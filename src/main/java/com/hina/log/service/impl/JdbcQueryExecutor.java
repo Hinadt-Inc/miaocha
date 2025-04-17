@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 @Component
 public class JdbcQueryExecutor {
@@ -34,6 +35,47 @@ public class JdbcQueryExecutor {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "SQL执行失败: " + e.getMessage());
         }
 
+        return result;
+    }
+
+    /**
+     * 执行原始SQL查询并返回结果
+     * 
+     * @param conn 数据库连接
+     * @param sql  SQL语句
+     * @return 查询结果，包含列名和行数据
+     * @throws SQLException 如果SQL执行出错
+     */
+    public Map<String, Object> executeRawQuery(Connection conn, String sql) throws SQLException {
+        Map<String, Object> result = new HashMap<>();
+        List<Map<String, Object>> rows = new ArrayList<>();
+        List<String> columns = new ArrayList<>();
+
+        try (Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(sql)) {
+
+            ResultSetMetaData metaData = rs.getMetaData();
+            int columnCount = metaData.getColumnCount();
+
+            // 获取列名
+            for (int i = 1; i <= columnCount; i++) {
+                columns.add(metaData.getColumnLabel(i));
+            }
+
+            // 获取行数据
+            while (rs.next()) {
+                Map<String, Object> row = new LinkedHashMap<>();
+                for (int i = 1; i <= columnCount; i++) {
+                    String columnName = metaData.getColumnLabel(i);
+                    Object value = rs.getObject(i);
+                    row.put(columnName, value);
+                }
+                rows.add(row);
+            }
+        }
+
+        result.put("columns", columns);
+        result.put("rows", rows);
         return result;
     }
 

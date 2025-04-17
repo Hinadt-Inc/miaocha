@@ -164,8 +164,8 @@ public class SqlQueryServiceTest {
 
         // 验证结果
         assertNotNull(result);
-        assertNotNull(result.getExcelDownloadUrl());
-        assertTrue(result.getExcelDownloadUrl().startsWith("/api/sql/excel/"));
+        assertNotNull(result.getDownloadUrl());
+        assertTrue(result.getDownloadUrl().startsWith("/api/sql/result"));
 
         // 验证调用
         verify(datasourceMapper).selectById(testQueryDTO.getDatasourceId());
