@@ -1,6 +1,7 @@
 package com.hina.log.entity;
 
 import lombok.Data;
+
 import java.time.LocalDateTime;
 
 /**
@@ -10,6 +11,7 @@ import java.time.LocalDateTime;
 public class User {
     private Long id;
     private String nickname;
+    private String email;
     private String uid;
     private Boolean isAdmin;
     private LocalDateTime createTime;

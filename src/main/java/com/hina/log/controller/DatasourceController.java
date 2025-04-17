@@ -34,7 +34,7 @@ public class DatasourceController {
     @PutMapping("/{id}")
     @Operation(summary = "更新数据源", description = "根据ID更新已有数据源的配置信息")
     public ApiResponse<DatasourceDTO> updateDatasource(
-            @Parameter(description = "数据源ID", required = true) @PathVariable Long id,
+            @Parameter(description = "数据源ID", required = true) @PathVariable("id") Long id,
             @Parameter(description = "数据源更新信息", required = true) @Valid @RequestBody DatasourceCreateDTO dto) {
         return ApiResponse.success(datasourceService.updateDatasource(id, dto));
     }
@@ -42,7 +42,7 @@ public class DatasourceController {
     @DeleteMapping("/{id}")
     @Operation(summary = "删除数据源", description = "根据ID删除数据源")
     public ApiResponse<Void> deleteDatasource(
-            @Parameter(description = "数据源ID", required = true) @PathVariable Long id) {
+            @Parameter(description = "数据源ID", required = true) @PathVariable("id") Long id) {
         datasourceService.deleteDatasource(id);
         return ApiResponse.success();
     }
@@ -50,7 +50,7 @@ public class DatasourceController {
     @GetMapping("/{id}")
     @Operation(summary = "获取数据源详情", description = "根据ID获取数据源的详细信息")
     public ApiResponse<DatasourceDTO> getDatasource(
-            @Parameter(description = "数据源ID", required = true) @PathVariable Long id) {
+            @Parameter(description = "数据源ID", required = true) @PathVariable("id") Long id) {
         return ApiResponse.success(datasourceService.getDatasource(id));
     }
 
@@ -70,7 +70,7 @@ public class DatasourceController {
     @PostMapping("/{id}/test-connection")
     @Operation(summary = "测试现有的数据源连接", description = "测试已保存的数据源连接是否可用")
     public ApiResponse<Boolean> testConnection(
-            @Parameter(description = "数据源ID", required = true) @PathVariable Long id) {
+            @Parameter(description = "数据源ID", required = true) @PathVariable("id") Long id) {
         return ApiResponse.success(datasourceService.testExistingConnection(id));
     }
 }

@@ -24,7 +24,10 @@ public enum ErrorCode {
     USER_PASSWORD_ERROR("3003", "用户名或密码错误"),
 
     // 权限相关错误码
-    PERMISSION_DENIED("4001", "权限不足");
+    PERMISSION_DENIED("4001", "权限不足"),
+
+    // 导出相关错误码
+    EXPORT_FAILED("5001", "导出失败");
 
     private final String code;
     private final String message;

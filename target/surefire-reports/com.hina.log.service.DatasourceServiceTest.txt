@@ -1,20 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.hina.log.service.DatasourceServiceTest
 -------------------------------------------------------------------------------
-Tests run: 10, Failures: 0, Errors: 2, Skipped: 1, Time elapsed: 1.402 s <<< FAILURE! -- in com.hina.log.service.DatasourceServiceTest
-com.hina.log.service.DatasourceServiceTest.testCreateDatasource_Success -- Time elapsed: 0.154 s <<< ERROR!
-com.hina.log.exception.BusinessException: 数据源连接失败
-	at com.hina.log.service.impl.DatasourceServiceImpl.createDatasource(DatasourceServiceImpl.java:40)
-	at com.hina.log.service.DatasourceServiceTest.testCreateDatasource_Success(DatasourceServiceTest.java:72)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
-
-com.hina.log.service.DatasourceServiceTest.testUpdateDatasource_Success -- Time elapsed: 0.008 s <<< ERROR!
-com.hina.log.exception.BusinessException: 数据源连接失败
-	at com.hina.log.service.impl.DatasourceServiceImpl.updateDatasource(DatasourceServiceImpl.java:69)
-	at com.hina.log.service.DatasourceServiceTest.testUpdateDatasource_Success(DatasourceServiceTest.java:102)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
-
+Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.184 s -- in com.hina.log.service.DatasourceServiceTest

@@ -25,4 +25,11 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+# 自定义配置
+sql:
+  query:
+    csv:
+      export:
+        dir: /tmp/sql-exports
+
     

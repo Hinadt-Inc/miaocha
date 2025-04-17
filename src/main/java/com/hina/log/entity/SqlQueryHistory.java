@@ -2,6 +2,7 @@ package com.hina.log.entity;
 
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.Date;
 
 /**
  * SQL查询历史实体类
@@ -13,5 +14,7 @@ public class SqlQueryHistory {
     private Long datasourceId;
     private String tableName;
     private String sqlQuery;
+    private String resultFilePath;
     private LocalDateTime createTime;
+    private Date updateTime;
 }

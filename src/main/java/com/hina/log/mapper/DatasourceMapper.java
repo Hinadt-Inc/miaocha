@@ -11,7 +11,7 @@ import java.util.List;
 @Mapper
 public interface DatasourceMapper {
 
-    @Insert("INSERT INTO datasource (name, type, description, ip, port, username, password, database, jdbc_params, create_time, update_time) " +
+    @Insert("INSERT INTO datasource (name, type, description, ip, port, username, password, `database`, jdbc_params, create_time, update_time) " +
             "VALUES (#{name}, #{type}, #{description}, #{ip}, #{port}, #{username}, #{password}, #{database}, #{jdbcParams}, " +
             "NOW(), NOW())")
     @Options(useGeneratedKeys = true, keyProperty = "id")
