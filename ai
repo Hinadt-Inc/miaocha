@@ -1,0 +1,88 @@
+现在需要完成日志管理系统项目后端
+核心功能有
+1. 数据源管理
+2. 日志检索查询(连接Doris 查询日志)
+3. 自定义SQL查询Doris
+4. 用户管理(对接外部域控登录用户，可以先内置几个用户，这个等后续再对接域控)
+5. 权限管理(配置什么用户可以查看什么数据源的那张日志表)
+
+粗略功能划分如上。
+下面我先给你我需要的表的大致结构，你帮我设计优化一下表结构，我使用的数据库是mysql
+
+```sql
+CREATE TABLE datasource (
+    id bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+    name varchar(100) NOT NULL COMMENT '数据源名称',
+    type varchar(50) NOT NULL COMMENT '数据源类型',
+    description text DEFAULT NULL COMMENT '数据源描述',
+    ip varchar(100) NOT NULL COMMENT '数据源IP',
+    port int(11) NOT NULL COMMENT '数据源端口',
+    username varchar(100) NOT NULL COMMENT '数据源用户名',
+    password varchar(100) NOT NULL COMMENT '数据源密码',
+    database varchar(100) NOT NULL COMMENT '数据源数据库',
+    jdbc_params text DEFAULT NULL COMMENT '数据源JDBC参数,JSON格式',
+    create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数据源表';
+
+CREATE TABLE user (
+    id bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+    nickname varchar(100) NOT NULL COMMENT '用户昵称',
+    uid varchar(100) NOT NULL COMMENT '用户ID',
+    is_admin tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否管理员',
+)
+
+CREATE TABLE user_datasource_permission (
+    id bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+    user_id bigint(20) NOT NULL COMMENT '用户ID',
+    datasource_id bigint(20) NOT NULL COMMENT '数据源ID',
+    table_name varchar(100) NOT NULL COMMENT '表名, * 表示所有表',
+    create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户数据源权限表';
+
+CREATE TABLE sql_query_history (
+    id bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+    user_id bigint(20) NOT NULL COMMENT '用户ID',
+    datasource_id bigint(20) NOT NULL COMMENT '数据源ID',
+    table_name varchar(100) NOT NULL COMMENT '表名',
+    sql_query text NOT NULL COMMENT 'SQL查询语句',
+    create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='SQL查询历史表';
+```
+
+目前应该只有这几张表，我需要使用 flyway 来管理数据库的迁移。
+
+
+目前 Doris 那边的日志表一个示例结构如下：
+```sql
+CREATE TABLE `log_table` (
+  `log_time` datetime(3) NOT NULL COMMENT "log content time",
+  `host` text NULL COMMENT "hostname or ip",
+  `path` text NULL COMMENT "log file path",
+  `log_offset` text NULL COMMENT "日志所在kafka主题偏移量",
+  `level` text NULL COMMENT "日志级别",
+  `line` text NULL COMMENT "日志行数",
+  `logId` text NULL COMMENT "日志ID",
+  `logger` text NULL COMMENT "代码所在类全限定名",
+  `method` text NULL COMMENT "代码所在方法",
+  `msg` text NULL COMMENT "日志信息",
+  `service` text NULL COMMENT "服务名",
+  `thread` text NULL COMMENT "线程名",
+  `time` text NULL COMMENT "日志打印时间",
+  `marker` text NULL COMMENT "标记信息",
+  `duration` text NULL COMMENT "耗时",
+  `reqType` text NULL COMMENT "请求类型",
+  `message` text NULL COMMENT "log message",
+  INDEX idx_host (`host`) USING INVERTED,
+  INDEX idx_path (`path`) USING INVERTED,
+  INDEX idx_service (`service`) USING INVERTED,
+  INDEX idx_message (`message`) USING INVERTED PROPERTIES("support_phrase" = "true", "parser" = "unicode", "lower_case" = "true")
+) ENGINE=OLAP
+DUPLICATE KEY(`log_time`)
+...... 省略其他参数
+```
+主要是看里面的 message 和 log_time 字段，其余字段都是从 message 中解析出来的。message是一个大JSON字符串。

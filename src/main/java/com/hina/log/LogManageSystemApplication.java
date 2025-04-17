@@ -1,0 +1,18 @@
+package com.hina.log;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.mybatis.spring.annotation.MapperScan;
+
+/**
+ * 日志管理系统主应用类
+ * 
+ * @author hina
+ */
+@SpringBootApplication
+@MapperScan("com.hina.log.mapper")
+public class LogManageSystemApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(LogManageSystemApplication.class, args);
+    }
+}
