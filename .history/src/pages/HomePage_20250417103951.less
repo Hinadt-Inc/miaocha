@@ -1,0 +1,46 @@
+/* HomePage.less */
+
+/* 表格列动画效果 */
+.table-column-animation {
+  transition: all 0.3s ease-in-out;
+}
+
+/* 为新增的表格列添加进入动画 */
+.ant-table-tbody > tr > td {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* 可选字段列表项的动画效果 */
+.ant-collapse-content {
+  transition: all 0.3s ease-in-out;
+}
+
+/* 表格行的高亮过渡效果 */
+.ant-table-tbody > tr:hover > td {
+  background-color: #e6f7ff !important;
+  transition: background-color 0.2s ease;
+}
+
+/* 字段选择动画 */
+.ant-tag {
+  transition: all 0.2s ease;
+}
+
+/* 让表格整体有更好的动画过渡 */
+.ant-table {
+  transition: height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+}
+
+/* 表格展开/收起行动画 */
+.ant-table-expanded-row {
+  transition: all 0.3s ease-in-out;
+}
+
+/* 添加鼠标悬浮卡片效果 */
+.ant-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.09);
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
+}

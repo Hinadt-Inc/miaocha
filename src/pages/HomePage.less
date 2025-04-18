@@ -1,0 +1,199 @@
+/* HomePage.less - 单列动画效果版 */
+
+/* 关键帧动画定义 */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(20px); }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes columnFadeIn {
+  from { 
+    opacity: 0;
+    transform: translateX(30px);
+    background-color: rgba(24, 144, 255, 0.05);
+  }
+  to { 
+    opacity: 1;
+    transform: translateX(0);
+    background-color: transparent;
+  }
+}
+
+@keyframes slideIn {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* 表格容器动画 */
+.table-container-with-animation {
+  position: relative;
+  transition: opacity 0.3s ease-in-out;
+  
+  .ant-table-wrapper {
+    transition: all 0.3s ease-in-out;
+  }
+  
+  /* 表格行动画 */
+  .ant-table-tbody > tr {
+    transition: background-color 0.3s ease, opacity 0.3s ease;
+    
+    &:hover {
+      transform: translateZ(0);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+      z-index: 1;
+    }
+  }
+
+  /* 表格单元格动画 */
+  .table-column-with-animation {
+    animation: fadeIn 0.5s ease-out;
+    transition: width 0.3s ease-in-out, 
+                padding 0.3s ease-in-out,
+                background-color 0.3s ease-in-out;
+    
+    &:nth-child(odd) {
+      animation-delay: 0.05s;
+    }
+    
+    &:nth-child(even) {
+      animation-delay: 0.1s;
+    }
+  }
+  
+  /* 表格头部动画 */
+  .ant-table-thead > tr > th {
+    transition: all 0.3s ease;
+    overflow: hidden;
+    
+    &:hover {
+      background-color: #f0f7ff !important;
+    }
+  }
+}
+
+/* 单列进入动画，避免整表重新渲染 */
+.column-fade-in {
+  animation: columnFadeIn 0.8s ease-out;
+}
+
+/* 表格容器，保持稳定，不引起重新渲染 */
+.table-container-with-animation {
+  position: relative;
+  
+  /* 表格和单元格基础样式，不需要动画 */
+  .ant-table-wrapper,
+  .ant-table,
+  .ant-table-container,
+  .ant-table-content,
+  .ant-table-tbody {
+    transition: none;
+  }
+  
+  /* 表格行基础交互 */
+  .ant-table-tbody > tr {
+    transition: background-color 0.3s ease;
+  }
+}
+
+/* 字段选择项动画 */
+.field-selection-item {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+  overflow: hidden;
+  
+  &:hover {
+    background-color: #f5f5f5 !important;
+    transform: translateX(2px);
+  }
+  
+  &:active {
+    background-color: #e6f7ff !important;
+    transform: translateX(0);
+  }
+  
+  /* 选中状态的动画 */
+  &:has(.anticon-eye) {
+    animation: pulse 0.5s;
+  }
+
+  &.field-added {
+    animation: pulse 0.5s ease;
+  }
+}
+
+/* 让图标有动画效果 */
+.anticon {
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: scale(1.2);
+  }
+}
+
+/* Tag标签动画 */
+.ant-tag {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+}
+
+/* 按钮动画加强 */
+.ant-btn {
+  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+/* 数据表格动画 */
+.data-table-with-animation {
+  .ant-table-row {
+    transition: all 0.3s ease;
+  }
+  
+  .ant-table-row-expand-icon {
+    transition: all 0.3s ease;
+  }
+}
+
+/* 已选择字段的视觉效果 */
+.ant-table-thead > tr > th.column-fade-in {
+  position: relative;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: #1890ff;
+    animation: slideIn 0.8s ease-in-out;
+  }
+}
+
+/* 表格单元格动画强化 */
+.ant-table-cell.column-fade-in {
+  position: relative;
+  z-index: 1;
+}
