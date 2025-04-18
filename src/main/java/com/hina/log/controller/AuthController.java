@@ -3,6 +3,7 @@ package com.hina.log.controller;
 import com.hina.log.dto.ApiResponse;
 import com.hina.log.dto.auth.LoginRequestDTO;
 import com.hina.log.dto.auth.LoginResponseDTO;
+import com.hina.log.dto.auth.RefreshTokenRequestDTO;
 import com.hina.log.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -36,6 +37,20 @@ public class AuthController {
     public ApiResponse<LoginResponseDTO> login(
             @Parameter(description = "登录请求信息", required = true) @Valid @RequestBody LoginRequestDTO loginRequest) {
         LoginResponseDTO response = userService.login(loginRequest);
+        return ApiResponse.success(response);
+    }
+
+    /**
+     * 刷新令牌
+     *
+     * @param refreshTokenRequest 刷新令牌请求
+     * @return 登录响应
+     */
+    @PostMapping("/refresh")
+    @Operation(summary = "刷新令牌", description = "使用刷新令牌获取新的访问令牌和刷新令牌。每次刷新都会生成新的刷新令牌，旧的刷新令牌将不再有效。")
+    public ApiResponse<LoginResponseDTO> refreshToken(
+            @Parameter(description = "刷新令牌请求信息", required = true) @Valid @RequestBody RefreshTokenRequestDTO refreshTokenRequest) {
+        LoginResponseDTO response = userService.refreshToken(refreshTokenRequest);
         return ApiResponse.success(response);
     }
 }

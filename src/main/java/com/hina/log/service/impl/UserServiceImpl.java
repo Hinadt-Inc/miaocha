@@ -3,6 +3,7 @@ package com.hina.log.service.impl;
 import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
 import com.hina.log.dto.auth.LoginRequestDTO;
 import com.hina.log.dto.auth.LoginResponseDTO;
+import com.hina.log.dto.auth.RefreshTokenRequestDTO;
 import com.hina.log.dto.user.UpdatePasswordDTO;
 import com.hina.log.dto.user.UserCreateDTO;
 import com.hina.log.dto.user.UserUpdateDTO;
@@ -45,9 +46,48 @@ public class UserServiceImpl implements UserService {
         }
 
         String token = jwtUtils.generateToken(user.getUid());
+        String refreshToken = jwtUtils.generateRefreshToken(user.getUid());
+
+        long expiresAt = jwtUtils.getExpirationFromToken(token);
+        long refreshExpiresAt = jwtUtils.getExpirationFromToken(refreshToken);
 
         return LoginResponseDTO.builder()
                 .token(token)
+                .refreshToken(refreshToken)
+                .expiresAt(expiresAt)
+                .refreshExpiresAt(refreshExpiresAt)
+                .userId(user.getId())
+                .nickname(user.getNickname())
+                .role(user.getRole())
+                .build();
+    }
+
+    @Override
+    public LoginResponseDTO refreshToken(RefreshTokenRequestDTO refreshTokenRequest) {
+        String refreshToken = refreshTokenRequest.getRefreshToken();
+
+        // 验证刷新token并生成新的token
+        String newToken = jwtUtils.generateTokenFromRefreshToken(refreshToken);
+        if (newToken == null) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN, "无效的刷新令牌");
+        }
+
+        // 从刷新token中获取用户ID
+        String uid = jwtUtils.getUidFromToken(refreshToken);
+        User user = getUserByUid(uid);
+
+        // 同时生成新的刷新令牌
+        String newRefreshToken = jwtUtils.generateRefreshToken(uid);
+
+        // 获取过期时间
+        long expiresAt = jwtUtils.getExpirationFromToken(newToken);
+        long refreshExpiresAt = jwtUtils.getExpirationFromToken(newRefreshToken);
+
+        return LoginResponseDTO.builder()
+                .token(newToken)
+                .refreshToken(newRefreshToken) // 返回新的refreshToken
+                .expiresAt(expiresAt)
+                .refreshExpiresAt(refreshExpiresAt)
                 .userId(user.getId())
                 .nickname(user.getNickname())
                 .role(user.getRole())

@@ -1,4 +1,7 @@
 -- 添加用户密码和角色字段
+-- 先更新NULL邮箱为默认值
+UPDATE user SET email = CONCAT('user_', uid, '@example.com') WHERE email IS NULL;
+
 ALTER TABLE user
     ADD COLUMN password VARCHAR(100) DEFAULT NULL COMMENT '用户密码',
     ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'USER' COMMENT '用户角色: SUPER_ADMIN, ADMIN, USER',

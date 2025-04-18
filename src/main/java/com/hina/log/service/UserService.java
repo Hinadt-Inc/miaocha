@@ -2,6 +2,7 @@ package com.hina.log.service;
 
 import com.hina.log.dto.auth.LoginRequestDTO;
 import com.hina.log.dto.auth.LoginResponseDTO;
+import com.hina.log.dto.auth.RefreshTokenRequestDTO;
 import com.hina.log.dto.user.UserCreateDTO;
 import com.hina.log.dto.user.UserUpdateDTO;
 import com.hina.log.dto.user.UpdatePasswordDTO;
@@ -21,6 +22,14 @@ public interface UserService {
      * @return 登录响应
      */
     LoginResponseDTO login(LoginRequestDTO loginRequest);
+
+    /**
+     * 刷新令牌
+     *
+     * @param refreshTokenRequest 刷新令牌请求
+     * @return 登录响应
+     */
+    LoginResponseDTO refreshToken(RefreshTokenRequestDTO refreshTokenRequest);
 
     /**
      * 通过ID获取用户

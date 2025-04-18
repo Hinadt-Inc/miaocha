@@ -23,6 +23,9 @@ public enum ErrorCode {
     USER_NAME_EXISTS("3002", "用户名已存在"),
     USER_PASSWORD_ERROR("3003", "用户名或密码错误"),
 
+    // 认证相关错误码
+    INVALID_TOKEN("3101", "无效的令牌"),
+
     // 权限相关错误码
     PERMISSION_DENIED("4001", "权限不足"),
 
