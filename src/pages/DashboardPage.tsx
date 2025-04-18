@@ -418,7 +418,7 @@ const topProductColumns = [
     title: '销售量',
     dataIndex: 'sales',
     key: 'sales',
-    sorter: (a, b) => a.sales - b.sales,
+    sorter: (a: {sales: number}, b: {sales: number}) => a.sales - b.sales,
   },
   {
     title: '趋势',
