@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { 
   AutoComplete,
   Dropdown,
   Layout, 
-  Input, 
   Select,
   Space, 
   DatePicker, 
@@ -15,19 +14,24 @@ import {
   Tabs, 
   Tooltip, 
   Divider,
-  message 
+  message,
+  Spin,
+  Modal,
+  Form,
+  Input,
+  Radio,
 } from 'antd'
 import { 
   SearchOutlined, 
-  DownloadOutlined, 
-  SaveOutlined, 
-  ReloadOutlined,
   EyeOutlined,
   ExpandOutlined,
   CompressOutlined,
   InfoCircleOutlined,
   PlusOutlined,
-  MinusOutlined
+  MinusOutlined,
+  LoadingOutlined,
+  FilterOutlined,
+  CloseOutlined,
 } from '@ant-design/icons'
 import ReactECharts from 'echarts-for-react'
 import { Outlet } from 'react-router-dom'
@@ -37,8 +41,31 @@ import './HomePage.less'
 
 const { Content, Sider } = Layout
 const { RangePicker } = DatePicker
-const { Panel } = Collapse
 const { TabPane } = Tabs
+const { Option } = Select
+
+// 过滤器操作符类型
+type FilterOperator = 
+  | 'is' // 等于 
+  | 'is_not' // 不等于
+  | 'contains' // 包含
+  | 'does_not_contain' // 不包含
+  | 'exists' // 存在
+  | 'does_not_exist' // 不存在
+  | 'is_one_of' // 是其中之一
+  | 'is_not_one_of' // 不是其中之一
+  | 'greater_than' // 大于
+  | 'less_than' // 小于
+  | 'is_between' // 在...之间
+
+// 过滤器类型定义
+interface Filter {
+  id: string; // 唯一标识符
+  field: string; // 字段名
+  operator: FilterOperator; // 操作符
+  value: string | string[] | [number, number] | null; // 值，可以是字符串、字符串数组（用于多选）或范围值
+  color: string; // 标签颜色
+}
 
 function HomePage() {
   const [collapsed, setCollapsed] = useState(false)
@@ -49,11 +76,45 @@ function HomePage() {
   const [timeRange, setTimeRange] = useState<[string, string] | null>(null)
   const [showTimePicker, setShowTimePicker] = useState(false)
   const [selectedTable, setSelectedTable] = useState<string>('')
-  const [selectedField, setSelectedField] = useState<string>('')
   const [searchHistory, setSearchHistory] = useState<string[]>(() => {
     const saved = localStorage.getItem('searchHistory')
     return saved ? JSON.parse(saved) : []
   })
+  
+  // 过滤器相关状态
+  const [filters, setFilters] = useState<Filter[]>([
+    { id: 'default-source', field: 'source', operator: 'is', value: 'nginx', color: 'blue' },
+    { id: 'default-status', field: 'status', operator: 'is', value: '200', color: 'green' }
+  ])
+  const [showFilterModal, setShowFilterModal] = useState(false)
+  const [filterForm] = Form.useForm()
+  const [selectedFilterField, setSelectedFilterField] = useState<string>('')
+  const [selectedFilterOperator, setSelectedFilterOperator] = useState<FilterOperator>('is')
+  
+  // 无限滚动相关状态
+  interface LogData {
+    key: number;
+    timestamp: string;
+    message: string;
+    host: string;
+    source: string;
+    status: number;
+    bytes: number;
+    response_time: number;
+    ip: string;
+    method: string;
+    path: string;
+    user_agent: string;
+    referer: string;
+    'geo.country': string;
+    'geo.city': string;
+  }
+
+  const [tableData, setTableData] = useState<LogData[]>([])
+  const [loading, setLoading] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const pageSize = 20
+  const tableContainerRef = useRef<HTMLDivElement>(null)
 
   // 保存所有需要持久化的状态到localStorage
   useEffect(() => {
@@ -63,11 +124,10 @@ function HomePage() {
       searchQuery,
       showHistogram,
       timeRange,
-      selectedTable,
-      selectedField
+      selectedTable
     }
     localStorage.setItem('homePageState', JSON.stringify(stateToSave))
-  }, [selectedFields, viewMode, searchQuery, showHistogram, timeRange, selectedTable, selectedField])
+  }, [selectedFields, viewMode, searchQuery, showHistogram, timeRange, selectedTable])
 
   // 初始化时恢复状态
   useEffect(() => {
@@ -80,7 +140,6 @@ function HomePage() {
       setShowHistogram(parsedState.showHistogram !== false)
       setTimeRange(parsedState.timeRange || null)
       setSelectedTable(parsedState.selectedTable || '')
-      setSelectedField(parsedState.selectedField || '')
     }
   }, [])
   const [lastAddedField, setLastAddedField] = useState<string | null>(null)
@@ -120,24 +179,70 @@ function HomePage() {
     { name: 'geo.city', type: 'keyword' },
   ]
 
-  // 模拟数据
-  const mockData = Array(20).fill(null).map((_, index) => ({
-    key: index,
-    timestamp: `2025-04-${(index % 14) + 1} ${(index % 24)}:${(index % 60).toString().padStart(2, '0')}:00`,
-    message: `这是日志消息 ${index}`,
-    host: `server-${index % 5}.example.com`,
-    source: index % 3 === 0 ? 'nginx' : (index % 3 === 1 ? 'application' : 'database'),
-    status: index % 10 === 0 ? 500 : (index % 5 === 0 ? 404 : 200),
-    bytes: Math.floor(Math.random() * 10000),
-    response_time: Math.round(Math.random() * 1000) / 10,
-    ip: `192.168.1.${index % 256}`,
-    method: index % 4 === 0 ? 'POST' : (index % 3 === 0 ? 'PUT' : 'GET'),
-    path: index % 3 === 0 ? '/api/users' : (index % 5 === 0 ? '/api/products' : '/api/orders'),
-    user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
-    referer: 'https://example.com',
-    'geo.country': 'China',
-    'geo.city': index % 3 === 0 ? 'Beijing' : (index % 3 === 1 ? 'Shanghai' : 'Guangzhou'),
-  }))
+  // 生成模拟数据
+  const generateMockData = (start: number, count: number) => {
+    return Array(count).fill(null).map((_, index) => {
+      const actualIndex = start + index;
+      return {
+        key: actualIndex,
+        timestamp: `2025-04-${(actualIndex % 14) + 1} ${(actualIndex % 24)}:${(actualIndex % 60).toString().padStart(2, '0')}:00`,
+        message: `这是日志消息 ${actualIndex}`,
+        host: `server-${actualIndex % 5}.example.com`,
+        source: actualIndex % 3 === 0 ? 'nginx' : (actualIndex % 3 === 1 ? 'application' : 'database'),
+        status: actualIndex % 10 === 0 ? 500 : (actualIndex % 5 === 0 ? 404 : 200),
+        bytes: Math.floor(Math.random() * 10000),
+        response_time: Math.round(Math.random() * 1000) / 10,
+        ip: `192.168.1.${actualIndex % 256}`,
+        method: actualIndex % 4 === 0 ? 'POST' : (actualIndex % 3 === 0 ? 'PUT' : 'GET'),
+        path: index % 3 === 0 ? '/api/users' : (index % 5 === 0 ? '/api/products' : '/api/orders'),
+        user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+        referer: 'https://example.com',
+        'geo.country': 'China',
+        'geo.city': actualIndex % 3 === 0 ? 'Beijing' : (actualIndex % 3 === 1 ? 'Shanghai' : 'Guangzhou'),
+      };
+    });
+  };
+
+  // 加载更多数据
+  const loadMoreData = useCallback(() => {
+    if (loading || !hasMore) return;
+    
+    setLoading(true);
+    
+    // 模拟API请求延迟
+    setTimeout(() => {
+      const newData = generateMockData(tableData.length, pageSize);
+      setTableData(prevData => [...prevData, ...newData]);
+      
+      // 模拟数据上限，设置为500条
+      if (tableData.length + newData.length >= 500) {
+        setHasMore(false);
+      }
+      
+      setLoading(false);
+    }, 500);
+  }, [loading, hasMore, tableData.length]);
+
+  // 处理滚动事件检测
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
+    // 当滚动到距离底部100px时，加载更多数据
+    if (scrollHeight - scrollTop - clientHeight < 100 && !loading && hasMore) {
+      loadMoreData();
+    }
+  }, [loadMoreData, loading, hasMore]);
+
+  // 初始化加载数据
+  useEffect(() => {
+    setTableData(generateMockData(0, pageSize));
+    setHasMore(true);
+  }, []);
+
+  // 搜索或时间范围改变时重置数据
+  useEffect(() => {
+    setTableData(generateMockData(0, pageSize));
+    setHasMore(true);
+  }, [searchQuery, timeRange, selectedTable]);
 
   // 生成直方图数据
   const getHistogramOption = (): EChartsOption => {
@@ -146,26 +251,31 @@ function HomePage() {
     
     return {
       grid: {
-        top: 35,
-        right: 40,
-        bottom: 60,
-        left: 50,
+        top: 20,
+        right: 30,
+        bottom: 40,
+        left: 40,
       },
       xAxis: {
         type: 'category',
         data: dates,
         axisLabel: {
-          interval: 2
+          interval: 2,
+          fontSize: 10
         }
       },
       yAxis: {
-        type: 'value'
+        type: 'value',
+        axisLabel: {
+          fontSize: 10
+        }
       },
       series: [{
         data: values,
         type: 'bar',
         color: '#1890ff',
         name: '数据条数',
+        barWidth: '60%',
         emphasis: {
           itemStyle: {
             color: '#69c0ff'  // 鼠标悬浮时颜色变亮
@@ -176,27 +286,6 @@ function HomePage() {
         trigger: 'axis',
         formatter: '{b}<br/>{a}: {c}'
       },
-      toolbox: {
-        feature: {
-          dataZoom: {
-            yAxisIndex: 'none',
-            title: {
-              zoom: '区域缩放',
-              back: '还原缩放'
-            },
-            // 移除自定义图标定义，使用默认图标
-            icon: {}
-          },
-          restore: {
-            title: '重置'
-          },
-          saveAsImage: {
-            title: '保存为图片'
-          }
-        },
-        right: 15,
-        top: 0
-      },
       dataZoom: [
         {
           type: 'slider',
@@ -204,18 +293,18 @@ function HomePage() {
           xAxisIndex: [0],
           start: 0,
           end: 100,
-          height: 20,
-          bottom: 10,
+          height: 15,
+          bottom: 5,
           borderColor: 'transparent',
           backgroundColor: '#e6e6e6',
           fillerColor: 'rgba(24, 144, 255, 0.2)',
-          handleIcon: 'M10.7,11.9v-1.3H9.3v1.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4v1.3h1.3v-1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z',
-          handleSize: '80%',
+          handleSize: '70%',
           handleStyle: {
             color: '#1890ff'
           },
           textStyle: {
-            color: 'rgba(0, 0, 0, 0.65)'
+            color: 'rgba(0, 0, 0, 0.65)',
+            fontSize: 10
           },
           brushSelect: true  // 允许刷选
         },
@@ -341,6 +430,132 @@ function HomePage() {
     }, 5000)
   }
 
+  // 处理表选择变化
+  const handleTableChange = (value: string) => {
+    setSelectedTable(value);
+  };
+
+  // 过滤器相关方法
+  // 根据字段类型获取操作符选项
+  const getOperatorsByFieldType = (fieldType?: string): { label: string; value: FilterOperator }[] => {
+    const commonOperators = [
+      { label: '是', value: 'is' },
+      { label: '不是', value: 'is_not' },
+      { label: '存在', value: 'exists' },
+      { label: '不存在', value: 'does_not_exist' },
+    ];
+    
+    if (!fieldType) return commonOperators;
+    
+    switch (fieldType) {
+      case 'text':
+      case 'keyword':
+        return [
+          ...commonOperators,
+          { label: '包含', value: 'contains' },
+          { label: '不包含', value: 'does_not_contain' },
+          { label: '是其中之一', value: 'is_one_of' },
+          { label: '不是其中之一', value: 'is_not_one_of' },
+        ];
+      case 'number':
+      case 'date':
+        return [
+          ...commonOperators,
+          { label: '大于', value: 'greater_than' },
+          { label: '小于', value: 'less_than' },
+          { label: '在...之间', value: 'is_between' },
+        ];
+      default:
+        return commonOperators;
+    }
+  };
+
+  // 获取字段的类型
+  const getFieldType = (fieldName: string): string => {
+    const field = availableFields.find(f => f.name === fieldName);
+    return field?.type || 'keyword';
+  };
+
+  // 打开添加过滤器对话框
+  const openFilterModal = () => {
+    filterForm.resetFields();
+    setSelectedFilterField('');
+    setSelectedFilterOperator('is');
+    setShowFilterModal(true);
+  };
+
+  // 处理过滤器字段变化
+  const handleFilterFieldChange = (fieldName: string) => {
+    setSelectedFilterField(fieldName);
+    const fieldType = getFieldType(fieldName);
+    const operators = getOperatorsByFieldType(fieldType);
+    setSelectedFilterOperator(operators[0]?.value || 'is');
+    filterForm.setFieldsValue({ operator: operators[0]?.value || 'is' });
+  };
+
+  // 添加过滤器
+  const addFilter = (values: any) => {
+    const { field, operator, value } = values;
+    const fieldType = getFieldType(field);
+    
+    // 生成随机颜色
+    const colors = ['blue', 'green', 'orange', 'red', 'purple', 'cyan', 'magenta', 'gold', 'lime', 'geekblue'];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    
+    // 创建新过滤器
+    const newFilter: Filter = {
+      id: `filter-${Date.now()}`,
+      field,
+      operator,
+      value,
+      color,
+    };
+    
+    setFilters([...filters, newFilter]);
+    setShowFilterModal(false);
+    message.success(`已添加过滤器: ${field}`);
+  };
+
+  // 删除过滤器
+  const removeFilter = (filterId: string) => {
+    setFilters(filters.filter(f => f.id !== filterId));
+  };
+
+  // 获取过滤器显示文本
+  const getFilterDisplayText = (filter: Filter): string => {
+    const { field, operator, value } = filter;
+    
+    switch (operator) {
+      case 'is':
+        return `${field}: ${value}`;
+      case 'is_not':
+        return `${field} 不是: ${value}`;
+      case 'contains':
+        return `${field} 包含: ${value}`;
+      case 'does_not_contain':
+        return `${field} 不包含: ${value}`;
+      case 'exists':
+        return `${field} 存在`;
+      case 'does_not_exist':
+        return `${field} 不存在`;
+      case 'is_one_of':
+        return `${field} 是: [${Array.isArray(value) ? value.join(', ') : value}]`;
+      case 'is_not_one_of':
+        return `${field} 不是: [${Array.isArray(value) ? value.join(', ') : value}]`;
+      case 'greater_than':
+        return `${field} > ${value}`;
+      case 'less_than':
+        return `${field} < ${value}`;
+      case 'is_between':
+        if (Array.isArray(value) && value.length === 2) {
+          return `${field}: ${value[0]} 至 ${value[1]}`;
+        }
+        return `${field} 在范围内`;
+      default:
+        return `${field}: ${value}`;
+    }
+  };
+
   // 当时间范围改变时更新 DatePicker
   useEffect(() => {
     if (timeRange) {
@@ -349,60 +564,51 @@ function HomePage() {
   }, [timeRange])
 
   return (
+    <>
     <Layout style={{ background: '#f0f2f5', minHeight: 'calc(100vh - 64px)' }}>
+      {/* 搜索区域 */}
       <div style={{ padding: '16px 24px', background: '#fff', boxShadow: '0 1px 4px rgba(0, 21, 41, 0.08)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-          <Space size="middle">
-            <Space.Compact style={{ width: '100%' }}>
-              <Select
-                placeholder="选择表"
-                style={{ width: 180 }}
-                value={selectedTable}
-                onChange={value => {
-                  setSelectedTable(value)
-                  setSelectedField('')
-                }}
-                options={availableTables.map(table => ({
-                  label: table.name,
-                  value: table.name,
-                  fields: table.fields
-                }))}
-              />
-              <Select
-                placeholder="选择字段"
-                style={{ width: 180 }}
-                value={selectedField}
-                onChange={setSelectedField}
-                disabled={!selectedTable}
-                options={
-                  selectedTable 
-                    ? availableTables
-                        .find(t => t.name === selectedTable)
-                        ?.fields.map(field => ({
-                          label: field,
-                          value: field
-                        })) || []
-                    : []
-                }
-              />
+          <Space size="middle" style={{ width: '100%' }}>
+            <Space.Compact>
               <AutoComplete
                 placeholder="输入搜索内容"
-                style={{ width: 300 }}
+                style={{ width: 1100 }}
                 value={searchQuery}
                 onChange={setSearchQuery}
                 options={searchHistory.map(query => ({
                   value: query,
                   label: query
                 }))}
-                onSearch={text => {
-                  if (text && !searchHistory.includes(text)) {
-                    const newHistory = [text, ...searchHistory].slice(0, 10)
-                    setSearchHistory(newHistory)
-                    localStorage.setItem('searchHistory', JSON.stringify(newHistory))
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && searchQuery.trim()) {
+                    // 执行搜索并保存历史记录
+                    if (!searchHistory.includes(searchQuery.trim())) {
+                      const newHistory = [searchQuery.trim(), ...searchHistory].slice(0, 10)
+                      setSearchHistory(newHistory)
+                      localStorage.setItem('searchHistory', JSON.stringify(newHistory))
+                    }
+                    // 这里可以添加其他搜索时的逻辑
+                    message.info(`正在搜索: ${searchQuery}`)
                   }
                 }}
               />
-              <Button icon={<SearchOutlined />} type="primary" />
+              <Button 
+                icon={<SearchOutlined />} 
+                type="primary"
+                onClick={() => {
+                  if (searchQuery.trim()) {
+                    // 执行搜索并保存历史记录
+                    if (!searchHistory.includes(searchQuery.trim())) {
+                      const newHistory = [searchQuery.trim(), ...searchHistory].slice(0, 10)
+                      setSearchHistory(newHistory)
+                      localStorage.setItem('searchHistory', JSON.stringify(newHistory))
+                    }
+                    // 这里可以添加其他搜索时的逻辑
+                    message.info(`正在搜索: ${searchQuery}`)
+                  }
+                }}
+              />
             </Space.Compact>
             
             <Space.Compact>
@@ -466,49 +672,35 @@ function HomePage() {
               )}
             </Space.Compact>
           </Space>
-          <Space>
-            <Button icon={<ReloadOutlined />}>刷新</Button>
-            <Button icon={<SaveOutlined />}>保存</Button>
-            <Button icon={<DownloadOutlined />}>导出</Button>
-          </Space>
         </div>
         <div>
           <Space>
-            <Tag color="blue" closable>来源: nginx</Tag>
-            <Tag color="green" closable>状态: 200</Tag>
-            {timeRange && (
-              <Tag color="purple" closable onClose={() => setTimeRange(null)}>
-                时间范围: {timeRange[0]} 至 {timeRange[1]}
+            {filters.map(filter => (
+              <Tag 
+                key={filter.id} 
+                color={filter.color} 
+                closable 
+                onClose={() => removeFilter(filter.id)}
+                icon={<FilterOutlined />}
+                style={{ display: 'flex', alignItems: 'center', padding: '0 8px' }}
+              >
+                {getFilterDisplayText(filter)}
               </Tag>
-            )}
-            <Button type="link" icon={<PlusOutlined />}>添加过滤器</Button>
+            ))}
+            <Button 
+              type="link" 
+              icon={<PlusOutlined />} 
+              onClick={openFilterModal}
+            >
+              添加过滤器
+            </Button>
           </Space>
         </div>
       </div>
       
-      {showHistogram && (
-        <div style={{ padding: '12px 24px', background: '#fff', margin: '12px 0', position: 'relative' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-            <div style={{ fontSize: 12, color: '#666' }}>
-              <InfoCircleOutlined style={{ marginRight: 5 }} />
-              提示：直接在图表上拖拽可以选择时间范围
-            </div>
-            <Button 
-              size="small" 
-              type="text" 
-              icon={<MinusOutlined />} 
-              onClick={() => setShowHistogram(false)}
-            />
-          </div>
-          <ReactECharts 
-            option={getHistogramOption()} 
-            style={{ height: 180 }} 
-            onEvents={onChartEvents}
-          />
-        </div>
-      )}
-      
-      <Layout>
+      {/* 下面为左右结构 */}
+      <Layout style={{ padding: '12px 0', background: '#f0f2f5' }}>
+        {/* 左侧：字段展示和搜索 */}
         <Sider 
           width={280} 
           theme="light" 
@@ -520,49 +712,30 @@ function HomePage() {
           {!collapsed && (
             <>
               <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0' }}>
-                <Input.Search
-                  placeholder="搜索字段"
-                  size="small"
-                />
+                <div>
+                  <Select
+                    placeholder="选择数据表"
+                    style={{ width: '100%' }}
+                    value={selectedTable || undefined}
+                    onChange={handleTableChange}
+                    allowClear
+                    showSearch
+                  >
+                    {availableTables.map((table) => (
+                      <Option key={table.name} value={table.name}>{table.name}</Option>
+                    ))}
+                  </Select>
+                </div>
               </div>
               
-              <Collapse defaultActiveKey={['available']} ghost>
-                <Panel header="可用字段" key="available">
-                  {availableFields.map(field => (
-                    <div 
-                      key={field.name} 
-                      style={{ 
-                        padding: '8px 16px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        cursor: 'pointer',
-                        borderRadius: '4px',
-                        background: selectedFields.includes(field.name) ? '#e6f7ff' : 'transparent',
-                        marginBottom: 4,
-                        transition: 'all 0.3s ease'
-                      }}
-                      onClick={() => toggleFieldSelection(field.name)}
-                      className={`field-selection-item ${lastAddedField === field.name ? 'field-added' : ''} ${lastRemovedField === field.name ? 'field-removed' : ''}`}
-                    >
-                      <Space>
-                        <Tag color={getFieldTypeColor(field.type)} style={{ marginRight: 8 }}>
-                          {field.type.substr(0, 1).toUpperCase()}
-                        </Tag>
-                        {field.name}
-                      </Space>
-                      {selectedFields.includes(field.name) && (
-                        <EyeOutlined style={{ color: '#1890ff' }} />
-                      )}
-                    </div>
-                  ))}
-                </Panel>
-                <Panel header="已选字段" key="selected">
-                  {selectedFields.map(fieldName => {
-                    const field = availableFields.find(f => f.name === fieldName)
-                    if (!field) return null
-                    
-                    return (
+              <Collapse 
+                defaultActiveKey={['available']} 
+                ghost
+                items={[
+                  {
+                    key: 'available',
+                    label: '可用字段',
+                    children: availableFields.map(field => (
                       <div 
                         key={field.name} 
                         style={{ 
@@ -570,10 +743,14 @@ function HomePage() {
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center',
+                          cursor: 'pointer',
                           borderRadius: '4px',
-                          background: '#e6f7ff',
-                          marginBottom: 4
+                          background: selectedFields.includes(field.name) ? '#e6f7ff' : 'transparent',
+                          marginBottom: 4,
+                          transition: 'all 0.3s ease'
                         }}
+                        onClick={() => toggleFieldSelection(field.name)}
+                        className={`field-selection-item ${lastAddedField === field.name ? 'field-added' : ''} ${lastRemovedField === field.name ? 'field-removed' : ''}`}
                       >
                         <Space>
                           <Tag color={getFieldTypeColor(field.type)} style={{ marginRight: 8 }}>
@@ -581,113 +758,301 @@ function HomePage() {
                           </Tag>
                           {field.name}
                         </Space>
-                        <EyeOutlined style={{ color: '#1890ff' }} />
+                        {selectedFields.includes(field.name) && (
+                          <EyeOutlined style={{ color: '#1890ff' }} />
+                        )}
                       </div>
-                    )
-                  })}
-                </Panel>
-              </Collapse>
+                    ))
+                  },
+                  {
+                    key: 'selected',
+                    label: '已选字段',
+                    children: selectedFields.map(fieldName => {
+                      const field = availableFields.find(f => f.name === fieldName)
+                      if (!field) return null
+                      
+                      return (
+                        <div 
+                          key={field.name} 
+                          style={{ 
+                            padding: '8px 16px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            borderRadius: '4px',
+                            background: '#e6f7ff',
+                            marginBottom: 4
+                          }}
+                        >
+                          <Space>
+                            <Tag color={getFieldTypeColor(field.type)} style={{ marginRight: 8 }}>
+                              {field.type.substr(0, 1).toUpperCase()}
+                            </Tag>
+                            {field.name}
+                          </Space>
+                          <EyeOutlined style={{ color: '#1890ff' }} />
+                        </div>
+                      )
+                    })
+                  }
+                ]}
+              />
             </>
           )}
         </Sider>
         
-        <Content style={{ padding: '0 0 24px 0', background: '#fff', position: 'relative' }}>
-          <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0' }}>
-            <div>找到 {mockData.length} 条记录</div>
-            <Space>
-              {!showHistogram && (
+        {/* 右侧：分为上下结构 */}
+        <Layout style={{ background: '#f0f2f5' }}>
+          {/* 右侧上方：直方图 */}
+          <Content style={{ background: '#fff', marginBottom: 12, display: showHistogram ? 'block' : 'none', flex: 'none', }}>
+            <div style={{ padding: '8px 12px', background: '#fff', position: 'relative' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0 }}>
+                <div style={{ fontSize: 11, color: '#666' }}>
+                  <InfoCircleOutlined style={{ marginRight: 4 }} />
+                  直接在图表上拖拽可选择时间范围
+                </div>
                 <Button 
                   size="small" 
                   type="text" 
-                  icon={<PlusOutlined />} 
-                  onClick={() => setShowHistogram(true)}
-                >
-                  显示直方图
-                </Button>
-              )}
-              <Button.Group>
-                <Tooltip title="表格视图">
-                  <Button 
-                    type={viewMode === 'table' ? 'primary' : 'default'} 
-                    icon={<CompressOutlined />} 
-                    onClick={() => setViewMode('table')}
-                  />
-                </Tooltip>
-                <Tooltip title="JSON视图">
-                  <Button 
-                    type={viewMode === 'json' ? 'primary' : 'default'} 
-                    icon={<ExpandOutlined />} 
-                    onClick={() => setViewMode('json')}
-                  />
-                </Tooltip>
-              </Button.Group>
-            </Space>
-          </div>
-          
-          {viewMode === 'table' ? (
-            <div className="table-container-with-animation">
-              <Table 
-                dataSource={mockData} 
-                columns={getTableColumns()} 
-                pagination={{ pageSize: 10 }}
-                size="middle"
-                expandable={{
-                  expandedRowRender: record => (
-                    <div style={{ padding: 16 }}>
-                      <Tabs defaultActiveKey="json">
-                        <TabPane tab="JSON" key="json">
-                          <pre style={{ background: '#f6f8fa', padding: 16, borderRadius: 4 }}>
-                            {JSON.stringify(record, null, 2)}
-                          </pre>
-                        </TabPane>
-                        <TabPane tab="表格" key="table">
-                          <Table 
-                            dataSource={Object.entries(record).filter(([key]) => key !== 'key').map(([key, value]) => ({ key, field: key, value }))} 
-                            columns={[
-                              { title: '字段', dataIndex: 'field', key: 'field' },
-                              { title: '值', dataIndex: 'value', key: 'value' }
-                            ]} 
-                            pagination={false}
-                            size="small"
-                          />
-                        </TabPane>
-                      </Tabs>
-                    </div>
-                  )
-                }}
-                rowKey="key"
-                className="data-table-with-animation"
+                  icon={<MinusOutlined />} 
+                  onClick={() => setShowHistogram(false)}
+                  style={{ padding: '0 4px' }}
+                />
+              </div>
+              <ReactECharts 
+                option={getHistogramOption()} 
+                style={{ height: 150 }} 
+                onEvents={onChartEvents}
               />
             </div>
-          ) : (
-            <div style={{ overflow: 'auto', height: 'calc(100vh - 280px)' }}>
-              {mockData.map(record => (
-                <Card 
-                  key={record.key} 
-                  style={{ margin: '8px 16px', borderLeft: '4px solid #1890ff' }} 
-                  size="small"
-                >
-                  <div style={{ marginBottom: 8 }}>
-                    <Tag color="blue">{record.timestamp}</Tag>
-                    <Divider type="vertical" />
-                    <Tag color={record.status === 200 ? 'green' : (record.status === 404 ? 'orange' : 'red')}>
-                      {record.status}
-                    </Tag>
-                    <Divider type="vertical" />
-                    <span>{record.host}</span>
-                  </div>
-                  <pre style={{ background: '#f6f8fa', padding: 16, borderRadius: 4, maxHeight: 200, overflow: 'auto' }}>
-                    {JSON.stringify(record, null, 2)}
-                  </pre>
-                </Card>
-              ))}
+          </Content>
+          
+          {/* 右侧下方：数据表格 */}
+          <Content style={{ background: '#fff', padding: '0 0 24px 0', position: 'relative', flex: 1 }}>
+            <div style={{ padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0' }}>
+              <div>找到 {3242423} 条记录</div>
+              <Space>
+                {!showHistogram && (
+                  <Button 
+                    size="small" 
+                    type="text" 
+                    icon={<PlusOutlined />} 
+                    onClick={() => setShowHistogram(true)}
+                  >
+                    显示直方图
+                  </Button>
+                )}
+                <Space.Compact>
+                  <Tooltip title="表格视图">
+                    <Button 
+                      type={viewMode === 'table' ? 'primary' : 'default'} 
+                      icon={<CompressOutlined />} 
+                      onClick={() => setViewMode('table')}
+                    />
+                  </Tooltip>
+                  <Tooltip title="JSON视图">
+                    <Button 
+                      type={viewMode === 'json' ? 'primary' : 'default'} 
+                      icon={<ExpandOutlined />} 
+                      onClick={() => setViewMode('json')}
+                    />
+                  </Tooltip>
+                </Space.Compact>
+              </Space>
             </div>
-          )}
-        </Content>
+            
+            {viewMode === 'table' ? (
+              <div className="table-container-with-animation" style={{ 
+                height: `calc(100vh - ${showHistogram ? 315 : 165}px)`, 
+                overflowY: 'auto' 
+              }} onScroll={handleScroll} ref={tableContainerRef}>
+                <Table 
+                  dataSource={tableData} 
+                  columns={getTableColumns()} 
+                  pagination={false}
+                  size="small"
+                  expandable={{
+                    expandedRowRender: record => (
+                      <div style={{ padding: 16 }}>
+                        <Tabs defaultActiveKey="json">
+                          <TabPane tab="JSON" key="json">
+                            <pre style={{ background: '#f6f8fa', padding: 16, borderRadius: 4 }}>
+                              {JSON.stringify(record, null, 2)}
+                            </pre>
+                          </TabPane>
+                          <TabPane tab="表格" key="table">
+                            <Table 
+                              dataSource={Object.entries(record).filter(([key]) => key !== 'key').map(([key, value]) => ({ key, field: key, value }))} 
+                              columns={[
+                                { title: '字段', dataIndex: 'field', key: 'field' },
+                                { title: '值', dataIndex: 'value', key: 'value' }
+                              ]} 
+                              pagination={false}
+                              size="small"
+                            />
+                          </TabPane>
+                        </Tabs>
+                      </div>
+                    )
+                  }}
+                  rowKey="key"
+                  className="data-table-with-animation"
+                  // scroll={{ y: `calc(100vh - ${showHistogram ? 315 : 220}px)` }} // 动态调整滚动区域
+                />
+                {loading && (
+                  <div style={{ textAlign: 'center', padding: 16 }}>
+                    <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} />
+                  </div>
+                )}
+                {!hasMore && tableData.length > 0 && (
+                  <div style={{ textAlign: 'center', padding: 16, color: '#999' }}>
+                    已加载全部数据
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div 
+                style={{ 
+                  overflowY: 'auto', 
+                  height: `calc(100vh - ${showHistogram ? 365 : 215}px)`,
+                  padding: '0 16px' 
+                }}
+                onScroll={handleScroll}
+                ref={tableContainerRef}
+              >
+                {tableData.map(record => (
+                  <Card 
+                    key={record.key} 
+                    style={{ margin: '8px 0', borderLeft: '4px solid #1890ff' }} 
+                    size="small"
+                  >
+                    <div style={{ marginBottom: 8 }}>
+                      <Tag color="blue">{record.timestamp}</Tag>
+                      <Divider type="vertical" />
+                      <Tag color={record.status === 200 ? 'green' : (record.status === 404 ? 'orange' : 'red')}>
+                        {record.status}
+                      </Tag>
+                      <Divider type="vertical" />
+                      <span>{record.host}</span>
+                    </div>
+                    <pre style={{ background: '#f6f8fa', padding: 16, borderRadius: 4, maxHeight: 200, overflow: 'auto' }}>
+                      {JSON.stringify(record, null, 2)}
+                    </pre>
+                  </Card>
+                ))}
+                {loading && (
+                  <div style={{ textAlign: 'center', padding: 16 }}>
+                    <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} />
+                  </div>
+                )}
+                {!hasMore && tableData.length > 0 && (
+                  <div style={{ textAlign: 'center', padding: 16, color: '#999' }}>
+                    已加载全部数据
+                  </div>
+                )}
+              </div>
+            )}
+          </Content>
+        </Layout>
       </Layout>
       
       <Outlet />
     </Layout>
+    
+    {/* 添加过滤器对话框 */}
+    <Modal
+      title="添加过滤器"
+      open={showFilterModal}
+      onCancel={() => setShowFilterModal(false)}
+      onOk={() => filterForm.submit()}
+      okText="添加"
+      cancelText="取消"
+      destroyOnClose
+    >
+      <Form 
+        form={filterForm} 
+        layout="vertical" 
+        onFinish={addFilter}
+        initialValues={{ operator: 'is' }}
+      >
+        <Form.Item 
+          name="field" 
+          label="字段" 
+          rules={[{ required: true, message: '请选择字段' }]}
+        >
+          <Select 
+            placeholder="选择字段" 
+            onChange={handleFilterFieldChange}
+            showSearch
+            optionFilterProp="children"
+          >
+            {availableFields.map(field => (
+              <Option key={field.name} value={field.name}>
+                <Space>
+                  <Tag color={getFieldTypeColor(field.type)} style={{ marginRight: 0 }}>
+                    {field.type.substr(0, 1).toUpperCase()}
+                  </Tag>
+                  {field.name}
+                </Space>
+              </Option>
+            ))}
+          </Select>
+        </Form.Item>
+        
+        <Form.Item 
+          name="operator" 
+          label="操作符" 
+          rules={[{ required: true, message: '请选择操作符' }]}
+        >
+          <Select 
+            placeholder="选择操作符"
+            onChange={(value) => setSelectedFilterOperator(value as FilterOperator)}
+          >
+            {selectedFilterField && 
+              getOperatorsByFieldType(getFieldType(selectedFilterField)).map(op => (
+                <Option key={op.value} value={op.value}>{op.label}</Option>
+              ))
+            }
+            {!selectedFilterField && 
+              getOperatorsByFieldType().map(op => (
+                <Option key={op.value} value={op.value}>{op.label}</Option>
+              ))
+            }
+          </Select>
+        </Form.Item>
+        
+        {/* 根据不同的操作符类型显示不同的输入控件 */}
+        {selectedFilterOperator !== 'exists' && selectedFilterOperator !== 'does_not_exist' && (
+          <Form.Item 
+            name="value" 
+            label="值" 
+            rules={[
+              { 
+                required: ['is', 'is_not', 'contains', 'does_not_contain', 'greater_than', 'less_than'].includes(selectedFilterOperator), 
+                message: '请输入值' 
+              }
+            ]}
+          >
+            {selectedFilterOperator === 'is_between' ? (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Input placeholder="起始值" style={{ flex: 1 }} />
+                <Input placeholder="结束值" style={{ flex: 1 }} />
+              </div>
+            ) : selectedFilterOperator === 'is_one_of' || selectedFilterOperator === 'is_not_one_of' ? (
+              <Select
+                mode="tags"
+                placeholder="输入多个值，按回车键分隔"
+                style={{ width: '100%' }}
+                tokenSeparators={[',']}
+              />
+            ) : (
+              <Input placeholder="输入值" />
+            )}
+          </Form.Item>
+        )}
+      </Form>
+    </Modal>
+    </>
   )
 }
 
