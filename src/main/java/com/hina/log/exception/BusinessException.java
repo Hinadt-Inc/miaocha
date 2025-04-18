@@ -1,28 +1,31 @@
 package com.hina.log.exception;
 
+import lombok.Getter;
+
 /**
- * 业务异常类
+ * 业务异常
  */
+@Getter
 public class BusinessException extends RuntimeException {
     private final ErrorCode errorCode;
-    private final String customMessage;
+    private final String message;
 
     public BusinessException(ErrorCode errorCode) {
         super(errorCode.getMessage());
         this.errorCode = errorCode;
-        this.customMessage = null;
+        this.message = errorCode.getMessage();
     }
 
-    public BusinessException(ErrorCode errorCode, String customMessage) {
-        super(customMessage);
+    public BusinessException(ErrorCode errorCode, String message) {
+        super(message);
         this.errorCode = errorCode;
-        this.customMessage = customMessage;
+        this.message = message;
     }
 
     public BusinessException(ErrorCode errorCode, String customMessage, Throwable cause) {
         super(customMessage, cause);
         this.errorCode = errorCode;
-        this.customMessage = customMessage;
+        this.message = customMessage;
     }
 
     public ErrorCode getErrorCode() {
@@ -30,6 +33,6 @@ public class BusinessException extends RuntimeException {
     }
 
     public String getCustomMessage() {
-        return customMessage;
+        return message;
     }
 }

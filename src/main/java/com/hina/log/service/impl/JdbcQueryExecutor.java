@@ -8,11 +8,7 @@ import com.hina.log.exception.ErrorCode;
 import org.springframework.stereotype.Component;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
+import java.util.*;
 
 @Component
 public class JdbcQueryExecutor {
@@ -40,7 +36,7 @@ public class JdbcQueryExecutor {
 
     /**
      * 执行原始SQL查询并返回结果
-     * 
+     *
      * @param conn 数据库连接
      * @param sql  SQL语句
      * @return 查询结果，包含列名和行数据
@@ -52,7 +48,7 @@ public class JdbcQueryExecutor {
         List<String> columns = new ArrayList<>();
 
         try (Statement stmt = conn.createStatement();
-                ResultSet rs = stmt.executeQuery(sql)) {
+             ResultSet rs = stmt.executeQuery(sql)) {
 
             ResultSetMetaData metaData = rs.getMetaData();
             int columnCount = metaData.getColumnCount();

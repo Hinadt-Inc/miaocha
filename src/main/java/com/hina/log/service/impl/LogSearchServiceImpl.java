@@ -11,10 +11,10 @@ import com.hina.log.mapper.DatasourceMapper;
 import com.hina.log.mapper.UserMapper;
 import com.hina.log.service.LogSearchService;
 import com.hina.log.service.builder.LogSqlBuilder;
-import com.hina.log.service.processor.ResultProcessor;
-import com.hina.log.service.processor.TimeRangeProcessor;
 import com.hina.log.service.database.DatabaseMetadataService;
 import com.hina.log.service.database.DatabaseMetadataServiceFactory;
+import com.hina.log.service.processor.ResultProcessor;
+import com.hina.log.service.processor.TimeRangeProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -134,7 +134,7 @@ public class LogSearchServiceImpl implements LogSearchService {
      * 同步执行日志搜索查询 (用于测试)
      */
     private void executeLogSearchSync(Datasource datasource, String distributionSql, String detailSql,
-            LogSearchResultDTO result) throws SQLException {
+                                      LogSearchResultDTO result) throws SQLException {
         try (Connection conn = jdbcQueryExecutor.getConnection(datasource)) {
             // 执行日志分布查询
             logger.debug("执行日志分布查询SQL: {}", distributionSql);
@@ -150,7 +150,7 @@ public class LogSearchServiceImpl implements LogSearchService {
      * 异步执行日志搜索查询 (用于生产)
      */
     private void executeLogSearchAsync(Datasource datasource, String distributionSql, String detailSql,
-            LogSearchResultDTO result) {
+                                       LogSearchResultDTO result) {
         // 创建两个并行任务
         CompletableFuture<Void> distributionFuture = createQueryTask(
                 () -> executeDistributionQuery(datasource, distributionSql, result),
@@ -171,7 +171,7 @@ public class LogSearchServiceImpl implements LogSearchService {
 
     /**
      * 创建异步查询任务
-     * 
+     *
      * @param supplier 查询任务
      * @param taskName 任务名称（用于日志）
      * @return CompletableFuture

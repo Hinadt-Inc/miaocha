@@ -6,6 +6,7 @@ import com.hina.log.dto.SqlQueryResultDTO;
 import com.hina.log.entity.Datasource;
 import com.hina.log.entity.SqlQueryHistory;
 import com.hina.log.entity.User;
+import com.hina.log.enums.UserRole;
 import com.hina.log.exception.BusinessException;
 import com.hina.log.exception.ErrorCode;
 import com.hina.log.mapper.DatasourceMapper;
@@ -299,7 +300,7 @@ public class SqlQueryServiceImpl implements SqlQueryService {
      * 同步获取schema信息
      */
     private SchemaInfoDTO getSchemaInfoSync(User user, Long userId, Long datasourceId,
-            Datasource datasource, SchemaInfoDTO schemaInfo) {
+                                            Datasource datasource, SchemaInfoDTO schemaInfo) {
         try {
             // 获取JDBC连接
             Connection conn = jdbcQueryExecutor.getConnection(datasource);
@@ -312,7 +313,7 @@ public class SqlQueryServiceImpl implements SqlQueryService {
             List<String> permittedTables;
 
             // 如果是管理员，则可以查看所有表
-            if (user.getIsAdmin()) {
+            if (user.getRole().equals(UserRole.ADMIN.name()) || user.getRole().equals(UserRole.SUPER_ADMIN.name())) {
                 permittedTables = metadataService.getAllTables(conn);
             } else {
                 // 获取用户有权限的表

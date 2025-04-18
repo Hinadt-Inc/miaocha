@@ -32,5 +32,5 @@ echo "===== 运行容器示例命令 ====="
 echo "docker rm log-system"
 echo "docker run -d -p 8080:8080 --name log-system $IMAGE_NAME:$VERSION"
 
-docker rm log-system
+docker rm log-system --force
 docker run -d -p 8080:8080 --name log-system $IMAGE_NAME:$VERSION

@@ -27,19 +27,58 @@ public class ApiResponse<T> {
         this.data = data;
     }
 
+    /**
+     * 成功结果
+     *
+     * @param data 数据
+     * @param <T>  数据类型
+     * @return 结果
+     */
     public static <T> ApiResponse<T> success(T data) {
         return new ApiResponse<>(ErrorCode.SUCCESS.getCode(), ErrorCode.SUCCESS.getMessage(), data);
     }
 
+    /**
+     * 成功结果（无数据）
+     *
+     * @return 结果
+     */
     public static <T> ApiResponse<T> success() {
-        return new ApiResponse<>(ErrorCode.SUCCESS.getCode(), ErrorCode.SUCCESS.getMessage(), null);
+        return success(null);
     }
 
+    /**
+     * 失败结果
+     *
+     * @param code    错误码
+     * @param message 错误信息
+     * @param <T>     数据类型
+     * @return 结果
+     */
+    public static <T> ApiResponse<T> error(String code, String message) {
+        return new ApiResponse<>(code, message, null);
+    }
+
+    /**
+     * 失败结果
+     *
+     * @param errorCode 错误码
+     * @param <T>       数据类型
+     * @return 结果
+     */
     public static <T> ApiResponse<T> error(ErrorCode errorCode) {
-        return new ApiResponse<>(errorCode.getCode(), errorCode.getMessage(), null);
+        return error(errorCode.getCode(), errorCode.getMessage());
     }
 
-    public static <T> ApiResponse<T> error(ErrorCode errorCode, String message) {
-        return new ApiResponse<>(errorCode.getCode(), message, null);
+    /**
+     * 失败结果
+     *
+     * @param errorCode   错误码
+     * @param errorDetail 错误详情
+     * @param <T>         数据类型
+     * @return 结果
+     */
+    public static <T> ApiResponse<T> error(ErrorCode errorCode, String errorDetail) {
+        return error(errorCode.getCode(), errorDetail);
     }
 }

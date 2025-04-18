@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.hina.log.service.DatasourceServiceTest
--------------------------------------------------------------------------------
-Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.184 s -- in com.hina.log.service.DatasourceServiceTest

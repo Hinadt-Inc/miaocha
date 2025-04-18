@@ -5,6 +5,7 @@ import com.hina.log.dto.SqlQueryResultDTO;
 import com.hina.log.entity.Datasource;
 import com.hina.log.entity.SqlQueryHistory;
 import com.hina.log.entity.User;
+import com.hina.log.enums.UserRole;
 import com.hina.log.exception.BusinessException;
 import com.hina.log.exception.ErrorCode;
 import com.hina.log.mapper.DatasourceMapper;
@@ -33,6 +34,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -95,7 +97,11 @@ public class SqlQueryServiceTest {
         testUser = new User();
         testUser.setId(1L);
         testUser.setUid("test_user");
-        testUser.setIsAdmin(false);
+        testUser.setRole(UserRole.SUPER_ADMIN.name());
+        testUser.setEmail("admin@hinadt.com");
+        testUser.setStatus(1);
+        testUser.setCreateTime(LocalDateTime.now());
+        testUser.setUpdateTime(LocalDateTime.now());
 
         // 创建测试数据源
         testDatasource = new Datasource();

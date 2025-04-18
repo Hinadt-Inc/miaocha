@@ -65,9 +65,7 @@ public class TimeRangeProcessor {
                 return "second";
             } else if (seconds <= 3600) { // 1小时内
                 return "minute";
-            } else if (seconds <= 86400) { // 1天内
-                return "minute";
-            } else if (seconds <= 604800) { // 1周内
+            } else if (seconds <= 86400 * 2 ) { // 2天内
                 return "hour";
             } else {
                 return "day";

@@ -13,7 +13,9 @@ public class User {
     private String nickname;
     private String email;
     private String uid;
-    private Boolean isAdmin;
+    private String password;
+    private String role;
+    private Integer status;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }
