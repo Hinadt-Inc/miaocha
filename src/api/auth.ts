@@ -7,11 +7,13 @@ interface LoginParams {
 }
 
 interface LoginResponse {
-  name: string
-  tokens: {
-    accessToken: string
+    expiresAt: number
+    nickname: string
+    refreshExpiresAt: number
     refreshToken: string
-  }
+    role: string
+    token: string
+    userId: number
 }
 
 interface RefreshTokenParams {

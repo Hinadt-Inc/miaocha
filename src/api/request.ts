@@ -37,7 +37,7 @@ service.interceptors.response.use(
   (response: AxiosResponse) => {
     const res = response.data
     // 根据后端接口返回结构调整
-    if (res.code !== 200) {
+    if (res.code !== '0000') {
       // 处理业务错误
       return Promise.reject(new Error(res.message || 'Error'))
     }

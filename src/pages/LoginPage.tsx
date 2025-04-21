@@ -26,10 +26,14 @@ const LoginPage = () => {
         email: values.username,
         password: values.password,
       });
+      console.log('Login response:', response);
       
       dispatch(login({
-        name: response.name,
-        tokens: response.tokens
+        name: response.nickname,
+        tokens: {
+          accessToken: response.token,
+          refreshToken: response.refreshToken,
+        },
       }));
       
       message.success('登录成功！');
