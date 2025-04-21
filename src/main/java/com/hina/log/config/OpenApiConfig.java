@@ -21,6 +21,7 @@ public class OpenApiConfig {
     @Bean
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
+                .openapi("3.1.0")
                 .info(new Info()
                         .title("海纳日志系统API")
                         .version("1.0.0")
