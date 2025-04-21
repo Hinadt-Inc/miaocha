@@ -60,7 +60,7 @@ const DataSourceManagementPage = () => {
   const setTestLoading = (loading: boolean) => {
     setLoading(prev => ({ ...prev, test: loading }));
   };
-  const actionRef = useRef<ActionType>();
+  const actionRef = useRef<ActionType>(null);
   
   // 获取数据源列表
   const fetchDataSources: (
