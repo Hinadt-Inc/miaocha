@@ -1,9 +1,10 @@
 package com.hina.log.service.impl;
 
-import com.hina.log.config.LogstashProperties;
 import com.hina.log.converter.LogstashProcessConverter;
+import com.hina.log.converter.MachineConverter;
 import com.hina.log.dto.LogstashProcessCreateDTO;
 import com.hina.log.dto.LogstashProcessDTO;
+import com.hina.log.dto.MachineDTO;
 import com.hina.log.dto.TaskDetailDTO;
 import com.hina.log.entity.LogstashMachine;
 import com.hina.log.entity.LogstashProcess;
@@ -28,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
@@ -43,6 +45,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
     private final DatasourceMapper datasourceMapper;
     private final com.hina.log.service.logstash.LogstashProcessService logstashDeployService;
     private final LogstashProcessConverter logstashProcessConverter;
+    private final MachineConverter machineConverter;
 
     public LogstashProcessServiceImpl(
             LogstashProcessMapper logstashProcessMapper,
@@ -50,13 +53,14 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             MachineMapper machineMapper,
             DatasourceMapper datasourceMapper,
             @Qualifier("logstashDeployServiceImpl") com.hina.log.service.logstash.LogstashProcessService logstashDeployService,
-            LogstashProcessConverter logstashProcessConverter) {
+            LogstashProcessConverter logstashProcessConverter, MachineConverter machineConverter) {
         this.logstashProcessMapper = logstashProcessMapper;
         this.logstashMachineMapper = logstashMachineMapper;
         this.machineMapper = machineMapper;
         this.datasourceMapper = datasourceMapper;
         this.logstashDeployService = logstashDeployService;
         this.logstashProcessConverter = logstashProcessConverter;
+        this.machineConverter = machineConverter;
     }
 
     @Override
@@ -208,11 +212,36 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "运行中的进程不能删除，请先停止进程");
         }
 
-        // 删除进程与机器的关联关系
-        logstashMachineMapper.deleteByLogstashProcessId(id);
+        // 删除与进程相关的所有任务和步骤
+        // 1. 获取最近的任务，并删除相关步骤信息
+        Optional<TaskDetailDTO> latestTask = logstashDeployService.getLatestProcessTaskDetail(id);
+        if (latestTask.isPresent()) {
+            logger.info("删除进程关联的任务: {}", latestTask.get().getTaskId());
+            deleteProcessTask(latestTask.get().getTaskId());
+        }
 
-        // 删除进程记录
+        // 2. 删除与进程相关的所有机器关联
+        logstashMachineMapper.deleteByLogstashProcessId(id);
+        logger.info("已删除进程与机器的关联关系: {}", id);
+
+        // 3. 删除进程记录
         logstashProcessMapper.deleteById(id);
+        logger.info("已删除Logstash进程: {}", id);
+    }
+
+    /**
+     * 删除进程关联的任务及步骤
+     */
+    private void deleteProcessTask(String taskId) {
+        try {
+            // 先删除任务步骤
+            logstashDeployService.deleteTaskSteps(taskId);
+            // 再删除任务
+            logstashDeployService.deleteTask(taskId);
+        } catch (Exception e) {
+            logger.error("删除任务失败: {}", taskId, e);
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "删除任务数据失败: " + e.getMessage());
+        }
     }
 
     @Override
@@ -269,7 +298,19 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         }
 
         // 异步部署并启动Logstash
-        logstashDeployService.deployAndStartAsync(process, machines);
+        CompletableFuture<Boolean> future = logstashDeployService.deployAndStartAsync(process, machines);
+
+        // 添加完成处理器，确保状态被正确更新
+        future.thenAccept(success -> {
+            if (!success) {
+                // 如果部署失败，确保更新状态为失败状态
+                logstashProcessMapper.updateState(id, LogstashProcessState.FAILED.name());
+                logger.error("Logstash进程 [{}] 部署和启动失败", id);
+            } else {
+                logger.info("Logstash进程 [{}] 部署和启动成功", id);
+                // 成功状态已在验证进程步骤中更新为RUNNING
+            }
+        });
 
         return getLogstashProcess(id);
     }
@@ -308,7 +349,10 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         logstashProcessMapper.updateState(id, LogstashProcessState.STOPPING.name());
 
         // 异步停止Logstash
-        logstashDeployService.stopAsync(machines).thenAccept(success -> {
+        CompletableFuture<Boolean> future = logstashDeployService.stopAsync(machines);
+
+        // 使用thenAccept处理结果
+        future.thenAccept(success -> {
             // 清除所有相关的进程PID
             List<LogstashMachine> logstashMachines = logstashMachineMapper.selectByLogstashProcessId(id);
             for (LogstashMachine logstashMachine : logstashMachines) {
@@ -369,6 +413,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
      * @return 重试操作结果
      */
     @Override
+    @Transactional
     public boolean retryTask(Long id) {
         // 参数校验
         if (id == null) {
@@ -381,7 +426,37 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             throw new BusinessException(ErrorCode.LOGSTASH_PROCESS_NOT_FOUND);
         }
 
-        return logstashDeployService.resetFailedProcessState(id);
+        // 检查进程状态，只有失败状态的进程可以重试
+        if (!LogstashProcessState.FAILED.name().equals(process.getState())) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "只有失败状态的进程可以重试");
+        }
+
+        // 重置进程状态为NOT_STARTED
+        logstashProcessMapper.updateState(id, LogstashProcessState.NOT_STARTED.name());
+        logger.info("重置进程 [{}] 状态为未启动，准备重新尝试启动", id);
+
+        // 获取进程关联的所有机器
+        List<Machine> machines = getMachinesForProcess(id);
+        if (machines.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程未关联任何机器");
+        }
+
+        // 重新启动任务（与startLogstashProcess相同的逻辑，但不进行状态检查）
+        CompletableFuture<Boolean> future = logstashDeployService.deployAndStartAsync(process, machines);
+
+        // 添加完成处理器，确保状态被正确更新
+        future.thenAccept(success -> {
+            if (!success) {
+                // 如果部署失败，确保更新状态为失败状态
+                logstashProcessMapper.updateState(id, LogstashProcessState.FAILED.name());
+                logger.error("Logstash进程 [{}] 重试部署和启动失败", id);
+            } else {
+                logger.info("Logstash进程 [{}] 重试部署和启动成功", id);
+                // 成功状态已在验证进程步骤中更新为RUNNING
+            }
+        });
+
+        return true;
     }
 
     /**
@@ -456,12 +531,12 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         }
 
         // 获取机器列表
-        List<Machine> machines = new ArrayList<>();
+        List<MachineDTO> machines = new ArrayList<>();
         List<LogstashMachine> relations = logstashMachineMapper.selectByLogstashProcessId(dto.getId());
         for (LogstashMachine relation : relations) {
             Machine machine = machineMapper.selectById(relation.getMachineId());
             if (machine != null) {
-                machines.add(machine);
+                machines.add(machineConverter.toDto(machine));
             }
         }
         dto.setMachines(machines);

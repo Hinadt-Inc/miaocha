@@ -39,18 +39,24 @@ public interface LogstashProcessService {
     String getProcessTaskStatus(Long processId);
 
     /**
-     * 重置失败的Logstash进程状态，以便重试
-     *
-     * @param processId Logstash进程ID
-     * @return 是否成功重置
-     */
-    boolean resetFailedProcessState(Long processId);
-
-    /**
      * 查询Logstash进程任务详情
      *
      * @param processId Logstash进程ID
      * @return 任务详情
      */
     Optional<TaskDetailDTO> getLatestProcessTaskDetail(Long processId);
+
+    /**
+     * 删除任务记录
+     *
+     * @param taskId 任务ID
+     */
+    void deleteTask(String taskId);
+
+    /**
+     * 删除任务所有步骤记录
+     *
+     * @param taskId 任务ID
+     */
+    void deleteTaskSteps(String taskId);
 }

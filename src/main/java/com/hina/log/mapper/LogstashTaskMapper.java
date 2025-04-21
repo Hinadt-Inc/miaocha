@@ -61,4 +61,10 @@ public interface LogstashTaskMapper {
      */
     @Select("SELECT * FROM logstash_task WHERE process_id = #{processId} ORDER BY create_time DESC LIMIT 1")
     Optional<LogstashTask> findLatestByProcessId(Long processId);
+
+    /**
+     * 删除任务
+     */
+    @Delete("DELETE FROM logstash_task WHERE id = #{id}")
+    void deleteById(String id);
 }

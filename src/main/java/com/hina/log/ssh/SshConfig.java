@@ -19,13 +19,13 @@ public class SshConfig {
      * 连接超时时间（秒）
      */
     @Builder.Default
-    private int connectTimeout = 10;
+    private int connectTimeout = 60;
 
     /**
      * 命令执行超时时间（分钟）
      */
     @Builder.Default
-    private int commandTimeout = 20;
+    private int commandTimeout = 10;
 
     /**
      * 文件传输超时时间（分钟）

@@ -187,8 +187,6 @@ public class TaskServiceImpl implements TaskService {
                     taskMapper.updateErrorMessage(taskId, e.getMessage());
                 }
                 updateTaskStatus(taskId, TaskStatus.FAILED);
-
-                logger.error("执行任务失败: {}", taskId, e);
             } finally {
                 if (callback != null) {
                     callback.run();
@@ -313,6 +311,72 @@ public class TaskServiceImpl implements TaskService {
             return String.format("%d分%d秒", minutes, seconds);
         } else {
             return String.format("%d秒", seconds);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void deleteTask(String taskId) {
+        try {
+            // 先删除步骤再删除任务
+            taskMapper.deleteById(taskId);
+            logger.info("Deleted task: {}", taskId);
+        } catch (Exception e) {
+            logger.error("Failed to delete task: {}", taskId, e);
+            throw new RuntimeException("Failed to delete task: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void deleteTaskSteps(String taskId) {
+        try {
+            stepMapper.deleteByTaskId(taskId);
+            logger.info("Deleted all steps for task: {}", taskId);
+        } catch (Exception e) {
+            logger.error("Failed to delete task steps: {}", taskId, e);
+            throw new RuntimeException("Failed to delete task steps: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 重置进程关联的任务状态
+     * 将进程ID关联的所有任务及步骤状态设置为未执行状态，便于重试
+     *
+     * @param processId 进程ID
+     * @return 是否成功重置
+     * @deprecated 任务应当被视为历史记录，不应重置状态，新的操作应创建新的任务记录
+     */
+    @Override
+    @Transactional
+    @Deprecated
+    public boolean resetTasksForBusiness(Long processId) {
+        try {
+            // 获取该进程最新的任务
+            List<LogstashTask> tasks = taskMapper.findByProcessId(processId);
+            if (tasks.isEmpty()) {
+                logger.info("No tasks found for process ID: {}", processId);
+                return true;
+            }
+
+            // 获取最新任务ID
+            String latestTaskId = tasks.get(0).getId();
+
+            // 重置任务状态为PENDING
+            taskMapper.updateStatus(latestTaskId, TaskStatus.PENDING.name());
+
+            // 重置任务步骤状态为PENDING
+            stepMapper.resetStepStatuses(latestTaskId, StepStatus.PENDING.name());
+
+            // 清除任务和步骤的错误信息
+            taskMapper.updateErrorMessage(latestTaskId, null);
+            stepMapper.clearStepErrorMessages(latestTaskId);
+
+            logger.info("Successfully reset task status for process ID: {}, task ID: {}", processId, latestTaskId);
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to reset tasks for process ID: {}", processId, e);
+            return false;
         }
     }
 }

@@ -32,12 +32,6 @@ public class MachineDTO {
     @NotBlank(message = "机器用户名不能为空")
     private String username;
 
-    @Schema(description = "机器密码", example = "password123")
-    private String password;
-
-    @Schema(description = "机器SSH密钥")
-    private String sshKey;
-
     @Schema(description = "创建时间")
     private LocalDateTime createTime;
 

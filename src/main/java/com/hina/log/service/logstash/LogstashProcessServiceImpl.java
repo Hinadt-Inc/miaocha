@@ -2,9 +2,9 @@ package com.hina.log.service.logstash;
 
 import com.hina.log.config.LogstashProperties;
 import com.hina.log.dto.TaskDetailDTO;
+import com.hina.log.entity.LogstashMachine;
 import com.hina.log.entity.LogstashProcess;
 import com.hina.log.entity.Machine;
-import com.hina.log.entity.LogstashMachine;
 import com.hina.log.enums.LogstashProcessState;
 import com.hina.log.enums.LogstashProcessStep;
 import com.hina.log.enums.StepStatus;
@@ -13,20 +13,21 @@ import com.hina.log.exception.LogstashException;
 import com.hina.log.exception.SshDependencyException;
 import com.hina.log.exception.SshException;
 import com.hina.log.exception.SshOperationException;
-import com.hina.log.mapper.LogstashProcessMapper;
 import com.hina.log.mapper.LogstashMachineMapper;
+import com.hina.log.mapper.LogstashProcessMapper;
 import com.hina.log.service.task.TaskService;
 import com.hina.log.ssh.SshClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-import java.util.Optional;
 
 /**
  * Logstash进程服务实现类 - 负责Logstash进程的部署、启动和停止
@@ -89,10 +90,14 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         taskService.executeAsync(taskId, () -> {
             try {
                 executeStartTask(taskId, process, machines);
+                // 任务执行成功，更新为RUNNING状态
+                // 注意：executeStartTask已经在最后一步中更新了状态为RUNNING，所以这里不需要重复更新
                 resultFuture.complete(true);
             } catch (Exception e) {
-                logger.error("执行Logstash启动任务失败", e);
+                // 更新进程状态为失败
+                logstashProcessMapper.updateState(process.getId(), LogstashProcessState.FAILED.name());
                 resultFuture.complete(false);
+                throw e;
             }
         }, null);
 
@@ -127,7 +132,6 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                 executeStopTask(taskId, machines);
                 resultFuture.complete(true);
             } catch (Exception e) {
-                logger.error("执行Logstash停止任务失败", e);
                 resultFuture.complete(false);
             }
         }, null);
@@ -148,10 +152,27 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
     }
 
     @Override
-    public boolean resetFailedProcessState(Long processId) {
-        // 更新进程状态为未启动
-        logstashProcessMapper.updateState(processId, LogstashProcessState.NOT_STARTED.name());
-        return true;
+    @Transactional
+    public void deleteTask(String taskId) {
+        if (taskId == null || taskId.isEmpty()) {
+            return;
+        }
+
+        // 删除任务记录
+        taskService.deleteTask(taskId);
+        logger.info("已删除任务记录: {}", taskId);
+    }
+
+    @Override
+    @Transactional
+    public void deleteTaskSteps(String taskId) {
+        if (taskId == null || taskId.isEmpty()) {
+            return;
+        }
+
+        // 删除任务步骤记录
+        taskService.deleteTaskSteps(taskId);
+        logger.info("已删除任务步骤记录: {}", taskId);
     }
 
     /**
@@ -159,16 +180,14 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
      */
     private void executeStartTask(String taskId, LogstashProcess process, List<Machine> machines) {
         // 遍历所有机器，执行部署和启动任务
+
         for (Machine machine : machines) {
             try {
                 // 1. 创建远程目录
                 executeStep(taskId, machine.getId(), LogstashProcessStep.CREATE_REMOTE_DIR, () -> {
                     try {
-                        String result = sshClient.executeCommand(machine,
+                        sshClient.executeCommand(machine,
                                 String.format("mkdir -p %s", logstashProperties.getDeployDir()));
-                        if (result == null || result.isEmpty()) {
-                            throw new LogstashException("创建远程目录失败");
-                        }
                         return true;
                     } catch (SshDependencyException e) {
                         throw new SshOperationException("系统缺少SSH依赖: " + e.getMessage() +
@@ -194,13 +213,10 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                 executeStep(taskId, machine.getId(), LogstashProcessStep.EXTRACT_PACKAGE, () -> {
                     try {
                         String packageFileName = getPackageFileName(logstashProperties.getPackagePath());
-                        String command = String.format("cd %s && tar -xzf %s",
+                        String command = String.format("'cd %s && tar -xzf %s'",
                                 logstashProperties.getDeployDir(), packageFileName);
 
-                        String result = sshClient.executeCommand(machine, command);
-                        if (result == null) {
-                            throw new LogstashException("解压Logstash安装包失败");
-                        }
+                        sshClient.executeCommand(machine, command);
                         return true;
                     } catch (SshException e) {
                         throw new SshOperationException("解压Logstash安装包失败: " + e.getMessage(), e);
@@ -216,15 +232,12 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
 
                         // 使用执行命令的方式创建文件
                         String escapedContent = configContent.replace("\"", "\\\"").replace("$", "\\$");
-                        String command = String.format("mkdir -p %1$s/config && echo \"%2$s\" > %3$s",
+                        String command = String.format("'mkdir -p %1$s/config && echo \"%2$s\" > %3$s'",
                                 logstashProperties.getDeployDir(),
                                 escapedContent,
                                 configPath);
 
-                        String result = sshClient.executeCommand(machine, command);
-                        if (result == null) {
-                            throw new LogstashException("创建Logstash配置文件失败");
-                        }
+                        sshClient.executeCommand(machine, command);
                         return true;
                     } catch (SshException e) {
                         throw new SshOperationException("创建Logstash配置文件失败: " + e.getMessage(), e);
@@ -235,13 +248,11 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                 executeStep(taskId, machine.getId(), LogstashProcessStep.START_PROCESS, () -> {
                     try {
                         String command = String.format(
-                                "cd %s && bin/logstash -f config/logstash-%s.conf --config.reload.automatic > logs/logstash-%s.log 2>&1 &",
-                                logstashProperties.getDeployDir(), process.getId(), process.getId());
+                                "'cd %s && mkdir -p logs && nohup bin/logstash -f config/logstash-%s.conf --config.reload.automatic > logs/logstash-%s.log 2>&1 & echo $! > logs/logstash-%s.pid‘",
+                                logstashProperties.getDeployDir(), process.getId(), process.getId(),
+                                process.getId());
 
-                        String result = sshClient.executeCommand(machine, command);
-                        if (result == null) {
-                            throw new LogstashException("启动Logstash进程失败");
-                        }
+                        sshClient.executeCommand(machine, command);
                         return true;
                     } catch (SshException e) {
                         throw new SshOperationException("启动Logstash进程失败: " + e.getMessage(), e);
@@ -251,8 +262,9 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                 // 6. 验证进程
                 executeStep(taskId, machine.getId(), LogstashProcessStep.VERIFY_PROCESS, () -> {
                     try {
+                        // 读取 PID 文件
                         String command = String.format(
-                                "ps -ef | grep 'logstash-%s.conf' | grep -v grep | awk '{print $2}'",
+                                "'cat logs/logstash-%s.pid'",
                                 process.getId());
 
                         String pid = sshClient.executeCommand(machine, command);
@@ -260,8 +272,15 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                             throw new LogstashException("未找到运行中的Logstash进程");
                         }
 
+                        String pidValue = pid.trim();
+                        // 验证 PID 是否存在
+                        String checkCommand = String.format("'ps -p %s > /dev/null && echo \"running\"'", pidValue);
+                        String checkResult = sshClient.executeCommand(machine, checkCommand);
+                        if (!"running".equals(checkResult.trim())) {
+                            throw new LogstashException("Logstash进程未运行，PID: " + pidValue);
+                        }
+
                         // 保存进程PID到LogstashMachine表
-                        String pidValue = pid.trim().split("\\s+")[0]; // 获取第一个PID
                         logstashMachineMapper.updateProcessPid(process.getId(), machine.getId(), pidValue);
 
                         logger.info("Saved Logstash process PID {} for process {} on machine {}",
@@ -274,16 +293,23 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                         throw new SshOperationException("验证Logstash进程失败: " + e.getMessage(), e);
                     }
                 });
+
             } catch (Exception e) {
                 logger.error("在机器{}上执行Logstash任务失败", machine.getId(), e);
+                // 更新进程状态为失败
+                logstashProcessMapper.updateState(process.getId(), LogstashProcessState.FAILED.name());
+                throw e;
             }
         }
+
     }
 
     /**
      * 执行停止任务
      */
     private void executeStopTask(String taskId, List<Machine> machines) {
+        boolean allSucceeded = true;
+
         for (Machine machine : machines) {
             try {
                 // 停止进程
@@ -334,8 +360,13 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                     }
                 });
             } catch (Exception e) {
+                allSucceeded = false;
                 logger.error("在机器{}上停止Logstash进程失败", machine.getId(), e);
             }
+        }
+
+        if (!allSucceeded) {
+            logger.warn("至少有一台机器的Logstash进程停止失败");
         }
     }
 

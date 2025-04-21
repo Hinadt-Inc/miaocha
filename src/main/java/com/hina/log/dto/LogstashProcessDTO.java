@@ -41,7 +41,7 @@ public class LogstashProcessDTO {
     private String stateDescription;
 
     @Schema(description = "部署的机器列表")
-    private List<Machine> machines;
+    private List<MachineDTO> machines;
 
     @Schema(description = "创建时间")
     private LocalDateTime createTime;

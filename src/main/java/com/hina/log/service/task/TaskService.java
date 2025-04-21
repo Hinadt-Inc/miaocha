@@ -98,4 +98,29 @@ public interface TaskService {
      * @return 各机器步骤执行状态统计
      */
     Map<Long, Map<String, Integer>> getTaskMachineStepStatusStats(String taskId);
+
+    /**
+     * 重置进程关联的任务状态
+     * 将进程ID关联的所有任务及步骤状态设置为未执行状态，便于重试
+     * 
+     * @deprecated 任务应当被视为历史记录，不应重置状态，新的操作应创建新的任务记录
+     * @param processId 进程ID
+     * @return 是否成功重置
+     */
+    @Deprecated
+    boolean resetTasksForBusiness(Long processId);
+
+    /**
+     * 删除任务记录
+     *
+     * @param taskId 任务ID
+     */
+    void deleteTask(String taskId);
+
+    /**
+     * 删除任务步骤记录
+     *
+     * @param taskId 任务ID
+     */
+    void deleteTaskSteps(String taskId);
 }

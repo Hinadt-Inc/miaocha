@@ -25,6 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import io.jsonwebtoken.ExpiredJwtException;
+
 /**
  * 用户服务实现类
  */
@@ -70,32 +72,42 @@ public class UserServiceImpl implements UserService {
     public LoginResponseDTO refreshToken(RefreshTokenRequestDTO refreshTokenRequest) {
         String refreshToken = refreshTokenRequest.getRefreshToken();
 
-        // 验证刷新token并生成新的token
-        String newToken = jwtUtils.generateTokenFromRefreshToken(refreshToken);
-        if (newToken == null) {
+        try {
+            // 验证刷新token并生成新的token
+            String newToken = jwtUtils.generateTokenFromRefreshToken(refreshToken);
+            if (newToken == null) {
+                throw new BusinessException(ErrorCode.INVALID_TOKEN, "无效的刷新令牌");
+            }
+
+            // 从刷新token中获取用户ID
+            String uid = jwtUtils.getUidFromToken(refreshToken);
+            User user = getUserEntityByUid(uid);
+
+            // 同时生成新的刷新令牌
+            String newRefreshToken = jwtUtils.generateRefreshToken(uid);
+
+            // 获取过期时间
+            long expiresAt = jwtUtils.getExpirationFromToken(newToken);
+            long refreshExpiresAt = jwtUtils.getExpirationFromToken(newRefreshToken);
+
+            return LoginResponseDTO.builder()
+                    .token(newToken)
+                    .refreshToken(newRefreshToken) // 返回新的refreshToken
+                    .expiresAt(expiresAt)
+                    .refreshExpiresAt(refreshExpiresAt)
+                    .userId(user.getId())
+                    .nickname(user.getNickname())
+                    .role(user.getRole())
+                    .build();
+        } catch (ExpiredJwtException e) {
+            // 特殊处理刷新令牌过期的情况
+            log.warn("Refresh token has expired: {}", e.getMessage());
+            throw new BusinessException(ErrorCode.REFRESH_TOKEN_EXPIRED, "刷新令牌已过期，请重新登录");
+        } catch (Exception e) {
+            // 处理其他异常
+            log.error("Error during token refresh: {}", e.getMessage());
             throw new BusinessException(ErrorCode.INVALID_TOKEN, "无效的刷新令牌");
         }
-
-        // 从刷新token中获取用户ID
-        String uid = jwtUtils.getUidFromToken(refreshToken);
-        User user = getUserEntityByUid(uid);
-
-        // 同时生成新的刷新令牌
-        String newRefreshToken = jwtUtils.generateRefreshToken(uid);
-
-        // 获取过期时间
-        long expiresAt = jwtUtils.getExpirationFromToken(newToken);
-        long refreshExpiresAt = jwtUtils.getExpirationFromToken(newRefreshToken);
-
-        return LoginResponseDTO.builder()
-                .token(newToken)
-                .refreshToken(newRefreshToken) // 返回新的refreshToken
-                .expiresAt(expiresAt)
-                .refreshExpiresAt(refreshExpiresAt)
-                .userId(user.getId())
-                .nickname(user.getNickname())
-                .role(user.getRole())
-                .build();
     }
 
     @Override

@@ -70,8 +70,9 @@ public class LogstashDeploymentServiceImpl implements LogstashDeploymentService 
             // 3. Download package if it's a URL (on remote machine)
             if (packagePath.startsWith("http://") || packagePath.startsWith("https://")) {
                 String fileName = packagePath.substring(packagePath.lastIndexOf('/') + 1);
-                String downloadCommand = "cd " + deployDir + " && wget -q " + packagePath;
-                executeCommand(machine, downloadCommand);
+                // Split change directory and wget into separate commands
+                executeCommand(machine, "cd " + deployDir);
+                executeCommand(machine, "wget -q " + packagePath);
                 packagePath = Paths.get(deployDir, fileName).toString();
             } else if (!packagePath.startsWith("/")) {
                 // If not a URL and not an absolute path, assume it's now in /tmp
@@ -87,8 +88,10 @@ public class LogstashDeploymentServiceImpl implements LogstashDeploymentService 
             if (packagePath.endsWith(".tar.gz") || packagePath.endsWith(".tgz")) {
                 executeCommand(machine, "tar -xzf " + packagePath + " -C " + extractDir + " --strip-components=1");
             } else if (packagePath.endsWith(".zip")) {
-                executeCommand(machine, "unzip -o " + packagePath + " -d " + extractDir + " && mv " + extractDir +
-                        "/logstash-*/* " + extractDir + " && rm -rf " + extractDir + "/logstash-*");
+                // Split the combined commands into separate calls
+                executeCommand(machine, "unzip -o " + packagePath + " -d " + extractDir);
+                executeCommand(machine, "mv " + extractDir + "/logstash-*/* " + extractDir);
+                executeCommand(machine, "rm -rf " + extractDir + "/logstash-*");
             } else {
                 throw new LogstashException("Unsupported package format. Supported formats: .tar.gz, .tgz, .zip");
             }

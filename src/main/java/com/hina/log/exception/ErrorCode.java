@@ -25,10 +25,13 @@ public enum ErrorCode {
 
     // 认证相关错误码
     INVALID_TOKEN("3101", "无效的令牌"),
+    TOKEN_EXPIRED("3102", "令牌已过期，请刷新"),
+    REFRESH_TOKEN_EXPIRED("3103", "刷新令牌已过期，请重新登录"),
 
     // 权限相关错误码
     PERMISSION_DENIED("4001", "权限不足"),
     PERMISSION_NOT_FOUND("4002", "权限不存在"),
+    NO_ADMIN_PERMISSION("4003", "无管理员权限，无法访问"),
 
     // 导出相关错误码
     EXPORT_FAILED("5001", "导出失败"),

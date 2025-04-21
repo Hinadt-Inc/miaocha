@@ -1,5 +1,7 @@
 package com.hina.log.config;
 
+import com.hina.log.security.CustomAccessDeniedHandler;
+import com.hina.log.security.CustomAuthenticationEntryPoint;
 import com.hina.log.security.JwtAuthenticationFilter;
 import com.hina.log.security.JwtUtils;
 import com.hina.log.service.UserService;
@@ -42,6 +44,9 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(customAuthenticationEntryPoint())
+                        .accessDeniedHandler(customAccessDeniedHandler()))
                 .authorizeHttpRequests(auth -> auth
                         // 公开接口
                         .requestMatchers("/api/auth/login").permitAll()
@@ -64,7 +69,6 @@ public class SecurityConfig {
 
                         // 数据源管理接口
                         .requestMatchers(HttpMethod.POST, "/api/datasources/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/datasources/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/datasources/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/datasources/**").authenticated()
 
@@ -102,5 +106,15 @@ public class SecurityConfig {
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
         return new JwtAuthenticationFilter(jwtUtils, userService);
+    }
+
+    @Bean
+    public CustomAuthenticationEntryPoint customAuthenticationEntryPoint() {
+        return new CustomAuthenticationEntryPoint();
+    }
+
+    @Bean
+    public CustomAccessDeniedHandler customAccessDeniedHandler() {
+        return new CustomAccessDeniedHandler();
     }
 }

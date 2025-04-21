@@ -59,8 +59,9 @@ public class JwtUtils {
      *
      * @param refreshToken 刷新token
      * @return 新的token，如果刷新token无效则返回null
+     * @throws ExpiredJwtException 如果刷新token已过期
      */
-    public String generateTokenFromRefreshToken(String refreshToken) {
+    public String generateTokenFromRefreshToken(String refreshToken) throws ExpiredJwtException {
         try {
             Claims claims = Jwts.parser()
                     .verifyWith(getSigningKey())
@@ -75,6 +76,10 @@ public class JwtUtils {
 
             String uid = claims.getSubject();
             return generateToken(uid);
+        } catch (ExpiredJwtException e) {
+            // 刷新token过期，向上抛出这个异常，以便调用者区分处理
+            log.error("Refresh token has expired: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Error while generating token from refresh token: {}", e.getMessage());
             return null;
