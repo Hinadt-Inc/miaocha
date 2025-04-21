@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+
 import java.util.List;
 
 /**
@@ -20,8 +21,16 @@ public class LogSearchDTO {
     @NotBlank(message = "日志表名不能为空")
     private String tableName;
 
-    @Schema(description = "搜索关键字", example = "error")
+    @Schema(description = "搜索关键字，支持多种格式：\n"
+            + "1. 单个关键字: error\n"
+            + "2. 多个关键字OR关系: 'error' || 'timeout'\n"
+            + "3. 多个关键字AND关系: 'error' && 'timeout'\n"
+            + "4. 复杂表达式: ('error' || 'warning') && ('timeout' || 'failure')", example = "error 或 'error' || 'timeout' 或 'error' && 'timeout' 或 ('error' || 'warning') && 'timeout'"
+            + "5. 最多支持两层嵌套")
     private String keyword;
+
+    @Schema(description = "WHERE 条件后续SQL，直接拼接到SQL语句中", example = "level = 'ERROR' and service_name = 'user-service'")
+    private String whereSql;
 
     @Schema(description = "开始时间", example = "2023-06-01 10:00:00")
     private String startTime;
@@ -29,12 +38,13 @@ public class LogSearchDTO {
     @Schema(description = "结束时间", example = "2023-06-01 11:00:00")
     private String endTime;
 
-    @Schema(description = "预定义时间范围", example = "last_15m", allowableValues = { "last_5m", "last_15m", "last_30m",
-            "last_1h", "last_8h", "last_24h", "today", "yesterday", "last_week" })
+    @Schema(description = "预定义时间范围", example = "last_15m", allowableValues = {"last_5m", "last_15m", "last_30m",
+            "last_1h", "last_8h", "last_24h", "today", "yesterday", "last_week"})
     private String timeRange;
 
-    @Schema(description = "时间分组单位（用于统计图表）", example = "minute", allowableValues = { "second", "minute", "hour", "day",
-            "auto" })
+    @Schema(description = "时间分组单位（用于统计图表）", example = "minute", allowableValues = {"second", "minute", "hour",
+            "day",
+            "auto"})
     private String timeGrouping = "auto";
 
     @Schema(description = "分页大小", example = "50")

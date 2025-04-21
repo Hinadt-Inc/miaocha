@@ -1,39 +1,42 @@
 package com.hina.log.service.sql.processor;
 
 import com.hina.log.dto.LogSearchResultDTO;
-import com.hina.log.service.sql.JdbcQueryExecutor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 /**
  * 查询结果处理器
+ * 专注于处理数据库查询返回的原始结果，将其转换为应用所需的数据结构
  */
 @Component
 public class ResultProcessor {
 
-    @Autowired
-    private JdbcQueryExecutor jdbcQueryExecutor;
-
     /**
      * 处理日志分布统计查询结果
+     * 
+     * @param queryResult 查询返回的原始结果
+     * @param result      日志搜索结果DTO，用于填充分布数据
      */
-    public void processDistributionResult(Connection conn, String sql, LogSearchResultDTO result) throws SQLException {
+    public void processDistributionResult(Map<String, Object> queryResult, LogSearchResultDTO result) {
         List<LogSearchResultDTO.LogDistributionData> distributionData = new ArrayList<>();
 
-        Map<String, Object> queryResult = jdbcQueryExecutor.executeRawQuery(conn, sql);
         List<Map<String, Object>> rows = (List<Map<String, Object>>) queryResult.get("rows");
 
-        for (Map<String, Object> row : rows) {
-            LogSearchResultDTO.LogDistributionData data = new LogSearchResultDTO.LogDistributionData();
-            data.setTimePoint(row.get("log_time_").toString());
-            data.setCount(Long.valueOf(row.get("count").toString()));
-            distributionData.add(data);
+        if (rows != null) {
+            for (Map<String, Object> row : rows) {
+                LogSearchResultDTO.LogDistributionData data = new LogSearchResultDTO.LogDistributionData();
+                if (row.containsKey("log_time_")) {
+                    data.setTimePoint(row.get("log_time_").toString());
+                }
+                if (row.containsKey("count")) {
+                    Object countObj = row.get("count");
+                    data.setCount(countObj instanceof Number ? ((Number) countObj).longValue() : 0L);
+                }
+                distributionData.add(data);
+            }
         }
 
         result.setDistributionData(distributionData);
@@ -41,10 +44,37 @@ public class ResultProcessor {
 
     /**
      * 处理详细日志查询结果
+     * 
+     * @param queryResult 查询返回的原始结果
+     * @param result      日志搜索结果DTO，用于填充列名和数据行
      */
-    public void processDetailResult(Connection conn, String sql, LogSearchResultDTO result) throws SQLException {
-        Map<String, Object> queryResult = jdbcQueryExecutor.executeRawQuery(conn, sql);
-        result.setColumns((List<String>) queryResult.get("columns"));
-        result.setRows((List<Map<String, Object>>) queryResult.get("rows"));
+    public void processDetailResult(Map<String, Object> queryResult, LogSearchResultDTO result) {
+        if (queryResult != null) {
+            result.setColumns((List<String>) queryResult.get("columns"));
+            result.setRows((List<Map<String, Object>>) queryResult.get("rows"));
+        }
+    }
+
+    /**
+     * 处理总数查询结果
+     * 
+     * @param queryResult 查询返回的原始结果
+     * @return 总数值
+     */
+    public int processTotalCountResult(Map<String, Object> queryResult) {
+        int totalCount = 0;
+
+        if (queryResult != null) {
+            List<Map<String, Object>> rows = (List<Map<String, Object>>) queryResult.get("rows");
+
+            if (rows != null && !rows.isEmpty() && rows.get(0).containsKey("total")) {
+                Object totalObj = rows.get(0).get("total");
+                if (totalObj instanceof Number) {
+                    totalCount = ((Number) totalObj).intValue();
+                }
+            }
+        }
+
+        return totalCount;
     }
 }

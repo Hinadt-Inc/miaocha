@@ -39,6 +39,16 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 关键字语法异常处理
+     */
+    @ExceptionHandler(KeywordSyntaxException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiResponse<Void> handleKeywordSyntaxException(KeywordSyntaxException e) {
+        log.warn("关键字语法异常: {}, 表达式: {}", e.getMessage(), e.getExpression());
+        return ApiResponse.error(ErrorCode.VALIDATION_ERROR.getCode(), "关键字表达式语法错误: " + e.getMessage());
+    }
+
+    /**
      * 参数校验异常处理
      */
     @ExceptionHandler({ MethodArgumentNotValidException.class, BindException.class })

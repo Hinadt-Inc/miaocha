@@ -7,13 +7,14 @@ import com.hina.log.entity.Datasource;
 import com.hina.log.entity.User;
 import com.hina.log.exception.BusinessException;
 import com.hina.log.exception.ErrorCode;
+import com.hina.log.exception.KeywordSyntaxException;
 import com.hina.log.mapper.DatasourceMapper;
 import com.hina.log.mapper.UserMapper;
 import com.hina.log.service.LogSearchService;
-import com.hina.log.service.sql.JdbcQueryExecutor;
-import com.hina.log.service.sql.builder.LogSqlBuilder;
 import com.hina.log.service.database.DatabaseMetadataService;
 import com.hina.log.service.database.DatabaseMetadataServiceFactory;
+import com.hina.log.service.sql.JdbcQueryExecutor;
+import com.hina.log.service.sql.builder.LogSqlBuilder;
 import com.hina.log.service.sql.processor.ResultProcessor;
 import com.hina.log.service.sql.processor.TimeRangeProcessor;
 import org.slf4j.Logger;
@@ -25,12 +26,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
+import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
-import java.util.function.Supplier;
 
 /**
  * 日志检索服务实现类
@@ -47,9 +47,6 @@ public class LogSearchServiceImpl implements LogSearchService {
 
     @Autowired
     private JdbcQueryExecutor jdbcQueryExecutor;
-
-    @Autowired
-    private QueryPermissionChecker permissionChecker;
 
     @Autowired
     private TimeRangeProcessor timeRangeProcessor;
@@ -89,134 +86,96 @@ public class LogSearchServiceImpl implements LogSearchService {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
-        // 使用权限检查器验证用户权限 (实际逻辑可以先fake)
-        // TODO: 实现实际的权限检查
-        // permissionChecker.checkQueryPermission(user, dto.getDatasourceId(), null);
-
         // 处理时间范围
-        timeRangeProcessor.processTimeRange(dto);
-
-        // 构建查询SQL
-        String timeUnit = timeRangeProcessor.determineTimeUnit(dto);
-        String distributionSql = logSqlBuilder.buildDistributionSql(dto, timeUnit);
-        String detailSql = logSqlBuilder.buildDetailSql(dto);
-
-        LogSearchResultDTO result = new LogSearchResultDTO();
-        long startTime = System.currentTimeMillis();
-
         try {
-            // 为了单元测试的兼容性，检查是否在测试环境中
-            if (logQueryExecutor == null) {
-                // 测试环境，同步执行
-                executeLogSearchSync(datasource, distributionSql, detailSql, result);
-            } else {
-                // 生产环境，异步执行
-                executeLogSearchAsync(datasource, distributionSql, detailSql, result);
-            }
-        } catch (CompletionException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof BusinessException) {
-                throw (BusinessException) cause;
-            }
-            throw new BusinessException(ErrorCode.INTERNAL_ERROR,
-                    "执行日志查询失败: " + (cause != null ? cause.getMessage() : e.getMessage()));
+            timeRangeProcessor.processTimeRange(dto);
+
+            // 确定时间分组单位
+            String timeUnit = timeRangeProcessor.determineTimeUnit(dto);
+
+            // 构建SQL并执行查询
+            return executeSearch(datasource, dto, timeUnit);
+        } catch (KeywordSyntaxException e) {
+            // 捕获关键字语法异常，构造友好的错误结果
+            logger.warn("关键字表达式语法错误: {}, 表达式: {}", e.getMessage(), e.getExpression());
+
+            LogSearchResultDTO errorResult = new LogSearchResultDTO();
+            errorResult.setSuccess(false);
+            errorResult.setErrorMessage("关键字表达式语法错误: " + e.getMessage());
+            errorResult.setRows(Collections.emptyList());
+            errorResult.setTotalCount(0);
+            errorResult.setDistributionData(Collections.emptyList());
+            return errorResult;
         } catch (Exception e) {
-            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "执行日志查询失败: " + e.getMessage());
+            // 其他异常处理
+            logger.error("日志检索异常", e);
+
+            LogSearchResultDTO errorResult = new LogSearchResultDTO();
+            errorResult.setSuccess(false);
+            errorResult.setErrorMessage("日志检索失败: " + e.getMessage());
+            errorResult.setRows(Collections.emptyList());
+            errorResult.setTotalCount(0);
+            errorResult.setDistributionData(Collections.emptyList());
+            return errorResult;
+        }
+    }
+
+    private LogSearchResultDTO executeSearch(Datasource datasource, LogSearchDTO dto, String timeUnit) {
+        long startTime = System.currentTimeMillis();
+        LogSearchResultDTO result = new LogSearchResultDTO();
+        result.setSuccess(true);
+
+        try (Connection conn = jdbcQueryExecutor.getConnection(datasource)) {
+            // 1. 执行分布统计查询
+            String distributionSql = logSqlBuilder.buildDistributionSql(dto, timeUnit);
+            logger.debug("分布统计SQL: {}", distributionSql);
+
+            // 执行分布查询并获取原始结果
+            Map<String, Object> distributionQueryResult = jdbcQueryExecutor.executeRawQuery(conn, distributionSql);
+
+            // 处理分布查询结果
+            resultProcessor.processDistributionResult(distributionQueryResult, result);
+
+            // 2. 执行详细日志查询
+            String detailSql = logSqlBuilder.buildDetailSql(dto);
+            logger.debug("详细日志SQL: {}", detailSql);
+
+            // 执行详细查询并获取原始结果
+            Map<String, Object> detailQueryResult = jdbcQueryExecutor.executeRawQuery(conn, detailSql);
+
+            // 处理详细查询结果
+            resultProcessor.processDetailResult(detailQueryResult, result);
+
+            // 3. 执行总数查询
+            StringBuilder countSql = new StringBuilder();
+            countSql.append("SELECT COUNT(1) as total FROM ").append(dto.getTableName())
+                    .append(" WHERE log_time >= '").append(dto.getStartTime()).append("'")
+                    .append(" AND log_time <= '").append(dto.getEndTime()).append("'");
+
+            // 在where条件部分添加搜索条件
+            String searchConditions = logSqlBuilder.buildSearchConditionsOnly(dto);
+            if (!searchConditions.isEmpty()) {
+                countSql.append(" AND ").append(searchConditions);
+            }
+
+            logger.debug("总数SQL: {}", countSql);
+
+            // 执行总数查询并获取原始结果
+            Map<String, Object> countQueryResult = jdbcQueryExecutor.executeRawQuery(conn, countSql.toString());
+
+            // 处理总数查询结果
+            int totalCount = resultProcessor.processTotalCountResult(countQueryResult);
+            result.setTotalCount(totalCount);
+
+        } catch (SQLException e) {
+            logger.error("执行SQL查询失败", e);
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "执行SQL查询失败: " + e.getMessage());
         }
 
         long endTime = System.currentTimeMillis();
         result.setExecutionTimeMs(endTime - startTime);
-        logger.info("日志查询完成，耗时: {}ms", result.getExecutionTimeMs());
 
         return result;
-    }
-
-    /**
-     * 同步执行日志搜索查询 (用于测试)
-     */
-    private void executeLogSearchSync(Datasource datasource, String distributionSql, String detailSql,
-                                      LogSearchResultDTO result) throws SQLException {
-        try (Connection conn = jdbcQueryExecutor.getConnection(datasource)) {
-            // 执行日志分布查询
-            logger.debug("执行日志分布查询SQL: {}", distributionSql);
-            resultProcessor.processDistributionResult(conn, distributionSql, result);
-
-            // 执行日志详情查询
-            logger.debug("执行日志详情查询SQL: {}", detailSql);
-            resultProcessor.processDetailResult(conn, detailSql, result);
-        }
-    }
-
-    /**
-     * 异步执行日志搜索查询 (用于生产)
-     */
-    private void executeLogSearchAsync(Datasource datasource, String distributionSql, String detailSql,
-                                       LogSearchResultDTO result) {
-        // 创建两个并行任务
-        CompletableFuture<Void> distributionFuture = createQueryTask(
-                () -> executeDistributionQuery(datasource, distributionSql, result),
-                "日志分布查询");
-
-        CompletableFuture<Void> detailFuture = createQueryTask(
-                () -> executeDetailQuery(datasource, detailSql, result),
-                "日志详情查询");
-
-        // 等待所有任务完成
-        CompletableFuture.allOf(distributionFuture, detailFuture)
-                .exceptionally(throwable -> {
-                    logger.error("日志查询过程中发生异常", throwable);
-                    throw new CompletionException(throwable);
-                })
-                .join();
-    }
-
-    /**
-     * 创建异步查询任务
-     *
-     * @param supplier 查询任务
-     * @param taskName 任务名称（用于日志）
-     * @return CompletableFuture
-     */
-    private CompletableFuture<Void> createQueryTask(Supplier<Void> supplier, String taskName) {
-        return CompletableFuture.supplyAsync(supplier, getExecutor())
-                .exceptionally(throwable -> {
-                    logger.error("{}任务执行失败", taskName, throwable);
-                    if (throwable instanceof CompletionException && throwable.getCause() != null) {
-                        throwable = throwable.getCause();
-                    }
-                    if (throwable instanceof BusinessException) {
-                        throw (BusinessException) throwable;
-                    }
-                    throw new BusinessException(ErrorCode.INTERNAL_ERROR, taskName + "失败: " + throwable.getMessage());
-                });
-    }
-
-    /**
-     * 执行日志分布查询
-     */
-    private Void executeDistributionQuery(Datasource datasource, String sql, LogSearchResultDTO result) {
-        try (Connection conn = jdbcQueryExecutor.getConnection(datasource)) {
-            logger.debug("执行日志分布查询SQL: {}", sql);
-            resultProcessor.processDistributionResult(conn, sql, result);
-            return null;
-        } catch (SQLException e) {
-            logger.error("执行日志分布查询失败", e);
-            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "执行日志分布查询失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 执行日志详情查询
-     */
-    private Void executeDetailQuery(Datasource datasource, String sql, LogSearchResultDTO result) {
-        try (Connection conn = jdbcQueryExecutor.getConnection(datasource)) {
-            logger.debug("执行日志详情查询SQL: {}", sql);
-            resultProcessor.processDetailResult(conn, sql, result);
-            return null;
-        } catch (SQLException e) {
-            logger.error("执行日志详情查询失败", e);
-            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "执行日志详情查询失败: " + e.getMessage());
-        }
     }
 
     @Override

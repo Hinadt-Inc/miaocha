@@ -1,7 +1,6 @@
 package com.hina.log.controller;
 
 import com.hina.log.annotation.CurrentUser;
-import com.hina.log.converter.UserConverter;
 import com.hina.log.dto.ApiResponse;
 import com.hina.log.dto.user.UpdatePasswordDTO;
 import com.hina.log.dto.user.UserCreateDTO;

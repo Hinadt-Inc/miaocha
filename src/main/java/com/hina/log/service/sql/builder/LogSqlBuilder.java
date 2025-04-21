@@ -1,7 +1,9 @@
 package com.hina.log.service.sql.builder;
 
 import com.hina.log.dto.LogSearchDTO;
+import com.hina.log.service.sql.builder.condition.SearchConditionManager;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -9,6 +11,13 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class LogSqlBuilder {
+
+    private final SearchConditionManager searchConditionManager;
+
+    @Autowired
+    public LogSqlBuilder(SearchConditionManager searchConditionManager) {
+        this.searchConditionManager = searchConditionManager;
+    }
 
     /**
      * 构建日志分布统计SQL
@@ -22,9 +31,7 @@ public class LogSqlBuilder {
                 .append(" WHERE log_time >= '").append(dto.getStartTime()).append("'")
                 .append(" AND log_time <= '").append(dto.getEndTime()).append("'");
 
-        if (StringUtils.isNotBlank(dto.getKeyword())) {
-            sql.append(" AND message LIKE '%").append(dto.getKeyword()).append("%'");
-        }
+        appendSearchConditions(sql, dto);
 
         sql.append(" GROUP BY date_trunc(log_time, '").append(timeUnit).append("')")
                 .append(" ORDER BY log_time_ DESC");
@@ -48,14 +55,32 @@ public class LogSqlBuilder {
                 .append(" WHERE log_time >= '").append(dto.getStartTime()).append("'")
                 .append(" AND log_time <= '").append(dto.getEndTime()).append("'");
 
-        if (StringUtils.isNotBlank(dto.getKeyword())) {
-            sql.append(" AND message LIKE '%").append(dto.getKeyword()).append("%'");
-        }
+        appendSearchConditions(sql, dto);
 
         sql.append(" ORDER BY log_time DESC")
                 .append(" LIMIT ").append(dto.getPageSize())
                 .append(" OFFSET ").append(dto.getOffset());
 
         return sql.toString();
+    }
+
+    /**
+     * 仅构建搜索条件字符串
+     * 
+     * @param dto 日志搜索DTO
+     * @return 搜索条件字符串（不包含前置AND）
+     */
+    public String buildSearchConditionsOnly(LogSearchDTO dto) {
+        return searchConditionManager.buildSearchConditions(dto);
+    }
+
+    /**
+     * 添加搜索条件
+     */
+    private void appendSearchConditions(StringBuilder sql, LogSearchDTO dto) {
+        String conditions = searchConditionManager.buildSearchConditions(dto);
+        if (StringUtils.isNotBlank(conditions)) {
+            sql.append(" AND ").append(conditions);
+        }
     }
 }
