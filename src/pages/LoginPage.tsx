@@ -29,10 +29,14 @@ const LoginPage = () => {
       console.log('Login response:', response);
       
       dispatch(login({
+        userId: response.userId,
         name: response.nickname,
+        role: response.role,
         tokens: {
           accessToken: response.token,
           refreshToken: response.refreshToken,
+          expiresAt: response.expiresAt,
+          refreshExpiresAt: response.refreshExpiresAt
         },
       }));
       

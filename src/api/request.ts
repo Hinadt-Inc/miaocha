@@ -17,8 +17,10 @@ service.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     // 添加token到请求头
     const token = localStorage.getItem('accessToken')
+    console.log('Adding token to request:', token) // 调试日志
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`
+      console.log('Request headers:', config.headers) // 调试日志
     }
     return config
   },
@@ -41,7 +43,7 @@ service.interceptors.response.use(
       // 处理业务错误
       return Promise.reject(new Error(res.message || 'Error'))
     }
-    return res
+    return res.data
   },
   async (error) => {
     const originalRequest = error.config
@@ -76,7 +78,9 @@ service.interceptors.response.use(
         localStorage.setItem('refreshToken', data.refreshToken)
         store.dispatch(setTokens({
           accessToken: data.accessToken,
-          refreshToken: data.refreshToken
+          refreshToken: data.refreshToken,
+          expiresAt: data.expiresAt,
+          refreshExpiresAt: data.refreshExpiresAt
         }))
         
         // 重试队列中的请求
