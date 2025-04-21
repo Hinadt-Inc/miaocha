@@ -1,0 +1,59 @@
+# 生产环境配置
+server:
+  port: 8080
+  # 启用压缩
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+    min-response-size: 1024
+
+spring:
+  datasource:
+    # 生产环境数据库配置，实际使用时应当从环境变量获取
+    url: jdbc:mysql://${DB_HOST:mysql}:${DB_PORT:3306}/${DB_NAME:log_manage_system}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:password}
+    # 生产环境连接池配置
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+    
+  # 生产环境禁用SQL日志
+  jpa:
+    show-sql: false
+  
+  # 设置JSON日期格式
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+
+# Logstash生产环境配置
+logstash:
+  # 生产环境Logstash压缩包路径
+  package-path: /opt/logstash/logstash-8.11.1.tar.gz
+  # 生产环境远程部署目录
+  deploy-dir: /opt/logstash
+
+# JWT生产环境配置 - 更长的过期时间
+jwt:
+  # 生产环境从环境变量获取密钥
+  secret: ${JWT_SECRET:8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92}
+  expiration: 3600000  # 1小时
+  refresh-expiration: 86400000  # 24小时
+
+# 生产环境特定配置
+sql:
+  query:
+    csv:
+      export:
+        dir: /data/sql-exports
+
+# 关闭Swagger
+springdoc:
+  api-docs:
+    enabled: ${ENABLE_API_DOCS:false}
+  swagger-ui:
+    enabled: ${ENABLE_SWAGGER_UI:false} 

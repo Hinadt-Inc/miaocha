@@ -28,9 +28,34 @@ public enum ErrorCode {
 
     // 权限相关错误码
     PERMISSION_DENIED("4001", "权限不足"),
+    PERMISSION_NOT_FOUND("4002", "权限不存在"),
 
     // 导出相关错误码
-    EXPORT_FAILED("5001", "导出失败");
+    EXPORT_FAILED("5001", "导出失败"),
+
+    // 机器相关错误码
+    MACHINE_NOT_FOUND("6001", "机器不存在"),
+    MACHINE_NAME_EXISTS("6002", "机器名称已存在"),
+    MACHINE_CONNECTION_FAILED("6003", "机器连接失败"),
+
+    // SSH相关错误码
+    SSH_OPERATION_FAILED("6101", "SSH操作失败"),
+    SSH_DEPENDENCY_MISSING("6102", "SSH依赖缺失"),
+    SSH_COMMAND_FAILED("6103", "SSH命令执行失败"),
+    SSH_FILE_TRANSFER_FAILED("6104", "SSH文件传输失败"),
+
+    // Logstash相关错误码
+    LOGSTASH_PROCESS_NOT_FOUND("7001", "Logstash进程不存在"),
+    LOGSTASH_PROCESS_NAME_EXISTS("7002", "Logstash进程名称已存在"),
+    LOGSTASH_DEPLOY_FAILED("7003", "Logstash部署失败"),
+    LOGSTASH_START_FAILED("7004", "Logstash启动失败"),
+    LOGSTASH_STOP_FAILED("7005", "Logstash停止失败"),
+    LOGSTASH_CONFIG_NOT_FOUND("7006", "Logstash配置不存在"),
+
+    // 任务相关错误码
+    TASK_EXECUTION_FAILED("8001", "任务执行失败"),
+    TASK_NOT_FOUND("8002", "任务不存在"),
+    TASK_RETRY_FAILED("8003", "任务重试失败");
 
     private final String code;
     private final String message;

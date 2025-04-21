@@ -1,4 +1,4 @@
-package com.hina.log.service.impl;
+package com.hina.log.service.sql;
 
 import com.hina.log.dto.SchemaInfoDTO;
 import com.hina.log.dto.SqlQueryDTO;
@@ -17,6 +17,7 @@ import com.hina.log.service.database.DatabaseMetadataService;
 import com.hina.log.service.database.DatabaseMetadataServiceFactory;
 import com.hina.log.service.export.FileExporter;
 import com.hina.log.service.export.FileExporterFactory;
+import com.hina.log.service.impl.QueryPermissionChecker;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

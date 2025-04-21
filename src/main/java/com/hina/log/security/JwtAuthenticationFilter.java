@@ -1,6 +1,6 @@
 package com.hina.log.security;
 
-import com.hina.log.entity.User;
+import com.hina.log.dto.user.UserDTO;
 import com.hina.log.service.UserService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -38,7 +38,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String jwt = parseJwt(request);
             if (jwt != null && jwtUtils.validateToken(jwt)) {
                 String uid = jwtUtils.getUidFromToken(jwt);
-                User user = userService.getUserByUid(uid);
+                UserDTO user = userService.getUserByUid(uid);
 
                 if (user != null && user.getStatus() == 1) {
                     List<SimpleGrantedAuthority> authorities = List.of(

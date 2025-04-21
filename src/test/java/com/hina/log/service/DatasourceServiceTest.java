@@ -6,6 +6,7 @@ import com.hina.log.entity.Datasource;
 import com.hina.log.exception.BusinessException;
 import com.hina.log.mapper.DatasourceMapper;
 import com.hina.log.service.impl.DatasourceServiceImpl;
+import com.hina.log.converter.DatasourceConverter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,6 +14,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -26,10 +29,14 @@ import static org.mockito.Mockito.*;
  * 数据源服务单元测试
  */
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class DatasourceServiceTest {
 
     @Mock
     private DatasourceMapper datasourceMapper;
+
+    @Mock
+    private DatasourceConverter datasourceConverter;
 
     @Spy
     @InjectMocks
@@ -37,6 +44,7 @@ class DatasourceServiceTest {
 
     private DatasourceCreateDTO createDTO;
     private Datasource existingDatasource;
+    private DatasourceDTO datasourceDTO;
 
     @BeforeEach
     void setUp() {
@@ -63,6 +71,21 @@ class DatasourceServiceTest {
         existingDatasource.setJdbcParams("useSSL=false&serverTimezone=UTC");
         existingDatasource.setCreateTime(LocalDateTime.now());
         existingDatasource.setUpdateTime(LocalDateTime.now());
+
+        datasourceDTO = new DatasourceDTO();
+        datasourceDTO.setId(existingDatasource.getId());
+        datasourceDTO.setName(existingDatasource.getName());
+        datasourceDTO.setType(existingDatasource.getType());
+        datasourceDTO.setIp(existingDatasource.getIp());
+        datasourceDTO.setPort(existingDatasource.getPort());
+        datasourceDTO.setDatabase(existingDatasource.getDatabase());
+        datasourceDTO.setJdbcParams(existingDatasource.getJdbcParams());
+
+        // 设置转换器行为
+        when(datasourceConverter.toDto(any(Datasource.class))).thenReturn(datasourceDTO);
+        when(datasourceConverter.toEntity(any(DatasourceCreateDTO.class))).thenReturn(existingDatasource);
+        when(datasourceConverter.updateEntity(any(Datasource.class), any(DatasourceCreateDTO.class)))
+                .thenReturn(existingDatasource);
     }
 
     @Test

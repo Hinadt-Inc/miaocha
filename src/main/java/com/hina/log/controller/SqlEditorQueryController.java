@@ -5,7 +5,7 @@ import com.hina.log.dto.ApiResponse;
 import com.hina.log.dto.SchemaInfoDTO;
 import com.hina.log.dto.SqlQueryDTO;
 import com.hina.log.dto.SqlQueryResultDTO;
-import com.hina.log.entity.User;
+import com.hina.log.dto.user.UserDTO;
 import com.hina.log.service.SqlQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -39,7 +39,7 @@ public class SqlEditorQueryController {
     @PostMapping("/execute")
     @Operation(summary = "执行SQL查询", description = "执行用户输入的SQL查询语句，返回查询结果，可选择导出为文件")
     public ApiResponse<SqlQueryResultDTO> executeQuery(
-            @CurrentUser User user,
+            @CurrentUser UserDTO user,
             @Parameter(description = "SQL查询请求", required = true) @Valid @RequestBody SqlQueryDTO dto) {
         SqlQueryResultDTO result = sqlQueryService.executeQuery(user.getId(), dto);
         return ApiResponse.success(result);
@@ -55,7 +55,7 @@ public class SqlEditorQueryController {
     @GetMapping("/schema/{datasourceId}")
     @Operation(summary = "获取数据库结构", description = "获取指定数据源的数据库结构信息，包括表和字段")
     public ApiResponse<SchemaInfoDTO> getSchemaInfo(
-            @CurrentUser User user,
+            @CurrentUser UserDTO user,
             @Parameter(description = "数据源ID", required = true) @PathVariable("datasourceId") Long datasourceId) {
         SchemaInfoDTO schema = sqlQueryService.getSchemaInfo(user.getId(), datasourceId);
         return ApiResponse.success(schema);

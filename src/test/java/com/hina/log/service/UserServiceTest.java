@@ -4,6 +4,7 @@ import com.hina.log.dto.auth.LoginRequestDTO;
 import com.hina.log.dto.auth.LoginResponseDTO;
 import com.hina.log.dto.user.UpdatePasswordDTO;
 import com.hina.log.dto.user.UserCreateDTO;
+import com.hina.log.dto.user.UserDTO;
 import com.hina.log.dto.user.UserUpdateDTO;
 import com.hina.log.entity.User;
 import com.hina.log.enums.UserRole;
@@ -12,6 +13,7 @@ import com.hina.log.exception.ErrorCode;
 import com.hina.log.mapper.UserMapper;
 import com.hina.log.security.JwtUtils;
 import com.hina.log.service.impl.UserServiceImpl;
+import com.hina.log.converter.UserConverter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -44,6 +46,9 @@ public class UserServiceTest {
 
     @Mock
     private JwtUtils jwtUtils;
+
+    @Mock
+    private UserConverter userConverter;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -99,6 +104,46 @@ public class UserServiceTest {
         when(passwordEncoder.matches("password123", "encoded_password")).thenReturn(true);
         when(passwordEncoder.matches("old_password", "encoded_password")).thenReturn(true);
         when(jwtUtils.generateToken(anyString())).thenReturn("test_token");
+
+        // 设置转换器行为 - more granular toDto implementation
+        when(userConverter.toDto(any(User.class))).thenAnswer(invocation -> {
+            User entity = invocation.getArgument(0);
+            UserDTO dto = new UserDTO();
+            dto.setId(entity.getId());
+            dto.setUid(entity.getUid());
+            dto.setNickname(entity.getNickname());
+            dto.setEmail(entity.getEmail());
+            dto.setRole(entity.getRole());
+            dto.setStatus(entity.getStatus());
+            return dto;
+        });
+
+        // Mock entity conversion from createDTO
+        User newUser = new User();
+        newUser.setNickname(createDTO.getNickname());
+        newUser.setEmail(createDTO.getEmail());
+        newUser.setRole(createDTO.getRole());
+        when(userConverter.toEntity(any(UserCreateDTO.class))).thenReturn(newUser);
+
+        // Mock entity conversion from updateDTO
+        User updatedUser = new User();
+        updatedUser.setId(updateDTO.getId());
+        updatedUser.setNickname(updateDTO.getNickname());
+        updatedUser.setEmail(updateDTO.getEmail());
+        updatedUser.setRole(updateDTO.getRole());
+        updatedUser.setStatus(updateDTO.getStatus());
+        when(userConverter.toEntity(any(UserUpdateDTO.class))).thenReturn(updatedUser);
+
+        // Mock update entity
+        when(userConverter.updateEntity(any(User.class), any(UserUpdateDTO.class))).thenAnswer(invocation -> {
+            User entity = invocation.getArgument(0);
+            UserUpdateDTO dto = invocation.getArgument(1);
+            entity.setNickname(dto.getNickname());
+            entity.setEmail(dto.getEmail());
+            entity.setRole(dto.getRole());
+            entity.setStatus(dto.getStatus());
+            return entity;
+        });
     }
 
     @Test
@@ -154,7 +199,7 @@ public class UserServiceTest {
     @Test
     void testGetUserById_Success() {
         // 执行测试
-        User result = userService.getUserById(1L);
+        UserDTO result = userService.getUserById(1L);
 
         // 验证结果
         assertNotNull(result);
@@ -183,7 +228,7 @@ public class UserServiceTest {
     @Test
     void testGetUserByUid_Success() {
         // 执行测试
-        User result = userService.getUserByUid("test_uid");
+        UserDTO result = userService.getUserByUid("test_uid");
 
         // 验证结果
         assertNotNull(result);
@@ -216,7 +261,7 @@ public class UserServiceTest {
         when(userMapper.selectAll()).thenReturn(users);
 
         // 执行测试
-        List<User> result = userService.getAllUsers();
+        List<UserDTO> result = userService.getAllUsers();
 
         // 验证结果
         assertNotNull(result);
@@ -234,7 +279,7 @@ public class UserServiceTest {
         when(userMapper.insert(any(User.class))).thenReturn(1);
 
         // 执行测试
-        User result = userService.createUser(createDTO);
+        UserDTO result = userService.createUser(createDTO);
 
         // 验证结果
         assertNotNull(result);
@@ -286,7 +331,7 @@ public class UserServiceTest {
         when(userMapper.update(any(User.class))).thenReturn(1);
 
         // 执行测试
-        User result = userService.updateUser(updateDTO);
+        UserDTO result = userService.updateUser(updateDTO);
 
         // 验证结果
         assertNotNull(result);

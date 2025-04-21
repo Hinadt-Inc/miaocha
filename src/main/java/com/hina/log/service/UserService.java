@@ -4,6 +4,7 @@ import com.hina.log.dto.auth.LoginRequestDTO;
 import com.hina.log.dto.auth.LoginResponseDTO;
 import com.hina.log.dto.auth.RefreshTokenRequestDTO;
 import com.hina.log.dto.user.UserCreateDTO;
+import com.hina.log.dto.user.UserDTO;
 import com.hina.log.dto.user.UserUpdateDTO;
 import com.hina.log.dto.user.UpdatePasswordDTO;
 import com.hina.log.entity.User;
@@ -35,40 +36,40 @@ public interface UserService {
      * 通过ID获取用户
      *
      * @param id 用户ID
-     * @return 用户
+     * @return 用户DTO
      */
-    User getUserById(Long id);
+    UserDTO getUserById(Long id);
 
     /**
      * 通过UID获取用户
      *
      * @param uid 用户UID
-     * @return 用户
+     * @return 用户DTO
      */
-    User getUserByUid(String uid);
+    UserDTO getUserByUid(String uid);
 
     /**
      * 获取所有用户
      *
-     * @return 用户列表
+     * @return 用户DTO列表
      */
-    List<User> getAllUsers();
+    List<UserDTO> getAllUsers();
 
     /**
      * 创建用户
      *
      * @param userCreateDTO 用户创建DTO
-     * @return 创建的用户
+     * @return 创建的用户DTO
      */
-    User createUser(UserCreateDTO userCreateDTO);
+    UserDTO createUser(UserCreateDTO userCreateDTO);
 
     /**
      * 更新用户
      *
      * @param userUpdateDTO 用户更新DTO
-     * @return 更新的用户
+     * @return 更新的用户DTO
      */
-    User updateUser(UserUpdateDTO userUpdateDTO);
+    UserDTO updateUser(UserUpdateDTO userUpdateDTO);
 
     /**
      * 删除用户
@@ -92,4 +93,20 @@ public interface UserService {
      * @param updatePasswordDTO 密码更新DTO
      */
     void updateOwnPassword(Long userId, UpdatePasswordDTO updatePasswordDTO);
+
+    /**
+     * 获取用户实体（内部使用）
+     * 
+     * @param id 用户ID
+     * @return 用户实体
+     */
+    User getUserEntityById(Long id);
+
+    /**
+     * 通过UID获取用户实体（内部使用）
+     * 
+     * @param uid 用户UID
+     * @return 用户实体
+     */
+    User getUserEntityByUid(String uid);
 }

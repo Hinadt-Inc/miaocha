@@ -1,6 +1,7 @@
 package com.hina.log.config;
 
 import com.hina.log.annotation.CurrentUser;
+import com.hina.log.dto.user.UserDTO;
 import com.hina.log.entity.User;
 import com.hina.log.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +26,7 @@ public class CurrentUserMethodArgumentResolver implements HandlerMethodArgumentR
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
         return parameter.hasParameterAnnotation(CurrentUser.class)
-                && parameter.getParameterType().equals(User.class);
+                && parameter.getParameterType().equals(UserDTO.class);
     }
 
     @Override

@@ -1,7 +1,9 @@
 server:
-  port: 8080
+  port: 8081
 
 spring:
+  profiles:
+    active: dev
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://10.0.19.212:3306/log_manage_system?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
@@ -39,5 +41,12 @@ sql:
     csv:
       export:
         dir: /tmp/sql-exports
+
+# Logstash配置
+logstash:
+  # Logstash压缩包路径
+  package-path: /opt/logstash/logstash-8.11.1.tar.gz
+  # 远程部署目录
+  deploy-dir: ~/logstash
 
     

@@ -13,6 +13,12 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * 安全配置
@@ -33,8 +39,9 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
-                    .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // 公开接口
                         .requestMatchers("/api/auth/login").permitAll()
@@ -49,7 +56,10 @@ public class SecurityConfig {
                         // 其他用户管理接口
                         .requestMatchers("/api/users/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
 
-                        // 权限管理接口
+                        // 用户查看自己权限的接口
+                        .requestMatchers("/api/permissions/my/tables").authenticated()
+
+                        // 其他权限管理接口
                         .requestMatchers("/api/permissions/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
 
                         // 数据源管理接口
@@ -57,6 +67,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/datasources/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/datasources/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/datasources/**").authenticated()
+
+                        // Logstash进程管理接口，只有管理员可以操作
+                        .requestMatchers("/api/logstash/processes/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
+
+                        // 机器管理接口
+                        .requestMatchers(HttpMethod.GET, "/api/machines").authenticated()
+                        .requestMatchers("/api/machines/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
 
                         // SQL查询和日志查询接口
                         .requestMatchers("/api/sql/**", "/api/logs/**").authenticated()
@@ -66,6 +83,20 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of("*"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setMaxAge(3600L);
+        configuration.setAllowCredentials(false);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 
     @Bean

@@ -1,7 +1,7 @@
-package com.hina.log.service.processor;
+package com.hina.log.service.sql.processor;
 
 import com.hina.log.dto.LogSearchResultDTO;
-import com.hina.log.service.impl.JdbcQueryExecutor;
+import com.hina.log.service.sql.JdbcQueryExecutor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 

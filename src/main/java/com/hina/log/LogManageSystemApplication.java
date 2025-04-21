@@ -2,6 +2,7 @@ package com.hina.log;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.mybatis.spring.annotation.MapperScan;
 
 /**
@@ -11,6 +12,7 @@ import org.mybatis.spring.annotation.MapperScan;
  */
 @SpringBootApplication
 @MapperScan("com.hina.log.mapper")
+@EnableScheduling
 public class LogManageSystemApplication {
     public static void main(String[] args) {
         SpringApplication.run(LogManageSystemApplication.class, args);

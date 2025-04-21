@@ -8,7 +8,7 @@ import com.hina.log.exception.BusinessException;
 import com.hina.log.exception.ErrorCode;
 import com.hina.log.mapper.DatasourceMapper;
 import com.hina.log.service.DatasourceService;
-import org.springframework.beans.BeanUtils;
+import com.hina.log.converter.DatasourceConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +27,9 @@ public class DatasourceServiceImpl implements DatasourceService {
     @Autowired
     private DatasourceMapper datasourceMapper;
 
+    @Autowired
+    private DatasourceConverter datasourceConverter;
+
     @Override
     @Transactional
     public DatasourceDTO createDatasource(DatasourceCreateDTO dto) {
@@ -41,12 +44,11 @@ public class DatasourceServiceImpl implements DatasourceService {
         }
 
         // 转换为实体并保存
-        Datasource datasource = new Datasource();
-        BeanUtils.copyProperties(dto, datasource);
+        Datasource datasource = datasourceConverter.toEntity(dto);
         datasourceMapper.insert(datasource);
 
         // 返回DTO
-        return convertToDTO(datasource);
+        return datasourceConverter.toDto(datasource);
     }
 
     @Override
@@ -70,12 +72,11 @@ public class DatasourceServiceImpl implements DatasourceService {
         }
 
         // 更新数据源
-        Datasource datasource = new Datasource();
-        BeanUtils.copyProperties(dto, datasource);
+        Datasource datasource = datasourceConverter.updateEntity(existingDatasource, dto);
         datasource.setId(id);
         datasourceMapper.update(datasource);
 
-        return convertToDTO(datasource);
+        return datasourceConverter.toDto(datasource);
     }
 
     @Override
@@ -94,13 +95,13 @@ public class DatasourceServiceImpl implements DatasourceService {
         if (datasource == null) {
             throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
         }
-        return convertToDTO(datasource);
+        return datasourceConverter.toDto(datasource);
     }
 
     @Override
     public List<DatasourceDTO> getAllDatasources() {
         return datasourceMapper.selectAll().stream()
-                .map(this::convertToDTO)
+                .map(datasourceConverter::toDto)
                 .collect(Collectors.toList());
     }
 
@@ -151,14 +152,5 @@ public class DatasourceServiceImpl implements DatasourceService {
 
         // 使用已保存的参数测试连接
         return testConnection(dto);
-    }
-
-    /**
-     * 将实体转换为DTO
-     */
-    private DatasourceDTO convertToDTO(Datasource datasource) {
-        DatasourceDTO dto = new DatasourceDTO();
-        BeanUtils.copyProperties(datasource, dto);
-        return dto;
     }
 }

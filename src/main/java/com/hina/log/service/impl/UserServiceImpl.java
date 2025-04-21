@@ -1,11 +1,13 @@
 package com.hina.log.service.impl;
 
 import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
+import com.hina.log.converter.UserConverter;
 import com.hina.log.dto.auth.LoginRequestDTO;
 import com.hina.log.dto.auth.LoginResponseDTO;
 import com.hina.log.dto.auth.RefreshTokenRequestDTO;
 import com.hina.log.dto.user.UpdatePasswordDTO;
 import com.hina.log.dto.user.UserCreateDTO;
+import com.hina.log.dto.user.UserDTO;
 import com.hina.log.dto.user.UserUpdateDTO;
 import com.hina.log.entity.User;
 import com.hina.log.enums.UserRole;
@@ -21,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 用户服务实现类
@@ -33,6 +36,7 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
+    private final UserConverter userConverter;
 
     @Override
     public LoginResponseDTO login(LoginRequestDTO loginRequest) {
@@ -74,7 +78,7 @@ public class UserServiceImpl implements UserService {
 
         // 从刷新token中获取用户ID
         String uid = jwtUtils.getUidFromToken(refreshToken);
-        User user = getUserByUid(uid);
+        User user = getUserEntityByUid(uid);
 
         // 同时生成新的刷新令牌
         String newRefreshToken = jwtUtils.generateRefreshToken(uid);
@@ -95,7 +99,19 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User getUserById(Long id) {
+    public UserDTO getUserById(Long id) {
+        User user = getUserEntityById(id);
+        return userConverter.toDto(user);
+    }
+
+    @Override
+    public UserDTO getUserByUid(String uid) {
+        User user = getUserEntityByUid(uid);
+        return userConverter.toDto(user);
+    }
+
+    @Override
+    public User getUserEntityById(Long id) {
         User user = userMapper.selectById(id);
         if (user == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
@@ -104,7 +120,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User getUserByUid(String uid) {
+    public User getUserEntityByUid(String uid) {
         User user = userMapper.selectByUid(uid);
         if (user == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
@@ -113,13 +129,16 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<User> getAllUsers() {
-        return userMapper.selectAll();
+    public List<UserDTO> getAllUsers() {
+        List<User> users = userMapper.selectAll();
+        return users.stream()
+                .map(userConverter::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional
-    public User createUser(UserCreateDTO userCreateDTO) {
+    public UserDTO createUser(UserCreateDTO userCreateDTO) {
         // 检查邮箱是否已存在
         User existUser = userMapper.selectByEmail(userCreateDTO.getEmail());
         if (existUser != null) {
@@ -131,25 +150,19 @@ public class UserServiceImpl implements UserService {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "无效的角色");
         }
 
-        User user = new User();
-        user.setNickname(userCreateDTO.getNickname());
-        user.setEmail(userCreateDTO.getEmail());
+        User user = userConverter.toEntity(userCreateDTO);
         user.setUid(generateUid());
         user.setPassword(passwordEncoder.encode(userCreateDTO.getPassword()));
-        user.setRole(userCreateDTO.getRole());
         user.setStatus(1);
 
         userMapper.insert(user);
-        return user;
+        return userConverter.toDto(user);
     }
 
     @Override
     @Transactional
-    public User updateUser(UserUpdateDTO userUpdateDTO) {
-        User user = userMapper.selectById(userUpdateDTO.getId());
-        if (user == null) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
+    public UserDTO updateUser(UserUpdateDTO userUpdateDTO) {
+        User user = getUserEntityById(userUpdateDTO.getId());
 
         // 超级管理员不能被修改
         if (UserRole.SUPER_ADMIN.name().equals(user.getRole())) {
@@ -167,22 +180,16 @@ public class UserServiceImpl implements UserService {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "无效的角色");
         }
 
-        user.setNickname(userUpdateDTO.getNickname());
-        user.setEmail(userUpdateDTO.getEmail());
-        user.setRole(userUpdateDTO.getRole());
-        user.setStatus(userUpdateDTO.getStatus());
+        user = userConverter.updateEntity(user, userUpdateDTO);
 
         userMapper.update(user);
-        return user;
+        return userConverter.toDto(user);
     }
 
     @Override
     @Transactional
     public void deleteUser(Long id) {
-        User user = userMapper.selectById(id);
-        if (user == null) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
+        User user = getUserEntityById(id);
 
         // 超级管理员不能被删除
         if (UserRole.SUPER_ADMIN.name().equals(user.getRole())) {
@@ -195,21 +202,14 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void updatePassword(Long id, String newPassword) {
-        User user = userMapper.selectById(id);
-        if (user == null) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
-
+        User user = getUserEntityById(id);
         userMapper.updatePassword(id, passwordEncoder.encode(newPassword));
     }
 
     @Override
     @Transactional
     public void updateOwnPassword(Long userId, UpdatePasswordDTO updatePasswordDTO) {
-        User user = userMapper.selectById(userId);
-        if (user == null) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
+        User user = getUserEntityById(userId);
 
         // 验证旧密码
         if (!passwordEncoder.matches(updatePasswordDTO.getOldPassword(), user.getPassword())) {

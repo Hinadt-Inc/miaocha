@@ -6,13 +6,15 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 /**
- * 密码编码器配置
+ * protect circle dependency Bean
  */
 @Configuration
-public class PasswordEncoderConfig {
+public class PasswordConfig {
+
 
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
+
 }

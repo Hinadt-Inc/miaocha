@@ -1,4 +1,4 @@
-package com.hina.log.service.impl;
+package com.hina.log.service.sql;
 
 import com.hina.log.dto.SqlQueryResultDTO;
 import com.hina.log.entity.Datasource;

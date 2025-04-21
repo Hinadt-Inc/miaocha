@@ -1,7 +1,10 @@
 package com.hina.log.controller;
 
+import com.hina.log.annotation.CurrentUser;
 import com.hina.log.dto.ApiResponse;
-import com.hina.log.entity.UserDatasourcePermission;
+import com.hina.log.dto.permission.UserDatasourcePermissionDTO;
+import com.hina.log.dto.permission.UserPermissionTableStructureDTO;
+import com.hina.log.dto.user.UserDTO;
 import com.hina.log.service.UserDatasourcePermissionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -31,9 +34,9 @@ public class UserDatasourcePermissionController {
      */
     @GetMapping("/user/{userId}/datasource/{datasourceId}")
     @Operation(summary = "获取用户数据源权限", description = "获取指定用户在指定数据源上的所有表权限")
-    public ApiResponse<List<UserDatasourcePermission>> getUserDatasourcePermissions(
-            @Parameter(description = "用户ID", required = true) @PathVariable Long userId,
-            @Parameter(description = "数据源ID", required = true) @PathVariable Long datasourceId) {
+    public ApiResponse<List<UserDatasourcePermissionDTO>> getUserDatasourcePermissions(
+            @Parameter(description = "用户ID", required = true) @PathVariable("userId") Long userId,
+            @Parameter(description = "数据源ID", required = true) @PathVariable("datasourceId") Long datasourceId) {
         return ApiResponse.success(permissionService.getUserDatasourcePermissions(userId, datasourceId));
     }
 
@@ -47,10 +50,10 @@ public class UserDatasourcePermissionController {
      */
     @PostMapping("/user/{userId}/datasource/{datasourceId}/table/{tableName}")
     @Operation(summary = "授予表权限", description = "授予用户对指定数据源表的访问权限")
-    public ApiResponse<UserDatasourcePermission> grantTablePermission(
-            @Parameter(description = "用户ID", required = true) @PathVariable Long userId,
-            @Parameter(description = "数据源ID", required = true) @PathVariable Long datasourceId,
-            @Parameter(description = "表名", required = true) @PathVariable String tableName) {
+    public ApiResponse<UserDatasourcePermissionDTO> grantTablePermission(
+            @Parameter(description = "用户ID", required = true) @PathVariable("userId") Long userId,
+            @Parameter(description = "数据源ID", required = true) @PathVariable("datasourceId") Long datasourceId,
+            @Parameter(description = "表名", required = true) @PathVariable("tableName") String tableName) {
         return ApiResponse.success(permissionService.grantTablePermission(userId, datasourceId, tableName));
     }
 
@@ -65,9 +68,9 @@ public class UserDatasourcePermissionController {
     @DeleteMapping("/user/{userId}/datasource/{datasourceId}/table/{tableName}")
     @Operation(summary = "撤销表权限", description = "撤销用户对指定数据源表的访问权限")
     public ApiResponse<Void> revokeTablePermission(
-            @Parameter(description = "用户ID", required = true) @PathVariable Long userId,
-            @Parameter(description = "数据源ID", required = true) @PathVariable Long datasourceId,
-            @Parameter(description = "表名", required = true) @PathVariable String tableName) {
+            @Parameter(description = "用户ID", required = true) @PathVariable("userId") Long userId,
+            @Parameter(description = "数据源ID", required = true) @PathVariable("datasourceId") Long datasourceId,
+            @Parameter(description = "表名", required = true) @PathVariable("tableName") String tableName) {
         permissionService.revokeTablePermission(userId, datasourceId, tableName);
         return ApiResponse.success();
     }
@@ -81,8 +84,19 @@ public class UserDatasourcePermissionController {
     @DeleteMapping("/{permissionId}")
     @Operation(summary = "通过ID撤销权限", description = "通过权限ID撤销用户的数据源表访问权限")
     public ApiResponse<Void> revokePermissionById(
-            @Parameter(description = "权限ID", required = true) @PathVariable Long permissionId) {
+            @Parameter(description = "权限ID", required = true) @PathVariable("permissionId") Long permissionId) {
         permissionService.revokeTablePermission(permissionId);
         return ApiResponse.success();
+    }
+
+    /**
+     * 获取当前用户可访问的所有数据源表结构
+     *
+     * @return 当前用户可访问的数据源表结构
+     */
+    @GetMapping("/my/tables")
+    @Operation(summary = "获取当前用户可访问的表", description = "获取当前用户可以访问的所有数据源及其表，以两级结构返回")
+    public ApiResponse<List<UserPermissionTableStructureDTO>> getMyAccessibleTables(@CurrentUser UserDTO user) {
+        return ApiResponse.success(permissionService.getUserAccessibleTables(user.getId()));
     }
 }

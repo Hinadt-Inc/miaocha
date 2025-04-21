@@ -1,5 +1,6 @@
 package com.hina.log.service;
 
+import com.hina.log.dto.permission.UserDatasourcePermissionDTO;
 import com.hina.log.entity.User;
 import com.hina.log.entity.UserDatasourcePermission;
 import com.hina.log.enums.UserRole;
@@ -8,6 +9,7 @@ import com.hina.log.exception.ErrorCode;
 import com.hina.log.mapper.UserDatasourcePermissionMapper;
 import com.hina.log.mapper.UserMapper;
 import com.hina.log.service.impl.UserDatasourcePermissionServiceImpl;
+import com.hina.log.converter.UserDatasourcePermissionConverter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +39,9 @@ public class UserDatasourcePermissionServiceTest {
     @Mock
     private UserMapper userMapper;
 
+    @Mock
+    private UserDatasourcePermissionConverter permissionConverter;
+
     @InjectMocks
     private UserDatasourcePermissionServiceImpl permissionService;
 
@@ -44,6 +49,7 @@ public class UserDatasourcePermissionServiceTest {
     private User adminUser;
     private User superAdminUser;
     private UserDatasourcePermission testPermission;
+    private UserDatasourcePermissionDTO testPermissionDTO;
 
     @BeforeEach
     void setUp() {
@@ -78,11 +84,42 @@ public class UserDatasourcePermissionServiceTest {
         testPermission.setDatasourceId(1L);
         testPermission.setTableName("test_table");
 
+        // 准备测试权限DTO
+        testPermissionDTO = new UserDatasourcePermissionDTO();
+        testPermissionDTO.setId(1L);
+        testPermissionDTO.setUserId(1L);
+        testPermissionDTO.setDatasourceId(1L);
+        testPermissionDTO.setTableName("test_table");
+
         // 设置默认行为
         when(userMapper.selectById(1L)).thenReturn(normalUser);
         when(userMapper.selectById(2L)).thenReturn(adminUser);
         when(userMapper.selectById(3L)).thenReturn(superAdminUser);
         when(permissionMapper.selectByUserDatasourceAndTable(1L, 1L, "test_table")).thenReturn(testPermission);
+
+        // 设置转换器行为
+        when(permissionConverter.toDto(any(UserDatasourcePermission.class))).thenAnswer(invocation -> {
+            UserDatasourcePermission entity = invocation.getArgument(0);
+            UserDatasourcePermissionDTO dto = new UserDatasourcePermissionDTO();
+            dto.setId(entity.getId());
+            dto.setUserId(entity.getUserId());
+            dto.setDatasourceId(entity.getDatasourceId());
+            dto.setTableName(entity.getTableName());
+            return dto;
+        });
+
+        when(permissionConverter.createEntity(anyLong(), anyLong(), anyString())).thenAnswer(invocation -> {
+            Long userId = invocation.getArgument(0);
+            Long datasourceId = invocation.getArgument(1);
+            String tableName = invocation.getArgument(2);
+
+            UserDatasourcePermission entity = new UserDatasourcePermission();
+            entity.setId(5L); // ID for new permissions in tests
+            entity.setUserId(userId);
+            entity.setDatasourceId(datasourceId);
+            entity.setTableName(tableName);
+            return entity;
+        });
     }
 
     @Test
@@ -92,7 +129,7 @@ public class UserDatasourcePermissionServiceTest {
         when(permissionMapper.selectByUserAndDatasource(1L, 1L)).thenReturn(permissions);
 
         // 执行测试
-        List<UserDatasourcePermission> result = permissionService.getUserDatasourcePermissions(1L, 1L);
+        List<UserDatasourcePermissionDTO> result = permissionService.getUserDatasourcePermissions(1L, 1L);
 
         // 验证结果
         assertNotNull(result);
@@ -215,7 +252,7 @@ public class UserDatasourcePermissionServiceTest {
         when(permissionMapper.insert(any(UserDatasourcePermission.class))).thenReturn(1);
 
         // 执行测试
-        UserDatasourcePermission result = permissionService.grantTablePermission(1L, 1L, "new_table");
+        UserDatasourcePermissionDTO result = permissionService.grantTablePermission(1L, 1L, "new_table");
 
         // 验证结果
         assertNotNull(result);
@@ -240,7 +277,7 @@ public class UserDatasourcePermissionServiceTest {
         when(permissionMapper.selectByUserDatasourceAndTable(1L, 1L, "existing_table")).thenReturn(existingPermission);
 
         // 执行测试
-        UserDatasourcePermission result = permissionService.grantTablePermission(1L, 1L, "existing_table");
+        UserDatasourcePermissionDTO result = permissionService.grantTablePermission(1L, 1L, "existing_table");
 
         // 验证结果
         assertNotNull(result);

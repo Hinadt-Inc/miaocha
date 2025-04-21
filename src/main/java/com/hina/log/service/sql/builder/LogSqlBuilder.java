@@ -1,4 +1,4 @@
-package com.hina.log.service.builder;
+package com.hina.log.service.sql.builder;
 
 import com.hina.log.dto.LogSearchDTO;
 import org.apache.commons.lang3.StringUtils;
