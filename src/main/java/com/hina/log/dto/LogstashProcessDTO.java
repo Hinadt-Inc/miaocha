@@ -19,9 +19,6 @@ public class LogstashProcessDTO {
     @Schema(description = "进程名称", example = "Nginx日志收集")
     private String name;
 
-    @Schema(description = "机器名称", example = "1")
-    private Long machineName;
-
     @Schema(description = "模块名称", example = "nginx")
     private String module;
 

@@ -11,13 +11,13 @@ import java.util.List;
 @Mapper
 public interface LogstashProcessMapper {
 
-        @Insert("INSERT INTO logstash_process (name, machine_name, module, config_json, doris_sql, datasource_id, state, create_time, update_time) "
+        @Insert("INSERT INTO logstash_process (name, module, config_json, doris_sql, datasource_id, state, create_time, update_time) "
                         +
-                        "VALUES (#{name}, #{machineName}, #{module}, #{configJson}, #{dorisSql}, #{datasourceId}, #{state}, NOW(), NOW())")
+                        "VALUES (#{name}, #{module}, #{configJson}, #{dorisSql}, #{datasourceId}, #{state}, NOW(), NOW())")
         @Options(useGeneratedKeys = true, keyProperty = "id")
         int insert(LogstashProcess logstashProcess);
 
-        @Update("UPDATE logstash_process SET name=#{name}, machine_name=#{machineName}, module=#{module}, " +
+        @Update("UPDATE logstash_process SET name=#{name}, module=#{module}, " +
                         "config_json=#{configJson}, doris_sql=#{dorisSql}, datasource_id=#{datasourceId}, update_time=NOW() WHERE id=#{id}")
         int update(LogstashProcess logstashProcess);
 

@@ -23,7 +23,6 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         LogstashProcess entity = new LogstashProcess();
         entity.setId(dto.getId());
         entity.setName(dto.getName());
-        entity.setMachineName(dto.getMachineName());
         entity.setModule(dto.getModule());
         entity.setConfigJson(dto.getConfigJson());
         entity.setDorisSql(dto.getDorisSql());
@@ -45,7 +44,6 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
 
         LogstashProcess entity = new LogstashProcess();
         entity.setName(dto.getName());
-        entity.setMachineName(dto.getMachineName());
         entity.setModule(dto.getModule());
         entity.setConfigJson(dto.getConfigJson());
         entity.setDorisSql(dto.getDorisSql());
@@ -66,7 +64,6 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         LogstashProcessDTO dto = new LogstashProcessDTO();
         dto.setId(entity.getId());
         dto.setName(entity.getName());
-        dto.setMachineName(entity.getMachineName());
         dto.setModule(entity.getModule());
         dto.setConfigJson(entity.getConfigJson());
         dto.setDorisSql(entity.getDorisSql());
@@ -74,8 +71,6 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         dto.setState(entity.getState());
         dto.setCreateTime(entity.getCreateTime());
         dto.setUpdateTime(entity.getUpdateTime());
-
-        // 注意：datasourceName 和 stateDescription 和 machines 需要外部设置
 
         return dto;
     }
@@ -90,7 +85,6 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         }
 
         entity.setName(dto.getName());
-        entity.setMachineName(dto.getMachineName());
         entity.setModule(dto.getModule());
         entity.setConfigJson(dto.getConfigJson());
         entity.setDorisSql(dto.getDorisSql());
@@ -109,7 +103,6 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         }
 
         entity.setName(dto.getName());
-        entity.setMachineName(dto.getMachineName());
         entity.setModule(dto.getModule());
         entity.setConfigJson(dto.getConfigJson());
         entity.setDorisSql(dto.getDorisSql());
