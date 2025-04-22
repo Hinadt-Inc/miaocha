@@ -55,6 +55,11 @@ function AppWrapper() {
                 name: '数据源管理',
                 icon: <UserOutlined />,
               },
+              {
+                path: '/system/permission',
+                name: '数据源权限管理',
+                icon: <UserOutlined />,
+              },
             ]
           }
         ]
