@@ -2,7 +2,6 @@ package com.hina.log.logstash;
 
 import com.hina.log.config.LogstashProperties;
 import com.hina.log.dto.TaskDetailDTO;
-import com.hina.log.dto.TaskStepsGroupDTO;
 import com.hina.log.entity.LogstashProcess;
 import com.hina.log.entity.Machine;
 import com.hina.log.logstash.command.LogstashCommand;

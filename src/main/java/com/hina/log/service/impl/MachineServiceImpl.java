@@ -1,5 +1,6 @@
 package com.hina.log.service.impl;
 
+import com.hina.log.converter.MachineConverter;
 import com.hina.log.dto.MachineCreateDTO;
 import com.hina.log.dto.MachineDTO;
 import com.hina.log.entity.Machine;
@@ -8,7 +9,6 @@ import com.hina.log.exception.ErrorCode;
 import com.hina.log.mapper.MachineMapper;
 import com.hina.log.service.MachineService;
 import com.hina.log.ssh.SshClient;
-import com.hina.log.converter.MachineConverter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

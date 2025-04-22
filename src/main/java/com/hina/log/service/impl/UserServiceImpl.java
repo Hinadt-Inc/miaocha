@@ -16,6 +16,7 @@ import com.hina.log.exception.ErrorCode;
 import com.hina.log.mapper.UserMapper;
 import com.hina.log.security.JwtUtils;
 import com.hina.log.service.UserService;
+import io.jsonwebtoken.ExpiredJwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,8 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
-
-import io.jsonwebtoken.ExpiredJwtException;
 
 /**
  * 用户服务实现类

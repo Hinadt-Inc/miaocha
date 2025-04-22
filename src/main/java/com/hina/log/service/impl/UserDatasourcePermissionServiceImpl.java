@@ -213,7 +213,7 @@ public class UserDatasourcePermissionServiceImpl implements UserDatasourcePermis
 
     /**
      * 从数据库中获取表列表
-     * 
+     *
      * @param datasource 数据源
      * @return 表名列表
      */

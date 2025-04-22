@@ -1,12 +1,7 @@
 package com.hina.log.controller;
 
 import com.hina.log.annotation.CurrentUser;
-import com.hina.log.dto.ApiResponse;
-import com.hina.log.dto.SchemaInfoDTO;
-import com.hina.log.dto.SqlHistoryQueryDTO;
-import com.hina.log.dto.SqlHistoryResponseDTO;
-import com.hina.log.dto.SqlQueryDTO;
-import com.hina.log.dto.SqlQueryResultDTO;
+import com.hina.log.dto.*;
 import com.hina.log.dto.user.UserDTO;
 import com.hina.log.service.SqlQueryService;
 import io.swagger.v3.oas.annotations.Operation;
