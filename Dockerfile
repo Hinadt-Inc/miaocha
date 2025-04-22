@@ -6,8 +6,9 @@ WORKDIR /app
 # 设置生产环境变量
 ENV SPRING_PROFILES_ACTIVE=prod
 
-# 创建日志目录
-RUN mkdir -p /app/logs /app/logs/archive
+# 创建日志目录和Logstash目录
+RUN mkdir -p /app/logs /app/logs/archive /opt/logstash && \
+    chmod -R 755 /opt/logstash
 
 # 复制应用JAR包
 COPY target/*.jar app.jar

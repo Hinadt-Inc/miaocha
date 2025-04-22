@@ -35,6 +35,7 @@ DB_USER="root"
 DB_PASS="root"
 ENABLE_API_DOCS="true"
 ENABLE_SWAGGER_UI="true"
+LOGSTASH_PATH="/opt/logstash/logstash-9.0.0-linux-x86_64.tar.gz"
 
 # 运行容器的示例命令
 echo "===== 运行容器示例命令 ====="
@@ -44,6 +45,7 @@ echo "  -e \"SPRING_PROFILES_ACTIVE=${PROFILE}\" \\"
 echo "  -e \"SPRING_DATASOURCE_URL=${DB_URL}\" \\"
 echo "  -e \"SPRING_DATASOURCE_USERNAME=${DB_USER}\" \\"
 echo "  -e \"SPRING_DATASOURCE_PASSWORD=${DB_PASS}\" \\"
+echo "  -v \"${LOGSTASH_PATH}:/opt/logstash/logstash.tar.gz\" \\"
 echo "  $IMAGE_NAME:$VERSION"
 
 # 移除旧容器
@@ -57,4 +59,5 @@ docker run -d -p 8080:8080 --name log-system \
   -e "SPRING_DATASOURCE_PASSWORD=${DB_PASS}" \
   -e "ENABLE_API_DOCS=${ENABLE_API_DOCS}" \
   -e "ENABLE_SWAGGER_UI=${ENABLE_SWAGGER_UI}" \
+  -v "${LOGSTASH_PATH}:/opt/logstash/logstash-9.0.0-linux-x86_64.tar.gz" \
   "$IMAGE_NAME:$VERSION"
