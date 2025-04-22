@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Layout, Space, Button, Modal, Form, Input, Select, Tag } from 'antd';
 import { getOperatorsByFieldType, getFieldTypeColor } from '../utils/logDataHelpers';
 import { 
@@ -13,6 +13,22 @@ import { FilterPanel } from '../components/HomePage/FilterPanel';
 import { DataTable } from '../components/HomePage/DataTable';
 import { HistogramChart } from '../components/HomePage/HistogramChart';
 import { FieldSelector } from '../components/HomePage/FieldSelector';
+import { getMyTablePermissions } from '../api/permission';
+
+interface TableColumn {
+  columnName: string;
+  dataType: string;
+  columnComment?: string;
+  isPrimaryKey?: boolean;
+  isNullable?: boolean;
+}
+
+interface TablePermission {
+  tableName: string;
+  tableComment?: string;
+  columns?: TableColumn[];
+}
+
 import './HomePage.less';
 
 const { Content, Sider } = Layout;
@@ -25,9 +41,54 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showHistogram, setShowHistogram] = useState(true);
   const [timeRange, setTimeRange] = useState<[string, string] | null>(null);
-  const [selectedTable, setSelectedTable] = useState<string>('');
+  const [selectedTable, setSelectedTable] = useState<string>(''); // 保留以兼容FieldSelector组件
   const [lastAddedField, setLastAddedField] = useState<string | null>(null);
   const [lastRemovedField, setLastRemovedField] = useState<string | null>(null);
+  const [availableTables, setAvailableTables] = useState<Array<{
+    datasourceId: number;
+    datasourceName: string;
+    databaseName: string;
+    tables: Array<{
+      tableName: string;
+      tableComment: string;
+      columns: Array<{
+        columnName: string;
+        dataType: string;
+        columnComment: string;
+        isPrimaryKey: boolean;
+        isNullable: boolean;
+      }>;
+    }>;
+  }>>([]);
+
+  useEffect(() => {
+    const fetchTablePermissions = async () => {
+      try {
+        const data = await getMyTablePermissions();
+        // 转换接口数据格式
+        const transformedData = data.map(ds => ({
+          datasourceId: ds.datasourceId,
+          datasourceName: ds.datasourceName,
+          databaseName: ds.databaseName,
+          tables: ds.tables.map((table: TablePermission) => ({
+            tableName: table.tableName,
+            tableComment: table.tableComment || '',
+            columns: (table.columns || []).map((col: TableColumn) => ({
+              columnName: col.columnName,
+              dataType: col.dataType,
+              columnComment: col.columnComment || '',
+              isPrimaryKey: col.isPrimaryKey || false,
+              isNullable: col.isNullable || false
+            }))
+          }))
+        }));
+        setAvailableTables(transformedData);
+      } catch (error) {
+        console.error('获取表权限失败:', error);
+      }
+    };
+    fetchTablePermissions();
+  }, []);
 
   const { tableData, loading, hasMore, loadMoreData } = useLogData(searchQuery);
   const { 
@@ -35,7 +96,6 @@ export default function HomePage() {
     showFilterModal,
     setShowFilterModal,
     selectedFilterField,
-    // selectedFilterOperator,
     openFilterModal,
     handleFilterFieldChange,
     addFilter,
@@ -65,12 +125,6 @@ export default function HomePage() {
       loadMoreData();
     }
   }, [loadMoreData, loading, hasMore]);
-
-  const availableTables = [
-    { name: 'nginx_logs', fields: ['timestamp', 'host', 'message', 'status', 'bytes'] },
-    { name: 'app_logs', fields: ['timestamp', 'level', 'message', 'service', 'trace_id'] },
-    { name: 'db_logs', fields: ['timestamp', 'query', 'duration', 'database', 'user'] }
-  ];
 
   const availableFields = [
     { name: 'timestamp', type: 'date' },
@@ -121,10 +175,8 @@ export default function HomePage() {
             lastAddedField={lastAddedField}
             lastRemovedField={lastRemovedField}
             availableTables={availableTables}
-            selectedTable={selectedTable}
             onTableChange={setSelectedTable}
             collapsed={collapsed}
-            onCollapse={setCollapsed}
           />
         </Sider>
         

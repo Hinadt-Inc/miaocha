@@ -1,4 +1,4 @@
-import { Collapse, Select, Space, Tag } from 'antd';
+import { Collapse, Space, Tag, Cascader } from 'antd';
 import { EyeOutlined } from '@ant-design/icons';
 import { getFieldTypeColor } from '../../utils/logDataHelpers';
 
@@ -8,11 +8,24 @@ interface FieldSelectorProps {
   onToggleField: (fieldName: string) => void;
   lastAddedField: string | null;
   lastRemovedField: string | null;
-  availableTables: Array<{ name: string; fields: string[] }>;
-  selectedTable: string;
+  availableTables: Array<{
+    datasourceId: number;
+    datasourceName: string;
+    databaseName: string;
+    tables: Array<{
+      tableName: string;
+      tableComment: string;
+      columns: Array<{
+        columnName: string;
+        dataType: string;
+        columnComment: string;
+        isPrimaryKey: boolean;
+        isNullable: boolean;
+      }>;
+    }>;
+  }>;
   onTableChange: (value: string) => void;
   collapsed: boolean;
-  onCollapse: (collapsed: boolean) => void;
 }
 
 export const FieldSelector = ({
@@ -22,10 +35,8 @@ export const FieldSelector = ({
   lastAddedField,
   lastRemovedField,
   availableTables,
-  selectedTable,
   onTableChange,
-  collapsed,
-  onCollapse
+  collapsed
 }: FieldSelectorProps) => {
   if (collapsed) {
     return null;
@@ -35,18 +46,37 @@ export const FieldSelector = ({
     <>
       <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0' }}>
         <div>
-          <Select
+          <Cascader
             placeholder="选择数据表"
             style={{ width: '100%' }}
-            value={selectedTable || undefined}
-            onChange={onTableChange}
+            options={availableTables.map(ds => ({
+              value: `ds-${ds.datasourceId}`,
+              label: ds.datasourceName,
+              children: ds.tables.map(table => ({
+                value: `tbl-${table.tableName}`,
+                label: table.tableName,
+                children: table.columns.map(col => ({
+                  value: `col-${col.columnName}`,
+                  label: `${col.columnName} (${col.dataType})`
+                }))
+              }))
+            }))}
+            onChange={(value: string[]) => {
+              if (value && value.length > 0) {
+                const lastValue = value[value.length - 1];
+                // 从格式化的value中提取实际表名
+                const tableName = lastValue.startsWith('tbl-') 
+                  ? lastValue.substring(4)
+                  : lastValue;
+                onTableChange(tableName);
+              } else {
+                onTableChange('');
+              }
+            }}
             allowClear
             showSearch
-          >
-            {availableTables.map((table) => (
-              <Select.Option key={table.name} value={table.name}>{table.name}</Select.Option>
-            ))}
-          </Select>
+            displayRender={(labels) => labels[labels.length - 1]}
+          />
         </div>
       </div>
       
