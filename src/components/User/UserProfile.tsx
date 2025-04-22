@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { Avatar, Modal, Dropdown, Button, Typography, Space, Spin, Descriptions, Tooltip } from 'antd';
-import type { PopconfirmProps, MenuProps } from 'antd';
+import type { MenuProps } from 'antd';
 import { 
   UserOutlined, 
   LogoutOutlined, 
@@ -9,14 +10,10 @@ import {
   MailOutlined,
   ReloadOutlined
 } from '@ant-design/icons';
-import { fetchUserInfo } from '../../store/userSlice';
+import { fetchUserInfo, logoutUser } from '../../store/userSlice';
 import type { AppDispatch } from '../../store/store';
 
 const { Text } = Typography;
-
-const confirm: PopconfirmProps['onConfirm'] = (e) => {
-  console.log(e);
-};
 
 interface UserStateType {
   id: number;
@@ -33,8 +30,23 @@ interface UserStateType {
 
 const UserProfile: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
   const user = useSelector((state: { user: UserStateType }) => state.user);
   const [isModalVisible, setIsModalVisible] = useState(false);
+
+  const confirmLogout = () => {
+    Modal.confirm({
+      title: '确认退出登录',
+      content: '您确定要退出当前账号吗？',
+      okText: '确认',
+      cancelText: '取消',
+      onOk: async () => {
+        await dispatch(logoutUser());
+        navigate('/login');
+      },
+    });
+  };
+
   // 组件加载时获取用户信息
   useEffect(() => {
     if (user.isLoggedIn && user.sessionChecked && (!user.name || !user.email)) {
@@ -47,7 +59,6 @@ const UserProfile: React.FC = () => {
   };
 
   const showModal = () => {
-    // 在显示模态框前确保用户信息已加载
     if (user.isLoggedIn && (!user.email || !user.lastLoginAt)) {
       dispatch(fetchUserInfo());
     }
@@ -77,7 +88,7 @@ const UserProfile: React.FC = () => {
       icon: <LogoutOutlined />,
       onClick: (e) => {
         e?.domEvent.stopPropagation();
-        confirm();
+        confirmLogout();
       },
     },
   ];
@@ -87,7 +98,6 @@ const UserProfile: React.FC = () => {
     return new Date(dateString).toLocaleString('zh-CN');
   };
 
-  // 会话检查中显示加载状态
   if (!user.sessionChecked) {
     return (
       <Button type="text" className="user-profile-button">
@@ -99,12 +109,10 @@ const UserProfile: React.FC = () => {
     );
   }
 
-  // 未登录则不显示
   if (!user.isLoggedIn) {
     return null;
   }
 
-  // 即使没有用户名，也显示基本信息
   return (
     <>
       <Dropdown menu={{ items }} placement="bottomRight" arrow>
