@@ -123,7 +123,7 @@ public class LogstashProcessController {
     }
 
     @GetMapping("/{id}/task-status")
-    @Operation(summary = "查询Logstash任务执行状态", description = "根据ID查询Logstash任务的执行状态")
+    @Operation(summary = "查询最近的一次Logstash任务执行状态", description = "根据ID查询Logstash任务的执行状态")
     public ApiResponse<TaskDetailDTO> getTaskStatus(
             @Parameter(description = "Logstash进程数据库ID", required = true) @PathVariable("id") Long id) {
         return ApiResponse.success(logstashProcessService.getTaskDetailStatus(id));
