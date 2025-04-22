@@ -1,22 +1,20 @@
 import './App.less'
 import { App as AntdApp } from 'antd'
 import { ProLayout } from '@ant-design/pro-components'
-import { Link, Outlet, useLocation } from 'react-router-dom'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { 
   CompassOutlined,
   DashboardOutlined,
   ConsoleSqlOutlined,
   SettingOutlined,
   UserOutlined,
-  LogoutOutlined
 } from '@ant-design/icons'
-import { useSelector, useDispatch } from 'react-redux'
-import { logout } from './store/userSlice'
-import { Button } from 'antd'
+import { useSelector } from 'react-redux'
+import UserProfile from './components/User/UserProfile'
 
 function AppWrapper() {
   const location = useLocation()
-  const dispatch = useDispatch()
+  const navigate = useNavigate()
   const user = useSelector((state: { user: { name: string; isLoggedIn: boolean } }) => state.user)
   
   return (
@@ -67,20 +65,11 @@ function AppWrapper() {
       menuItemRender={(item, dom) => (
         <Link to={item.path || '/'}>{dom}</Link>
       )}
-      menuFooterRender={() => (
-        user.isLoggedIn && (
-          <div className="menu-user-info">
-            <span>{user.name}</span>
-            <Button
-              className="logout-button"
-              onClick={() => {
-                dispatch(logout())
-              }}
-              icon={<LogoutOutlined />}
-            />
-          </div>
+      avatarProps={{
+        render: () => (
+          user.isLoggedIn && <UserProfile />
         )
-      )}
+      }}
     >
       <div>
         <Outlet />
