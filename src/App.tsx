@@ -1,4 +1,5 @@
 import './App.less'
+import { App as AntdApp } from 'antd'
 import { ProLayout } from '@ant-design/pro-components'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { 
@@ -13,7 +14,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import { logout } from './store/userSlice'
 import { Button } from 'antd'
 
-function App() {
+function AppWrapper() {
   const location = useLocation()
   const dispatch = useDispatch()
   const user = useSelector((state: { user: { name: string; isLoggedIn: boolean } }) => state.user)
@@ -61,11 +62,6 @@ function App() {
       menuItemRender={(item, dom) => (
         <Link to={item.path || '/'}>{dom}</Link>
       )}
-      footerRender={() => (
-        <div className="copyright">
-          Hina Cloud BI ©2025
-        </div>
-      )}
       menuFooterRender={() => (
         user.isLoggedIn && (
           <div className="menu-user-info">
@@ -88,4 +84,10 @@ function App() {
   )
 }
 
-export default App
+export default function App() {
+  return (
+    <AntdApp>
+      <AppWrapper />
+    </AntdApp>
+  );
+}

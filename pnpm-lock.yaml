@@ -35,6 +35,9 @@ importers:
       less:
         specifier: ^4.3.0
         version: 4.3.0
+      rc-resize-observer:
+        specifier: ^1.4.3
+        version: 1.4.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       react:
         specifier: ^19.0.0
         version: 19.1.0

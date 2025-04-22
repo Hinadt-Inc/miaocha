@@ -1,6 +1,10 @@
-import { Table, Divider, Tabs, Card, Tag, Spin } from 'antd';
-import { LoadingOutlined } from '@ant-design/icons';
+import { Table, Divider, Tabs, Card, Tag, Spin, Empty, Typography, Space, Tooltip, Button } from 'antd';
+import { LoadingOutlined, DownloadOutlined, CopyOutlined, FullscreenOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { LogData } from '../../types/logDataTypes';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import ResizeObserver from 'rc-resize-observer';
+
+const { Text } = Typography;
 
 interface DataTableProps {
   data: LogData[];
@@ -23,125 +27,340 @@ export const DataTable = ({
   onScroll,
   lastAddedField
 }: DataTableProps) => {
-  const getTableColumns = () => {
+  const [tableWidth, setTableWidth] = useState<number>(0);
+  const [activeRowKey, setActiveRowKey] = useState<string | null>(null);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // 自适应列宽
+  const getColumnWidth = useCallback((field: string) => {
+    if (!tableWidth) return undefined;
+    
+    // 根据字段类型和表格宽度分配不同的宽度比例
+    if (field === 'timestamp') return 160;
+    if (field === 'status') return 80;
+    if (field === 'message') return Math.max(300, tableWidth * 0.4);
+    if (field === 'host' || field === 'source') return 120;
+    
+    // 默认宽度
+    return 150;
+  }, [tableWidth]);
+
+  // 处理表格单元格的渲染逻辑
+  const renderCell = useCallback((text: string | number, field: string) => {
+    const searchQueryLower = searchQuery.toLowerCase();
+    const textStr = String(text || '');
+    
+    if (textStr === '' || textStr === 'undefined' || textStr === 'null') {
+      return <Text type="secondary" italic>空</Text>;
+    }
+    
+    if (field === 'timestamp') {
+      return (
+        <Tooltip title={textStr}>
+          <Text style={{ color: '#1890ff' }}>{textStr}</Text>
+        </Tooltip>
+      );
+    }
+    
+    if (field === 'status') {
+      const status = Number(text);
+      let color = 'default';
+      let statusText = textStr;
+      
+      if (status >= 200 && status < 300) color = 'success';
+      else if (status >= 300 && status < 400) color = 'processing';
+      else if (status >= 400 && status < 500) color = 'warning';
+      else if (status >= 500) color = 'error';
+      
+      return <Tag color={color}>{statusText}</Tag>;
+    }
+    
+    // 高亮搜索关键词
+    if (searchQuery && textStr.toLowerCase().includes(searchQueryLower)) {
+      const parts = textStr.split(new RegExp(`(${searchQuery})`, 'gi'));
+      return ( 
+        <Text ellipsis={{ tooltip: textStr }}>
+          {parts.map((part, i) => 
+            part.toLowerCase() === searchQueryLower ? (
+              <Text key={i} className="highlight-text" mark>{part}</Text>
+            ) : (
+              <Text key={i}>{part}</Text>
+            )
+          )}
+        </Text>
+      );
+    }
+    
+    // 处理长文本省略
+    if (textStr.length > 100 && (field === 'message' || field.includes('text'))) {
+      return (
+        <Text ellipsis={{ tooltip: textStr }}>
+          {textStr}
+        </Text>
+      );
+    }
+    
+    return textStr;
+  }, [searchQuery]);
+
+  // 生成表格列配置
+  const getTableColumns = useCallback(() => {
     return selectedFields.map(field => ({
-      title: field,
+      title: (
+        <Space>
+          {field}
+          <Tooltip title={`字段: ${field}`}>
+            <InfoCircleOutlined style={{ fontSize: '12px', color: '#8c8c8c' }} />
+          </Tooltip>
+        </Space>
+      ),
       dataIndex: field,
       key: field,
-      render: (text: string | number) => {
-        const searchQueryLower = searchQuery.toLowerCase();
-        const textStr = String(text);
-        
-        if (field === 'timestamp') {
-          return <span style={{ color: '#1890ff' }}>{textStr}</span>;
-        }
-        if (field === 'status') {
-          const status = Number(text);
-          return <Tag color={status === 200 ? 'green' : (status === 404 ? 'orange' : 'red')}>{textStr}</Tag>;
-        }
-        
-        if (searchQuery && textStr.toLowerCase().includes(searchQueryLower)) {
-          const parts = textStr.split(new RegExp(`(${searchQuery})`, 'gi'));
-          return ( 
-            <span>
-              {parts.map((part, i) => 
-                part.toLowerCase() === searchQueryLower ? (
-                  <span key={i} className="highlight-text">{part}</span>
-                ) : (
-                  part
-                )
-              )}
-            </span>
-          );
-        }
-        
-        return textStr;
-      },
+      width: getColumnWidth(field),
+      ellipsis: true,
+      render: (text: string | number) => renderCell(text, field),
       className: `table-column ${field === lastAddedField ? 'column-fade-in' : ''}`,
       onHeaderCell: () => ({
         className: field === lastAddedField ? 'column-fade-in' : '',
       }),
-      onCell: () => ({
-        className: field === lastAddedField ? 'column-fade-in' : '',
-      })
+      onCell: (record: LogData) => ({
+        className: `${field === lastAddedField ? 'column-fade-in' : ''} ${record.key === activeRowKey ? 'active-row-cell' : ''}`,
+      }),
+      sorter: (a: LogData, b: LogData) => {
+        const valA = a[field];
+        const valB = b[field];
+        
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return valA - valB;
+        }
+        
+        return String(valA).localeCompare(String(valB));
+      },
     }));
-  };
+  }, [selectedFields, lastAddedField, activeRowKey, renderCell, getColumnWidth]);
+
+  // 切换全屏显示
+  const toggleFullscreen = useCallback(() => {
+    if (!isFullscreen) {
+      const element = tableContainerRef.current;
+      if (element) {
+        if (element.requestFullscreen) {
+          element.requestFullscreen();
+        }
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  }, [isFullscreen]);
+
+  // 监听全屏状态变化
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  // 复制当前行数据到剪贴板
+  const copyRowData = useCallback((record: LogData) => {
+    const jsonData = JSON.stringify(record, null, 2);
+    navigator.clipboard.writeText(jsonData).then(() => {
+      // 可以添加一个消息提示复制成功
+    });
+  }, []);
+
+  // 表格工具栏
+  const renderTableToolbar = () => (
+    <div className="table-toolbar">
+      <Space>
+        <Button 
+          icon={<FullscreenOutlined />} 
+          onClick={toggleFullscreen}
+          size="small"
+          title="全屏显示"
+        />
+        <Button 
+          icon={<DownloadOutlined />} 
+          size="small"
+          title="导出数据"
+          onClick={() => {
+            const jsonData = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `log_data_${new Date().toISOString()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+        />
+      </Space>
+    </div>
+  );
 
   return (
-    <div className="table-container-with-animation" 
+    <div 
+      className={`table-container-with-animation ${isFullscreen ? 'fullscreen-table' : ''}`}
       style={{ 
         height: 'calc(100vh - 165px)', 
-        overflowY: 'auto' 
+        overflowY: 'auto',
+        position: 'relative'
       }} 
       onScroll={onScroll}
+      ref={tableContainerRef}
     >
-      {viewMode === 'table' ? (
-        <Table 
-          dataSource={data} 
-          columns={getTableColumns()} 
-          pagination={false}
-          size="small"
-          expandable={{
-            expandedRowRender: (record: LogData) => (
-              <div style={{ padding: 16 }}>
-                <Tabs defaultActiveKey="json">
-                  <Tabs.TabPane tab="JSON" key="json">
-                    <pre style={{ background: '#f6f8fa', padding: 16, borderRadius: 4 }}>
-                      {JSON.stringify(record, null, 2)}
-                    </pre>
-                  </Tabs.TabPane>
-                  <Tabs.TabPane tab="表格" key="table">
-                    <Table 
-                      dataSource={Object.entries(record)
-                        .filter(([key]) => key !== 'key')
-                        .map(([key, value]) => ({ key, field: key, value }))} 
-                      columns={[
-                        { title: '字段', dataIndex: 'field', key: 'field' },
-                        { title: '值', dataIndex: 'value', key: 'value' }
-                      ]} 
-                      pagination={false}
-                      size="small"
-                    />
-                  </Tabs.TabPane>
-                </Tabs>
-              </div>
+      {renderTableToolbar()}
+      
+      <ResizeObserver
+        onResize={({ width }) => {
+          setTableWidth(width);
+        }}
+      >
+        <div className="resize-container">
+          {viewMode === 'table' ? (
+            data.length > 0 ? (
+              <Table 
+                dataSource={data} 
+                columns={getTableColumns()} 
+                pagination={false}
+                size="middle"
+                scroll={{ x: 'max-content' }}
+                expandable={{
+                  expandedRowRender: (record: LogData) => (
+                    <div style={{ padding: 16 }}>
+                      <Tabs defaultActiveKey="json">
+                        <Tabs.TabPane tab="JSON" key="json">
+                          <div className="json-preview-header">
+                            <Button
+                              icon={<CopyOutlined />}
+                              size="small"
+                              onClick={() => copyRowData(record)}
+                              title="复制JSON数据"
+                            >
+                              复制
+                            </Button>
+                          </div>
+                          <pre className="json-preview">
+                            {JSON.stringify(record, null, 2)}
+                          </pre>
+                        </Tabs.TabPane>
+                        <Tabs.TabPane tab="表格" key="table">
+                          <Table 
+                            dataSource={Object.entries(record)
+                              .filter(([key]) => key !== 'key')
+                              .map(([key, value]) => ({ key, field: key, value: String(value) }))} 
+                            columns={[
+                              { 
+                                title: '字段', 
+                                dataIndex: 'field', 
+                                key: 'field',
+                                width: 150
+                              },
+                              { 
+                                title: '值', 
+                                dataIndex: 'value', 
+                                key: 'value',
+                                render: (text) => <Text ellipsis={{ tooltip: text }}>{text}</Text>
+                              }
+                            ]} 
+                            pagination={false}
+                            size="small"
+                          />
+                        </Tabs.TabPane>
+                      </Tabs>
+                    </div>
+                  ),
+                  onExpand: (expanded, record) => {
+                    setActiveRowKey(expanded ? record.key : null);
+                  }
+                }}
+                rowKey="key"
+                className="data-table-with-animation"
+                rowClassName={(record) => record.key === activeRowKey ? 'active-table-row' : ''}
+                onRow={(record) => ({
+                  onClick: () => {
+                    setActiveRowKey(record.key === activeRowKey ? null : record.key);
+                  },
+                  className: record.key === activeRowKey ? 'active-table-row' : ''
+                })}
+                sticky={{ offsetHeader: 0 }}
+              />
+            ) : (
+              !loading && <Empty description="没有找到匹配的数据记录" />
             )
-          }}
-          rowKey="key"
-          className="data-table-with-animation"
-        />
-      ) : (
-        <div style={{ overflowY: 'auto', height: 'calc(100vh - 215px)', padding: '0 16px' }}>
-          {data.map(record => (
-            <Card 
-              key={record.key} 
-              style={{ margin: '8px 0', borderLeft: '4px solid #1890ff' }} 
-              size="small"
-            >
-              <div style={{ marginBottom: 8 }}>
-                <Tag color="blue">{record.timestamp}</Tag>
-                <Divider type="vertical" />
-                <Tag color={record.status === 200 ? 'green' : (record.status === 404 ? 'orange' : 'red')}>
-                  {record.status}
-                </Tag>
-                <Divider type="vertical" />
-                <span>{record.host}</span>
-              </div>
-              <pre style={{ background: '#f6f8fa', padding: 16, borderRadius: 4, maxHeight: 200, overflow: 'auto' }}>
-                {JSON.stringify(record, null, 2)}
-              </pre>
-            </Card>
-          ))}
+          ) : (
+            <div className="json-card-view">
+              {data.length > 0 ? data.map(record => (
+                <Card 
+                  key={record.key} 
+                  className={`json-card ${record.key === activeRowKey ? 'active-card' : ''}`}
+                  size="small"
+                  onClick={() => setActiveRowKey(record.key === activeRowKey ? null : record.key)}
+                  extra={
+                    <Button
+                      icon={<CopyOutlined />}
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyRowData(record);
+                      }}
+                      type="text"
+                    />
+                  }
+                >
+                  <div className="json-card-header">
+                    <Space wrap>
+                      <Tag color="blue">{record.timestamp}</Tag>
+                      {record.status !== undefined && (
+                        <Tag color={
+                          Number(record.status) >= 200 && Number(record.status) < 300 ? 'green' : 
+                          Number(record.status) >= 300 && Number(record.status) < 400 ? 'blue' :
+                          Number(record.status) >= 400 && Number(record.status) < 500 ? 'orange' : 'red'
+                        }>
+                          {record.status}
+                        </Tag>
+                      )}
+                      {record.host && <Tag>{record.host}</Tag>}
+                      {record.source && <Tag>{record.source}</Tag>}
+                    </Space>
+                  </div>
+                  <div className="json-card-content">
+                    <pre className="json-preview">
+                      {JSON.stringify(
+                        Object.fromEntries(
+                          Object.entries(record).filter(([key]) => key !== 'key')
+                        ), 
+                        null, 
+                        2
+                      )}
+                    </pre>
+                  </div>
+                </Card>
+              )) : (
+                !loading && <Empty description="没有找到匹配的数据记录" />
+              )}
+            </div>
+          )}
         </div>
-      )}
+      </ResizeObserver>
+      
       {loading && (
-        <div style={{ textAlign: 'center', padding: 16 }}>
+        <div className="loading-container">
           <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} />
+          <div className="loading-text">加载数据中...</div>
         </div>
       )}
+      
       {!hasMore && data.length > 0 && (
-        <div style={{ textAlign: 'center', padding: 16, color: '#999' }}>
-          已加载全部数据
+        <div className="end-of-data-message">
+          <Divider plain>已加载全部数据</Divider>
         </div>
       )}
     </div>

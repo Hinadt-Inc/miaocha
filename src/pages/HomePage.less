@@ -1,9 +1,9 @@
-/* HomePage.less - 单列动画效果版 */
+/* HomePage.less - 优化版 */
 
 /* 关键帧动画定义 */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateX(20px); }
-  to { opacity: 1; transform: translateX(0); }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fadeOut {
@@ -35,49 +35,171 @@
   to { transform: scaleX(1); }
 }
 
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
 /* 表格容器动画 */
 .table-container-with-animation {
   position: relative;
-  transition: opacity 0.3s ease-in-out;
+  transition: all 0.3s ease-in-out;
   
+  /* 表格工具栏 */
+  .table-toolbar {
+    padding: 8px 12px;
+    display: flex;
+    justify-content: flex-end;
+    background: #fafafa;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  /* 负责调整大小的容器 */
+  .resize-container {
+    position: relative;
+  }
+  
+  /* 表格组件样式 */
   .ant-table-wrapper {
-    transition: all 0.3s ease-in-out;
+    .ant-table {
+      background: #fff;
+      
+      .ant-table-thead > tr > th {
+        background: #f5f7fa;
+        font-weight: 600;
+        transition: background-color 0.3s;
+        padding: 12px 16px;
+        
+        &:hover {
+          background-color: #e6f7ff !important;
+        }
+      }
+      
+      .ant-table-tbody > tr {
+        transition: all 0.3s ease;
+        
+        &:hover {
+          background-color: #f0f7ff;
+        }
+        
+        &.active-table-row {
+          background-color: #e6f7ff;
+        }
+        
+        td {
+          padding: 12px 16px;
+          transition: background-color 0.3s;
+        }
+      }
+    }
   }
   
-  /* 表格行动画 */
-  .ant-table-tbody > tr {
-    transition: background-color 0.3s ease, opacity 0.3s ease;
-    
-    &:hover {
-      transform: translateZ(0);
-      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-      z-index: 1;
-    }
+  /* JSON预览相关样式 */
+  .json-preview-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
   }
-
-  /* 表格单元格动画 */
-  .table-column-with-animation {
-    animation: fadeIn 0.5s ease-out;
-    transition: width 0.3s ease-in-out, 
-                padding 0.3s ease-in-out,
-                background-color 0.3s ease-in-out;
+  
+  .json-preview {
+    background: #292d3e;
+    color: #fff;
+    padding: 16px;
+    border-radius: 4px;
+    overflow: auto;
+    font-family: 'Fira Code', Consolas, 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    max-height: 300px;
+  }
+  
+  /* JSON卡片视图样式 */
+  .json-card-view {
+    padding: 16px;
     
-    &:nth-child(odd) {
-      animation-delay: 0.05s;
-    }
-    
-    &:nth-child(even) {
-      animation-delay: 0.1s;
+    .json-card {
+      margin-bottom: 16px;
+      border-radius: 4px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      transition: all 0.3s ease;
+      animation: fadeIn 0.3s;
+      
+      &:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+      }
+      
+      &.active-card {
+        border-left: 3px solid #1890ff;
+        background-color: #f0f7ff;
+      }
+      
+      .json-card-header {
+        margin-bottom: 12px;
+        display: flex;
+        flex-wrap: wrap;
+      }
+      
+      .json-card-content {
+        .json-preview {
+          max-height: 200px;
+        }
+      }
     }
   }
   
-  /* 表格头部动画 */
-  .ant-table-thead > tr > th {
+  /* 加载中状态样式 */
+  .loading-container {
+    text-align: center;
+    padding: 24px;
+    background: rgba(255, 255, 255, 0.8);
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     transition: all 0.3s ease;
-    overflow: hidden;
     
-    &:hover {
-      background-color: #f0f7ff !important;
+    .loading-text {
+      margin-top: 8px;
+      color: #8c8c8c;
+    }
+  }
+  
+  /* 结束信息样式 */
+  .end-of-data-message {
+    padding: 16px 24px;
+    color: #8c8c8c;
+    
+    .ant-divider {
+      color: #8c8c8c;
+      font-size: 13px;
+    }
+  }
+  
+  /* 空状态样式 */
+  .ant-empty {
+    padding: 40px 0;
+  }
+  
+  /* 全屏模式样式 */
+  &.fullscreen-table {
+    background: #fff;
+    height: 100vh !important;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    
+    .table-toolbar {
+      margin-bottom: 16px;
+    }
+    
+    .resize-container {
+      flex: 1;
+      overflow: auto;
     }
   }
 }
@@ -206,7 +328,7 @@
 
 /* 内容区布局样式 */
 .layout-content {
-  padding: 12px 0;
+  padding: 12px 12px;
   background: #f0f2f5;
 }
 
@@ -214,7 +336,15 @@
 .sider-container {
   background: #fff;
   margin-right: 16px;
-  overflow-y: auto;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  
+  .ant-layout-sider-children {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
 }
 
 /* 内部布局样式 */
@@ -225,16 +355,30 @@
 /* 内容容器样式 */
 .content-container {
   background: #fff;
-  padding: 0 0 24px 0;
+  padding: 0;
   position: relative;
   flex: 1;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
 }
 
 /* 表格头部样式 */
 .table-header {
-  padding: 8px 12px;
+  padding: 12px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+  
+  .record-count {
+    font-size: 14px;
+    color: #8c8c8c;
+  }
+  
+  .view-controls {
+    display: flex;
+    align-items: center;
+  }
 }

@@ -17,10 +17,8 @@ service.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     // 添加token到请求头
     const token = localStorage.getItem('accessToken')
-    console.log('Adding token to request:', token) // 调试日志
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`
-      console.log('Request headers:', config.headers) // 调试日志
     }
     return config
   },

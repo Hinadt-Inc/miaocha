@@ -1,36 +1,126 @@
 .sql-editor-page {
-  padding: 16px;
   background: #fff;
-  height: 100%;
+  font-size: 20px;
+
+  .main-container {
+    display: flex;
+    height: calc(100vh - 200px);
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .schema-tree-container {
+    width: 280px;
+    margin-right: 16px;
+  }
+
+  .schema-card-body {
+    padding: 12px 8px;
+    height: calc(100% - 50px);
+    overflow: auto;
+  }
+
+  .loading-spinner {
+    text-align: center;
+    padding: 40px 0;
+  }
+
+  .query-results-spinner {
+    text-align: center;
+    padding: 80px 0;
+  }
+
+  .editor-results-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .editor-wrapper {
+    height: 40%;
+    margin-bottom: 16px;
+  }
+
+  .results-table {
+    .ant-table-body {
+      max-height: 300px;
+      overflow-y: auto !important;
+    }
+  }
+
+  .chart-container {
+    height: 400px;
+  }
 
   .sql-editor-card {
-    margin-bottom: 16px;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+    border-radius: 4px;
   }
 
   .editor-container {
     border: 1px solid #d9d9d9;
-    border-radius: 2px;
+    border-radius: 4px;
     transition: all 0.3s;
     
     &:hover {
-      border-color: #40a9ff;
+      border-color: #1890ff;
       box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
     }
   }
 
   .toolbar {
-    margin-bottom: 16px;
+    margin-bottom: 24px;
+    display: flex;
+    gap: 12px;
+  }
+
+  .tree-table-icon {
+    margin-right: 8px;
+  }
+
+  .tree-spacer {
+    width: 16px;
+    display: inline-block;
+    margin-right: 8px;
+  }
+
+  .tree-copy-icon {
+    margin-left: 8px;
+    cursor: pointer;
+    opacity: 0.6;
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  .tree-node-wrapper {
+    display: flex;
+    align-items: center;
+  }
+
+  .tree-node-wrapper {
+    display: flex;
+    align-items: center;
+  }
+
+  .tree-node-title {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    vertical-align: middle;
   }
 
   .results-container {
-    padding: 8px 0;
+    padding: 16px 0;
 
     .results-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
+      margin-bottom: 24px;
+      font-size: 16px;
     }
 
     .success-text {
@@ -66,10 +156,10 @@
   // 历史记录和保存的查询样式
   .history-list {
     .history-item {
-      padding: 12px;
-      margin-bottom: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
       border: 1px solid #f0f0f0;
-      border-radius: 2px;
+      border-radius: 4px;
       cursor: pointer;
       transition: all 0.3s;
 
@@ -85,8 +175,8 @@
       .history-item-header {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 8px;
-        font-size: 12px;
+        margin-bottom: 12px;
+        font-size: 14px;
         
         .history-time {
           color: #999;
@@ -106,7 +196,7 @@
         overflow: hidden;
         text-overflow: ellipsis;
         font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-        font-size: 12px;
+        font-size: 14px;
         color: #333;
         background-color: #f5f5f5;
         padding: 4px 8px;
@@ -117,10 +207,10 @@
 
   .saved-queries-list {
     .saved-query-item {
-      padding: 12px;
-      margin-bottom: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
       border: 1px solid #d9d9d9;
-      border-radius: 2px;
+      border-radius: 4px;
       cursor: pointer;
       transition: all 0.3s;
 
@@ -130,15 +220,15 @@
       }
 
       .saved-query-name {
-        font-size: 14px;
+        font-size: 16px;
         font-weight: 500;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
       }
 
       .saved-query-time {
-        font-size: 12px;
+        font-size: 14px;
         color: #999;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
       }
 
       .saved-query-sql {
@@ -146,7 +236,7 @@
         overflow: hidden;
         text-overflow: ellipsis;
         font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-        font-size: 12px;
+        font-size: 14px;
         color: #333;
         background-color: #f5f5f5;
         padding: 4px 8px;
