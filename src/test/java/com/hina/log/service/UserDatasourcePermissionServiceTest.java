@@ -3,7 +3,7 @@ package com.hina.log.service;
 import com.hina.log.dto.permission.UserDatasourcePermissionDTO;
 import com.hina.log.entity.User;
 import com.hina.log.entity.UserDatasourcePermission;
-import com.hina.log.enums.UserRole;
+import com.hina.log.entity.enums.UserRole;
 import com.hina.log.exception.BusinessException;
 import com.hina.log.exception.ErrorCode;
 import com.hina.log.mapper.UserDatasourcePermissionMapper;

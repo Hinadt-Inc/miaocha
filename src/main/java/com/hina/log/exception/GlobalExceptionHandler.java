@@ -117,14 +117,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(SshException.class)
     public ResponseEntity<ApiResponse<Void>> handleSshException(SshException e) {
         log.error("SSH异常: ", e);
-
-        ApiResponse<Void> response;
-        if (e instanceof SshDependencyException) {
-            response = ApiResponse.error(ErrorCode.SSH_DEPENDENCY_MISSING.getCode(), e.getMessage());
-        } else {
-            response = ApiResponse.error(ErrorCode.SSH_COMMAND_FAILED.getCode(), e.getMessage());
-        }
-
+        ApiResponse<Void> response = ApiResponse.error(ErrorCode.SSH_COMMAND_FAILED.getCode(), e.getMessage());
         return createResponseEntityWithUtf8(response, HttpStatus.SERVICE_UNAVAILABLE);
     }
 

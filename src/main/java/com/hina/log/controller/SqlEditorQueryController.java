@@ -3,6 +3,8 @@ package com.hina.log.controller;
 import com.hina.log.annotation.CurrentUser;
 import com.hina.log.dto.ApiResponse;
 import com.hina.log.dto.SchemaInfoDTO;
+import com.hina.log.dto.SqlHistoryQueryDTO;
+import com.hina.log.dto.SqlHistoryResponseDTO;
 import com.hina.log.dto.SqlQueryDTO;
 import com.hina.log.dto.SqlQueryResultDTO;
 import com.hina.log.dto.user.UserDTO;
@@ -94,5 +96,21 @@ public class SqlEditorQueryController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
                 .contentType(mediaType)
                 .body(resource);
+    }
+
+    /**
+     * 查询SQL执行历史
+     *
+     * @param user 当前用户
+     * @param dto  查询参数
+     * @return 分页查询结果
+     */
+    @GetMapping("/history")
+    @Operation(summary = "查询SQL执行历史", description = "分页查询用户的SQL执行历史记录，支持按数据源、表名和查询关键字筛选")
+    public ApiResponse<SqlHistoryResponseDTO> getQueryHistory(
+            @CurrentUser UserDTO user,
+            @Parameter(description = "查询参数") @Valid SqlHistoryQueryDTO dto) {
+        SqlHistoryResponseDTO result = sqlQueryService.getQueryHistory(user.getId(), dto);
+        return ApiResponse.success(result);
     }
 }

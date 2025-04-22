@@ -3,7 +3,7 @@ package com.hina.log.service.impl;
 import com.hina.log.dto.DatasourceCreateDTO;
 import com.hina.log.dto.DatasourceDTO;
 import com.hina.log.entity.Datasource;
-import com.hina.log.enums.DatasourceType;
+import com.hina.log.entity.enums.DatasourceType;
 import com.hina.log.exception.BusinessException;
 import com.hina.log.exception.ErrorCode;
 import com.hina.log.mapper.DatasourceMapper;

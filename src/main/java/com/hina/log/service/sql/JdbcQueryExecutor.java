@@ -2,7 +2,7 @@ package com.hina.log.service.sql;
 
 import com.hina.log.dto.SqlQueryResultDTO;
 import com.hina.log.entity.Datasource;
-import com.hina.log.enums.DatasourceType;
+import com.hina.log.entity.enums.DatasourceType;
 import com.hina.log.exception.BusinessException;
 import com.hina.log.exception.ErrorCode;
 import org.springframework.stereotype.Component;

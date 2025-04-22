@@ -43,7 +43,10 @@ public enum ErrorCode {
 
     // SSH相关错误码
     SSH_OPERATION_FAILED("6101", "SSH操作失败"),
+
+    @Deprecated
     SSH_DEPENDENCY_MISSING("6102", "SSH依赖缺失"),
+
     SSH_COMMAND_FAILED("6103", "SSH命令执行失败"),
     SSH_FILE_TRANSFER_FAILED("6104", "SSH文件传输失败"),
 

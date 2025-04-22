@@ -59,10 +59,10 @@ public class TaskDetailDTO {
     private String errorMessage;
 
     @Schema(description = "机器步骤详情")
-    private Map<Long, List<MachineStepDTO>> machineSteps;
+    private Map<String, List<MachineStepDTO>> machineSteps;
 
-    @Schema(description = "每台机器的进度百分比 (机器ID -> 百分比值)")
-    private Map<Long, Integer> machineProgressPercentages;
+    @Schema(description = "每台机器的进度百分比 (机器名称 -> 百分比值)")
+    private Map<String, Integer> machineProgressPercentages;
 
     /**
      * 计算并获取任务进度百分比
@@ -117,7 +117,7 @@ public class TaskDetailDTO {
      * @return 每台机器的进度百分比 (机器ID -> 百分比值)
      */
     @Schema(description = "每台机器的进度百分比")
-    public Map<Long, Integer> getMachineProgressPercentages() {
+    public Map<String, Integer> getMachineProgressPercentages() {
         if (machineSteps == null || machineSteps.isEmpty()) {
             this.machineProgressPercentages = Map.of();
             return this.machineProgressPercentages;

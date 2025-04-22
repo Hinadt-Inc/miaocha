@@ -1,12 +1,15 @@
 package com.hina.log.service.sql;
 
+import com.hina.log.converter.SqlQueryHistoryConverter;
 import com.hina.log.dto.SchemaInfoDTO;
+import com.hina.log.dto.SqlHistoryQueryDTO;
+import com.hina.log.dto.SqlHistoryResponseDTO;
 import com.hina.log.dto.SqlQueryDTO;
 import com.hina.log.dto.SqlQueryResultDTO;
 import com.hina.log.entity.Datasource;
 import com.hina.log.entity.SqlQueryHistory;
 import com.hina.log.entity.User;
-import com.hina.log.enums.UserRole;
+import com.hina.log.entity.enums.UserRole;
 import com.hina.log.exception.BusinessException;
 import com.hina.log.exception.ErrorCode;
 import com.hina.log.mapper.DatasourceMapper;
@@ -35,13 +38,17 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Connection;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * SQL查询服务实现类
@@ -80,6 +87,9 @@ public class SqlQueryServiceImpl implements SqlQueryService {
 
     private static final Pattern TABLE_NAME_PATTERN = Pattern.compile("\\bFROM\\s+[\"'`]?([\\w\\d_\\.]+)[\"'`]?",
             Pattern.CASE_INSENSITIVE);
+
+    @Autowired
+    private SqlQueryHistoryConverter sqlQueryHistoryConverter;
 
     /**
      * 获取线程执行器，如果注入的执行器为空（如在测试环境中），则使用公共线程池
@@ -301,7 +311,7 @@ public class SqlQueryServiceImpl implements SqlQueryService {
      * 同步获取schema信息
      */
     private SchemaInfoDTO getSchemaInfoSync(User user, Long userId, Long datasourceId,
-                                            Datasource datasource, SchemaInfoDTO schemaInfo) {
+            Datasource datasource, SchemaInfoDTO schemaInfo) {
         try {
             // 获取JDBC连接
             Connection conn = jdbcQueryExecutor.getConnection(datasource);
@@ -340,20 +350,27 @@ public class SqlQueryServiceImpl implements SqlQueryService {
 
     @Override
     public Resource getQueryResult(Long queryId) {
+        // 查询历史记录
         SqlQueryHistory history = sqlQueryHistoryMapper.selectById(queryId);
         if (history == null) {
+            logger.warn("查询记录不存在, ID: {}", queryId);
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "查询记录不存在");
         }
 
+        // 检查结果文件路径
         if (StringUtils.isBlank(history.getResultFilePath())) {
+            logger.warn("查询结果文件路径为空, ID: {}", queryId);
             throw new BusinessException(ErrorCode.EXPORT_FAILED, "查询结果文件不存在");
         }
 
+        // 检查文件是否存在
         File resultFile = new File(history.getResultFilePath());
         if (!resultFile.exists()) {
+            logger.warn("查询结果文件不存在: {}", history.getResultFilePath());
             throw new BusinessException(ErrorCode.EXPORT_FAILED, "查询结果文件不存在");
         }
 
+        logger.debug("获取查询结果文件: {}", history.getResultFilePath());
         return new FileSystemResource(resultFile);
     }
 
@@ -400,5 +417,63 @@ public class SqlQueryServiceImpl implements SqlQueryService {
         } catch (Exception e) {
             throw new BusinessException(ErrorCode.EXPORT_FAILED, "创建导出目录失败: " + e.getMessage());
         }
+    }
+
+    @Override
+    public SqlHistoryResponseDTO getQueryHistory(Long userId, SqlHistoryQueryDTO dto) {
+        // 计算分页参数
+        int offset = (dto.getPageNum() - 1) * dto.getPageSize();
+        int limit = dto.getPageSize();
+
+        // 查询总记录数
+        Long total = sqlQueryHistoryMapper.countTotal(
+                userId,
+                dto.getDatasourceId(),
+                dto.getTableName(),
+                dto.getQueryKeyword());
+
+        // 查询记录列表
+        List<SqlQueryHistory> historyList = sqlQueryHistoryMapper.selectByPage(
+                userId,
+                dto.getDatasourceId(),
+                dto.getTableName(),
+                dto.getQueryKeyword(),
+                offset,
+                limit);
+
+        // 构建响应对象
+        SqlHistoryResponseDTO response = new SqlHistoryResponseDTO();
+        response.setPageNum(dto.getPageNum());
+        response.setPageSize(dto.getPageSize());
+        response.setTotal(total);
+        response.setPages((int) Math.ceil((double) total / dto.getPageSize()));
+
+        // 如果没有记录，直接返回空列表
+        if (historyList == null || historyList.isEmpty()) {
+            response.setRecords(new ArrayList<>());
+            return response;
+        }
+
+        // 收集所有用户ID
+        Set<Long> userIds = historyList.stream()
+                .map(SqlQueryHistory::getUserId)
+                .collect(Collectors.toSet());
+
+        // 批量查询用户信息
+        Map<Long, User> userMap = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            List<User> users = userMapper.selectByIds(new ArrayList<>(userIds));
+            if (users != null) {
+                userMap = users.stream()
+                        .collect(Collectors.toMap(User::getId, user -> user));
+            }
+        }
+
+        // 使用转换器批量转换记录
+        List<SqlHistoryResponseDTO.SqlHistoryItemDTO> records = sqlQueryHistoryConverter.convertToDtoList(historyList,
+                userMap);
+
+        response.setRecords(records);
+        return response;
     }
 }

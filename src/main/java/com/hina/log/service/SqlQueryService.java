@@ -1,6 +1,8 @@
 package com.hina.log.service;
 
 import com.hina.log.dto.SchemaInfoDTO;
+import com.hina.log.dto.SqlHistoryQueryDTO;
+import com.hina.log.dto.SqlHistoryResponseDTO;
 import com.hina.log.dto.SqlQueryDTO;
 import com.hina.log.dto.SqlQueryResultDTO;
 
@@ -36,4 +38,13 @@ public interface SqlQueryService {
      * @return 查询结果文件
      */
     Resource getQueryResult(Long queryId);
+
+    /**
+     * 分页查询SQL查询历史
+     *
+     * @param userId 用户ID
+     * @param dto    查询参数
+     * @return 分页查询结果
+     */
+    SqlHistoryResponseDTO getQueryHistory(Long userId, SqlHistoryQueryDTO dto);
 }

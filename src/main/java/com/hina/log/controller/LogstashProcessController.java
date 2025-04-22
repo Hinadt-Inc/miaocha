@@ -4,6 +4,8 @@ import com.hina.log.dto.ApiResponse;
 import com.hina.log.dto.LogstashProcessCreateDTO;
 import com.hina.log.dto.LogstashProcessDTO;
 import com.hina.log.dto.TaskDetailDTO;
+import com.hina.log.dto.TaskStepsGroupDTO;
+import com.hina.log.dto.TaskSummaryDTO;
 import com.hina.log.service.LogstashProcessService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -128,10 +130,24 @@ public class LogstashProcessController {
     }
 
     @PostMapping("/{id}/retry")
-    @Operation(summary = "重试失败的Logstash任务", description = "根据ID重试失败的Logstash任务")
-    public ApiResponse<Boolean> retryTask(
+    @Operation(summary = "重试失败的Logstash任务操作", description = "根据ID重试失败的Logstash任务")
+    public ApiResponse<LogstashProcessDTO> retryTask(
             @Parameter(description = "Logstash进程数据库ID", required = true) @PathVariable("id") Long id) {
-        return ApiResponse.success(logstashProcessService.retryTask(id));
+        return ApiResponse.success(logstashProcessService.retryLogstashProcessOps(id));
+    }
+
+    @GetMapping("/{id}/tasks")
+    @Operation(summary = "查询Logstash进程关联的所有任务", description = "根据进程ID查询所有相关的任务摘要信息")
+    public ApiResponse<List<TaskSummaryDTO>> getProcessTasks(
+            @Parameter(description = "Logstash进程数据库ID", required = true) @PathVariable("id") Long id) {
+        return ApiResponse.success(logstashProcessService.getProcessTaskSummaries(id));
+    }
+
+    @GetMapping("/tasks/{taskId}/steps")
+    @Operation(summary = "查询任务的步骤详情", description = "根据任务ID查询步骤执行详情，按步骤分组")
+    public ApiResponse<TaskStepsGroupDTO> getTaskSteps(
+            @Parameter(description = "任务ID", required = true) @PathVariable("taskId") String taskId) {
+        return ApiResponse.success(logstashProcessService.getTaskStepsGrouped(taskId));
     }
 
 }

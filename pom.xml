@@ -26,6 +26,8 @@
         <mybatis.version>3.0.4</mybatis.version>
         <validation.version>3.0.2</validation.version>
         <jjwt.version>0.12.5</jjwt.version>
+        <sshd.version>2.12.1</sshd.version>
+        <bouncycastle.version>1.77</bouncycastle.version>
     </properties>
 
     <dependencyManagement>
@@ -159,6 +161,35 @@
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
             <version>5.2.3</version>
+        </dependency>
+
+        <!-- SSH连接组件 -->
+        <dependency>
+            <groupId>org.apache.sshd</groupId>
+            <artifactId>sshd-core</artifactId>
+            <version>${sshd.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.sshd</groupId>
+            <artifactId>sshd-sftp</artifactId>
+            <version>${sshd.version}</version>
+        </dependency>
+        
+        <!-- 加密组件 -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>${bouncycastle.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+            <version>${bouncycastle.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcutil-jdk18on</artifactId>
+            <version>${bouncycastle.version}</version>
         </dependency>
     </dependencies>
 
