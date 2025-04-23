@@ -47,7 +47,12 @@ public class SecurityConfig {
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(customAuthenticationEntryPoint())
                         .accessDeniedHandler(customAccessDeniedHandler()))
-                .authorizeHttpRequests(auth -> auth
+                .authorizeHttpRequests(authorizeRequests -> authorizeRequests
+                        // 前端静态资源和SPA路由
+                        .requestMatchers("/", "/index.html", "/favicon.ico", "/manifest.json").permitAll()
+                        .requestMatchers("/assets/**", "/static/**", "/css/**", "/js/**", "/img/**", "/fonts/**")
+                        .permitAll()
+
                         // 公开接口
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/refresh").permitAll()
@@ -79,11 +84,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/machines").authenticated()
                         .requestMatchers("/api/machines/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
 
-                        // SQL查询和日志查询接口
-                        .requestMatchers("/api/sql/**", "/api/logs/**").authenticated()
+                        // SQL查询和日志查询接口需要认证
+                        .requestMatchers("/api/logs/**", "/api/sql/**").authenticated()
 
-                        // 其他接口
-                        .anyRequest().authenticated())
+                        // 所有其他API接口需要认证
+                        .requestMatchers("/api/**").authenticated()
+
+                        // 所有前端路由直接放行，由前端处理
+                        .anyRequest().permitAll())
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

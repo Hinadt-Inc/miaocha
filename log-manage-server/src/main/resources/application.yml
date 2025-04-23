@@ -1,7 +1,12 @@
 server:
   port: 8081
+  servlet:
+    context-path: /
 
 spring:
+  application:
+    name: log-manage-system
+    version: '@project.version@'
   profiles:
     active: dev
   datasource:
@@ -23,7 +28,7 @@ mybatis:
 
 springdoc:
   api-docs:
-    path: /api-docs
+    path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui
   show-actuator: false

@@ -6,13 +6,18 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="log-manage-system" />
+        <module name="log-manage-assembly" />
+        <module name="log-manage-ui" />
+        <module name="log-manage-server" />
       </profile>
     </annotationProcessing>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
-      <module name="log-manage-system" options="-parameters" />
+      <module name="log-manage-assembly" options="-parameters" />
+      <module name="log-manage-server" options="-parameters" />
+      <module name="log-manage-system" options="" />
+      <module name="log-manage-ui" options="-parameters" />
     </option>
   </component>
 </project>
