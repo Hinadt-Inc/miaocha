@@ -27,8 +27,6 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-
     /**
      * 创建带有UTF-8编码的ResponseEntity
      */
@@ -62,7 +60,7 @@ public class GlobalExceptionHandler {
     /**
      * 参数校验异常处理
      */
-    @ExceptionHandler({ MethodArgumentNotValidException.class, BindException.class })
+    @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
     public ResponseEntity<ApiResponse<Void>> handleValidationException(Exception e) {
         String message;
         if (e instanceof MethodArgumentNotValidException) {

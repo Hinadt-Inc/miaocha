@@ -39,10 +39,7 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
 
     public LogstashProcessDeployServiceImpl(
             LogstashProcessMapper logstashProcessMapper,
-            LogstashProperties logstashProperties,
             TaskService taskService,
-            SshClient sshClient,
-            LogstashMachineMapper logstashMachineMapper,
             LogstashProcessStateManager stateManager,
             LogstashCommandFactory commandFactory) {
         this.logstashProcessMapper = logstashProcessMapper;

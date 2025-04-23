@@ -2,7 +2,6 @@ package com.hina.log.logstash.task;
 
 import com.hina.log.dto.TaskDetailDTO;
 import com.hina.log.dto.TaskStepsGroupDTO;
-import com.hina.log.dto.TaskSummaryDTO;
 import com.hina.log.entity.Machine;
 import com.hina.log.logstash.enums.StepStatus;
 import com.hina.log.logstash.enums.TaskOperationType;
@@ -93,13 +92,6 @@ public interface TaskService {
      */
     void executeAsync(String taskId, Runnable action, Runnable callback);
 
-    /**
-     * 获取任务摘要信息
-     *
-     * @param taskId 任务ID
-     * @return 任务摘要信息
-     */
-    String getTaskSummary(String taskId);
 
     /**
      * 获取任务机器步骤执行状态统计
@@ -134,13 +126,6 @@ public interface TaskService {
      */
     void deleteTaskSteps(String taskId);
 
-    /**
-     * 获取进程关联的所有任务摘要信息
-     *
-     * @param processId 进程ID
-     * @return 任务摘要列表
-     */
-    List<TaskSummaryDTO> getProcessTaskSummaries(Long processId);
 
     /**
      * 获取任务步骤分组信息（按步骤分组）

@@ -4,7 +4,6 @@ import com.hina.log.converter.TaskDetailConverter;
 import com.hina.log.converter.TaskMachineStepConverter;
 import com.hina.log.dto.TaskDetailDTO;
 import com.hina.log.dto.TaskStepsGroupDTO;
-import com.hina.log.dto.TaskSummaryDTO;
 import com.hina.log.entity.LogstashTask;
 import com.hina.log.entity.LogstashTaskMachineStep;
 import com.hina.log.entity.Machine;
@@ -57,8 +56,8 @@ public class TaskServiceImpl implements TaskService {
     @Override
     @Transactional
     public String createTask(Long processId, String name, String description,
-            TaskOperationType operationType, List<Machine> machines,
-            List<String> stepIds) {
+                             TaskOperationType operationType, List<Machine> machines,
+                             List<String> stepIds) {
         // 创建任务
         String taskId = UUID.randomUUID().toString();
         LogstashTask task = new LogstashTask();
@@ -181,6 +180,7 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
+    @Transactional
     public void executeAsync(String taskId, Runnable action, Runnable callback) {
         taskExecutor.execute(() -> {
             try {
@@ -208,66 +208,6 @@ public class TaskServiceImpl implements TaskService {
         });
     }
 
-    @Override
-    public String getTaskSummary(String taskId) {
-        Optional<TaskDetailDTO> taskDetail = getTaskDetail(taskId);
-        if (!taskDetail.isPresent()) {
-            return "任务不存在";
-        }
-
-        TaskDetailDTO dto = taskDetail.get();
-        StringBuilder summary = new StringBuilder();
-
-        summary.append("任务ID: ").append(dto.getTaskId()).append("\n");
-        summary.append("业务ID: ").append(dto.getBusinessId()).append("\n");
-        summary.append("任务名称: ").append(dto.getName()).append("\n");
-        summary.append("任务状态: ").append(dto.getStatus()).append("\n");
-        summary.append("操作类型: ").append(dto.getOperationType()).append("\n");
-
-        if (dto.getStartTime() != null) {
-            summary.append("开始时间: ").append(dto.getStartTime()).append("\n");
-        }
-
-        if (dto.getEndTime() != null) {
-            summary.append("结束时间: ").append(dto.getEndTime()).append("\n");
-            summary.append("耗时: ").append(formatDuration(dto.getDuration())).append("\n");
-        }
-
-        summary.append("步骤总数: ").append(dto.getTotalSteps()).append("\n");
-        summary.append("成功步骤: ").append(dto.getSuccessCount()).append("\n");
-        summary.append("失败步骤: ").append(dto.getFailedCount()).append("\n");
-        summary.append("跳过步骤: ").append(dto.getSkippedCount()).append("\n");
-
-        if (dto.getErrorMessage() != null) {
-            summary.append("错误信息: ").append(dto.getErrorMessage()).append("\n");
-        }
-
-        summary.append("\n各机器步骤执行情况:\n");
-
-        for (Map.Entry<String, List<TaskDetailDTO.MachineStepDTO>> entry : dto.getMachineSteps().entrySet()) {
-            String machineName = entry.getKey();
-            List<TaskDetailDTO.MachineStepDTO> steps = entry.getValue();
-
-            summary.append("  机器: ").append(machineName).append("\n");
-
-            // 按执行顺序排序步骤
-            steps.sort(Comparator.comparing(
-                    step -> step.getStartTime() != null ? step.getStartTime() : LocalDateTime.MAX));
-
-            for (TaskDetailDTO.MachineStepDTO step : steps) {
-                summary.append("    - ").append(step.getStepName()).append(": ")
-                        .append(step.getStatus());
-
-                if (step.getErrorMessage() != null) {
-                    summary.append(" (").append(step.getErrorMessage()).append(")");
-                }
-
-                summary.append("\n");
-            }
-        }
-
-        return summary.toString();
-    }
 
     @Override
     public Map<String, Map<String, Integer>> getTaskMachineStepStatusStats(String taskId) {
@@ -345,27 +285,6 @@ public class TaskServiceImpl implements TaskService {
         return counts;
     }
 
-    // 辅助方法：格式化持续时间
-    private String formatDuration(Long millis) {
-        if (millis == null) {
-            return "未知";
-        }
-
-        long seconds = millis / 1000;
-        long minutes = seconds / 60;
-        long hours = minutes / 60;
-
-        seconds = seconds % 60;
-        minutes = minutes % 60;
-
-        if (hours > 0) {
-            return String.format("%d小时%d分%d秒", hours, minutes, seconds);
-        } else if (minutes > 0) {
-            return String.format("%d分%d秒", minutes, seconds);
-        } else {
-            return String.format("%d秒", seconds);
-        }
-    }
 
     @Override
     @Transactional
@@ -433,108 +352,6 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
-    @Override
-    public List<TaskSummaryDTO> getProcessTaskSummaries(Long processId) {
-        List<LogstashTask> tasks = taskMapper.findByProcessId(processId);
-        if (tasks.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        List<TaskSummaryDTO> summaries = new ArrayList<>();
-        for (LogstashTask task : tasks) {
-            TaskSummaryDTO summary = new TaskSummaryDTO();
-            summary.setTaskId(task.getId());
-            summary.setProcessId(task.getProcessId());
-            summary.setName(task.getName());
-            summary.setDescription(task.getDescription());
-            summary.setStatus(task.getStatus());
-            summary.setOperationType(task.getOperationType());
-            summary.setStartTime(task.getStartTime());
-            summary.setEndTime(task.getEndTime());
-            summary.setErrorMessage(task.getErrorMessage());
-
-            // 获取步骤信息并计算统计数据
-            List<LogstashTaskMachineStep> steps = stepMapper.findByTaskId(task.getId());
-
-            // 初始化计数器
-            int totalSteps = steps.size();
-            int completedSteps = 0;
-            int failedSteps = 0;
-            int pendingSteps = 0;
-            int runningSteps = 0;
-            int skippedSteps = 0;
-
-            // 统计各状态的步骤数量
-            for (LogstashTaskMachineStep step : steps) {
-                String status = step.getStatus();
-                if (StepStatus.COMPLETED.name().equals(status)) {
-                    completedSteps++;
-                } else if (StepStatus.FAILED.name().equals(status)) {
-                    failedSteps++;
-                } else if (StepStatus.PENDING.name().equals(status)) {
-                    pendingSteps++;
-                } else if (StepStatus.RUNNING.name().equals(status)) {
-                    runningSteps++;
-                } else if (StepStatus.SKIPPED.name().equals(status)) {
-                    skippedSteps++;
-                }
-            }
-
-            // 设置统计数据
-            summary.setTotalSteps(totalSteps);
-            summary.setCompletedSteps(completedSteps);
-            summary.setFailedSteps(failedSteps);
-            summary.setPendingSteps(pendingSteps);
-            summary.setRunningSteps(runningSteps);
-            summary.setSkippedSteps(skippedSteps);
-
-            // 计算进度百分比
-            int progressPercentage = 0;
-            if (totalSteps > 0) {
-                progressPercentage = (completedSteps + skippedSteps) * 100 / totalSteps;
-            }
-            summary.setProgressPercentage(progressPercentage);
-
-            summaries.add(summary);
-        }
-
-        // 按创建时间倒序排序，最新的任务在前面
-        summaries.sort((a, b) -> {
-            // 首先按状态排序：运行中的最先，然后是失败的，最后是已完成和其他状态
-            int statusCompare = compareStatus(a.getStatus(), b.getStatus());
-            if (statusCompare != 0) {
-                return statusCompare;
-            }
-
-            // 其次按开始时间倒序排序
-            if (a.getStartTime() != null && b.getStartTime() != null) {
-                return b.getStartTime().compareTo(a.getStartTime());
-            } else if (a.getStartTime() != null) {
-                return -1;
-            } else if (b.getStartTime() != null) {
-                return 1;
-            }
-
-            return 0;
-        });
-
-        return summaries;
-    }
-
-    // 辅助方法：比较任务状态的优先级
-    private int compareStatus(String status1, String status2) {
-        Map<String, Integer> statusPriority = new HashMap<>();
-        statusPriority.put(TaskStatus.RUNNING.name(), 1);
-        statusPriority.put(TaskStatus.FAILED.name(), 2);
-        statusPriority.put(TaskStatus.COMPLETED.name(), 3);
-        statusPriority.put(TaskStatus.CANCELLED.name(), 4);
-        statusPriority.put(TaskStatus.PENDING.name(), 5);
-
-        Integer priority1 = statusPriority.getOrDefault(status1, 99);
-        Integer priority2 = statusPriority.getOrDefault(status2, 99);
-
-        return priority1.compareTo(priority2);
-    }
 
     @Override
     public TaskStepsGroupDTO getTaskStepsGrouped(String taskId) {

@@ -23,7 +23,7 @@ public class CreateDirectoryCommand extends AbstractLogstashCommand {
             // 创建进程目录
             String processDir = getProcessDirectory();
             String command = String.format("mkdir -p %s", processDir);
-            String result = sshClient.executeCommand(machine, command);
+            sshClient.executeCommand(machine, command);
 
             // 检查目录是否创建成功
             String checkCommand = String.format("[ -d %s ] && echo \"exists\"", processDir);
