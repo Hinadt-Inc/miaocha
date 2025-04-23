@@ -33,11 +33,14 @@ export const HistogramChart = ({
     // 当只有一个时间点时，直接使用该时间点
     if (distributionData.length === 1) {
       const timePoint = distributionData[0].timePoint;
-      const hour = timePoint.split(' ')[1];
+      // 处理带T的ISO格式或带空格的常规格式
+      const formattedTimePoint = timePoint.replace('T', ' ');
+      const parts = formattedTimePoint.split(' ');
+      const hour = parts.length > 1 ? parts[1] : timePoint;
       return {
-        hourlyData: [{ hour: timePoint, count: distributionData[0].count }],
-        hourLabels: [hour || timePoint],
-        originalData: distributionData
+        hourlyData: [{ hour: formattedTimePoint, count: distributionData[0].count }],
+        hourLabels: [hour],
+        originalData: [{ timePoint: formattedTimePoint, count: distributionData[0].count }]
       };
     }
 
@@ -54,10 +57,13 @@ export const HistogramChart = ({
         return;
       }
       
+      // 处理带T的ISO格式或带空格的常规格式
+      const timePoint = item.timePoint.replace('T', ' ');
+      
       // 提取日期和时间部分
-      const dateParts = item.timePoint.split(' ');
+      const dateParts = timePoint.split(' ');
       if (dateParts.length !== 2) {
-        console.log('时间格式不正确:', item.timePoint);
+        console.log('时间格式不正确:', timePoint);
         return;
       }
       
@@ -65,7 +71,7 @@ export const HistogramChart = ({
       const timeStr = dateParts[1];
       
       // 使用完整时间点作为键，以保留所有唯一时间点
-      const timeKey = item.timePoint;
+      const timeKey = timePoint;
       
       // 累加相同时间点的数量
       const currentCount = hourMap.get(timeKey) || 0;
@@ -73,7 +79,7 @@ export const HistogramChart = ({
       
       // 保存原始时间点
       if (!originalTimePoints.has(timeKey)) {
-        originalTimePoints.set(timeKey, item.timePoint);
+        originalTimePoints.set(timeKey, timePoint);
       }
     });
     

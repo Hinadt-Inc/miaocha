@@ -39,8 +39,11 @@ export default function HomePage() {
   const [selectedFields, setSelectedFields] = useState<string[]>(['log_time', 'message']);
   const [viewMode, setViewMode] = useState<'table' | 'json'>('table');
   const [searchQuery, setSearchQuery] = useState('');
+  const [whereSql, setWhereSql] = useState('');
   const [showHistogram, setShowHistogram] = useState(true);
   const [timeRange, setTimeRange] = useState<[string, string] | null>(null);
+  const [timeRangePreset, setTimeRangePreset] = useState<string | null>(null);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedTable, setSelectedTable] = useState<string>('');
   const [lastAddedField, setLastAddedField] = useState<string | null>(null);
   const [lastRemovedField, setLastRemovedField] = useState<string | null>(null);
@@ -79,18 +82,34 @@ export default function HomePage() {
     
     fetchTableColumns();
   }, [selectedTable]);
+  
+  // 设置默认时间范围为最近15分钟
+  useEffect(() => {
+    if (!timeRange) {
+      const now = new Date();
+      const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
+      
+      setTimeRange([
+        fifteenMinutesAgo.toISOString().substring(0, 19).replace('T', ' '),
+        now.toISOString().substring(0, 19).replace('T', ' ')
+      ]);
+      setTimeRangePreset('last_15m');
+    }
+  }, []);
+
   const searchParams = useMemo(() => ({
     datasourceId: selectedTable ? Number(selectedTable.split('-')[0]) : 1,
     tableName: selectedTable ? selectedTable.split('-')[1] : '',
     keyword: searchQuery,
-    whereSql: '',
+    whereSql: whereSql,
     timeRange: timeRange ? `${timeRange[0]}_${timeRange[1]}` : undefined,
+    timeGrouping: 'minute', // 默认按分钟分组
     pageSize: 50,
     offset: 0,
     fields: selectedFields,
-    startTime: timeRange ? timeRange[0] : '2025-04-01T16:30:00',
-    endTime: timeRange ? timeRange[1] : '2025-04-01T16:40:00',
-  }), [selectedTable, searchQuery, timeRange, selectedFields]);
+    startTime: timeRange ? timeRange[0] : undefined,
+    endTime: timeRange ? timeRange[1] : undefined,
+  }), [selectedTable, searchQuery, whereSql, timeRange, selectedFields]);
 
   // 获取表权限数据
   useEffect(() => {
@@ -148,7 +167,7 @@ export default function HomePage() {
     fetchTableColumns();
   }, [selectedTable]);
 
-  const { tableData, loading, hasMore, loadMoreData, distributionData = [] } = useLogData({
+  const { tableData, loading, hasMore, loadMoreData, resetData, distributionData = [] } = useLogData({
     ...searchParams,
     tableName: selectedTable ? selectedTable.split('-')[1] : '',
     datasourceId: selectedTable ? Number(selectedTable.split('-')[0]) : 1,
@@ -189,20 +208,91 @@ export default function HomePage() {
     }
   }, [loadMoreData, loading, hasMore]);
 
+  const handleTimeRangeChange = (range: [string, string] | null, preset?: string | null) => {
+    setTimeRange(range);
+    setTimeRangePreset(preset || null);
+    
+    // 当有时间范围变化时，如果是有数据的情况下，重新加载数据
+    if (range && tableData.length > 0) {
+      resetData();
+    }
+  };
+
+  // 处理关键词搜索提交
+  const handleSubmitSearch = () => {
+    // 重置数据，触发新查询
+    if (tableData.length > 0) {
+      resetData();
+    }
+  };
+
+  // 处理SQL查询提交
+  const handleSubmitSql = () => {
+    // 重置数据，触发新查询
+    if (tableData.length > 0) {
+      resetData();
+    }
+  };
+
+  // 清除时间范围
+  const handleClearTimeRange = () => {
+    setTimeRange(null);
+    setTimeRangePreset(null);
+    if (tableData.length > 0) {
+      resetData();
+    }
+  };
+
+  // 清除关键词
+  const handleClearKeyword = () => {
+    setSearchQuery('');
+    if (tableData.length > 0) {
+      resetData();
+    }
+  };
+
+  // 清除SQL条件
+  const handleClearWhereSql = () => {
+    setWhereSql('');
+    if (tableData.length > 0) {
+      resetData();
+    }
+  };
+
+  // 处理时间选择器显示
+  const handleToggleTimePicker = (show: boolean) => {
+    setShowTimePicker(show);
+  };
+
   return (
     <>
     <Layout className="layout-main">
       <SearchBar 
         searchQuery={searchQuery}
+        whereSql={whereSql}
         timeRange={timeRange}
+        timeRangePreset={timeRangePreset}
+        showTimePicker={showTimePicker}
         onSearch={setSearchQuery}
-        onTimeRangeChange={setTimeRange}
+        onWhereSqlChange={setWhereSql}
+        onTimeRangeChange={handleTimeRangeChange}
+        onSubmitSearch={handleSubmitSearch}
+        onSubmitSql={handleSubmitSql}
+        onToggleTimePicker={handleToggleTimePicker}
       />
       
       <FilterPanel 
         filters={filters}
+        timeRange={timeRange}
+        timeRangePreset={timeRangePreset}
+        keyword={searchQuery}
+        whereSql={whereSql}
         onRemoveFilter={removeFilter}
         onAddFilter={openFilterModal}
+        onClearTimeRange={handleClearTimeRange}
+        onClearKeyword={handleClearKeyword}
+        onClearWhereSql={handleClearWhereSql}
+        onOpenTimeSelector={() => setShowTimePicker(true)}
       />
       
       <Layout className="layout-content">
@@ -231,7 +321,7 @@ export default function HomePage() {
           {showHistogram && distributionData && distributionData.length > 0 && (
             <HistogramChart
               show={showHistogram}
-              onTimeRangeChange={setTimeRange}
+              onTimeRangeChange={handleTimeRangeChange}
               onToggle={() => setShowHistogram(false)}
               distributionData={distributionData}
             />
