@@ -7,16 +7,37 @@ interface HistogramChartProps {
   show: boolean;
   onTimeRangeChange: (range: [string, string]) => void;
   onToggle: () => void;
+  distributionData?: Array<{
+    timePoint: string;
+    count: number;
+  }>;
 }
 
 export const HistogramChart = ({ 
   show,
   onTimeRangeChange,
-  onToggle
+  onToggle,
+  distributionData
 }: HistogramChartProps) => {
   const getHistogramOption = (): EChartsOption => {
-    const dates = Array(14).fill(null).map((_, i) => `2025-04-${i + 1}`);
-    const values = Array(14).fill(null).map(() => Math.floor(Math.random() * 100) + 20);
+    if (!distributionData || distributionData.length === 0) {
+      return {
+        title: {
+          text: '加载数据中...',
+          left: 'center',
+          top: 'center',
+          textStyle: {
+            color: '#999',
+            fontSize: 14
+          }
+        },
+        xAxis: { show: false },
+        yAxis: { show: false }
+      };
+    }
+    
+    const dates = distributionData.map(item => item.timePoint);
+    const values = distributionData.map(item => item.count);
     
     return {
       grid: {
@@ -97,12 +118,14 @@ export const HistogramChart = ({
         endValue?: number;
       }>;
     }) => {
+      if (!distributionData || distributionData.length === 0) return;
+      
       if (params.batch && params.batch.length > 0) {
         const { startValue, endValue } = params.batch[0];
         
         if (startValue !== undefined && endValue !== undefined) {
           try {
-            const dates = Array(14).fill(null).map((_, i) => `2025-04-${i + 1}`);
+            const dates = distributionData.map(item => item.timePoint);
             const startIndex = Math.max(0, Math.floor(startValue));
             const endIndex = Math.min(dates.length - 1, Math.floor(endValue));
             

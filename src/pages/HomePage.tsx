@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Layout, Space, Button, Modal, Form, Input, Select, Tag } from 'antd';
 import { getOperatorsByFieldType, getFieldTypeColor } from '../utils/logDataHelpers';
 import { 
@@ -14,6 +14,10 @@ import { DataTable } from '../components/HomePage/DataTable';
 import { HistogramChart } from '../components/HomePage/HistogramChart';
 import { FieldSelector } from '../components/HomePage/FieldSelector';
 import { getMyTablePermissions } from '../api/permission';
+import { getTableColumns } from '../api/logs';
+import './HomePage.less';
+
+const { Content, Sider } = Layout;
 
 interface TableColumn {
   columnName: string;
@@ -29,19 +33,15 @@ interface TablePermission {
   columns?: TableColumn[];
 }
 
-import './HomePage.less';
-
-const { Content, Sider } = Layout;
-
 export default function HomePage() {
   const [form] = Form.useForm();
   const [collapsed, setCollapsed] = useState(false);
-  const [selectedFields, setSelectedFields] = useState<string[]>(['timestamp', 'message', 'host', 'source']);
+  const [selectedFields, setSelectedFields] = useState<string[]>(['log_time', 'message']);
   const [viewMode, setViewMode] = useState<'table' | 'json'>('table');
   const [searchQuery, setSearchQuery] = useState('');
   const [showHistogram, setShowHistogram] = useState(true);
   const [timeRange, setTimeRange] = useState<[string, string] | null>(null);
-  const [selectedTable, setSelectedTable] = useState<string>(''); // 保留以兼容FieldSelector组件
+  const [selectedTable, setSelectedTable] = useState<string>('');
   const [lastAddedField, setLastAddedField] = useState<string | null>(null);
   const [lastRemovedField, setLastRemovedField] = useState<string | null>(null);
   const [availableTables, setAvailableTables] = useState<Array<{
@@ -60,12 +60,43 @@ export default function HomePage() {
       }>;
     }>;
   }>>([]);
+  const [availableFields, setAvailableFields] = useState<Array<{columnName: string; dataType: string}>>([]);
+  const prevSelectedTable = useRef<string>('');
 
+  useEffect(() => {
+    const fetchTableColumns = async () => {
+      if (!selectedTable || selectedTable === prevSelectedTable.current) return;
+      prevSelectedTable.current = selectedTable;
+      
+      try {
+        const [datasourceId, tableName] = selectedTable.split('-');
+        const columns = await getTableColumns(datasourceId, tableName) as Array<{columnName: string; dataType: string}>;
+        setAvailableFields(columns);
+      } catch (error) {
+        console.error('获取表字段失败:', error);
+      }
+    };
+    
+    fetchTableColumns();
+  }, [selectedTable]);
+  const searchParams = useMemo(() => ({
+    datasourceId: selectedTable ? Number(selectedTable.split('-')[0]) : 1,
+    tableName: selectedTable ? selectedTable.split('-')[1] : '',
+    keyword: searchQuery,
+    whereSql: '',
+    timeRange: timeRange ? `${timeRange[0]}_${timeRange[1]}` : undefined,
+    pageSize: 50,
+    offset: 0,
+    fields: selectedFields,
+    startTime: timeRange ? timeRange[0] : '2025-04-01T16:30:00',
+    endTime: timeRange ? timeRange[1] : '2025-04-01T16:40:00',
+  }), [selectedTable, searchQuery, timeRange, selectedFields]);
+
+  // 获取表权限数据
   useEffect(() => {
     const fetchTablePermissions = async () => {
       try {
         const data = await getMyTablePermissions();
-        // 转换接口数据格式
         const transformedData = data.map(ds => ({
           datasourceId: ds.datasourceId,
           datasourceName: ds.datasourceName,
@@ -83,6 +114,12 @@ export default function HomePage() {
           }))
         }));
         setAvailableTables(transformedData);
+
+        // 默认选择第一个数据源和第一个表
+        if (data.length > 0 && data[0].tables.length > 0) {
+          const defaultTable = `${data[0].datasourceId}-${data[0].tables[0].tableName}`;
+          setSelectedTable(defaultTable);
+        }
       } catch (error) {
         console.error('获取表权限失败:', error);
       }
@@ -90,7 +127,33 @@ export default function HomePage() {
     fetchTablePermissions();
   }, []);
 
-  const { tableData, loading, hasMore, loadMoreData } = useLogData(searchQuery);
+  // 表选择变化时获取字段
+  useEffect(() => {
+    const fetchTableColumns = async () => {
+      if (!selectedTable) return;
+      
+      try {
+        // 从级联选择器的value中解析datasourceId和tableName
+        const [datasourceId, tableName] = selectedTable.split('-');
+        const columns = await getTableColumns(datasourceId, tableName);
+        setAvailableFields(columns.map(col => ({
+          columnName: col.columnName,
+          dataType: col.dataType
+        })));
+      } catch (error) {
+        console.error('获取表字段失败:', error);
+      }
+    };
+    
+    fetchTableColumns();
+  }, [selectedTable]);
+
+  const { tableData, loading, hasMore, loadMoreData, distributionData = [] } = useLogData({
+    ...searchParams,
+    tableName: selectedTable ? selectedTable.split('-')[1] : '',
+    datasourceId: selectedTable ? Number(selectedTable.split('-')[0]) : 1,
+    fields: selectedFields
+  });
   const { 
     filters,
     showFilterModal,
@@ -126,23 +189,6 @@ export default function HomePage() {
     }
   }, [loadMoreData, loading, hasMore]);
 
-  const availableFields = [
-    { name: 'timestamp', type: 'date' },
-    { name: 'message', type: 'text' },
-    { name: 'host', type: 'keyword' },
-    { name: 'source', type: 'keyword' },
-    { name: 'user_agent', type: 'text' },
-    { name: 'status', type: 'number' },
-    { name: 'bytes', type: 'number' },
-    { name: 'response_time', type: 'number' },
-    { name: 'ip', type: 'ip' },
-    { name: 'method', type: 'keyword' },
-    { name: 'path', type: 'keyword' },
-    { name: 'referer', type: 'text' },
-    { name: 'geo.country', type: 'keyword' },
-    { name: 'geo.city', type: 'keyword' },
-  ];
-
   return (
     <>
     <Layout className="layout-main">
@@ -169,6 +215,7 @@ export default function HomePage() {
           className="sider-container"
         >
           <FieldSelector
+            selectedTable={selectedTable}
             availableFields={availableFields}
             selectedFields={selectedFields}
             onToggleField={toggleFieldSelection}
@@ -181,17 +228,20 @@ export default function HomePage() {
         </Sider>
         
         <Layout className="layout-inner">
-          <HistogramChart
-            show={showHistogram}
-            onTimeRangeChange={setTimeRange}
-            onToggle={() => setShowHistogram(false)}
-          />
+          {(distributionData && distributionData.length > 0) && (
+            <HistogramChart
+              show={showHistogram}
+              onTimeRangeChange={setTimeRange}
+              onToggle={() => setShowHistogram(false)}
+              distributionData={distributionData}
+            />
+          )}
           
-            <Content className="content-container">
+          <Content className="content-container">
             <div className="table-header">
               <div>找到 {tableData.length} 条记录</div>
               <Space>
-                {!showHistogram && (
+                {!showHistogram && (distributionData && distributionData.length > 0) && (
                   <Button 
                     size="small" 
                     type="text" 
@@ -264,12 +314,12 @@ export default function HomePage() {
             optionFilterProp="children"
           >
             {availableFields.map(field => (
-              <Select.Option key={field.name} value={field.name}>
+              <Select.Option key={field.columnName} value={field.columnName}>
                 <Space>
-                  <Tag color={getFieldTypeColor(field.type)} style={{ marginRight: 0 }}>
-                    {field.type.slice(0, 1).toUpperCase()}
+                  <Tag color={getFieldTypeColor(field.dataType)} style={{ marginRight: 0 }}>
+                    {field.dataType}
                   </Tag>
-                  {field.name}
+                  {field.columnName}
                 </Space>
               </Select.Option>
             ))}
@@ -285,7 +335,7 @@ export default function HomePage() {
             placeholder="选择操作符"
           >
             {getOperatorsByFieldType(selectedFilterField ? 
-              availableFields.find(f => f.name === selectedFilterField)?.type : undefined)
+              availableFields.find(f => f.columnName === selectedFilterField)?.dataType : undefined)
               .map(op => (
                 <Select.Option key={op.value} value={op.value}>{op.label}</Select.Option>
               ))

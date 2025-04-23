@@ -23,21 +23,18 @@ export interface Filter {
 
 // 日志数据类型
 export interface LogData {
-  key: number;
+  key: string;
   timestamp: string;
   message: string;
   host: string;
   source: string;
-  status: number;
-  bytes: number;
-  response_time: number;
-  ip: string;
-  method: string;
-  path: string;
-  user_agent: string;
-  referer: string;
-  'geo.country': string;
-  'geo.city': string;
+  level: string;
+  distributionData?: Array<{
+    timePoint: string;
+    count: number;
+  }>;
+  [key: string]: unknown;
+  
 }
 
 // 表格类型定义
@@ -67,4 +64,9 @@ export interface UseFiltersReturn {
     value: string | string[] | [number, number] | null;
   }) => void;
   removeFilter: (filterId: string) => void;
+}
+
+// API返回的日志数据类型
+export interface APILogData {
+  [key: string]: unknown;
 }

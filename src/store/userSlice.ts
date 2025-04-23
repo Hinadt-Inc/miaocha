@@ -40,9 +40,10 @@ export const fetchUserInfo = createAsyncThunk(
     try {
       const response = await getUserInfo()
       return response
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('获取用户信息失败:', error)
-      return rejectWithValue(error.message || '获取用户信息失败')
+      const message = error instanceof Error ? error.message : '获取用户信息失败'
+      return rejectWithValue(message)
     }
   }
 )
@@ -50,11 +51,11 @@ export const fetchUserInfo = createAsyncThunk(
 // 异步退出登录
 export const logoutUser = createAsyncThunk(
   'user/logoutUser',
-  async (_, { rejectWithValue }) => {
+  async () => {
     try {
       await apiLogout()
       return true
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('退出登录失败:', error)
       // 即使退出 API 失败，我们也清理本地状态
       return true
@@ -72,42 +73,50 @@ export const restoreSession = createAsyncThunk(
       const tokenExpiresAt = localStorage.getItem('tokenExpiresAt')
       const refreshTokenExpiresAt = localStorage.getItem('refreshTokenExpiresAt')
       
-      // 如果存在令牌，则恢复会话并获取用户信息
-      if (accessToken && refreshToken && tokenExpiresAt && refreshTokenExpiresAt) {
-        // 检查令牌是否过期
-        const now = Date.now()
-        const expiresAt = parseInt(tokenExpiresAt)
-        const refreshExpiresAt = parseInt(refreshTokenExpiresAt)
-        
-        if (refreshExpiresAt < now) {
-          // 刷新令牌已过期，清除所有令牌
-          localStorage.removeItem('accessToken')
-          localStorage.removeItem('refreshToken')
-          localStorage.removeItem('tokenExpiresAt')
-          localStorage.removeItem('refreshTokenExpiresAt')
-          return { restored: false }
+      // 如果不存在任何令牌，直接返回未恢复
+      if (!accessToken || !refreshToken || !tokenExpiresAt || !refreshTokenExpiresAt) {
+        return { restored: false }
+      }
+
+      // 检查令牌是否过期
+      const now = Date.now()
+      const expiresAt = parseInt(tokenExpiresAt)
+      const refreshExpiresAt = parseInt(refreshTokenExpiresAt)
+      
+      if (refreshExpiresAt < now) {
+        // 刷新令牌已过期，清除所有令牌
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('tokenExpiresAt')
+        localStorage.removeItem('refreshTokenExpiresAt')
+        return { restored: false }
+      }
+      
+      // 设置令牌，并标记为已登录
+      dispatch({
+        type: 'user/setTokensAndLogin',
+        payload: {
+          accessToken,
+          refreshToken,
+          expiresAt,
+          refreshExpiresAt
         }
-        
-        // 设置令牌，并标记为已登录
-        dispatch({
-          type: 'user/setTokensAndLogin',
-          payload: {
-            accessToken,
-            refreshToken,
-            expiresAt,
-            refreshExpiresAt
-          }
-        })
-        
-        // 获取用户信息
+      })
+      
+      // 仅在当前路径不是登录页时才获取用户信息
+      if (window.location.pathname !== '/login') {
         try {
           const userInfo = await dispatch(fetchUserInfo()).unwrap()
           return { restored: true, userInfo }
         } catch (error) {
-          console.error('恢复会话获取用户信息失败，但不影响已登录状态:', error)
-          // 即使获取用户信息失败，也认为会话恢复成功
-          // 用户可能还是登录状态，只是获取信息失败而已
-          return { restored: true, error }
+          console.error('恢复会话获取用户信息失败:', error)
+          // 获取用户信息失败时，清除令牌并重定向到登录页
+          localStorage.removeItem('accessToken')
+          localStorage.removeItem('refreshToken')
+          localStorage.removeItem('tokenExpiresAt')
+          localStorage.removeItem('refreshTokenExpiresAt')
+          window.location.href = '/login'
+          return { restored: false, error }
         }
       }
       

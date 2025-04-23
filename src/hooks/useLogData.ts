@@ -1,11 +1,26 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { LogData } from '../types/logDataTypes';
+import { searchLogs } from '../api/logs';
 import { generateMockData } from '../utils/logDataHelpers';
 
 const PAGE_SIZE = 20;
 const MAX_DATA_COUNT = 500;
 
-export const useLogData = (searchQuery: string) => {
+interface LogDataParams {
+  datasourceId: number;
+  tableName: string;
+  keyword?: string;
+  whereSql?: string;
+  timeRange?: string;
+  pageSize?: number;
+  offset?: number;
+  fields?: string[];
+  startTime?: string;
+  endTime?: string;
+  timeGrouping?: string;
+}
+
+export const useLogData = (params: LogDataParams) => {
   const [tableData, setTableData] = useState<LogData[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -37,10 +52,52 @@ export const useLogData = (searchQuery: string) => {
   }, []);
 
   // 搜索条件改变时重置数据
+  const prevParams = useRef(params);
+  
   useEffect(() => {
-    setTableData(generateMockData(0, PAGE_SIZE));
-    setHasMore(true);
-  }, [searchQuery]);
+    // 深度比较params是否变化
+    if (JSON.stringify(params) === JSON.stringify(prevParams.current)) {
+      return;
+    }
+    prevParams.current = params;
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const result = await searchLogs({
+          ...params,
+          pageSize: params.pageSize || PAGE_SIZE,
+          offset: params.offset || 0
+        });
+        
+        if (result.success) {
+          const formattedData = result.rows.map((row, index) => ({
+            key: `${index}`,
+            timestamp: row.timestamp as string || new Date().toISOString(),
+            message: row.message as string || '',
+            host: row.host as string || '',
+            source: row.source as string || '',
+            level: row.level as string || 'INFO',
+            ...row
+          }));
+          setTableData(formattedData);
+          setHasMore(result.rows.length >= (params.pageSize || PAGE_SIZE));
+        } else {
+          // 失败时使用mock数据
+          setTableData(generateMockData(0, PAGE_SIZE));
+          setHasMore(true);
+        }
+      } catch (error) {
+        console.error('获取日志数据失败:', error);
+        setTableData(generateMockData(0, PAGE_SIZE));
+        setHasMore(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [params]);
 
   return {
     tableData,

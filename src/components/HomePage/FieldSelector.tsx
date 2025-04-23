@@ -3,7 +3,8 @@ import { EyeOutlined } from '@ant-design/icons';
 import { getFieldTypeColor } from '../../utils/logDataHelpers';
 
 interface FieldSelectorProps {
-  availableFields: Array<{ name: string; type: string }>;
+  selectedTable: string;
+  availableFields: Array<{ columnName: string; dataType: string }>;
   selectedFields: string[];
   onToggleField: (fieldName: string) => void;
   lastAddedField: string | null;
@@ -29,6 +30,7 @@ interface FieldSelectorProps {
 }
 
 export const FieldSelector = ({
+  selectedTable,
   availableFields,
   selectedFields,
   onToggleField,
@@ -61,14 +63,16 @@ export const FieldSelector = ({
                 }))
               }))
             }))}
+            value={selectedTable && availableTables.length > 0 ? [
+              `ds-${selectedTable.split('-')[0]}`, 
+              `tbl-${selectedTable.split('-')[1]}`
+            ] : undefined}
+            loading={availableTables.length === 0}
             onChange={(value: string[]) => {
               if (value && value.length > 0) {
-                const lastValue = value[value.length - 1];
-                // 从格式化的value中提取实际表名
-                const tableName = lastValue.startsWith('tbl-') 
-                  ? lastValue.substring(4)
-                  : lastValue;
-                onTableChange(tableName);
+                const tableName = value[value.length - 1].split('-')[1];
+                const datasourceId = value[0].split('-')[1];
+                onTableChange(`${datasourceId}-${tableName}`);
               } else {
                 onTableChange('');
               }
@@ -89,7 +93,7 @@ export const FieldSelector = ({
             label: '可用字段',
             children: availableFields.map(field => (
               <div 
-                key={field.name} 
+                key={field.columnName} 
                 style={{ 
                   padding: '8px 16px',
                   display: 'flex',
@@ -97,20 +101,20 @@ export const FieldSelector = ({
                   alignItems: 'center',
                   cursor: 'pointer',
                   borderRadius: '4px',
-                  background: selectedFields.includes(field.name) ? '#e6f7ff' : 'transparent',
+                  background: selectedFields.includes(field.columnName) ? '#e6f7ff' : 'transparent',
                   marginBottom: 4,
                   transition: 'all 0.3s ease'
                 }}
-                onClick={() => onToggleField(field.name)}
-                className={`field-selection-item ${lastAddedField === field.name ? 'field-added' : ''} ${lastRemovedField === field.name ? 'field-removed' : ''}`}
+                onClick={() => onToggleField(field.columnName)}
+                className={`field-selection-item ${lastAddedField === field.columnName ? 'field-added' : ''} ${lastRemovedField === field.columnName ? 'field-removed' : ''}`}
               >
                 <Space>
-                  <Tag color={getFieldTypeColor(field.type)} style={{ marginRight: 8 }}>
-                    {field.type.substr(0, 1).toUpperCase()}
+                  <Tag color={getFieldTypeColor(field.dataType)} style={{ marginRight: 8 }}>
+                    {field.dataType.substr(0, 1).toUpperCase()}
                   </Tag>
-                  {field.name}
+                  {field.columnName}
                 </Space>
-                {selectedFields.includes(field.name) && (
+                {selectedFields.includes(field.columnName) && (
                   <EyeOutlined style={{ color: '#1890ff' }} />
                 )}
               </div>
@@ -120,12 +124,12 @@ export const FieldSelector = ({
             key: 'selected',
             label: '已选字段',
             children: selectedFields.map(fieldName => {
-              const field = availableFields.find(f => f.name === fieldName);
+              const field = availableFields.find(f => f.columnName === fieldName);
               if (!field) return null;
               
               return (
                 <div 
-                  key={field.name} 
+                  key={field.columnName} 
                   style={{ 
                     padding: '8px 16px',
                     display: 'flex',
@@ -137,10 +141,10 @@ export const FieldSelector = ({
                   }}
                 >
                   <Space>
-                    <Tag color={getFieldTypeColor(field.type)} style={{ marginRight: 8 }}>
-                      {field.type.substr(0, 1).toUpperCase()}
+                    <Tag color={getFieldTypeColor(field.dataType)} style={{ marginRight: 8 }}>
+                      {field.dataType.substr(0, 1).toUpperCase()}
                     </Tag>
-                    {field.name}
+                    {field.columnName}
                   </Space>
                   <EyeOutlined style={{ color: '#1890ff' }} />
                 </div>

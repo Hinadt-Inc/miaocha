@@ -1,5 +1,5 @@
 import { Table, Divider, Tabs, Card, Tag, Spin, Empty, Typography, Space, Tooltip, Button } from 'antd';
-import { LoadingOutlined, DownloadOutlined, CopyOutlined, FullscreenOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { LoadingOutlined, DownloadOutlined, CopyOutlined, FullscreenOutlined, InfoCircleOutlined, SearchOutlined, TableOutlined, DatabaseOutlined } from '@ant-design/icons';
 import { LogData } from '../../types/logDataTypes';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import ResizeObserver from 'rc-resize-observer';
@@ -66,7 +66,7 @@ export const DataTable = ({
     if (field === 'status') {
       const status = Number(text);
       let color = 'default';
-      let statusText = textStr;
+      const statusText = textStr;
       
       if (status >= 200 && status < 300) color = 'success';
       else if (status >= 300 && status < 400) color = 'processing';
@@ -205,6 +205,50 @@ export const DataTable = ({
     </div>
   );
 
+  const renderEmptyState = () => (
+    <div className="custom-empty-state">
+      <Empty
+        image={Empty.PRESENTED_IMAGE_SIMPLE}
+        imageStyle={{ height: 80 }}
+        description={
+          <div>
+            <Typography.Title level={4} style={{ marginBottom: 16 }}>
+              未找到匹配的数据
+            </Typography.Title>
+            <Space direction="vertical" style={{ width: '100%', textAlign: 'center' }}>
+              <Text type="secondary">
+                {searchQuery ? 
+                  '没有符合当前搜索条件的数据记录' : 
+                  '当前视图没有数据可显示'}
+              </Text>
+              {searchQuery && (
+                <div>
+                  <Text type="secondary">您可以尝试：</Text>
+                  <ul style={{ textAlign: 'left', display: 'inline-block', marginTop: 8 }}>
+                    <li><SearchOutlined /> 修改搜索关键词</li>
+                    <li><TableOutlined /> 调整选择的表或字段</li>
+                    <li><DatabaseOutlined /> 检查时间范围设置</li>
+                  </ul>
+                </div>
+              )}
+            </Space>
+          </div>
+        }
+      >
+        {!searchQuery && (
+          <Space direction="vertical" size="middle" style={{ marginTop: 16 }}>
+            <Text type="secondary">
+              请从左侧选择数据表和字段，或使用顶部搜索框进行查询
+            </Text>
+            <Button type="primary" icon={<SearchOutlined />}>
+              开始搜索
+            </Button>
+          </Space>
+        )}
+      </Empty>
+    </div>
+  );
+
   return (
     <div 
       className={`table-container-with-animation ${isFullscreen ? 'fullscreen-table' : ''}`}
@@ -293,7 +337,7 @@ export const DataTable = ({
                 sticky={{ offsetHeader: 0 }}
               />
             ) : (
-              !loading && <Empty description="没有找到匹配的数据记录" />
+              !loading && renderEmptyState()
             )
           ) : (
             <div className="json-card-view">
@@ -344,7 +388,7 @@ export const DataTable = ({
                   </div>
                 </Card>
               )) : (
-                !loading && <Empty description="没有找到匹配的数据记录" />
+                !loading && renderEmptyState()
               )}
             </div>
           )}
