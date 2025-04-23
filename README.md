@@ -158,4 +158,4 @@ log-manage-system/
 欢迎提交Pull Request或Issue来改进项目。
 
 ## 许可证
-项目采用私有许可证，详情请见[海纳科技许可协议](https://www.hina.com/licenses)。 
+项目采用私有许可证。 
