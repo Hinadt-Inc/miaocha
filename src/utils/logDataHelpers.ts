@@ -130,3 +130,35 @@ export const getFieldTypeColor = (type: string): string => {
     default: return 'default';
   }
 };
+
+// 生成模拟时间分布数据
+export const generateMockDistributionData = (): Array<{ timePoint: string; count: number }> => {
+  const data: Array<{ timePoint: string; count: number }> = [];
+  
+  // 使用固定日期，确保数据稳定
+  const today = '2025-04-23';
+  
+  // 创建一些重复的时间点，模拟真实场景中的数据分布
+  // 典型的时间序列数据，一小时生成几个数据点
+  for (let hour = 0; hour < 24; hour++) {
+    const hourStr = hour.toString().padStart(2, '0');
+    
+    // 为每小时生成1-3个样本，更接近真实场景
+    const samplesInHour = Math.floor(Math.random() * 3) + 1;
+    
+    for (let i = 0; i < samplesInHour; i++) {
+      // 生成随机分钟，使数据点在同一小时内有所不同
+      const minute = Math.floor(Math.random() * 60).toString().padStart(2, '0');
+      const formattedTime = `${today} ${hourStr}:${minute}:00`;
+      const count = Math.floor(Math.random() * 40) + 5; // 随机生成5-45之间的数据数量
+      
+      data.push({
+        timePoint: formattedTime,
+        count
+      });
+    }
+  }
+  
+  // 确保数据按时间排序
+  return data.sort((a, b) => new Date(a.timePoint).getTime() - new Date(b.timePoint).getTime());
+};

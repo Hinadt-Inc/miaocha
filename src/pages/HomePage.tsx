@@ -228,7 +228,7 @@ export default function HomePage() {
         </Sider>
         
         <Layout className="layout-inner">
-          {(distributionData && distributionData.length > 0) && (
+          {showHistogram && distributionData && distributionData.length > 0 && (
             <HistogramChart
               show={showHistogram}
               onTimeRangeChange={setTimeRange}
@@ -241,11 +241,11 @@ export default function HomePage() {
             <div className="table-header">
               <div>找到 {tableData.length} 条记录</div>
               <Space>
-                {!showHistogram && (distributionData && distributionData.length > 0) && (
-                  <Button 
-                    size="small" 
-                    type="text" 
-                    icon={<PlusOutlined />} 
+                {!showHistogram && distributionData && distributionData.length > 0 && (
+                  <Button
+                    size="small"
+                    type="text"
+                    icon={<PlusOutlined />}
                     onClick={() => setShowHistogram(true)}
                   >
                     显示直方图
