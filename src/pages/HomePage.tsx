@@ -4,7 +4,8 @@ import { getOperatorsByFieldType, getFieldTypeColor } from '../utils/logDataHelp
 import { 
   CompressOutlined,
   ExpandOutlined,
-  PlusOutlined
+  PlusOutlined,
+  ReloadOutlined
 } from '@ant-design/icons';
 import { useLogData } from '../hooks/useLogData';
 import { useFilters } from '../hooks/useFilters';
@@ -13,6 +14,7 @@ import { FilterPanel } from '../components/HomePage/FilterPanel';
 import { DataTable } from '../components/HomePage/DataTable';
 import { HistogramChart } from '../components/HomePage/HistogramChart';
 import { FieldSelector } from '../components/HomePage/FieldSelector';
+import { KibanaTimePicker } from '../components/HomePage/KibanaTimePicker';
 import { getMyTablePermissions } from '../api/permission';
 import { getTableColumns } from '../api/logs';
 import './HomePage.less';
@@ -272,26 +274,11 @@ export default function HomePage() {
         whereSql={whereSql}
         timeRange={timeRange}
         timeRangePreset={timeRangePreset}
-        showTimePicker={showTimePicker}
         onSearch={setSearchQuery}
         onWhereSqlChange={setWhereSql}
-        onTimeRangeChange={handleTimeRangeChange}
         onSubmitSearch={handleSubmitSearch}
         onSubmitSql={handleSubmitSql}
-        onToggleTimePicker={handleToggleTimePicker}
-      />
-      
-      <FilterPanel 
-        filters={filters}
-        timeRange={timeRange}
-        timeRangePreset={timeRangePreset}
-        keyword={searchQuery}
-        whereSql={whereSql}
-        onRemoveFilter={removeFilter}
-        onAddFilter={openFilterModal}
-        onClearTimeRange={handleClearTimeRange}
-        onClearKeyword={handleClearKeyword}
-        onClearWhereSql={handleClearWhereSql}
+        onTimeRangeChange={handleTimeRangeChange}
         onOpenTimeSelector={() => setShowTimePicker(true)}
       />
       
@@ -441,6 +428,33 @@ export default function HomePage() {
         </Form.Item>
       </Form>
     </Modal>
+
+    {/* 时间选择器对话框 */}
+    {showTimePicker && (
+      <Modal
+        title="自定义时间范围"
+        open={showTimePicker}
+        onCancel={() => setShowTimePicker(false)}
+        footer={null}
+        width={600}
+      >
+        <KibanaTimePicker
+          value={timeRange}
+          presetKey={timeRangePreset || undefined}
+          onChange={(range, preset) => {
+            handleTimeRangeChange(range, preset);
+            setShowTimePicker(false);
+          }}
+          onTimeGroupingChange={(value) => {
+            // 更新时间分组设置并重新加载数据
+            if (tableData.length > 0) {
+              resetData();
+            }
+          }}
+          timeGrouping={searchParams.timeGrouping}
+        />
+      </Modal>
+    )}
     </>
   );
 }

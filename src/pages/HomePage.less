@@ -632,3 +632,104 @@
   border-color: #91d5ff;
   color: #1890ff;
 }
+
+/* Kibana风格自定义样式 */
+.kibana-time-control {
+  display: flex;
+  align-items: center;
+  background-color: #fff;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  padding: 0 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  height: 32px;
+}
+
+.kibana-time-control:hover {
+  border-color: #40a9ff;
+}
+
+.kibana-time-control-active {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.kibana-time-display {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kibana-time-display-text {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.kibana-time-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.kibana-quick-ranges {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+  margin-bottom: 16px;
+}
+
+.kibana-quick-range-button {
+  text-align: center;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.kibana-quick-range-button:hover {
+  background-color: #f0f0f0;
+}
+
+.kibana-quick-range-button-active {
+  background-color: #e6f7ff;
+  border-color: #1890ff;
+}
+
+.time-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.absolute-time-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.kibana-timepicker-container {
+  background-color: #fff;
+  padding: 12px 16px;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin-bottom: 16px;
+}
+
+.layout-top-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.time-picker-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+}

@@ -1,10 +1,8 @@
-import { useState, useEffect } from 'react';
-import { AutoComplete, Button, Space, Dropdown, DatePicker, Tooltip, Segmented, Card, Tag, Select, Menu, Divider } from 'antd';
-const { RangePicker } = DatePicker;
-import { SearchOutlined, CodeOutlined, ClockCircleOutlined, QuestionCircleOutlined, InfoCircleOutlined, TagsOutlined, SaveOutlined, StarOutlined, DownOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
-import type { SegmentedValue } from 'antd/es/segmented';
+import { useState } from 'react';
+import { AutoComplete, Button, Space, Dropdown, Tooltip, Card, Tag, Select, Popover } from 'antd';
+import { SearchOutlined, CodeOutlined, InfoCircleOutlined, TagsOutlined, SaveOutlined, StarOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
+import dayjs from 'dayjs';
 
 // 日志常用字段和值
 const LOG_FIELDS = [
@@ -42,19 +40,28 @@ const QUERY_TEMPLATES = [
   }
 ];
 
+// 快速时间范围选项
+const TIME_PRESETS = [
+  { key: 'last_15m', label: '最近15分钟' },
+  { key: 'last_1h', label: '最近1小时' },
+  { key: 'last_24h', label: '最近24小时' },
+  { key: 'last_7d', label: '最近7天' },
+  { key: 'today', label: '今天' },
+  { key: 'yesterday', label: '昨天' },
+  { key: 'this_week', label: '本周' }
+];
+
 interface SearchBarProps {
   searchQuery: string;
   whereSql: string;
-  timeRange: [string, string] | null;
-  timeRangePreset: string | null;
-  showTimePicker: boolean;
+  timeRange?: [string, string] | null;
+  timeRangePreset?: string | null;
   onSearch: (query: string) => void;
   onWhereSqlChange: (sql: string) => void;
-  onTimeRangeChange: (range: [string, string] | null, preset?: string | null) => void;
   onSubmitSearch: () => void;
   onSubmitSql: () => void;
-  onToggleTimePicker: (show: boolean) => void;
-  onTimeGroupingChange?: (value: SegmentedValue) => void;
+  onTimeRangeChange?: (range: [string, string], preset?: string) => void;
+  onOpenTimeSelector?: () => void;
 }
 
 export const SearchBar = ({ 
@@ -62,14 +69,12 @@ export const SearchBar = ({
   whereSql,
   timeRange,
   timeRangePreset,
-  showTimePicker,
   onSearch,
   onWhereSqlChange,
-  onTimeRangeChange,
   onSubmitSearch,
   onSubmitSql,
-  onToggleTimePicker,
-  onTimeGroupingChange
+  onTimeRangeChange,
+  onOpenTimeSelector
 }: SearchBarProps) => {
   const [searchHistory, setSearchHistory] = useState<string[]>(() => {
     const saved = localStorage.getItem('searchHistory');
@@ -79,30 +84,22 @@ export const SearchBar = ({
     const saved = localStorage.getItem('sqlHistory');
     return saved ? JSON.parse(saved) : [];
   });
-  const [timeGrouping, setTimeGrouping] = useState<SegmentedValue>('minute');
-  const [datePickerValues, setDatePickerValues] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
+  const [showFieldSelector, setShowFieldSelector] = useState(false);
+  const [selectedField, setSelectedField] = useState<string | null>(null);
+  const [fieldValue, setFieldValue] = useState<string>('');
   const [savedQueries, setSavedQueries] = useState<{name: string, query: string}[]>(() => {
     const saved = localStorage.getItem('savedQueries');
     return saved ? JSON.parse(saved) : [];
   });
-  const [showFieldSelector, setShowFieldSelector] = useState(false);
-  const [selectedField, setSelectedField] = useState<string | null>(null);
-  const [fieldValue, setFieldValue] = useState<string>('');
-
-  // 初始化日期选择器的值
-  useEffect(() => {
-    if (timeRange) {
-      setDatePickerValues([dayjs(timeRange[0]), dayjs(timeRange[1])]);
-    }
-  }, [timeRange]);
-
-  // 处理时间分组改变
-  const handleTimeGroupingChange = (value: SegmentedValue) => {
-    setTimeGrouping(value);
-    if (onTimeGroupingChange) {
-      onTimeGroupingChange(value);
-    }
-  };
+  const [activeFilters, setActiveFilters] = useState<{
+    keywords: boolean;
+    sql: boolean;
+    time: boolean;
+  }>({
+    keywords: false,
+    sql: false,
+    time: timeRange != null
+  });
 
   // 处理关键词搜索
   const handleKeywordSearch = () => {
@@ -113,6 +110,7 @@ export const SearchBar = ({
         setSearchHistory(newHistory);
         localStorage.setItem('searchHistory', JSON.stringify(newHistory));
       }
+      setActiveFilters(prev => ({ ...prev, keywords: true }));
       onSubmitSearch();
     }
   };
@@ -126,36 +124,8 @@ export const SearchBar = ({
         setSqlHistory(newHistory);
         localStorage.setItem('sqlHistory', JSON.stringify(newHistory));
       }
+      setActiveFilters(prev => ({ ...prev, sql: true }));
       onSubmitSql();
-    }
-  };
-
-  // 应用时间范围
-  const applyTimeRange = (start: string, end: string, preset?: string) => {
-    onTimeRangeChange([start, end], preset);
-    // 不自动关闭自定义时间选择器，除非是预设时间
-    if (preset && preset !== 'custom') {
-      onToggleTimePicker(false);
-    }
-  };
-
-  // 处理日期选择器改变
-  const handleDatePickerChange = (dates: any) => {
-    if (dates && dates[0] && dates[1]) {
-      setDatePickerValues([dates[0], dates[1]]);
-    } else {
-      setDatePickerValues(null);
-    }
-  };
-
-  // 处理日期选择器确认
-  const handleDatePickerOk = () => {
-    if (datePickerValues && datePickerValues[0] && datePickerValues[1]) {
-      applyTimeRange(
-        datePickerValues[0].format('YYYY-MM-DD HH:mm:ss'),
-        datePickerValues[1].format('YYYY-MM-DD HH:mm:ss'),
-        'custom'
-      );
     }
   };
 
@@ -189,131 +159,73 @@ export const SearchBar = ({
     onWhereSqlChange(query);
   };
 
-  // 缩短的时间范围预设项
-  const timePresets = [
-    { key: 'last_5m', label: '最近5分钟', 
-      action: () => {
-        const now = dayjs();
-        applyTimeRange(
-          now.subtract(5, 'minute').format('YYYY-MM-DD HH:mm:ss'),
-          now.format('YYYY-MM-DD HH:mm:ss'),
-          'last_5m'
-        );
+  // 应用时间范围预设
+  const applyTimePreset = (preset: typeof TIME_PRESETS[0]) => {
+    if (onTimeRangeChange) {
+      const now = dayjs();
+      let start;
+      let end = now;
+      
+      switch (preset.key) {
+        case 'last_15m':
+          start = now.subtract(15, 'minute');
+          break;
+        case 'last_1h':
+          start = now.subtract(1, 'hour');
+          break;
+        case 'last_24h':
+          start = now.subtract(24, 'hour');
+          break;
+        case 'last_7d':
+          start = now.subtract(7, 'day');
+          break;
+        case 'today':
+          start = now.startOf('day');
+          break;
+        case 'yesterday':
+          start = now.subtract(1, 'day').startOf('day');
+          end = now.subtract(1, 'day').endOf('day');
+          break;
+        case 'this_week':
+          start = now.startOf('week');
+          break;
+        default:
+          start = now.subtract(15, 'minute');
       }
-    },
-    { key: 'last_15m', label: '最近15分钟', 
-      action: () => {
-        const now = dayjs();
-        applyTimeRange(
-          now.subtract(15, 'minute').format('YYYY-MM-DD HH:mm:ss'),
-          now.format('YYYY-MM-DD HH:mm:ss'),
-          'last_15m'
-        );
-      }
-    },
-    { key: 'last_30m', label: '最近30分钟', 
-      action: () => {
-        const now = dayjs();
-        applyTimeRange(
-          now.subtract(30, 'minute').format('YYYY-MM-DD HH:mm:ss'),
-          now.format('YYYY-MM-DD HH:mm:ss'),
-          'last_30m'
-        );
-      }
-    },
-    { key: 'last_1h', label: '最近1小时', 
-      action: () => {
-        const now = dayjs();
-        applyTimeRange(
-          now.subtract(1, 'hour').format('YYYY-MM-DD HH:mm:ss'),
-          now.format('YYYY-MM-DD HH:mm:ss'),
-          'last_1h'
-        );
-      }
-    },
-    { key: 'last_3h', label: '最近3小时', 
-      action: () => {
-        const now = dayjs();
-        applyTimeRange(
-          now.subtract(3, 'hour').format('YYYY-MM-DD HH:mm:ss'),
-          now.format('YYYY-MM-DD HH:mm:ss'),
-          'last_3h'
-        );
-      }
-    },
-    { key: 'last_6h', label: '最近6小时', 
-      action: () => {
-        const now = dayjs();
-        applyTimeRange(
-          now.subtract(6, 'hour').format('YYYY-MM-DD HH:mm:ss'),
-          now.format('YYYY-MM-DD HH:mm:ss'),
-          'last_6h'
-        );
-      }
-    },
-    { key: 'last_12h', label: '最近12小时', 
-      action: () => {
-        const now = dayjs();
-        applyTimeRange(
-          now.subtract(12, 'hour').format('YYYY-MM-DD HH:mm:ss'),
-          now.format('YYYY-MM-DD HH:mm:ss'),
-          'last_12h'
-        );
-      }
-    },
-    { key: 'today', label: '今天', 
-      action: () => {
-        const now = dayjs();
-        applyTimeRange(
-          now.startOf('day').format('YYYY-MM-DD HH:mm:ss'),
-          now.format('YYYY-MM-DD HH:mm:ss'),
-          'today'
-        );
-      }
-    },
-    { key: 'yesterday', label: '昨天', 
-      action: () => {
-        const yesterday = dayjs().subtract(1, 'day');
-        applyTimeRange(
-          yesterday.startOf('day').format('YYYY-MM-DD HH:mm:ss'),
-          yesterday.endOf('day').format('YYYY-MM-DD HH:mm:ss'),
-          'yesterday'
-        );
-      }
-    },
-    { key: 'this_week', label: '本周', 
-      action: () => {
-        const now = dayjs();
-        applyTimeRange(
-          now.startOf('week').format('YYYY-MM-DD HH:mm:ss'),
-          now.format('YYYY-MM-DD HH:mm:ss'),
-          'this_week'
-        );
-      }
-    },
-    { key: 'custom', label: '自定义时间', 
-      action: () => {
-        // 直接打开时间选择器
-        onToggleTimePicker(true);
-      }
+      
+      onTimeRangeChange(
+        [start.format('YYYY-MM-DD HH:mm:ss'), end.format('YYYY-MM-DD HH:mm:ss')],
+        preset.key
+      );
+      setActiveFilters(prev => ({ ...prev, time: true }));
     }
-  ];
+  };
 
-  // 获取默认显示的时间选项标签
-  const getTimeRangeButtonText = () => {
-    if (!timeRange) {
-      return '选择时间范围';
-    }
+  // 获取时间范围显示文本
+  const getTimeRangeDisplayText = (): string => {
+    if (!timeRange) return '选择时间范围';
     
-    // 如果有预设值，显示预设的标签
     if (timeRangePreset) {
-      const preset = timePresets.find(p => p.key === timeRangePreset);
+      const preset = TIME_PRESETS.find(p => p.key === timeRangePreset);
       if (preset) {
         return preset.label;
       }
     }
     
-    return '选择时间范围';
+    const [start, end] = timeRange;
+    const startDay = dayjs(start).format('YYYY-MM-DD');
+    const endDay = dayjs(end).format('YYYY-MM-DD');
+    const now = dayjs().format('YYYY-MM-DD');
+    
+    // 判断是否为当天
+    if (startDay === endDay) {
+      if (startDay === now) {
+        return `今天 ${dayjs(start).format('HH:mm:ss')} - ${dayjs(end).format('HH:mm:ss')}`;
+      }
+      return `${dayjs(start).format('MM-DD')} ${dayjs(start).format('HH:mm:ss')} - ${dayjs(end).format('HH:mm:ss')}`;
+    }
+    
+    return `${dayjs(start).format('MM-DD HH:mm:ss')} - ${dayjs(end).format('MM-DD HH:mm:ss')}`;
   };
 
   // 查询模板菜单项
@@ -352,6 +264,76 @@ export const SearchBar = ({
         : [{ key: 'no-saved', label: '暂无保存的查询', disabled: true }],
     }
   ];
+
+  // 时间预设菜单项
+  const timePresetMenuItems: MenuProps['items'] = TIME_PRESETS.map(preset => ({
+    key: preset.key,
+    label: preset.label,
+    onClick: () => applyTimePreset(preset)
+  }));
+
+  // 显示过滤标签
+  const renderFilterTags = () => {
+    return (
+      <div style={{ marginTop: '12px' }}>
+        <Space wrap>
+          {searchQuery && activeFilters.keywords && (
+            <Tag 
+              color="green" 
+              closable 
+              onClose={() => {
+                onSearch('');
+                setActiveFilters(prev => ({ ...prev, keywords: false }));
+                onSubmitSearch();
+              }}
+              icon={<SearchOutlined />}
+            >
+              关键词: {searchQuery.length > 20 ? `${searchQuery.substring(0, 18)}...` : searchQuery}
+            </Tag>
+          )}
+          
+          {whereSql && activeFilters.sql && whereSql.split(/\s+AND\s+/i).map((condition, index) => (
+            <Tag 
+              key={index} 
+              color="purple"
+              closable
+              onClose={() => {
+                const conditions = whereSql.split(/\s+AND\s+/i);
+                conditions.splice(index, 1);
+                const newWhereSql = conditions.join(' AND ');
+                onWhereSqlChange(newWhereSql);
+                if (!newWhereSql) {
+                  setActiveFilters(prev => ({ ...prev, sql: false }));
+                }
+                onSubmitSql();
+              }}
+              icon={<CodeOutlined />}
+            >
+              {condition}
+            </Tag>
+          ))}
+          
+          {timeRange && activeFilters.time && (
+            <Tag 
+              color="blue" 
+              closable 
+              onClose={() => {
+                if (onTimeRangeChange) {
+                  onTimeRangeChange([dayjs().subtract(15, 'minute').format('YYYY-MM-DD HH:mm:ss'), dayjs().format('YYYY-MM-DD HH:mm:ss')], 'last_15m');
+                }
+                setActiveFilters(prev => ({ ...prev, time: false }));
+              }}
+              icon={<ClockCircleOutlined />}
+              onClick={onOpenTimeSelector}
+              style={{ cursor: 'pointer' }}
+            >
+              {getTimeRangeDisplayText()}
+            </Tag>
+          )}
+        </Space>
+      </div>
+    );
+  };
 
   return (
     <div className="search-bar-container">
@@ -429,6 +411,11 @@ export const SearchBar = ({
                 >
                   保存查询
                 </Button>
+                <Dropdown menu={{ items: timePresetMenuItems }} trigger={['click']}>
+                  <Button type="text" size="small" icon={<ClockCircleOutlined />}>
+                    {timeRangePreset ? TIME_PRESETS.find(p => p.key === timeRangePreset)?.label || '时间范围' : '时间范围'}
+                  </Button>
+                </Dropdown>
               </Space>
             </div>
             <div className="search-section-content">
@@ -497,144 +484,12 @@ export const SearchBar = ({
                 />
               </Space.Compact>
               
-              {whereSql && (
-                <div style={{ marginTop: '8px' }}>
-                  <Space wrap>
-                    {whereSql.split(/\s+AND\s+/i).map((condition, index) => (
-                      <Tag 
-                        key={index} 
-                        closable
-                        onClose={() => {
-                          const conditions = whereSql.split(/\s+AND\s+/i);
-                          conditions.splice(index, 1);
-                          onWhereSqlChange(conditions.join(' AND '));
-                        }}
-                      >
-                        {condition}
-                      </Tag>
-                    ))}
-                  </Space>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <div className="search-section">
-            <div className="search-section-title">
-              <Space>
-                <ClockCircleOutlined />
-                <span>时间范围</span>
-              </Space>
-            </div>
-            <div className="search-section-content">
-              <Dropdown
-                menu={{
-                  items: [
-                    {
-                      key: 'recent',
-                      type: 'group',
-                      label: '最近时间',
-                      children: timePresets.slice(0, 7).map(preset => ({
-                        key: preset.key,
-                        label: preset.label,
-                        onClick: preset.action
-                      })),
-                    },
-                    {
-                      type: 'divider',
-                    },
-                    {
-                      key: 'fixed',
-                      type: 'group',
-                      label: '固定时间段',
-                      children: timePresets.slice(7).map(preset => ({
-                        key: preset.key,
-                        label: preset.label,
-                        onClick: preset.action
-                      })),
-                    }
-                  ]
-                }}
-                trigger={['click']}
-              >
-                <Button style={{ width: '100%' }}>
-                  <Space>
-                    <ClockCircleOutlined />
-                    <span>{getTimeRangeButtonText()}</span>
-                    <DownOutlined />
-                  </Space>
-                </Button>
-              </Dropdown>
+              {/* 显示过滤条件标签 */}
+              {(activeFilters.keywords || activeFilters.sql || activeFilters.time) && renderFilterTags()}
             </div>
           </div>
         </div>
       </Card>
-      
-      {showTimePicker && (
-        <div className="time-picker-container">
-          <div className="time-picker-header">
-            <div className="time-picker-title">自定义时间范围</div>
-            <div className="time-grouping-selector">
-              <span className="time-grouping-label">时间分组：</span>
-              <Segmented
-                options={[
-                  { label: '分钟', value: 'minute' },
-                  { label: '小时', value: 'hour' },
-                  { label: '天', value: 'day' },
-                  { label: '周', value: 'week' },
-                  { label: '月', value: 'month' },
-                ]}
-                value={timeGrouping}
-                onChange={handleTimeGroupingChange}
-              />
-              <Tooltip title="选择时间分组方式，影响图表数据的统计粒度">
-                <QuestionCircleOutlined style={{ marginLeft: 8 }} />
-              </Tooltip>
-            </div>
-          </div>
-          <RangePicker
-            showTime={{ format: 'HH:mm:ss' }}
-            format="YYYY-MM-DD HH:mm:ss"
-            style={{ width: '100%' }}
-            value={datePickerValues}
-            onChange={handleDatePickerChange}
-            onOk={handleDatePickerOk}
-            ranges={{
-              '最近5分钟': [dayjs().subtract(5, 'minute'), dayjs()],
-              '最近15分钟': [dayjs().subtract(15, 'minute'), dayjs()],
-              '最近30分钟': [dayjs().subtract(30, 'minute'), dayjs()],
-              '最近1小时': [dayjs().subtract(1, 'hour'), dayjs()],
-              '最近3小时': [dayjs().subtract(3, 'hour'), dayjs()],
-              '今天': [dayjs().startOf('day'), dayjs()],
-              '昨天': [dayjs().subtract(1, 'day').startOf('day'), dayjs().subtract(1, 'day').endOf('day')],
-            }}
-          />
-          <div className="time-picker-actions" style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between' }}>
-            <div className="time-picker-presets">
-              <Space wrap>
-                {timePresets.slice(0, 6).map(preset => (
-                  <Button key={preset.key} size="small" onClick={preset.action}>
-                    {preset.label}
-                  </Button>
-                ))}
-              </Space>
-            </div>
-            <Space>
-              <Button size="small" onClick={() => onToggleTimePicker(false)}>
-                取消
-              </Button>
-              <Button 
-                type="primary" 
-                size="small" 
-                onClick={handleDatePickerOk}
-                disabled={!datePickerValues}
-              >
-                确定
-              </Button>
-            </Space>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
