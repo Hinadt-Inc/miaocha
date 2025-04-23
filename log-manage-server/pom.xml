@@ -20,11 +20,13 @@
 
     <dependencies>
         <!-- 前端UI组件 -->
+        <!-- 
         <dependency>
             <groupId>com.hina.log</groupId>
             <artifactId>log-manage-ui</artifactId>
             <version>${project.version}</version>
         </dependency>
+        -->
         
         <!-- Spring Boot Starters -->
         <dependency>

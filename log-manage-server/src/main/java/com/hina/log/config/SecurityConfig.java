@@ -49,7 +49,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(customAccessDeniedHandler()))
                 .authorizeHttpRequests(authorizeRequests -> authorizeRequests
                         // 前端静态资源和SPA路由
-                        .requestMatchers("/", "/index.html", "/favicon.ico", "/manifest.json").permitAll()
+                        .requestMatchers("/", "/index.html", "/static/favicon.ico", "/manifest.json").permitAll()
                         .requestMatchers("/assets/**", "/static/**", "/css/**", "/js/**", "/img/**", "/fonts/**")
                         .permitAll()
 

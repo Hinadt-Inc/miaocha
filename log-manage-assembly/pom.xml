@@ -24,11 +24,13 @@
             <artifactId>log-manage-server</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- 
         <dependency>
             <groupId>com.hina.log</groupId>
             <artifactId>log-manage-ui</artifactId>
             <version>${project.version}</version>
         </dependency>
+        -->
     </dependencies>
 
     <build>

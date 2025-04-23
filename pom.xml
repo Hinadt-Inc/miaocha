@@ -12,7 +12,7 @@
     <url>http://www.example.com</url>
     <modules>
         <module>log-manage-server</module>
-        <module>log-manage-ui</module>
+        <!-- <module>log-manage-ui</module> -->
         <module>log-manage-assembly</module>
     </modules>
 
