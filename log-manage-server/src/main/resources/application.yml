@@ -52,6 +52,10 @@ logstash:
   # Logstash压缩包路径
   package-path: ${LOGSTASH_PACKAGE_PATH}
   # 远程部署目录
-  deploy-dir: ${LOGSTASH_DEPLOY_PATH}
+  deploy-dir: ${LOGSTASH_DEPLOY_DIR:/opt/logstash}
+  # 进程监控配置
+  monitor:
+    # 监控间隔时间（毫秒），默认10分钟
+    interval: 600000
 
     
