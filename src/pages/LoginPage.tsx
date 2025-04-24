@@ -139,7 +139,7 @@ const LoginPage = () => {
       </div>
       
       <div className="login-footer">
-        <Text type="secondary">© 2025 Hina Cloud BI 平台 - 版权所有</Text>
+        <Text type="secondary">© 2025 日志查询系统 - 版权所有</Text>
       </div>
     </div>
   );
