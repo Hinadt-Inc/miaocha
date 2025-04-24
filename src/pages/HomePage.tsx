@@ -45,6 +45,7 @@ export default function HomePage() {
   const [showHistogram, setShowHistogram] = useState(true);
   const [timeRange, setTimeRange] = useState<[string, string] | null>(null);
   const [timeRangePreset, setTimeRangePreset] = useState<string | null>(null);
+  const [timeDisplayText, setTimeDisplayText] = useState<string | null>(null); // 添加时间显示文本状态
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedTable, setSelectedTable] = useState<string>('');
   const [lastAddedField, setLastAddedField] = useState<string | null>(null);
@@ -210,9 +211,10 @@ export default function HomePage() {
     }
   }, [loadMoreData, loading, hasMore]);
 
-  const handleTimeRangeChange = (range: [string, string] | null, preset?: string | null) => {
+  const handleTimeRangeChange = (range: [string, string] | null, preset?: string | null, displayText?: string) => {
     setTimeRange(range);
     setTimeRangePreset(preset || null);
+    setTimeDisplayText(displayText || null);
     
     // 当有时间范围变化时，如果是有数据的情况下，重新加载数据
     if (range && tableData.length > 0) {
@@ -274,6 +276,7 @@ export default function HomePage() {
         whereSql={whereSql}
         timeRange={timeRange}
         timeRangePreset={timeRangePreset}
+        timeDisplayText={timeDisplayText}
         onSearch={setSearchQuery}
         onWhereSqlChange={setWhereSql}
         onSubmitSearch={handleSubmitSearch}
@@ -441,8 +444,8 @@ export default function HomePage() {
         <KibanaTimePicker
           value={timeRange}
           presetKey={timeRangePreset || undefined}
-          onChange={(range, preset) => {
-            handleTimeRangeChange(range, preset);
+          onChange={(range, preset, displayText) => {
+            handleTimeRangeChange(range, preset, displayText);
             setShowTimePicker(false);
           }}
           onTimeGroupingChange={(value) => {

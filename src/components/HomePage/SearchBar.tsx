@@ -1,8 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { AutoComplete, Button, Space, Dropdown, Tooltip, Card, Tag, Select, Popover } from 'antd';
 import { SearchOutlined, CodeOutlined, InfoCircleOutlined, TagsOutlined, SaveOutlined, StarOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import dayjs from 'dayjs';
+import { KibanaTimePicker } from './KibanaTimePicker';
+
+// 节流函数
+const useThrottle = (value: any, delay: number) => {
+  const [throttledValue, setThrottledValue] = useState(value);
+  const lastExecuted = useRef<number>(Date.now());
+
+  useEffect(() => {
+    const now = Date.now();
+    const handler = setTimeout(() => {
+      if (now - lastExecuted.current >= delay) {
+        setThrottledValue(value);
+        lastExecuted.current = now;
+      }
+    }, delay - (now - lastExecuted.current));
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return throttledValue;
+};
 
 // 日志常用字段和值
 const LOG_FIELDS = [
@@ -56,11 +79,12 @@ interface SearchBarProps {
   whereSql: string;
   timeRange?: [string, string] | null;
   timeRangePreset?: string | null;
+  timeDisplayText?: string;  // 新增时间显示文本属性
   onSearch: (query: string) => void;
   onWhereSqlChange: (sql: string) => void;
   onSubmitSearch: () => void;
   onSubmitSql: () => void;
-  onTimeRangeChange?: (range: [string, string], preset?: string) => void;
+  onTimeRangeChange?: (range: [string, string], preset?: string, displayText?: string) => void;
   onOpenTimeSelector?: () => void;
 }
 
@@ -69,6 +93,7 @@ export const SearchBar = ({
   whereSql,
   timeRange,
   timeRangePreset,
+  timeDisplayText,  // 添加这个参数
   onSearch,
   onWhereSqlChange,
   onSubmitSearch,
@@ -100,6 +125,40 @@ export const SearchBar = ({
     sql: false,
     time: timeRange != null
   });
+
+  // 添加时间选择器显示状态
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
+  // 添加节流状态
+  const [searchInputValue, setSearchInputValue] = useState(searchQuery);
+  const [sqlInputValue, setSqlInputValue] = useState(whereSql);
+  
+  // 使用节流处理搜索输入，节流时间为500毫秒
+  const throttledSearchValue = useThrottle(searchInputValue, 500);
+  const throttledSqlValue = useThrottle(sqlInputValue, 500);
+  
+  // 监听节流后的值变化
+  useEffect(() => {
+    if (throttledSearchValue !== searchQuery) {
+      onSearch(throttledSearchValue);
+    }
+  }, [throttledSearchValue, onSearch, searchQuery]);
+  
+  useEffect(() => {
+    if (throttledSqlValue !== whereSql) {
+      onWhereSqlChange(throttledSqlValue);
+    }
+  }, [throttledSqlValue, onWhereSqlChange, whereSql]);
+  
+  // 处理搜索输入变化
+  const handleSearchInputChange = (value: string) => {
+    setSearchInputValue(value);
+  };
+  
+  // 处理SQL输入变化
+  const handleSqlInputChange = (value: string) => {
+    setSqlInputValue(value);
+  };
 
   // 处理关键词搜索
   const handleKeywordSearch = () => {
@@ -205,6 +264,7 @@ export const SearchBar = ({
   const getTimeRangeDisplayText = (): string => {
     if (!timeRange) return '选择时间范围';
     
+    // 如果是预设，优先使用预设名称
     if (timeRangePreset) {
       const preset = TIME_PRESETS.find(p => p.key === timeRangePreset);
       if (preset) {
@@ -213,19 +273,44 @@ export const SearchBar = ({
     }
     
     const [start, end] = timeRange;
-    const startDay = dayjs(start).format('YYYY-MM-DD');
-    const endDay = dayjs(end).format('YYYY-MM-DD');
-    const now = dayjs().format('YYYY-MM-DD');
+    const startDayjs = dayjs(start);
+    const endDayjs = dayjs(end);
     
-    // 判断是否为当天
-    if (startDay === endDay) {
-      if (startDay === now) {
-        return `今天 ${dayjs(start).format('HH:mm:ss')} - ${dayjs(end).format('HH:mm:ss')}`;
-      }
-      return `${dayjs(start).format('MM-DD')} ${dayjs(start).format('HH:mm:ss')} - ${dayjs(end).format('HH:mm:ss')}`;
+    const now = dayjs();
+    const today = now.format('YYYY-MM-DD');
+    const yesterday = now.subtract(1, 'day').format('YYYY-MM-DD');
+    
+    const startDate = startDayjs.format('YYYY-MM-DD');
+    const endDate = endDayjs.format('YYYY-MM-DD');
+    const startYear = startDayjs.format('YYYY');
+    const endYear = endDayjs.format('YYYY');
+    
+    // 不同年份的情况，显示完整年月日时间
+    if (startYear !== endYear) {
+      return `${startDayjs.format('YYYY-MM-DD HH:mm:ss')} - ${endDayjs.format('YYYY-MM-DD HH:mm:ss')}`;
     }
     
-    return `${dayjs(start).format('MM-DD HH:mm:ss')} - ${dayjs(end).format('MM-DD HH:mm:ss')}`;
+    // 同一天的情况
+    if (startDate === endDate) {
+      // 如果是今天
+      if (startDate === today) {
+        return `今天 ${startDayjs.format('HH:mm:ss')} - ${endDayjs.format('HH:mm:ss')}`;
+      }
+      // 如果是昨天
+      if (startDate === yesterday) {
+        return `昨天 ${startDayjs.format('HH:mm:ss')} - ${endDayjs.format('HH:mm:ss')}`;
+      }
+      // 其他同一天的情况
+      return `${startDayjs.format('MM-DD')} ${startDayjs.format('HH:mm:ss')} - ${endDayjs.format('HH:mm:ss')}`;
+    }
+    
+    // 跨天但在同一月
+    if (startDayjs.format('YYYY-MM') === endDayjs.format('YYYY-MM')) {
+      return `${startDayjs.format('MM-DD HH:mm:ss')} - ${endDayjs.format('DD HH:mm:ss')}`;
+    }
+    
+    // 跨月但在同一年
+    return `${startDayjs.format('MM-DD HH:mm:ss')} - ${endDayjs.format('MM-DD HH:mm:ss')}`;
   };
 
   // 查询模板菜单项
@@ -324,10 +409,10 @@ export const SearchBar = ({
                 setActiveFilters(prev => ({ ...prev, time: false }));
               }}
               icon={<ClockCircleOutlined />}
-              onClick={onOpenTimeSelector}
+              onClick={() => setShowTimePicker(true)}
               style={{ cursor: 'pointer' }}
             >
-              {getTimeRangeDisplayText()}
+              {timeDisplayText || getTimeRangeDisplayText()}
             </Tag>
           )}
         </Space>
@@ -354,8 +439,8 @@ export const SearchBar = ({
                 <AutoComplete
                   placeholder="输入关键词搜索，例如: 'error' || 'timeout'"
                   style={{ width: 'calc(100% - 32px)' }}
-                  value={searchQuery}
-                  onChange={onSearch}
+                  value={searchInputValue}
+                  onChange={handleSearchInputChange}
                   options={searchHistory.map(query => ({
                     value: query,
                     label: query
@@ -411,11 +496,37 @@ export const SearchBar = ({
                 >
                   保存查询
                 </Button>
-                <Dropdown menu={{ items: timePresetMenuItems }} trigger={['click']}>
+                {/* 将Dropdown替换为Popover */}
+                <Popover
+                  content={
+                    <KibanaTimePicker
+                      value={timeRange as [string, string]}
+                      presetKey={timeRangePreset || undefined}
+                      onChange={(range, preset, displayText) => {
+                        if (onTimeRangeChange) {
+                          onTimeRangeChange(range, preset, displayText);
+                          setActiveFilters(prev => ({ ...prev, time: true }));
+                          setShowTimePicker(false);
+                        }
+                      }}
+                      timeGrouping="minute"
+                      onTimeGroupingChange={(value) => {
+                        // 如果需要处理时间分组变化，可以在这里添加
+                        console.log('Time grouping changed:', value);
+                      }}
+                    />
+                  }
+                  trigger="click"
+                  open={showTimePicker}
+                  onOpenChange={setShowTimePicker}
+                  placement="bottomRight"
+                  overlayStyle={{ width: 'auto', maxWidth: '450px' }}
+                  arrow={true}
+                >
                   <Button type="text" size="small" icon={<ClockCircleOutlined />}>
-                    {timeRangePreset ? TIME_PRESETS.find(p => p.key === timeRangePreset)?.label || '时间范围' : '时间范围'}
+                    {timeDisplayText || (timeRangePreset ? TIME_PRESETS.find(p => p.key === timeRangePreset)?.label || '时间范围' : '时间范围')}
                   </Button>
-                </Dropdown>
+                </Popover>
               </Space>
             </div>
             <div className="search-section-content">
@@ -459,8 +570,8 @@ export const SearchBar = ({
                 <AutoComplete
                   placeholder="WHERE子句，例如: level = 'ERROR' AND marker.reqType = 'EXECUTE'"
                   style={{ width: 'calc(100% - 32px)' }}
-                  value={whereSql}
-                  onChange={onWhereSqlChange}
+                  value={sqlInputValue}
+                  onChange={handleSqlInputChange}
                   options={[
                     ...sqlHistory.map(sql => ({
                       value: sql,

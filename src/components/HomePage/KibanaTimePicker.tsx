@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, DatePicker, Space, Tabs, Radio, Input, Tooltip, Popover } from 'antd';
+import { Button, DatePicker, Space, Tabs, Radio, Input, Tooltip } from 'antd';
 import { 
   ClockCircleOutlined, 
   LeftOutlined, 
@@ -64,9 +64,10 @@ const RELATIVE_TIME_OPTIONS = [
 interface KibanaTimePickerProps {
   value?: [string, string];
   presetKey?: string;
-  onChange?: (range: [string, string], presetKey?: string) => void;
+  onChange?: (range: [string, string], presetKey?: string, displayText?: string) => void;
   onTimeGroupingChange?: (value: string) => void;
   timeGrouping?: string;
+  displayText?: string;
 }
 
 export const KibanaTimePicker: React.FC<KibanaTimePickerProps> = ({
@@ -76,9 +77,6 @@ export const KibanaTimePicker: React.FC<KibanaTimePickerProps> = ({
   onTimeGroupingChange,
   timeGrouping = 'minute'
 }) => {
-  // 控制面板是否显示
-  const [visible, setVisible] = useState(false);
-  
   // 当前选中的时间范围
   const [selectedRange, setSelectedRange] = useState<{
     start: Dayjs;
@@ -133,17 +131,70 @@ export const KibanaTimePicker: React.FC<KibanaTimePickerProps> = ({
     });
     
     if (onChange) {
+      // 获取显示文本
+      let displayText: string;
+      
+      // 如果是快速预设，显示预设名称
+      if (key && key !== 'custom' && key !== 'relative' && key !== 'moved' && key !== 'now') {
+        const preset = QUICK_RANGES.find(r => r.key === key);
+        if (preset) {
+          displayText = preset.label;
+        } else {
+          displayText = formatTimeRange(start, end);
+        }
+      } else {
+        displayText = formatTimeRange(start, end);
+      }
+      
       onChange([
         start.format('YYYY-MM-DD HH:mm:ss'),
         end.format('YYYY-MM-DD HH:mm:ss')
-      ], key);
+      ], key, displayText);
     }
+  };
+  
+  // 用于格式化时间范围显示的辅助函数
+  const formatTimeRange = (start: Dayjs, end: Dayjs): string => {
+    const now = dayjs();
+    const today = now.format('YYYY-MM-DD');
+    const yesterday = now.subtract(1, 'day').format('YYYY-MM-DD');
+    
+    const startDate = start.format('YYYY-MM-DD');
+    const endDate = end.format('YYYY-MM-DD');
+    const startYear = start.format('YYYY');
+    const endYear = end.format('YYYY');
+    
+    // 不同年份的情况，显示完整年月日时间
+    if (startYear !== endYear) {
+      return `${start.format('YYYY-MM-DD HH:mm:ss')} - ${end.format('YYYY-MM-DD HH:mm:ss')}`;
+    }
+    
+    // 同一天的情况
+    if (startDate === endDate) {
+      // 如果是今天
+      if (startDate === today) {
+        return `今天 ${start.format('HH:mm:ss')} - ${end.format('HH:mm:ss')}`;
+      }
+      // 如果是昨天
+      if (startDate === yesterday) {
+        return `昨天 ${start.format('HH:mm:ss')} - ${end.format('HH:mm:ss')}`;
+      }
+      // 其他同一天的情况
+      return `${start.format('MM-DD')} ${start.format('HH:mm:ss')} - ${end.format('HH:mm:ss')}`;
+    }
+    
+    // 跨天但在同一月
+    if (start.format('YYYY-MM') === end.format('YYYY-MM')) {
+      return `${start.format('MM-DD HH:mm:ss')} - ${end.format('DD HH:mm:ss')}`;
+    }
+    
+    // 跨月但在同一年
+    return `${start.format('MM-DD HH:mm:ss')} - ${end.format('MM-DD HH:mm:ss')}`;
   };
   
   // 应用快速预设时间范围
   const applyQuickRange = (range: typeof QUICK_RANGES[0]) => {
     updateTimeRange(range.from(), range.to(), range.key);
-    setVisible(false);
   };
   
   // 应用绝对时间范围
@@ -219,7 +270,6 @@ export const KibanaTimePicker: React.FC<KibanaTimePickerProps> = ({
     }
     
     updateTimeRange(start, end, 'relative');
-    setVisible(false);
   };
   
   // 移动时间范围
@@ -265,25 +315,42 @@ export const KibanaTimePicker: React.FC<KibanaTimePickerProps> = ({
     }
     
     // 否则显示格式化的时间范围
-    // 如果是今天的时间，只显示时间部分
-    const today = dayjs().format('YYYY-MM-DD');
+    const now = dayjs();
+    const today = now.format('YYYY-MM-DD');
+    const yesterday = now.subtract(1, 'day').format('YYYY-MM-DD');
+    const currentYear = now.format('YYYY');
+    
     const startDate = start.format('YYYY-MM-DD');
     const endDate = end.format('YYYY-MM-DD');
+    const startYear = start.format('YYYY');
+    const endYear = end.format('YYYY');
     
-    const startFormat = startDate === today ? 'HH:mm:ss' : 'MM-DD HH:mm:ss';
-    const endFormat = endDate === today ? 'HH:mm:ss' : 'MM-DD HH:mm:ss';
-    
-    // 如果开始和结束日期相同，简化显示
-    if (startDate === endDate) {
-      return `${start.format('MM-DD')} ${start.format('HH:mm:ss')} - ${end.format('HH:mm:ss')}`;
-    }
-    
-    // 如果是不同的年份，显示完整日期
-    if (start.format('YYYY') !== end.format('YYYY')) {
+    // 不同年份的情况，显示完整年月日时间
+    if (startYear !== endYear) {
       return `${start.format('YYYY-MM-DD HH:mm:ss')} - ${end.format('YYYY-MM-DD HH:mm:ss')}`;
     }
     
-    return `${start.format(startFormat)} - ${end.format(endFormat)}`;
+    // 同一天的情况
+    if (startDate === endDate) {
+      // 如果是今天
+      if (startDate === today) {
+        return `今天 ${start.format('HH:mm:ss')} - ${end.format('HH:mm:ss')}`;
+      }
+      // 如果是昨天
+      if (startDate === yesterday) {
+        return `昨天 ${start.format('HH:mm:ss')} - ${end.format('HH:mm:ss')}`;
+      }
+      // 其他同一天的情况
+      return `${start.format('MM-DD')} ${start.format('HH:mm:ss')} - ${end.format('HH:mm:ss')}`;
+    }
+    
+    // 跨天但在同一月
+    if (start.format('YYYY-MM') === end.format('YYYY-MM')) {
+      return `${start.format('MM-DD HH:mm:ss')} - ${end.format('DD HH:mm:ss')}`;
+    }
+    
+    // 跨月但在同一年
+    return `${start.format('MM-DD HH:mm:ss')} - ${end.format('MM-DD HH:mm:ss')}`;
   };
   
   // 监听外部值变化
@@ -297,42 +364,110 @@ export const KibanaTimePicker: React.FC<KibanaTimePickerProps> = ({
     }
   }, [value, presetKey]);
   
-  // 时间选择面板内容
-  const timePickerContent = (
-    <div className="kibana-time-picker-popover" style={{ width: '400px' }}>
+  return (
+    <div className="kibana-time-picker-container" style={{ width: '400px' }}>
+      {/* 顶部显示已选择时间范围和时间导航控件 */}
+      <div className="time-header" style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: '8px',
+        borderBottom: '1px solid #f0f0f0',
+        paddingBottom: '8px' 
+      }}>
+        <div className="time-display">
+          <Space align="center">
+            <ClockCircleOutlined />
+            <div style={{ fontWeight: 'bold' }}>{formatDisplayTime()}</div>
+          </Space>
+        </div>
+        <div className="time-navigation">
+          <Space>
+            <Tooltip title="向前移动时间段">
+              <Button 
+                icon={<LeftOutlined />} 
+                size="small"
+                onClick={() => moveTimeRange('backward')}
+              />
+            </Tooltip>
+            <Tooltip title="回到当前">
+              <Button 
+                icon={<ReloadOutlined />} 
+                size="small"
+                onClick={goToNow}
+              />
+            </Tooltip>
+            <Tooltip title="向后移动时间段">
+              <Button 
+                icon={<RightOutlined />} 
+                size="small"
+                onClick={() => moveTimeRange('forward')}
+              />
+            </Tooltip>
+          </Space>
+        </div>
+      </div>
+      
+      {/* 时间选择器主内容 */}
       <Tabs activeKey={activeTab} onChange={setActiveTab}>
         <TabPane tab="快速选择" key="quick">
-          <div className="kibana-quick-ranges">
+          <div className="kibana-quick-ranges" style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(3, 1fr)', 
+            gap: '8px', 
+            maxHeight: '200px', 
+            overflowY: 'auto' 
+          }}>
             {QUICK_RANGES.map(range => (
-              <div 
+              <Button 
                 key={range.key}
-                className={`kibana-quick-range-button ${selectedRange.presetKey === range.key ? 'kibana-quick-range-button-active' : ''}`}
+                type={selectedRange.presetKey === range.key ? 'primary' : 'default'}
+                size="small"
                 onClick={() => applyQuickRange(range)}
+                style={{ width: '100%', textAlign: 'center' }}
               >
                 {range.label}
-              </div>
+              </Button>
             ))}
           </div>
+          
+          <div className="time-grouping-section" style={{ marginTop: '16px' }}>
+            <div style={{ marginBottom: '8px' }}>时间分组：</div>
+            <Radio.Group
+              options={timeGroupingOptions}
+              value={timeGrouping}
+              optionType="button"
+              buttonStyle="solid"
+              onChange={e => {
+                if (onTimeGroupingChange) {
+                  onTimeGroupingChange(e.target.value);
+                }
+              }}
+              style={{ display: 'flex', flexWrap: 'wrap' }}
+            />
+          </div>
         </TabPane>
+        
         <TabPane tab="绝对时间" key="absolute">
           <div className="absolute-time-panel">
             <RangePicker
               showTime
               format="YYYY-MM-DD HH:mm:ss"
               style={{ width: '100%', marginBottom: '16px' }}
-              defaultValue={[selectedRange.start, selectedRange.end]}
+              value={[selectedRange.start, selectedRange.end]}
               onOk={(dates: any) => applyAbsoluteRange(dates)}
             />
-            <Button type="primary" block onClick={() => setVisible(false)}>
+            <Button type="primary" onClick={() => applyAbsoluteRange([selectedRange.start, selectedRange.end])}>
               应用
             </Button>
           </div>
         </TabPane>
+        
         <TabPane tab="相对时间" key="relative">
-          <div className="relative-time-panel">
+          <div className="relative-time-panel" style={{ maxWidth: '380px' }}>
             <div className="relative-time-section">
-              <div className="relative-time-label">开始时间：</div>
-              <Space align="center">
+              <div className="relative-time-label" style={{ marginBottom: '8px' }}>开始时间：</div>
+              <Space align="center" style={{ flexWrap: 'wrap' }}>
                 <Input 
                   type="number" 
                   style={{ width: '80px' }} 
@@ -351,21 +486,23 @@ export const KibanaTimePicker: React.FC<KibanaTimePickerProps> = ({
                     ...relativeTimeSettings,
                     fromUnit: e.target.value
                   })}
-                />
-                <span>前的</span>
-                <Radio.Group
-                  options={RELATIVE_TIME_OPTIONS}
-                  value={relativeTimeSettings.fromOption}
-                  onChange={e => setRelativeTimeSettings({
-                    ...relativeTimeSettings,
-                    fromOption: e.target.value
-                  })}
+                  style={{ flexWrap: 'wrap' }}
                 />
               </Space>
+              <div style={{ marginTop: '8px', marginBottom: '8px' }}>前的</div>
+              <Radio.Group
+                options={RELATIVE_TIME_OPTIONS}
+                value={relativeTimeSettings.fromOption}
+                onChange={e => setRelativeTimeSettings({
+                  ...relativeTimeSettings,
+                  fromOption: e.target.value
+                })}
+                style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}
+              />
             </div>
             
             <div className="relative-time-section" style={{ marginTop: '16px' }}>
-              <div className="relative-time-label">结束时间：</div>
+              <div className="relative-time-label" style={{ marginBottom: '8px' }}>结束时间：</div>
               <Radio.Group
                 options={RELATIVE_TIME_OPTIONS}
                 value={relativeTimeSettings.toOption}
@@ -373,12 +510,12 @@ export const KibanaTimePicker: React.FC<KibanaTimePickerProps> = ({
                   ...relativeTimeSettings,
                   toOption: e.target.value
                 })}
+                style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}
               />
             </div>
             
             <Button 
               type="primary" 
-              block 
               style={{ marginTop: '16px' }}
               onClick={applyRelativeRange}
             >
@@ -387,74 +524,6 @@ export const KibanaTimePicker: React.FC<KibanaTimePickerProps> = ({
           </div>
         </TabPane>
       </Tabs>
-      
-      {activeTab === 'quick' && (
-        <div className="time-grouping-section" style={{ marginTop: '16px', borderTop: '1px solid #f0f0f0', paddingTop: '16px' }}>
-          <div style={{ marginBottom: '8px' }}>时间分组：</div>
-          <Radio.Group
-            options={timeGroupingOptions}
-            value={timeGrouping}
-            optionType="button"
-            buttonStyle="solid"
-            onChange={e => {
-              if (onTimeGroupingChange) {
-                onTimeGroupingChange(e.target.value);
-              }
-            }}
-          />
-        </div>
-      )}
-    </div>
-  );
-  
-  return (
-    <div className="kibana-time-picker">
-      <Popover
-        content={timePickerContent}
-        title="选择时间范围"
-        trigger="click"
-        open={visible}
-        onOpenChange={setVisible}
-        placement="bottomRight"
-        overlayStyle={{ width: '400px' }}
-      >
-        <div className={`kibana-time-control ${visible ? 'kibana-time-control-active' : ''}`}>
-          <Space align="center">
-            <ClockCircleOutlined />
-            <div className="kibana-time-display">
-              <span className="kibana-time-display-text">
-                {formatDisplayTime()}
-              </span>
-            </div>
-          </Space>
-        </div>
-      </Popover>
-      
-      <div className="time-navigation" style={{ marginTop: '8px' }}>
-        <Space>
-          <Tooltip title="向前移动时间段">
-            <Button 
-              icon={<LeftOutlined />} 
-              size="small"
-              onClick={() => moveTimeRange('backward')}
-            />
-          </Tooltip>
-          <Tooltip title="回到当前">
-            <Button 
-              icon={<ReloadOutlined />} 
-              size="small"
-              onClick={goToNow}
-            />
-          </Tooltip>
-          <Tooltip title="向后移动时间段">
-            <Button 
-              icon={<RightOutlined />} 
-              size="small"
-              onClick={() => moveTimeRange('forward')}
-            />
-          </Tooltip>
-        </Space>
-      </div>
     </div>
   );
 };
