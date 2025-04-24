@@ -15,5 +15,5 @@ UPDATE user SET role = 'ADMIN' WHERE uid = 'admin';
 
 -- 创建超级管理员账户
 INSERT INTO user (nickname, email, uid, role, password, status, create_time, update_time)
-VALUES ('超级管理员', 'admin@hinadt.com', 'super_admin', 'SUPER_ADMIN', '$2a$10$VvXOt1QT/IwdF8wTpnrTvOvHKYHS3NMYnp4ukTTKXzQ/gXwkXdVJu', 1, NOW(), NOW())
-ON DUPLICATE KEY UPDATE role = 'SUPER_ADMIN', password = '$2a$10$VvXOt1QT/IwdF8wTpnrTvOvHKYHS3NMYnp4ukTTKXzQ/gXwkXdVJu'; 
+VALUES ('超级管理员', 'admin@hinadt.com', 'super_admin', 'SUPER_ADMIN', '$2a$10$vgn1nLgB8Df31zkLsRmamutNCNcZ.r.xFWHA1KdbMJ8ReidZc/CVK', 1, NOW(), NOW())
+ON DUPLICATE KEY UPDATE role = 'SUPER_ADMIN', password = '$2a$10$vgn1nLgB8Df31zkLsRmamutNCNcZ.r.xFWHA1KdbMJ8ReidZc/CVK';
