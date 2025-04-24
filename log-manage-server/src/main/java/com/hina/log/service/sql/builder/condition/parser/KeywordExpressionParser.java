@@ -16,6 +16,9 @@ public class KeywordExpressionParser {
     private static final String AND_OPERATOR = "&&";
     private static final String OR_OPERATOR = "||";
 
+    // 列名常量
+    private static final String MESSAGE_COLUMN = "message";
+
     // 括号匹配的正则表达式 - 匹配括号内容
     private static final Pattern PARENTHESIS_PATTERN = Pattern.compile("\\(([^()]+)\\)");
 
@@ -138,7 +141,8 @@ public class KeywordExpressionParser {
     /**
      * 解析关键字表达式，转换为Doris SQL条件
      *
-     * @param expression 关键字表达式，如 "key1"、"'key1' || 'key2'"、"('key1' && 'key2') || 'key3'"等
+     * @param expression 关键字表达式，如 "key1"、"'key1' || 'key2'"、"('key1' && 'key2') ||
+     *                   'key3'"等
      * @return Doris SQL条件或语法错误信息
      */
     public static ParseResult parse(String expression) {
@@ -169,28 +173,75 @@ public class KeywordExpressionParser {
      */
     private static String parseExpression(String expression) {
         expression = normalizeExpression(expression);
-        expression = replaceParenthesesWithParsedExpressions(expression);
+
+        // 如果是带括号的表达式，则先解析括号内的内容
+        if (expression.startsWith("(") && expression.endsWith(")")
+                && isBalancedParenthesis(expression.substring(1, expression.length() - 1))) {
+            String innerExpr = expression.substring(1, expression.length() - 1).trim();
+            // 递归解析内部表达式，保留外层括号
+            return parseExpression(innerExpr);
+        }
 
         // 查找顶层 OR 操作符
         int orIndex = findTopLevelOperatorIndex(expression, " || ");
         if (orIndex != -1) {
-            String left = parseExpression(expression.substring(0, orIndex).trim());
-            String right = parseExpression(expression.substring(orIndex + 4).trim());
-            return left + " OR " + right;
+            String left = expression.substring(0, orIndex).trim();
+            String right = expression.substring(orIndex + 4).trim();
+
+            String leftParsed = parseExpression(left);
+            String rightParsed = parseExpression(right);
+
+            return "(" + leftParsed + " OR " + rightParsed + ")";
         }
 
         // 查找顶层 AND 操作符
         int andIndex = findTopLevelOperatorIndex(expression, " && ");
         if (andIndex != -1) {
-            String left = parseExpression(expression.substring(0, andIndex).trim());
-            String right = parseExpression(expression.substring(andIndex + 4).trim());
-            // AND 操作符用于MATCH_ALL
-            String keywords = extractKeywordsFromExpressions(left, right);
-            return "message MATCH_ALL '" + keywords + "'";
+            String left = expression.substring(0, andIndex).trim();
+            String right = expression.substring(andIndex + 4).trim();
+
+            String leftParsed = parseExpression(left);
+            String rightParsed = parseExpression(right);
+
+            // 只有当两边都是简单的MATCH_ALL（不包含OR操作）时，才合并关键字
+            boolean leftIsSimpleMatchAll = leftParsed.contains("MATCH_ALL") && !leftParsed.contains(" OR ");
+            boolean rightIsSimpleMatchAll = rightParsed.contains("MATCH_ALL") && !rightParsed.contains(" OR ");
+
+            if (leftIsSimpleMatchAll && rightIsSimpleMatchAll) {
+                String keywords = extractKeywordsFromExpressions(leftParsed, rightParsed);
+                return MESSAGE_COLUMN + " MATCH_ALL '" + keywords + "'";
+            } else {
+                // 否则使用标准的AND操作符
+                return "(" + leftParsed + " AND " + rightParsed + ")";
+            }
+        }
+
+        // 如果表达式本身就是括号表达式，则递归解析
+        Matcher matcher = PARENTHESIS_PATTERN.matcher(expression);
+        if (matcher.matches()) {
+            String innerExpr = matcher.group(1).trim();
+            return parseExpression(innerExpr);
         }
 
         // 如果没有操作符，处理单个项
         return parseSingleTerm(expression);
+    }
+
+    /**
+     * 检查括号是否平衡匹配
+     */
+    private static boolean isBalancedParenthesis(String expression) {
+        int count = 0;
+        for (char c : expression.toCharArray()) {
+            if (c == '(')
+                count++;
+            else if (c == ')')
+                count--;
+
+            if (count < 0)
+                return false;
+        }
+        return count == 0;
     }
 
     /**
@@ -228,23 +279,6 @@ public class KeywordExpressionParser {
     }
 
     /**
-     * 替换所有括号表达式为其解析结果
-     */
-    private static String replaceParenthesesWithParsedExpressions(String expression) {
-        Matcher matcher = PARENTHESIS_PATTERN.matcher(expression);
-        StringBuffer result = new StringBuffer();
-
-        while (matcher.find()) {
-            String innerExpr = matcher.group(1).trim();
-            String parsedInner = parseExpression(innerExpr); // 递归解析内部表达式
-            parsedInner = Matcher.quoteReplacement(parsedInner);
-            matcher.appendReplacement(result, "(" + parsedInner + ")");
-        }
-        matcher.appendTail(result);
-        return result.toString();
-    }
-
-    /**
      * 查找顶层操作符的索引
      */
     private static int findTopLevelOperatorIndex(String expression, String operator) {
@@ -263,20 +297,25 @@ public class KeywordExpressionParser {
     }
 
     /**
-     * 解析单个项
+     * 解析单个表达式项
      */
     private static String parseSingleTerm(String term) {
         term = term.trim();
-        if (term.startsWith("(") && term.endsWith(")")) {
-            // 去除最外层的括号
-            String inner = term.substring(1, term.length() - 1).trim();
-            return parseExpression(inner);
+        // 移除外层引号
+        term = term.replaceAll("^'(.+)'$", "$1");
+
+        // 如果是已处理的条件语句（如MATCH_ALL），直接返回
+        if (term.contains("MATCH_ALL") || term.contains(" OR ")) {
+            return term;
         }
+
+        // 否则构建MATCH_ALL条件
         String keyword = extractKeyword(term);
-        if (keyword.isEmpty()) {
-            return "";
+        if (StringUtils.isNotBlank(keyword)) {
+            return MESSAGE_COLUMN + " MATCH_ALL '" + keyword + "'";
         }
-        return "message MATCH_ANY '" + keyword + "'";
+
+        return "";
     }
 
     /**
@@ -299,21 +338,18 @@ public class KeywordExpressionParser {
     private static String extractKeywordsFromExpressions(String... expressions) {
         List<String> keywords = new ArrayList<>();
         for (String expr : expressions) {
-            if (expr.contains("MATCH_ANY")) {
-                // 提取MATCH_ANY中的关键字
-                Matcher matcher = Pattern.compile("MATCH_ANY\\s+'([^']+)'").matcher(expr);
+            if (expr.contains("MATCH_ALL")) {
+                // 提取MATCH_ALL中的关键字
+                Matcher matcher = Pattern.compile(MESSAGE_COLUMN + "\\s+MATCH_ALL\\s+'([^']+)'").matcher(expr);
                 if (matcher.find()) {
                     keywords.add(matcher.group(1));
                 }
-            } else if (expr.contains("MATCH_ALL")) {
-                // 提取MATCH_ALL中的关键字
-                Matcher matcher = Pattern.compile("MATCH_ALL\\s+'([^']+)'").matcher(expr);
-                if (matcher.find()) {
-                    keywords.addAll(List.of(matcher.group(1).split("\\s+")));
-                }
             } else {
-                // 假设是单个关键字
-                keywords.add(expr);
+                // 如果不包含MATCH_ALL，可能是单个关键字，尝试提取
+                String keyword = extractKeyword(expr);
+                if (StringUtils.isNotBlank(keyword)) {
+                    keywords.add(keyword);
+                }
             }
         }
         return String.join(" ", keywords);

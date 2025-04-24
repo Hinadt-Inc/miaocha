@@ -9,7 +9,6 @@ import com.hina.log.mapper.LogstashMachineMapper;
 import com.hina.log.mapper.LogstashProcessMapper;
 import com.hina.log.mapper.MachineMapper;
 import com.hina.log.ssh.SshClient;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -19,7 +18,6 @@ import org.springframework.util.StringUtils;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Logstash进程监控任务

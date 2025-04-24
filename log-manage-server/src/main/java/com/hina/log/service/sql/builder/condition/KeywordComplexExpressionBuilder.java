@@ -14,6 +14,11 @@ import org.springframework.stereotype.Component;
  * 复杂关键字表达式条件构建器
  * 处理包含括号和复合逻辑的复杂表达式
  * 比如: ('error' || 'warning') && ('timeout' || 'failure')
+ * 
+ * 说明：
+ * 1. 对于OR关系（||），使用SQL的OR操作符和LIKE条件，而不是MATCH_ANY
+ * 2. 对于AND关系（&&），使用MATCH_ALL或SQL的AND操作符
+ * 3. 最多支持两层嵌套，符合大多数查询需求
  */
 @Component
 @Order(10) // 高优先级，确保在简单表达式处理器之前执行

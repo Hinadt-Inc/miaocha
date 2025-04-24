@@ -30,40 +30,12 @@ public class LogSearchResultDTO {
     @Schema(description = "日志总数")
     private Integer totalCount;
 
+    @Schema(description = "时间分布粒度", example = "MINUTE", allowableValues = { "SECOND", "MINUTE", "HOUR", "DAY",
+            "MONTH" })
+    private String timeGranularity;
+
     @Schema(description = "日志时间分布数据，用于生成时间分布图")
     private List<LogDistributionData> distributionData;
-
-    /**
-     * 为了保持与修改前的API兼容
-     */
-    @Schema(hidden = true)
-    public List<Map<String, Object>> getRecords() {
-        return rows;
-    }
-
-    /**
-     * 为了保持与修改前的API兼容
-     */
-    @Schema(hidden = true)
-    public void setRecords(List<Map<String, Object>> records) {
-        this.rows = records;
-    }
-
-    /**
-     * 为了保持与修改前的API兼容
-     */
-    @Schema(hidden = true)
-    public List<Map<String, Object>> getDistribution() {
-        return rows;
-    }
-
-    /**
-     * 为了保持与修改前的API兼容
-     */
-    @Schema(hidden = true)
-    public void setDistribution(List<Map<String, Object>> distribution) {
-        // 不做实际设置，仅作为兼容方法
-    }
 
     @Data
     @Schema(description = "日志时间分布数据")

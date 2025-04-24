@@ -104,6 +104,7 @@ public class LogSearchServiceImpl implements LogSearchService {
             errorResult.setErrorMessage("关键字表达式语法错误: " + e.getMessage());
             errorResult.setRows(Collections.emptyList());
             errorResult.setTotalCount(0);
+            errorResult.setTimeGranularity("MINUTE"); // 设置默认时间粒度
             errorResult.setDistributionData(Collections.emptyList());
             return errorResult;
         } catch (Exception e) {
@@ -115,6 +116,7 @@ public class LogSearchServiceImpl implements LogSearchService {
             errorResult.setErrorMessage("日志检索失败: " + e.getMessage());
             errorResult.setRows(Collections.emptyList());
             errorResult.setTotalCount(0);
+            errorResult.setTimeGranularity("MINUTE"); // 设置默认时间粒度
             errorResult.setDistributionData(Collections.emptyList());
             return errorResult;
         }
@@ -124,6 +126,9 @@ public class LogSearchServiceImpl implements LogSearchService {
         long startTime = System.currentTimeMillis();
         LogSearchResultDTO result = new LogSearchResultDTO();
         result.setSuccess(true);
+
+        // 设置时间分布粒度
+        result.setTimeGranularity(convertTimeUnitToGranularity(timeUnit));
 
         try (Connection conn = jdbcQueryExecutor.getConnection(datasource)) {
             // 1. 执行分布统计查询
@@ -176,6 +181,33 @@ public class LogSearchServiceImpl implements LogSearchService {
         result.setExecutionTimeMs(endTime - startTime);
 
         return result;
+    }
+
+    /**
+     * 将时间单位转换为时间粒度
+     * 
+     * @param timeUnit SQL中使用的时间单位
+     * @return 时间粒度
+     */
+    private String convertTimeUnitToGranularity(String timeUnit) {
+        if (timeUnit == null) {
+            return "MINUTE";
+        }
+
+        switch (timeUnit.toLowerCase()) {
+            case "second":
+                return "SECOND";
+            case "minute":
+                return "MINUTE";
+            case "hour":
+                return "HOUR";
+            case "day":
+                return "DAY";
+            case "month":
+                return "MONTH";
+            default:
+                return "MINUTE";
+        }
     }
 
     @Override
