@@ -1,21 +1,20 @@
 import './App.less'
+import { App as AntdApp } from 'antd'
 import { ProLayout } from '@ant-design/pro-components'
-import { Link, Outlet, useLocation } from 'react-router-dom'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { 
   CompassOutlined,
   DashboardOutlined,
   ConsoleSqlOutlined,
   SettingOutlined,
   UserOutlined,
-  LogoutOutlined
 } from '@ant-design/icons'
-import { useSelector, useDispatch } from 'react-redux'
-import { logout } from './store/userSlice'
-import { Button } from 'antd'
+import { useSelector } from 'react-redux'
+import UserProfile from './components/User/UserProfile'
 
-function App() {
+function AppWrapper() {
   const location = useLocation()
-  const dispatch = useDispatch()
+  const navigate = useNavigate()
   const user = useSelector((state: { user: { name: string; isLoggedIn: boolean } }) => state.user)
   
   return (
@@ -54,6 +53,11 @@ function App() {
                 name: '数据源管理',
                 icon: <UserOutlined />,
               },
+              {
+                path: '/system/permission',
+                name: '数据源权限管理',
+                icon: <UserOutlined />,
+              },
             ]
           }
         ]
@@ -61,25 +65,11 @@ function App() {
       menuItemRender={(item, dom) => (
         <Link to={item.path || '/'}>{dom}</Link>
       )}
-      footerRender={() => (
-        <div className="copyright">
-          Hina Cloud BI ©2025
-        </div>
-      )}
-      menuFooterRender={() => (
-        user.isLoggedIn && (
-          <div className="menu-user-info">
-            <span>{user.name}</span>
-            <Button
-              className="logout-button"
-              onClick={() => {
-                dispatch(logout())
-              }}
-              icon={<LogoutOutlined />}
-            />
-          </div>
+      avatarProps={{
+        render: () => (
+          user.isLoggedIn && <UserProfile />
         )
-      )}
+      }}
     >
       <div>
         <Outlet />
@@ -88,4 +78,10 @@ function App() {
   )
 }
 
-export default App
+export default function App() {
+  return (
+    <AntdApp>
+      <AppWrapper />
+    </AntdApp>
+  );
+}

@@ -1,9 +1,10 @@
-import { Button, Checkbox, Form, Input, Alert, message, Typography, Divider, Space } from 'antd';
-import { UserOutlined, LockOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { Button, Checkbox, Form, Input, Alert, message, Typography } from 'antd';
+import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { login } from '../store/userSlice';
+import { login as apiLogin } from '../api/auth';
 import './LoginPage.less';
 import reactLogo from '../assets/react.svg';
 
@@ -21,18 +22,26 @@ const LoginPage = () => {
     setError(null);
     
     try {
-      // 这里模拟登录请求
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await apiLogin({
+        email: values.username,
+        password: values.password,
+      });
+      console.log('Login response:', response);
       
-      // 简单的用户名和密码验证，实际项目中应该调用API进行验证
-      if (values.username === 'admin' && values.password === 'password') {
-        dispatch(login(values.username));
-        
-        message.success('登录成功！');
-        navigate('/dashboard'); // 登录成功后跳转到仪表盘页面
-      } else {
-        setError('用户名或密码错误，请重试！');
-      }
+      dispatch(login({
+        userId: response.userId,
+        name: response.nickname,
+        role: response.role,
+        tokens: {
+          accessToken: response.token,
+          refreshToken: response.refreshToken,
+          expiresAt: response.expiresAt,
+          refreshExpiresAt: response.refreshExpiresAt
+        },
+      }));
+      
+      message.success('登录成功！');
+      navigate('/'); 
     } catch {
       setError('登录时发生错误，请稍后再试！');
     } finally {
@@ -107,19 +116,6 @@ const LoginPage = () => {
               />
             </Form.Item>
 
-            <Form.Item className="verification-code">
-              <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-                <Input 
-                  prefix={<SafetyCertificateOutlined className="site-form-item-icon" />} 
-                  placeholder="验证码" 
-                  style={{ width: '60%' }} 
-                />
-                <Button style={{ width: '35%' }} type="default">
-                  获取验证码
-                </Button>
-              </Space>
-            </Form.Item>
-
             <div className="login-form-options">
               <Form.Item name="remember" valuePropName="checked" noStyle>
                 <Checkbox>记住我</Checkbox>
@@ -128,7 +124,7 @@ const LoginPage = () => {
             </div>
 
             <Form.Item>
-              <Button 
+              <Button
                 type="primary" 
                 htmlType="submit" 
                 block 
@@ -138,14 +134,6 @@ const LoginPage = () => {
                 登录
               </Button>
             </Form.Item>
-            
-            <Divider plain>其他登录方式</Divider>
-            
-            <div className="other-login-methods">
-              <Button type="link">企业微信</Button>
-              <Button type="link">钉钉</Button>
-              <Button type="link">飞书</Button>
-            </div>
           </Form>
         </div>
       </div>

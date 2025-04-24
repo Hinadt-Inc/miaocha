@@ -1,25 +1,52 @@
 import { PageContainer } from '@ant-design/pro-components';
-import React, { useState, useEffect, useRef } from 'react';
+import { executeSQL, downloadResult, getSchema, ExecuteSQLResult } from '../api/sql';
+import { getAllDataSources } from '../api/datasource';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Input, Select, Button, Space, Table, Tabs, 
-  Card, message, Tooltip, Modal, Form, 
-  Spin, Drawer, Radio, Divider 
+  Card, Modal, Form, Drawer, Tree, 
+  Tooltip, Badge, Empty, Alert, Tag, Spin, Typography
 } from 'antd';
+import { useMessage } from '../hooks/useMessage';
 import { 
-  PlayCircleOutlined, SaveOutlined, HistoryOutlined, 
-  DeleteOutlined, DownloadOutlined, LineChartOutlined, 
-  DatabaseOutlined, CopyOutlined, FileTextOutlined,
-  ReloadOutlined, SettingOutlined
+  PlayCircleOutlined, SaveOutlined, HistoryOutlined,
+  DownloadOutlined, CopyOutlined, FileTextOutlined,
+  DatabaseOutlined, TableOutlined, ClockCircleOutlined,
+  ReloadOutlined, FileSearchOutlined,
 } from '@ant-design/icons';
-import axios from 'axios';
-// 注意: 需要安装 @monaco-editor/react
-import Editor from '@monaco-editor/react';
+import Editor, { OnMount, loader } from '@monaco-editor/react';
 import ReactECharts from 'echarts-for-react';
 import './SQLEditorPage.less';
 
+// 预加载 Monaco 编辑器
+loader.init().then(monaco => {
+  // 可以在这里配置编辑器的一些全局选项
+  monaco.editor.defineTheme('myTheme', {
+    base: 'vs',
+    inherit: true,
+    rules: [],
+    // 把颜色配置的炫一些
+    colors: {
+      'editor.foreground': '#000000',
+      'editor.background': '#F5F5F5',
+      'editorCursor.foreground': '#8B0000',
+      'editor.lineHighlightBackground': '#FFFAFA',
+      'editorLineNumber.foreground': '#008080',
+      'editor.selectionBackground': '#ADD8E6',
+      'editor.inactiveSelectionBackground': '#D3D3D3'
+    }
+  })
+}).catch(error => {
+  console.error('Monaco editor 加载失败:', error);
+});
+
 const { Option } = Select;
-const { TabPane } = Tabs;
-const { TextArea } = Input;
+const { Text } = Typography;
+
+// 本地存储的键名
+const HISTORY_STORAGE_KEY = 'sql_editor_history';
+// 历史记录最大保存数量
+const MAX_HISTORY_COUNT = 100;
 
 interface DataSource {
   id: string;
@@ -28,22 +55,28 @@ interface DataSource {
   host: string;
 }
 
-interface QueryResult {
-  columns: string[];
-  rows: any[];
-  total: number;
-  executionTime: number;
-  status: 'success' | 'error';
-  message?: string;
+interface QueryResult extends ExecuteSQLResult {
+  columns?: string[];
+  rows?: Record<string, unknown>[];
+  total?: number;
+  executionTimeMs?: number;
+  downloadUrl?: string;
+  affectedRows?: number;
 }
 
-interface SavedQuery {
-  id: string;
-  name: string;
-  sql: string;
-  dataSourceId: string;
-  createdAt: string;
-  updatedAt: string;
+interface SchemaResult {
+  databaseName: string;
+  tables: Array<{
+    tableName: string;
+    tableComment: string;
+    columns: Array<{
+      columnName: string;
+      dataType: string;
+      columnComment: string;
+      isPrimaryKey: boolean;
+      isNullable: boolean;
+    }>;
+  }>;
 }
 
 interface QueryHistory {
@@ -53,107 +86,102 @@ interface QueryHistory {
   executionTime: number;
   status: 'success' | 'error';
   timestamp: string;
+  message?: string;
 }
 
-const SQLEditorPage: React.FC = () => {
-  // 状态管理
+export default function SQLEditorPage() {
+  const message = useMessage();
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
   const [selectedDataSource, setSelectedDataSource] = useState<string>('');
-  const [sqlQuery, setSqlQuery] = useState<string>('SELECT * FROM users LIMIT 10;');
+  const editorRef = useRef<any>(null);
+
+  const [loadingDataSources, setLoadingDataSources] = useState(false);
+  const [loadingSchema, setLoadingSchema] = useState(false);
+
+  // 加载数据源
+  useEffect(() => {
+    if (loadingDataSources || dataSources.length > 0) return;
+    
+    const fetchDataSources = async () => {
+      setLoadingDataSources(true);
+      try {
+        const sources = await getAllDataSources();
+        setDataSources(sources);
+        if (sources.length > 0) {
+          setSelectedDataSource(sources[0].id);
+        }
+      } catch {
+        message.error('加载数据源失败');
+      } finally {
+        setLoadingDataSources(false);
+      }
+    };
+    fetchDataSources();
+  }, [loadingDataSources, dataSources.length]);
+  
+  const [databaseSchema, setDatabaseSchema] = useState<SchemaResult | null>(null);
+  const [sqlQuery, setSqlQuery] = useState<string>('');
   const [queryResults, setQueryResults] = useState<QueryResult | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>('results');
-  const [queryHistory, setQueryHistory] = useState<QueryHistory[]>([]);
-  const [savedQueries, setSavedQueries] = useState<SavedQuery[]>([]);
+  const [queryHistory, setQueryHistory] = useState<QueryHistory[]>(() => {
+    try {
+      const storedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
+      return storedHistory ? JSON.parse(storedHistory) : [];
+    } catch (error) {
+      console.error('读取历史记录失败:', error);
+      return [];
+    }
+  });
   const [saveModalVisible, setSaveModalVisible] = useState<boolean>(false);
   const [historyDrawerVisible, setHistoryDrawerVisible] = useState<boolean>(false);
-  const [queryName, setQueryName] = useState<string>('');
-  const [visualization, setVisualization] = useState<'table' | 'chart'>('table');
-  const [chartType, setChartType] = useState<'bar' | 'line' | 'pie'>('bar');
-  const [xAxisField, setXAxisField] = useState<string>('');
-  const [yAxisField, setYAxisField] = useState<string>('');
+  const [mode, setMode] = useState<'normal' | 'nest' | 'fullscreen'>('normal');
   
-  const editorRef = useRef<any>(null);
+  const toggleMode = () => {
+    setMode(prev => {
+      if (prev === 'normal') return 'nest';
+      if (prev === 'nest') return 'fullscreen';
+      return 'normal';
+    });
+  };
+  
   const [form] = Form.useForm();
 
-  // 模拟加载数据源
-  useEffect(() => {
-    // 实际应用中，这里应该调用API获取数据源列表
-    const mockDataSources: DataSource[] = [
-      { id: '1', name: 'MySQL生产库', type: 'mysql', host: 'mysql-prod.example.com' },
-      { id: '2', name: 'PostgreSQL分析库', type: 'postgresql', host: 'pg-analytics.example.com' },
-      { id: '3', name: 'Clickhouse数仓', type: 'clickhouse', host: 'clickhouse.example.com' },
-    ];
-    setDataSources(mockDataSources);
-    if (mockDataSources.length > 0) {
-      setSelectedDataSource(mockDataSources[0].id);
-    }
+  // 编辑器加载完成的回调
+  const handleEditorDidMount: OnMount = (editor) => {
+    editorRef.current = editor;
+  };
 
-    // 加载最近的查询历史
-    loadQueryHistory();
+  // 加载数据库结构
+  const loadSchema = async (datasourceId: string) => {
+    if (!datasourceId) return null;
+    setLoadingSchema(true);
     
-    // 加载保存的查询
-    loadSavedQueries();
-  }, []);
-
-  // 加载查询历史
-  const loadQueryHistory = () => {
-    // 模拟加载查询历史
-    const mockHistory: QueryHistory[] = [
-      { 
-        id: '1', 
-        sql: 'SELECT * FROM users ORDER BY created_at DESC LIMIT 100;', 
-        dataSourceId: '1', 
-        executionTime: 350, 
-        status: 'success', 
-        timestamp: '2025-04-17 14:30:22' 
-      },
-      { 
-        id: '2', 
-        sql: 'SELECT count(*) as total FROM orders WHERE created_at > now() - INTERVAL 7 DAY;', 
-        dataSourceId: '2', 
-        executionTime: 780, 
-        status: 'success', 
-        timestamp: '2025-04-16 11:25:10' 
-      },
-      { 
-        id: '3', 
-        sql: 'SELECT * FROM invalid_table;', 
-        dataSourceId: '3', 
-        executionTime: 120, 
-        status: 'error', 
-        timestamp: '2025-04-15 16:42:35' 
-      }
-    ];
-    setQueryHistory(mockHistory);
+    try {
+      const schema = await getSchema(datasourceId);
+      message.success('数据库结构加载成功');
+      setLoadingSchema(false);
+      return schema;
+    } catch {
+      message.error('获取数据库结构失败');
+      setLoadingSchema(false);
+      return null;
+    }
   };
 
-  // 加载已保存的查询
-  const loadSavedQueries = () => {
-    // 模拟加载已保存的查询
-    const mockSavedQueries: SavedQuery[] = [
-      {
-        id: '101',
-        name: '用户注册趋势查询',
-        sql: 'SELECT DATE(created_at) as date, COUNT(*) as count FROM users GROUP BY DATE(created_at) ORDER BY date DESC LIMIT 30;',
-        dataSourceId: '1',
-        createdAt: '2025-03-20 10:15:00',
-        updatedAt: '2025-04-05 14:30:22'
-      },
-      {
-        id: '102',
-        name: '订单金额统计',
-        sql: 'SELECT sum(amount) as total_amount, avg(amount) as avg_amount FROM orders WHERE status = "completed";',
-        dataSourceId: '2',
-        createdAt: '2025-04-01 09:20:00',
-        updatedAt: '2025-04-10 11:45:30'
-      }
-    ];
-    setSavedQueries(mockSavedQueries);
-  };
+  // 数据源变更时加载结构
+  useEffect(() => {
+    if (selectedDataSource) {
+      loadSchema(selectedDataSource).then(schema => {
+        setDatabaseSchema(schema);
+      });
+    } else {
+      setDatabaseSchema(null);
+    }
+  }, [selectedDataSource]);
 
   // 执行查询
-  const executeQuery = () => {
+  const executeQuery = async () => {
     if (!selectedDataSource) {
       message.error('请选择数据源');
       return;
@@ -166,558 +194,582 @@ const SQLEditorPage: React.FC = () => {
 
     setLoading(true);
     setActiveTab('results');
+    setQueryResults(null);
 
-    // 在实际应用中，这里应该调用后端API执行查询
-    // 这里使用模拟数据
-    setTimeout(() => {
-      const isSuccess = Math.random() > 0.2; // 80% 概率成功
-      
-      if (isSuccess) {
-        // 模拟成功的查询结果
-        const mockResult: QueryResult = {
-          columns: ['id', 'name', 'email', 'created_at', 'status', 'order_count', 'total_amount'],
-          rows: Array(20).fill(0).map((_, index) => ({
-            id: index + 1,
-            name: `用户${index + 1}`,
-            email: `user${index + 1}@example.com`,
-            created_at: `2025-${(index % 12) + 1}-${(index % 28) + 1}`,
-            status: index % 3 === 0 ? '活跃' : (index % 3 === 1 ? '非活跃' : '新用户'),
-            order_count: Math.floor(Math.random() * 50),
-            total_amount: Math.floor(Math.random() * 10000)
-          })),
-          total: 20,
-          executionTime: Math.floor(Math.random() * 1000) + 100,
+    try {
+      const result = await executeSQL({
+        datasourceId: selectedDataSource,
+        sql: sqlQuery
+      });
+
+      if (result && result.status !== 'error') {
+        const queryResult: QueryResult = {
+          queryId: result.queryId,
+          columns: result.columns || [],
+          rows: result.rows || [],
+          total: result.rows?.length ?? 0,
+          executionTime: result.executionTimeMs ?? 0,
           status: 'success'
         };
-        setQueryResults(mockResult);
+        setQueryResults(queryResult);
         
-        // 添加到查询历史
         const newHistory: QueryHistory = {
-          id: Date.now().toString(),
+          id: result.queryId,
           sql: sqlQuery,
           dataSourceId: selectedDataSource,
-          executionTime: mockResult.executionTime,
+          executionTime: queryResult.executionTime || 0,
           status: 'success',
           timestamp: new Date().toLocaleString()
         };
-        setQueryHistory(prev => [newHistory, ...prev]);
-        message.success(`查询成功，耗时 ${mockResult.executionTime} ms`);
+        setQueryHistory(prev => {
+          const updatedHistory = [newHistory, ...prev].slice(0, MAX_HISTORY_COUNT);
+          localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory));
+          return updatedHistory;
+        });
+        message.success(`查询成功，耗时 ${queryResult.executionTime} ms`);
       } else {
-        // 模拟失败的查询结果
-        const errorMessages = [
-          '语法错误：在第1行附近发现未预期的关键字',
-          '表 "unknown_table" 不存在',
-          '访问权限不足',
-          '查询超时，已中断',
-          '连接数据库失败'
-        ];
-        const randomError = errorMessages[Math.floor(Math.random() * errorMessages.length)];
-        
         setQueryResults({
+          queryId: result?.queryId || '',
           columns: [],
           rows: [],
           total: 0,
-          executionTime: Math.floor(Math.random() * 200) + 50,
+          executionTime: 0,
           status: 'error',
-          message: randomError
+          message: result?.message || '未知错误'
         });
         
-        // 添加到查询历史
         const newHistory: QueryHistory = {
-          id: Date.now().toString(),
+          id: result?.queryId || new Date().getTime().toString(),
           sql: sqlQuery,
           dataSourceId: selectedDataSource,
           executionTime: 0,
           status: 'error',
+          message: result?.message || '未知错误',
           timestamp: new Date().toLocaleString()
         };
-        setQueryHistory(prev => [newHistory, ...prev]);
-        message.error(`查询失败: ${randomError}`);
+        setQueryHistory(prev => {
+          const updatedHistory = [newHistory, ...prev].slice(0, MAX_HISTORY_COUNT);
+          localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory));
+          return updatedHistory;
+        });
+        message.error(`查询失败: ${result?.message || '未知错误'}`);
       }
+    } catch (error) {
+      setQueryResults({
+        queryId: '',
+        columns: [],
+        rows: [],
+        total: 0,
+        executionTime: 0,
+        status: 'error',
+        message: error instanceof Error ? error.message : '请求失败'
+      });
+      message.error('查询请求失败');
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
-  // 保存查询
-  const saveQuery = () => {
-    if (!queryName.trim()) {
-      message.error('请输入查询名称');
+  // 下载查询结果
+  const downloadResults = async () => {
+    if (!queryResults || queryResults.status === 'error') {
+      message.warning('没有可下载的数据');
       return;
     }
 
-    // 在实际应用中，这里应该调用后端API保存查询
-    const newSavedQuery: SavedQuery = {
-      id: Date.now().toString(),
-      name: queryName,
-      sql: sqlQuery,
-      dataSourceId: selectedDataSource,
-      createdAt: new Date().toLocaleString(),
-      updatedAt: new Date().toLocaleString()
-    };
-
-    setSavedQueries(prev => [newSavedQuery, ...prev]);
-    setSaveModalVisible(false);
-    setQueryName('');
-    message.success('查询已保存');
+    try {
+      const blob = await downloadResult(queryResults.queryId || '');
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `query_results_${new Date().getTime()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      message.success('下载成功');
+    } catch {
+      message.error('下载失败');
+    }
   };
 
-  // 加载已保存的查询
-  const loadSavedQuery = (query: SavedQuery) => {
-    setSqlQuery(query.sql);
-    setSelectedDataSource(query.dataSourceId);
+  // 从历史记录中加载SQL
+  const loadFromHistory = (historySql: string) => {
+    setSqlQuery(historySql);
     setHistoryDrawerVisible(false);
-    message.success(`已加载查询: ${query.name}`);
-  };
-
-  // 加载历史查询
-  const loadHistoryQuery = (query: QueryHistory) => {
-    setSqlQuery(query.sql);
-    setSelectedDataSource(query.dataSourceId);
-    setHistoryDrawerVisible(false);
-    message.success('已从历史记录加载查询');
-  };
-
-  // 生成图表配置
-  const getChartOption = () => {
-    if (!queryResults || queryResults.rows.length === 0 || queryResults.status === 'error') {
-      return {
-        title: { text: '无可用数据' },
-        tooltip: {},
-        xAxis: { type: 'category', data: [] },
-        yAxis: { type: 'value' },
-        series: [{ type: 'bar', data: [] }]
-      };
-    }
-
-    const xData = queryResults.rows.map(row => row[xAxisField]);
-    const yData = queryResults.rows.map(row => row[yAxisField]);
-
-    if (chartType === 'bar' || chartType === 'line') {
-      return {
-        title: { text: '查询结果可视化' },
-        tooltip: {},
-        xAxis: { 
-          type: 'category', 
-          data: xData,
-          axisLabel: {
-            interval: 0,
-            rotate: xData.length > 10 ? 45 : 0,
-            fontSize: 10
-          }
-        },
-        yAxis: { type: 'value' },
-        series: [{
-          name: yAxisField,
-          type: chartType,
-          data: yData,
-          itemStyle: {
-            color: chartType === 'bar' ? '#1890ff' : '#52c41a'
-          }
-        }]
-      };
-    } else if (chartType === 'pie') {
-      const pieData = xData.map((x, index) => ({
-        name: x,
-        value: yData[index]
-      }));
-      
-      return {
-        title: { text: '查询结果可视化' },
-        tooltip: {
-          trigger: 'item',
-          formatter: '{a} <br/>{b} : {c} ({d}%)'
-        },
-        legend: {
-          orient: 'vertical',
-          left: 'left',
-          data: xData
-        },
-        series: [
-          {
-            name: yAxisField,
-            type: 'pie',
-            radius: '60%',
-            center: ['50%', '50%'],
-            data: pieData,
-            emphasis: {
-              itemStyle: {
-                shadowBlur: 10,
-                shadowOffsetX: 0,
-                shadowColor: 'rgba(0, 0, 0, 0.5)'
-              }
-            }
-          }
-        ]
-      };
-    }
-  };
-
-  // 处理编辑器加载完成事件
-  function handleEditorDidMount(editor: any) {
-    editorRef.current = editor;
-  }
-
-  // 下载查询结果为CSV
-  const downloadResults = () => {
-    if (!queryResults || queryResults.rows.length === 0 || queryResults.status === 'error') {
-      message.warn('没有可下载的数据');
-      return;
-    }
-
-    const header = queryResults.columns.join(',');
-    const csvContent = queryResults.rows.map(row => 
-      queryResults.columns.map(col => row[col] !== undefined ? `"${row[col]}"` : '""').join(',')
-    );
-
-    const csv = [header, ...csvContent].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `query_results_${new Date().getTime()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   // 复制SQL到剪贴板
-  const copySqlToClipboard = () => {
-    navigator.clipboard.writeText(sqlQuery).then(() => {
-      message.success('SQL已复制到剪贴板');
-    }, () => {
-      message.error('复制失败');
-    });
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+      .then(() => message.success('已复制到剪贴板'))
+      .catch(() => message.error('复制失败'));
   };
 
-  // 格式化SQL
-  const formatSql = () => {
-    // 这里应该使用更专业的SQL格式化库
-    // 这里只是一个简单的示例
-    try {
-      let formattedSql = sqlQuery.replace(/\s+/g, ' ')
-        .replace(/\s*,\s*/g, ', ')
-        .replace(/\s*;\s*/g, ';')
-        .replace(/\s*=\s*/g, ' = ')
-        .replace(/\s*>\s*/g, ' > ')
-        .replace(/\s*<\s*/g, ' < ')
-        .replace(/\s*AND\s*/gi, '\nAND ')
-        .replace(/\s*OR\s*/gi, '\nOR ')
-        .replace(/\s*SELECT\s*/gi, 'SELECT\n  ')
-        .replace(/\s*FROM\s*/gi, '\nFROM\n  ')
-        .replace(/\s*WHERE\s*/gi, '\nWHERE\n  ')
-        .replace(/\s*GROUP BY\s*/gi, '\nGROUP BY\n  ')
-        .replace(/\s*ORDER BY\s*/gi, '\nORDER BY\n  ')
-        .replace(/\s*HAVING\s*/gi, '\nHAVING\n  ')
-        .replace(/\s*LIMIT\s*/gi, '\nLIMIT ');
-      
-      setSqlQuery(formattedSql);
-      message.success('SQL已格式化');
-    } catch (error) {
-      message.error('SQL格式化失败');
+  // 刷新数据库结构
+  const refreshSchema = () => {
+    if (selectedDataSource) {
+      loadSchema(selectedDataSource).then(schema => {
+        setDatabaseSchema(schema);
+      });
     }
   };
 
+  // 表格数据格式化展示
+  const formatTableCell = (value: unknown) => {
+    if (value === null) return <Text type="secondary">(null)</Text>;
+    if (value === undefined) return <Text type="secondary">(undefined)</Text>;
+    if (typeof value === 'object') return <Text code>{JSON.stringify(value)}</Text>;
+    return value;
+  };
+
+  // 将表名拖拽到编辑器
+  const handleTreeNodeDoubleClick = (tableName: string) => {
+    if (editorRef.current) {
+      const position = editorRef.current.getPosition();
+      editorRef.current.executeEdits('', [
+        {
+          range: {
+            startLineNumber: position.lineNumber,
+            startColumn: position.column,
+            endLineNumber: position.lineNumber,
+            endColumn: position.column
+          },
+          text: tableName
+        }
+      ]);
+    }
+  };
+
+  // 插入表名和字段
+  const handleInsertTable = (tableName: string, columns: Array<{ columnName: string }>) => {
+    if (!editorRef.current) return;
+    
+    const columnList = columns.map(c => c.columnName).join(', ');
+    const snippet = `SELECT ${columnList} FROM ${tableName}`;
+    
+    const position = editorRef.current.getPosition();
+    editorRef.current.executeEdits('', [
+      {
+        range: {
+          startLineNumber: position.lineNumber,
+          startColumn: position.column,
+          endLineNumber: position.lineNumber,
+          endColumn: position.column
+        },
+        text: snippet
+      }
+    ]);
+  };
+
   return (
-    <PageContainer>
-      <div className="sql-editor-page">
-        <Card className="sql-editor-card">
-          <div className="toolbar">
-            <Space style={{ marginBottom: '16px' }}>
-              <Select 
-                value={selectedDataSource} 
-                onChange={setSelectedDataSource}
-                style={{ width: 200 }}
-                placeholder="选择数据源"
-              >
-                {dataSources.map(ds => (
-                  <Option key={ds.id} value={ds.id}>
-                    <DatabaseOutlined /> {ds.name} ({ds.type})
-                  </Option>
-                ))}
-              </Select>
-              <Tooltip title="执行查询 (Ctrl+Enter)">
+    <PageContainer className="sql-editor-page">
+      <Card className="sql-editor-card">
+        <Space className="toolbar" wrap size="middle" style={{ marginBottom: 16 }}>
+          <Select
+            style={{ width: 300 }}
+            placeholder="选择数据源"
+            value={selectedDataSource}
+            onChange={setSelectedDataSource}
+            loading={loadingDataSources}
+            disabled={loadingDataSources}
+            dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
+            optionLabelProp="label"
+            optionFilterProp="label"
+          >
+            {dataSources.map(ds => (
+              <Option key={ds.id} value={ds.id} label={ds.name}>
+                <Space>
+                  <DatabaseOutlined />
+                  <span>{ds.name}</span>
+                  <Tag color="blue">{ds.type}</Tag>
+                </Space>
+              </Option>
+            ))}
+          </Select>
+
+          <Tooltip title="执行查询 (Ctrl+Enter)" open={mode === 'nest' || mode === 'fullscreen'}>
+            <Button 
+              type="primary" 
+              icon={<PlayCircleOutlined />}
+              onClick={executeQuery}
+              loading={loading}
+            >
+              执行
+            </Button>
+          </Tooltip>
+
+          {/* <Tooltip title="切换模式" open={mode === 'nest' || mode === 'fullscreen'}>
+            <Button 
+              icon={mode === 'fullscreen' ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+              onClick={toggleMode}
+            >
+              {mode === 'normal' ? '普通' : mode === 'nest' ? '嵌套' : '全屏'}
+            </Button>
+          </Tooltip> */}
+
+          <Tooltip title="保存查询" open={mode === 'nest' || mode === 'fullscreen'}>
+            <Button 
+              icon={<SaveOutlined />}
+              onClick={() => setSaveModalVisible(true)}
+            >
+              保存
+            </Button>
+          </Tooltip>
+
+            <Tooltip title="查询历史记录" open={mode === 'nest' || mode === 'fullscreen'}>
+              <Badge count={queryHistory.length} size="small">
                 <Button 
-                  type="primary" 
-                  icon={<PlayCircleOutlined />} 
-                  onClick={executeQuery}
-                  loading={loading}
-                >
-                  执行
-                </Button>
-              </Tooltip>
-              <Tooltip title="保存查询">
-                <Button 
-                  icon={<SaveOutlined />} 
-                  onClick={() => setSaveModalVisible(true)}
-                >
-                  保存
-                </Button>
-              </Tooltip>
-              <Tooltip title="查询历史">
-                <Button 
-                  icon={<HistoryOutlined />} 
+                  icon={<HistoryOutlined />}
                   onClick={() => setHistoryDrawerVisible(true)}
                 >
-                  历史
+                  历史记录
                 </Button>
-              </Tooltip>
-              <Tooltip title="格式化SQL">
-                <Button 
-                  icon={<FileTextOutlined />} 
-                  onClick={formatSql}
-                >
-                  格式化
-                </Button>
-              </Tooltip>
-              <Tooltip title="复制SQL">
-                <Button 
-                  icon={<CopyOutlined />} 
-                  onClick={copySqlToClipboard}
-                >
-                  复制
-                </Button>
-              </Tooltip>
-            </Space>
-          </div>
-          
-          <div className="editor-container" style={{ height: '200px', border: '1px solid #d9d9d9', borderRadius: '2px' }}>
-            <Editor
-              height="100%"
-              defaultLanguage="sql"
-              defaultValue={sqlQuery}
-              onChange={(value) => setSqlQuery(value || '')}
-              onMount={handleEditorDidMount}
-              options={{
-                minimap: { enabled: false },
-                lineNumbers: 'on',
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                tabSize: 2,
-              }}
-            />
-          </div>
+              </Badge>
+            </Tooltip>
 
-          <Divider style={{ margin: '16px 0' }} />
+          <Tooltip title="下载查询结果为CSV" open={mode === 'nest' || mode === 'fullscreen'}>
+            <Button 
+              icon={<DownloadOutlined />}
+              onClick={downloadResults}
+              disabled={!queryResults || queryResults.status === 'error' || !queryResults.rows?.length}
+            >
+              下载结果
+            </Button>
+          </Tooltip>
+        </Space>
 
-          <Spin spinning={loading} tip="执行查询中...">
-            <Tabs activeKey={activeTab} onChange={setActiveTab}>
-              <TabPane tab="查询结果" key="results">
-                {queryResults && (
-                  <div className="results-container">
-                    <div className="results-header">
-                      <Space>
-                        {queryResults.status === 'success' ? (
-                          <span className="success-text">
-                            查询成功，返回 {queryResults.total} 条记录，耗时 {queryResults.executionTime} ms
+        <div style={{ display: 'flex', height: 'calc(100vh - 180px)' }}>
+          {/* 左侧树形结构 */}
+          <div style={{ width: 300, marginRight: 16 }}>
+            <Card 
+              title={
+                <Space>
+                  <FileSearchOutlined />
+                  <span>数据库结构</span>
+                  <Tooltip title="刷新数据库结构" open={mode === 'nest' || mode === 'fullscreen'}>
+                    <Button 
+                      type="text" 
+                      size="small" 
+                      icon={<ReloadOutlined />} 
+                      onClick={refreshSchema}
+                      loading={loadingSchema}
+                    />
+                  </Tooltip>
+                </Space>
+              } 
+              style={{ height: '100%', overflow: 'auto' }}
+            >
+              {loadingSchema ? (
+                <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                  <Spin tip="加载中..." />
+                </div>
+              ) : databaseSchema ? (
+                <Tree
+                  showLine
+                  defaultExpandAll={false}
+                  titleRender={(node: { key: string; title: string }) => {
+                    const isTable = node.key.indexOf('-') === -1;
+                    return (
+                      <div 
+                        onDoubleClick={() => isTable && handleTreeNodeDoubleClick(node.key)}
+                        style={{ display: 'flex', alignItems: 'center' }}
+                      >
+                        {isTable ? <TableOutlined style={{ marginRight: 8 }} /> : 
+                          <span style={{ width: 16, display: 'inline-block', marginRight: 8 }}></span>}
+                        <Tooltip title={node.title} open={mode === 'nest' || mode === 'fullscreen'}>
+                          <span className="tree-node-title" style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {node.title}
                           </span>
-                        ) : (
-                          <span className="error-text">
-                            查询失败: {queryResults.message}
-                          </span>
-                        )}
-                        {queryResults.status === 'success' && queryResults.rows.length > 0 && (
-                          <>
-                            <Tooltip title="下载为CSV">
-                              <Button 
-                                type="text" 
-                                icon={<DownloadOutlined />} 
-                                onClick={downloadResults}
-                              />
-                            </Tooltip>
-                            <Radio.Group 
-                              value={visualization} 
-                              onChange={(e) => setVisualization(e.target.value)}
-                              buttonStyle="solid"
-                              size="small"
-                            >
-                              <Radio.Button value="table">表格</Radio.Button>
-                              <Radio.Button value="chart">图表</Radio.Button>
-                            </Radio.Group>
-                          </>
-                        )}
-                      </Space>
-                    </div>
-
-                    {queryResults.status === 'success' && queryResults.rows.length > 0 && visualization === 'table' && (
-                      <Table 
-                        dataSource={queryResults.rows} 
-                        columns={queryResults.columns.map(col => ({
-                          title: col,
-                          dataIndex: col,
-                          key: col,
-                          sorter: (a, b) => {
-                            if (typeof a[col] === 'number') return a[col] - b[col];
-                            if (typeof a[col] === 'string') return a[col].localeCompare(b[col]);
-                            return 0;
-                          }
-                        }))}
-                        rowKey="id"
-                        scroll={{ x: 'max-content' }}
-                        pagination={{ pageSize: 10 }}
-                        size="small"
-                      />
-                    )}
-
-                    {queryResults.status === 'success' && queryResults.rows.length > 0 && visualization === 'chart' && (
-                      <div>
-                        <div className="chart-controls">
-                          <Space>
-                            <Select 
-                              value={chartType}
-                              onChange={setChartType}
-                              style={{ width: 120 }}
-                            >
-                              <Option value="bar">柱状图</Option>
-                              <Option value="line">折线图</Option>
-                              <Option value="pie">饼图</Option>
-                            </Select>
-                            <Select
-                              placeholder="X轴字段"
-                              style={{ width: 120 }}
-                              value={xAxisField}
-                              onChange={setXAxisField}
-                            >
-                              {queryResults.columns.map(col => (
-                                <Option key={col} value={col}>{col}</Option>
-                              ))}
-                            </Select>
-                            <Select
-                              placeholder="Y轴字段"
-                              style={{ width: 120 }}
-                              value={yAxisField}
-                              onChange={setYAxisField}
-                            >
-                              {queryResults.columns.map(col => (
-                                <Option key={col} value={col}>{col}</Option>
-                              ))}
-                            </Select>
-                          </Space>
-                        </div>
-                        {xAxisField && yAxisField ? (
-                          <div style={{ height: '400px', marginTop: '16px' }}>
-                            <ReactECharts 
-                              option={getChartOption()}
-                              style={{ height: '100%' }}
-                              notMerge={true}
+                        </Tooltip>
+                        {isTable && (
+                          <Tooltip title="插入表和字段" open={mode === 'nest' || mode === 'fullscreen'}>
+                            <CopyOutlined 
+                              style={{ marginLeft: 8, cursor: 'pointer', opacity: 0.6 }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const table = databaseSchema.tables.find(t => t.tableName === node.key);
+                                if (table) {
+                                  handleInsertTable(table.tableName, table.columns);
+                                }
+                              }}
                             />
-                          </div>
-                        ) : (
-                          <div style={{ textAlign: 'center', marginTop: '50px', color: '#999' }}>
-                            请选择要显示的数据字段
-                          </div>
+                          </Tooltip>
                         )}
                       </div>
-                    )}
+                    );
+                  }}
+                  treeData={databaseSchema.tables.map(table => ({
+                    title: `${table.tableName}${table.tableComment ? ` (${table.tableComment})` : ''}`,
+                    key: table.tableName,
+                    children: table.columns.map(column => ({
+                      title: `${column.columnName} ${column.isPrimaryKey ? '🔑 ' : ''}(${column.dataType})${column.columnComment ? ` - ${column.columnComment}` : ''}`,
+                      key: `${table.tableName}-${column.columnName}`,
+                      isLeaf: true
+                    }))
+                  }))}
+                />
+              ) : (
+                <Empty 
+                  description="请选择数据源获取数据库结构" 
+                  image={Empty.PRESENTED_IMAGE_SIMPLE} 
+                />
+              )}
+            </Card>
+          </div>
 
-                    {(!queryResults.rows.length || queryResults.status === 'error') && (
-                      <div className="no-results">
-                        {queryResults.status === 'error' ? (
-                          <div className="error-message">{queryResults.message}</div>
+          {/* 右侧SQL编辑器和结果 */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div className="editor-container" style={{ height: '40%', marginBottom: 16 }}>
+              <Editor
+                language="sql"
+                value={sqlQuery}
+                onChange={value => setSqlQuery(value ?? '')}
+                onMount={handleEditorDidMount}
+                options={{
+                  minimap: { enabled: false },
+                  scrollBeyondLastLine: false,
+                  folding: true,
+                  lineNumbers: 'on',
+                  wordWrap: 'on',
+                  automaticLayout: true,
+                  fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace',
+                  fontSize: 14
+                }}
+              />
+            </div>
+            <div className="results-container" style={{ flex: 1 }}>
+              <Tabs 
+                activeKey={activeTab} 
+                onChange={setActiveTab}
+                type="card"
+                items={[
+                  {
+                    key: 'results',
+                    label: (
+                      <span>
+                        <FileTextOutlined />
+                        <span>查询结果</span>
+                      </span>
+                    ),
+                    children: (
+                      <div style={{overflow: 'hidden'}}>
+                        {loading ? (
+                          <div style={{ textAlign: 'center', padding: '80px 0' }}>
+                            <Spin tip="执行查询中..." size="large" />
+                          </div>
+                        ) : queryResults ? (
+                          <div>
+                            {queryResults.status === 'success' ? (
+                              queryResults.rows && queryResults.rows.length > 0 ? (
+                                <div>
+                                  <div className="results-header">
+                                    <Space>
+                                      <Badge status="success" text={<Text strong className="success-text">查询成功</Text>} />
+                                      <Text>耗时: {queryResults.executionTime} ms</Text>
+                                      <Text>总行数: {queryResults.rows.length}</Text>
+                                    </Space>
+                                  </div>
+                                  <Table
+                                    columns={queryResults.columns?.map(col => ({
+                                      title: col,
+                                      dataIndex: col,
+                                      key: col,
+                                      render: formatTableCell,
+                                      ellipsis: {
+                                        showTitle: false,
+                                      },
+                                      width: 150,
+                                    }))}
+                                    dataSource={queryResults.rows.map((row, index) => ({
+                                      ...row,
+                                      key: `row-${index}`
+                                    }))}
+                                    pagination={{
+                                      pageSize: 20,
+                                      showSizeChanger: true,
+                                      showTotal: (total) => `共 ${total} 行`
+                                    }}
+                                    scroll={{ x: 'max-content', y: 250 }}
+                                    size="small"
+                                    bordered
+                                  />
+                                </div>
+                              ) : (
+                                <Empty description="查询未返回数据" />
+                              )
+                            ) : (
+                              <Alert
+                                message="查询执行失败"
+                                description={queryResults.message}
+                                type="error"
+                                showIcon
+                              />
+                            )}
+                          </div>
                         ) : (
-                          <div>没有返回数据</div>
+                          <Empty description="请执行查询获取结果" />
                         )}
                       </div>
-                    )}
-                  </div>
-                )}
-                
-                {!queryResults && (
-                  <div className="no-results">
-                    <div>请执行查询以查看结果</div>
-                  </div>
-                )}
-              </TabPane>
-            </Tabs>
-          </Spin>
-        </Card>
+                    )
+                  },
+                  {
+                    key: 'visualization',
+                    label: (
+                      <span>
+                        <span>可视化</span>
+                      </span>
+                    ),
+                    children: (
+                      <div>
+                        {queryResults && queryResults.status === 'success' && queryResults.rows && queryResults.rows.length > 0 ? (
+                          <>
+                            <div className="chart-controls" style={{ marginBottom: 16 }}>
+                              <Form layout="inline">
+                                <Form.Item label="图表类型">
+                                  <Select defaultValue="bar" style={{ width: 120 }}>
+                                    <Option value="bar">柱状图</Option>
+                                    <Option value="line">折线图</Option>
+                                    <Option value="pie">饼图</Option>
+                                  </Select>
+                                </Form.Item>
+                                <Form.Item label="X轴">
+                                  <Select style={{ width: 120 }} placeholder="选择字段">
+                                    {queryResults.columns?.map(col => (
+                                      <Option key={col} value={col}>{col}</Option>
+                                    ))}
+                                  </Select>
+                                </Form.Item>
+                                <Form.Item label="Y轴">
+                                  <Select style={{ width: 120 }} placeholder="选择字段">
+                                    {queryResults.columns?.map(col => (
+                                      <Option key={col} value={col}>{col}</Option>
+                                    ))}
+                                  </Select>
+                                </Form.Item>
+                              </Form>
+                            </div>
+                            <ReactECharts 
+                              option={{
+                                title: { text: '查询结果可视化' },
+                                tooltip: {},
+                                xAxis: { type: 'category', data: [] },
+                                yAxis: { type: 'value' },
+                                series: [{ type: 'bar', data: [] }]
+                              }} 
+                              style={{ height: 400 }}
+                            />
+                          </>
+                        ) : (
+                          <Empty description="需要有查询结果才能创建可视化" />
+                        )}
+                      </div>
+                    )
+                  }
+                ]}
+              />
+            </div>
+          </div>
+        </div>
 
-        {/* 保存查询的模态框 */}
         <Modal
-          title="保存SQL查询"
+          title="保存查询"
           open={saveModalVisible}
           onCancel={() => setSaveModalVisible(false)}
-          onOk={saveQuery}
-          okText="保存"
-          cancelText="取消"
+          onOk={() => {
+            form.validateFields().then(values => {
+              // 这里应该有保存查询的逻辑
+              message.success(`已保存查询 "${values.name}"`);
+              setSaveModalVisible(false);
+              form.resetFields();
+            });
+          }}
         >
           <Form form={form} layout="vertical">
-            <Form.Item
-              label="查询名称"
-              rules={[{ required: true, message: '请输入查询名称' }]}
-            >
-              <Input
-                placeholder="输入便于识别的查询名称"
-                value={queryName}
-                onChange={e => setQueryName(e.target.value)}
-                maxLength={50}
-              />
+            <Form.Item name="name" label="查询名称" rules={[{ required: true, message: '请输入查询名称' }]}>
+              <Input placeholder="我的查询" />
             </Form.Item>
-            <Form.Item label="SQL查询">
-              <TextArea
-                value={sqlQuery}
-                autoSize={{ minRows: 3, maxRows: 8 }}
-                disabled
-                style={{ backgroundColor: '#f5f5f5' }}
-              />
+            <Form.Item name="description" label="描述">
+              <Input.TextArea placeholder="查询的用途或说明" rows={3} />
             </Form.Item>
           </Form>
         </Modal>
 
-        {/* 历史记录抽屉 */}
         <Drawer
-          title="查询历史"
-          placement="right"
+          title={
+            <Space>
+              <HistoryOutlined />
+              <span>查询历史</span>
+              <Tag color="blue">{queryHistory.length} 条记录</Tag>
+            </Space>
+          }
           width={600}
-          onClose={() => setHistoryDrawerVisible(false)}
           open={historyDrawerVisible}
+          onClose={() => setHistoryDrawerVisible(false)}
+          style={{ padding: '12px' }}
         >
-          <Tabs defaultActiveKey="history">
-            <TabPane tab="历史记录" key="history">
-              <div className="history-list">
-                {queryHistory.map(query => (
-                  <div 
-                    key={query.id} 
-                    className={`history-item ${query.status === 'error' ? 'error-history' : ''}`}
-                    onClick={() => loadHistoryQuery(query)}
-                  >
-                    <div className="history-item-header">
-                      <span className="history-time">{query.timestamp}</span>
-                      {query.status === 'success' ? (
-                        <span className="history-success">成功 ({query.executionTime} ms)</span>
+          <div className="history-list">
+            {queryHistory.length > 0 ? (
+              queryHistory.map(history => (
+                <div 
+                  key={history.id} 
+                  className={`history-item ${history.status === 'error' ? 'error-history' : ''}`}
+                  onClick={() => loadFromHistory(history.sql)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      loadFromHistory(history.sql);
+                    }
+                  }}
+                  style={{ 
+                    cursor: 'pointer',
+                    background: 'none',
+                    border: 'none',
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: 0
+                  }}
+                >
+                  <div className="history-item-header">
+                    <Space>
+                      <ClockCircleOutlined style={{ color: '#1890ff' }}/>
+                      <Text>{history.timestamp}</Text>
+                    </Space>
+                    <Space>
+                      {history.status === 'success' ? (
+                        <Badge status="success" text={<Text className="history-success">成功</Text>} />
                       ) : (
-                        <span className="history-error">失败</span>
+                        <Badge status="error" text={<Text className="history-error">失败</Text>} />
                       )}
-                    </div>
-                    <div className="history-sql">{query.sql}</div>
+                      {history.status === 'success' && (
+                        <Text type="secondary">耗时: {history.executionTime} ms</Text>
+                      )}
+                      <Button 
+                        type="text" 
+                        size="small" 
+                        icon={<CopyOutlined />} 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyToClipboard(history.sql);
+                        }}
+                      />
+                    </Space>
                   </div>
-                ))}
-              </div>
-            </TabPane>
-            <TabPane tab="已保存查询" key="saved">
-              <div className="saved-queries-list">
-                {savedQueries.map(query => (
-                  <div 
-                    key={query.id} 
-                    className="saved-query-item"
-                    onClick={() => loadSavedQuery(query)}
-                  >
-                    <div className="saved-query-name">{query.name}</div>
-                    <div className="saved-query-time">
-                      创建于: {query.createdAt}
-                      <br />
-                      更新于: {query.updatedAt}
-                    </div>
-                    <div className="saved-query-sql">{query.sql}</div>
-                  </div>
-                ))}
-              </div>
-            </TabPane>
-          </Tabs>
+                  <div className="history-sql">{history.sql}</div>
+                  {history.status === 'error' && history.message && (
+                    <Alert 
+                      message={history.message} 
+                      type="error" 
+                      showIcon 
+                      style={{ marginTop: 8 }} 
+                    />
+                  )}
+                </div>
+              ))
+            ) : (
+              <Empty description="暂无查询历史记录" />
+            )}
+          </div>
         </Drawer>
-      </div>
+      </Card>
     </PageContainer>
   );
-};
-
-export default SQLEditorPage;
+}

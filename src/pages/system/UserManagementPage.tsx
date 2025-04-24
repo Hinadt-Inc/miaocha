@@ -1,4 +1,11 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { 
+  getUsers,
+  createUser,
+  updateUser,
+  deleteUser,
+  type User
+} from '../../api/user';
 import { 
   Button, 
   Input, 
@@ -15,8 +22,7 @@ import {
   Avatar,
   Card,
   Row,
-  Col,
-  Typography
+  Col
 } from 'antd';
 import { 
   SearchOutlined, 
@@ -24,74 +30,76 @@ import {
   EditOutlined, 
   DeleteOutlined, 
   UserOutlined, 
-  ExportOutlined,
-  ImportOutlined,
-  ReloadOutlined,
-  QuestionCircleOutlined
+  ReloadOutlined
 } from '@ant-design/icons';
+import type { AxiosRequestConfig } from 'axios';
 import type { 
   ColumnsType, 
   TablePaginationConfig 
 } from 'antd/es/table';
 import type { 
-  FilterConfirmProps,
   FilterValue,
   SorterResult 
 } from 'antd/es/table/interface';
 import { PageContainer } from '@ant-design/pro-components';
+import dayjs from 'dayjs';
 
-interface UserData {
+interface UserData extends User {
   key: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: string;
+  status: number;
   department: string;
-  status: boolean;
-  createTime: string;
   lastLoginTime: string;
+  name: string;
+  role: string;
+  createTime: string;
 }
 
-// 模拟数据
-const generateMockData = (): UserData[] => {
-  const roles = ['管理员', '编辑', '浏览者', '分析师', '数据员'];
-  const departments = ['市场部', '销售部', '技术部', '财务部', '人力资源部'];
-  
-  return Array.from({ length: 35 }, (_, i) => ({
-    key: i.toString(),
-    name: `用户 ${i + 1}`,
-    email: `user${i + 1}@example.com`,
-    phone: `1${Math.floor(Math.random() * 10)}${Math.floor(Math.random() * 10)}${Math.floor(Math.random() * 10)}${Math.floor(Math.random() * 10)}${Math.floor(Math.random() * 10)}${Math.floor(Math.random() * 10)}${Math.floor(Math.random() * 10)}${Math.floor(Math.random() * 10)}${Math.floor(Math.random() * 10)}${Math.floor(Math.random() * 10)}`,
-    role: roles[Math.floor(Math.random() * roles.length)],
-    department: departments[Math.floor(Math.random() * departments.length)],
-    status: Math.random() > 0.2,
-    createTime: `2025-${Math.floor(Math.random() * 3) + 1}-${Math.floor(Math.random() * 28) + 1}`,
-    lastLoginTime: `2025-0${Math.floor(Math.random() * 4) + 1}-${Math.floor(Math.random() * 28) + 1} ${Math.floor(Math.random() * 24)}:${Math.floor(Math.random() * 60)}:${Math.floor(Math.random() * 60)}`
+// 转换API数据到表格数据
+const transformUserData = (users: User[]): UserData[] => {
+  return users.map(user => ({
+    ...user,
+    key: user.id.toString(),
+    status: user.status,
+    name: user.nickname ?? user.username,
+    username: user.uid ?? user.username,
+    createTime: user.createTime ?? user.createdAt,
+    role: user.role,
+    department: '',  // Add default value for department
+    lastLoginTime: ''  // Add default value for lastLoginTime
   }));
 };
 
 // 角色选项
 const roleOptions = [
-  { value: '管理员', label: '管理员' },
-  { value: '编辑', label: '编辑' },
-  { value: '浏览者', label: '浏览者' },
-  { value: '分析师', label: '分析师' },
-  { value: '数据员', label: '数据员' },
+  { value: 'ADMIN', label: '管理员' },
+  { value: 'USER', label: '普通用户' },
 ];
 
-// 部门选项
-const departmentOptions = [
-  { value: '市场部', label: '市场部' },
-  { value: '销售部', label: '销售部' },
-  { value: '技术部', label: '技术部' },
-  { value: '财务部', label: '财务部' },
-  { value: '人力资源部', label: '人力资源部' },
-];
-
-const { Text } = Typography;
 
 const UserManagementPage = () => {
-  const [data, setData] = useState<UserData[]>(generateMockData());
+  const [data, setData] = useState<UserData[]>([]);
+
+  // 加载用户数据
+  useEffect(() => {
+    const abortController = new AbortController();
+    fetchUsers({ signal: abortController.signal });
+    return () => abortController.abort();
+  }, []);
+
+  const fetchUsers = async (config?: AxiosRequestConfig) => {
+    setLoading(true);
+    try {
+      const users = await getUsers(config);
+      setData(transformUserData(users));
+      message.success('用户数据加载成功');
+    } catch (_error) {
+      if (!(_error instanceof Error && _error.name === 'CanceledError')) {
+        message.error('加载用户数据失败');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -106,13 +114,7 @@ const UserManagementPage = () => {
 
   // 重新加载数据
   const handleReload = () => {
-    setLoading(true);
-    // 模拟API请求
-    setTimeout(() => {
-      setData(generateMockData());
-      setLoading(false);
-      message.success('数据已刷新');
-    }, 1000);
+    fetchUsers();
   };
 
   // 处理表格变更（分页、排序、筛选）
@@ -129,11 +131,14 @@ const UserManagementPage = () => {
   // 处理搜索
   const handleSearch = (value: string) => {
     setSearchText(value);
-    const filteredData = generateMockData().filter(
-      item => 
-        item.name.toLowerCase().includes(value.toLowerCase()) ||
-        item.email.toLowerCase().includes(value.toLowerCase()) ||
-        item.phone.includes(value)
+    if (!value) {
+      fetchUsers();
+      return;
+    }
+    const filteredData = data.filter(user => 
+      (user.nickname?.toLowerCase().includes(value.toLowerCase())) ||
+      (user.name?.toLowerCase().includes(value.toLowerCase())) ||
+      (user.email?.toLowerCase().includes(value.toLowerCase()))
     );
     setData(filteredData);
   };
@@ -143,62 +148,87 @@ const UserManagementPage = () => {
     setSelectedRecord(record || null);
     form.resetFields();
     if (record) {
-      form.setFieldsValue(record);
+      form.setFieldsValue({
+        ...record,
+        status: record.status === 1
+      });
     }
     setIsModalVisible(true);
   };
 
   // 处理删除用户
-  const handleDelete = (key: string) => {
-    setData(data.filter(item => item.key !== key));
-    message.success('用户已删除');
+  const handleDelete = async (key: string) => {
+    try {
+      await deleteUser(key);
+      setData(data.filter(item => item.key !== key));
+      message.success('用户已删除');
+    } catch {
+      message.error('删除用户失败');
+    }
   };
 
   // 处理表单提交
-  const handleSubmit = () => {
-    form.validateFields()
-      .then(values => {
-        if (selectedRecord) {
-          // 编辑现有用户
-          setData(data.map(item => 
-            item.key === selectedRecord.key ? { ...item, ...values } : item
-          ));
-          message.success('用户信息已更新');
-        } else {
-          // 添加新用户
-          const newUser = {
-            key: Date.now().toString(),
-            ...values,
-            createTime: new Date().toISOString().split('T')[0],
-            lastLoginTime: '-'
-          };
-          setData([newUser, ...data]);
-          message.success('用户已添加');
-        }
-        setIsModalVisible(false);
-      })
-      .catch(info => {
-        console.log('验证失败:', info);
-      });
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      
+      if (selectedRecord) {
+        // 编辑现有用户
+        await updateUser({
+          id: selectedRecord.key,
+          nickname: values.nickname,
+          ...values,
+          status: values.status ? 1 : 0
+        });
+        message.success('用户信息已更新');
+      } else {
+        // 添加新用户
+        await createUser({
+          username: values.name,
+          nickname: values.nickname,
+          password: values.password,
+          email: values.email,
+          phone: values.phone,
+          role: values.role,
+          status: values.status ? 1 : 0
+        });
+        message.success('用户已添加');
+      }
+      
+      setIsModalVisible(false);
+      fetchUsers(); // 刷新数据
+    } catch {
+      console.log('操作失败');
+    }
   };
 
   // 处理状态变更
-  const handleStatusChange = (checked: boolean, key: string) => {
-    setData(data.map(item => 
-      item.key === key ? { ...item, status: checked } : item
-    ));
-    message.success(`用户状态已${checked ? '启用' : '禁用'}`);
+  const handleStatusChange = async (checked: boolean, key: string) => {
+    try {
+      const newStatus = checked ? 1 : 0;
+      await updateUser({
+        id: key,
+        status: newStatus
+      });
+      setData(data.map(item => 
+        item.key === key ? { ...item, status: newStatus } : item
+      ));
+      message.success(`用户状态已${checked ? '启用' : '禁用'}`);
+    } catch {
+      message.error('更新用户状态失败');
+    }
   };
 
   // 表格列定义
   const columns: ColumnsType<UserData> = [
     {
-      title: '用户名',
-      dataIndex: 'name',
-      key: 'name',
+      title: '昵称',
+      dataIndex: 'nickname',
+      key: 'nickname',
+      width: 150,
       sorter: (a, b) => a.name.localeCompare(b.name),
-      sortOrder: sortedInfo.columnKey === 'name' ? sortedInfo.order : null,
-      render: (text, record) => (
+      sortOrder: sortedInfo.columnKey === 'nickname' ? sortedInfo.order : null,
+      render: (text) => (
         <Space>
           <Avatar icon={<UserOutlined />} />
           <span>{text}</span>
@@ -209,49 +239,43 @@ const UserManagementPage = () => {
       title: '邮箱',
       dataIndex: 'email',
       key: 'email',
-    },
-    {
-      title: '手机号',
-      dataIndex: 'phone',
-      key: 'phone',
+      width: 180,
     },
     {
       title: '角色',
       dataIndex: 'role',
       key: 'role',
+      width: 100,
       filters: roleOptions.map(role => ({ text: role.label, value: role.value })),
       filteredValue: filteredInfo.role || null,
       onFilter: (value, record) => record.role === value,
       render: (role: string) => {
         let color = 'blue';
-        if (role === '管理员') color = 'red';
-        if (role === '编辑') color = 'green';
-        if (role === '浏览者') color = 'geekblue';
-        if (role === '分析师') color = 'purple';
-        return <Tag color={color}>{role}</Tag>;
+        let label = '普通用户';
+        if (role === 'ADMIN') {
+          color = 'red';
+          label = '管理员';
+        } else if (role === 'SUPER_ADMIN') {
+          color = 'volcano';
+          label = '超级管理员';
+        }
+        return <Tag color={color}>{label}</Tag>;
       }
-    },
-    {
-      title: '部门',
-      dataIndex: 'department',
-      key: 'department',
-      filters: departmentOptions.map(dept => ({ text: dept.label, value: dept.value })),
-      filteredValue: filteredInfo.department || null,
-      onFilter: (value, record) => record.department === value,
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
+      width: 80,
       filters: [
         { text: '启用', value: true },
         { text: '禁用', value: false }
       ],
       filteredValue: filteredInfo.status || null,
       onFilter: (value, record) => record.status === value,
-      render: (status: boolean, record) => (
+      render: (status: number, record) => (
         <Switch 
-          checked={status} 
+          checked={status === 1} 
           onChange={(checked) => handleStatusChange(checked, record.key)}
           size="small"
         />
@@ -261,25 +285,16 @@ const UserManagementPage = () => {
       title: '创建时间',
       dataIndex: 'createTime',
       key: 'createTime',
+      width: 160,
       sorter: (a, b) => new Date(a.createTime).getTime() - new Date(b.createTime).getTime(),
       sortOrder: sortedInfo.columnKey === 'createTime' ? sortedInfo.order : null,
-    },
-    {
-      title: '上次登录',
-      dataIndex: 'lastLoginTime',
-      key: 'lastLoginTime',
-      sorter: (a, b) => {
-        if (a.lastLoginTime === '-') return 1;
-        if (b.lastLoginTime === '-') return -1;
-        return new Date(a.lastLoginTime).getTime() - new Date(b.lastLoginTime).getTime();
-      },
-      sortOrder: sortedInfo.columnKey === 'lastLoginTime' ? sortedInfo.order : null,
+      render: (createTime: string) => dayjs(createTime).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
       title: '操作',
       key: 'action',
       fixed: 'right',
-      width: 120,
+      width: 100,
       render: (_, record) => (
         <Space size="middle">
           <Tooltip title="编辑">
@@ -289,17 +304,19 @@ const UserManagementPage = () => {
               onClick={() => handleAddEdit(record)}
             />
           </Tooltip>
-          <Tooltip title="删除">
-            <Popconfirm
-              title="确定要删除此用户吗？"
-              description="此操作不可撤销"
-              onConfirm={() => handleDelete(record.key)}
-              okText="确定"
-              cancelText="取消"
-            >
-              <Button type="text" danger icon={<DeleteOutlined />} />
-            </Popconfirm>
-          </Tooltip>
+          {!['SUPER_ADMIN'].includes(record.role) && (
+            <Tooltip title="删除">
+              <Popconfirm
+                title="确定要删除此用户吗？"
+                description="此操作不可撤销"
+                onConfirm={() => handleDelete(record.key)}
+                okText="确定"
+                cancelText="取消"
+              >
+                <Button type="text" danger icon={<DeleteOutlined />} />
+              </Popconfirm>
+            </Tooltip>
+          )}
         </Space>
       ),
     },
@@ -315,7 +332,7 @@ const UserManagementPage = () => {
       <Card>
         <Space style={{ marginBottom: 16 }}>
           <Input
-            placeholder="搜索用户名/邮箱/电话"
+            placeholder="搜索昵称/邮箱"
             value={searchText}
             onChange={e => handleSearch(e.target.value)}
             style={{ width: 240 }}
@@ -328,16 +345,6 @@ const UserManagementPage = () => {
             onClick={() => handleAddEdit()}
           >
             添加用户
-          </Button>
-          <Button 
-            icon={<ImportOutlined />} 
-          >
-            批量导入
-          </Button>
-          <Button 
-            icon={<ExportOutlined />} 
-          >
-            导出数据
           </Button>
           <Button 
             icon={<ReloadOutlined />} 
@@ -375,11 +382,11 @@ const UserManagementPage = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="name"
-                label="用户名"
-                rules={[{ required: true, message: '请输入用户名' }]}
+                name="nickname"
+                label="昵称"
+                rules={[{ required: true, message: '请输入昵称' }]}
               >
-                <Input placeholder="请输入用户名" />
+                <Input placeholder="请输入昵称" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -399,18 +406,6 @@ const UserManagementPage = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="phone"
-                label="手机号"
-                rules={[
-                  { required: true, message: '请输入手机号' },
-                  { pattern: /^1\d{10}$/, message: '请输入有效的手机号' }
-                ]}
-              >
-                <Input placeholder="请输入手机号" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
                 name="role"
                 label="角色"
                 rules={[{ required: true, message: '请选择角色' }]}
@@ -418,21 +413,6 @@ const UserManagementPage = () => {
                 <Select 
                   options={roleOptions}
                   placeholder="请选择角色"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="department"
-                label="部门"
-                rules={[{ required: true, message: '请选择部门' }]}
-              >
-                <Select 
-                  options={departmentOptions}
-                  placeholder="请选择部门"
                 />
               </Form.Item>
             </Col>
@@ -447,42 +427,40 @@ const UserManagementPage = () => {
             </Col>
           </Row>
 
-          {!selectedRecord && (
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  name="password"
-                  label="密码"
-                  rules={[
-                    { required: true, message: '请输入密码' },
-                    { min: 6, message: '密码长度不能少于6个字符' }
-                  ]}
-                >
-                  <Input.Password placeholder="请输入密码" />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="confirmPassword"
-                  label="确认密码"
-                  dependencies={['password']}
-                  rules={[
-                    { required: true, message: '请确认密码' },
-                    ({ getFieldValue }) => ({
-                      validator(_, value) {
-                        if (!value || getFieldValue('password') === value) {
-                          return Promise.resolve();
-                        }
-                        return Promise.reject(new Error('两次输入的密码不一致'));
-                      },
-                    }),
-                  ]}
-                >
-                  <Input.Password placeholder="请确认密码" />
-                </Form.Item>
-              </Col>
-            </Row>
-          )}
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="password"
+                label="密码"
+                rules={[
+                  { required: !selectedRecord, message: '请输入密码' },
+                  { min: 6, message: '密码长度不能少于6个字符' }
+                ]}
+              >
+                <Input.Password placeholder={selectedRecord ? '留空则不修改密码' : '请输入密码'} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="confirmPassword"
+                label="确认密码"
+                dependencies={['password']}
+                rules={[
+                  { required: !selectedRecord, message: '请确认密码' },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      if (!value || getFieldValue('password') === value) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(new Error('两次输入的密码不一致'));
+                    },
+                  }),
+                ]}
+              >
+                <Input.Password placeholder={selectedRecord ? '留空则不修改密码' : '请确认密码'} />
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
     </PageContainer>
