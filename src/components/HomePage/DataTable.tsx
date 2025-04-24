@@ -32,6 +32,7 @@ export const DataTable = ({
   const tableContainerRef = useRef<HTMLDivElement>(null);
   // 使用字符串数组存储展开的行的key
   const [expandedRowKeys, setExpandedRowKeys] = useState<React.Key[]>([]);
+  console.log('expandedRowKeys', expandedRowKeys);
 
   // 自适应列宽
   const getColumnWidth = useCallback((field: string) => {
@@ -107,37 +108,30 @@ export const DataTable = ({
 
   // 生成表格列配置
   const getTableColumns = useCallback(() => {
+    console.log('getTableColumns', selectedFields);
     return selectedFields.map(field => ({
-      title: (
-        <Space>
-          {field}
-          <Tooltip title={`字段: ${field}`}>
-            <InfoCircleOutlined style={{ fontSize: '12px', color: '#8c8c8c' }} />
-          </Tooltip>
-        </Space>
-      ),
+      title: field,
       dataIndex: field,
-      key: field,
       width: getColumnWidth(field),
       ellipsis: true,
       render: (text: string | number) => renderCell(text, field),
-      className: `table-column ${field === lastAddedField ? 'column-fade-in' : ''}`,
-      onHeaderCell: () => ({
-        className: field === lastAddedField ? 'column-fade-in' : '',
-      }),
-      onCell: (record: LogData) => ({
-        className: `${field === lastAddedField ? 'column-fade-in' : ''} ${record.key === activeRowKey ? 'active-row-cell' : ''}`,
-      }),
-      sorter: (a: LogData, b: LogData) => {
-        const valA = a[field];
-        const valB = b[field];
+      // className: `table-column ${field === lastAddedField ? 'column-fade-in' : ''}`,
+      // onHeaderCell: () => ({
+      //   className: field === lastAddedField ? 'column-fade-in' : '',
+      // }),
+      // onCell: (record: LogData) => ({
+      //   className: `${field === lastAddedField ? 'column-fade-in' : ''} ${record.key === activeRowKey ? 'active-row-cell' : ''}`,
+      // }),
+      // sorter: (a: LogData, b: LogData) => {
+      //   const valA = a[field];
+      //   const valB = b[field];
         
-        if (typeof valA === 'number' && typeof valB === 'number') {
-          return valA - valB;
-        }
+      //   if (typeof valA === 'number' && typeof valB === 'number') {
+      //     return valA - valB;
+      //   }
         
-        return String(valA).localeCompare(String(valB));
-      },
+      //   return String(valA).localeCompare(String(valB));
+      // },
     }));
   }, [selectedFields, lastAddedField, activeRowKey, renderCell, getColumnWidth]);
 
@@ -199,7 +193,9 @@ export const DataTable = ({
   // 处理行展开状态改变
   const handleExpand = (expanded: boolean, record: LogData) => {
     const key = record.key as React.Key;
+    console.log('handleExpand', expanded, record);
     if (expanded) {
+
       // 只展开当前行，不影响其他行
       setExpandedRowKeys([key]);
       setActiveRowKey(record.key as string);
@@ -225,6 +221,8 @@ export const DataTable = ({
       setActiveRowKey(key as string);
     }
   };
+
+  console.log(222,data)
 
   return (
     <div 
@@ -256,10 +254,9 @@ export const DataTable = ({
                 key={tableWidth}
                 expandable={{
                   // 关键配置：控制哪些行被展开
-                  expandedRowKeys: expandedRowKeys,
+                  // expandedRowKeys: expandedRowKeys,
                   // 处理展开/收起事件
-                  onExpand: handleExpand,
-                  expandRowByClick: false,
+                  // onExpand: handleExpand,
                   expandedRowRender: (record: LogData) => (
                     <div style={{ padding: 16 }}>
                       <Tabs defaultActiveKey="json">
@@ -310,14 +307,14 @@ export const DataTable = ({
                     </div>
                   )
                 }}
-                rowKey="key"
+                rowKey="_id"
                 className="data-table-with-animation"
-                rowClassName={(record) => record.key === activeRowKey ? 'active-table-row' : ''}
-                onRow={(record) => ({
-                  onClick: () => handleRowClick(record),
-                  className: record.key === activeRowKey ? 'active-table-row' : ''
-                })}
-                sticky={{ offsetHeader: 0 }}
+                // rowClassName={(record) => record.key === activeRowKey ? 'active-table-row' : ''}
+                // onRow={(record) => ({
+                //   onClick: () => handleRowClick(record),
+                //   className: record.key === activeRowKey ? 'active-table-row' : ''
+                // })}
+                // sticky={{ offsetHeader: 0 }}
               />
             ) : (
               !loading && (renderEmptyState() as React.ReactNode)

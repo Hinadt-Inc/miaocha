@@ -187,6 +187,8 @@ export default function HomePage() {
     removeFilter
   } = useFilters();
 
+  console.log('tableData', tableData);
+
   const toggleFieldSelection = (fieldName: string) => {
     if (selectedFields.includes(fieldName)) {
       setLastRemovedField(fieldName);
