@@ -1,7 +1,7 @@
 import { Table, Divider, Tabs, Card, Tag, Spin, Empty, Typography, Space, Tooltip, Button } from 'antd';
-import { LoadingOutlined, DownloadOutlined, CopyOutlined, FullscreenOutlined, InfoCircleOutlined, SearchOutlined, TableOutlined, DatabaseOutlined } from '@ant-design/icons';
+import { LoadingOutlined, CopyOutlined, InfoCircleOutlined, SearchOutlined, TableOutlined, DatabaseOutlined } from '@ant-design/icons';
 import { LogData } from '../../types/logDataTypes';
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import ResizeObserver from 'rc-resize-observer';
 
 const { Text } = Typography;
@@ -30,7 +30,8 @@ export const DataTable = ({
   const [tableWidth, setTableWidth] = useState<number>(0);
   const [activeRowKey, setActiveRowKey] = useState<string | null>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  // 使用字符串数组存储展开的行的key
+  const [expandedRowKeys, setExpandedRowKeys] = useState<React.Key[]>([]);
 
   // 自适应列宽
   const getColumnWidth = useCallback((field: string) => {
@@ -140,34 +141,6 @@ export const DataTable = ({
     }));
   }, [selectedFields, lastAddedField, activeRowKey, renderCell, getColumnWidth]);
 
-  // 切换全屏显示
-  const toggleFullscreen = useCallback(() => {
-    if (!isFullscreen) {
-      const element = tableContainerRef.current;
-      if (element) {
-        if (element.requestFullscreen) {
-          element.requestFullscreen();
-        }
-      }
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      }
-    }
-  }, [isFullscreen]);
-
-  // 监听全屏状态变化
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    };
-  }, []);
-
   // 复制当前行数据到剪贴板
   const copyRowData = useCallback((record: LogData) => {
     const jsonData = JSON.stringify(record, null, 2);
@@ -176,82 +149,86 @@ export const DataTable = ({
     });
   }, []);
 
-  // 表格工具栏
-  const renderTableToolbar = () => (
-    <div className="table-toolbar">
-      <Space>
-        <Button 
-          icon={<FullscreenOutlined />} 
-          onClick={toggleFullscreen}
-          size="small"
-          title="全屏显示"
-        />
-        <Button 
-          icon={<DownloadOutlined />} 
-          size="small"
-          title="导出数据"
-          onClick={() => {
-            const jsonData = JSON.stringify(data, null, 2);
-            const blob = new Blob([jsonData], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `log_data_${new Date().toISOString()}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-          }}
-        />
-      </Space>
-    </div>
-  );
-
-  const renderEmptyState = () => (
-    <div className="custom-empty-state">
-      <Empty
-        image={Empty.PRESENTED_IMAGE_SIMPLE}
-        imageStyle={{ height: 80 }}
-        description={
-          <div>
-            <Typography.Title level={4} style={{ marginBottom: 16 }}>
-              未找到匹配的数据
-            </Typography.Title>
-            <Space direction="vertical" style={{ width: '100%', textAlign: 'center' }}>
+  const renderEmptyState = (): React.ReactNode => {
+    const description = (
+      <div>
+        <Typography.Title level={4} style={{ marginBottom: 16 }}>
+          未找到匹配的数据
+        </Typography.Title>
+        <Space direction="vertical" style={{ width: '100%', textAlign: 'center' }}>
+          <Text type="secondary">
+            {searchQuery ? 
+              '没有符合当前搜索条件的数据记录' : 
+              '当前视图没有数据可显示'}
+          </Text>
+          {searchQuery && (
+            <div>
+              <Text type="secondary">您可以尝试：</Text>
+              <ul style={{ textAlign: 'left', display: 'inline-block', marginTop: 8 }}>
+                <li><SearchOutlined /> 修改搜索关键词</li>
+                <li><TableOutlined /> 调整选择的表或字段</li>
+                <li><DatabaseOutlined /> 检查时间范围设置</li>
+              </ul>
+            </div>
+          )}
+          {!searchQuery && (
+            <Space direction="vertical" size="middle" style={{ marginTop: 16 }}>
               <Text type="secondary">
-                {searchQuery ? 
-                  '没有符合当前搜索条件的数据记录' : 
-                  '当前视图没有数据可显示'}
+                请从左侧选择数据表和字段，或使用顶部搜索框进行查询
               </Text>
-              {searchQuery && (
-                <div>
-                  <Text type="secondary">您可以尝试：</Text>
-                  <ul style={{ textAlign: 'left', display: 'inline-block', marginTop: 8 }}>
-                    <li><SearchOutlined /> 修改搜索关键词</li>
-                    <li><TableOutlined /> 调整选择的表或字段</li>
-                    <li><DatabaseOutlined /> 检查时间范围设置</li>
-                  </ul>
-                </div>
-              )}
+              <Button type="primary" icon={<SearchOutlined />}>
+                开始搜索
+              </Button>
             </Space>
-          </div>
-        }
-      >
-        {!searchQuery && (
-          <Space direction="vertical" size="middle" style={{ marginTop: 16 }}>
-            <Text type="secondary">
-              请从左侧选择数据表和字段，或使用顶部搜索框进行查询
-            </Text>
-            <Button type="primary" icon={<SearchOutlined />}>
-              开始搜索
-            </Button>
-          </Space>
-        )}
-      </Empty>
-    </div>
-  );
+          )}
+        </Space>
+      </div>
+    );
+
+    return (
+      <div className="custom-empty-state">
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          imageStyle={{ height: 80 }}
+          description={description}
+        />
+      </div>
+    );
+  };
+
+  // 处理行展开状态改变
+  const handleExpand = (expanded: boolean, record: LogData) => {
+    const key = record.key as React.Key;
+    if (expanded) {
+      // 只展开当前行，不影响其他行
+      setExpandedRowKeys([key]);
+      setActiveRowKey(record.key as string);
+    } else {
+      // 收起当前行
+      setExpandedRowKeys([]);
+      setActiveRowKey(null);
+    }
+  };
+
+  // 单独处理行点击事件
+  const handleRowClick = (record: LogData) => {
+    const key = record.key as React.Key;
+    const isCurrentExpanded = expandedRowKeys.includes(key);
+    
+    if (isCurrentExpanded) {
+      // 如果当前行已展开，则收起
+      setExpandedRowKeys([]);
+      setActiveRowKey(null);
+    } else {
+      // 如果当前行未展开，则展开它并收起其他行
+      setExpandedRowKeys([key]);
+      setActiveRowKey(key as string);
+    }
+  };
 
   return (
     <div 
-      className={`table-container-with-animation ${isFullscreen ? 'fullscreen-table' : ''}`}
+      className="table-container-with-animation"
       style={{ 
         height: 'calc(100vh - 165px)', 
         overflowY: 'auto',
@@ -260,7 +237,7 @@ export const DataTable = ({
       onScroll={onScroll}
       ref={tableContainerRef}
     >
-      {renderTableToolbar()}
+      {/* {renderTableToolbar()} */}
       
       <ResizeObserver
         onResize={({ width }) => {
@@ -276,7 +253,13 @@ export const DataTable = ({
                 pagination={false}
                 size="middle"
                 scroll={{ x: 'max-content' }}
+                key={tableWidth}
                 expandable={{
+                  // 关键配置：控制哪些行被展开
+                  expandedRowKeys: expandedRowKeys,
+                  // 处理展开/收起事件
+                  onExpand: handleExpand,
+                  expandRowByClick: false,
                   expandedRowRender: (record: LogData) => (
                     <div style={{ padding: 16 }}>
                       <Tabs defaultActiveKey="json">
@@ -296,10 +279,14 @@ export const DataTable = ({
                           </pre>
                         </Tabs.TabPane>
                         <Tabs.TabPane tab="表格" key="table">
-                          <Table 
+                            <Table 
                             dataSource={Object.entries(record)
                               .filter(([key]) => key !== 'key')
-                              .map(([key, value]) => ({ key, field: key, value: String(value) }))} 
+                              .map(([key, value], index) => ({ 
+                                key: `${record.key}_${key}_${index}_${Date.now()}`, // 增强唯一性
+                                field: key, 
+                                value: String(value) 
+                              }))} 
                             columns={[
                               { 
                                 title: '字段', 
@@ -316,28 +303,24 @@ export const DataTable = ({
                             ]} 
                             pagination={false}
                             size="small"
+                            rowKey="key"
                           />
                         </Tabs.TabPane>
                       </Tabs>
                     </div>
-                  ),
-                  onExpand: (expanded, record) => {
-                    setActiveRowKey(expanded ? record.key : null);
-                  }
+                  )
                 }}
                 rowKey="key"
                 className="data-table-with-animation"
                 rowClassName={(record) => record.key === activeRowKey ? 'active-table-row' : ''}
                 onRow={(record) => ({
-                  onClick: () => {
-                    setActiveRowKey(record.key === activeRowKey ? null : record.key);
-                  },
+                  onClick: () => handleRowClick(record),
                   className: record.key === activeRowKey ? 'active-table-row' : ''
                 })}
                 sticky={{ offsetHeader: 0 }}
               />
             ) : (
-              !loading && renderEmptyState()
+              !loading && (renderEmptyState() as React.ReactNode)
             )
           ) : (
             <div className="json-card-view">
@@ -368,7 +351,7 @@ export const DataTable = ({
                           Number(record.status) >= 300 && Number(record.status) < 400 ? 'blue' :
                           Number(record.status) >= 400 && Number(record.status) < 500 ? 'orange' : 'red'
                         }>
-                          {record.status}
+                          {String(record.status)}
                         </Tag>
                       )}
                       {record.host && <Tag>{record.host}</Tag>}
@@ -388,7 +371,7 @@ export const DataTable = ({
                   </div>
                 </Card>
               )) : (
-                !loading && renderEmptyState()
+                !loading && (renderEmptyState() as React.ReactNode)
               )}
             </div>
           )}
