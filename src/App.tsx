@@ -62,6 +62,11 @@ function AppWrapper() {
                 name: '机器管理',
                 icon: <UserOutlined />,
               },
+              {
+                path: '/system/logstash',
+                name: 'Logstash管理',
+                icon: <UserOutlined />,
+              },
             ]
           }
         ]
