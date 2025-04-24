@@ -125,8 +125,10 @@ echo "  -e \"ENABLE_API_DOCS=${ENABLE_API_DOCS}\" \\"
 echo "  -e \"ENABLE_SWAGGER_UI=${ENABLE_SWAGGER_UI}\" \\"
 echo "  -e \"LOG_PATH=${LOG_PATH}\" \\"
 echo "  -e \"JAVA_OPTS=-Xms1g -Xmx2g\" \\"
-echo "  -v \"${LOGSTASH_PATH}:/opt/logstash/logstash-9.0.0-linux-x86_64.tar.gz\" \\"
-echo "  -v \"./logs:/app/logs\" \\"
+echo "  -e \"LOGSTASH_PACKAGE_PATH=${LOGSTASH_PACKAGE_PATH}\" \\"
+echo "  -e \"LOGSTASH_DEPLOY_PATH=${LOGSTASH_DEPLOY_PATH}\" \\"
+echo "  -v \"${LOGSTASH_PATH}:${LOGSTASH_PACKAGE_PATH}\" \\"
+echo "  -v \"./logs:${LOG_PATH}\" \\"
 echo "  $IMAGE_NAME:$VERSION"
 echo
 
