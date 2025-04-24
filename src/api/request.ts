@@ -6,7 +6,7 @@ import { store } from '../store/store'
 // 创建axios实例
 const service: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
-  timeout: 10000,
+  timeout: 100000,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -39,6 +39,13 @@ service.interceptors.response.use(
     // 根据后端接口返回结构调整
     if (res.code !== '0000') {
       // 处理业务错误
+      // 全局提示信息
+      // 动态导入message组件以避免循环依赖
+      import('../hooks/useMessage').then(({ useMessage }) => {
+        const message = useMessage();
+        message.error(res.message || '操作失败');
+      });
+      
       return Promise.reject(new Error(res.message || 'Error'))
     }
     return res.data

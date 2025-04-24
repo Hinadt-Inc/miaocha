@@ -6,6 +6,8 @@ import DashboardPage from '../pages/DashboardPage'
 import UserManagementPage from '../pages/system/UserManagementPage'
 import DataSourceManagementPage from '../pages/system/DataSourceManagementPage'
 import PermissionManagementPage from '../pages/system/PermissionManagementPage'
+import MachineManagementPage from '../pages/system/MachineManagementPage'
+import LogstashManagementPage from '../pages/system/LogstashManagementPage'
 import LoginPage from '../pages/LoginPage'
 import SQLEditorPage from '../pages/SQLEditorPage'
 
@@ -47,6 +49,14 @@ export const router = createBrowserRouter([
       {
         path: 'sql-editor',
         element: <SQLEditorPage />,
+      },
+      {
+        path: 'system/machine',
+        element: <MachineManagementPage />,
+      },
+      {
+        path: 'system/logstash',
+        element: <LogstashManagementPage />,
       },
     ],
   },

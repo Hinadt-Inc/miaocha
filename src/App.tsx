@@ -1,7 +1,7 @@
 import './App.less'
 import { App as AntdApp } from 'antd'
 import { ProLayout } from '@ant-design/pro-components'
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 import { 
   CompassOutlined,
   DashboardOutlined,
@@ -14,7 +14,6 @@ import UserProfile from './components/User/UserProfile'
 
 function AppWrapper() {
   const location = useLocation()
-  const navigate = useNavigate()
   const user = useSelector((state: { user: { name: string; isLoggedIn: boolean } }) => state.user)
   
   return (
@@ -56,6 +55,16 @@ function AppWrapper() {
               {
                 path: '/system/permission',
                 name: '数据源权限管理',
+                icon: <UserOutlined />,
+              },
+              {
+                path: '/system/machine',
+                name: '机器管理',
+                icon: <UserOutlined />,
+              },
+              {
+                path: '/system/logstash',
+                name: 'Logstash管理',
                 icon: <UserOutlined />,
               },
             ]
