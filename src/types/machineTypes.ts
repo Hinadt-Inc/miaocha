@@ -7,3 +7,16 @@ export interface Machine {
   createTime: string
   updateTime: string
 }
+
+export interface CreateMachineParams {
+  name: string
+  ip: string
+  port: number
+  username: string
+  password?: string
+  sshKey?: string
+}
+
+export interface UpdateMachineParams extends CreateMachineParams {
+  id: number
+}
