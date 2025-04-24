@@ -275,7 +275,7 @@ export const SearchBar = ({
   // 显示过滤标签
   const renderFilterTags = () => {
     return (
-      <div style={{ marginTop: '12px' }}>
+      <div>
         <Space wrap>
           {searchQuery && activeFilters.keywords && (
             <Tag 
@@ -484,11 +484,14 @@ export const SearchBar = ({
                 />
               </Space.Compact>
               
-              {/* 显示过滤条件标签 */}
-              {(activeFilters.keywords || activeFilters.sql || activeFilters.time) && renderFilterTags()}
+              
             </div>
+            
           </div>
+          
         </div>
+        {/* 显示过滤条件标签 */}
+        {(activeFilters.keywords || activeFilters.sql || activeFilters.time) && renderFilterTags()}
       </Card>
     </div>
   );
