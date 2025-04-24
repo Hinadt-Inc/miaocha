@@ -7,10 +7,12 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="log-manage-assembly" />
-        <module name="log-manage-ui" />
         <module name="log-manage-server" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="log-manage-ui" target="17" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">

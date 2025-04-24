@@ -58,6 +58,15 @@
         <!-- 应用特定日志级别 -->
         <logger name="com.hina.log" level="DEBUG" />
     </springProfile>
+
+
+    <!-- 测试环境配置 -->
+    <springProfile name="test">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE" />
+            <appender-ref ref="ASYNC_FILE" />
+        </root>
+    </springProfile>
     
     <!-- 生产环境配置 -->
     <springProfile name="prod">

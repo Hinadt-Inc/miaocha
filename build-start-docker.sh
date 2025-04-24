@@ -100,6 +100,9 @@ ENABLE_API_DOCS="true"
 ENABLE_SWAGGER_UI="true"
 LOGSTASH_PATH="/opt/logstash/logstash-9.0.0-linux-x86_64.tar.gz"
 LOG_PATH="/app/logs"
+LOGSTASH_DEPLOY_PATH="/opt/logstash"
+LOGSTASH_PACKAGE_PATH="/opt/logstash/logstash-9.0.0-linux-x86_64.tar.gz"
+SPRING_PROFILES_ACTIVE="prod"
 
 # 容器名称
 CONTAINER_NAME="log-system"
@@ -114,7 +117,7 @@ echo "================================================="
 info "容器运行命令示例:"
 echo "docker rm $CONTAINER_NAME --force"
 echo "docker run -d -p 8080:8080 --name $CONTAINER_NAME \\"
-echo "  -e \"SPRING_PROFILES_ACTIVE=prod\" \\"
+echo "  -e \"SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}\" \\"
 echo "  -e \"SPRING_DATASOURCE_URL=jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai\" \\"
 echo "  -e \"SPRING_DATASOURCE_USERNAME=${DB_USER}\" \\"
 echo "  -e \"SPRING_DATASOURCE_PASSWORD=${DB_PASS}\" \\"
@@ -141,7 +144,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   
   # 运行新容器
   if ! docker run -d -p 8080:8080 --name $CONTAINER_NAME \
-    -e "SPRING_PROFILES_ACTIVE=prod" \
+    -e "SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}" \
     -e "SPRING_DATASOURCE_URL=jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai" \
     -e "SPRING_DATASOURCE_USERNAME=${DB_USER}" \
     -e "SPRING_DATASOURCE_PASSWORD=${DB_PASS}" \
@@ -149,8 +152,10 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     -e "ENABLE_SWAGGER_UI=${ENABLE_SWAGGER_UI}" \
     -e "LOG_PATH=${LOG_PATH}" \
     -e "JAVA_OPTS=-Xms1g -Xmx2g" \
-    -v "${LOGSTASH_PATH}:/opt/logstash/logstash-9.0.0-linux-x86_64.tar.gz" \
-    -v "./logs:/app/logs" \
+    -e "LOGSTASH_PACKAGE_PATH=${LOGSTASH_PACKAGE_PATH}" \
+    -e "LOGSTASH_DEPLOY_PATH=${LOGSTASH_DEPLOY_PATH}" \
+    -v "${LOGSTASH_PATH}:${LOGSTASH_PACKAGE_PATH}" \
+    -v "./logs:${LOG_PATH}" \
     "$IMAGE_NAME:$VERSION"; then
     error "容器启动失败"
     exit 1

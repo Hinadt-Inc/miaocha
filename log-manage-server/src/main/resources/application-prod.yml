@@ -30,13 +30,6 @@ spring:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: GMT+8
 
-# Logstash生产环境配置
-logstash:
-  # 生产环境Logstash压缩包路径
-  package-path: /opt/logstash/logstash-9.0.0-linux-x86_64.tar.gz
-  # 生产环境远程部署目录
-  deploy-dir: /opt/logstash
-
 # JWT生产环境配置 - 更长的过期时间
 jwt:
   # 生产环境从环境变量获取密钥

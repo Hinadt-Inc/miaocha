@@ -11,9 +11,9 @@ spring:
     active: dev
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://10.0.19.212:3306/log_manage_system?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
-    username: root
-    password: root
+    url: jdbc:mysql://${DB_HOST:mysql}:${DB_PORT:3306}/${DB_NAME:log_manage_system}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:password}
   flyway:
     enabled: true
     baseline-on-migrate: true
@@ -50,8 +50,8 @@ sql:
 # Logstash配置
 logstash:
   # Logstash压缩包路径
-  package-path: /opt/logstash/logstash-8.11.1.tar.gz
+  package-path: ${LOGSTASH_PACKAGE_PATH}
   # 远程部署目录
-  deploy-dir: ~/logstash
+  deploy-dir: ${LOGSTASH_DEPLOY_PATH}
 
     

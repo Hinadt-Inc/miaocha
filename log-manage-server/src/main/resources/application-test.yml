@@ -1,0 +1,23 @@
+# 测试环境配置
+server:
+  port: 8080
+
+spring:
+  datasource:
+    # 测试环境使用测试数据库
+    url: jdbc:mysql://10.0.21.34:3306/log_manage_system?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: root
+    password: Root@123
+  
+  # 测试环境显示SQL日志
+  jpa:
+    show-sql: true
+  
+# 日志配置 - 通过logback-spring.xml中的springProfile配置
+
+# 测试环境特定配置
+sql:
+  query:
+    csv:
+      export:
+        dir: ./sql-exports
