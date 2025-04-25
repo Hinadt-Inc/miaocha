@@ -3,6 +3,7 @@ package com.hina.log.logstash.command;
 import com.hina.log.config.LogstashProperties;
 import com.hina.log.entity.LogstashProcess;
 import com.hina.log.mapper.LogstashMachineMapper;
+import com.hina.log.mapper.LogstashProcessMapper;
 import com.hina.log.ssh.SshClient;
 import org.springframework.stereotype.Component;
 
@@ -16,12 +17,14 @@ public class LogstashCommandFactory {
     private final LogstashProperties logstashProperties;
     private final SshClient sshClient;
     private final LogstashMachineMapper logstashMachineMapper;
+    private final LogstashProcessMapper logstashProcessMapper;
 
     public LogstashCommandFactory(LogstashProperties logstashProperties, SshClient sshClient,
-            LogstashMachineMapper logstashMachineMapper) {
+            LogstashMachineMapper logstashMachineMapper, LogstashProcessMapper logstashProcessMapper) {
         this.logstashProperties = logstashProperties;
         this.sshClient = sshClient;
         this.logstashMachineMapper = logstashMachineMapper;
+        this.logstashProcessMapper = logstashProcessMapper;
     }
 
     /**
@@ -53,6 +56,30 @@ public class LogstashCommandFactory {
     public LogstashCommand createConfigCommand(LogstashProcess process) {
         return new CreateConfigCommand(sshClient, logstashProperties.getDeployDir(),
                 process.getId(), process.getConfigJson());
+    }
+
+    /**
+     * 创建更新配置文件命令
+     */
+    public LogstashCommand updateConfigCommand(Long processId, String configContent) {
+        return new UpdateConfigCommand(sshClient, logstashProperties.getDeployDir(),
+                processId, configContent);
+    }
+
+    /**
+     * 创建刷新配置文件命令
+     */
+    public LogstashCommand refreshConfigCommand(Long processId) {
+        return new RefreshConfigCommand(sshClient, logstashProperties.getDeployDir(),
+                processId, logstashProcessMapper, null);
+    }
+
+    /**
+     * 创建刷新配置文件命令（带配置内容）
+     */
+    public LogstashCommand refreshConfigCommand(Long processId, String configContent) {
+        return new RefreshConfigCommand(sshClient, logstashProperties.getDeployDir(),
+                processId, logstashProcessMapper, configContent);
     }
 
     /**

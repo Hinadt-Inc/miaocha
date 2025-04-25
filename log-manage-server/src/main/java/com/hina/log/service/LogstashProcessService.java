@@ -22,13 +22,21 @@ public interface LogstashProcessService {
     LogstashProcessDTO createLogstashProcess(LogstashProcessCreateDTO dto);
 
     /**
-     * 更新Logstash进程
+     * 更新Logstash配置
      *
-     * @param id  Logstash进程ID
-     * @param dto Logstash进程更新DTO
+     * @param id         Logstash进程ID
+     * @param configJson 新的配置JSON
      * @return 更新后的Logstash进程信息
      */
-    LogstashProcessDTO updateLogstashProcess(Long id, LogstashProcessCreateDTO dto);
+    LogstashProcessDTO updateLogstashConfig(Long id, String configJson);
+
+    /**
+     * 手动刷新Logstash配置到目标机器
+     *
+     * @param id Logstash进程ID
+     * @return 刷新后的Logstash进程信息
+     */
+    LogstashProcessDTO refreshLogstashConfig(Long id);
 
     /**
      * 删除Logstash进程

@@ -39,18 +39,31 @@ public class LogstashProcessController {
     }
 
     /**
-     * 更新Logstash进程
+     * 更新Logstash进程配置
      *
-     * @param id  Logstash进程数据库ID
-     * @param dto Logstash进程更新DTO
+     * @param id        Logstash进程数据库ID
+     * @param configDTO 包含configJson的DTO
      * @return 更新后的Logstash进程
      */
-    @PutMapping("/{id}")
-    @Operation(summary = "更新Logstash进程", description = "根据ID更新已有Logstash进程的配置信息")
-    public ApiResponse<LogstashProcessDTO> updateLogstashProcess(
+    @PutMapping("/{id}/config")
+    @Operation(summary = "更新Logstash配置", description = "更新Logstash进程的配置信息并自动刷新到目标机器")
+    public ApiResponse<LogstashProcessDTO> updateLogstashConfig(
             @Parameter(description = "Logstash进程数据库ID", required = true) @PathVariable("id") Long id,
-            @Parameter(description = "Logstash进程更新信息", required = true) @Valid @RequestBody LogstashProcessCreateDTO dto) {
-        return ApiResponse.success(logstashProcessService.updateLogstashProcess(id, dto));
+            @Parameter(description = "Logstash配置信息", required = true) @Valid @RequestBody LogstashConfigUpdateDTO configDTO) {
+        return ApiResponse.success(logstashProcessService.updateLogstashConfig(id, configDTO.getConfigJson()));
+    }
+
+    /**
+     * 手动刷新Logstash配置
+     *
+     * @param id Logstash进程数据库ID
+     * @return 操作结果
+     */
+    @PostMapping("/{id}/config/refresh")
+    @Operation(summary = "刷新Logstash配置", description = "手动将数据库中的配置刷新到目标机器（不更改配置内容）")
+    public ApiResponse<LogstashProcessDTO> refreshLogstashConfig(
+            @Parameter(description = "Logstash进程数据库ID", required = true) @PathVariable("id") Long id) {
+        return ApiResponse.success(logstashProcessService.refreshLogstashConfig(id));
     }
 
     /**

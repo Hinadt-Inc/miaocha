@@ -134,79 +134,6 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
 
     @Override
     @Transactional
-    public LogstashProcessDTO updateLogstashProcess(Long id, LogstashProcessCreateDTO dto) {
-        // 参数校验
-        if (id == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
-        }
-
-        if (dto == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "参数不能为空");
-        }
-
-        if (!StringUtils.hasText(dto.getName())) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程名称不能为空");
-        }
-
-        if (!StringUtils.hasText(dto.getModule())) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块名称不能为空");
-        }
-
-        if (dto.getDatasourceId() == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "数据源ID不能为空");
-        }
-
-        if (dto.getMachineIds() == null || dto.getMachineIds().isEmpty()) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "至少需要选择一台机器");
-        }
-
-        // 检查进程是否存在
-        LogstashProcess process = logstashProcessMapper.selectById(id);
-        if (process == null) {
-            throw new BusinessException(ErrorCode.LOGSTASH_PROCESS_NOT_FOUND);
-        }
-
-        // 检查进程是否正在运行，运行中的进程不能修改
-        if (LogstashProcessState.RUNNING.name().equals(process.getState()) ||
-                LogstashProcessState.STARTING.name().equals(process.getState())) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "运行中的进程不能修改，请先停止进程");
-        }
-
-        // 检查进程名称是否已被其他进程使用
-        LogstashProcess existingProcess = logstashProcessMapper.selectByName(dto.getName());
-        if (existingProcess != null && !existingProcess.getId().equals(id)) {
-            throw new BusinessException(ErrorCode.LOGSTASH_PROCESS_NAME_EXISTS);
-        }
-
-        // 检查数据源是否存在
-        if (datasourceMapper.selectById(dto.getDatasourceId()) == null) {
-            throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND, "指定的数据源不存在");
-        }
-
-        // 更新进程记录
-        process = logstashProcessConverter.updateEntity(process, dto);
-        process.setId(id);
-        process.setUpdateTime(LocalDateTime.now());
-        logstashProcessMapper.update(process);
-
-        // 更新进程与机器的关联关系
-        logstashMachineMapper.deleteByLogstashProcessId(id);
-        for (Long machineId : dto.getMachineIds()) {
-            if (machineMapper.selectById(machineId) == null) {
-                throw new BusinessException(ErrorCode.MACHINE_NOT_FOUND, "指定的机器不存在: ID=" + machineId);
-            }
-
-            LogstashMachine logstashMachine = new LogstashMachine();
-            logstashMachine.setLogstashProcessId(id);
-            logstashMachine.setMachineId(machineId);
-            logstashMachineMapper.insert(logstashMachine);
-        }
-
-        return getLogstashProcess(id);
-    }
-
-    @Override
-    @Transactional
     public void deleteLogstashProcess(Long id) {
         // 参数校验
         if (id == null) {
@@ -646,5 +573,91 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
 
         // 使用转换器生成DTO
         return taskStepsGroupConverter.convert(task, allSteps, machineMap);
+    }
+
+    @Override
+    @Transactional
+    public LogstashProcessDTO updateLogstashConfig(Long id, String configJson) {
+        // 参数校验
+        if (id == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
+        }
+
+        if (!StringUtils.hasText(configJson)) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "配置JSON不能为空");
+        }
+
+        // 检查进程是否存在
+        LogstashProcess process = logstashProcessMapper.selectById(id);
+        if (process == null) {
+            throw new BusinessException(ErrorCode.LOGSTASH_PROCESS_NOT_FOUND);
+        }
+
+        // 检查进程是否正在运行，运行中的进程不能修改
+        if (LogstashProcessState.RUNNING.name().equals(process.getState()) ||
+                LogstashProcessState.STARTING.name().equals(process.getState())) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "运行中的进程不能修改配置，请先停止进程");
+        }
+
+        if (LogstashProcessState.INITIALIZING.name().equals(process.getState())) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "初始化中的进程不能修改配置");
+        }
+
+        // 获取进程对应的机器
+        List<Machine> machines = getMachinesForProcess(id);
+        if (machines.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程未关联任何机器");
+        }
+
+        // 更新进程配置
+        process.setConfigJson(configJson);
+        process.setUpdateTime(LocalDateTime.now());
+        logstashProcessMapper.update(process);
+
+        // 异步更新机器上的配置文件
+        logstashDeployService.updateConfigAsync(id, configJson, machines);
+
+        return getLogstashProcess(id);
+    }
+
+    @Override
+    @Transactional
+    public LogstashProcessDTO refreshLogstashConfig(Long id) {
+        // 参数校验
+        if (id == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
+        }
+
+        // 检查进程是否存在
+        LogstashProcess process = logstashProcessMapper.selectById(id);
+        if (process == null) {
+            throw new BusinessException(ErrorCode.LOGSTASH_PROCESS_NOT_FOUND);
+        }
+
+        // 检查进程是否正在运行，运行中的进程不能修改
+        if (LogstashProcessState.RUNNING.name().equals(process.getState()) ||
+                LogstashProcessState.STARTING.name().equals(process.getState())) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "运行中的进程不能刷新配置，请先停止进程");
+        }
+
+        if (LogstashProcessState.INITIALIZING.name().equals(process.getState())) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "初始化中的进程不能刷新配置");
+        }
+
+        // 获取进程对应的机器
+        List<Machine> machines = getMachinesForProcess(id);
+        if (machines.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程未关联任何机器");
+        }
+
+        // 检查配置是否为空
+        if (!StringUtils.hasText(process.getConfigJson())) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程配置为空，无法刷新");
+        }
+
+        // 异步刷新机器上的配置文件
+        logstashDeployService.refreshConfigAsync(id, machines);
+
+        return getLogstashProcess(id);
     }
 }

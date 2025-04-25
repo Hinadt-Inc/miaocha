@@ -56,6 +56,26 @@ public abstract class AbstractLogstashProcessStateHandler implements LogstashPro
     }
 
     /**
+     * 处理更新配置操作的默认实现
+     */
+    @Override
+    public CompletableFuture<Boolean> handleUpdateConfig(LogstashProcess process, String configJson,
+            List<Machine> machines, String taskId) {
+        logger.warn("状态 [{}] 不支持更新配置操作", getState().name());
+        return CompletableFuture.completedFuture(false);
+    }
+
+    /**
+     * 处理刷新配置操作的默认实现
+     */
+    @Override
+    public CompletableFuture<Boolean> handleRefreshConfig(LogstashProcess process, List<Machine> machines,
+            String taskId) {
+        logger.warn("状态 [{}] 不支持刷新配置操作", getState().name());
+        return CompletableFuture.completedFuture(false);
+    }
+
+    /**
      * 判断当前状态是否可以执行初始化操作
      */
     @Override
@@ -80,6 +100,22 @@ public abstract class AbstractLogstashProcessStateHandler implements LogstashPro
     }
 
     /**
+     * 判断当前状态是否可以执行更新配置操作
+     */
+    @Override
+    public boolean canUpdateConfig() {
+        return false;
+    }
+
+    /**
+     * 判断当前状态是否可以执行刷新配置操作
+     */
+    @Override
+    public boolean canRefreshConfig() {
+        return false;
+    }
+
+    /**
      * 获取操作完成后的下一个状态
      */
     @Override
@@ -91,6 +127,10 @@ public abstract class AbstractLogstashProcessStateHandler implements LogstashPro
                 return success ? LogstashProcessState.RUNNING : LogstashProcessState.START_FAILED;
             case STOP:
                 return success ? LogstashProcessState.NOT_STARTED : LogstashProcessState.STOP_FAILED;
+            case UPDATE_CONFIG:
+            case REFRESH_CONFIG:
+                // 配置操作不会改变进程状态
+                return getState();
             default:
                 return getState();
         }

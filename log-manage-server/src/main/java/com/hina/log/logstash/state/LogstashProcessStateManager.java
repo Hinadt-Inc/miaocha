@@ -125,6 +125,39 @@ public class LogstashProcessStateManager {
     }
 
     /**
+     * 执行更新配置操作，带任务ID
+     */
+    public CompletableFuture<Boolean> updateConfig(LogstashProcess process, String configJson, List<Machine> machines,
+            String taskId) {
+        LogstashProcessState currentState = LogstashProcessState.valueOf(process.getState());
+        LogstashProcessStateHandler handler = getStateHandler(currentState);
+
+        if (!handler.canUpdateConfig()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR,
+                    String.format("当前状态[%s]不允许执行更新配置操作", currentState.getDescription()));
+        }
+
+        // 执行更新配置操作（不改变进程状态）
+        return handler.handleUpdateConfig(process, configJson, machines, taskId);
+    }
+
+    /**
+     * 执行刷新配置操作，带任务ID
+     */
+    public CompletableFuture<Boolean> refreshConfig(LogstashProcess process, List<Machine> machines, String taskId) {
+        LogstashProcessState currentState = LogstashProcessState.valueOf(process.getState());
+        LogstashProcessStateHandler handler = getStateHandler(currentState);
+
+        if (!handler.canRefreshConfig()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR,
+                    String.format("当前状态[%s]不允许执行刷新配置操作", currentState.getDescription()));
+        }
+
+        // 执行刷新配置操作（不改变进程状态）
+        return handler.handleRefreshConfig(process, machines, taskId);
+    }
+
+    /**
      * 获取状态处理器
      */
     private LogstashProcessStateHandler getStateHandler(LogstashProcessState state) {

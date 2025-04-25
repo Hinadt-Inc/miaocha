@@ -51,6 +51,28 @@ public interface LogstashProcessStateHandler {
     CompletableFuture<Boolean> handleStop(LogstashProcess process, List<Machine> machines, String taskId);
 
     /**
+     * 处理更新配置操作
+     * 
+     * @param process    Logstash进程
+     * @param configJson 配置JSON内容
+     * @param machines   目标机器列表
+     * @param taskId     任务ID，可以为null
+     * @return 异步操作结果
+     */
+    CompletableFuture<Boolean> handleUpdateConfig(LogstashProcess process, String configJson, List<Machine> machines,
+            String taskId);
+
+    /**
+     * 处理刷新配置操作
+     * 
+     * @param process  Logstash进程
+     * @param machines 目标机器列表
+     * @param taskId   任务ID，可以为null
+     * @return 异步操作结果
+     */
+    CompletableFuture<Boolean> handleRefreshConfig(LogstashProcess process, List<Machine> machines, String taskId);
+
+    /**
      * 判断当前状态是否可以执行初始化操作
      * 
      * @return 是否可以初始化
@@ -70,6 +92,20 @@ public interface LogstashProcessStateHandler {
      * @return 是否可以停止
      */
     boolean canStop();
+
+    /**
+     * 判断当前状态是否可以执行更新配置操作
+     * 
+     * @return 是否可以更新配置
+     */
+    boolean canUpdateConfig();
+
+    /**
+     * 判断当前状态是否可以执行刷新配置操作
+     * 
+     * @return 是否可以刷新配置
+     */
+    boolean canRefreshConfig();
 
     /**
      * 获取下一个操作完成后的状态
@@ -96,6 +132,8 @@ public interface LogstashProcessStateHandler {
     enum OperationType {
         INITIALIZE,
         START,
-        STOP
+        STOP,
+        UPDATE_CONFIG,
+        REFRESH_CONFIG
     }
 }

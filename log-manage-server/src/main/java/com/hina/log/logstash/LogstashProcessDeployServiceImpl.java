@@ -8,6 +8,7 @@ import com.hina.log.logstash.command.LogstashCommand;
 import com.hina.log.logstash.command.LogstashCommandFactory;
 import com.hina.log.logstash.enums.LogstashProcessState;
 import com.hina.log.logstash.enums.LogstashProcessStep;
+import com.hina.log.logstash.enums.StepStatus;
 import com.hina.log.logstash.enums.TaskOperationType;
 import com.hina.log.logstash.state.LogstashProcessStateManager;
 import com.hina.log.logstash.task.TaskService;
@@ -223,5 +224,83 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
     @Transactional
     public void deleteTaskSteps(String taskId) {
         taskService.deleteTaskSteps(taskId);
+    }
+
+    @Override
+    public void updateConfigAsync(Long processId, String configJson, List<Machine> machines) {
+        if (processId == null || configJson == null || configJson.isEmpty() || machines == null || machines.isEmpty()) {
+            logger.error("更新配置参数无效: processId={}, configJson是否为空={}, machines是否为空={}",
+                    processId, configJson == null || configJson.isEmpty(), machines == null || machines.isEmpty());
+            return;
+        }
+
+        // 查询进程信息
+        LogstashProcess process = logstashProcessMapper.selectById(processId);
+        if (process == null) {
+            logger.error("找不到指定的Logstash进程: {}", processId);
+            return;
+        }
+
+        // 创建任务
+        String taskName = "更新Logstash配置 [" + processId + "]";
+        String taskDescription = "更新Logstash进程配置文件";
+
+        // 创建任务
+        String taskId = taskService.createTask(
+                processId,
+                taskName,
+                taskDescription,
+                TaskOperationType.UPDATE_CONFIG,
+                machines,
+                List.of(LogstashProcessStep.CREATE_CONFIG.getId()));
+
+        // 更新进程配置
+        process.setConfigJson(configJson);
+        logstashProcessMapper.update(process);
+
+        // 使用状态管理器执行配置更新操作
+        taskService.executeAsync(taskId, () -> {
+            stateManager.updateConfig(process, configJson, machines, taskId)
+                    .thenAccept(success -> {
+                        logger.info("Logstash配置更新{}", success ? "成功" : "失败");
+                    });
+        }, null);
+    }
+
+    @Override
+    public void refreshConfigAsync(Long processId, List<Machine> machines) {
+        if (processId == null || machines == null || machines.isEmpty()) {
+            logger.error("刷新配置参数无效: processId={}, machines是否为空={}",
+                    processId, machines == null || machines.isEmpty());
+            return;
+        }
+
+        // 查询进程信息
+        LogstashProcess process = logstashProcessMapper.selectById(processId);
+        if (process == null) {
+            logger.error("找不到指定的Logstash进程: {}", processId);
+            return;
+        }
+
+        // 创建任务
+        String taskName = "刷新Logstash配置 [" + processId + "]";
+        String taskDescription = "刷新Logstash进程配置文件到目标机器";
+
+        // 创建任务
+        String taskId = taskService.createTask(
+                processId,
+                taskName,
+                taskDescription,
+                TaskOperationType.REFRESH_CONFIG,
+                machines,
+                List.of(LogstashProcessStep.CREATE_CONFIG.getId()));
+
+        // 使用状态管理器执行配置刷新操作
+        taskService.executeAsync(taskId, () -> {
+            stateManager.refreshConfig(process, machines, taskId)
+                    .thenAccept(success -> {
+                        logger.info("Logstash配置刷新{}", success ? "成功" : "失败");
+                    });
+        }, null);
     }
 }

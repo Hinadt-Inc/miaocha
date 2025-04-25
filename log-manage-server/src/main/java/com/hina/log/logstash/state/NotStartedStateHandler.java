@@ -38,8 +38,23 @@ public class NotStartedStateHandler extends AbstractLogstashProcessStateHandler 
     }
 
     @Override
+    public boolean canUpdateConfig() {
+        return true;
+    }
+
+    @Override
+    public boolean canRefreshConfig() {
+        return true;
+    }
+
+    @Override
     public boolean canInitialize() {
         return false; // 初始化逻辑已移至InitializingStateHandler
+    }
+
+    @Override
+    public boolean canStop() {
+        return true; // 即使未启动，也支持停止操作（实际上是空操作）
     }
 
     @Override
@@ -119,6 +134,100 @@ public class NotStartedStateHandler extends AbstractLogstashProcessStateHandler 
         // 未启动状态不需要停止，直接返回成功
         logger.info("未启动状态下无需执行停止操作");
         return CompletableFuture.completedFuture(true);
+    }
+
+    @Override
+    public CompletableFuture<Boolean> handleUpdateConfig(LogstashProcess process, String configJson,
+            List<Machine> machines, String taskId) {
+        CompletableFuture<Boolean> resultFuture = new CompletableFuture<>();
+        Long processId = process.getId();
+
+        // 1. 更新配置步骤状态为运行中
+        if (taskId != null) {
+            for (Machine machine : machines) {
+                taskService.updateStepStatus(taskId, machine.getId(),
+                        LogstashProcessStep.CREATE_CONFIG.getId(), StepStatus.RUNNING);
+            }
+        }
+
+        // 2. 执行配置更新命令
+        LogstashCommand updateCommand = commandFactory.updateConfigCommand(processId, configJson);
+        executeCommandOnAllMachines(updateCommand, machines)
+                .thenAccept(updateSuccess -> {
+                    // 更新配置步骤状态
+                    if (taskId != null) {
+                        StepStatus status = updateSuccess ? StepStatus.COMPLETED : StepStatus.FAILED;
+                        for (Machine machine : machines) {
+                            taskService.updateStepStatus(taskId, machine.getId(),
+                                    LogstashProcessStep.CREATE_CONFIG.getId(), status);
+                        }
+                    }
+
+                    logger.info("Logstash配置更新{}", updateSuccess ? "成功" : "失败");
+                    resultFuture.complete(updateSuccess);
+                })
+                .exceptionally(e -> {
+                    // 更新步骤状态为失败
+                    if (taskId != null) {
+                        for (Machine machine : machines) {
+                            taskService.updateStepStatus(taskId, machine.getId(),
+                                    LogstashProcessStep.CREATE_CONFIG.getId(), StepStatus.FAILED);
+                        }
+                    }
+
+                    logger.error("更新Logstash配置时发生错误", e);
+                    resultFuture.complete(false);
+                    return null;
+                });
+
+        return resultFuture;
+    }
+
+    @Override
+    public CompletableFuture<Boolean> handleRefreshConfig(LogstashProcess process, List<Machine> machines,
+            String taskId) {
+        CompletableFuture<Boolean> resultFuture = new CompletableFuture<>();
+        Long processId = process.getId();
+
+        // 1. 更新配置步骤状态为运行中
+        if (taskId != null) {
+            for (Machine machine : machines) {
+                taskService.updateStepStatus(taskId, machine.getId(),
+                        LogstashProcessStep.CREATE_CONFIG.getId(), StepStatus.RUNNING);
+            }
+        }
+
+        // 2. 执行配置刷新命令
+        LogstashCommand refreshCommand = commandFactory.refreshConfigCommand(processId);
+        executeCommandOnAllMachines(refreshCommand, machines)
+                .thenAccept(refreshSuccess -> {
+                    // 更新配置步骤状态
+                    if (taskId != null) {
+                        StepStatus status = refreshSuccess ? StepStatus.COMPLETED : StepStatus.FAILED;
+                        for (Machine machine : machines) {
+                            taskService.updateStepStatus(taskId, machine.getId(),
+                                    LogstashProcessStep.CREATE_CONFIG.getId(), status);
+                        }
+                    }
+
+                    logger.info("Logstash配置刷新{}", refreshSuccess ? "成功" : "失败");
+                    resultFuture.complete(refreshSuccess);
+                })
+                .exceptionally(e -> {
+                    // 更新步骤状态为失败
+                    if (taskId != null) {
+                        for (Machine machine : machines) {
+                            taskService.updateStepStatus(taskId, machine.getId(),
+                                    LogstashProcessStep.CREATE_CONFIG.getId(), StepStatus.FAILED);
+                        }
+                    }
+
+                    logger.error("刷新Logstash配置时发生错误", e);
+                    resultFuture.complete(false);
+                    return null;
+                });
+
+        return resultFuture;
     }
 
     /**

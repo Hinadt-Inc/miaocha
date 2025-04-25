@@ -75,4 +75,23 @@ public interface LogstashProcessDeployService {
      * @param taskId 任务ID
      */
     void deleteTaskSteps(String taskId);
+
+    /**
+     * 更新Logstash配置并刷新到目标机器
+     *
+     * @param processId  进程ID
+     * @param configJson 新的配置JSON
+     * @param machines   目标机器列表
+     * @return 是否成功
+     */
+    void updateConfigAsync(Long processId, String configJson, List<Machine> machines);
+
+    /**
+     * 刷新Logstash配置到目标机器
+     *
+     * @param processId 进程ID
+     * @param machines  目标机器列表
+     * @return 是否成功
+     */
+    void refreshConfigAsync(Long processId, List<Machine> machines);
 }
