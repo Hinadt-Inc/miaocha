@@ -20,7 +20,7 @@ public class LogstashProcess {
     @Schema(description = "模块名称", example = "nginx")
     private String module;
 
-    @Schema(description = "Logstash配置文件JSON")
+    @Schema(description = "Logstash采集配置文件不标准JSON,JSON块")
     private String configJson;
 
     @Schema(description = "与Logstash配置对应的Doris日志表SQL")
