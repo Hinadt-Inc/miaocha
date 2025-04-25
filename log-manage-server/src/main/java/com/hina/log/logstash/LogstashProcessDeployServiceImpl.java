@@ -1,5 +1,6 @@
 package com.hina.log.logstash;
 
+import com.hina.log.config.LogstashProperties;
 import com.hina.log.dto.TaskDetailDTO;
 import com.hina.log.entity.LogstashProcess;
 import com.hina.log.entity.Machine;
@@ -10,7 +11,9 @@ import com.hina.log.logstash.enums.LogstashProcessStep;
 import com.hina.log.logstash.enums.TaskOperationType;
 import com.hina.log.logstash.state.LogstashProcessStateManager;
 import com.hina.log.logstash.task.TaskService;
+import com.hina.log.mapper.LogstashMachineMapper;
 import com.hina.log.mapper.LogstashProcessMapper;
+import com.hina.log.ssh.SshClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
