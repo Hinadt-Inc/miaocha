@@ -1,22 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
-import { Spin } from 'antd'
-
-// 创建统一的加载组件
-const LoadingComponent = () => (
-  <div style={{ 
-    display: 'flex', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    height: '100%',
-    width: '100%',
-    position: 'absolute',
-    top: 20,
-    left: 0
-  }}>
-    <Spin size="large" />
-  </div>
-);
+import LoadingComponent from '../components/Loading'
 
 // 创建统一的懒加载包装器
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,6 +19,8 @@ const DataSourceManagementPage = lazy(() => import('../pages/system/DataSourceMa
 const PermissionManagementPage = lazy(() => import('../pages/system/PermissionManagementPage'))
 const LoginPage = lazy(() => import('../pages/LoginPage'))
 const SQLEditorPage = lazy(() => import('../pages/SQLEditorPage'))
+const MachineManagementPage = lazy(() => import('../pages/system/MachineManagementPage'))
+const LogstashManagementPage = lazy(() => import('../pages/system/LogstashManagementPage'))
 
 export const router = createBrowserRouter([
   {
@@ -68,6 +54,14 @@ export const router = createBrowserRouter([
       {
         path: 'sql-editor',
         element: lazyLoad(SQLEditorPage),
+      },
+      {
+        path: 'system/machine',
+        element: lazyLoad(MachineManagementPage),
+      },
+      {
+        path: 'system/logstash',
+        element: lazyLoad(LogstashManagementPage),
       },
     ],
   },

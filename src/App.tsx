@@ -64,6 +64,16 @@ function AppWrapper() {
                 name: '数据源权限管理',
                 icon: <UserOutlined />,
               },
+              {
+                path: '/system/machine',
+                name: '机器管理',
+                icon: <UserOutlined />,
+              },
+              {
+                path: '/system/logstash',
+                name: 'Logstash管理',
+                icon: <UserOutlined />,
+              },
             ]
           }
         ]
