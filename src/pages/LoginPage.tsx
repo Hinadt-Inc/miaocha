@@ -57,7 +57,7 @@ const LoginPage = () => {
               欢迎使用
             </Title>
             <Title level={1} style={{ color: '#fff', margin: 0 }}>
-              云 BI 平台
+              日志查询平台
             </Title>
             <Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 16, marginTop: 24, display: 'block' }}>
               智能大数据分析 · 数据可视化 · 商业智能

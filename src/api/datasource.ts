@@ -6,6 +6,14 @@ import type {
   TestConnectionParams
 } from '../types/datasourceTypes';
 
+// 获取数据源列表
+export function getDataSources(): Promise<DataSource[]> {
+  return request({
+    url: '/api/datasources',
+    method: 'GET'
+  });
+}
+
 // 获取数据源详情
 export function getDataSource(id: string): Promise<DataSource> {
   return request({

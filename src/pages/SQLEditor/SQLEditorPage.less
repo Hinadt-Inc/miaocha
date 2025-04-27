@@ -1,0 +1,359 @@
+/* SQLEditorPage.less - 重新设计以匹配HomePage样式 */
+
+/* 关键帧动画定义 */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes slideIn {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* SQL编辑器容器 */
+.sql-editor-container {
+  height: calc(100vh - 150px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  
+  &.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1000;
+    background-color: #fff;
+    padding: 16px;
+  }
+}
+
+/* SQL编辑器头部 */
+.sql-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  
+  .sql-editor-actions {
+    display: flex;
+    align-items: center;
+  }
+  
+  .sql-editor-title {
+    h4 {
+      margin-bottom: 0;
+    }
+  }
+}
+
+/* SQL编辑器内容区域 */
+.sql-editor-content {
+  flex: 1;
+  overflow: hidden;
+  
+  .editor-results-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+/* 主布局样式 - 匹配HomePage */
+.layout-content {
+  background: #f0f2f5;
+  height: calc(100vh - 180px);
+  
+  &.fullscreen {
+    height: calc(100vh - 100px);
+  }
+}
+
+/* 侧边栏容器样式 - 匹配HomePage */
+.sider-container {
+  background: #fff;
+  margin-right: 16px;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  
+  .ant-layout-sider-children {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+}
+
+/* 内部布局样式 - 匹配HomePage */
+.layout-inner {
+  background: #f0f2f5;
+}
+
+/* 内容容器样式 - 匹配HomePage */
+.content-container {
+  background: #fff;
+  padding: 0;
+  position: relative;
+  flex: 1;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 结果容器 */
+.results-container {
+  flex: 1;
+  overflow: auto;
+  padding: 0;
+  
+  .ant-table-wrapper {
+    height: 100%;
+    
+    .ant-spin-nested-loading,
+    .ant-spin-container,
+    .ant-table {
+      height: 100%;
+    }
+    
+    .ant-table-container {
+      height: calc(100% - 44px);
+      overflow: auto;
+    }
+  }
+}
+
+/* 查询编辑器卡片 */
+.query-editor-card {
+  margin-bottom: 16px;
+  .ant-card-head {
+    min-height: auto;
+    padding: 0 12px;
+    
+    .ant-card-head-title {
+      padding: 8px 0;
+    }
+  }
+  
+  .ant-card-body {
+    padding: 0;
+    height: auto;
+  }
+}
+
+/* 表格头部样式 - 匹配HomePage */
+.table-header {
+  padding: 8px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+  
+  .results-tabs {
+    flex: 1;
+  }
+  
+  .view-controls {
+    display: flex;
+    align-items: center;
+  }
+}
+
+/* 按钮动画加强 - 匹配HomePage */
+.ant-btn {
+  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+/* 查询结果表格 */
+.query-results-table {
+  .ant-table-thead > tr > th {
+    background: #f5f7fa;
+    font-weight: 600;
+    transition: background-color 0.3s;
+    padding: 12px 16px;
+    
+    &:hover {
+      background-color: #e6f7ff !important;
+    }
+  }
+  
+  .ant-table-tbody > tr {
+    transition: all 0.3s ease;
+    
+    &:hover {
+      background-color: #f0f7ff;
+    }
+    
+    td {
+      padding: 12px 16px;
+      transition: background-color 0.3s;
+    }
+  }
+}
+
+/* 数据库结构树 */
+.schema-tree {
+  height: 100%;
+  overflow: auto;
+  padding: 8px 4px;
+  
+  .ant-tree-title {
+    transition: all 0.2s ease;
+  }
+  
+  .ant-tree-node-content-wrapper:hover .ant-tree-title {
+    color: #1890ff;
+  }
+  
+  .schema-tree-toolbar {
+    padding: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #f0f0f0;
+    margin-bottom: 8px;
+  }
+}
+
+/* 抽屉样式 */
+.history-drawer,
+.settings-drawer {
+  .ant-drawer-body {
+    padding: 16px;
+  }
+  
+  .drawer-title {
+    margin-bottom: 16px;
+  }
+  
+  .history-list {
+    .history-item {
+      margin-bottom: 16px;
+      padding: 12px;
+      border-radius: 4px;
+      border: 1px solid #f0f0f0;
+      transition: all 0.3s ease;
+      
+      &:hover {
+        border-color: #1890ff;
+        box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
+      }
+      
+      .history-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      
+      .history-item-sql {
+        background: #f5f5f5;
+        padding: 8px;
+        border-radius: 4px;
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        font-size: 12px;
+        overflow: auto;
+        max-height: 100px;
+      }
+      
+      .history-item-actions {
+        margin-top: 8px;
+        display: flex;
+        justify-content: flex-end;
+      }
+      
+      &.status-success {
+        border-left: 4px solid #52c41a;
+      }
+      
+      &.status-error {
+        border-left: 4px solid #f5222d;
+      }
+    }
+  }
+}
+
+/* 可视化面板 */
+.visualization-panel {
+  padding: 16px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  
+  .visualization-toolbar {
+    margin-bottom: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  }
+  
+  .chart-container {
+    flex: 1;
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fafafa;
+    border-radius: 4px;
+    padding: 16px;
+  }
+}
+
+/* 查询编辑器 */
+.query-editor {
+  height: 100%;
+  
+  .monaco-editor {
+    .margin,
+    .monaco-editor-background {
+      background-color: #fafafa;
+    }
+  }
+}
+
+/* 响应式布局 */
+@media (max-width: 992px) {
+  .sql-editor-header {
+    flex-direction: column;
+    align-items: flex-start;
+    
+    .sql-editor-actions {
+      margin-top: 8px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+  }
+  
+  .visualization-toolbar {
+    flex-direction: column;
+    
+    .toolbar-group {
+      width: 100%;
+    }
+  }
+}

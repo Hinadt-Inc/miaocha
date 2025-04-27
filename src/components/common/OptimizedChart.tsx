@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, useMemo } from 'react';
 import { init, getInstanceByDom } from 'echarts';
 import type { EChartsOption, ECharts } from 'echarts';
-import { debounce } from 'lodash';
+import debounce from 'lodash/debounce';
 
 interface OptimizedChartProps {
   option: EChartsOption;

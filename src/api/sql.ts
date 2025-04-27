@@ -3,6 +3,8 @@ import { request, get, post } from './request';
 export interface ExecuteSQLParams {
   datasourceId: string;
   sql: string;
+  exportResult?: boolean;
+  exportFormat?: 'csv' | 'xlsx' | 'json';
 }
 
 export interface ExecuteSQLResult {

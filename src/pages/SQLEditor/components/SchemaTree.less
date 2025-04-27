@@ -1,0 +1,129 @@
+.schema-tree-container {
+  width: 100%;
+  height: 100%;
+  overflow-x: auto;
+  
+  .loading-spinner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+  }
+}
+
+/* 树节点样式 */
+.tree-node-wrapper {
+  width: 100%;
+  padding: 2px 0;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: rgba(24, 144, 255, 0.05);
+    
+    .tree-copy-icon {
+      opacity: 1;
+    }
+    
+    .tree-node-title {
+      color: #1890ff;
+    }
+  }
+  
+  .tree-table-icon {
+    margin-right: 4px;
+    color: #1890ff;
+  }
+  
+  .tree-spacer {
+    width: 12px;
+  }
+  
+  .tree-node-title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color 0.2s ease;
+    font-size: 13px;
+  }
+  
+  .tree-copy-icon {
+    opacity: 0;
+    margin-left: 4px;
+    color: #1890ff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      color: #40a9ff;
+      transform: scale(1.1);
+    }
+  }
+}
+
+/* 树组件样式增强 */
+.schema-tree {
+  .ant-tree {
+    background: transparent;
+    
+    .ant-tree-node-content-wrapper {
+      transition: all 0.2s ease;
+      
+      &.ant-tree-node-selected {
+        background-color: rgba(24, 144, 255, 0.1);
+      }
+      
+      &:hover {
+        background-color: rgba(24, 144, 255, 0.05);
+      }
+    }
+    
+    .ant-tree-list-holder-inner {
+      padding: 8px 0;
+    }
+    
+    .ant-tree-treenode {
+      padding: 2px 0;
+      transition: padding 0.3s ease;
+      
+      &:hover {
+        padding-left: 4px;
+      }
+      
+      &.ant-tree-treenode-selected {
+        background-color: rgba(24, 144, 255, 0.05);
+      }
+    }
+  }
+}
+
+/* 加载中状态样式 */
+.loading-spinner {
+  padding: 40px 0;
+  text-align: center;
+  
+  .ant-spin {
+    .ant-spin-dot {
+      animation-duration: 1.2s;
+    }
+    
+    .ant-spin-text {
+      margin-top: 8px;
+      color: rgba(0, 0, 0, 0.65);
+    }
+  }
+}
+
+/* 空状态样式 */
+.ant-empty {
+  padding: 32px 0;
+  
+  .ant-empty-image {
+    height: 40px;
+    margin-bottom: 16px;
+  }
+  
+  .ant-empty-description {
+    color: rgba(0, 0, 0, 0.45);
+  }
+}

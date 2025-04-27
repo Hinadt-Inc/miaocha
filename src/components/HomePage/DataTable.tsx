@@ -306,8 +306,6 @@ export const DataTable = ({
     }
   }, [loading, onScroll]);
 
-  console.log(222,data)
-
   return (
     <div 
       className="table-container-with-animation"

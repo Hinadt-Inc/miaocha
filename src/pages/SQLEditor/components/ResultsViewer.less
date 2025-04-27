@@ -1,0 +1,40 @@
+.results-container {
+  margin-top: 16px;
+  border: 1px solid #e8e8e8;
+  border-radius: 2px;
+  
+  .query-results-spinner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 300px;
+  }
+  
+  .results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background-color: #f5f5f5;
+    border-bottom: 1px solid #e8e8e8;
+    
+    .success-text {
+      color: #52c41a;
+    }
+  }
+  
+  .results-table {
+    .ant-table-thead > tr > th {
+      background-color: #fafafa;
+      font-weight: 600;
+    }
+    .ant-table-container {
+      overflow: auto !important;
+    }
+    .ant-table-body {
+      min-height: 200px;
+      max-height: calc(100vh - 400px);
+      overflow: auto !important;
+    }
+  }
+}

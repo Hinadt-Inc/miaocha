@@ -35,6 +35,9 @@ importers:
       axios:
         specifier: ^1.8.4
         version: 1.8.4
+      copy-to-clipboard:
+        specifier: ^3.3.3
+        version: 3.3.3
       dayjs:
         specifier: ^1.11.13
         version: 1.11.13
@@ -50,6 +53,12 @@ importers:
       lodash:
         specifier: ^4.17.21
         version: 4.17.21
+      monaco-editor:
+        specifier: ^0.52.2
+        version: 0.52.2
+      monaco-sql-languages:
+        specifier: ^0.13.1
+        version: 0.13.1(antlr4ng-cli@1.0.7)(monaco-editor@0.52.2)
       rc-resize-observer:
         specifier: ^1.4.3
         version: 1.4.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -74,6 +83,9 @@ importers:
       react-transition-group:
         specifier: ^4.4.5
         version: 4.4.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      vite-plugin-monaco-editor:
+        specifier: ^1.1.0
+        version: 1.1.0(monaco-editor@0.52.2)
     devDependencies:
       '@eslint/js':
         specifier: ^9.21.0
@@ -1099,6 +1111,19 @@ packages:
       react: '>=16.9.0'
       react-dom: '>=16.9.0'
 
+  antlr4-c3@3.3.7:
+    resolution: {integrity: sha512-F3ndE38wwA6z6AjUbL3heSdEGl4TxulGDPf9xB0/IY4dbRHWBh6XNaqFwur8vHKQk9FS5yNABHeg2wqlqIYO0w==}
+
+  antlr4ng-cli@1.0.7:
+    resolution: {integrity: sha512-qN2FsDBmLvsQcA5CWTrPz8I8gNXeS1fgXBBhI78VyxBSBV/EJgqy8ks6IDTC9jyugpl40csCQ4sL5K4i2YZ/2w==}
+    deprecated: 'This package is deprecated and will no longer be updated. Please use the new antlr-ng package instead: https://github.com/mike-lischke/antlr-ng'
+    hasBin: true
+
+  antlr4ng@2.0.11:
+    resolution: {integrity: sha512-9jM91VVtHSqHkAHQsXHaoaiewFETMvUTI1/tXvwTiFw4f7zke3IGlwEyoKN9NS0FqIwDKFvUNW2e1cKPniTkVQ==}
+    peerDependencies:
+      antlr4ng-cli: 1.0.7
+
   argparse@2.0.1:
     resolution: {integrity: sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==}
 
@@ -1350,6 +1375,10 @@ packages:
 
   dom-helpers@5.2.1:
     resolution: {integrity: sha512-nRCa7CK3VTrM2NmGkIy4cbK7IZlgBE/PYMn55rrXefr5xXDP0LdtfPnblFDoVdcAfslJ7or6iqAUnx0CCGIWQA==}
+
+  dt-sql-parser@4.1.1:
+    resolution: {integrity: sha512-9f4m+CxIzhIrFqW8g95bCRQd+B+WeiC+RgDinBL5hwxa9OXrC6iIbaUtmiMDLO3GDBONn9ybgc+kQzv+G7EKcg==}
+    engines: {node: '>=18'}
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -2022,6 +2051,12 @@ packages:
 
   monaco-editor@0.52.2:
     resolution: {integrity: sha512-GEQWEZmfkOGLdd3XK8ryrfWz3AIP8YymVXiPHEdewrUq7mh0qrKrfHLNCXcbB6sTnMLnOZ3ztSiKcciFUkIJwQ==}
+
+  monaco-sql-languages@0.13.1:
+    resolution: {integrity: sha512-lmcNOxfQMZFJmQpG0stscyANx1BY8rhUTtaGcEudTRuF3M8ogb0CLh2hzEPc1bpQitAeTirUjBWzt+fA92E6yw==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      monaco-editor: '>=0.31.0'
 
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
@@ -2876,6 +2911,11 @@ packages:
     resolution: {integrity: sha512-V+IxPAE2FvXpTCHXyNem0M+gWm6J7eRyWPR6vYoG/Gl+IscNOjXzztUhimQgTxaAoUoj40Qqimaa0NLIOOAH4w==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
     hasBin: true
+
+  vite-plugin-monaco-editor@1.1.0:
+    resolution: {integrity: sha512-IvtUqZotrRoVqwT0PBBDIZPNraya3BxN/bfcNfnxZ5rkJiGcNtO5eAOWWSgT7zullIAEqQwxMU83yL9J5k7gww==}
+    peerDependencies:
+      monaco-editor: '>=0.33.0'
 
   vite@6.2.6:
     resolution: {integrity: sha512-9xpjNl3kR4rVDZgPNdTL0/c6ao4km69a/2ihNQbcANz8RuCOK3hQBmLSJf3bRKVQjVMda+YvizNE8AwvogcPbw==}
@@ -4146,6 +4186,18 @@ snapshots:
       - luxon
       - moment
 
+  antlr4-c3@3.3.7(antlr4ng-cli@1.0.7):
+    dependencies:
+      antlr4ng: 2.0.11(antlr4ng-cli@1.0.7)
+    transitivePeerDependencies:
+      - antlr4ng-cli
+
+  antlr4ng-cli@1.0.7: {}
+
+  antlr4ng@2.0.11(antlr4ng-cli@1.0.7):
+    dependencies:
+      antlr4ng-cli: 1.0.7
+
   argparse@2.0.1: {}
 
   aria-query@5.3.0:
@@ -4420,6 +4472,13 @@ snapshots:
     dependencies:
       '@babel/runtime': 7.27.0
       csstype: 3.1.3
+
+  dt-sql-parser@4.1.1(antlr4ng-cli@1.0.7):
+    dependencies:
+      antlr4-c3: 3.3.7(antlr4ng-cli@1.0.7)
+      antlr4ng: 2.0.11(antlr4ng-cli@1.0.7)
+    transitivePeerDependencies:
+      - antlr4ng-cli
 
   dunder-proto@1.0.1:
     dependencies:
@@ -5230,6 +5289,13 @@ snapshots:
       brace-expansion: 2.0.1
 
   monaco-editor@0.52.2: {}
+
+  monaco-sql-languages@0.13.1(antlr4ng-cli@1.0.7)(monaco-editor@0.52.2):
+    dependencies:
+      dt-sql-parser: 4.1.1(antlr4ng-cli@1.0.7)
+      monaco-editor: 0.52.2
+    transitivePeerDependencies:
+      - antlr4ng-cli
 
   ms@2.1.3: {}
 
@@ -6236,6 +6302,10 @@ snapshots:
       - terser
       - tsx
       - yaml
+
+  vite-plugin-monaco-editor@1.1.0(monaco-editor@0.52.2):
+    dependencies:
+      monaco-editor: 0.52.2
 
   vite@6.2.6(less@4.3.0)(yaml@2.7.1):
     dependencies:
