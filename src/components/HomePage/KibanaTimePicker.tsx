@@ -65,8 +65,8 @@ interface KibanaTimePickerProps {
   value?: [string, string];
   presetKey?: string;
   onChange?: (range: [string, string], presetKey?: string, displayText?: string) => void;
-  onTimeGroupingChange?: (value: string) => void;
-  timeGrouping?: string;
+  onTimeGroupingChange?: (value: 'minute' | 'hour' | 'day' | 'month') => void;
+  timeGrouping?: 'minute' | 'hour' | 'day' | 'month';
   displayText?: string;
 }
 
@@ -102,6 +102,9 @@ export const KibanaTimePicker: React.FC<KibanaTimePickerProps> = ({
   
   // 选项卡值
   const [activeTab, setActiveTab] = useState('quick');
+  
+  // 内部状态跟踪时间分组
+  const [currentTimeGrouping, setCurrentTimeGrouping] = useState(timeGrouping);
   
   // 相对时间设置
   const [relativeTimeSettings, setRelativeTimeSettings] = useState({
@@ -364,6 +367,11 @@ export const KibanaTimePicker: React.FC<KibanaTimePickerProps> = ({
     }
   }, [value, presetKey]);
   
+  // 监听外部 timeGrouping 属性变化
+  useEffect(() => {
+    setCurrentTimeGrouping(timeGrouping);
+  }, [timeGrouping]);
+  
   return (
     <div className="kibana-time-picker-container" style={{ width: '400px' }}>
       {/* 顶部显示已选择时间范围和时间导航控件 */}
@@ -435,12 +443,27 @@ export const KibanaTimePicker: React.FC<KibanaTimePickerProps> = ({
             <div style={{ marginBottom: '8px' }}>时间分组：</div>
             <Radio.Group
               options={timeGroupingOptions}
-              value={timeGrouping}
+              value={currentTimeGrouping}
               optionType="button"
               buttonStyle="solid"
               onChange={e => {
+                const newTimeGrouping = e.target.value;
+                setCurrentTimeGrouping(newTimeGrouping);
                 if (onTimeGroupingChange) {
-                  onTimeGroupingChange(e.target.value);
+                  onTimeGroupingChange(newTimeGrouping);
+                  
+                  // 在修改时间分组时，也重新应用当前时间范围以触发数据更新
+                  if (selectedRange.presetKey && selectedRange.presetKey !== 'custom' && 
+                      selectedRange.presetKey !== 'relative' && selectedRange.presetKey !== 'moved') {
+                    // 如果是预设，重新应用该预设
+                    const preset = QUICK_RANGES.find(r => r.key === selectedRange.presetKey);
+                    if (preset) {
+                      updateTimeRange(preset.from(), preset.to(), preset.key);
+                    }
+                  } else {
+                    // 如果是自定义时间范围，直接重新应用当前的时间范围
+                    updateTimeRange(selectedRange.start, selectedRange.end, selectedRange.presetKey);
+                  }
                 }
               }}
               style={{ display: 'flex', flexWrap: 'wrap' }}

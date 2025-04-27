@@ -12,13 +12,15 @@ interface HistogramChartProps {
     timePoint: string;
     count: number;
   }>;
+  timeGrouping?: 'minute' | 'hour' | 'day' | 'month';
 }
 
 export const HistogramChart = ({ 
   show,
   onTimeRangeChange,
   onToggle,
-  distributionData
+  distributionData,
+  timeGrouping = 'minute'
 }: HistogramChartProps) => {
   // 增强调试日志，检查组件接收到的数据
   useEffect(() => {
@@ -31,11 +33,11 @@ export const HistogramChart = ({
     });
   }, [show, distributionData]);
   
-  // 按小时聚合数据，将相同小时的数据合并
+  // 根据timeGrouping聚合数据
   const aggregatedData = useMemo(() => {
     if (!distributionData || distributionData.length === 0) {
       console.log('没有分布数据，返回空结果');
-      return { hourlyData: [], hourLabels: [], originalData: [] };
+      return { groupedData: [], groupLabels: [], originalData: [] };
     }
 
     // 当只有一个时间点时，直接使用该时间点
@@ -43,15 +45,15 @@ export const HistogramChart = ({
       const timePoint = distributionData[0].timePoint;
       const count = distributionData[0].count;
       return {
-        hourlyData: [count],
-        hourLabels: [timePoint],
+        groupedData: [count],
+        groupLabels: [timePoint],
         originalData: [{ timePoint, count }]
       };
     }
 
-    // 按小时聚合数据
-    const hourMap = new Map();
-    const original = [];
+    // 按不同粒度聚合数据
+    const groupMap = new Map<string, number>();
+    const original: Array<{timePoint: string; count: number}> = [];
 
     // 对数据按时间排序
     const sortedData = [...distributionData].sort((a, b) => {
@@ -61,23 +63,40 @@ export const HistogramChart = ({
     // 聚合数据
     sortedData.forEach(item => {
       const date = new Date(item.timePoint);
-      const hourKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:00`;
+      let groupKey = '';
       
-      if (!hourMap.has(hourKey)) {
-        hourMap.set(hourKey, 0);
+      switch(timeGrouping) {
+        case 'minute':
+          groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+          break;
+        case 'hour':
+          groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:00`;
+          break;
+        case 'day':
+          groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+          break;
+        case 'month':
+          groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          break;
+        default:
+          groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:00`;
       }
       
-      hourMap.set(hourKey, hourMap.get(hourKey) + item.count);
+      if (!groupMap.has(groupKey)) {
+        groupMap.set(groupKey, 0);
+      }
+      
+      groupMap.set(groupKey, (groupMap.get(groupKey) || 0) + item.count);
       original.push(item);
     });
 
     // 转换为数组
-    const hourLabels = Array.from(hourMap.keys());
-    const hourlyData = Array.from(hourMap.values());
+    const groupLabels = Array.from(groupMap.keys());
+    const groupedData = Array.from(groupMap.values());
 
     return {
-      hourlyData,
-      hourLabels,
+      groupedData,
+      groupLabels,
       originalData: original
     };
   }, [distributionData]);
@@ -98,9 +117,26 @@ export const HistogramChart = ({
     },
     xAxis: {
       type: 'category',
-      data: aggregatedData.hourLabels,
+      data: aggregatedData.groupLabels,
       axisTick: {
         alignWithLabel: true
+      },
+      axisLabel: {
+        formatter: (value: string) => {
+          // 根据分组粒度调整x轴标签显示格式
+          switch(timeGrouping) {
+            case 'minute':
+              return value.substring(11, 16); // 显示时分
+            case 'hour':
+              return value.substring(11, 13) + ':00'; // 显示小时
+            case 'day':
+              return value.substring(5, 10); // 显示月日
+            case 'month':
+              return value.substring(5, 7) + '月'; // 显示月份
+            default:
+              return value.substring(11, 16);
+          }
+        }
       }
     },
     yAxis: {
@@ -111,7 +147,7 @@ export const HistogramChart = ({
         name: '日志数量',
         type: 'bar',
         barWidth: '60%',
-        data: aggregatedData.hourlyData
+        data: aggregatedData.groupedData
       }
     ]
   }), [aggregatedData]);
@@ -120,22 +156,40 @@ export const HistogramChart = ({
   const handleChartClick = (params: any) => {
     if (params.componentType === 'series') {
       const index = params.dataIndex;
-      const selectedHour = aggregatedData.hourLabels[index];
+      const selectedGroup = aggregatedData.groupLabels[index];
       
-      // 查找对应小时内的第一个和最后一个时间点
-      const hourItems = aggregatedData.originalData.filter(item => {
+      // 查找对应分组内的第一个和最后一个时间点
+      const groupItems = aggregatedData.originalData.filter(item => {
         const date = new Date(item.timePoint);
-        const hourKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:00`;
-        return hourKey === selectedHour;
+        let groupKey = '';
+        
+        switch(timeGrouping) {
+          case 'minute':
+            groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+            break;
+          case 'hour':
+            groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:00`;
+            break;
+          case 'day':
+            groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            break;
+          case 'month':
+            groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            break;
+          default:
+            groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:00`;
+        }
+        
+        return groupKey === selectedGroup;
       });
       
-      if (hourItems.length > 0) {
-        // 对小时内的数据按时间排序
-        hourItems.sort((a, b) => new Date(a.timePoint).getTime() - new Date(b.timePoint).getTime());
+      if (groupItems.length > 0) {
+        // 对分组内的数据按时间排序
+        groupItems.sort((a, b) => new Date(a.timePoint).getTime() - new Date(b.timePoint).getTime());
         
         // 获取时间范围
-        const start = hourItems[0].timePoint;
-        const end = hourItems[hourItems.length - 1].timePoint;
+        const start = groupItems[0].timePoint;
+        const end = groupItems[groupItems.length - 1].timePoint;
         
         // 调用回调函数更新时间范围
         onTimeRangeChange([start, end]);

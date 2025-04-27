@@ -89,7 +89,7 @@ const SQLEditorImpl: React.FC = () => {
   const [selectedSource, setSelectedSource] = useState<string>('');
   const [databaseSchema, setDatabaseSchema] = useState<SchemaResult | null>(null);
   const [loadingSchema, setLoadingSchema] = useState<boolean>(false);
-  const [sqlQuery, setSqlQuery] = useState<string>('SELECT * FROM ');
+  const [sqlQuery, setSqlQuery] = useState<string>('');
   const [queryResults, setQueryResults] = useState<QueryResult | null>(null);
   const [loadingResults, setLoadingResults] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>('results');

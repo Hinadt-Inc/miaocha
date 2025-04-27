@@ -75,6 +75,7 @@ const createRequestSignature = (params: any): string => {
 };
 
 export const useLogData = (queryParams: UseLogDataParams): UseLogDataReturn => {
+  console.log('useLogData - 初始查询参数:', queryParams);
   const [tableData, setTableData] = useState<LogData[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [hasMore, setHasMore] = useState<boolean>(true);

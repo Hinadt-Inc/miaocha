@@ -181,19 +181,21 @@ const HomePage = () => {
   }, []);
 
   // 使用useMemo优化搜索参数构建，减少不必要的对象创建
+  const [timeGrouping, setTimeGrouping] = useState<'minute' | 'hour' | 'day' | 'month'>('minute');
+
   const searchParams = useMemo(() => ({
     datasourceId: selectedTable ? Number(selectedTable.split('-')[0]) : 1,
     tableName: selectedTable ? selectedTable.split('-')[1] : '',
     keyword: searchQuery,
     whereSql: whereSql,
-    timeRange: timeRange ? `${timeRange[0]}_${timeRange[1]}` : undefined,
-    timeGrouping: 'minute', // 默认按分钟分组
+    timeRange: timeRange ? `${timeRange[0]}-${timeRange[1]}` : undefined,
+    timeGrouping: timeGrouping,
     pageSize: 50,
     offset: 0,
     fields: selectedFields,
     startTime: timeRange ? timeRange[0] : undefined,
     endTime: timeRange ? timeRange[1] : undefined,
-  }), [selectedTable, searchQuery, whereSql, timeRange, selectedFields]);
+  }), [selectedTable, searchQuery, whereSql, timeRange, selectedFields, timeGrouping]);
 
   // 获取表权限数据，优化为仅在组件挂载时执行一次
   useEffect(() => {
@@ -329,6 +331,7 @@ const HomePage = () => {
     setTimeRangePreset(preset);
     setTimeDisplayText(displayText);
     
+    
     // 当有时间范围变化时，如果是有数据的情况下，重新加载数据
     if (range && tableDataRef.current.length > 0) {
       resetData();
@@ -423,12 +426,14 @@ const HomePage = () => {
         timeRange={timeRange}
         timeRangePreset={timeRangePreset}
         timeDisplayText={timeDisplayText}
+        timeGrouping={timeGrouping}
         onSearch={setSearchQuery}
         onWhereSqlChange={setWhereSql}
         onSubmitSearch={handleSubmitSearch}
         onSubmitSql={handleSubmitSql}
         onTimeRangeChange={handleTimeRangeChange}
         onOpenTimeSelector={() => setShowTimePicker(true)}
+        onTimeGroupingChange={setTimeGrouping}
       />
       
       <Layout className="layout-content">
@@ -457,6 +462,7 @@ const HomePage = () => {
                 onTimeRangeChange={handleTimeRangeChange}
                 onToggle={() => handleToggleHistogram(false)}
                 distributionData={distributionData}
+                timeGrouping={searchParams.timeGrouping}
               />
             </Suspense>
           )}
@@ -588,21 +594,20 @@ const HomePage = () => {
         width={600}
       >
         <Suspense fallback={<Skeleton active paragraph={{ rows: 5 }} />}>
-          <KibanaTimePicker
-            value={timeRange}
-            presetKey={timeRangePreset || undefined}
-            onChange={(range, preset, displayText) => {
-              handleTimeRangeChange(range, preset, displayText);
-              setShowTimePicker(false);
-            }}
-            onTimeGroupingChange={(value) => {
-              // 更新时间分组设置并重新加载数据
-              if (tableDataRef.current.length > 0) {
-                resetData();
-              }
-            }}
-            timeGrouping={searchParams.timeGrouping}
-          />
+              <KibanaTimePicker
+                value={timeRange}
+                presetKey={timeRangePreset || undefined}
+                onChange={(range, preset, displayText) => {
+                  handleTimeRangeChange(range, preset, displayText);
+                  setShowTimePicker(false);
+                }}
+                onTimeGroupingChange={(value: 'minute' | 'hour' | 'day' | 'month') => {
+                  // 确保searchParams包含最新timeGrouping
+                  searchParams.timeGrouping = value;
+                  setTimeGrouping(value);
+                }}
+                timeGrouping={timeGrouping}
+            />
         </Suspense>
       </Modal>
     )}

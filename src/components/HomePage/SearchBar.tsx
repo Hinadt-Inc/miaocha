@@ -59,12 +59,14 @@ interface SearchBarProps {
   timeRange?: [string, string] | null;
   timeRangePreset?: string | null;
   timeDisplayText?: string;
+  timeGrouping?: 'minute' | 'hour' | 'day' | 'month';
   onSearch: (query: string) => void;
   onWhereSqlChange: (sql: string) => void;
   onSubmitSearch: () => void;
   onSubmitSql: () => void;
   onTimeRangeChange?: (range: [string, string], preset?: string, displayText?: string) => void;
   onOpenTimeSelector?: () => void;
+  onTimeGroupingChange?: (grouping: 'minute' | 'hour' | 'day' | 'month') => void;
 }
 
 export const SearchBar = ({ 
@@ -73,12 +75,13 @@ export const SearchBar = ({
   timeRange,
   timeRangePreset,
   timeDisplayText,
+  timeGrouping,
   onSearch,
   onWhereSqlChange,
   onSubmitSearch,
   onSubmitSql,
   onTimeRangeChange,
-  onOpenTimeSelector
+  onTimeGroupingChange,
 }: SearchBarProps) => {
   // 修复 useRef 的使用方式，改用 useState 初始化历史记录
   const [searchHistory, setSearchHistory] = useState<string[]>(() => {
@@ -253,6 +256,12 @@ export const SearchBar = ({
       setActiveFilters(prev => ({ ...prev, time: true }));
     }
   }, [onTimeRangeChange]);
+  // 应用时间分组
+  const applyTimeGrouping = useCallback((grouping: 'minute' | 'hour' | 'day' | 'month') => {
+    if (onTimeGroupingChange) {
+      onTimeGroupingChange(grouping);
+    }
+  }, [onTimeGroupingChange]);
 
   // 获取时间范围显示文本
   const getTimeRangeDisplayText = useCallback((): string => {
@@ -417,7 +426,7 @@ export const SearchBar = ({
   }, [
     searchInputValue, sqlInputValue, timeRange, activeFilters, 
     onSearch, onWhereSqlChange, onSubmitSearch, onSubmitSql, 
-    onTimeRangeChange, timeDisplayText, getTimeRangeDisplayText
+    onTimeRangeChange, timeDisplayText, getTimeRangeDisplayText, onTimeGroupingChange
   ]);
 
   return (
@@ -499,18 +508,15 @@ export const SearchBar = ({
                           setShowTimePicker(false);
                         }
                       }}
-                      timeGrouping="minute"
-                      onTimeGroupingChange={(value) => {
-                        // 如果需要处理时间分组变化，可以在这里添加
-                        console.log('Time grouping changed:', value);
-                      }}
+                      timeGrouping={timeGrouping}
+                      onTimeGroupingChange={onTimeGroupingChange}
                     />
                   }
                   trigger="hover"
                   open={showTimePicker}
                   onOpenChange={setShowTimePicker}
                   placement="bottomRight"
-                  overlayStyle={{ width: 'auto', maxWidth: '450px' }}
+                  style={{ width: 'auto', maxWidth: '450px' }}
                   arrow={true}
                 >
                   <Button type="text" size="small" icon={<ClockCircleOutlined />}>
