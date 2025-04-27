@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { Avatar, Modal, Dropdown, Button, Typography, Space, Spin, Descriptions, Tooltip, Card, Row, Col, Divider, Tag } from 'antd';
+import { Avatar, Modal, Dropdown, Button, Typography, Space, Spin, Descriptions, Tooltip, Card, Row, Col, Divider, Tag, App } from 'antd';
 import type { MenuProps } from 'antd';
 import { 
   UserOutlined, 
@@ -89,6 +89,7 @@ const UserProfile: React.FC = () => {
   const user = useSelector((state: { user: UserStateType }) => state.user);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const isMenuCollapsed = useMenuCollapsed();
+  const { modal } = App.useApp(); // 在组件顶层调用 App.useApp()
   
   // 根据菜单栏收缩状态设置样式
   const avatarStyle = {
@@ -96,14 +97,18 @@ const UserProfile: React.FC = () => {
   };
 
   const confirmLogout = () => {
-    Modal.confirm({
+    modal.confirm({ // 使用之前获取的 modal
       title: '确认退出登录',
       content: '您确定要退出当前账号吗？',
       okText: '确认',
       cancelText: '取消',
       onOk: async () => {
-        await dispatch(logoutUser());
-        navigate('/login');
+        try {
+          await dispatch(logoutUser());
+          navigate('/login');
+        } catch (error) {
+          console.error('退出登录失败:', error);
+        }
       },
     });
   };
