@@ -422,17 +422,11 @@ export const SearchBar = ({
 
   return (
     <div className="search-bar-container">
-      <Card bodyStyle={{ padding: '16px' }}>
+      <Card>
         <div className="search-sections">
           <div className="search-section">
             <div className="search-section-title">
-              <Space>
-                <SearchOutlined />
-                <span>关键词搜索</span>
-                <Tooltip title="支持 'error' || 'timeout' 或 'error' && 'timeout' 语法，最多支持两层嵌套">
-                  <InfoCircleOutlined style={{ color: '#8c8c8c', cursor: 'help' }} />
-                </Tooltip>
-              </Space>
+            关键词搜索
             </div>
             <div className="search-section-content">
               <Space.Compact style={{ width: '100%' }}>
@@ -463,12 +457,8 @@ export const SearchBar = ({
           <div className="search-section">
             <div className="search-section-title">
               <Space>
-                <CodeOutlined />
                 <span>SQL条件查询</span>
-                <Tooltip title="输入SQL WHERE子句，例如: level = 'ERROR' and service_name = 'user-service'">
-                  <InfoCircleOutlined style={{ color: '#8c8c8c', cursor: 'help' }} />
-                </Tooltip>
-                <Dropdown menu={{ items: templateMenuItems }} trigger={['click']}>
+                <Dropdown menu={{ items: templateMenuItems }} trigger={['hover']}>
                   <Button type="text" size="small" icon={<StarOutlined />}>
                     模板
                   </Button>
@@ -516,7 +506,7 @@ export const SearchBar = ({
                       }}
                     />
                   }
-                  trigger="click"
+                  trigger="hover"
                   open={showTimePicker}
                   onOpenChange={setShowTimePicker}
                   placement="bottomRight"

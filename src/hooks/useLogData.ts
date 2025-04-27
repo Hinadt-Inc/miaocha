@@ -1,7 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { message } from 'antd';
 import { searchLogs, getLogDistribution } from '../api/logs';
-import type { LogQueryParams, LogRecord, DistributionPoint } from '../types/logDataTypes';
+
+// 添加必要的类型定义
+// LogRecord类型定义
+export interface LogRecord {
+  _id?: string; // 前端生成的唯一ID
+  [key: string]: unknown; // 其他字段
+}
+
+// 日志分布点类型定义
+export interface DistributionPoint {
+  timePoint: string;
+  count: number;
+}
 
 interface UseLogDataParams {
   datasourceId: number;
@@ -15,7 +27,6 @@ interface UseLogDataParams {
   fields: string[];
   startTime?: string;
   endTime?: string;
-
 }
 
 interface UseLogDataReturn {
@@ -171,13 +182,23 @@ export const useLogData = (queryParams: UseLogDataParams): UseLogDataReturn => {
         const response = await searchLogs(params);
         console.log('查询结果:', response);
         if (offset === 0) {
-          setTableData(response.records || []);
+          // 为每条记录添加唯一ID
+          const recordsWithId = (response.rows || []).map((record: Record<string, unknown>, index: number) => ({
+            ...record,
+            _id: `${Date.now()}-${index}`
+          }));
+          setTableData(recordsWithId);
           setDistributionData(response.distributionData || []);
         } else {
-          setTableData(prev => [...prev, ...response.records]);
+          // 为每条记录添加唯一ID，并确保与已有记录ID不重复
+          const recordsWithId = (response.rows || []).map((record: Record<string, unknown>, index: number) => ({
+            ...record,
+            _id: `${Date.now()}-${offset}-${index}`
+          }));
+          setTableData(prev => [...prev, ...recordsWithId]);
         }
         
-        setHasMore(response.hasMore || false);
+        setHasMore(response.totalCount > (offset + (queryParams.pageSize || 50)));
         setLoading(false);
         
       } catch (err) {

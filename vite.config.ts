@@ -34,7 +34,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://10.254.133.210:32088/',
+        target: 'http://10.254.133.210:32088',
         changeOrigin: true,
       }
     }
@@ -54,6 +54,6 @@ export default defineConfig({
     ]
   },
   esbuild: {
-    jsxInject: `import React from 'react'`
+    jsxInject: `import React from 'react'`,
   }
 })

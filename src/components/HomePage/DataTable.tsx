@@ -159,7 +159,6 @@ export const DataTable = ({
   if (dataRef.current !== data) {
     dataRef.current = data;
   }
-
   // 缓存列宽计算函数
   const getColumnWidth = useMemo(() => memoize((field: string, width: number) => {
     if (!width) return undefined;
@@ -177,14 +176,7 @@ export const DataTable = ({
   // 生成表格列配置，并使用useMemo缓存结果
   const tableColumns = useMemo(() => {
     return selectedFields.map(field => ({
-      title: (
-        <Space>
-          {field}
-          <Tooltip title={`字段: ${field}`}>
-            <InfoCircleOutlined style={{ fontSize: '12px', color: '#8c8c8c' }} />
-          </Tooltip>
-        </Space>
-      ),
+      title: field,
       dataIndex: field,
       key: field,
       width: getColumnWidth(field, tableWidth),
@@ -204,12 +196,12 @@ export const DataTable = ({
         const valA = a[field];
         const valB = b[field];
         
-        if (typeof valA === 'number' && typeof valB === 'number') {
-          return valA - valB;
-        }
+      //   if (typeof valA === 'number' && typeof valB === 'number') {
+      //     return valA - valB;
+      //   }
         
-        return String(valA).localeCompare(String(valB));
-      },
+      //   return String(valA).localeCompare(String(valB));
+      // },
     }));
   }, [selectedFields, lastAddedField, activeRowKey, searchQuery, tableWidth, getColumnWidth]);
 
@@ -228,33 +220,6 @@ export const DataTable = ({
         <Typography.Title level={4} style={{ marginBottom: 16 }}>
           未找到匹配的数据
         </Typography.Title>
-        <Space direction="vertical" style={{ width: '100%', textAlign: 'center' }}>
-          <Text type="secondary">
-            {searchQuery ? 
-              '没有符合当前搜索条件的数据记录' : 
-              '当前视图没有数据可显示'}
-          </Text>
-          {searchQuery && (
-            <div>
-              <Text type="secondary">您可以尝试：</Text>
-              <ul style={{ textAlign: 'left', display: 'inline-block', marginTop: 8 }}>
-                <li><SearchOutlined /> 修改搜索关键词</li>
-                <li><TableOutlined /> 调整选择的表或字段</li>
-                <li><DatabaseOutlined /> 检查时间范围设置</li>
-              </ul>
-            </div>
-          )}
-          {!searchQuery && (
-            <Space direction="vertical" size="middle" style={{ marginTop: 16 }}>
-              <Text type="secondary">
-                请从左侧选择数据表和字段，或使用顶部搜索框进行查询
-              </Text>
-              <Button type="primary" icon={<SearchOutlined />}>
-                开始搜索
-              </Button>
-            </Space>
-          )}
-        </Space>
       </div>
     );
 
@@ -262,7 +227,6 @@ export const DataTable = ({
       <div className="custom-empty-state">
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          imageStyle={{ height: 80 }}
           description={description}
         />
       </div>
@@ -272,7 +236,9 @@ export const DataTable = ({
   // 处理行展开状态改变
   const handleExpand = useCallback((expanded: boolean, record: LogData) => {
     const key = record.key as React.Key;
+    console.log('handleExpand', expanded, record);
     if (expanded) {
+
       // 只展开当前行，不影响其他行
       setExpandedRowKeys([key]);
       setActiveRowKey(record.key as string);
@@ -323,6 +289,8 @@ export const DataTable = ({
       });
     }
   }, [loading, onScroll]);
+
+  console.log(222,data)
 
   return (
     <div 

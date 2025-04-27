@@ -42,20 +42,24 @@ function AppWrapper() {
   return (
     <ProLayout
       location={location}
-      className={`app-layout ${mode === 'dark' ? 'dark' : 'light'}`}
+      className='app-wrapper'
       siderMenuType="group"
       fixSiderbar
       fixedHeader
       layout="mix"
       splitMenus
-      title="Hina Cloud BI"
-      logo="https://gw.alipayobjects.com/zos/rmsportal/KDpgvguMpGfqaHPjicRK.svg"
+      title="日志查询平台"
       contentStyle={{ 
         background: mode === 'dark' ? '#141414' : '#f0f2f5',
         padding: '16px',
         minHeight: 'calc(100vh - 64px)'
       }}
       openKeys={openKeys}
+      logo="/logo.png"
+      breakpoint={false}
+      defaultCollapsed={true}
+      siderWidth={220}
+      colorPrimary='#0038FF'
       route={{
         path: '/',
         routes: [
