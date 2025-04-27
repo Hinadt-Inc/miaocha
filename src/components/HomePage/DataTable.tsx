@@ -196,12 +196,12 @@ export const DataTable = ({
         const valA = a[field];
         const valB = b[field];
         
-      //   if (typeof valA === 'number' && typeof valB === 'number') {
-      //     return valA - valB;
-      //   }
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return valA - valB;
+        }
         
-      //   return String(valA).localeCompare(String(valB));
-      // },
+        return String(valA || '').localeCompare(String(valB || ''));
+      }
     }));
   }, [selectedFields, lastAddedField, activeRowKey, searchQuery, tableWidth, getColumnWidth]);
 
