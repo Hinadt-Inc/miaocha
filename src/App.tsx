@@ -1,7 +1,7 @@
 import './App.less'
 import { App as AntdApp } from 'antd'
 import { ProLayout } from '@ant-design/pro-components'
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 import { 
   CompassOutlined,
   DashboardOutlined,
@@ -14,12 +14,18 @@ import UserProfile from './components/User/UserProfile'
 
 function AppWrapper() {
   const location = useLocation()
-  const navigate = useNavigate()
   const user = useSelector((state: { user: { name: string; isLoggedIn: boolean } }) => state.user)
   
   return (
     <ProLayout
       location={location}
+      className='app-wrapper'
+      title="日志查询平台"
+      logo="/logo.png"
+      breakpoint={false}
+      defaultCollapsed={true}
+      siderWidth={220}
+      colorPrimary='#0038FF'
       route={{
         path: '/',
         routes: [

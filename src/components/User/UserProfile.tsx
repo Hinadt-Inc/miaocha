@@ -1,17 +1,72 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { Avatar, Modal, Dropdown, Button, Typography, Space, Spin, Descriptions, Tooltip } from 'antd';
+import { Avatar, Modal, Dropdown, Button, Typography, Space, Spin, Descriptions, Tooltip, Card, Row, Col, Divider, Tag } from 'antd';
 import type { MenuProps } from 'antd';
 import { 
   UserOutlined, 
   LogoutOutlined, 
   SettingOutlined,
   MailOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+  IdcardOutlined,
+  TeamOutlined,
+  ClockCircleOutlined
 } from '@ant-design/icons';
 import { fetchUserInfo, logoutUser } from '../../store/userSlice';
 import type { AppDispatch } from '../../store/store';
+
+// 自定义hook，用于检测菜单栏收缩状态
+const useMenuCollapsed = (): boolean => {
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    // 初始化时检查一次收缩状态
+    const sider = document.querySelector('.ant-pro-sider');
+    return sider ? sider.classList.contains('ant-pro-sider-collapsed') : false;
+  });
+
+  useEffect(() => {
+    // 检查菜单栏收缩状态
+    const checkCollapsedState = () => {
+      const sider = document.querySelector('.ant-pro-sider');
+      if (sider) {
+        const isCollapsed = sider.classList.contains('ant-pro-sider-collapsed');
+        setCollapsed(isCollapsed);
+      }
+    };
+
+    // 使用ResizeObserver监听侧边栏大小变化
+    const resizeObserver = new ResizeObserver(() => {
+      checkCollapsedState();
+    });
+    
+    // 监听侧边栏元素的变化
+    const sider = document.querySelector('.ant-pro-sider');
+    if (sider) {
+      resizeObserver.observe(sider);
+    }
+
+    // 创建MutationObserver来监听侧边栏类名变化
+    const mutationObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          checkCollapsedState();
+          break;
+        }
+      }
+    });
+    
+    if (sider) {
+      mutationObserver.observe(sider, { attributes: true });
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
+    };
+  }, []);
+
+  return collapsed;
+};
 
 const { Text } = Typography;
 
@@ -33,6 +88,12 @@ const UserProfile: React.FC = () => {
   const navigate = useNavigate();
   const user = useSelector((state: { user: UserStateType }) => state.user);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const isMenuCollapsed = useMenuCollapsed();
+  
+  // 根据菜单栏收缩状态设置样式
+  const avatarStyle = {
+    marginRight: isMenuCollapsed ? 0 : 8,
+  };
 
   const confirmLogout = () => {
     Modal.confirm({
@@ -115,73 +176,179 @@ const UserProfile: React.FC = () => {
 
   return (
     <>
-      <Dropdown menu={{ items }} placement="bottomRight" arrow>
-        <Button type="text" className="user-profile-button">
-          <Space>
+      <Dropdown menu={{ items }} arrow>
+        <Button type="text" className="user-profile-button" style={{ padding: isMenuCollapsed ? '4px 8px' : undefined }}>
+          <Space size={isMenuCollapsed ? 0 : 'small'} align="center">
             <Avatar 
               src={user.avatar} 
               icon={!user.avatar ? <UserOutlined /> : undefined} 
-              size="small" 
+              size="small"
+              style={avatarStyle}
             />
             {user.loading ? (
               <Spin size="small" />
             ) : (
-              <Space>
-                <Text ellipsis style={{ maxWidth: 120 }}>
-                  {user.name || '用户'}
-                </Text>
-                {user.error && (
-                  <Tooltip title="重新获取用户信息">
-                    <ReloadOutlined onClick={handleRetryFetchUserInfo} style={{ cursor: 'pointer' }} />
-                  </Tooltip>
-                )}
-              </Space>
+              !isMenuCollapsed && (
+                <Space>
+                  <Text ellipsis style={{ maxWidth: 120 }}>
+                    {user.name || '用户'}
+                  </Text>
+                  {user.error && (
+                    <Tooltip title="重新获取用户信息">
+                      <ReloadOutlined onClick={handleRetryFetchUserInfo} style={{ cursor: 'pointer' }} />
+                    </Tooltip>
+                  )}
+                </Space>
+              )
             )}
           </Space>
         </Button>
       </Dropdown>
 
       <Modal
-        title="个人资料"
+        title={null}
         open={isModalVisible}
         onCancel={handleCancel}
         footer={null}
-        width={600}
+        width={700}
         centered
+        closable={false}
+        className="user-profile-modal"
       >
         {user.loading ? (
-          <div style={{ textAlign: 'center', padding: '20px' }}>
+          <div style={{ textAlign: 'center', padding: '60px 20px' }}>
             <Spin size="large" />
-            <p style={{ marginTop: '10px' }}>正在获取用户信息...</p>
+            <p style={{ marginTop: '16px', fontSize: '16px', color: '#8c8c8c' }}>正在获取用户信息...</p>
           </div>
         ) : user.error ? (
-          <div style={{ textAlign: 'center', padding: '20px' }}>
-            <p style={{ marginBottom: '20px' }}>获取用户信息失败: {user.error}</p>
+          <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+            <p style={{ marginBottom: '24px', fontSize: '16px', color: '#ff4d4f' }}>获取用户信息失败: {user.error}</p>
             <Button 
               type="primary" 
               icon={<ReloadOutlined />} 
               onClick={handleRetryFetchUserInfo}
+              size="large"
+              shape="round"
             >
               重新获取
             </Button>
           </div>
         ) : (
-          <div className="user-info-container" style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-            <div className="user-details-section" style={{ flex: 1 }}>
-              <Descriptions column={1} bordered>
-                <Descriptions.Item label="用户名">{user.name || '未知'}</Descriptions.Item>
-                <Descriptions.Item label="用户ID">{user.id || '未知'}</Descriptions.Item>
-                <Descriptions.Item label="角色">{user.role || '未知'}</Descriptions.Item>
-                <Descriptions.Item label="邮箱">
-                  <Space>
-                    <MailOutlined />
-                    {user.email || '未设置'}
-                  </Space>
-                </Descriptions.Item>
-                <Descriptions.Item label="最后登录时间">
-                  {formatDate(user.lastLoginAt)}
-                </Descriptions.Item>
-              </Descriptions>
+          <div className="user-info-container">
+            {/* 顶部背景区域 */}
+            <div style={{ 
+              height: '120px', 
+              background: 'linear-gradient(135deg, #1890ff 0%, #722ed1 100%)',
+              borderTopLeftRadius: '8px',
+              borderTopRightRadius: '8px',
+              position: 'relative'
+            }}>
+              <div style={{ 
+                position: 'absolute', 
+                top: '70px', 
+                left: '50%', 
+                transform: 'translateX(-50%)',
+                zIndex: 1
+              }}>
+                <Avatar 
+                  src={user.avatar} 
+                  icon={!user.avatar ? <UserOutlined /> : undefined} 
+                  size={100}
+                  style={{ 
+                    border: '4px solid #fff',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                  }}
+                />
+              </div>
+              <Button 
+                type="text" 
+                onClick={handleCancel} 
+                style={{ 
+                  position: 'absolute', 
+                  top: '16px', 
+                  right: '16px',
+                  color: '#fff',
+                  fontSize: '16px'
+                }}
+              >
+                ×
+              </Button>
+            </div>
+            
+            {/* 用户信息内容区 */}
+            <div style={{ padding: '60px 0 40px' }}>
+              <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                <Typography.Title level={3} style={{ margin: '8px 0 4px', fontWeight: 600 }}>
+                  {user.name || '未知用户'}
+                </Typography.Title>
+                <Tag color="blue" style={{ margin: '8px 0', fontSize: '14px', padding: '2px 10px' }}>
+                  {user.role || '未知角色'}
+                </Tag>
+              </div>
+              
+              <Divider style={{ margin: '16px 0 24px' }} />
+              
+              <Row gutter={[24, 24]}>
+                <Col span={8}>
+                  <Card
+                    bordered={false}
+                    className="info-card"
+                    style={{ 
+                      borderRadius: '8px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                      height: '100%'
+                    }}
+                  >
+                    <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                      <div style={{ color: '#8c8c8c', fontSize: '14px', marginBottom: '4px' }}>用户ID</div>
+                      <Space>
+                        <IdcardOutlined style={{ color: '#1890ff' }} />
+                        <Typography.Text strong>{user.id || '未知'}</Typography.Text>
+                      </Space>
+                    </Space>
+                  </Card>
+                </Col>
+                
+                <Col span={8}>
+                  <Card
+                    variant="borderless"
+                    className="info-card"
+                    style={{ 
+                      borderRadius: '8px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                      height: '100%'
+                    }}
+                  >
+                    <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                      <div style={{ color: '#8c8c8c', fontSize: '14px', marginBottom: '4px' }}>邮箱</div>
+                      <Space>
+                        <MailOutlined style={{ color: '#1890ff' }} />
+                        <Typography.Text strong>{user.email || '未设置'}</Typography.Text>
+                      </Space>
+                    </Space>
+                  </Card>
+                </Col>
+                
+                <Col span={8}>
+                  <Card
+                    variant="borderless"
+                    className="info-card"
+                    style={{ 
+                      borderRadius: '8px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                      height: '100%'
+                    }}
+                  >
+                    <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                      <div style={{ color: '#8c8c8c', fontSize: '14px', marginBottom: '4px' }}>最后登录</div>
+                      <Space>
+                        <ClockCircleOutlined style={{ color: '#1890ff' }} />
+                        <Typography.Text strong>{formatDate(user.lastLoginAt)}</Typography.Text>
+                      </Space>
+                    </Space>
+                  </Card>
+                </Col>
+              </Row>
             </div>
           </div>
         )}

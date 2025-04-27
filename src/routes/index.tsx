@@ -1,52 +1,73 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
-// import App from '../App'
-import HomePage from '../pages/HomePage'
-import DashboardPage from '../pages/DashboardPage'
-import UserManagementPage from '../pages/system/UserManagementPage'
-import DataSourceManagementPage from '../pages/system/DataSourceManagementPage'
-import PermissionManagementPage from '../pages/system/PermissionManagementPage'
-import LoginPage from '../pages/LoginPage'
-import SQLEditorPage from '../pages/SQLEditorPage'
+import { Spin } from 'antd'
 
+// 创建统一的加载组件
+const LoadingComponent = () => (
+  <div style={{ 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    height: '100%',
+    width: '100%',
+    position: 'absolute',
+    top: 20,
+    left: 0
+  }}>
+    <Spin size="large" />
+  </div>
+);
+
+// 创建统一的懒加载包装器
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const lazyLoad = (Component: React.LazyExoticComponent<any>) => (
+  <Suspense fallback={<LoadingComponent />}>
+    <Component />
+  </Suspense>
+);
+
+// 懒加载所有页面组件
 const App = lazy(() => import('../App'))
+const HomePage = lazy(() => import('../pages/HomePage'))
+const DashboardPage = lazy(() => import('../pages/DashboardPage'))
+const UserManagementPage = lazy(() => import('../pages/system/UserManagementPage'))
+const DataSourceManagementPage = lazy(() => import('../pages/system/DataSourceManagementPage'))
+const PermissionManagementPage = lazy(() => import('../pages/system/PermissionManagementPage'))
+const LoginPage = lazy(() => import('../pages/LoginPage'))
+const SQLEditorPage = lazy(() => import('../pages/SQLEditorPage'))
 
 export const router = createBrowserRouter([
   {
     path: '/login',
-    element: <LoginPage />,
+    element: lazyLoad(LoginPage),
   },
   {
     path: '/',
-    element: (
-      <Suspense fallback={<div>Loading...</div>}>
-        <App />
-      </Suspense>
-    ),
+    element: <App />,
     children: [
       {
         index: true,
-        element: <HomePage />,
+        element: lazyLoad(HomePage),
       },
       {
         path: 'dashboard',
-        element: <DashboardPage />,
+        element: lazyLoad(DashboardPage),
       },
       {
         path: 'system/user',
-        element: <UserManagementPage />,
+        element: lazyLoad(UserManagementPage),
       },
       {
         path: 'system/datasource',
-        element: <DataSourceManagementPage />,
+        element: lazyLoad(DataSourceManagementPage),
       },
       {
         path: 'system/permission',
-        element: <PermissionManagementPage />,
+        element: lazyLoad(PermissionManagementPage),
       },
       {
         path: 'sql-editor',
-        element: <SQLEditorPage />,
+        element: lazyLoad(SQLEditorPage),
       },
     ],
   },

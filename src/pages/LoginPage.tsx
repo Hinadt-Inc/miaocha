@@ -6,7 +6,6 @@ import { useDispatch } from 'react-redux';
 import { login } from '../store/userSlice';
 import { login as apiLogin } from '../api/auth';
 import './LoginPage.less';
-import reactLogo from '../assets/react.svg';
 
 const { Title, Text } = Typography;
 
@@ -68,8 +67,8 @@ const LoginPage = () => {
         
         <div className="login-form">
           <div className="login-logo">
-            <img src={reactLogo} alt="Logo" />
-            <Title level={3} className="brand-name">Hina Cloud BI</Title>
+            <img src="/logo.png" alt="Logo" />
+            <Title level={3} className="brand-name">日志查询平台</Title>
           </div>
           
           <Title level={4} className="welcome-text">欢迎登录</Title>
