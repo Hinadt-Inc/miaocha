@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
-import { Layout, Space, Button, Modal, Form, Input, Select, Tag, Spin, Skeleton } from 'antd';
+import { Layout, Space, Button, Modal, Form, Input, Select, Tag, Skeleton } from 'antd';
 import { getOperatorsByFieldType, getFieldTypeColor, debounce, memoize, throttle } from '../utils/logDataHelpers';
 import { 
   CompressOutlined,
@@ -11,11 +11,13 @@ import {
 } from '@ant-design/icons';
 import { useLogData } from '../hooks/useLogData';
 import { useFilters } from '../hooks/useFilters';
+import { useGlobalLoading } from '../hooks/useLoading';
 import { SearchBar } from '../components/HomePage/SearchBar';
 import { DataTable } from '../components/HomePage/DataTable';
 import { FieldSelector } from '../components/HomePage/FieldSelector';
 import { getMyTablePermissions } from '../api/permission';
 import { getTableColumns } from '../api/logs';
+import Loading from '../components/Loading';
 import './HomePage.less';
 
 // 使用懒加载优化初始加载时间
@@ -59,6 +61,9 @@ const HomePage = () => {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedTable, setSelectedTable] = useState<string>('');
 
+  // 使用全局加载状态
+  const { isLoading: isGlobalLoading, startLoading, endLoading } = useGlobalLoading();
+
   // 使用refs优化状态管理，减少重新渲染
   const lastAddedFieldRef = useRef<string | null>(null);
   const lastRemovedFieldRef = useRef<string | null>(null);
@@ -94,6 +99,24 @@ const HomePage = () => {
   
   // 添加请求缓存
   const tableColumnsCache = useRef<Record<string, any[]>>({});
+
+  // 将表格加载状态与全局加载状态集成
+  useEffect(() => {
+    if (tableLoading && !isGlobalLoading) {
+      startLoading('tableLoading');
+    } else if (!tableLoading && isGlobalLoading) {
+      endLoading('tableLoading');
+    }
+  }, [tableLoading, isGlobalLoading, startLoading, endLoading]);
+
+  // 将字段加载状态与全局加载状态集成
+  useEffect(() => {
+    if (fieldLoading && !isGlobalLoading) {
+      startLoading('fieldLoading');
+    } else if (!fieldLoading && isGlobalLoading) {
+      endLoading('fieldLoading');
+    }
+  }, [fieldLoading, isGlobalLoading, startLoading, endLoading]);
 
   // 获取表字段，添加缓存和错误处理
   const fetchTableColumns = useCallback(async (tableIdentifier: string) => {
@@ -226,6 +249,19 @@ const HomePage = () => {
     datasourceId: selectedTable ? Number(selectedTable.split('-')[0]) : 1,
     fields: selectedFields
   });
+  
+  // 将数据加载状态与全局加载状态集成
+  useEffect(() => {
+    if (loading && !isGlobalLoading) {
+      startLoading('dataLoading');
+    } else if (!loading && isGlobalLoading) {
+      // 延迟结束加载状态，避免闪烁
+      const timer = setTimeout(() => {
+        endLoading('dataLoading');
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, isGlobalLoading, startLoading, endLoading]);
   
   // 更新ref，但不触发重新渲染
   if (tableDataRef.current !== tableData) {
@@ -389,7 +425,7 @@ const HomePage = () => {
         >
           {tableLoading ? (
             <div style={{ padding: "20px" }}>
-              <Skeleton active paragraph={{ rows: 10 }} />
+              <Loading tip="加载表结构..." size="small" />
             </div>
           ) : (
             <FieldSelector {...fieldSelectorProps} />
@@ -398,7 +434,7 @@ const HomePage = () => {
         
         <Layout className="layout-inner">
           {showHistogram && distributionData && distributionData.length > 0 && (
-            <Suspense fallback={<Skeleton active paragraph={{ rows: 2 }} />}>
+            <Suspense fallback={<Loading tip="加载直方图..." delay={300} />}>
               <HistogramChart
                 show={showHistogram}
                 onTimeRangeChange={handleTimeRangeChange}
@@ -411,11 +447,7 @@ const HomePage = () => {
           <Content className="content-container">
             <div className="table-header">
               <div>
-                {loading ? (
-                  <Spin size="small" style={{ marginRight: 8 }} />
-                ) : (
-                  <span>找到 <b>{tableData.length}</b> 条记录</span>
-                )}
+                <span>找到 <b>{loading ? '...' : tableData.length}</b> 条记录</span>
                 {!selectedTable && (
                   <Tag color="warning" icon={<InfoCircleOutlined />}>请选择数据表</Tag>
                 )}

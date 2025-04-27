@@ -1,20 +1,8 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
+import Loading from '../components/Loading'
 
-// 通用的加载组件
-const PageLoader = () => (
-  <div style={{ 
-    display: 'flex', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    height: '100vh',
-    color: 'var(--text-primary)'
-  }}>
-    加载中...
-  </div>
-);
-
-// 修改懒加载方式，确保正确处理默认导出
+// 修改懒加载方式，确保正确处理默认导出，并使用统一的Loading组件
 const lazyLoad = (path: string, isApp: boolean = false) => {
   // 使用动态导入，并明确解构默认导出
   const Component = lazy(() => 
@@ -32,7 +20,7 @@ const lazyLoad = (path: string, isApp: boolean = false) => {
   );
 
   return (
-    <Suspense fallback={<PageLoader />}>
+    <Suspense fallback={<Loading delay={300} />}>
       <Component />
     </Suspense>
   );

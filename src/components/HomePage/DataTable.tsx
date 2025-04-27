@@ -1,10 +1,12 @@
 import { Table, Divider, Tabs, Card, Tag, Spin, Empty, Typography, Space, Tooltip, Button } from 'antd';
 import { LoadingOutlined, CopyOutlined, InfoCircleOutlined, SearchOutlined, TableOutlined, DatabaseOutlined } from '@ant-design/icons';
 import { LogData } from '../../types/logDataTypes';
-import { useState, useCallback, useRef, useMemo, memo } from 'react';
+import { useState, useCallback, useRef, useMemo, memo, useEffect } from 'react';
 import ResizeObserver from 'rc-resize-observer';
 import { VirtualList } from '../common/VirtualList';
 import { memoize, chunkProcess } from '../../utils/logDataHelpers';
+import { useGlobalLoading, isGlobalLoadingActive } from '../../hooks/useLoading';
+import Loading from '../Loading';
 
 const { Text } = Typography;
 
@@ -154,6 +156,20 @@ export const DataTable = ({
   const [expandedRowKeys, setExpandedRowKeys] = useState<React.Key[]>([]);
   // 添加一个useRef跟踪当前视图中的数据，避免不必要的重新渲染
   const dataRef = useRef<LogData[]>(data);
+  
+  // 使用全局加载状态管理
+  const { isLoading: isGlobalLoading, startLoading, endLoading } = useGlobalLoading();
+  
+  // 当loading状态变化时，更新全局加载状态
+  useEffect(() => {
+    if (loading && !isGlobalLoading) {
+      startLoading();
+    } else if (!loading && isGlobalLoading) {
+      // 延迟结束加载状态，避免闪烁
+      const timer = setTimeout(endLoading, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, isGlobalLoading, startLoading, endLoading]);
   
   // 当数据变化时更新ref，但不触发重新渲染
   if (dataRef.current !== data) {
@@ -479,10 +495,9 @@ export const DataTable = ({
         </div>
       </ResizeObserver>
       
-      {loading && (
+      {loading && !isGlobalLoadingActive() && (
         <div className="loading-container">
-          <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} />
-          <div className="loading-text">加载数据中...</div>
+          <Loading tip="加载数据中..." />
         </div>
       )}
       

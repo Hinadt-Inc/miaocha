@@ -162,7 +162,7 @@ const UserProfile: React.FC = () => {
   if (!user.sessionChecked) {
     return (
       <Button type="text" className="user-profile-button">
-        <Space>
+        <Space align="center">
           <Avatar icon={<UserOutlined />} size="small" />
           <Spin size="small" />
         </Space>
@@ -178,19 +178,24 @@ const UserProfile: React.FC = () => {
     <>
       <Dropdown menu={{ items }} arrow>
         <Button type="text" className="user-profile-button" style={{ padding: isMenuCollapsed ? '4px 8px' : undefined }}>
-          <Space size={isMenuCollapsed ? 0 : 'small'} align="center">
+          <Space size={isMenuCollapsed ? 0 : 'small'} align="center" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Avatar 
               src={user.avatar} 
               icon={!user.avatar ? <UserOutlined /> : undefined} 
               size="small"
-              style={avatarStyle}
+              style={{
+                ...avatarStyle,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             />
             {user.loading ? (
-              <Spin size="small" />
+              <Spin size="small" style={{ display: 'flex', alignItems: 'center' }} />
             ) : (
               !isMenuCollapsed && (
-                <Space>
-                  <Text ellipsis style={{ maxWidth: 120 }}>
+                <Space align="center">
+                  <Text ellipsis style={{ maxWidth: 120, verticalAlign: 'middle' }}>
                     {user.name || '用户'}
                   </Text>
                   {user.error && (
@@ -217,7 +222,7 @@ const UserProfile: React.FC = () => {
       >
         {user.loading ? (
           <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <Spin size="large" />
+            <Spin size="large" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
             <p style={{ marginTop: '16px', fontSize: '16px', color: '#8c8c8c' }}>正在获取用户信息...</p>
           </div>
         ) : user.error ? (
@@ -237,7 +242,7 @@ const UserProfile: React.FC = () => {
           <div className="user-info-container">
             {/* 顶部背景区域 */}
             <div style={{ 
-              height: '120px', 
+              height: '200px', 
               background: 'linear-gradient(135deg, #1890ff 0%, #722ed1 100%)',
               borderTopLeftRadius: '8px',
               borderTopRightRadius: '8px',
@@ -256,7 +261,10 @@ const UserProfile: React.FC = () => {
                   size={100}
                   style={{ 
                     border: '4px solid #fff',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                 />
               </div>

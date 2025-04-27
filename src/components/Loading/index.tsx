@@ -1,20 +1,34 @@
 import React from 'react';
 import { Spin } from 'antd';
+import './loading.less';
 
-  // 创建统一的加载组件
-const Loading: React.FC = () => {
+interface LoadingProps {
+  fullScreen?: boolean;
+  tip?: string;
+  size?: 'small' | 'default' | 'large';
+  delay?: number;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+// 创建统一的加载组件
+const Loading: React.FC<LoadingProps> = ({
+  fullScreen = false,
+  tip = '',
+  size = 'large',
+  delay = 200,
+  className = '',
+  style = {}
+}) => {
   return (
-    <div style={{ 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      height: '100%',
-      width: '100%',
-      position: 'absolute',
-      top: 20,
-      left: 0
-    }}>
-      <Spin size="large" />
+    <div className={`loading-container ${fullScreen ? 'fullscreen' : ''} ${className}`}
+      style={style}
+    >
+      <Spin 
+        size={size} 
+        tip={tip}
+        delay={delay}
+      />
     </div>
   );
 };

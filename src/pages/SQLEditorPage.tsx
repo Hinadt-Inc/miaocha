@@ -5,10 +5,11 @@ import { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } fro
 import { 
   Input, Select, Button, Space, Table, Tabs, 
   Card, Modal, Form, Drawer, Tree, 
-  Tooltip, Badge, Empty, Alert, Tag, Spin, Typography,
+  Tooltip, Badge, Empty, Alert, Tag, Typography,
   Divider, ConfigProvider, Skeleton, App, Checkbox
 } from 'antd';
 import { useMessage } from '../hooks/useMessage';
+import { useGlobalLoading } from '../hooks/useLoading';
 import { 
   PlayCircleOutlined, SaveOutlined, HistoryOutlined,
   DownloadOutlined, CopyOutlined, FileTextOutlined,
@@ -21,6 +22,7 @@ import Editor, { OnMount, loader, Monaco } from '@monaco-editor/react';
 import ReactECharts from 'echarts-for-react';
 import VirtualList from 'rc-virtual-list';
 import debounce from 'lodash/debounce';
+import Loading from '../components/Loading';
 import './SQLEditorPage.less';
 
 // 预加载 Monaco 编辑器
@@ -154,6 +156,10 @@ interface EditorSettings {
 
 export default function SQLEditorPage() {
   const message = useMessage();
+  
+  // 使用全局加载状态管理
+  const { isLoading: isGlobalLoading, startLoading, endLoading } = useGlobalLoading();
+  
   // 使用本地存储保存编辑器设置
   const [editorSettings, setEditorSettings] = useState<EditorSettings>(() => {
     try {
@@ -333,6 +339,37 @@ export default function SQLEditorPage() {
       isMounted = false;
     };
   }, [selectedDataSource, message]);
+
+  // 监听dataSources加载状态，与全局加载状态集成
+  useEffect(() => {
+    if (loadingDataSources && !isGlobalLoading) {
+      startLoading('dataSources');
+    } else if (!loadingDataSources && isGlobalLoading) {
+      endLoading('dataSources');
+    }
+  }, [loadingDataSources, isGlobalLoading, startLoading, endLoading]);
+
+  // 监听schema加载状态，与全局加载状态集成
+  useEffect(() => {
+    if (loadingSchema && !isGlobalLoading) {
+      startLoading('schema');
+    } else if (!loadingSchema && isGlobalLoading) {
+      endLoading('schema');
+    }
+  }, [loadingSchema, isGlobalLoading, startLoading, endLoading]);
+
+  // 监听查询执行状态，与全局加载状态集成
+  useEffect(() => {
+    if (loading && !isGlobalLoading) {
+      startLoading('query');
+    } else if (!loading && isGlobalLoading) {
+      // 延迟结束加载状态，避免闪烁
+      const timer = setTimeout(() => {
+        endLoading('query');
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, isGlobalLoading, startLoading, endLoading]);
 
   // 执行查询
   const executeQuery = useCallback(async () => {
@@ -794,7 +831,7 @@ export default function SQLEditorPage() {
             >
               {loadingSchema ? (
                 <div className="loading-spinner">
-                  <Spin tip="加载中..." />
+                  <Loading tip="加载数据库结构..." />
                 </div>
               ) : databaseSchema ? (
                 <Tree
@@ -856,7 +893,7 @@ export default function SQLEditorPage() {
                       <div style={{overflow: 'hidden'}}>
                         {loading ? (
                           <div className="query-results-spinner">
-                            <Spin tip="执行查询中..." size="large" />
+                            <Loading tip="执行查询中..." />
                           </div>
                         ) : queryResults ? (
                           <div>

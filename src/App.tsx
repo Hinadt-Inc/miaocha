@@ -115,28 +115,28 @@ function AppWrapper() {
       menuItemRender={(item, dom) => (
         <Link to={item.path || '/'}>{dom}</Link>
       )}
-      actionsRender={() => [
-        <Tooltip title={mode === 'dark' ? '切换到亮色模式' : '切换到暗色模式'}>
-          <Button 
-            type="text" 
-            icon={mode === 'dark' ? <BulbOutlined /> : <BulbFilled />} 
-            onClick={toggleTheme}
-          />
-        </Tooltip>,
-      ]}
+      // actionsRender={() => [
+      //   <Tooltip title={mode === 'dark' ? '切换到亮色模式' : '切换到暗色模式'}>
+      //     <Button 
+      //       type="text" 
+      //       icon={mode === 'dark' ? <BulbOutlined /> : <BulbFilled />} 
+      //       onClick={toggleTheme}
+      //     />
+      //   </Tooltip>,
+      // ]}
       avatarProps={{
         render: () => (
           user.isLoggedIn && (
             <Space size={12}>
               <UserProfile />
-              <Tooltip title="退出登录">
+              {/* <Tooltip title="退出登录">
                 <Button 
                   icon={<LogoutOutlined />}
                   type="text" 
                   danger 
                   onClick={handleLogout}
                 />
-              </Tooltip>
+              </Tooltip> */}
             </Space>
           )
         )
