@@ -1,23 +1,33 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { Layout, Space, Button, Modal, Form, Input, Select, Tag } from 'antd';
-import { getOperatorsByFieldType, getFieldTypeColor } from '../utils/logDataHelpers';
+import { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
+import { Layout, Space, Button, Modal, Form, Input, Select, Tag, Spin, Skeleton } from 'antd';
+import { getOperatorsByFieldType, getFieldTypeColor, debounce, memoize, throttle } from '../utils/logDataHelpers';
 import { 
   CompressOutlined,
   ExpandOutlined,
   PlusOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+  WarningOutlined,
+  InfoCircleOutlined
 } from '@ant-design/icons';
 import { useLogData } from '../hooks/useLogData';
 import { useFilters } from '../hooks/useFilters';
 import { SearchBar } from '../components/HomePage/SearchBar';
-import { FilterPanel } from '../components/HomePage/FilterPanel';
 import { DataTable } from '../components/HomePage/DataTable';
-import { HistogramChart } from '../components/HomePage/HistogramChart';
 import { FieldSelector } from '../components/HomePage/FieldSelector';
-import { KibanaTimePicker } from '../components/HomePage/KibanaTimePicker';
 import { getMyTablePermissions } from '../api/permission';
 import { getTableColumns } from '../api/logs';
 import './HomePage.less';
+
+// 使用懒加载优化初始加载时间
+const HistogramChart = lazy(() => import('../components/HomePage/HistogramChart').then(module => ({ 
+  default: module.HistogramChart 
+})));
+const KibanaTimePicker = lazy(() => import('../components/HomePage/KibanaTimePicker').then(module => ({ 
+  default: module.KibanaTimePicker 
+})));
+const FilterPanel = lazy(() => import('../components/HomePage/FilterPanel').then(module => ({ 
+  default: module.FilterPanel 
+})));
 
 const { Content, Sider } = Layout;
 
@@ -35,7 +45,7 @@ interface TablePermission {
   columns?: TableColumn[];
 }
 
-export default function HomePage() {
+const HomePage = () => {
   const [form] = Form.useForm();
   const [collapsed, setCollapsed] = useState(false);
   const [selectedFields, setSelectedFields] = useState<string[]>(['log_time', 'message']);
@@ -45,12 +55,17 @@ export default function HomePage() {
   const [showHistogram, setShowHistogram] = useState(true);
   const [timeRange, setTimeRange] = useState<[string, string] | null>(null);
   const [timeRangePreset, setTimeRangePreset] = useState<string | null>(null);
-  const [timeDisplayText, setTimeDisplayText] = useState<string | null>(null); // 添加时间显示文本状态
+  const [timeDisplayText, setTimeDisplayText] = useState<string | null>(null);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedTable, setSelectedTable] = useState<string>('');
-  const [lastAddedField, setLastAddedField] = useState<string | null>(null);
-  const [lastRemovedField, setLastRemovedField] = useState<string | null>(null);
-  const [availableTables, setAvailableTables] = useState<Array<{
+
+  // 使用refs优化状态管理，减少重新渲染
+  const lastAddedFieldRef = useRef<string | null>(null);
+  const lastRemovedFieldRef = useRef<string | null>(null);
+  const [renderKey, setRenderKey] = useState<number>(0); // 用于强制更新UI的key
+
+  // 将状态放入ref以减少不必要的重渲染
+  const availableTablesRef = useRef<Array<{
     datasourceId: number;
     datasourceName: string;
     databaseName: string;
@@ -66,25 +81,67 @@ export default function HomePage() {
       }>;
     }>;
   }>>([]);
+  
   const [availableFields, setAvailableFields] = useState<Array<{columnName: string; dataType: string}>>([]);
   const prevSelectedTable = useRef<string>('');
+  
+  // 缓存表格数据引用
+  const tableDataRef = useRef<any[]>([]);
+  
+  // 新增数据加载状态
+  const [tableLoading, setTableLoading] = useState<boolean>(false);
+  const [fieldLoading, setFieldLoading] = useState<boolean>(false);
+  
+  // 添加请求缓存
+  const tableColumnsCache = useRef<Record<string, any[]>>({});
 
-  useEffect(() => {
-    const fetchTableColumns = async () => {
-      if (!selectedTable || selectedTable === prevSelectedTable.current) return;
-      prevSelectedTable.current = selectedTable;
-      
-      try {
-        const [datasourceId, tableName] = selectedTable.split('-');
-        const columns = await getTableColumns(datasourceId, tableName) as Array<{columnName: string; dataType: string}>;
-        setAvailableFields(columns);
-      } catch (error) {
-        console.error('获取表字段失败:', error);
-      }
-    };
+  // 获取表字段，添加缓存和错误处理
+  const fetchTableColumns = useCallback(async (tableIdentifier: string) => {
+    if (!tableIdentifier || tableIdentifier === prevSelectedTable.current) return;
     
-    fetchTableColumns();
-  }, [selectedTable]);
+    setFieldLoading(true);
+    
+    try {
+      // 检查缓存中是否已存在该表的字段
+      if (tableColumnsCache.current[tableIdentifier]) {
+        setAvailableFields(tableColumnsCache.current[tableIdentifier]);
+        setFieldLoading(false);
+        prevSelectedTable.current = tableIdentifier;
+        return;
+      }
+      
+      const [datasourceId, tableName] = tableIdentifier.split('-');
+      const columns = await getTableColumns(datasourceId, tableName) as Array<{columnName: string; dataType: string}>;
+      
+      // 更新缓存
+      tableColumnsCache.current[tableIdentifier] = columns;
+      setAvailableFields(columns);
+      prevSelectedTable.current = tableIdentifier;
+    } catch (error) {
+      console.error('获取表字段失败:', error);
+      // 显示友好的错误提示
+      Modal.error({
+        title: '获取字段失败',
+        content: '无法获取表字段，请检查网络连接或联系管理员'
+      });
+    } finally {
+      setFieldLoading(false);
+    }
+  }, []);
+  
+  // 使用节流函数优化表选择
+  const throttledFetchColumns = useMemo(() => 
+    throttle(fetchTableColumns, 500),
+    [fetchTableColumns]
+  );
+  
+  // 表选择变化处理
+  const handleTableChange = useCallback((tableId: string) => {
+    setSelectedTable(tableId);
+    if (tableId !== prevSelectedTable.current) {
+      throttledFetchColumns(tableId);
+    }
+  }, [throttledFetchColumns]);
   
   // 设置默认时间范围为最近15分钟
   useEffect(() => {
@@ -100,6 +157,7 @@ export default function HomePage() {
     }
   }, []);
 
+  // 使用useMemo优化搜索参数构建，减少不必要的对象创建
   const searchParams = useMemo(() => ({
     datasourceId: selectedTable ? Number(selectedTable.split('-')[0]) : 1,
     tableName: selectedTable ? selectedTable.split('-')[1] : '',
@@ -114,9 +172,10 @@ export default function HomePage() {
     endTime: timeRange ? timeRange[1] : undefined,
   }), [selectedTable, searchQuery, whereSql, timeRange, selectedFields]);
 
-  // 获取表权限数据
+  // 获取表权限数据，优化为仅在组件挂载时执行一次
   useEffect(() => {
     const fetchTablePermissions = async () => {
+      setTableLoading(true);
       try {
         const data = await getMyTablePermissions();
         const transformedData = data.map(ds => ({
@@ -135,47 +194,45 @@ export default function HomePage() {
             }))
           }))
         }));
-        setAvailableTables(transformedData);
+        
+        // 使用ref存储数据，减少重渲染
+        availableTablesRef.current = transformedData;
+        setRenderKey(prev => prev + 1);
 
         // 默认选择第一个数据源和第一个表
         if (data.length > 0 && data[0].tables.length > 0) {
           const defaultTable = `${data[0].datasourceId}-${data[0].tables[0].tableName}`;
           setSelectedTable(defaultTable);
+          throttledFetchColumns(defaultTable);
         }
       } catch (error) {
         console.error('获取表权限失败:', error);
-      }
-    };
-    fetchTablePermissions();
-  }, []);
-
-  // 表选择变化时获取字段
-  useEffect(() => {
-    const fetchTableColumns = async () => {
-      if (!selectedTable) return;
-      
-      try {
-        // 从级联选择器的value中解析datasourceId和tableName
-        const [datasourceId, tableName] = selectedTable.split('-');
-        const columns = await getTableColumns(datasourceId, tableName);
-        setAvailableFields(columns.map(col => ({
-          columnName: col.columnName,
-          dataType: col.dataType
-        })));
-      } catch (error) {
-        console.error('获取表字段失败:', error);
+        Modal.error({
+          title: '获取表权限失败',
+          content: '无法获取表权限信息，请检查网络连接或联系管理员'
+        });
+      } finally {
+        setTableLoading(false);
       }
     };
     
-    fetchTableColumns();
-  }, [selectedTable]);
+    fetchTablePermissions();
+  }, [throttledFetchColumns]);
 
+  // 使用优化的 useLogData 钩子
   const { tableData, loading, hasMore, loadMoreData, resetData, distributionData = [] } = useLogData({
     ...searchParams,
     tableName: selectedTable ? selectedTable.split('-')[1] : '',
     datasourceId: selectedTable ? Number(selectedTable.split('-')[0]) : 1,
     fields: selectedFields
   });
+  
+  // 更新ref，但不触发重新渲染
+  if (tableDataRef.current !== tableData) {
+    tableDataRef.current = tableData;
+  }
+  
+  // 优化 useFilters 钩子的使用
   const { 
     filters,
     showFilterModal,
@@ -187,86 +244,122 @@ export default function HomePage() {
     removeFilter
   } = useFilters();
 
-  const toggleFieldSelection = (fieldName: string) => {
-    if (selectedFields.includes(fieldName)) {
-      setLastRemovedField(fieldName);
-      setLastAddedField(null);
-      setSelectedFields(selectedFields.filter(f => f !== fieldName));
-    } else {
-      setLastAddedField(fieldName);
-      setLastRemovedField(null);
-      setSelectedFields([...selectedFields, fieldName]);
-    }
+  // 优化字段选择逻辑，使用带记忆的回调
+  const toggleFieldSelection = useCallback((fieldName: string) => {
+    setSelectedFields(prev => {
+      if (prev.includes(fieldName)) {
+        lastRemovedFieldRef.current = fieldName;
+        lastAddedFieldRef.current = null;
+        return prev.filter(f => f !== fieldName);
+      } else {
+        lastAddedFieldRef.current = fieldName;
+        lastRemovedFieldRef.current = null;
+        return [...prev, fieldName];
+      }
+    });
     
+    // 使用setTimeout清除动画状态
     setTimeout(() => {
-      setLastAddedField(null);
-      setLastRemovedField(null);
-    }, 5000);
-  };
+      lastAddedFieldRef.current = null;
+      lastRemovedFieldRef.current = null;
+      // 强制更新以反映新的ref值
+      setRenderKey(prev => prev + 1);
+    }, 2000);
+  }, []);
 
+  // 优化滚动逻辑，使用requestAnimationFrame提高性能
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
-    if (scrollHeight - scrollTop - clientHeight < 100 && !loading && hasMore) {
-      loadMoreData();
-    }
+    if (loading || !hasMore) return;
+    
+    requestAnimationFrame(() => {
+      const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
+      if (scrollHeight - scrollTop - clientHeight < 100) {
+        loadMoreData();
+      }
+    });
   }, [loadMoreData, loading, hasMore]);
 
-  const handleTimeRangeChange = (range: [string, string] | null, preset?: string | null, displayText?: string) => {
+  // 优化时间范围变更处理
+  const handleTimeRangeChange = useCallback((range: [string, string] | null, preset?: string | null, displayText?: string) => {
     setTimeRange(range);
     setTimeRangePreset(preset || null);
     setTimeDisplayText(displayText || null);
     
     // 当有时间范围变化时，如果是有数据的情况下，重新加载数据
-    if (range && tableData.length > 0) {
+    if (range && tableDataRef.current.length > 0) {
       resetData();
     }
-  };
+  }, [resetData]);
 
-  // 处理关键词搜索提交
-  const handleSubmitSearch = () => {
+  // 优化搜索提交处理
+  const handleSubmitSearch = useCallback(() => {
     // 重置数据，触发新查询
-    if (tableData.length > 0) {
+    if (tableDataRef.current.length > 0) {
       resetData();
     }
-  };
+  }, [resetData]);
 
-  // 处理SQL查询提交
-  const handleSubmitSql = () => {
+  // 优化SQL查询提交处理
+  const handleSubmitSql = useCallback(() => {
     // 重置数据，触发新查询
-    if (tableData.length > 0) {
+    if (tableDataRef.current.length > 0) {
       resetData();
     }
-  };
+  }, [resetData]);
 
-  // 清除时间范围
-  const handleClearTimeRange = () => {
-    setTimeRange(null);
-    setTimeRangePreset(null);
-    if (tableData.length > 0) {
-      resetData();
-    }
-  };
+  // 优化字段选择组件的props
+  const fieldSelectorProps = useMemo(() => ({
+    selectedTable,
+    availableFields,
+    selectedFields,
+    onToggleField: toggleFieldSelection,
+    lastAddedField: lastAddedFieldRef.current,
+    lastRemovedField: lastRemovedFieldRef.current,
+    availableTables: availableTablesRef.current,
+    onTableChange: handleTableChange,
+    collapsed,
+    loading: fieldLoading
+  }), [
+    selectedTable, 
+    availableFields, 
+    selectedFields, 
+    toggleFieldSelection, 
+    collapsed, 
+    renderKey, 
+    fieldLoading,
+    handleTableChange
+  ]);
 
-  // 清除关键词
-  const handleClearKeyword = () => {
-    setSearchQuery('');
-    if (tableData.length > 0) {
-      resetData();
-    }
-  };
+  // 优化DataTable组件的props
+  const dataTableProps = useMemo(() => ({
+    data: tableData,
+    loading,
+    hasMore,
+    selectedFields,
+    searchQuery,
+    viewMode,
+    onScroll: handleScroll,
+    lastAddedField: lastAddedFieldRef.current
+  }), [
+    tableData, 
+    loading, 
+    hasMore, 
+    selectedFields, 
+    searchQuery, 
+    viewMode, 
+    handleScroll, 
+    renderKey
+  ]);
 
-  // 清除SQL条件
-  const handleClearWhereSql = () => {
-    setWhereSql('');
-    if (tableData.length > 0) {
-      resetData();
-    }
-  };
+  // 优化视图模式切换的处理函数
+  const handleViewModeChange = useCallback((mode: 'table' | 'json') => {
+    setViewMode(mode);
+  }, []);
 
-  // 处理时间选择器显示
-  const handleToggleTimePicker = (show: boolean) => {
-    setShowTimePicker(show);
-  };
+  // 优化直方图显示切换的处理函数
+  const handleToggleHistogram = useCallback((show: boolean) => {
+    setShowHistogram(show);
+  }, []);
 
   return (
     <>
@@ -294,39 +387,46 @@ export default function HomePage() {
           onCollapse={setCollapsed}
           className="sider-container"
         >
-          <FieldSelector
-            selectedTable={selectedTable}
-            availableFields={availableFields}
-            selectedFields={selectedFields}
-            onToggleField={toggleFieldSelection}
-            lastAddedField={lastAddedField}
-            lastRemovedField={lastRemovedField}
-            availableTables={availableTables}
-            onTableChange={setSelectedTable}
-            collapsed={collapsed}
-          />
+          {tableLoading ? (
+            <div style={{ padding: "20px" }}>
+              <Skeleton active paragraph={{ rows: 10 }} />
+            </div>
+          ) : (
+            <FieldSelector {...fieldSelectorProps} />
+          )}
         </Sider>
         
         <Layout className="layout-inner">
           {showHistogram && distributionData && distributionData.length > 0 && (
-            <HistogramChart
-              show={showHistogram}
-              onTimeRangeChange={handleTimeRangeChange}
-              onToggle={() => setShowHistogram(false)}
-              distributionData={distributionData}
-            />
+            <Suspense fallback={<Skeleton active paragraph={{ rows: 2 }} />}>
+              <HistogramChart
+                show={showHistogram}
+                onTimeRangeChange={handleTimeRangeChange}
+                onToggle={() => handleToggleHistogram(false)}
+                distributionData={distributionData}
+              />
+            </Suspense>
           )}
           
           <Content className="content-container">
             <div className="table-header">
-              <div>找到 {tableData.length} 条记录</div>
+              <div>
+                {loading ? (
+                  <Spin size="small" style={{ marginRight: 8 }} />
+                ) : (
+                  <span>找到 <b>{tableData.length}</b> 条记录</span>
+                )}
+                {!selectedTable && (
+                  <Tag color="warning" icon={<InfoCircleOutlined />}>请选择数据表</Tag>
+                )}
+              </div>
               <Space>
                 {!showHistogram && distributionData && distributionData.length > 0 && (
                   <Button
                     size="small"
                     type="text"
                     icon={<PlusOutlined />}
-                    onClick={() => setShowHistogram(true)}
+                    onClick={() => handleToggleHistogram(true)}
                   >
                     显示直方图
                   </Button>
@@ -335,27 +435,18 @@ export default function HomePage() {
                   <Button 
                     type={viewMode === 'table' ? 'primary' : 'default'} 
                     icon={<CompressOutlined />} 
-                    onClick={() => setViewMode('table')}
+                    onClick={() => handleViewModeChange('table')}
                   />
                   <Button 
                     type={viewMode === 'json' ? 'primary' : 'default'} 
                     icon={<ExpandOutlined />} 
-                    onClick={() => setViewMode('json')}
+                    onClick={() => handleViewModeChange('json')}
                   />
                 </Space.Compact>
               </Space>
             </div>
             
-            <DataTable
-              data={tableData}
-              loading={loading}
-              hasMore={hasMore}
-              selectedFields={selectedFields}
-              searchQuery={searchQuery}
-              viewMode={viewMode}
-              onScroll={handleScroll}
-              lastAddedField={lastAddedField}
-            />
+            <DataTable {...dataTableProps} />
           </Content>
         </Layout>
       </Layout>
@@ -441,23 +532,29 @@ export default function HomePage() {
         footer={null}
         width={600}
       >
-        <KibanaTimePicker
-          value={timeRange}
-          presetKey={timeRangePreset || undefined}
-          onChange={(range, preset, displayText) => {
-            handleTimeRangeChange(range, preset, displayText);
-            setShowTimePicker(false);
-          }}
-          onTimeGroupingChange={(value) => {
-            // 更新时间分组设置并重新加载数据
-            if (tableData.length > 0) {
-              resetData();
-            }
-          }}
-          timeGrouping={searchParams.timeGrouping}
-        />
+        <Suspense fallback={<Skeleton active paragraph={{ rows: 5 }} />}>
+          <KibanaTimePicker
+            value={timeRange}
+            presetKey={timeRangePreset || undefined}
+            onChange={(range, preset, displayText) => {
+              handleTimeRangeChange(range, preset, displayText);
+              setShowTimePicker(false);
+            }}
+            onTimeGroupingChange={(value) => {
+              // 更新时间分组设置并重新加载数据
+              if (tableDataRef.current.length > 0) {
+                resetData();
+              }
+            }}
+            timeGrouping={searchParams.timeGrouping}
+          />
+        </Suspense>
       </Modal>
     )}
     </>
   );
 }
+
+// 确保使用命名导出和默认导出两种方式
+export { HomePage };
+export default HomePage;

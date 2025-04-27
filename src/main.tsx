@@ -2,6 +2,7 @@ import { StrictMode, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Provider, useDispatch } from 'react-redux'
 import { QueryProvider } from './providers/QueryProvider'
+import { ThemeProvider } from './providers/ThemeProvider'
 import { store } from './store/store'
 import { RouterProvider } from 'react-router-dom'
 import { router } from './routes'
@@ -27,7 +28,9 @@ createRoot(document.getElementById('root')!).render(
     <Provider store={store}>
       <SessionInitializer />
       <QueryProvider>
-        <RouterProvider router={router} />
+        <ThemeProvider>
+          <RouterProvider router={router} />
+        </ThemeProvider>
       </QueryProvider>
     </Provider>
   </StrictMode>,

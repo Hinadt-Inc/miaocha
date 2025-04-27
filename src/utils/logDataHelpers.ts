@@ -131,6 +131,88 @@ export const getFieldTypeColor = (type: string): string => {
   }
 };
 
+// 防抖函数
+export const debounce = <F extends (...args: any[]) => any>(func: F, waitFor: number): (...args: Parameters<F>) => void => {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+
+  return (...args: Parameters<F>): void => {
+    if (timeout !== null) {
+      clearTimeout(timeout);
+    }
+    timeout = setTimeout(() => func(...args), waitFor);
+  };
+};
+
+// 节流函数
+export const throttle = <F extends (...args: any[]) => any>(func: F, waitFor: number): (...args: Parameters<F>) => void => {
+  let lastTime = 0;
+  
+  return (...args: Parameters<F>): void => {
+    const now = Date.now();
+    if (now - lastTime >= waitFor) {
+      func(...args);
+      lastTime = now;
+    }
+  };
+};
+
+// 缓存函数结果
+export const memoize = <F extends (...args: any[]) => any>(func: F): (...args: Parameters<F>) => ReturnType<F> => {
+  const cache = new Map<string, ReturnType<F>>();
+  
+  return (...args: Parameters<F>): ReturnType<F> => {
+    const key = JSON.stringify(args);
+    if (cache.has(key)) {
+      return cache.get(key) as ReturnType<F>;
+    }
+    
+    const result = func(...args);
+    cache.set(key, result);
+    return result;
+  };
+};
+
+// 优化大型数据集渲染的分片处理函数
+export const chunkProcess = <T, R>(
+  items: T[], 
+  processor: (item: T) => R, 
+  chunkSize: number = 100
+): Promise<R[]> => {
+  return new Promise((resolve) => {
+    const result: R[] = [];
+    let index = 0;
+
+    function processNextChunk() {
+      const start = performance.now();
+      
+      while (index < items.length) {
+        result.push(processor(items[index]));
+        index++;
+        
+        // 如果处理了足够多的项或超过时间预算，中断操作并安排下一个时间片
+        if (index % chunkSize === 0 || performance.now() - start > 16) {
+          setTimeout(processNextChunk, 0);
+          return;
+        }
+      }
+      
+      resolve(result);
+    }
+
+    processNextChunk();
+  });
+};
+
+// 从对象数组中提取唯一值
+export const extractUniqueValues = <T, K extends keyof T>(
+  items: T[], 
+  key: K
+): T[K][] => {
+  const uniqueValues = new Set<T[K]>();
+  items.forEach(item => uniqueValues.add(item[key]));
+  return Array.from(uniqueValues);
+};
+
 // 生成模拟时间分布数据
 export const generateMockDistributionData = (): Array<{ timePoint: string; count: number }> => {
   const data: Array<{ timePoint: string; count: number }> = [];

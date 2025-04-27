@@ -137,16 +137,9 @@ export const useLogData = (queryParams: UseLogDataParams): UseLogDataReturn => {
       }
     };
 
+    // 只在查询参数变化且有必要时才执行
     fetchDistribution();
-  }, [
-    queryParams.datasourceId, 
-    queryParams.tableName, 
-    queryParams.keyword,
-    queryParams.whereSql,
-    queryParams.startTime,
-    queryParams.endTime,
-    queryParams.timeGrouping
-  ]);
+  }, [queryParams]); // 简化依赖项，避免重复请求
 
   // 初始加载和分页加载，添加防止重复请求的逻辑
   useEffect(() => {

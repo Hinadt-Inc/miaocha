@@ -2,7 +2,7 @@ import ReactECharts from 'echarts-for-react';
 import { EChartsOption } from 'echarts';
 import { message, Button } from 'antd';
 import { MinusOutlined } from '@ant-design/icons';
-import { useMemo } from 'react';
+import { useMemo, useCallback, memo } from 'react';
 
 interface HistogramChartProps {
   show: boolean;
@@ -14,19 +14,16 @@ interface HistogramChartProps {
   }>;
 }
 
-export const HistogramChart = ({ 
+// 使用 memo 优化组件重渲染性能
+export const HistogramChart = memo(({ 
   show,
   onTimeRangeChange,
   onToggle,
-  distributionData
+  distributionData = []
 }: HistogramChartProps) => {
-  // 添加直接的调试日志，查看传入的原始数据
-  console.log('HistogramChart 接收到的原始数据:', distributionData);
-  
-  // 按小时聚合数据，将相同小时的数据合并
+  // 按小时聚合数据，使用 useMemo 缓存计算结果
   const aggregatedData = useMemo(() => {
     if (!distributionData || distributionData.length === 0) {
-      console.log('没有分布数据，返回空结果');
       return { hourlyData: [], hourLabels: [], originalData: [] };
     }
 
@@ -43,52 +40,54 @@ export const HistogramChart = ({
         originalData: [{ timePoint: formattedTimePoint, count: distributionData[0].count }]
       };
     }
-
-    // 打印一些样本数据，帮助调试
-    console.log('分布数据样本:', distributionData.slice(0, 3));
     
+    // 使用 Map 优化数据聚合
     const hourMap = new Map<string, number>();
     const originalTimePoints = new Map<string, string>();
     
+    // 预先检查数据格式，避免在循环中重复判断
+    const hasValidFormat = distributionData.every(item => 
+      item && item.timePoint && (item.timePoint.includes(' ') || item.timePoint.includes('T'))
+    );
+    
     // 将数据按小时分组并累加
-    distributionData.forEach(item => {
-      if (!item || !item.timePoint) {
-        console.log('发现无效数据项:', item);
-        return;
-      }
+    for (const item of distributionData) {
+      if (!item || !item.timePoint) continue;
       
       // 处理带T的ISO格式或带空格的常规格式
       const timePoint = item.timePoint.replace('T', ' ');
       
-      // 提取日期和时间部分
-      const dateParts = timePoint.split(' ');
-      if (dateParts.length !== 2) {
-        console.log('时间格式不正确:', timePoint);
-        return;
-      }
+      // 提取日期和时间部分 - 仅当数据格式有效时进行
+      if (!hasValidFormat) continue;
       
-      const date = dateParts[0];
-      const timeStr = dateParts[1];
+      const dateParts = timePoint.split(' ');
+      if (dateParts.length !== 2) continue;
       
       // 使用完整时间点作为键，以保留所有唯一时间点
       const timeKey = timePoint;
       
       // 累加相同时间点的数量
-      const currentCount = hourMap.get(timeKey) || 0;
-      hourMap.set(timeKey, currentCount + item.count);
+      hourMap.set(timeKey, (hourMap.get(timeKey) || 0) + item.count);
       
       // 保存原始时间点
       if (!originalTimePoints.has(timeKey)) {
         originalTimePoints.set(timeKey, timePoint);
       }
+    }
+    
+    // 转换为数组并按时间排序 - 使用更高效的排序方法
+    const hourlyData = [];
+    for (const [hour, count] of hourMap.entries()) {
+      hourlyData.push({ hour, count });
+    }
+    
+    // 优化排序性能
+    hourlyData.sort((a, b) => {
+      // 直接比较字符串可能比创建Date对象更快
+      return a.hour < b.hour ? -1 : a.hour > b.hour ? 1 : 0;
     });
     
-    // 转换为数组并按时间排序
-    const hourlyData = Array.from(hourMap.entries())
-      .map(([hour, count]) => ({ hour, count }))
-      .sort((a, b) => new Date(a.hour).getTime() - new Date(b.hour).getTime());
-    
-    // 提取时间标签
+    // 提取时间标签 - 使用映射而不是重复遍历
     const hourLabels = hourlyData.map(item => {
       // 只显示时间部分，不显示日期
       const timePart = item.hour.split(' ')[1];
@@ -101,12 +100,6 @@ export const HistogramChart = ({
       count: item.count
     }));
     
-    console.log('聚合后数据统计:', {
-      原始数据条数: distributionData.length,
-      聚合后时间点数: hourlyData.length,
-      hourMap尺寸: hourMap.size
-    });
-    
     return {
       hourlyData,
       hourLabels,
@@ -114,7 +107,8 @@ export const HistogramChart = ({
     };
   }, [distributionData]);
   
-  const getHistogramOption = (): EChartsOption => {
+  // 记忆化图表配置
+  const chartOption = useMemo((): EChartsOption => {
     if (!distributionData || distributionData.length === 0) {
       return {
         title: {
@@ -133,9 +127,6 @@ export const HistogramChart = ({
     
     const { hourlyData, hourLabels } = aggregatedData;
     const values = hourlyData.map(item => item.count);
-    
-    // 检查横坐标数据是否有效
-    console.log('聚合后的直方图数据:', hourlyData, hourLabels, values);
     
     return {
       grid: {
@@ -158,7 +149,6 @@ export const HistogramChart = ({
       },
       yAxis: {
         type: 'value',
-        name: '数量',
         nameLocation: 'middle',
         nameGap: 30,
         axisLabel: {
@@ -225,42 +215,51 @@ export const HistogramChart = ({
         }
       ]
     };
-  };
+  }, [distributionData, aggregatedData]);
 
-  const onChartEvents = {
-    datazoom: (params: {
-      batch?: Array<{
-        startValue?: number;
-        endValue?: number;
-      }>;
-    }) => {
-      if (!distributionData || distributionData.length === 0) return;
+  // 使用 useCallback 记忆缩放事件处理函数
+  const handleDataZoom = useCallback((params: {
+    batch?: Array<{
+      startValue?: number;
+      endValue?: number;
+    }>;
+  }) => {
+    if (!distributionData || distributionData.length === 0) return;
+    
+    if (params.batch && params.batch.length > 0) {
+      const { startValue, endValue } = params.batch[0];
       
-      if (params.batch && params.batch.length > 0) {
-        const { startValue, endValue } = params.batch[0];
-        
-        if (startValue !== undefined && endValue !== undefined) {
-          try {
-            const dates = aggregatedData.originalData.map(item => item.timePoint);
-            const startIndex = Math.max(0, Math.floor(startValue));
-            const endIndex = Math.min(dates.length - 1, Math.floor(endValue));
+      if (startValue !== undefined && endValue !== undefined) {
+        try {
+          const dates = aggregatedData.originalData.map(item => item.timePoint);
+          const startIndex = Math.max(0, Math.floor(startValue));
+          const endIndex = Math.min(dates.length - 1, Math.floor(endValue));
+          
+          if (startIndex >= 0 && endIndex < dates.length && startIndex <= endIndex) {
+            const startDate = dates[startIndex];
+            const endDate = dates[endIndex];
             
-            if (startIndex >= 0 && endIndex < dates.length) {
-              const startDate = dates[startIndex];
-              const endDate = dates[endIndex];
-              
-              if (startDate && endDate) {
-                onTimeRangeChange([startDate, endDate]);
-                message.info(`已选择时间范围: ${startDate} 至 ${endDate}`);
-              }
+            if (startDate && endDate) {
+              onTimeRangeChange([startDate, endDate]);
+              // 使用较轻量的消息通知方式
+              message.success({
+                content: `已选择时间范围`,
+                duration: 1,
+                style: { marginTop: '5vh' }
+              });
             }
-          } catch (error) {
-            console.error('处理缩放事件时出错:', error);
           }
+        } catch (error) {
+          console.error('处理缩放事件时出错:', error);
         }
       }
     }
-  };
+  }, [distributionData, aggregatedData, onTimeRangeChange]);
+
+  // 缓存事件对象，避免重复创建
+  const chartEvents = useMemo(() => ({
+    datazoom: handleDataZoom
+  }), [handleDataZoom]);
 
   if (!show) return null;
 
@@ -280,11 +279,13 @@ export const HistogramChart = ({
           />
         </div>
         <ReactECharts 
-          option={getHistogramOption()} 
+          option={chartOption} 
           style={{ height: 150 }} 
-          onEvents={onChartEvents}
+          onEvents={chartEvents}
+          notMerge={true}
+          lazyUpdate={true}
         />
       </div>
     </div>
   );
-};
+});

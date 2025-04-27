@@ -1,18 +1,31 @@
 import { useState } from 'react'
-import { Layout, Card, Row, Col, Statistic, Button, Dropdown, Segmented, DatePicker, Typography, Skeleton } from 'antd'
+import { Row, Col, Segmented, DatePicker, Skeleton, Space, Table, Card, Button, Dropdown } from 'antd'
 import { ArrowUpOutlined, ArrowDownOutlined, ReloadOutlined, DownOutlined } from '@ant-design/icons'
-import ReactECharts from 'echarts-for-react'
 import type { MenuProps } from 'antd'
 import type { SegmentedValue } from 'antd/es/segmented'
 import type { EChartsOption } from 'echarts-for-react'
 
-const { Content } = Layout
-const { Title, Text } = Typography
+// 导入优化的组件
+import StatCard from '../components/common/StatCard'
+import OptimizedChart from '../components/common/OptimizedChart'
+import PageContainer from '../components/common/PageContainer'
+import CardGrid from '../components/common/CardGrid'
+import AnimatedNumber from '../components/common/AnimatedNumber'
+
+// 导入主题钩子
+import { useTheme } from '../providers/ThemeProvider'
+
 const { RangePicker } = DatePicker
+
+// 定义趋势样式类
+const upTrendStyle = { color: '#3f8600' };
+const downTrendStyle = { color: '#cf1322' };
 
 const DashboardPage = () => {
   const [loading, setLoading] = useState(false)
   const [timeRange, setTimeRange] = useState<SegmentedValue>('week')
+  // 使用主题钩子
+  const { isDarkMode } = useTheme()
 
   // 模拟加载数据
   const refreshData = () => {
@@ -53,7 +66,10 @@ const DashboardPage = () => {
   const salesTrendOption: EChartsOption = {
     title: {
       text: '销售趋势',
-      left: 'center'
+      left: 'center',
+      textStyle: {
+        color: isDarkMode ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.85)'
+      }
     },
     tooltip: {
       trigger: 'axis',
@@ -63,7 +79,10 @@ const DashboardPage = () => {
     },
     legend: {
       data: ['销售额', '订单量'],
-      top: 'bottom'
+      top: 'bottom',
+      textStyle: {
+        color: isDarkMode ? 'rgba(255, 255, 255, 0.65)' : 'rgba(0, 0, 0, 0.65)'
+      }
     },
     grid: {
       left: '3%',
@@ -75,19 +94,51 @@ const DashboardPage = () => {
     xAxis: [
       {
         type: 'category',
-        data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+        data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+        axisLine: {
+          lineStyle: {
+            color: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)'
+          }
+        },
+        axisLabel: {
+          color: isDarkMode ? 'rgba(255, 255, 255, 0.65)' : 'rgba(0, 0, 0, 0.65)'
+        }
       }
     ],
     yAxis: [
       {
         type: 'value',
         name: '销售额',
-        position: 'left'
+        position: 'left',
+        axisLine: {
+          lineStyle: {
+            color: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)'
+          }
+        },
+        axisLabel: {
+          color: isDarkMode ? 'rgba(255, 255, 255, 0.65)' : 'rgba(0, 0, 0, 0.65)'
+        },
+        splitLine: {
+          lineStyle: {
+            color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'
+          }
+        }
       },
       {
         type: 'value',
         name: '订单量',
-        position: 'right'
+        position: 'right',
+        axisLine: {
+          lineStyle: {
+            color: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)'
+          }
+        },
+        axisLabel: {
+          color: isDarkMode ? 'rgba(255, 255, 255, 0.65)' : 'rgba(0, 0, 0, 0.65)'
+        },
+        splitLine: {
+          show: false
+        }
       }
     ],
     series: [
@@ -98,7 +149,16 @@ const DashboardPage = () => {
         emphasis: {
           focus: 'series'
         },
-        data: [12000, 13200, 10100, 13400, 19000, 23400, 14000]
+        data: [12000, 13200, 10100, 13400, 19000, 23400, 14000],
+        lineStyle: {
+          width: 3,
+          shadowColor: 'rgba(0, 0, 0, 0.3)',
+          shadowBlur: 10,
+          shadowOffsetY: 5
+        },
+        itemStyle: {
+          borderWidth: 2
+        }
       },
       {
         name: '订单量',
@@ -107,7 +167,10 @@ const DashboardPage = () => {
           focus: 'series'
         },
         yAxisIndex: 1,
-        data: [120, 132, 101, 134, 190, 230, 140]
+        data: [120, 132, 101, 134, 190, 230, 140],
+        itemStyle: {
+          borderRadius: 4
+        }
       }
     ]
   }
@@ -116,7 +179,10 @@ const DashboardPage = () => {
   const categoryOption: EChartsOption = {
     title: {
       text: '销售类别占比',
-      left: 'center'
+      left: 'center',
+      textStyle: {
+        color: isDarkMode ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.85)'
+      }
     },
     tooltip: {
       trigger: 'item',
@@ -124,7 +190,10 @@ const DashboardPage = () => {
     },
     legend: {
       bottom: '0%',
-      left: 'center'
+      left: 'center',
+      textStyle: {
+        color: isDarkMode ? 'rgba(255, 255, 255, 0.65)' : 'rgba(0, 0, 0, 0.65)'
+      }
     },
     series: [
       {
@@ -134,7 +203,7 @@ const DashboardPage = () => {
         center: ['50%', '50%'],
         itemStyle: {
           borderRadius: 10,
-          borderColor: '#fff',
+          borderColor: isDarkMode ? '#1f1f1f' : '#fff',
           borderWidth: 2
         },
         data: [
@@ -150,6 +219,9 @@ const DashboardPage = () => {
             shadowOffsetX: 0,
             shadowColor: 'rgba(0, 0, 0, 0.5)'
           }
+        },
+        label: {
+          color: isDarkMode ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.85)'
         }
       }
     ]
@@ -159,7 +231,10 @@ const DashboardPage = () => {
   const regionOption: EChartsOption = {
     title: {
       text: '销售区域分布',
-      left: 'center'
+      left: 'center',
+      textStyle: {
+        color: isDarkMode ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.85)'
+      }
     },
     tooltip: {
       trigger: 'axis',
@@ -175,134 +250,109 @@ const DashboardPage = () => {
     },
     xAxis: {
       type: 'value',
-      boundaryGap: [0, 0.01]
+      boundaryGap: [0, 0.01],
+      axisLine: {
+        lineStyle: {
+          color: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)'
+        }
+      },
+      axisLabel: {
+        color: isDarkMode ? 'rgba(255, 255, 255, 0.65)' : 'rgba(0, 0, 0, 0.65)'
+      },
+      splitLine: {
+        lineStyle: {
+          color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'
+        }
+      }
     },
     yAxis: {
       type: 'category',
-      data: ['北京', '上海', '广州', '深圳', '杭州', '成都', '武汉', '其他']
+      data: ['北京', '上海', '广州', '深圳', '杭州', '成都', '武汉', '其他'],
+      axisLine: {
+        lineStyle: {
+          color: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)'
+        }
+      },
+      axisLabel: {
+        color: isDarkMode ? 'rgba(255, 255, 255, 0.65)' : 'rgba(0, 0, 0, 0.65)'
+      }
     },
     series: [
       {
         name: '销售额',
         type: 'bar',
-        data: [18203, 23489, 29034, 10498, 12380, 14000, 13050, 17000]
+        data: [18203, 23489, 29034, 10498, 12380, 14000, 13050, 17000],
+        itemStyle: {
+          borderRadius: [0, 4, 4, 0],
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 1,
+            y2: 0,
+            colorStops: [
+              { offset: 0, color: '#1677ff' },
+              { offset: 1, color: '#69c0ff' }
+            ]
+          }
+        }
       }
     ]
   }
 
-  return (
-    <Content>
-      <div className="dashboard-header" style={{ marginBottom: 24 }}>
-        <Row gutter={[16, 16]} align="middle">
-          <Col xs={24} sm={12}>
-            <Title level={3} style={{ margin: 0 }}>数据仪表盘</Title>
-            <Text type="secondary">查看关键业务指标和分析数据</Text>
-          </Col>
-          <Col xs={24} sm={12} style={{ textAlign: 'right' }}>
-            <Space>
-              <Segmented
-                options={['今日', '本周', '本月', '本季度']}
-                value={timeRange}
-                onChange={setTimeRange}
-              />
-              <RangePicker />
-              <Button
-                type="primary"
-                icon={<ReloadOutlined />}
-                loading={loading}
-                onClick={refreshData}
-              >
-                刷新数据
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-      </div>
+  // 页面标题区域的额外内容
+  const titleExtra = (
+    <Space wrap>
+      <Segmented
+        options={['今日', '本周', '本月', '本季度']}
+        value={timeRange}
+        onChange={setTimeRange}
+      />
+      <RangePicker />
+      <Button
+        type="primary"
+        icon={<ReloadOutlined />}
+        loading={loading}
+        onClick={refreshData}
+      >
+        刷新数据
+      </Button>
+    </Space>
+  );
 
+  return (
+    <PageContainer 
+      title="数据仪表盘"
+      extra={titleExtra}
+    >
       <Skeleton loading={loading} active paragraph={{ rows: 16 }}>
-        {/* 核心指标统计卡片 */}
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} md={6}>
-            <Card bordered={false} hoverable>
-              <Statistic
-                title="总销售额"
-                value={112893}
-                precision={2}
-                valueStyle={{ color: '#3f8600' }}
-                prefix="¥"
-                suffix={
-                  <span style={{ fontSize: 14, marginLeft: 8 }}>
-                    <ArrowUpOutlined /> 8.2%
-                  </span>
-                }
-              />
-              <div style={{ marginTop: 8 }}>
-                <Text type="secondary">
-                  日销售额 ¥12,423
-                </Text>
-              </div>
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card bordered={false} hoverable>
-              <Statistic
-                title="订单数量"
-                value={1893}
-                valueStyle={{ color: '#0958d9' }}
-                suffix={
-                  <span style={{ fontSize: 14, marginLeft: 8 }}>
-                    <ArrowUpOutlined /> 12.5%
-                  </span>
-                }
-              />
-              <div style={{ marginTop: 8 }}>
-                <Text type="secondary">
-                  日订单量 258
-                </Text>
-              </div>
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card bordered={false} hoverable>
-              <Statistic
-                title="访问量"
-                value={8846}
-                valueStyle={{ color: '#722ed1' }}
-                suffix={
-                  <span style={{ fontSize: 14, marginLeft: 8 }}>
-                    <ArrowUpOutlined /> 32.7%
-                  </span>
-                }
-              />
-              <div style={{ marginTop: 8 }}>
-                <Text type="secondary">
-                  日访问量 1,234
-                </Text>
-              </div>
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card bordered={false} hoverable>
-              <Statistic
-                title="转化率"
-                value={21.8}
-                precision={1}
-                valueStyle={{ color: '#cf1322' }}
-                suffix="%"
-                prefix={
-                  <span style={{ fontSize: 14, marginRight: 8 }}>
-                    <ArrowDownOutlined />
-                  </span>
-                }
-              />
-              <div style={{ marginTop: 8 }}>
-                <Text type="secondary">
-                  较上周下降 2.3%
-                </Text>
-              </div>
-            </Card>
-          </Col>
-        </Row>
+        {/* 使用新的卡片网格和统计卡片组件 */}
+        <CardGrid>
+          <StatCard
+            title="总销售额"
+            value={<AnimatedNumber value={112893} formatter={(val) => `¥${val.toFixed(2)}`} />}
+            icon={<span>¥</span>}
+            trend="up"
+          />
+          <StatCard
+            title="订单数量"
+            value={<AnimatedNumber value={1893} />}
+            icon={<span>N</span>}
+            trend="up"
+          />
+          <StatCard
+            title="访问量"
+            value={<AnimatedNumber value={8846} />}
+            icon={<span>V</span>}
+            trend="up"
+          />
+          <StatCard
+            title="转化率"
+            value={<AnimatedNumber value={21.8} formatter={(val) => `${val.toFixed(1)}%`} />}
+            icon={<span>R</span>}
+            trend="down"
+          />
+        </CardGrid>
 
         {/* 图表区域 */}
         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
@@ -315,28 +365,43 @@ const DashboardPage = () => {
                   size="small"
                 />
               }
-              bordered={false}
+              className="hoverable"
             >
-              <ReactECharts option={salesTrendOption} style={{ height: 340 }} />
+              <OptimizedChart 
+                option={salesTrendOption} 
+                style={{ height: 340 }} 
+              />
             </Card>
           </Col>
           <Col xs={24} md={8}>
-            <Card title="销售类别占比" bordered={false}>
-              <ReactECharts option={categoryOption} style={{ height: 340 }} />
+            <Card 
+              title="销售类别占比" 
+              className="hoverable"
+            >
+              <OptimizedChart 
+                option={categoryOption} 
+                style={{ height: 340 }} 
+              />
             </Card>
           </Col>
         </Row>
 
         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
           <Col xs={24} md={12}>
-            <Card title="区域销售分布" bordered={false}>
-              <ReactECharts option={regionOption} style={{ height: 340 }} />
+            <Card 
+              title="区域销售分布" 
+              className="hoverable"
+            >
+              <OptimizedChart 
+                option={regionOption} 
+                style={{ height: 340 }} 
+              />
             </Card>
           </Col>
           <Col xs={24} md={12}>
             <Card 
               title="销售排行榜" 
-              bordered={false}
+              className="hoverable"
               extra={
                 <Dropdown menu={{ items: dateRangeItems }}>
                   <Button type="text">
@@ -358,7 +423,7 @@ const DashboardPage = () => {
           </Col>
         </Row>
       </Skeleton>
-    </Content>
+    </PageContainer>
   )
 }
 
@@ -369,35 +434,35 @@ const topProducts = [
     rank: 1,
     name: '高端智能手机 Pro Max',
     sales: 1245,
-    trend: <span style={{color: '#3f8600'}}><ArrowUpOutlined /> 12%</span>
+    trend: <span style={upTrendStyle}><ArrowUpOutlined /> 12%</span>
   },
   {
     key: '2',
     rank: 2,
     name: '智能手表 Series 5',
     sales: 983,
-    trend: <span style={{color: '#3f8600'}}><ArrowUpOutlined /> 8%</span>
+    trend: <span style={upTrendStyle}><ArrowUpOutlined /> 8%</span>
   },
   {
     key: '3',
     rank: 3,
     name: '无线蓝牙耳机',
     sales: 873,
-    trend: <span style={{color: '#cf1322'}}><ArrowDownOutlined /> 2%</span>
+    trend: <span style={downTrendStyle}><ArrowDownOutlined /> 2%</span>
   },
   {
     key: '4',
     rank: 4,
     name: '平板电脑 Air',
     sales: 654,
-    trend: <span style={{color: '#3f8600'}}><ArrowUpOutlined /> 15%</span>
+    trend: <span style={upTrendStyle}><ArrowUpOutlined /> 15%</span>
   },
   {
     key: '5',
     rank: 5,
     name: '智能音响',
     sales: 538,
-    trend: <span style={{color: '#cf1322'}}><ArrowDownOutlined /> 5%</span>
+    trend: <span style={downTrendStyle}><ArrowDownOutlined /> 5%</span>
   },
 ]
 
@@ -427,7 +492,5 @@ const topProductColumns = [
     align: 'right' as const,
   },
 ]
-
-import { Space, Table } from 'antd'
 
 export default DashboardPage

@@ -1,0 +1,138 @@
+// 响应式布局变量
+@screen-xs: 480px;
+@screen-sm: 576px;
+@screen-md: 768px;
+@screen-lg: 992px;
+@screen-xl: 1200px;
+@screen-xxl: 1600px;
+
+// 响应式混入
+.responsive-container() {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 16px;
+  padding-right: 16px;
+  
+  @media (min-width: @screen-sm) {
+    max-width: 540px;
+  }
+  
+  @media (min-width: @screen-md) {
+    max-width: 720px;
+  }
+  
+  @media (min-width: @screen-lg) {
+    max-width: 960px;
+  }
+  
+  @media (min-width: @screen-xl) {
+    max-width: 1140px;
+  }
+  
+  @media (min-width: @screen-xxl) {
+    max-width: 1320px;
+  }
+}
+
+// 响应式网格
+.responsive-grid() {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 16px;
+  
+  @media (min-width: @screen-sm) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  @media (min-width: @screen-lg) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  @media (min-width: @screen-xl) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+// 响应式弹性布局
+.responsive-flex-container() {
+  display: flex;
+  flex-direction: column;
+  
+  @media (min-width: @screen-md) {
+    flex-direction: row;
+  }
+}
+
+// 响应式文本
+.responsive-text(@base-size) {
+  font-size: @base-size;
+  
+  @media (min-width: @screen-md) {
+    font-size: @base-size * 1.1;
+  }
+  
+  @media (min-width: @screen-lg) {
+    font-size: @base-size * 1.2;
+  }
+}
+
+// 响应式垂直间距
+.responsive-spacing(@base-spacing) {
+  margin-bottom: @base-spacing;
+  
+  @media (min-width: @screen-md) {
+    margin-bottom: @base-spacing * 1.5;
+  }
+  
+  @media (min-width: @screen-lg) {
+    margin-bottom: @base-spacing * 2;
+  }
+}
+
+// 盒子阴影混入
+.box-shadow(@level: 1) {
+  & when (@level = 1) {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+  }
+  & when (@level = 2) {
+    box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+  }
+  & when (@level = 3) {
+    box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+  }
+  & when (@level = 4) {
+    box-shadow: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
+  }
+  & when (@level = 5) {
+    box-shadow: 0 19px 38px rgba(0,0,0,0.30), 0 15px 12px rgba(0,0,0,0.22);
+  }
+}
+
+// 过渡效果混入
+.transition(@property: all, @duration: 0.3s, @timing: ease) {
+  transition: @property @duration @timing;
+}
+
+// 悬停效果混入
+.hover-effect() {
+  .transition();
+  
+  &:hover {
+    transform: translateY(-5px);
+    .box-shadow(2);
+  }
+}
+
+// 卡片样式混入
+.card-style() {
+  background: var(--card-bg, #fff);
+  border-radius: 8px;
+  padding: 16px;
+  .box-shadow(1);
+  .transition();
+  
+  &:hover {
+    .box-shadow(2);
+  }
+}

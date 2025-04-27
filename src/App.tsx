@@ -1,35 +1,72 @@
 import './App.less'
-import { App as AntdApp } from 'antd'
+import { App as AntdApp, Button, Space, Tooltip } from 'antd'
 import { ProLayout } from '@ant-design/pro-components'
-import { Link, Outlet, useLocation } from 'react-router-dom'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { 
   CompassOutlined,
   DashboardOutlined,
   ConsoleSqlOutlined,
   SettingOutlined,
   UserOutlined,
+  DatabaseOutlined,
+  SafetyCertificateOutlined,
+  DesktopOutlined,
+  CloudServerOutlined,
+  LogoutOutlined,
+  BulbOutlined,
+  BulbFilled,
 } from '@ant-design/icons'
-import { useSelector } from 'react-redux'
+import { useSelector, useDispatch } from 'react-redux'
 import UserProfile from './components/User/UserProfile'
+import { useTheme } from './providers/ThemeProvider'
+import { logout } from './store/userSlice'
 
 function AppWrapper() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const dispatch = useDispatch()
+  const { mode, toggleTheme } = useTheme()
   const user = useSelector((state: { user: { name: string; isLoggedIn: boolean } }) => state.user)
+  
+  // 当前路径判断，用于菜单高亮和展开
+  const currentPath = location.pathname
+  
+  // 确定需要展开的菜单
+  const openKeys = currentPath.startsWith('/system') ? ['/system'] : []
+  
+  const handleLogout = () => {
+    dispatch(logout())
+    navigate('/login')
+  }
   
   return (
     <ProLayout
       location={location}
+      className={`app-layout ${mode === 'dark' ? 'dark' : 'light'}`}
+      siderMenuType="group"
+      fixSiderbar
+      fixedHeader
+      layout="mix"
+      splitMenus
+      title="Hina Cloud BI"
+      logo="https://gw.alipayobjects.com/zos/rmsportal/KDpgvguMpGfqaHPjicRK.svg"
+      contentStyle={{ 
+        background: mode === 'dark' ? '#141414' : '#f0f2f5',
+        padding: '16px',
+        minHeight: 'calc(100vh - 64px)'
+      }}
+      openKeys={openKeys}
       route={{
         path: '/',
         routes: [
           {
             path: '/',
-            name: 'Discover',
+            name: '数据发现',
             icon: <CompassOutlined />,
           },
           {
             path: '/sql-editor',
-            name: 'SQL编辑',
+            name: 'SQL编辑器',
             icon: <ConsoleSqlOutlined />
           },
           {
@@ -38,8 +75,8 @@ function AppWrapper() {
             icon: <DashboardOutlined />,
           },
           {
-            path: '/system',
-            name: '系统设置',
+            path: '/system/user',
+            name: '系统管理',
             icon: <SettingOutlined />,
             routes: [
               {
@@ -50,22 +87,22 @@ function AppWrapper() {
               {
                 path: '/system/datasource',
                 name: '数据源管理',
-                icon: <UserOutlined />,
+                icon: <DatabaseOutlined />,
               },
               {
                 path: '/system/permission',
-                name: '数据源权限管理',
-                icon: <UserOutlined />,
+                name: '权限管理',
+                icon: <SafetyCertificateOutlined />,
               },
               {
                 path: '/system/machine',
-                name: '机器管理',
-                icon: <UserOutlined />,
+                name: '服务器管理',
+                icon: <DesktopOutlined />,
               },
               {
                 path: '/system/logstash',
                 name: 'Logstash管理',
-                icon: <UserOutlined />,
+                icon: <CloudServerOutlined />,
               },
             ]
           }
@@ -74,13 +111,34 @@ function AppWrapper() {
       menuItemRender={(item, dom) => (
         <Link to={item.path || '/'}>{dom}</Link>
       )}
+      actionsRender={() => [
+        <Tooltip title={mode === 'dark' ? '切换到亮色模式' : '切换到暗色模式'}>
+          <Button 
+            type="text" 
+            icon={mode === 'dark' ? <BulbOutlined /> : <BulbFilled />} 
+            onClick={toggleTheme}
+          />
+        </Tooltip>,
+      ]}
       avatarProps={{
         render: () => (
-          user.isLoggedIn && <UserProfile />
+          user.isLoggedIn && (
+            <Space size={12}>
+              <UserProfile />
+              <Tooltip title="退出登录">
+                <Button 
+                  icon={<LogoutOutlined />}
+                  type="text" 
+                  danger 
+                  onClick={handleLogout}
+                />
+              </Tooltip>
+            </Space>
+          )
         )
       }}
     >
-      <div>
+      <div className="app-content">
         <Outlet />
       </div>
     </ProLayout>

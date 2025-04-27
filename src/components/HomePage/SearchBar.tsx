@@ -1,31 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { AutoComplete, Button, Space, Dropdown, Tooltip, Card, Tag, Select, Popover } from 'antd';
 import { SearchOutlined, CodeOutlined, InfoCircleOutlined, TagsOutlined, SaveOutlined, StarOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import dayjs from 'dayjs';
 import { KibanaTimePicker } from './KibanaTimePicker';
-
-// 节流函数
-const useThrottle = (value: any, delay: number) => {
-  const [throttledValue, setThrottledValue] = useState(value);
-  const lastExecuted = useRef<number>(Date.now());
-
-  useEffect(() => {
-    const now = Date.now();
-    const handler = setTimeout(() => {
-      if (now - lastExecuted.current >= delay) {
-        setThrottledValue(value);
-        lastExecuted.current = now;
-      }
-    }, delay - (now - lastExecuted.current));
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [value, delay]);
-
-  return throttledValue;
-};
+import { debounce } from '../../utils/logDataHelpers';
 
 // 日志常用字段和值
 const LOG_FIELDS = [
@@ -79,7 +58,7 @@ interface SearchBarProps {
   whereSql: string;
   timeRange?: [string, string] | null;
   timeRangePreset?: string | null;
-  timeDisplayText?: string;  // 新增时间显示文本属性
+  timeDisplayText?: string;
   onSearch: (query: string) => void;
   onWhereSqlChange: (sql: string) => void;
   onSubmitSearch: () => void;
@@ -93,7 +72,7 @@ export const SearchBar = ({
   whereSql,
   timeRange,
   timeRangePreset,
-  timeDisplayText,  // 添加这个参数
+  timeDisplayText,
   onSearch,
   onWhereSqlChange,
   onSubmitSearch,
@@ -101,125 +80,140 @@ export const SearchBar = ({
   onTimeRangeChange,
   onOpenTimeSelector
 }: SearchBarProps) => {
+  // 修复 useRef 的使用方式，改用 useState 初始化历史记录
   const [searchHistory, setSearchHistory] = useState<string[]>(() => {
     const saved = localStorage.getItem('searchHistory');
     return saved ? JSON.parse(saved) : [];
   });
+  
   const [sqlHistory, setSqlHistory] = useState<string[]>(() => {
     const saved = localStorage.getItem('sqlHistory');
     return saved ? JSON.parse(saved) : [];
   });
-  const [showFieldSelector, setShowFieldSelector] = useState(false);
-  const [selectedField, setSelectedField] = useState<string | null>(null);
-  const [fieldValue, setFieldValue] = useState<string>('');
+  
   const [savedQueries, setSavedQueries] = useState<{name: string, query: string}[]>(() => {
     const saved = localStorage.getItem('savedQueries');
     return saved ? JSON.parse(saved) : [];
   });
+  
+  const [searchInputValue, setSearchInputValue] = useState(searchQuery);
+  const [sqlInputValue, setSqlInputValue] = useState(whereSql);
+  const [showFieldSelector, setShowFieldSelector] = useState(false);
+  const [selectedField, setSelectedField] = useState<string | null>(null);
+  const [fieldValue, setFieldValue] = useState<string>('');
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [activeFilters, setActiveFilters] = useState<{
     keywords: boolean;
     sql: boolean;
     time: boolean;
   }>({
-    keywords: false,
-    sql: false,
+    keywords: !!searchQuery,
+    sql: !!whereSql,
     time: timeRange != null
   });
-
-  // 添加时间选择器显示状态
-  const [showTimePicker, setShowTimePicker] = useState(false);
-
-  // 添加节流状态
-  const [searchInputValue, setSearchInputValue] = useState(searchQuery);
-  const [sqlInputValue, setSqlInputValue] = useState(whereSql);
   
-  // 使用节流处理搜索输入，节流时间为500毫秒
-  const throttledSearchValue = useThrottle(searchInputValue, 500);
-  const throttledSqlValue = useThrottle(sqlInputValue, 500);
+  // 使用 useMemo 缓存搜索历史和SQL历史，减少重复计算
+  const searchHistoryMemo = useMemo(() => searchHistory, [searchHistory]);
+  const sqlHistoryMemo = useMemo(() => sqlHistory, [sqlHistory]);
+  const savedQueriesMemo = useMemo(() => savedQueries, [savedQueries]);
   
-  // 监听节流后的值变化
-  useEffect(() => {
-    if (throttledSearchValue !== searchQuery) {
-      onSearch(throttledSearchValue);
-    }
-  }, [throttledSearchValue, onSearch, searchQuery]);
+  // 创建防抖处理函数，减少不必要的更新和渲染
+  const debouncedSearch = useMemo(
+    () => debounce((value: string) => {
+      onSearch(value);
+    }, 300), 
+    [onSearch]
+  );
   
-  useEffect(() => {
-    if (throttledSqlValue !== whereSql) {
-      onWhereSqlChange(throttledSqlValue);
-    }
-  }, [throttledSqlValue, onWhereSqlChange, whereSql]);
+  const debouncedSqlChange = useMemo(
+    () => debounce((value: string) => {
+      onWhereSqlChange(value);
+    }, 300), 
+    [onWhereSqlChange]
+  );
   
   // 处理搜索输入变化
-  const handleSearchInputChange = (value: string) => {
+  const handleSearchInputChange = useCallback((value: string) => {
     setSearchInputValue(value);
-  };
+    debouncedSearch(value);
+  }, [debouncedSearch]);
   
   // 处理SQL输入变化
-  const handleSqlInputChange = (value: string) => {
+  const handleSqlInputChange = useCallback((value: string) => {
     setSqlInputValue(value);
-  };
+    debouncedSqlChange(value);
+    // 当直接清空SQL输入框时，需要更新activeFilters
+    if (!value.trim()) {
+      setActiveFilters(prev => ({ ...prev, sql: false }));
+    }
+  }, [debouncedSqlChange]);
 
   // 处理关键词搜索
-  const handleKeywordSearch = () => {
-    if (searchQuery.trim()) {
+  const handleKeywordSearch = useCallback(() => {
+    if (searchInputValue.trim()) {
       // 保存搜索历史
-      if (!searchHistory.includes(searchQuery.trim())) {
-        const newHistory = [searchQuery.trim(), ...searchHistory].slice(0, 10);
+      if (!searchHistory.includes(searchInputValue.trim())) {
+        const newHistory = [searchInputValue.trim(), ...searchHistory].slice(0, 10);
         setSearchHistory(newHistory);
         localStorage.setItem('searchHistory', JSON.stringify(newHistory));
       }
       setActiveFilters(prev => ({ ...prev, keywords: true }));
       onSubmitSearch();
     }
-  };
+  }, [searchInputValue, searchHistory, onSubmitSearch]);
 
   // 处理SQL查询
-  const handleSqlSearch = () => {
-    if (whereSql.trim()) {
+  const handleSqlSearch = useCallback(() => {
+    if (sqlInputValue.trim()) {
       // 保存SQL历史
-      if (!sqlHistory.includes(whereSql.trim())) {
-        const newHistory = [whereSql.trim(), ...sqlHistory].slice(0, 10);
+      if (!sqlHistory.includes(sqlInputValue.trim())) {
+        const newHistory = [sqlInputValue.trim(), ...sqlHistory].slice(0, 10);
         setSqlHistory(newHistory);
         localStorage.setItem('sqlHistory', JSON.stringify(newHistory));
       }
       setActiveFilters(prev => ({ ...prev, sql: true }));
       onSubmitSql();
     }
-  };
+  }, [sqlInputValue, sqlHistory, onSubmitSql]);
 
   // 添加字段条件
-  const addFieldCondition = () => {
+  const addFieldCondition = useCallback(() => {
     if (selectedField && fieldValue) {
       const fieldInfo = LOG_FIELDS.find(f => f.value === selectedField);
       if (fieldInfo) {
         const condition = `${selectedField} = '${fieldValue}'`;
         const newWhereSql = whereSql ? `${whereSql} AND ${condition}` : condition;
         onWhereSqlChange(newWhereSql);
+        setSqlInputValue(newWhereSql); // 更新SQL输入框的值
         setSelectedField(null);
         setFieldValue('');
         setShowFieldSelector(false);
+        setActiveFilters(prev => ({ ...prev, sql: true }));
+        onSubmitSql(); // 触发SQL查询
       }
     }
-  };
+  }, [selectedField, fieldValue, whereSql, onWhereSqlChange, onSubmitSql]);
 
   // 保存当前查询
-  const saveCurrentQuery = (name: string) => {
+  const saveCurrentQuery = useCallback((name: string) => {
     if (whereSql && name) {
       const newSavedQuery = { name, query: whereSql };
       const newSavedQueries = [...savedQueries, newSavedQuery];
       setSavedQueries(newSavedQueries);
       localStorage.setItem('savedQueries', JSON.stringify(newSavedQueries));
     }
-  };
+  }, [whereSql, savedQueries]);
 
   // 应用查询模板
-  const applyQueryTemplate = (query: string) => {
+  const applyQueryTemplate = useCallback((query: string) => {
     onWhereSqlChange(query);
-  };
+    setSqlInputValue(query);
+    setActiveFilters(prev => ({ ...prev, sql: !!query }));
+    onSubmitSql(); // 触发查询执行
+  }, [onWhereSqlChange, onSubmitSql]);
 
   // 应用时间范围预设
-  const applyTimePreset = (preset: typeof TIME_PRESETS[0]) => {
+  const applyTimePreset = useCallback((preset: typeof TIME_PRESETS[0]) => {
     if (onTimeRangeChange) {
       const now = dayjs();
       let start;
@@ -258,10 +252,10 @@ export const SearchBar = ({
       );
       setActiveFilters(prev => ({ ...prev, time: true }));
     }
-  };
+  }, [onTimeRangeChange]);
 
   // 获取时间范围显示文本
-  const getTimeRangeDisplayText = (): string => {
+  const getTimeRangeDisplayText = useCallback((): string => {
     if (!timeRange) return '选择时间范围';
     
     // 如果是预设，优先使用预设名称
@@ -311,10 +305,10 @@ export const SearchBar = ({
     
     // 跨月但在同一年
     return `${startDayjs.format('MM-DD HH:mm:ss')} - ${endDayjs.format('MM-DD HH:mm:ss')}`;
-  };
+  }, [timeRange, timeRangePreset]);
 
-  // 查询模板菜单项
-  const templateMenuItems: MenuProps['items'] = [
+  // 查询模板菜单项 - 使用 useMemo 缓存
+  const templateMenuItems: MenuProps['items'] = useMemo(() => [
     {
       key: 'templates',
       type: 'group',
@@ -348,45 +342,47 @@ export const SearchBar = ({
           }))
         : [{ key: 'no-saved', label: '暂无保存的查询', disabled: true }],
     }
-  ];
+  ], [savedQueries, applyQueryTemplate]);
 
-  // 时间预设菜单项
-  const timePresetMenuItems: MenuProps['items'] = TIME_PRESETS.map(preset => ({
+  // 时间预设菜单项 - 使用 useMemo 缓存
+  const timePresetMenuItems: MenuProps['items'] = useMemo(() => TIME_PRESETS.map(preset => ({
     key: preset.key,
     label: preset.label,
     onClick: () => applyTimePreset(preset)
-  }));
+  })), [applyTimePreset]);
 
-  // 显示过滤标签
-  const renderFilterTags = () => {
+  // 显示过滤标签 - 使用 useMemo 缓存复杂渲染逻辑
+  const filterTags = useMemo(() => {
     return (
       <div>
         <Space wrap>
-          {searchQuery && activeFilters.keywords && (
+          {searchInputValue && activeFilters.keywords && (
             <Tag 
               color="green" 
               closable 
               onClose={() => {
                 onSearch('');
+                setSearchInputValue('');
                 setActiveFilters(prev => ({ ...prev, keywords: false }));
                 onSubmitSearch();
               }}
               icon={<SearchOutlined />}
             >
-              关键词: {searchQuery.length > 20 ? `${searchQuery.substring(0, 18)}...` : searchQuery}
+              关键词: {searchInputValue.length > 20 ? `${searchInputValue.substring(0, 18)}...` : searchInputValue}
             </Tag>
           )}
           
-          {whereSql && activeFilters.sql && whereSql.split(/\s+AND\s+/i).map((condition, index) => (
+          {sqlInputValue && activeFilters.sql && sqlInputValue.split(/\s+AND\s+/i).map((condition, index) => (
             <Tag 
               key={index} 
               color="purple"
               closable
               onClose={() => {
-                const conditions = whereSql.split(/\s+AND\s+/i);
+                const conditions = sqlInputValue.split(/\s+AND\s+/i);
                 conditions.splice(index, 1);
                 const newWhereSql = conditions.join(' AND ');
                 onWhereSqlChange(newWhereSql);
+                setSqlInputValue(newWhereSql);
                 if (!newWhereSql) {
                   setActiveFilters(prev => ({ ...prev, sql: false }));
                 }
@@ -418,7 +414,11 @@ export const SearchBar = ({
         </Space>
       </div>
     );
-  };
+  }, [
+    searchInputValue, sqlInputValue, timeRange, activeFilters, 
+    onSearch, onWhereSqlChange, onSubmitSearch, onSubmitSql, 
+    onTimeRangeChange, timeDisplayText, getTimeRangeDisplayText
+  ]);
 
   return (
     <div className="search-bar-container">
@@ -549,9 +549,10 @@ export const SearchBar = ({
                     onChange={setFieldValue}
                     options={
                       selectedField ? 
-                        LOG_FIELDS
-                          .find(f => f.value === selectedField)?.example
+                        (LOG_FIELDS
+                          .find(f => f.value === selectedField)?.example || '')
                           .split(', ')
+                          .filter(val => val) // 过滤掉空值
                           .map(val => ({ value: val })) 
                         : []
                     }
@@ -594,15 +595,11 @@ export const SearchBar = ({
                   onClick={handleSqlSearch}
                 />
               </Space.Compact>
-              
-              
             </div>
-            
           </div>
-          
         </div>
         {/* 显示过滤条件标签 */}
-        {(activeFilters.keywords || activeFilters.sql || activeFilters.time) && renderFilterTags()}
+        {(activeFilters.keywords || activeFilters.sql || activeFilters.time) && filterTags}
       </Card>
     </div>
   );

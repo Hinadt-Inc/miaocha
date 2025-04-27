@@ -1,5 +1,5 @@
-import { PlusOutlined } from '@ant-design/icons';
-import { Button, message, Modal, Space, Table, Breadcrumb } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, PlayCircleOutlined, StopOutlined, HistoryOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { Button, message, Popconfirm, Space, Table, Breadcrumb, Tooltip, Modal, Progress, Tag, Descriptions } from 'antd';
 import './LogstashManagementPage.less';
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -10,9 +10,11 @@ import {
   startLogstashProcess,
   stopLogstashProcess,
   updateLogstashProcess,
-  getLogstashTaskStatus
+  getLogstashTaskStatus,
+  getLogstashTaskSummaries,
+  getTaskSteps
 } from '../../api/logstash';
-import type { LogstashProcess } from '../../types/logstashTypes';
+import type { LogstashProcess, LogstashTaskSummary, TaskStepsResponse } from '../../types/logstashTypes';
 import LogstashEditModal from './components/LogstashEditModal';
 
 export default function LogstashManagementPage() {
@@ -20,6 +22,21 @@ export default function LogstashManagementPage() {
   const [loading, setLoading] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [currentProcess, setCurrentProcess] = useState<LogstashProcess | null>(null);
+  const [taskSummaries, setTaskSummaries] = useState<LogstashTaskSummary[]>([]);
+  const [summaryModalVisible, setSummaryModalVisible] = useState(false);
+  const [taskSteps, setTaskSteps] = useState<TaskStepsResponse | null>(null);
+  const [stepsModalVisible, setStepsModalVisible] = useState(false);
+
+  const showTaskSteps = async (taskId: string) => {
+    try {
+      const steps = await getTaskSteps(taskId);
+      setTaskSteps(steps);
+      setStepsModalVisible(true);
+    } catch (err) {
+      message.error('获取任务步骤详情失败');
+      console.error('获取任务步骤详情失败:', err);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -31,6 +48,17 @@ export default function LogstashManagementPage() {
       console.error('获取Logstash进程列表失败:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const showTaskSummaries = async (id: number) => {
+    try {
+      const summaries = await getLogstashTaskSummaries(id);
+      setTaskSummaries(summaries);
+      setSummaryModalVisible(true);
+    } catch (err) {
+      message.error('获取任务历史失败');
+      console.error('获取任务历史失败:', err);
     }
   };
 
@@ -49,20 +77,14 @@ export default function LogstashManagementPage() {
   };
 
   const handleDelete = async (id: number) => {
-    Modal.confirm({
-      title: '确认删除',
-      content: '确定要删除这个Logstash进程吗？',
-      onOk: async () => {
-        try {
-          await deleteLogstashProcess(id);
-          message.success('删除成功');
-          await fetchData();
-        } catch (err) {
-          message.error('删除失败');
-          console.error('删除Logstash进程失败:', err);
-        }
-      }
-    });
+    try {
+      await deleteLogstashProcess(id);
+      message.success('删除成功');
+      await fetchData();
+    } catch (err) {
+      message.error('删除失败');
+      console.error('删除Logstash进程失败:', err);
+    }
   };
 
   const handleStart = async (id: number) => {
@@ -71,7 +93,6 @@ export default function LogstashManagementPage() {
       message.success('启动成功');
       await fetchData();
       
-      // 轮询任务状态
       const pollStatus = async () => {
         const status = await getLogstashTaskStatus(id);
         if (status.status === 'COMPLETED' || status.status === 'FAILED') {
@@ -94,7 +115,6 @@ export default function LogstashManagementPage() {
       message.success('停止成功');
       await fetchData();
       
-      // 轮询任务状态
       const pollStatus = async () => {
         const status = await getLogstashTaskStatus(id);
         if (status.status === 'COMPLETED' || status.status === 'FAILED') {
@@ -132,14 +152,35 @@ export default function LogstashManagementPage() {
       key: 'action',
       render: (_: unknown, record: LogstashProcess) => (
         <Space size="middle">
-          <Button type="link" onClick={() => handleEdit(record)}>编辑</Button>
-          <Button 
-            type="link" 
-            onClick={() => record.state === 'RUNNING' ? handleStop(record.id) : handleStart(record.id)}
-          >
-            {record.state === 'RUNNING' ? '停止' : '启动'}
-          </Button>
-          <Button type="link" danger onClick={() => handleDelete(record.id)}>删除</Button>
+          <Tooltip title="编辑">
+            <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+          </Tooltip>
+          <Tooltip title={record.state === 'RUNNING' ? '停止' : '启动'}>
+            <Button 
+              type="text" 
+              icon={record.state === 'RUNNING' ? <StopOutlined /> : <PlayCircleOutlined />}
+              onClick={() => record.state === 'RUNNING' ? handleStop(record.id) : handleStart(record.id)}
+            />
+          </Tooltip>
+          <Tooltip title="任务历史">
+            <Button 
+              type="text" 
+              icon={<HistoryOutlined />} 
+              onClick={() => showTaskSummaries(record.id)}
+            />
+          </Tooltip>
+          <Tooltip title="删除">
+            <Popconfirm
+              title="确认删除"
+              description="确定要删除这个Logstash进程吗？"
+              onConfirm={() => handleDelete(record.id)}
+              okText="确认"
+              cancelText="取消"
+              okType="danger"
+            >
+              <Button type="text" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          </Tooltip>
         </Space>
       )
     }
@@ -173,26 +214,205 @@ export default function LogstashManagementPage() {
           bordered
         />
         <LogstashEditModal
-        visible={editModalVisible}
-        onCancel={() => setEditModalVisible(false)}
-        onOk={async (values: Partial<LogstashProcess>) => {
-          try {
-            if (currentProcess) {
-              await updateLogstashProcess(currentProcess.id, values);
-              message.success('更新成功');
-            } else {
-              await createLogstashProcess(values);
-              message.success('创建成功');
+          visible={editModalVisible}
+          onCancel={() => setEditModalVisible(false)}
+          onOk={async (values: Partial<LogstashProcess>) => {
+            try {
+              if (currentProcess) {
+                await updateLogstashProcess(currentProcess.id, values);
+                message.success('更新成功');
+              } else {
+                await createLogstashProcess(values);
+                message.success('创建成功');
+              }
+              setEditModalVisible(false);
+              await fetchData();
+            } catch (err) {
+              message.error(currentProcess ? '更新失败' : '创建失败');
+              console.error('操作Logstash进程失败:', err);
             }
-            setEditModalVisible(false);
-            await fetchData();
-          } catch (err) {
-            message.error(currentProcess ? '更新失败' : '创建失败');
-            console.error('操作Logstash进程失败:', err);
-          }
-        }}
-        initialValues={currentProcess}
+          }}
+          initialValues={currentProcess}
         />
+        <Modal
+          title="任务历史"
+          open={summaryModalVisible}
+          onCancel={() => setSummaryModalVisible(false)}
+          footer={null}
+          width={1000}
+        >
+          <Table
+            dataSource={taskSummaries}
+            rowKey="taskId"
+            columns={[
+              {
+                title: '任务ID',
+                dataIndex: 'taskId',
+                key: 'taskId'
+              },
+              {
+                title: '操作类型',
+                dataIndex: 'operationType',
+                key: 'operationType'
+              },
+              {
+                title: '状态',
+                dataIndex: 'status',
+                key: 'status',
+                render: (status: string) => (
+                  <Tag color={
+                    status === 'COMPLETED' ? 'success' : 
+                    status === 'FAILED' ? 'error' : 'processing'
+                  }>
+                    {status}
+                  </Tag>
+                )
+              },
+              {
+                title: '进度',
+                key: 'progress',
+                width: 100,
+                render: (_: unknown, record: LogstashTaskSummary) => (
+                  <Progress
+                    percent={record.progressPercentage}
+                    status={
+                      record.status === 'FAILED' ? 'exception' : 
+                      record.status === 'COMPLETED' ? 'success' : 'active'
+                    }
+                  />
+                )
+              },
+              {
+                title: '开始时间',
+                dataIndex: 'startTime',
+                key: 'startTime'
+              },
+              {
+                title: '操作',
+                key: 'action',
+                render: (_: unknown, record: LogstashTaskSummary) => (
+                  <Button 
+                    type="link" 
+                    icon={<InfoCircleOutlined />}
+                    onClick={() => showTaskSteps(record.taskId)}
+                  >
+                    详情
+                  </Button>
+                )
+              }
+            ]}
+          />
+        </Modal>
+        <Modal
+          title="任务步骤详情"
+          open={stepsModalVisible}
+          onCancel={() => setStepsModalVisible(false)}
+          footer={null}
+          width={1200}
+        >
+          {taskSteps && (
+            <div>
+              <Descriptions 
+                bordered
+                size="small"
+                column={2}
+                style={{ marginBottom: 16 }}
+              >
+                <Descriptions.Item label="任务ID">{taskSteps.taskId}</Descriptions.Item>
+                <Descriptions.Item label="任务名称">{taskSteps.taskName}</Descriptions.Item>
+                <Descriptions.Item label="任务状态">
+                  <Tag color={
+                    taskSteps.taskStatus === 'COMPLETED' ? 'success' : 
+                    taskSteps.taskStatus === 'FAILED' ? 'error' : 'processing'
+                  }>
+                    {taskSteps.taskStatus}
+                  </Tag>
+                </Descriptions.Item>
+              </Descriptions>
+              
+              <Table
+                dataSource={taskSteps.steps}
+                rowKey="stepId"
+                columns={[
+                  {
+                    title: '步骤ID',
+                    dataIndex: 'stepId',
+                    key: 'stepId'
+                  },
+                  {
+                    title: '步骤名称',
+                    dataIndex: 'stepName',
+                    key: 'stepName'
+                  },
+                  {
+                    title: '完成',
+                    dataIndex: 'completedCount',
+                    key: 'completedCount'
+                  },
+                  {
+                    title: '失败',
+                    dataIndex: 'failedCount',
+                    key: 'failedCount'
+                  },
+                  {
+                    title: '待处理',
+                    dataIndex: 'pendingCount',
+                    key: 'pendingCount'
+                  },
+                  {
+                    title: '运行中',
+                    dataIndex: 'runningCount',
+                    key: 'runningCount'
+                  },
+                  {
+                    title: '跳过',
+                    dataIndex: 'skippedCount',
+                    key: 'skippedCount'
+                  },
+                  {
+                    title: '总计',
+                    dataIndex: 'totalCount',
+                    key: 'totalCount'
+                  }
+                ]}
+                expandable={{
+                  expandedRowRender: (step) => (
+                    <div style={{ padding: '8px 16px', background: '#fafafa' }}>
+                      {step.machineSteps.map(machine => (
+                        <Descriptions 
+                          key={machine.machineId}
+                          bordered
+                          size="small"
+                          column={2}
+                          style={{ marginBottom: 16 }}
+                        >
+                          <Descriptions.Item label="机器ID">{machine.machineId}</Descriptions.Item>
+                          <Descriptions.Item label="名称">{machine.machineName}</Descriptions.Item>
+                          <Descriptions.Item label="IP">{machine.machineIp}</Descriptions.Item>
+                          <Descriptions.Item label="状态">
+                            <Tag color={
+                              machine.status === 'COMPLETED' ? 'success' : 
+                              machine.status === 'FAILED' ? 'error' : 'processing'
+                            }>
+                              {machine.status}
+                            </Tag>
+                          </Descriptions.Item>
+                          <Descriptions.Item label="开始时间">{machine.startTime}</Descriptions.Item>
+                          <Descriptions.Item label="结束时间">{machine.endTime || '-'}</Descriptions.Item>
+                          {machine.errorMessage && (
+                            <Descriptions.Item label="错误信息" span={2}>
+                              {machine.errorMessage}
+                            </Descriptions.Item>
+                          )}
+                        </Descriptions>
+                      ))}
+                    </div>
+                  )
+                }}
+              />
+            </div>
+          )}
+        </Modal>
       </div>
     </div>
   );

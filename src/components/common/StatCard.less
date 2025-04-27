@@ -1,0 +1,95 @@
+@import '../../styles/responsive.less';
+
+.stat-card {
+  border-radius: 8px;
+  overflow: hidden;
+  .transition();
+  .box-shadow(1);
+  
+  &:hover {
+    transform: translateY(-5px);
+    .box-shadow(2);
+  }
+  
+  // 暗色主题适配
+  &.dark {
+    background-color: #1f1f1f;
+    
+    .stat-card-title {
+      color: rgba(255, 255, 255, 0.45);
+    }
+    
+    .ant-statistic-content {
+      color: rgba(255, 255, 255, 0.85);
+    }
+  }
+  
+  .stat-card-content {
+    display: flex;
+    align-items: center;
+  }
+  
+  .stat-card-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    margin-right: 16px;
+    font-size: 24px;
+    background: var(--icon-bg, rgba(22, 119, 255, 0.1));
+    color: var(--icon-color, #1677ff);
+    
+    // 响应式调整
+    @media (max-width: @screen-sm) {
+      width: 40px;
+      height: 40px;
+      font-size: 20px;
+    }
+  }
+  
+  .stat-card-data {
+    flex: 1;
+  }
+  
+  .stat-card-title {
+    font-size: 14px;
+    color: var(--text-secondary, rgba(0, 0, 0, 0.45));
+    margin-bottom: 8px;
+  }
+  
+  .stat-card-trend {
+    margin-top: 8px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    
+    &.stat-card-trend-up {
+      color: #52c41a;
+    }
+    
+    &.stat-card-trend-down {
+      color: #f5222d;
+    }
+    
+    &.stat-card-trend-stable {
+      color: #faad14;
+    }
+    
+    .trend-text {
+      margin-left: 4px;
+    }
+  }
+  
+  // 响应式调整
+  @media (min-width: @screen-md) {
+    .ant-statistic-content-value {
+      font-size: 28px;
+    }
+    
+    .stat-card-title {
+      font-size: 16px;
+    }
+  }
+}

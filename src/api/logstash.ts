@@ -1,5 +1,5 @@
 import { request } from './request';
-import type { LogstashProcess, LogstashTaskStatus } from '../types/logstashTypes';
+import type { LogstashProcess, LogstashTaskStatus, LogstashTaskSummary, TaskStepsResponse } from '../types/logstashTypes';
 
 export function getLogstashProcesses(): Promise<LogstashProcess[]> {
   return request({
@@ -47,7 +47,21 @@ export function stopLogstashProcess(id: number): Promise<void> {
 
 export function getLogstashTaskStatus(id: number): Promise<LogstashTaskStatus> {
   return request({
-    url: `/api/logstash/processes/${id}/task-status`,
+    url: `/api/logstash/processes/${id}/task-status`, 
+    method: 'GET'
+  });
+}
+
+export function getLogstashTaskSummaries(processId: number): Promise<LogstashTaskSummary[]> {
+  return request({
+    url: `/api/logstash/processes/${processId}/tasks`,
+    method: 'GET'
+  });
+}
+
+export function getTaskSteps(taskId: string): Promise<TaskStepsResponse> {
+  return request({
+    url: `/api/logstash/processes/tasks/${taskId}/steps`,
     method: 'GET'
   });
 }

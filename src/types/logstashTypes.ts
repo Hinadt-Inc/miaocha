@@ -34,8 +34,58 @@ export interface LogstashTaskStatus {
   skippedCount: number;
   progressPercentage: number;
   errorMessage: string;
-  machineSteps: Record<string, LogstashTaskStep[]>;
-  machineProgressPercentages: Record<string, number>;
+  machineSteps: {
+    [key: string]: LogstashTaskStep[];
+  };
+  machineProgressPercentages: {
+    [key: string]: number;
+  };
+}
+
+export interface LogstashTaskSummary {
+  taskId: string;
+  processId: number;
+  name: string;
+  description: string;
+  status: string;
+  operationType: string;
+  startTime: string;
+  endTime: string;
+  totalSteps: number;
+  completedSteps: number;
+  failedSteps: number;
+  pendingSteps: number;
+  runningSteps: number;
+  skippedSteps: number;
+  progressPercentage: number;
+  errorMessage: string;
+}
+
+export interface TaskStepDetail {
+  stepId: string;
+  stepName: string;
+  completedCount: number;
+  failedCount: number;
+  pendingCount: number;
+  runningCount: number;
+  skippedCount: number;
+  totalCount: number;
+  machineSteps: {
+    machineId: number;
+    machineName: string;
+    machineIp: string;
+    status: string;
+    startTime: string;
+    endTime: string;
+    errorMessage: string;
+  }[];
+}
+
+export interface TaskStepsResponse {
+  taskId: string;
+  taskName: string;
+  taskStatus: string;
+  steps: TaskStepDetail[];
 }
 
 export type LogstashProcessState = 'NOT_STARTED' | 'RUNNING' | 'STOPPED' | 'ERROR';
