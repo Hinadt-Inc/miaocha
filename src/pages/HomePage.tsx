@@ -55,9 +55,9 @@ const HomePage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [whereSql, setWhereSql] = useState('');
   const [showHistogram, setShowHistogram] = useState(true);
-  const [timeRange, setTimeRange] = useState<[string, string] | null>(null);
-  const [timeRangePreset, setTimeRangePreset] = useState<string | null>(null);
-  const [timeDisplayText, setTimeDisplayText] = useState<string | null>(null);
+  const [timeRange, setTimeRange] = useState<[string, string] | undefined>(undefined);
+  const [timeRangePreset, setTimeRangePreset] = useState<string | undefined>(undefined);
+  const [timeDisplayText, setTimeDisplayText] = useState<string | undefined>(undefined);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedTable, setSelectedTable] = useState<string>('');
 
@@ -243,7 +243,7 @@ const HomePage = () => {
   }, [throttledFetchColumns]);
 
   // 使用优化的 useLogData 钩子
-  const { tableData, loading, hasMore, loadMoreData, resetData, distributionData = [] } = useLogData({
+  const { tableData, loading, hasMore, loadMoreData, resetData, distributionData = [], totalCount } = useLogData({
     ...searchParams,
     tableName: selectedTable ? selectedTable.split('-')[1] : '',
     datasourceId: selectedTable ? Number(selectedTable.split('-')[0]) : 1,
@@ -303,23 +303,31 @@ const HomePage = () => {
     }, 2000);
   }, []);
 
-  // 优化滚动逻辑，使用requestAnimationFrame提高性能
-  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    if (loading || !hasMore) return;
-    
-    requestAnimationFrame(() => {
-      const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
+  // 优化滚动逻辑，添加节流机制避免频繁触发
+  const handleScroll = useCallback(
+    throttle((e: React.UIEvent<HTMLDivElement>) => {
+      if (loading || !hasMore) return;
+      
+      const element = e.currentTarget;
+      if (!element) return;
+      
+      const scrollTop = element.scrollTop;
+      const scrollHeight = element.scrollHeight;
+      const clientHeight = element.clientHeight;
+      
+      // 当滚动到底部前200px时开始加载更多，提供更好的用户体验
       if (scrollHeight - scrollTop - clientHeight < 100) {
         loadMoreData();
       }
-    });
-  }, [loadMoreData, loading, hasMore]);
+    }, 300), // 300ms的节流时间，避免短时间内多次触发
+    [loadMoreData, loading, hasMore]
+  );
 
   // 优化时间范围变更处理
-  const handleTimeRangeChange = useCallback((range: [string, string] | null, preset?: string | null, displayText?: string) => {
+  const handleTimeRangeChange = useCallback((range: [string, string] | undefined, preset?: string | undefined, displayText?: string) => {
     setTimeRange(range);
-    setTimeRangePreset(preset || null);
-    setTimeDisplayText(displayText || null);
+    setTimeRangePreset(preset);
+    setTimeDisplayText(displayText);
     
     // 当有时间范围变化时，如果是有数据的情况下，重新加载数据
     if (range && tableDataRef.current.length > 0) {
@@ -397,6 +405,15 @@ const HomePage = () => {
     setShowHistogram(show);
   }, []);
 
+  useEffect(() => {
+    // 添加调试代码，检查HomePage中的直方图显示条件
+    console.log('HomePage 直方图显示条件:', {
+      showHistogram, 
+      hasDistributionData: distributionData && distributionData.length > 0,
+      distributionDataLength: distributionData ? distributionData.length : 0
+    });
+  }, [showHistogram, distributionData]);
+
   return (
     <>
     <Layout className="layout-main">
@@ -447,7 +464,7 @@ const HomePage = () => {
           <Content className="content-container">
             <div className="table-header">
               <div>
-                <span>找到 <b>{loading ? '...' : tableData.length}</b> 条记录</span>
+                <span>找到 <b>{ totalCount }</b> 条记录</span>
                 {!selectedTable && (
                   <Tag color="warning" icon={<InfoCircleOutlined />}>请选择数据表</Tag>
                 )}
@@ -478,7 +495,13 @@ const HomePage = () => {
               </Space>
             </div>
             
-            <DataTable {...dataTableProps} />
+            <div 
+              className="scroll-container" 
+              style={{ height: '100%', overflow: 'auto' }}
+              onScroll={handleScroll}
+            >
+              <DataTable {...dataTableProps} />
+            </div>
           </Content>
         </Layout>
       </Layout>
