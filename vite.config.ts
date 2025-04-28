@@ -1,20 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
-import monacoEditorPlugin from 'vite-plugin-monaco-editor';
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    monacoEditorPlugin({
-      languageWorkers: ['editorWorkerService', 'typescript', 'json', 'html'],
-      customWorkers: [
-        {
-          label: 'sql',
-          entry: 'monaco-sql-languages/out/esm/sql/sql.worker.js'
-        }
-      ]
-    }),
     react(),
 
   ],
