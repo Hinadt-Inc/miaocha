@@ -31,27 +31,14 @@ const ErrorBoundary = ({ children }: { children: React.ReactNode }) => {
 
 const lazyLoad = (path: string, isApp: boolean = false) => {
   // 使用动态导入，并明确解构默认导出
-  const Component = lazy(() => 
+  const Component = lazy(() =>
     import(`../${isApp ? '' : 'pages/'}${path}`).then(module => {
       if (module && module.default) {
         return { default: module.default };
       }
-      // 如果没有默认导出，创建一个错误组件
-      return { 
-        default: () => (
-          <div>Failed to load component: {path}</div>
-        ) 
-      };
-    }).catch(() => {
-      // 动态导入失败时返回错误组件
-      return { 
-        default: () => (
-          <div style={{ padding: 20 }}>
-            <h2>模块加载失败</h2>
-            <p>无法加载请求的页面，请检查网络连接后刷新页面重试</p>
-          </div>
-        ) 
-      };
+      // 处理命名导出
+      const key = path.split('/').pop();
+      return { default: key ? module[key] || (() => <div>Failed to load</div>) : (() => <div>Failed to load</div>) };
     })
   );
 
