@@ -30,16 +30,20 @@ const ErrorBoundary = ({ children }: { children: React.ReactNode }) => {
 };
 
 const lazyLoad = (path: string, isApp: boolean = false) => {
-  // 使用动态导入，并明确解构默认导出
   const Component = lazy(() =>
-    import(`../${isApp ? '' : 'pages/'}${path}`).then(module => {
-      if (module && module.default) {
-        return { default: module.default };
-      }
-      // 处理命名导出
-      const key = path.split('/').pop();
-      return { default: key ? module[key] || (() => <div>Failed to load</div>) : (() => <div>Failed to load</div>) };
-    })
+    import(`../${isApp ? '' : 'pages/'}${path}`)
+      .then(module => {
+        console.log(`加载模块 ${path}:`, module); // 调试日志
+        if (module && module.default) {
+          return { default: module.default };
+        }
+        const key = path.split('/').pop();
+        return { default: key ? module[key] || (() => <div>加载失败</div>) : (() => <div>加载失败</div>) };
+      })
+      .catch(err => {
+        console.error(`加载 ${path} 失败:`, err); // 记录导入错误
+        throw err; // 确保错误传播
+      })
   );
 
   return (
