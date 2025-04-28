@@ -1,8 +1,16 @@
 import { createBrowserRouter } from 'react-router-dom'
-import { lazy, Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import Loading from '../components/Loading'
 import LoginPage from '../pages/LoginPage'
+import App from '../App'
 import HomePage from '../pages/HomePage'
+import DashboardPage from '../pages/DashboardPage'
+import UserManagementPage from '../pages/system/UserManagementPage'
+import DataSourceManagementPage from '../pages/system/DataSourceManagementPage'
+import PermissionManagementPage from '../pages/system/PermissionManagementPage'
+import SQLEditorPage from '../pages/SQLEditorPage'
+import MachineManagementPage from '../pages/system/MachineManagementPage'
+import LogstashManagementPage from '../pages/system/LogstashManagementPage'
 
 // 简单的错误边界组件
 const ErrorBoundary = ({ children }: { children: React.ReactNode }) => {
@@ -30,29 +38,6 @@ const ErrorBoundary = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// 懒加载函数
-const lazyLoad = (path: string, isApp: boolean = false) => {
-  // 使用动态导入，并明确解构默认导出
-  const Component = lazy(() =>
-    import(`../${isApp ? '' : 'pages/'}${path}`).then(module => {
-      if (module && module.default) {
-        return { default: module.default };
-      }
-      // 处理命名导出
-      const key = path.split('/').pop();
-      return { default: key ? module[key] || (() => <div>Failed to load</div>) : (() => <div>Failed to load</div>) };
-    })
-  );
-
-  return (
-    <ErrorBoundary>
-      <Suspense fallback={<Loading delay={300} />}>
-        <Component />
-      </Suspense>
-    </ErrorBoundary>
-  );
-};
-
 // 创建路由
 export const router = createBrowserRouter([
   {
@@ -67,7 +52,13 @@ export const router = createBrowserRouter([
   },
   {
     path: '/',
-    element: lazyLoad('App', true),
+    element: (
+      <ErrorBoundary>
+        <Suspense fallback={<Loading delay={300} />}>
+          <App />
+        </Suspense>
+      </ErrorBoundary>
+    ),
     children: [
       {
         index: true,
@@ -81,31 +72,73 @@ export const router = createBrowserRouter([
       },
       {
         path: 'dashboard',
-        element: lazyLoad('DashboardPage'),
+        element: (
+          <ErrorBoundary>
+            <Suspense fallback={<Loading delay={300} />}>
+              <DashboardPage />
+            </Suspense>
+          </ErrorBoundary>
+        ),
       },
       {
         path: 'system/user',
-        element: lazyLoad('system/UserManagementPage'),
+        element: (
+          <ErrorBoundary>
+            <Suspense fallback={<Loading delay={300} />}>
+              <UserManagementPage />
+            </Suspense>
+          </ErrorBoundary>
+        ),
       },
       {
         path: 'system/datasource',
-        element: lazyLoad('system/DataSourceManagementPage'),
+        element: (
+          <ErrorBoundary>
+            <Suspense fallback={<Loading delay={300} />}>
+              <DataSourceManagementPage />
+            </Suspense>
+          </ErrorBoundary>
+        ),
       },
       {
         path: 'system/permission',
-        element: lazyLoad('system/PermissionManagementPage'),
+        element: (
+          <ErrorBoundary>
+            <Suspense fallback={<Loading delay={300} />}>
+              <PermissionManagementPage />
+            </Suspense>
+          </ErrorBoundary>
+        ),
       },
       {
         path: 'sql-editor',
-        element: lazyLoad('SQLEditorPage'),
+        element: (
+          <ErrorBoundary>
+            <Suspense fallback={<Loading delay={300} />}>
+              <SQLEditorPage />
+            </Suspense>
+          </ErrorBoundary>
+        ),
       },
       {
         path: 'system/machine',
-        element: lazyLoad('system/MachineManagementPage'),
+        element: (
+          <ErrorBoundary>
+            <Suspense fallback={<Loading delay={300} />}>
+              <MachineManagementPage />
+            </Suspense>
+          </ErrorBoundary>
+        ),
       },
       {
         path: 'system/logstash',
-        element: lazyLoad('system/LogstashManagementPage'),
+        element: (
+          <ErrorBoundary>
+            <Suspense fallback={<Loading delay={300} />}>
+              <LogstashManagementPage />
+            </Suspense>
+          </ErrorBoundary>
+        ),
       },
     ],
   },
