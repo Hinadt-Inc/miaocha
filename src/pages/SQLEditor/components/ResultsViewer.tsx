@@ -1,5 +1,5 @@
 import {useMemo} from 'react';
-import { Alert, Badge, Button, Empty, Space, Table, Typography } from 'antd';
+import { Badge, Button, Empty, Space, Table, Typography } from 'antd';
 import { DownloadOutlined } from '@ant-design/icons';
 import { QueryResult } from '../types';
 import Loading from '../../../components/Loading';

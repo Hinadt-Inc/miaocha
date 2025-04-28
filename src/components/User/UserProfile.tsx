@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { Avatar, Modal, Dropdown, Button, Typography, Space, Spin, Descriptions, Tooltip, Card, Row, Col, Divider, Tag, App } from 'antd';
+import { Avatar, Modal, Dropdown, Button, Typography, Space, Spin, Tooltip, Card, Row, Col, Divider, Tag, App } from 'antd';
 import type { MenuProps } from 'antd';
 import { 
   UserOutlined, 
@@ -10,7 +10,6 @@ import {
   MailOutlined,
   ReloadOutlined,
   IdcardOutlined,
-  TeamOutlined,
   ClockCircleOutlined
 } from '@ant-design/icons';
 import { fetchUserInfo, logoutUser } from '../../store/userSlice';

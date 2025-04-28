@@ -2,16 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { 
   Button, 
   Card, 
-  Col, 
   Divider, 
   Layout,
   message, 
-  Row, 
   Select, 
   Space, 
   Tabs,
   Tooltip,
-  Typography 
 } from 'antd';
 import { 
   CopyOutlined, 
@@ -61,7 +58,6 @@ import './SQLEditorPage.less';
 
 const { Option } = Select;
 const { TabPane } = Tabs;
-const { Title } = Typography;
 const { Content, Sider } = Layout;
 
 // 默认编辑器设置
@@ -103,7 +99,6 @@ const SQLEditorImpl: React.FC = () => {
   const [historyDrawerVisible, setHistoryDrawerVisible] = useState<boolean>(false);
   const [settingsDrawerVisible, setSettingsDrawerVisible] = useState<boolean>(false);
   const [fullscreen, setFullscreen] = useState<boolean>(false);
-  const [collapsed, setCollapsed] = useState<boolean>(false);
   
   // 历史记录和设置
   const [queryHistory, setQueryHistory] = useState<QueryHistory[]>([]);
@@ -312,6 +307,7 @@ const SQLEditorImpl: React.FC = () => {
       
       // 设置错误结果
       setQueryResults({
+        queryId: `error-${Date.now()}`,
         status: 'error',
         message: errorMessage
       });
@@ -410,8 +406,24 @@ const SQLEditorImpl: React.FC = () => {
   const insertTextToEditor = (text: string) => {
     if (editorRef.current) {
       const selection = editorRef.current.getSelection();
+      const model = editorRef.current.getModel();
       const id = { major: 1, minor: 1 };
-      const op = { identifier: id, range: selection, text, forceMoveMarkers: true };
+      
+      // 确保 range 是有效的 IRange 对象
+      const range = selection 
+      ?? (model ? {
+        startLineNumber: model.getLineCount(),
+        startColumn: model.getLineMaxColumn(model.getLineCount()),
+        endLineNumber: model.getLineCount(),
+        endColumn: model.getLineMaxColumn(model.getLineCount())
+      } : {
+        startLineNumber: 1,
+        startColumn: 1,
+        endLineNumber: 1,
+        endColumn: 1
+      });
+
+      const op = { identifier: id, range, text, forceMoveMarkers: true };
       editorRef.current.executeEdits('insert-text', [op]);
     }
   };
@@ -429,20 +441,30 @@ const SQLEditorImpl: React.FC = () => {
       // 添加表名和字段的自动完成
       databaseSchema.tables.forEach(table => {
         monaco.languages.registerCompletionItemProvider('sql', {
-          provideCompletionItems: () => {
+          provideCompletionItems: (model, position) => {
+            const word = model.getWordUntilPosition(position);
+            const range = {
+              startLineNumber: position.lineNumber,
+              endLineNumber: position.lineNumber,
+              startColumn: word.startColumn,
+              endColumn: word.endColumn
+            };
+            
             return {
               suggestions: [
                 {
                   label: table.tableName,
                   kind: monaco.languages.CompletionItemKind.Class,
                   insertText: table.tableName,
-                  detail: `表: ${table.tableComment || table.tableName}`
+                  detail: `表: ${table.tableComment || table.tableName}`,
+                  range: range
                 },
                 ...table.columns.map(column => ({
                   label: column.columnName,
                   kind: monaco.languages.CompletionItemKind.Field,
                   insertText: column.columnName,
-                  detail: `字段: ${column.columnComment || column.columnName} (${column.dataType})`
+                  detail: `字段: ${column.columnComment || column.columnName} (${column.dataType})`,
+                  range: range
                 }))
               ]
             };
@@ -453,11 +475,8 @@ const SQLEditorImpl: React.FC = () => {
   };
 
   return (
-    <PageContainer>
+    <PageContainer title="SQL编辑器">
       <div className="sql-editor-header">
-        <div className="sql-editor-title">
-          <Title level={4}>SQL 编辑器</Title>
-        </div>
         <div className="sql-editor-actions">
           <Space>
             <Select

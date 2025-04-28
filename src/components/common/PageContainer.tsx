@@ -1,6 +1,5 @@
 import React, { ReactNode } from 'react';
 import { useTheme } from '../../providers/ThemeProvider';
-import { Space, Button } from 'antd';
 import { withPureComponent } from '../../utils/withPureComponent';
 
 interface PageContainerProps {
@@ -16,7 +15,6 @@ const PageContainer: React.FC<PageContainerProps> = ({
   title,
   children,
   extra,
-  loading = false,
   className = '',
   style = {},
 }) => {

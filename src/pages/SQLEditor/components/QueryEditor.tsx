@@ -1,4 +1,3 @@
-import { useRef, useCallback } from 'react';
 import { OnMount } from '@monaco-editor/react';
 import Editor from '@monaco-editor/react';
 import { EditorSettings } from '../types';

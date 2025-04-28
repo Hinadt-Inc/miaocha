@@ -321,8 +321,6 @@ export const KibanaTimePicker: React.FC<KibanaTimePickerProps> = ({
     const now = dayjs();
     const today = now.format('YYYY-MM-DD');
     const yesterday = now.subtract(1, 'day').format('YYYY-MM-DD');
-    const currentYear = now.format('YYYY');
-    
     const startDate = start.format('YYYY-MM-DD');
     const endDate = end.format('YYYY-MM-DD');
     const startYear = start.format('YYYY');
