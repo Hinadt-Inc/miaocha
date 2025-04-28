@@ -1,10 +1,14 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { AutoComplete, Button, Space, Dropdown, Tooltip, Card, Tag, Select, Popover } from 'antd';
-import { SearchOutlined, CodeOutlined, InfoCircleOutlined, TagsOutlined, SaveOutlined, StarOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { SearchOutlined, CodeOutlined, TagsOutlined, SaveOutlined, StarOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import dayjs from 'dayjs';
-import { KibanaTimePicker } from './KibanaTimePicker';
+import { lazy } from 'react';
 import { debounce } from '../../utils/logDataHelpers';
+
+const KibanaTimePicker = lazy(() => import('./KibanaTimePicker').then(module => ({
+  default: module.KibanaTimePicker
+})));
 
 // 日志常用字段和值
 const LOG_FIELDS = [
@@ -86,17 +90,17 @@ export const SearchBar = ({
   // 修复 useRef 的使用方式，改用 useState 初始化历史记录
   const [searchHistory, setSearchHistory] = useState<string[]>(() => {
     const saved = localStorage.getItem('searchHistory');
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) as string[] : [];
   });
   
   const [sqlHistory, setSqlHistory] = useState<string[]>(() => {
     const saved = localStorage.getItem('sqlHistory');
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) as string[] : [];
   });
   
   const [savedQueries, setSavedQueries] = useState<{name: string, query: string}[]>(() => {
     const saved = localStorage.getItem('savedQueries');
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) as {name: string, query: string}[] : [];
   });
   
   const [searchInputValue, setSearchInputValue] = useState(searchQuery);
@@ -114,11 +118,6 @@ export const SearchBar = ({
     sql: !!whereSql,
     time: timeRange != null
   });
-  
-  // 使用 useMemo 缓存搜索历史和SQL历史，减少重复计算
-  const searchHistoryMemo = useMemo(() => searchHistory, [searchHistory]);
-  const sqlHistoryMemo = useMemo(() => sqlHistory, [sqlHistory]);
-  const savedQueriesMemo = useMemo(() => savedQueries, [savedQueries]);
   
   // 创建防抖处理函数，减少不必要的更新和渲染
   const debouncedSearch = useMemo(
@@ -215,54 +214,6 @@ export const SearchBar = ({
     onSubmitSql(); // 触发查询执行
   }, [onWhereSqlChange, onSubmitSql]);
 
-  // 应用时间范围预设
-  const applyTimePreset = useCallback((preset: typeof TIME_PRESETS[0]) => {
-    if (onTimeRangeChange) {
-      const now = dayjs();
-      let start;
-      let end = now;
-      
-      switch (preset.key) {
-        case 'last_15m':
-          start = now.subtract(15, 'minute');
-          break;
-        case 'last_1h':
-          start = now.subtract(1, 'hour');
-          break;
-        case 'last_24h':
-          start = now.subtract(24, 'hour');
-          break;
-        case 'last_7d':
-          start = now.subtract(7, 'day');
-          break;
-        case 'today':
-          start = now.startOf('day');
-          break;
-        case 'yesterday':
-          start = now.subtract(1, 'day').startOf('day');
-          end = now.subtract(1, 'day').endOf('day');
-          break;
-        case 'this_week':
-          start = now.startOf('week');
-          break;
-        default:
-          start = now.subtract(15, 'minute');
-      }
-      
-      onTimeRangeChange(
-        [start.format('YYYY-MM-DD HH:mm:ss'), end.format('YYYY-MM-DD HH:mm:ss')],
-        preset.key
-      );
-      setActiveFilters(prev => ({ ...prev, time: true }));
-    }
-  }, [onTimeRangeChange]);
-  // 应用时间分组
-  const applyTimeGrouping = useCallback((grouping: 'minute' | 'hour' | 'day' | 'month') => {
-    if (onTimeGroupingChange) {
-      onTimeGroupingChange(grouping);
-    }
-  }, [onTimeGroupingChange]);
-
   // 获取时间范围显示文本
   const getTimeRangeDisplayText = useCallback((): string => {
     if (!timeRange) return '选择时间范围';
@@ -353,12 +304,6 @@ export const SearchBar = ({
     }
   ], [savedQueries, applyQueryTemplate]);
 
-  // 时间预设菜单项 - 使用 useMemo 缓存
-  const timePresetMenuItems: MenuProps['items'] = useMemo(() => TIME_PRESETS.map(preset => ({
-    key: preset.key,
-    label: preset.label,
-    onClick: () => applyTimePreset(preset)
-  })), [applyTimePreset]);
 
   // 显示过滤标签 - 使用 useMemo 缓存复杂渲染逻辑
   const filterTags = useMemo(() => {
@@ -417,7 +362,7 @@ export const SearchBar = ({
               onClick={() => setShowTimePicker(true)}
               style={{ cursor: 'pointer' }}
             >
-              {timeDisplayText || getTimeRangeDisplayText()}
+              {timeDisplayText ?? getTimeRangeDisplayText()}
             </Tag>
           )}
         </Space>
@@ -499,8 +444,8 @@ export const SearchBar = ({
                 <Popover
                   content={
                     <KibanaTimePicker
-                      value={timeRange as [string, string]}
-                      presetKey={timeRangePreset || undefined}
+                      value={timeRange!}
+                      presetKey={timeRangePreset ?? undefined}
                       onChange={(range, preset, displayText) => {
                         if (onTimeRangeChange) {
                           onTimeRangeChange(range, preset, displayText);
@@ -520,7 +465,7 @@ export const SearchBar = ({
                   arrow={true}
                 >
                   <Button type="text" size="small" icon={<ClockCircleOutlined />}>
-                    {timeDisplayText || (timeRangePreset ? TIME_PRESETS.find(p => p.key === timeRangePreset)?.label || '时间范围' : '时间范围')}
+                    {timeDisplayText ?? (timeRangePreset ? TIME_PRESETS.find(p => p.key === timeRangePreset)?.label ?? '时间范围' : '时间范围')}
                   </Button>
                 </Popover>
               </Space>
@@ -546,7 +491,7 @@ export const SearchBar = ({
                     options={
                       selectedField ? 
                         (LOG_FIELDS
-                          .find(f => f.value === selectedField)?.example || '')
+                          .find(f => f.value === selectedField)?.example ?? '')
                           .split(', ')
                           .filter(val => val) // 过滤掉空值
                           .map(val => ({ value: val })) 

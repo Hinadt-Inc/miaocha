@@ -1,10 +1,10 @@
-import { Table, Divider, Tabs, Card, Tag, Spin, Empty, Typography, Space, Tooltip, Button } from 'antd';
-import { LoadingOutlined, CopyOutlined, InfoCircleOutlined, SearchOutlined, TableOutlined, DatabaseOutlined } from '@ant-design/icons';
+import { Table, Divider, Tabs, Card, Tag, Empty, Typography, Space, Tooltip, Button } from 'antd';
+import { CopyOutlined} from '@ant-design/icons';
 import { LogData } from '../../types/logDataTypes';
 import { useState, useCallback, useRef, useMemo, memo, useEffect } from 'react';
 import ResizeObserver from 'rc-resize-observer';
 import { VirtualList } from '../common/VirtualList';
-import { memoize, chunkProcess } from '../../utils/logDataHelpers';
+import { memoize } from '../../utils/logDataHelpers';
 import { useGlobalLoading, isGlobalLoadingActive } from '../../hooks/useLoading';
 import Loading from '../Loading';
 

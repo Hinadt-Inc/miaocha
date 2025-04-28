@@ -70,3 +70,9 @@ export interface UseFiltersReturn {
 export interface APILogData {
   [key: string]: unknown;
 }
+
+// 日志分布点类型
+export type DistributionPoint = {
+  timePoint: string;
+  count: number;
+};

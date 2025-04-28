@@ -1,7 +1,7 @@
 import './App.less'
-import { App as AntdApp, Button, Space, Tooltip } from 'antd'
+import { App as AntdApp, Space } from 'antd'
 import { ProLayout } from '@ant-design/pro-components'
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 import { 
   CompassOutlined,
   DashboardOutlined,
@@ -12,20 +12,14 @@ import {
   SafetyCertificateOutlined,
   DesktopOutlined,
   CloudServerOutlined,
-  LogoutOutlined,
-  BulbOutlined,
-  BulbFilled,
 } from '@ant-design/icons'
-import { useSelector, useDispatch } from 'react-redux'
+import { useSelector } from 'react-redux'
 import UserProfile from './components/User/UserProfile'
 import { useTheme } from './providers/ThemeProvider'
-import { logout } from './store/userSlice'
 
 function AppWrapper() {
   const location = useLocation()
-  const navigate = useNavigate()
-  const dispatch = useDispatch()
-  const { mode, toggleTheme } = useTheme()
+  const { mode } = useTheme()
   const user = useSelector((state: { user: { name: string; isLoggedIn: boolean } }) => state.user)
   
   // 当前路径判断，用于菜单高亮和展开
@@ -33,11 +27,7 @@ function AppWrapper() {
   
   // 确定需要展开的菜单
   const openKeys = currentPath.startsWith('/system') ? ['/system'] : []
-  
-  const handleLogout = () => {
-    dispatch(logout())
-    navigate('/login')
-  }
+
   
   return (
     <ProLayout
