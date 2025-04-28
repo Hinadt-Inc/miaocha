@@ -1,13 +1,14 @@
 import { createBrowserRouter } from 'react-router-dom'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState, useEffect } from 'react'
 import Loading from '../components/Loading'
+import LoginPage from '../pages/LoginPage'
+import HomePage from '../pages/HomePage'
 
-// 修改懒加载方式，确保正确处理默认导出，并使用统一的Loading组件
 // 简单的错误边界组件
 const ErrorBoundary = ({ children }: { children: React.ReactNode }) => {
-  const [hasError, setHasError] = React.useState(false);
+  const [hasError, setHasError] = useState(false);
   
-  React.useEffect(() => {
+  useEffect(() => {
     const errorHandler = (error: ErrorEvent) => {
       if (error.message.includes('Failed to fetch dynamically imported module')) {
         setHasError(true);
@@ -29,21 +30,18 @@ const ErrorBoundary = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// 懒加载函数
 const lazyLoad = (path: string, isApp: boolean = false) => {
+  // 使用动态导入，并明确解构默认导出
   const Component = lazy(() =>
-    import(`../${isApp ? '' : 'pages/'}${path}`)
-      .then(module => {
-        console.log(`加载模块 ${path}:`, module); // 调试日志
-        if (module && module.default) {
-          return { default: module.default };
-        }
-        const key = path.split('/').pop();
-        return { default: key ? module[key] || (() => <div>加载失败</div>) : (() => <div>加载失败</div>) };
-      })
-      .catch(err => {
-        console.error(`加载 ${path} 失败:`, err); // 记录导入错误
-        throw err; // 确保错误传播
-      })
+    import(`../${isApp ? '' : 'pages/'}${path}`).then(module => {
+      if (module && module.default) {
+        return { default: module.default };
+      }
+      // 处理命名导出
+      const key = path.split('/').pop();
+      return { default: key ? module[key] || (() => <div>Failed to load</div>) : (() => <div>Failed to load</div>) };
+    })
   );
 
   return (
@@ -55,11 +53,17 @@ const lazyLoad = (path: string, isApp: boolean = false) => {
   );
 };
 
-// 使用新的懒加载方式创建路由
+// 创建路由
 export const router = createBrowserRouter([
   {
     path: '/login',
-    element: lazyLoad('LoginPage'),
+    element: (
+      <ErrorBoundary>
+        <Suspense fallback={<Loading delay={300} />}>
+          <LoginPage />
+        </Suspense>
+      </ErrorBoundary>
+    ),
   },
   {
     path: '/',
@@ -67,7 +71,13 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: lazyLoad('HomePage'),
+        element: (
+          <ErrorBoundary>
+            <Suspense fallback={<Loading delay={300} />}>
+              <HomePage />
+            </Suspense>
+          </ErrorBoundary>
+        ),
       },
       {
         path: 'dashboard',
