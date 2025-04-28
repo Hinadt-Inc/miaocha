@@ -2,21 +2,22 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
 import monacoEditorPlugin from 'vite-plugin-monaco-editor'
+import dynamicImport from 'vite-plugin-dynamic-import'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    react(),
-    monacoEditorPlugin({
-      languageWorkers: ['editorWorkerService', 'typescript', 'json', 'html'],
-      customWorkers: [
-        {
-          label: 'sql',
-          entry: 'monaco-sql-languages/out/esm/sql/sql.worker.js'
-        }
-      ]
-    })
+    dynamicImport(),
+    react({
+      babel: {
+        plugins: [
+          ['@babel/plugin-transform-react-jsx', { runtime: 'automatic' }],
+          '@babel/plugin-syntax-dynamic-import'
+        ]
+      }
+    }),
   ],
+  base: '/',
   resolve: {
     alias: {
       '@': resolve(__dirname, './src')
@@ -26,6 +27,9 @@ export default defineConfig({
     // 优化分块策略
     rollupOptions: {
       output: {
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'ant-design': ['antd', '@ant-design/icons', '@ant-design/pro-components'],
