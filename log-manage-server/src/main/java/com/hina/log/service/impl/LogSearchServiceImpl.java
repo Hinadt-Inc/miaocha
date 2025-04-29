@@ -15,6 +15,7 @@ import com.hina.log.service.database.DatabaseMetadataService;
 import com.hina.log.service.database.DatabaseMetadataServiceFactory;
 import com.hina.log.service.sql.JdbcQueryExecutor;
 import com.hina.log.service.sql.builder.LogSqlBuilder;
+import com.hina.log.service.sql.processor.FieldDistributionProcessor;
 import com.hina.log.service.sql.processor.ResultProcessor;
 import com.hina.log.service.sql.processor.TimeRangeProcessor;
 import org.slf4j.Logger;
@@ -53,6 +54,9 @@ public class LogSearchServiceImpl implements LogSearchService {
 
     @Autowired
     private ResultProcessor resultProcessor;
+
+    @Autowired
+    private FieldDistributionProcessor fieldDistributionProcessor;
 
     @Autowired
     private DatabaseMetadataServiceFactory metadataServiceFactory;
@@ -158,6 +162,13 @@ public class LogSearchServiceImpl implements LogSearchService {
             logger.error("执行SQL查询失败", e);
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "执行SQL查询失败: " + e.getMessage());
         }
+
+        // 在SQL查询完成后，异步计算字段分布统计信息
+        fieldDistributionProcessor.processFieldDistributionsAsync(result)
+                .exceptionally(ex -> {
+                    logger.error("计算字段分布统计信息时发生异常", ex);
+                    return null;
+                });
 
         long endTime = System.currentTimeMillis();
         result.setExecutionTimeMs(endTime - startTime);

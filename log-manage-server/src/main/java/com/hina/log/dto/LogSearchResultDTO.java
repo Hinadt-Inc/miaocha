@@ -33,6 +33,9 @@ public class LogSearchResultDTO {
     @Schema(description = "日志时间分布数据，用于生成时间分布图")
     private List<LogDistributionData> distributionData;
 
+    @Schema(description = "字段数据分布统计信息，用于展示各字段的Top5值及占比")
+    private List<FieldDistributionDTO> fieldDistributions;
+
     /**
      * 为了保持与修改前的API兼容
      */
