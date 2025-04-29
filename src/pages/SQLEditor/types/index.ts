@@ -85,6 +85,8 @@ export function isValidQueryHistory(obj: any): obj is QueryHistory {
     obj !== null &&
     typeof obj.id === 'string' &&
     typeof obj.sql === 'string' &&
+    typeof obj.dataSourceId === 'string' && // 确保检查dataSourceId字段
+    typeof obj.timestamp === 'string' &&
     (obj.status === 'success' || obj.status === 'error')
   );
 }

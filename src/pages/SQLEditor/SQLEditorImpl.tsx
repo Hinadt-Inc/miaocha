@@ -90,6 +90,9 @@ const SQLEditorImpl: React.FC = () => {
     history: queryHistory,
     addHistory,
     clearHistory,
+    clearAllHistory,
+    isHistoryOpen,
+    toggleHistory,
   } = useQueryHistory(selectedSource);
 
   // 本地UI状态
@@ -508,6 +511,7 @@ const SQLEditorImpl: React.FC = () => {
         loadFromHistory={loadFromHistory}
         copyToClipboard={copyToClipboard}
         clearHistory={clearHistory}
+        clearAllHistory={clearAllHistory}
         fullscreen={fullscreen}
       />
 
