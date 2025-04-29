@@ -1,4 +1,5 @@
 import { ExecuteSQLResult } from '../../../api/sql';
+import { CSVRowData } from '../utils/editorUtils';
 
 // 图表类型枚举
 export enum ChartType {
@@ -18,7 +19,7 @@ export interface DataSource {
 // 查询结果类型
 export interface QueryResult extends ExecuteSQLResult {
   columns?: string[];
-  rows?: Record<string, unknown>[];
+  rows?: CSVRowData[];
   total?: number;
   executionTimeMs?: number;
   downloadUrl?: string;
@@ -65,29 +66,30 @@ export interface EditorSettings {
 }
 
 // 编辑器设置类型验证函数
-export function isValidEditorSettings(obj: any): obj is EditorSettings {
+export function isValidEditorSettings(obj: unknown): obj is EditorSettings {
   return (
     typeof obj === 'object' &&
     obj !== null &&
-    typeof obj.fontSize === 'number' &&
-    typeof obj.theme === 'string' &&
-    typeof obj.wordWrap === 'boolean' &&
-    typeof obj.autoComplete === 'boolean' &&
-    typeof obj.tabSize === 'number' &&
-    typeof obj.minimap === 'boolean'
+    typeof (obj as Record<string, unknown>).fontSize === 'number' &&
+    typeof (obj as Record<string, unknown>).theme === 'string' &&
+    typeof (obj as Record<string, unknown>).wordWrap === 'boolean' &&
+    typeof (obj as Record<string, unknown>).autoComplete === 'boolean' &&
+    typeof (obj as Record<string, unknown>).tabSize === 'number' &&
+    typeof (obj as Record<string, unknown>).minimap === 'boolean'
   );
 }
 
 // 历史记录类型验证函数
-export function isValidQueryHistory(obj: any): obj is QueryHistory {
+export function isValidQueryHistory(obj: unknown): obj is QueryHistory {
   return (
     typeof obj === 'object' &&
     obj !== null &&
-    typeof obj.id === 'string' &&
-    typeof obj.sql === 'string' &&
-    typeof obj.dataSourceId === 'string' && // 确保检查dataSourceId字段
-    typeof obj.timestamp === 'string' &&
-    (obj.status === 'success' || obj.status === 'error')
+    typeof (obj as Record<string, unknown>).id === 'string' &&
+    typeof (obj as Record<string, unknown>).sql === 'string' &&
+    typeof (obj as Record<string, unknown>).dataSourceId === 'string' && // 确保检查dataSourceId字段
+    typeof (obj as Record<string, unknown>).timestamp === 'string' &&
+    ((obj as Record<string, unknown>).status === 'success' || 
+     (obj as Record<string, unknown>).status === 'error')
   );
 }
 

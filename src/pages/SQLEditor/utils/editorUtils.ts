@@ -2,6 +2,8 @@ import { message } from 'antd';
 import * as monaco from 'monaco-editor';
 import dayjs from 'dayjs';
 
+export type CSVRowData = Record<string, string | number | boolean | null | undefined | object>;
+
 /**
  * 在编辑器中的当前位置或选定位置插入文本
  * @param editor Monaco编辑器实例
@@ -32,6 +34,49 @@ export const insertTextToEditor = (
   const op = { identifier: id, range, text, forceMoveMarkers: true };
   editor.executeEdits('insert-text', [op]);
   editor.focus();
+};
+
+/**
+ * 在编辑器中的当前位置或选定位置插入文本，支持高级SQL格式
+ * @param editor Monaco编辑器实例
+ * @param text 要插入的文本
+ * @param options 格式化选项
+ */
+export const insertFormattedSQL = (
+  editor: monaco.editor.IStandaloneCodeEditor,
+  text: string,
+  options?: {
+    useTabs?: boolean; // 使用Tab而不是空格
+    indentSize?: number; // 缩进大小
+    addComma?: boolean; // 是否添加逗号
+    addNewLine?: boolean; // 是否添加新行
+  }
+): void => {
+  // 处理默认选项
+  const { 
+    useTabs = false, 
+    indentSize = 4, 
+    addComma = false, 
+    addNewLine = false 
+  } = options ?? {};
+  
+  // 准备缩进字符和文本
+  const indentChar = useTabs ? '\t' : ' ';
+  const indent = indentChar.repeat(indentSize);
+  let formattedText = text;
+  
+  // 如果需要添加逗号
+  if (addComma) {
+    formattedText = formattedText + ',';
+  }
+  
+  // 如果需要添加新行
+  if (addNewLine) {
+    formattedText = formattedText + '\n';
+  }
+  
+  // 使用基础方法插入
+  insertTextToEditor(editor, formattedText);
 };
 
 /**
@@ -75,8 +120,8 @@ export const downloadResults = (
  * @param columns 查询结果列名
  */
 export const downloadAsCSV = (
-  rows: Record<string, any>[],
-  columns: string[]
+  rows: CSVRowData[],
+  columns: (keyof CSVRowData)[]
 ): void => {
   // 构造 CSV 内容
   const header = columns.join(',');
@@ -125,6 +170,133 @@ export const validateSQL = (query: string): boolean => {
   const hasSqlKeywords = /\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\b/i.test(query);
   
   return hasSqlKeywords;
+};
+
+/**
+ * SQL关键字检测器
+ * @param text 要检测的文本
+ * @param keyword 关键字
+ * @returns 是否包含关键字
+ */
+export const containsSQLKeyword = (text: string, keyword: string): boolean => {
+  const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+  return regex.test(text);
+};
+
+/**
+ * 获取当前SQL查询中的上下文位置
+ * @param editor 编辑器实例
+ * @returns SQL上下文信息
+ */
+export const getSQLContext = (
+  editor: monaco.editor.IStandaloneCodeEditor
+): {
+  isSelectQuery: boolean;
+  hasFromClause: boolean;
+  hasWhereClause: boolean;
+  isInSelectClause: boolean;
+  isInFromClause: boolean;
+  isInWhereClause: boolean;
+  cursorOffsetInSQL: number;
+} => {
+  const model = editor.getModel();
+  if (!model) {
+    return {
+      isSelectQuery: false,
+      hasFromClause: false,
+      hasWhereClause: false,
+      isInSelectClause: false,
+      isInFromClause: false,
+      isInWhereClause: false,
+      cursorOffsetInSQL: 0
+    };
+  }
+  
+  const text = model.getValue();
+  const selection = editor.getSelection();
+  
+  // 获取光标位置的偏移量
+  const cursorOffsetInSQL = selection ? model.getOffsetAt({
+    lineNumber: selection.startLineNumber,
+    column: selection.startColumn
+  }) : 0;
+  
+  // 使用正则表达式检测SQL关键字
+  const isSelectQuery = /\bSELECT\b/i.test(text);
+  const hasFromClause = /\bFROM\b/i.test(text);
+  const hasWhereClause = /\bWHERE\b/i.test(text);
+  
+  // 获取关键字的位置
+  const selectPos = text.toUpperCase().indexOf('SELECT');
+  const fromPos = text.toUpperCase().indexOf('FROM');
+  const wherePos = text.toUpperCase().indexOf('WHERE');
+  
+  // 判断光标是否在特定子句中
+  const isInSelectClause = isSelectQuery && hasFromClause && 
+                          cursorOffsetInSQL > selectPos && 
+                          cursorOffsetInSQL < fromPos;
+  
+  const isInFromClause = hasFromClause && 
+                        cursorOffsetInSQL > fromPos && 
+                        (!hasWhereClause || cursorOffsetInSQL < wherePos);
+  
+  const isInWhereClause = hasWhereClause && cursorOffsetInSQL > wherePos;
+  
+  return {
+    isSelectQuery,
+    hasFromClause,
+    hasWhereClause,
+    isInSelectClause,
+    isInFromClause,
+    isInWhereClause,
+    cursorOffsetInSQL
+  };
+};
+
+/**
+ * 生成SQL字段列表字符串
+ * @param columns 字段信息列表
+ * @param options 格式化选项
+ * @returns 格式化后的字段列表
+ */
+export const generateColumnList = (
+  columns: { 
+    columnName: string;
+    dataType?: string; 
+    columnComment?: string;
+    isPrimaryKey?: boolean;
+    isNullable?: boolean;
+  }[],
+  options?: {
+    addComments?: boolean;
+    indentSize?: number;
+    multiline?: boolean;
+  }
+): string => {
+  const { 
+    addComments = false, 
+    indentSize = 4,
+    multiline = true
+  } = options ?? {};
+  
+  const indent = ' '.repeat(indentSize);
+  
+  if (columns.length === 0) {
+    return '*';
+  }
+  
+  const formattedColumns = columns.map(col => {
+    let field = col.columnName;
+    if (addComments && col.columnComment) {
+      field += ` /* ${col.columnComment} */`;
+    }
+    return multiline ? `${indent}${field}` : field;
+  });
+  
+  if (multiline) {
+    return formattedColumns.join(',\n');
+  }
+  return formattedColumns.join(', ');
 };
 
 /**

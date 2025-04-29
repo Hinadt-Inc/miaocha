@@ -35,7 +35,13 @@ import PageContainer from '../../components/common/PageContainer';
 
 // 工具和类型导入
 import initMonacoEditor from './utils/monacoInit';
-import { downloadAsCSV, insertTextToEditor } from './utils/editorUtils';
+import { 
+  downloadAsCSV, 
+  insertTextToEditor, 
+  insertFormattedSQL, 
+  getSQLContext, 
+  generateColumnList 
+} from './utils/editorUtils';
 import formatTableCell from './utils/formatters';
 import { 
   ChartType,
@@ -225,23 +231,180 @@ const SQLEditorImpl: React.FC = () => {
       isNullable: boolean;
     }[]
   ) => {
-    if (editorRef.current) {
-      const selection = editorRef.current.getSelection();
-      const isAtStart = selection?.startColumn === 1 && selection?.startLineNumber === 1;
+    if (!editorRef.current) return;
+    
+    const editor = editorRef.current;
+    
+    // 规范化表名，防止SQL注入
+    const safeTableName = tableName.replace(/[^\w\d_]/g, '');
+    
+    // 获取当前SQL上下文
+    const sqlContext = getSQLContext(editor);
+    
+    try {
+      // 场景1: 编辑器为空或光标在开头 - 创建完整的查询
+      if (!sqlContext.isSelectQuery || editor.getModel()?.getValue().trim() === '') {
+        // 如果有字段，创建完整的带字段列表的查询
+        if (columns.length > 0) {
+          const fieldList = generateColumnList(columns, {
+            addComments: true,
+            indentSize: 4,
+            multiline: true
+          });
+          insertTextToEditor(editor, `SELECT\n${fieldList}\nFROM ${safeTableName};`);
+        } else {
+          // 如果没有字段信息，创建简单的全字段查询
+          insertTextToEditor(editor, `SELECT * FROM ${safeTableName};`);
+        }
+        return;
+      }
       
-      // 如果光标在开头，插入SELECT语句
-      if (isAtStart) {
-        insertTextToEditor(editorRef.current, `SELECT * FROM ${tableName}`);
-      } 
-      // 如果已有SELECT语句，插入字段列表
-      else if (sqlQuery?.toUpperCase().includes('SELECT')) {
-        const columnList = columns.map(col => col.columnName).join(',\n    ');
-        insertTextToEditor(editorRef.current, columnList);
+      // 场景2: 在SELECT子句中 - 添加字段
+      if (sqlContext.isInSelectClause) {
+        const fieldList = columns.length > 0 
+          ? generateColumnList(columns, { multiline: false, addComments: false }) 
+          : '*';
+        
+        // 获取当前选择位置前的文本，检查是否需要添加逗号
+        const model = editor.getModel();
+        const selection = editor.getSelection();
+        
+        if (model && selection) {
+          const textBeforeCursor = model.getValueInRange({
+            startLineNumber: 1,
+            startColumn: 1,
+            endLineNumber: selection.startLineNumber,
+            endColumn: selection.startColumn
+          });
+          
+          const needsComma = !/,\s*$/.test(textBeforeCursor) && textBeforeCursor.trim() !== 'SELECT';
+          const prefix = needsComma ? ', ' : '';
+          
+          insertFormattedSQL(editor, `${prefix}${fieldList}`, { addComma: false });
+        } else {
+          insertFormattedSQL(editor, fieldList, { addComma: false });
+        }
+        return;
       }
-      // 其他情况插入表名
-      else {
-        insertTextToEditor(editorRef.current, tableName);
+      
+      // 场景3: 有SELECT但无FROM - 添加FROM子句
+      if (sqlContext.isSelectQuery && !sqlContext.hasFromClause) {
+        const model = editor.getModel();
+        if (model) {
+          const lastLine = model.getLineCount();
+          const lastColumn = model.getLineMaxColumn(lastLine);
+          const position = { lineNumber: lastLine, column: lastColumn };
+          
+          // 检查最后一个字符是否需要添加空格
+          const text = model.getValue();
+          const needsSpace = /[^\s,]$/m.test(text);
+          const prefix = needsSpace ? ' ' : '';
+          
+          // 创建编辑操作插入到特定位置
+          editor.executeEdits('insert-from-clause', [
+            { range: monaco.Range.fromPositions(position, position), text: `${prefix}FROM ${safeTableName};` }
+          ]);
+        }
+        return;
       }
+      
+      // 场景4: 在FROM子句中 - 添加表名
+      if (sqlContext.isInFromClause) {
+        const model = editor.getModel();
+        const selection = editor.getSelection();
+        
+        if (model && selection) {
+          const textBeforeCursor = model.getValueInRange({
+            startLineNumber: 1,
+            startColumn: 1,
+            endLineNumber: selection.startLineNumber,
+            endColumn: selection.startColumn
+          });
+          
+          // 检查是否已经有表名，需要添加JOIN或逗号
+          if (/FROM\s+[\w\d_]+(\s*,\s*[\w\d_]+)*\s*$/i.test(textBeforeCursor)) {
+            // 如果有表名，添加逗号分隔的表名
+            const needsComma = !/,\s*$/.test(textBeforeCursor);
+            const prefix = needsComma ? ', ' : '';
+            insertTextToEditor(editor, `${prefix}${safeTableName}`);
+          } else if (/FROM\s*$/i.test(textBeforeCursor)) {
+            // 如果刚好在FROM后面，直接添加表名
+            insertTextToEditor(editor, ` ${safeTableName}`);
+          } else {
+            // 默认情况下，先添加空格再添加表名
+            insertTextToEditor(editor, ` ${safeTableName}`);
+          }
+        } else {
+          insertTextToEditor(editor, safeTableName);
+        }
+        return;
+      }
+      
+      // 场景5: 已有完整查询，添加JOIN子句
+      if (sqlContext.isSelectQuery && sqlContext.hasFromClause && !sqlContext.isInWhereClause) {
+        const model = editor.getModel();
+        if (model) {
+          // 找到FROM子句后面的位置
+          const text = model.getValue();
+          const fromIndex = text.toUpperCase().indexOf('FROM');
+          const lines = text.substring(0, fromIndex).split('\n').length;
+          
+          // 在FROM子句后找到一个合适的位置
+          let joinPosition;
+          const whereIndex = text.toUpperCase().indexOf('WHERE');
+          const groupByIndex = text.toUpperCase().indexOf('GROUP BY');
+          const orderByIndex = text.toUpperCase().indexOf('ORDER BY');
+          const limitIndex = text.toUpperCase().indexOf('LIMIT');
+          
+          // 确定JOIN应该插入的位置
+          let insertPos = -1;
+          if (whereIndex > fromIndex) insertPos = whereIndex;
+          else if (groupByIndex > fromIndex) insertPos = groupByIndex;
+          else if (orderByIndex > fromIndex) insertPos = orderByIndex;
+          else if (limitIndex > fromIndex) insertPos = limitIndex;
+          
+          if (insertPos > -1) {
+            // 在子句前插入JOIN
+            const positionInModel = model.getPositionAt(insertPos);
+            const position = { lineNumber: positionInModel.lineNumber, column: positionInModel.column };
+            
+            // 添加一个JOIN子句
+            editor.executeEdits('insert-join-clause', [
+              { range: monaco.Range.fromPositions(position, position), text: `\nJOIN ${safeTableName} ON \n` }
+            ]);
+          } else {
+            // 在查询末尾添加JOIN
+            const lastLine = model.getLineCount();
+            const lastColumn = model.getLineMaxColumn(lastLine);
+            const position = { lineNumber: lastLine, column: lastColumn };
+            
+            // 检查最后一个字符是否为分号
+            const lastChar = text.trim().charAt(text.trim().length - 1);
+            const removeSemicolon = lastChar === ';' ? true : false;
+            
+            let joinText = `\nJOIN ${safeTableName} ON `;
+            if (removeSemicolon) {
+              // 移除最后的分号然后添加JOIN
+              const textWithoutSemicolon = text.trim().slice(0, -1);
+              joinText = textWithoutSemicolon + joinText;
+            }
+            
+            // 创建编辑操作
+            editor.executeEdits('insert-join-clause', [
+              { range: monaco.Range.fromPositions(position, position), text: joinText }
+            ]);
+          }
+        }
+        return;
+      }
+      
+      // 场景6: 默认情况 - 直接插入表名
+      insertTextToEditor(editor, safeTableName);
+      
+    } catch (error) {
+      console.error('SQL插入错误:', error);
+      // 出错时的简单回退方案：直接插入表名
+      insertTextToEditor(editor, safeTableName);
     }
   };
   
