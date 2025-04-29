@@ -50,9 +50,6 @@ importers:
       echarts-for-react:
         specifier: ^3.0.2
         version: 3.0.2(echarts@5.6.0)(react@19.1.0)
-      less:
-        specifier: ^4.3.0
-        version: 4.3.0
       lodash:
         specifier: ^4.17.21
         version: 4.17.21
@@ -102,6 +99,9 @@ importers:
       '@testing-library/react':
         specifier: ^16.3.0
         version: 16.3.0(@testing-library/dom@10.4.0)(@types/react-dom@19.1.2(@types/react@19.1.2))(@types/react@19.1.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@types/less':
+        specifier: ^3.0.8
+        version: 3.0.8
       '@types/node':
         specifier: ^22.15.3
         version: 22.15.3
@@ -147,6 +147,9 @@ importers:
       jsdom:
         specifier: ^26.1.0
         version: 26.1.0
+      less:
+        specifier: ^4.3.0
+        version: 4.3.0
       lint-staged:
         specifier: ^15.5.1
         version: 15.5.1
@@ -975,6 +978,9 @@ packages:
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
+
+  '@types/less@3.0.8':
+    resolution: {integrity: sha512-Gjm4+H9noDJgu5EdT3rUw5MhPBag46fiOy27BefvWkNL8mlZnKnCaVVVTLKj6RYXed9b62CPKnPav9govyQDzA==}
 
   '@types/node@22.15.3':
     resolution: {integrity: sha512-lX7HFZeHf4QG/J7tBZqrCAXwz9J5RD56Y6MpP0eJkka8p+K0RY/yBTW7CYFJ4VGCclxqOLKmiGP5juQc6MKgcw==}
@@ -3989,6 +3995,8 @@ snapshots:
   '@types/estree@1.0.7': {}
 
   '@types/json-schema@7.0.15': {}
+
+  '@types/less@3.0.8': {}
 
   '@types/node@22.15.3':
     dependencies:

@@ -5,7 +5,9 @@ import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { login } from '../store/userSlice';
 import { login as apiLogin } from '../api/auth';
-import './LoginPage.less';
+import login_bg_poster from '@/assets/login/banner-bg.png';
+import login_bg_video from '@/assets/login/banner.mp4';
+import styles from './LoginPage.module.less';
 
 const { Title, Text } = Typography;
 
@@ -49,10 +51,18 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="login-page">
-      <div className="login-form-container fade-in">
-        <div className="login-banner">
-          <div className="login-banner-text">
+    <div className={styles.loginPage}>
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
+        className={styles.videoBackground}
+        poster={login_bg_poster}
+      ><source src={login_bg_video} type="video/mp4" /></video>
+      <div className={`${styles.loginFormContainer} ${styles.fadeIn}`}>
+        <div className={styles.loginBanner}>
+          <div className={styles.loginBannerText}>
             <Title level={2} style={{ color: '#fff', marginBottom: 16 }}>
               欢迎使用
             </Title>
@@ -65,13 +75,13 @@ const LoginPage = () => {
           </div>
         </div>
         
-        <div className="login-form">
-          <div className="login-logo">
+        <div className={styles.loginForm}>
+          <div className={styles.loginLogo}>
             <img src="/logo.png" alt="Logo" />
-            <Title level={3} className="brand-name">日志查询平台</Title>
+            <Title level={3} className={styles.brandName}>日志查询平台</Title>
           </div>
           
-          <Title level={4} className="welcome-text">欢迎登录</Title>
+          <Title level={4} className={styles.welcomeText}>欢迎登录</Title>
           
           {error && (
             <Alert 
@@ -96,7 +106,7 @@ const LoginPage = () => {
               rules={[{ required: true, message: '请输入用户名!' }]}
             >
               <Input 
-                prefix={<UserOutlined className="site-form-item-icon" />} 
+                prefix={<UserOutlined className={styles.siteFormItemIcon} />} 
                 placeholder="用户名" 
                 allowClear
               />
@@ -110,16 +120,16 @@ const LoginPage = () => {
               ]}
             >
               <Input.Password 
-                prefix={<LockOutlined className="site-form-item-icon" />} 
+                prefix={<LockOutlined className={styles.siteFormItemIcon} />} 
                 placeholder="密码"
               />
             </Form.Item>
 
-            <div className="login-form-options">
+            <div className={styles.loginFormOptions}>
               <Form.Item name="remember" valuePropName="checked" noStyle>
                 <Checkbox>记住我</Checkbox>
               </Form.Item>
-              <a className="forgot-password" href="#/reset-password">忘记密码？</a>
+              <a className={styles.forgotPassword} href="#/reset-password">忘记密码？</a>
             </div>
 
             <Form.Item>
@@ -127,7 +137,7 @@ const LoginPage = () => {
                 type="primary" 
                 htmlType="submit" 
                 block 
-                className="login-button" 
+                className={styles.loginButton} 
                 loading={loading}
               >
                 登录
@@ -137,7 +147,7 @@ const LoginPage = () => {
         </div>
       </div>
       
-      <div className="login-footer">
+      <div className={styles.loginFooter}>
         <Text type="secondary">© 2025 日志查询系统 - 版权所有</Text>
       </div>
     </div>

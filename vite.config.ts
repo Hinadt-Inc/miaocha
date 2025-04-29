@@ -66,12 +66,24 @@ export default defineConfig({
     preprocessorOptions: {
       less: {
         javascriptEnabled: true,
+        // 全局变量和混合
+        additionalData: `
+          @import "@/styles/variables.less";
+          @import "@/styles/mixins.less";
+        `,
+        // 修改主题变量
+        modifyVars: {
+          'primary-color': '#1677ff',
+          'link-color': '#1677ff',
+          'border-radius-base': '6px',
+        },
       },
     },
-    // CSS模块化配置
+    // CSS 模块化配置
     modules: {
-      localsConvention: 'camelCaseOnly'
-    }
+      localsConvention: 'camelCase',
+      generateScopedName: '[name]__[local]___[hash:base64:5]',
+    },
   },
   server: {
     host: '0.0.0.0',
