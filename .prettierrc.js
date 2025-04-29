@@ -1,11 +1,17 @@
-module.exports = {
-  printWidth: 100,
-  tabWidth: 2,
-  useTabs: false,
-  semi: true,
+export default {
   singleQuote: true,
-  trailingComma: 'all',
-  bracketSpacing: true,
   arrowParens: 'always',
-  endOfLine: 'lf',
+  parser: "typescript",
+  useTabs: false,
+  bracketSpacing: true,
+  endOfLine: "auto",
+  semi: true,
+  tabWidth: 2,
+  printWidth: 100,
+  trailingComma: 'all',
+  singleQuote: true,
+  bracketSameLine: false,
+  jsxSingleQuote: false,
+  quoteProps: 'as-needed',
+  htmlWhitespaceSensitivity: 'css'
 }

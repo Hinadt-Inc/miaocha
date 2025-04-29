@@ -7,14 +7,28 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# 依赖目录
 node_modules
+.pnpm-store
+
+# 构建输出
 dist
 dist-ssr
+build
+coverage
+.next
+out
 *.local
 
-# Editor directories and files
+# 缓存目录
+.cache
+.temp
+.tmp
+
+# 编辑器目录和文件
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
 .idea
 .DS_Store
 *.suo
@@ -23,5 +37,24 @@ dist-ssr
 *.sln
 *.sw?
 
+# 本地历史
 .history
+
+# 锁定文件（根据项目需要选择保留哪一个）
+package-lock.json
+yarn.lock
 pnpm-lock.yaml
+
+# 环境变量文件
+.env
+.env.*
+!.env.example
+
+# 测试
+coverage
+.nyc_output
+__snapshots__
+
+# 其他
+.thumbs
+Thumbs.db

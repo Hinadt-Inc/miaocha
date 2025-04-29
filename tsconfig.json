@@ -1,9 +1,12 @@
+// 根配置文件，作为项目的主入口配置
 {
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
-    }
+    },
+    "types": ["node"],
+    "moduleResolution": "node",
   },
   "files": [],
   "references": [
