@@ -21,15 +21,21 @@ public class LogSearchDTO {
     @NotBlank(message = "日志表名不能为空")
     private String tableName;
 
-    @Schema(description = "搜索关键字，支持多种格式：\n"
+    @Schema(description = "搜索关键字列表，每个关键字支持多种格式：\n"
             + "1. 单个关键字: error\n"
             + "2. 多个关键字OR关系: 'error' || 'timeout'\n"
             + "3. 多个关键字AND关系: 'error' && 'timeout'\n"
-            + "4. 复杂表达式: ('error' || 'warning') && ('timeout' || 'failure')", example = "error 或 'error' || 'timeout' 或 'error' && 'timeout' 或 ('error' || 'warning') && 'timeout'"
-            + "5. 最多支持两层嵌套")
+            + "4. 复杂表达式: ('error' || 'warning') && ('timeout' || 'failure')", example = "['error', '('error' || 'warning') && 'timeout'']")
+    private List<String> keywords;
+
+    @Schema(description = "WHERE 条件SQL列表，每个条件直接拼接到SQL语句中，多个条件之间使用AND连接", example = "['level = \'ERROR\'', 'service_name = \'user-service\'']")
+    private List<String> whereSqls;
+
+    // 为了向后兼容，保留原有的字段
+    @Schema(description = "搜索关键字（已废弃，请使用keywords）", deprecated = true)
     private String keyword;
 
-    @Schema(description = "WHERE 条件后续SQL，直接拼接到SQL语句中", example = "level = 'ERROR' and service_name = 'user-service'")
+    @Schema(description = "WHERE 条件后续SQL（已废弃，请使用whereSqls）", deprecated = true)
     private String whereSql;
 
     @Schema(description = "开始时间", example = "2023-06-01 10:00:00")

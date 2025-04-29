@@ -23,6 +23,24 @@ public class KeywordComplexExpressionBuilder implements SearchConditionBuilder {
 
     @Override
     public boolean supports(LogSearchDTO dto) {
+        // 先检查新的keywords列表
+        if (dto.getKeywords() != null && !dto.getKeywords().isEmpty()) {
+            for (String keyword : dto.getKeywords()) {
+                if (StringUtils.isNotBlank(keyword)) {
+                    String trimmedKeyword = keyword.trim();
+                    // 检查是否包含括号或复杂运算符组合
+                    boolean containsParentheses = trimmedKeyword.contains("(") && trimmedKeyword.contains(")");
+                    boolean containsComplexOperators = (trimmedKeyword.contains("&&") && trimmedKeyword.contains("||")) ||
+                            trimmedKeyword.contains("(") || trimmedKeyword.contains(")");
+
+                    if (containsParentheses || containsComplexOperators) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // 向后兼容，检查旧的keyword字段
         if (StringUtils.isBlank(dto.getKeyword())) {
             return false;
         }
@@ -42,17 +60,62 @@ public class KeywordComplexExpressionBuilder implements SearchConditionBuilder {
             return "";
         }
 
-        // 使用表达式解析器解析复杂表达式
-        ParseResult parseResult = KeywordExpressionParser.parse(dto.getKeyword().trim());
+        StringBuilder condition = new StringBuilder();
+        boolean isFirst = true;
 
-        // 如果语法错误，抛出异常
-        if (!parseResult.isSuccess()) {
-            // 记录错误日志
-            logger.warn("关键字表达式语法错误: {}, 表达式: {}", parseResult.getErrorMessage(), dto.getKeyword());
-            // 抛出自定义异常
-            throw new KeywordSyntaxException(parseResult.getErrorMessage(), dto.getKeyword());
+        // 先处理新的keywords列表
+        if (dto.getKeywords() != null && !dto.getKeywords().isEmpty()) {
+            for (String keyword : dto.getKeywords()) {
+                if (StringUtils.isNotBlank(keyword)) {
+                    String trimmedKeyword = keyword.trim();
+
+                    // 检查是否是复杂表达式
+                    boolean isComplex = (trimmedKeyword.contains("(") && trimmedKeyword.contains(")")) ||
+                            (trimmedKeyword.contains("&&") && trimmedKeyword.contains("||")) ||
+                            trimmedKeyword.contains("(") || trimmedKeyword.contains(")");
+
+                    if (isComplex) {
+                        // 使用表达式解析器解析复杂表达式
+                        ParseResult parseResult = KeywordExpressionParser.parse(trimmedKeyword);
+
+                        // 如果语法错误，抛出异常
+                        if (!parseResult.isSuccess()) {
+                            // 记录错误日志
+                            logger.warn("关键字表达式语法错误: {}, 表达式: {}", parseResult.getErrorMessage(), trimmedKeyword);
+                            // 抛出自定义异常
+                            throw new KeywordSyntaxException(parseResult.getErrorMessage(), trimmedKeyword);
+                        }
+
+                        if (!isFirst) {
+                            condition.append(" AND ");
+                        }
+                        condition.append(parseResult.getResult());
+                        isFirst = false;
+                    }
+                }
+            }
+
+            if (condition.length() > 0) {
+                return condition.toString();
+            }
         }
 
-        return parseResult.getResult();
+        // 向后兼容，处理旧的keyword字段
+        if (StringUtils.isNotBlank(dto.getKeyword())) {
+            // 使用表达式解析器解析复杂表达式
+            ParseResult parseResult = KeywordExpressionParser.parse(dto.getKeyword().trim());
+
+            // 如果语法错误，抛出异常
+            if (!parseResult.isSuccess()) {
+                // 记录错误日志
+                logger.warn("关键字表达式语法错误: {}, 表达式: {}", parseResult.getErrorMessage(), dto.getKeyword());
+                // 抛出自定义异常
+                throw new KeywordSyntaxException(parseResult.getErrorMessage(), dto.getKeyword());
+            }
+
+            return parseResult.getResult();
+        }
+
+        return "";
     }
 }

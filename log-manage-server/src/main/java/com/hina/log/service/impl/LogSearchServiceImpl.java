@@ -20,7 +20,6 @@ import com.hina.log.service.sql.processor.TimeRangeProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,8 +28,6 @@ import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
 
 /**
  * 日志检索服务实现类
@@ -60,16 +57,6 @@ public class LogSearchServiceImpl implements LogSearchService {
     @Autowired
     private DatabaseMetadataServiceFactory metadataServiceFactory;
 
-    @Autowired(required = false)
-    @Qualifier("logQueryExecutor")
-    private Executor logQueryExecutor;
-
-    /**
-     * 获取线程执行器，如果注入的执行器为空（如在测试环境中），则使用公共线程池
-     */
-    private Executor getExecutor() {
-        return logQueryExecutor != null ? logQueryExecutor : ForkJoinPool.commonPool();
-    }
 
     @Override
     @Transactional
