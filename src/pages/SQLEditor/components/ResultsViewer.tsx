@@ -1,94 +1,104 @@
-import {useMemo} from 'react';
-import { Badge, Button, Empty, Space, Table, Typography } from 'antd';
-import { DownloadOutlined } from '@ant-design/icons';
+import React, { memo } from 'react';
+import { Table, Spin, Empty, Alert, Typography } from 'antd';
 import { QueryResult } from '../types';
-import Loading from '../../../components/Loading';
-import './ResultsViewer.less';
 
 const { Text } = Typography;
 
 interface ResultsViewerProps {
-  loading: boolean;
   queryResults: QueryResult | null;
+  loading: boolean;
   downloadResults: () => void;
-  formatTableCell: (value: unknown) => React.ReactNode;
+  formatTableCell: (value: any) => React.ReactNode;
   fullscreen: boolean;
 }
 
+/**
+ * 查询结果显示组件
+ * 以表格形式展示SQL查询结果
+ */
 const ResultsViewer: React.FC<ResultsViewerProps> = ({
-  loading,
   queryResults,
+  loading,
   downloadResults,
   formatTableCell,
   fullscreen
 }) => {
-  // 表格列定义
-  const tableColumns = useMemo(() => {
-    return queryResults?.columns?.map(col => ({
-      title: col,
-      dataIndex: col,
-      key: col,
-      render: formatTableCell,
-      ellipsis: {
-        showTitle: false,
-      },
-      width: 150,
-    })) || [];
-  }, [queryResults?.columns, formatTableCell]);
+  if (loading) {
+    return <Spin tip="执行查询中..." />;
+  }
+
+  if (!queryResults) {
+    return <Empty description="请执行查询以查看结果" />;
+  }
+
+  if (queryResults.status === 'error') {
+    return (
+      <Alert
+        type="error"
+        message="查询执行错误"
+        description={queryResults.message || '未知错误'}
+        showIcon
+      />
+    );
+  }
+
+  if (!queryResults.rows?.length) {
+    return <Empty description="查询没有返回数据" />;
+  }
+
+  // 计算表格高度，在全屏模式下使用更多空间
+  const tableHeight = fullscreen ? 'calc(100vh - 350px)' : '400px';
+
+  // 构建表格列
+  const columns = queryResults.columns?.map(col => ({
+    title: col,
+    dataIndex: col,
+    key: col,
+    render: (value: any) => formatTableCell(value),
+    ellipsis: true,
+    sorter: (a: any, b: any) => {
+      const valueA = a[col];
+      const valueB = b[col];
+      
+      if (typeof valueA === 'number' && typeof valueB === 'number') {
+        return valueA - valueB;
+      }
+      
+      if (typeof valueA === 'string' && typeof valueB === 'string') {
+        return valueA.localeCompare(valueB);
+      }
+      
+      return 0;
+    }
+  }));
 
   return (
-    <div style={{ overflow: 'hidden' }}>
-      {loading ? (
-        <div className="query-results-spinner">
-          <Loading tip="执行查询中..." />
+    <div>
+      {queryResults.executionTimeMs && (
+        <div style={{ marginBottom: 16 }}>
+          <Text type="secondary">
+            查询执行时间: {queryResults.executionTimeMs}ms | 
+            返回行数: {queryResults.rows.length} 
+            {queryResults.affectedRows !== undefined && ` | 影响行数: ${queryResults.affectedRows}`}
+          </Text>
         </div>
-      ) : queryResults ? (
-        <div>
-          {(
-            queryResults.rows && queryResults.rows.length > 0 ? (
-              <div>
-                <div className="results-header">
-                  <Space>
-                    <Badge status="success" text={<Text strong className="success-text">查询成功</Text>} />
-                    <Text>耗时: {queryResults.executionTimeMs} ms</Text>
-                    <Text>总行数: {queryResults.total || queryResults.rows.length}</Text>
-                  </Space>
-                  <Button 
-                    type="text" 
-                    icon={<DownloadOutlined />}
-                    onClick={downloadResults}
-                  >
-                    下载 CSV
-                  </Button>
-                </div>
-                <Table
-                  className="results-table"
-                  columns={tableColumns}
-                  dataSource={queryResults.rows.map((row, index) => ({
-                    ...row,
-                    key: `row-${index}`
-                  }))}
-                  pagination={{
-                    pageSize: 20,
-                    showSizeChanger: true,
-                    showTotal: (total) => `共 ${total} 行`,
-                    pageSizeOptions: ['10', '20', '50', '100']
-                  }}
-                  scroll={{ x: 'max-content', y: fullscreen ? window.innerHeight - 350 : 'calc(100vh - 400px)' }}
-                  size="small"
-                  bordered
-                />
-              </div>
-            ) : (
-              <Empty description="查询未返回数据" />
-            )
-          )}
-        </div>
-      ) : (
-        <Empty description="请执行查询获取结果" />
       )}
+
+      <Table
+        dataSource={queryResults.rows.map((row, index) => ({ ...row, key: index }))}
+        columns={columns}
+        scroll={{ x: true, y: tableHeight }}
+        size="small"
+        pagination={{
+          showSizeChanger: true,
+          showQuickJumper: true,
+          pageSizeOptions: ['10', '20', '50', '100'],
+          showTotal: (total) => `共 ${total} 条记录`
+        }}
+      />
     </div>
   );
 };
 
-export default ResultsViewer;
+// 使用 memo 避免不必要的重渲染
+export default memo(ResultsViewer);

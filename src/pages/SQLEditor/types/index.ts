@@ -1,5 +1,12 @@
 import { ExecuteSQLResult } from '../../../api/sql';
 
+// 图表类型枚举
+export enum ChartType {
+  Bar = 'bar',
+  Line = 'line',
+  Pie = 'pie'
+}
+
 // 数据源类型
 export interface DataSource {
   id: string;
@@ -16,22 +23,24 @@ export interface QueryResult extends ExecuteSQLResult {
   executionTimeMs?: number;
   downloadUrl?: string;
   affectedRows?: number;
+  status: 'success' | 'error';
+  message?: string;
 }
 
 // 数据库结构类型
 export interface SchemaResult {
   databaseName: string;
-  tables: Array<{
+  tables: {
     tableName: string;
     tableComment: string;
-    columns: Array<{
+    columns: {
       columnName: string;
       dataType: string;
       columnComment: string;
       isPrimaryKey: boolean;
       isNullable: boolean;
-    }>;
-  }>;
+    }[];
+  }[];
 }
 
 // 查询历史记录类型
@@ -48,11 +57,36 @@ export interface QueryHistory {
 // 编辑器设置类型
 export interface EditorSettings {
   fontSize: number;
-  theme: string;
+  theme: 'vs' | 'vs-dark' | 'hc-black';
   wordWrap: boolean;
   autoComplete: boolean;
   tabSize: number;
   minimap: boolean;
+}
+
+// 编辑器设置类型验证函数
+export function isValidEditorSettings(obj: any): obj is EditorSettings {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    typeof obj.fontSize === 'number' &&
+    typeof obj.theme === 'string' &&
+    typeof obj.wordWrap === 'boolean' &&
+    typeof obj.autoComplete === 'boolean' &&
+    typeof obj.tabSize === 'number' &&
+    typeof obj.minimap === 'boolean'
+  );
+}
+
+// 历史记录类型验证函数
+export function isValidQueryHistory(obj: any): obj is QueryHistory {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    typeof obj.id === 'string' &&
+    typeof obj.sql === 'string' &&
+    (obj.status === 'success' || obj.status === 'error')
+  );
 }
 
 // 本地存储的键名

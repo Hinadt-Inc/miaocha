@@ -9,7 +9,7 @@ interface SchemaTreeProps {
   loadingSchema: boolean;
   refreshSchema: () => void;
   handleTreeNodeDoubleClick: (tableName: string) => void;
-  handleInsertTable: (tableName: string, columns: Array<{ columnName: string }>) => void;
+  handleInsertTable: (tableName: string, columns: SchemaResult['tables'][0]['columns']) => void;
   fullscreen: boolean;
 }
 
@@ -39,7 +39,7 @@ const SchemaTree: React.FC<SchemaTreeProps> = ({
 
   // 渲染树节点标题
   const renderTreeNodeTitle = useCallback((node: { key: string; title: string; content?: string }) => {
-    const isTable = node.key.indexOf('-') === -1;
+    const isTable = !node.key.includes('-');
     return (
       <div 
         className="tree-node-wrapper"

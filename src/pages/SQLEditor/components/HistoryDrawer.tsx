@@ -12,6 +12,7 @@ interface HistoryDrawerProps {
   queryHistory: QueryHistory[];
   loadFromHistory: (historySql: string) => void;
   copyToClipboard: (text: string) => void;
+  clearHistory: () => void;
   fullscreen: boolean;
 }
 
@@ -21,6 +22,7 @@ const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
   queryHistory,
   loadFromHistory,
   copyToClipboard,
+  clearHistory,
   fullscreen
 }) => {
   return (
@@ -30,6 +32,17 @@ const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
           <HistoryOutlined />
           <span>查询历史</span>
           <Tag color="blue">{queryHistory.length} 条记录</Tag>
+          <Button 
+            type="text" 
+            danger 
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              clearHistory();
+            }}
+          >
+            清除历史
+          </Button>
         </Space>
       }
       width={600}
