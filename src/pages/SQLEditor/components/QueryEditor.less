@@ -1,11 +1,129 @@
+.editor-container {
+  position: relative;
+  margin-bottom: 8px;
+  
+  &.collapsed {
+    margin-bottom: 36px;
+  }
+}
+
 .editor-wrapper {
   border: 1px solid #e8e8e8;
   border-radius: 2px;
-  height: 300px;
   overflow: hidden;
+  transition: height 0.3s ease;
+  height: 200px; /* 默认高度 */
   
   &:focus-within {
     border-color: #40a9ff;
     box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
   }
+  
+  &.collapsed {
+    height: 0 !important;
+  }
+  
+  &.height-auto {
+    height: auto !important;
+  }
+}
+
+/* 调整大小控制条使其更明显可操作 */
+.editor-resize-handle {
+  height: 20px;
+  border-top: 1px solid #e8e8e8;
+  background: #f5f5f5;
+  text-align: center;
+  cursor: row-resize;
+  transition: background-color 0.2s;
+  -webkit-user-select: none;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 100 !important; /* 保证最高层级 */
+  margin-top: -1px; /* 修复边框重叠问题 */
+  
+  &:hover {
+    background-color: #e6f7ff;
+    border-top: 1px dashed #1890ff;
+  }
+  
+  &.dragging {
+    background-color: #bae7ff;
+    border-top: 2px solid #1890ff;
+  }
+  
+  .anticon {
+    color: #666;
+    font-size: 12px;
+    margin-right: 4px;
+  }
+
+  .resize-handle-text {
+    font-size: 12px;
+    color: #666;
+    pointer-events: none; /* 防止文字干扰拖拽操作 */
+  }
+  
+  &.hidden {
+    display: none;
+  }
+  
+  /* 增大可点击区域 */
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 12px;
+    top: -6px;
+    cursor: row-resize;
+    z-index: 10;
+  }
+  
+  /* 添加视觉提示 */
+  &::after {
+    content: '...........';
+    letter-spacing: 3px;
+    color: #ccc;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 3px;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1;
+  }
+}
+
+.editor-collapse-button {
+  position: absolute;
+  right: 8px;
+  bottom: -28px;
+  z-index: 50;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 0 0 4px 4px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  padding: 2px 4px;
+  
+  .ant-btn {
+    padding: 0 8px;
+    
+    &:hover {
+      color: #1890ff;
+      background-color: #f0f0f0;
+    }
+  }
+}
+
+/* 编辑器高度类 */
+.editor-height-0 {
+  height: 0;
+}
+
+.editor-height-normal {
+  height: var(--editor-height, 300px);
 }

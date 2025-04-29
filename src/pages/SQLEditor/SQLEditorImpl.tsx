@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useDataSources } from './hooks/useDataSources';
 import { useQueryExecution } from './hooks/useQueryExecution';
 import { useEditorSettings } from './hooks/useEditorSettings';
@@ -8,7 +8,6 @@ import {
   Alert,
   Button, 
   Card, 
-  Divider, 
   Layout,
   message, 
   Space, 
@@ -18,7 +17,6 @@ import {
 } from 'antd';
 import { 
   CopyOutlined, 
-  SaveOutlined, 
 } from '@ant-design/icons';
 import { OnMount } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
@@ -43,11 +41,7 @@ import {
   ChartType,
   QueryResult,
   SchemaResult,
-  DataSource
 } from './types';
-
-type Table = SchemaResult['tables'][0];
-type TableColumn = Table['columns'][0];
 
 // 样式导入
 import './SQLEditorPage.less';
@@ -96,8 +90,6 @@ const SQLEditorImpl: React.FC = () => {
     history: queryHistory,
     addHistory,
     clearHistory,
-    isHistoryOpen,
-    toggleHistory 
   } = useQueryHistory(selectedSource);
 
   // 本地UI状态
@@ -108,6 +100,10 @@ const SQLEditorImpl: React.FC = () => {
   const [fullscreen, setFullscreen] = useState<boolean>(false);
   const [historyDrawerVisible, setHistoryDrawerVisible] = useState(false);
   const [settingsDrawerVisible, setSettingsDrawerVisible] = useState(false);
+  
+  // 添加编辑器高度和收起状态
+  const [editorHeight, setEditorHeight] = useState(300);
+  const [editorCollapsed, setEditorCollapsed] = useState(false);
   
   // 检查SQL语法有效性
   const validateSQL = (query: string): boolean => {
@@ -360,6 +356,16 @@ const SQLEditorImpl: React.FC = () => {
   const handleSetChartType = (type: "bar" | "line" | "pie") => {
     setChartType(type as ChartType);
   };
+  
+  // 处理编辑器高度改变
+  const handleEditorHeightChange = (height: number) => {
+    setEditorHeight(height);
+  };
+  
+  // 处理编辑器收起状态改变
+  const handleEditorCollapsedChange = (collapsed: boolean) => {
+    setEditorCollapsed(collapsed);
+  };
 
   return (
     <PageContainer title="">
@@ -422,6 +428,12 @@ const SQLEditorImpl: React.FC = () => {
                   onChange={(value) => setSqlQuery(value ?? '')}
                   onEditorMount={handleEditorDidMount}
                   editorSettings={editorSettings}
+                  height={editorHeight}
+                  minHeight={100}
+                  maxHeight={800}
+                  collapsed={editorCollapsed}
+                  onCollapsedChange={handleEditorCollapsedChange}
+                  onHeightChange={handleEditorHeightChange}
                 />
               </Card>
               <Card
@@ -476,7 +488,6 @@ const SQLEditorImpl: React.FC = () => {
                     loading={loadingResults}
                     downloadResults={handleDownloadResults}
                     formatTableCell={formatTableCell}
-                    fullscreen={fullscreen}
                   />
                 ) : (
                   <VisualizationPanel

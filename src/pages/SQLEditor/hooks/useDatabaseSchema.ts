@@ -16,7 +16,7 @@ export const useDatabaseSchema = (initialSelectedSource?: string) => {
    * @param sourceId 数据源ID
    */
   const fetchDatabaseSchema = useCallback(async (sourceId?: string) => {
-    const dataSourceId = sourceId || initialSelectedSource;
+    const dataSourceId = sourceId ?? initialSelectedSource;
     
     if (!dataSourceId) {
       message.warning('请先选择数据源');
