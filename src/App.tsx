@@ -42,7 +42,7 @@ function AppWrapper() {
       contentStyle={{ 
         background: mode === 'dark' ? '#141414' : '#f0f2f5',
         padding: '16px',
-        minHeight: 'calc(100vh - 64px)'
+        // minHeight: 'calc(100vh - 64px)'
       }}
       openKeys={openKeys}
       logo="/logo.png"
@@ -103,7 +103,7 @@ function AppWrapper() {
         ]
       }}
       menuItemRender={(item, dom) => (
-        <Link to={item.path || '/'}>{dom}</Link>
+        <Link to={item.path ?? '/'}>{dom}</Link>
       )}
       // actionsRender={() => [
       //   <Tooltip title={mode === 'dark' ? '切换到亮色模式' : '切换到暗色模式'}>

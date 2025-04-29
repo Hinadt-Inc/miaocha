@@ -386,7 +386,7 @@ const SQLEditorImpl: React.FC = () => {
 
       <Layout className={`layout-content ${fullscreen ? 'fullscreen' : ''}`}>
         <Sider 
-          width={280} 
+          width={250} 
           theme="light" 
           className="sider-container"
         >
@@ -465,13 +465,7 @@ const SQLEditorImpl: React.FC = () => {
                   )
                 }
               >
-                {!queryResults && !loadingResults && (
-                  <Empty 
-                    description="请执行查询以查看结果" 
-                    image={Empty.PRESENTED_IMAGE_SIMPLE} 
-                  />
-                )}
-                
+              
                 {queryResults?.status === 'error' && (
                   <Alert
                     message="查询失败"
