@@ -39,6 +39,8 @@ function AppWrapper() {
       layout="mix"
       splitMenus
       title="日志查询平台"
+      subMenuOpenDelay={0.1}
+      subMenuCloseDelay={0.1}
       contentStyle={{ 
         background: mode === 'dark' ? '#141414' : '#f0f2f5',
         padding: '16px',
