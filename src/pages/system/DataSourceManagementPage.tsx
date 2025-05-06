@@ -286,7 +286,7 @@ const DataSourceManagementPage = () => {
   ];
   
   return (
-    <PageContainer className="data-source-management-page">
+    <div className="data-source-management-page">
       <ProTable<DataSourceItem>
         className="table-container"
         bordered
@@ -416,7 +416,7 @@ const DataSourceManagementPage = () => {
           rules={[{ required: true, message: '请选择状态' }]}
         />
       </DrawerForm>
-    </PageContainer>
+    </div>
   );
 };
 

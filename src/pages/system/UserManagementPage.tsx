@@ -92,9 +92,13 @@ const UserManagementPage = () => {
       const users = await getUsers(config);
       setData(transformUserData(users));
       message.success('用户数据加载成功');
-    } catch (_error) {
-      if (!(_error instanceof Error && _error.name === 'CanceledError')) {
-        message.error('加载用户数据失败');
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.name !== 'CanceledError') {
+          message.error('加载用户数据失败');
+        }
+      } else {
+        console.error('Unexpected error:', error);
       }
     } finally {
       setLoading(false);
@@ -170,25 +174,37 @@ const UserManagementPage = () => {
   // 处理表单提交
   const handleSubmit = async () => {
     try {
-      const values = await form.validateFields();
+      const values = await form.validateFields() as {
+        nickname: string;
+        email: string;
+        role: string;
+        status: boolean;
+        password?: string;
+        confirmPassword?: string;
+      };
       
       if (selectedRecord) {
         // 编辑现有用户
         await updateUser({
           id: selectedRecord.key,
           nickname: values.nickname,
-          ...values,
+          email: values.email,
+          role: values.role,
           status: values.status ? 1 : 0
         });
         message.success('用户信息已更新');
       } else {
         // 添加新用户
+        if (!values.password || values.password !== values.confirmPassword) {
+          message.error('密码和确认密码必须一致');
+          return;
+        }
+        
         await createUser({
-          username: values.name,
+          username: values.nickname,
           nickname: values.nickname,
           password: values.password,
           email: values.email,
-          phone: values.phone,
           role: values.role,
           status: values.status ? 1 : 0
         });
@@ -196,9 +212,10 @@ const UserManagementPage = () => {
       }
       
       setIsModalVisible(false);
-      fetchUsers(); // 刷新数据
-    } catch {
-      console.log('操作失败');
+      await fetchUsers(); // 刷新数据
+    } catch (error) {
+      message.error('操作失败');
+      console.error('操作失败:', error);
     }
   };
 
@@ -309,7 +326,7 @@ const UserManagementPage = () => {
               <Popconfirm
                 title="确定要删除此用户吗？"
                 description="此操作不可撤销"
-                onConfirm={() => handleDelete(record.key)}
+                onConfirm={() => {return void handleDelete(record.key)}}
                 okText="确定"
                 cancelText="取消"
               >
@@ -323,50 +340,46 @@ const UserManagementPage = () => {
   ];
 
   return (
-    <PageContainer
-      header={{
-        title: '用户管理',
-        subTitle: '管理系统用户、分配角色和权限',
-      }}
-    >
-      <Card>
-        <Space style={{ marginBottom: 16 }}>
-          <Input
-            placeholder="搜索昵称/邮箱"
-            value={searchText}
-            onChange={e => handleSearch(e.target.value)}
-            style={{ width: 240 }}
-            prefix={<SearchOutlined />}
-            allowClear
-          />
-          <Button 
-            type="primary" 
-            icon={<PlusOutlined />} 
-            onClick={() => handleAddEdit()}
-          >
-            添加用户
-          </Button>
-          <Button 
-            icon={<ReloadOutlined />} 
-            onClick={handleReload}
+    <div className="user-management-page">
+      <Card
+        >
+          <Space style={{ marginBottom: 16 }}>
+            <Input
+              placeholder="搜索昵称/邮箱"
+              value={searchText}
+              onChange={e => handleSearch(e.target.value)}
+              style={{ width: 240 }}
+              prefix={<SearchOutlined />}
+              allowClear
+            />
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />} 
+              onClick={() => handleAddEdit()}
+            >
+              添加用户
+            </Button>
+            <Button 
+              icon={<ReloadOutlined />} 
+              onClick={handleReload}
+              loading={loading}
+            >
+              刷新
+            </Button>
+          </Space>
+
+          <Table 
+            columns={columns} 
+            dataSource={data}
+            rowKey="key"
+            pagination={pagination}
             loading={loading}
-          >
-            刷新
-          </Button>
-        </Space>
+            scroll={{ x: 1300 }}
+            onChange={handleTableChange}
+          />
+        </Card>
 
-        <Table 
-          columns={columns} 
-          dataSource={data}
-          rowKey="key"
-          pagination={pagination}
-          loading={loading}
-          scroll={{ x: 1300 }}
-          onChange={handleTableChange}
-        />
-      </Card>
-
-      <Modal
+        <Modal
         title={selectedRecord ? '编辑用户' : '添加用户'}
         open={isModalVisible}
         onOk={handleSubmit}
@@ -463,7 +476,7 @@ const UserManagementPage = () => {
           </Row>
         </Form>
       </Modal>
-    </PageContainer>
+    </div>
   );
 };
 
