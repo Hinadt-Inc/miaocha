@@ -22,7 +22,8 @@ import {
   Avatar,
   Card,
   Row,
-  Col
+  Col,
+  Breadcrumb
 } from 'antd';
 import { 
   SearchOutlined, 
@@ -41,12 +42,12 @@ import type {
   FilterValue,
   SorterResult 
 } from 'antd/es/table/interface';
-import { PageContainer } from '@ant-design/pro-components';
 import dayjs from 'dayjs';
+import { Link } from 'react-router-dom';
+import './UserManagementPage.less';
 
 interface UserData extends User {
   key: string;
-  status: number;
   department: string;
   lastLoginTime: string;
   name: string;
@@ -59,7 +60,6 @@ const transformUserData = (users: User[]): UserData[] => {
   return users.map(user => ({
     ...user,
     key: user.id.toString(),
-    status: user.status,
     name: user.nickname ?? user.username,
     username: user.uid ?? user.username,
     createTime: user.createTime ?? user.createdAt,
@@ -153,8 +153,7 @@ const UserManagementPage = () => {
     form.resetFields();
     if (record) {
       form.setFieldsValue({
-        ...record,
-        status: record.status === 1
+        ...record
       });
     }
     setIsModalVisible(true);
@@ -178,7 +177,6 @@ const UserManagementPage = () => {
         nickname: string;
         email: string;
         role: string;
-        status: boolean;
         password?: string;
         confirmPassword?: string;
       };
@@ -189,8 +187,7 @@ const UserManagementPage = () => {
           id: selectedRecord.key,
           nickname: values.nickname,
           email: values.email,
-          role: values.role,
-          status: values.status ? 1 : 0
+          role: values.role
         });
         message.success('用户信息已更新');
       } else {
@@ -205,8 +202,7 @@ const UserManagementPage = () => {
           nickname: values.nickname,
           password: values.password,
           email: values.email,
-          role: values.role,
-          status: values.status ? 1 : 0
+          role: values.role
         });
         message.success('用户已添加');
       }
@@ -216,23 +212,6 @@ const UserManagementPage = () => {
     } catch (error) {
       message.error('操作失败');
       console.error('操作失败:', error);
-    }
-  };
-
-  // 处理状态变更
-  const handleStatusChange = async (checked: boolean, key: string) => {
-    try {
-      const newStatus = checked ? 1 : 0;
-      await updateUser({
-        id: key,
-        status: newStatus
-      });
-      setData(data.map(item => 
-        item.key === key ? { ...item, status: newStatus } : item
-      ));
-      message.success(`用户状态已${checked ? '启用' : '禁用'}`);
-    } catch {
-      message.error('更新用户状态失败');
     }
   };
 
@@ -280,25 +259,6 @@ const UserManagementPage = () => {
       }
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      width: 80,
-      filters: [
-        { text: '启用', value: true },
-        { text: '禁用', value: false }
-      ],
-      filteredValue: filteredInfo.status || null,
-      onFilter: (value, record) => record.status === value,
-      render: (status: number, record) => (
-        <Switch 
-          checked={status === 1} 
-          onChange={(checked) => handleStatusChange(checked, record.key)}
-          size="small"
-        />
-      ),
-    },
-    {
       title: '创建时间',
       dataIndex: 'createTime',
       key: 'createTime',
@@ -341,45 +301,58 @@ const UserManagementPage = () => {
 
   return (
     <div className="user-management-page">
-      <Card
-        >
-          <Space style={{ marginBottom: 16 }}>
-            <Input
-              placeholder="搜索昵称/邮箱"
-              value={searchText}
-              onChange={e => handleSearch(e.target.value)}
-              style={{ width: 240 }}
-              prefix={<SearchOutlined />}
-              allowClear
-            />
-            <Button 
-              type="primary" 
-              icon={<PlusOutlined />} 
-              onClick={() => handleAddEdit()}
-            >
-              添加用户
-            </Button>
-            <Button 
-              icon={<ReloadOutlined />} 
-              onClick={handleReload}
-              loading={loading}
-            >
-              刷新
-            </Button>
-          </Space>
-
-          <Table 
-            columns={columns} 
-            dataSource={data}
-            rowKey="key"
-            pagination={pagination}
-            loading={loading}
-            scroll={{ x: 1300 }}
-            onChange={handleTableChange}
+      <Card>
+      <div className="user-management-page-header">
+        <Breadcrumb>
+          <Breadcrumb.Item>
+            <Link to="/">首页</Link>
+          </Breadcrumb.Item>
+          <Breadcrumb.Item>
+            <Link to="/system">系统设置</Link>
+          </Breadcrumb.Item>
+          <Breadcrumb.Item>用户管理</Breadcrumb.Item>
+        </Breadcrumb>
+        <Space style={{ marginBottom: 16 }}>
+          <Input
+            placeholder="搜索昵称/邮箱"
+            value={searchText}
+            onChange={e => handleSearch(e.target.value)}
+            style={{ width: 240 }}
+            prefix={<SearchOutlined />}
+            allowClear
           />
-        </Card>
+          <Button 
+            type="primary" 
+            icon={<PlusOutlined />} 
+            onClick={() => handleAddEdit()}
+          >
+            添加用户
+          </Button>
+          <Button 
+            icon={<ReloadOutlined />} 
+            onClick={handleReload}
+            loading={loading}
+          >
+            刷新
+          </Button>
+        </Space>
+      </div>
+      
+      <div className="table-container">
+        
 
-        <Modal
+        <Table 
+          columns={columns} 
+          dataSource={data}
+          rowKey="key"
+          pagination={pagination}
+          loading={loading}
+          scroll={{ x: 1300 }}
+          onChange={handleTableChange}
+        />
+      </div>
+
+      <Modal
         title={selectedRecord ? '编辑用户' : '添加用户'}
         open={isModalVisible}
         onOk={handleSubmit}
@@ -390,7 +363,6 @@ const UserManagementPage = () => {
         <Form
           form={form}
           layout="vertical"
-          initialValues={{ status: true }}
         >
           <Row gutter={16}>
             <Col span={12}>
@@ -427,15 +399,6 @@ const UserManagementPage = () => {
                   options={roleOptions}
                   placeholder="请选择角色"
                 />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="status"
-                label="状态"
-                valuePropName="checked"
-              >
-                <Switch checkedChildren="启用" unCheckedChildren="禁用" />
               </Form.Item>
             </Col>
           </Row>
@@ -476,6 +439,7 @@ const UserManagementPage = () => {
           </Row>
         </Form>
       </Modal>
+      </Card>
     </div>
   );
 };

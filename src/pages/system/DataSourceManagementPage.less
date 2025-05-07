@@ -1,71 +1,69 @@
-@import '~antd/es/style/themes/default.less';
-
 .data-source-management-page {
-  padding: @padding-lg;
-  background: @component-background;
-  border-radius: @border-radius-base;
-  box-shadow: @shadow-1-down;
+  padding: 24px;
+  background: var(--component-bg);
+  border-radius: 8px;
+  box-shadow: var(--shadow-1);
 
   .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: @margin-lg;
+    margin-bottom: 24px;
 
     .title {
       margin: 0;
-      font-size: @font-size-lg;
+      font-size: 16px;
       font-weight: 500;
     }
 
     .actions {
       > * {
-        margin-left: @margin-md;
+        margin-left: 16px;
       }
     }
   }
 
   .table-toolbar {
-    margin-bottom: @margin-md;
+    margin-bottom: 16px;
     display: flex;
-    gap: @margin-md;
+    gap: 16px;
     align-items: center;
-    padding: @padding-sm;
-    background: @background-color-light;
-    border-radius: @border-radius-base;
+    padding: 12px;
+    background: var(--hover-bg);
+    border-radius: 8px;
   }
 
-  .table-container {
-    margin-top: @margin-md;
-    padding: @padding-md;
-    background: @component-background;
-    border-radius: @border-radius-base;
-    border: 1px solid @border-color-split;
-    box-shadow: @shadow-1-down;
+    .table-container {
+    margin-top: 16px;
+    padding: 16px;
+    background: var(--component-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-color-split);
+    box-shadow: var(--shadow-1);
     
     .ant-table {
-      border: 1px solid @border-color-split;
-      border-radius: @border-radius-base;
+      border: 1px solid var(--border-color-split);
+      border-radius: 8px;
       
       .ant-table-thead > tr > th {
-        background-color: @table-header-bg;
+        background-color: var(--hover-bg);
         font-weight: 500;
-        border-bottom: 1px solid @border-color-split !important;
+        border-bottom: 1px solid var(--border-color-split) !important;
       }
       
       .ant-table-tbody > tr > td {
-        border-bottom: 1px solid @border-color-split;
+        border-bottom: 1px solid var(--border-color-split);
       }
     }
     
     .ant-pagination {
-      margin: @margin-md 0 0;
-      padding-top: @padding-md;
-      border-top: 1px solid @border-color-split;
+      margin: 16px 0 0;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color-split);
     }
   }
 
   .ant-form-item {
-    margin-bottom: @margin-md;
+    margin-bottom: 16px;
   }
 }
