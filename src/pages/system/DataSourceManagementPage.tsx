@@ -7,7 +7,6 @@ import {
   testDataSourceConnection
 } from '../../api/datasource';
 import type { DataSource, CreateDataSourceParams, TestConnectionParams } from '../../types/datasourceTypes';
-import { PageContainer } from '@ant-design/pro-components';
 import { 
   ProTable, 
   ProFormText,
@@ -15,8 +14,8 @@ import {
   DrawerForm,
   ProForm 
 } from '@ant-design/pro-components';
-import { Button, Tag, message, Popconfirm } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined } from '@ant-design/icons';
+import { Button, Tag, message, Popconfirm, Breadcrumb, Card } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, HomeOutlined } from '@ant-design/icons';
 import type { ProColumns, ActionType, RequestData, ParamsType } from '@ant-design/pro-components';
 import type { SortOrder } from 'antd/lib/table/interface';
 
@@ -287,6 +286,7 @@ const DataSourceManagementPage = () => {
   
   return (
     <div className="data-source-management-page">
+      <Card>
       <ProTable<DataSourceItem>
         className="table-container"
         bordered
@@ -294,11 +294,18 @@ const DataSourceManagementPage = () => {
           filterType: 'light',
           labelWidth: 'auto'
         }}
-        headerTitle="数据源管理"
+        headerTitle={
+          <Breadcrumb>
+            <Breadcrumb.Item href="/">
+              <HomeOutlined />
+            </Breadcrumb.Item>
+            <Breadcrumb.Item>数据源管理</Breadcrumb.Item>
+          </Breadcrumb>
+        }
         actionRef={actionRef}
         rowKey="id"
         toolBarRender={() => [
-          <div className="table-toolbar">
+          <div className="table-toolbar" key="toolbar">
           <Button 
             key="button" 
             icon={<PlusOutlined />} 
@@ -321,7 +328,7 @@ const DataSourceManagementPage = () => {
         title={currentDataSource ? '编辑数据源' : '新增数据源'}
         width="500px"
         open={drawerVisible}
-        onVisibleChange={setDrawerVisible}
+        onOpenChange={setDrawerVisible}
         onFinish={handleFormSubmit}
         initialValues={currentDataSource}
         submitter={{
@@ -416,6 +423,7 @@ const DataSourceManagementPage = () => {
           rules={[{ required: true, message: '请选择状态' }]}
         />
       </DrawerForm>
+      </Card>
     </div>
   );
 };

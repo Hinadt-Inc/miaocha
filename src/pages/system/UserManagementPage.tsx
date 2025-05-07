@@ -1,4 +1,7 @@
+
+import './UserManagementPage.less';
 import { useState, useEffect } from 'react';
+
 import { 
   getUsers,
   createUser,

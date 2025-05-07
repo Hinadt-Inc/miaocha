@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Card, Table, Button, Space, Input, Select } from 'antd'
+import { Card, Table, Button, Space, Input, Select, Breadcrumb } from 'antd'
 import { App } from 'antd'
 import { getUsers } from '../../api/user'
 import type { ColumnsType } from 'antd/es/table'
@@ -10,6 +10,8 @@ import {
   revokePermissionById
 } from '../../api/permission'
 import type { DatasourcePermission, TablePermission } from '../../types/permissionTypes'
+import { HomeOutlined } from '@ant-design/icons'
+import { Link } from 'react-router-dom'
 
 const PermissionManagementPage = () => {
   const { message, modal } = App.useApp()
@@ -181,6 +183,14 @@ const PermissionManagementPage = () => {
 
   return (
     <Card>
+      <Breadcrumb style={{ marginBottom: 16 }}>
+        <Breadcrumb.Item>
+          <Link to="/home">
+            <HomeOutlined />
+          </Link>
+        </Breadcrumb.Item>
+        <Breadcrumb.Item>权限管理</Breadcrumb.Item>
+      </Breadcrumb>
       <Space style={{ marginBottom: 16 }}>
         <Input
           placeholder="用户ID"

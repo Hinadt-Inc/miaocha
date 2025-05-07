@@ -16,6 +16,28 @@ import {
 } from '../../api/logstash';
 import type { LogstashProcess, LogstashTaskSummary, TaskStepsResponse } from '../../types/logstashTypes';
 import LogstashEditModal from './components/LogstashEditModal';
+import { useRef, useState } from 'react';
+import { 
+  getAllLogstashInstances,
+  createLogstashInstance,
+  updateLogstashInstance,
+  deleteLogstashInstance,
+  testLogstashConnection
+} from '../../api/logstash';
+import type { LogstashInstance, CreateLogstashInstanceParams, TestConnectionParams } from '../../types/logstashTypes';
+import { PageContainer } from '@ant-design/pro-components';
+import { 
+  ProTable, 
+  ProFormText,
+  ProFormSelect,
+  DrawerForm,
+  ProForm 
+} from '@ant-design/pro-components';
+import { Button, Tag, message, Popconfirm, Breadcrumb } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, HomeOutlined } from '@ant-design/icons';
+import type { ProColumns, ActionType, RequestData, ParamsType } from '@ant-design/pro-components';
+import type { SortOrder } from 'antd/lib/table/interface';
+import { Link } from 'react-router-dom';
 
 export default function LogstashManagementPage() {
   const [data, setData] = useState<LogstashProcess[]>([]);
