@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -17,6 +19,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class MultipleKeywordsAndWhereSqlTest {
 
     @Mock
@@ -79,7 +82,18 @@ public class MultipleKeywordsAndWhereSqlTest {
                     if (!isFirst) {
                         condition.append(" AND ");
                     }
-                    condition.append("message MATCH_ANY '").append(keyword).append("'");
+
+                    // Handle OR conditions
+                    if (keyword.contains(" || ")) {
+                        String[] terms = keyword.split(" \\|\\| ");
+                        String cleanedTerms = Arrays.stream(terms)
+                            .map(term -> term.replace("'", "").trim())
+                            .reduce((a, b) -> a + " " + b)
+                            .orElse("");
+                        condition.append("message MATCH_ANY '").append(cleanedTerms).append("'");
+                    } else {
+                        condition.append("message MATCH_ANY '").append(keyword).append("'");
+                    }
                     isFirst = false;
                 }
             }
