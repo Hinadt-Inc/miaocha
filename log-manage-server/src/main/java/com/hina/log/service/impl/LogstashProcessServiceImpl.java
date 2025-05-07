@@ -5,6 +5,7 @@ import com.hina.log.converter.MachineConverter;
 import com.hina.log.converter.TaskStepsGroupConverter;
 import com.hina.log.converter.TaskSummaryConverter;
 import com.hina.log.dto.*;
+import com.hina.log.service.sql.JdbcQueryExecutor;
 import com.hina.log.entity.*;
 import com.hina.log.exception.BusinessException;
 import com.hina.log.exception.ErrorCode;
@@ -47,6 +48,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
     private final TaskStepsGroupConverter taskStepsGroupConverter;
     private final LogstashConfigParser logstashConfigParser;
     private final TableValidationService tableValidationService;
+    private final JdbcQueryExecutor jdbcQueryExecutor;
 
     public LogstashProcessServiceImpl(
             LogstashProcessMapper logstashProcessMapper,
@@ -61,7 +63,8 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             TaskSummaryConverter taskSummaryConverter,
             TaskStepsGroupConverter taskStepsGroupConverter,
             LogstashConfigParser logstashConfigParser,
-            TableValidationService tableValidationService) {
+            TableValidationService tableValidationService,
+            JdbcQueryExecutor jdbcQueryExecutor) {
         this.logstashProcessMapper = logstashProcessMapper;
         this.logstashMachineMapper = logstashMachineMapper;
         this.machineMapper = machineMapper;
@@ -75,6 +78,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         this.taskStepsGroupConverter = taskStepsGroupConverter;
         this.logstashConfigParser = logstashConfigParser;
         this.tableValidationService = tableValidationService;
+        this.jdbcQueryExecutor = jdbcQueryExecutor;
     }
 
     @Override
@@ -717,5 +721,64 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         logstashDeployService.refreshConfigAsync(id, machines);
 
         return getLogstashProcess(id);
+    }
+
+    @Override
+    @Transactional
+    public LogstashProcessDTO executeDorisSql(Long id, String sql) {
+        // 参数校验
+        if (id == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
+        }
+
+        if (!StringUtils.hasText(sql)) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "SQL语句不能为空");
+        }
+
+        // 检查进程是否存在
+        LogstashProcess process = logstashProcessMapper.selectById(id);
+        if (process == null) {
+            throw new BusinessException(ErrorCode.LOGSTASH_PROCESS_NOT_FOUND);
+        }
+
+        // 检查进程状态，只有未启动状态的进程可以执行Doris SQL
+        if (!LogstashProcessState.NOT_STARTED.name().equals(process.getState())) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR,
+                    "只有未启动状态的进程可以执行Doris SQL，当前状态: " + process.getState());
+        }
+
+        // 检查dorisSql字段是否已有值
+        if (StringUtils.hasText(process.getDorisSql())) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "该进程已经执行过Doris SQL，不能重复执行");
+        }
+
+        // 检查SQL是否包含DROP语句
+        String sqlLower = sql.toLowerCase().trim();
+        if (sqlLower.contains("drop ")) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "不允许执行DROP语句");
+        }
+
+        // 获取数据源
+        Datasource datasource = datasourceMapper.selectById(process.getDatasourceId());
+        if (datasource == null) {
+            throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND, "找不到关联的数据源");
+        }
+
+        try {
+            // 执行SQL
+            logger.info("执行Doris SQL: {}", sql);
+            jdbcQueryExecutor.executeQuery(datasource, sql);
+
+            // 更新进程的dorisSql字段
+            process.setDorisSql(sql);
+            process.setUpdateTime(LocalDateTime.now());
+            logstashProcessMapper.update(process);
+
+            logger.info("Doris SQL执行成功并已保存到进程 [{}]", id);
+            return getLogstashProcess(id);
+        } catch (Exception e) {
+            logger.error("执行Doris SQL失败: {}", e.getMessage(), e);
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "执行Doris SQL失败: " + e.getMessage());
+        }
     }
 }

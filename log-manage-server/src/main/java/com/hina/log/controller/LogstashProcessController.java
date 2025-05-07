@@ -159,4 +159,19 @@ public class LogstashProcessController {
         return ApiResponse.success(logstashProcessService.getTaskStepsGrouped(taskId));
     }
 
+    /**
+     * 执行Doris SQL语句
+     *
+     * @param id  Logstash进程ID
+     * @param dto 包含SQL语句的DTO
+     * @return 更新后的Logstash进程
+     */
+    @PostMapping("/{id}/doris-sql")
+    @Operation(summary = "执行Doris SQL语句", description = "执行Doris建表SQL并保存到进程中，仅能在未启动状态执行且只能执行一次")
+    public ApiResponse<LogstashProcessDTO> executeDorisSql(
+            @Parameter(description = "Logstash进程数据库ID", required = true) @PathVariable("id") Long id,
+            @Parameter(description = "Doris SQL执行请求", required = true) @Valid @RequestBody DorisSqlExecuteDTO dto) {
+        return ApiResponse.success(logstashProcessService.executeDorisSql(id, dto.getSql()));
+    }
+
 }

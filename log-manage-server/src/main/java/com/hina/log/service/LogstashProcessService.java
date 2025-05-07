@@ -108,4 +108,13 @@ public interface LogstashProcessService {
      * @return 任务步骤分组信息
      */
     TaskStepsGroupDTO getTaskStepsGrouped(String taskId);
+
+    /**
+     * 执行Doris SQL语句并更新进程的dorisSql字段
+     *
+     * @param id  Logstash进程ID
+     * @param sql Doris SQL语句
+     * @return 更新后的Logstash进程信息
+     */
+    LogstashProcessDTO executeDorisSql(Long id, String sql);
 }
