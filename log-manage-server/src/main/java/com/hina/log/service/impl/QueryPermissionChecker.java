@@ -65,7 +65,7 @@ public class QueryPermissionChecker {
         Set<String> tableNames = extractTableNames(sql);
         for (String tableName : tableNames) {
             // 检查模块权限
-            if (!modulePermissionService.hasModulePermission(user.getId(), datasourceId, tableName)) {
+            if (!modulePermissionService.hasModulePermission(user.getId(), tableName)) {
                 throw new BusinessException(ErrorCode.PERMISSION_DENIED, "没有访问模块的权限: " + tableName);
             }
         }
@@ -74,12 +74,11 @@ public class QueryPermissionChecker {
     /**
      * 获取用户有权限访问的所有表
      *
-     * @param userId       用户ID
-     * @param datasourceId 数据源ID
-     * @param conn         数据库连接
+     * @param userId 用户ID
+     * @param conn   数据库连接
      * @return 有权限的表列表
      */
-    public List<String> getPermittedTables(Long userId, Long datasourceId, Connection conn) throws SQLException {
+    public List<String> getPermittedTables(Long userId, Connection conn) throws SQLException {
         List<String> permittedTables = new ArrayList<>();
 
         // 获取用户可访问的所有模块

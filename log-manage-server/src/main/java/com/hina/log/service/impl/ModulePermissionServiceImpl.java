@@ -45,7 +45,7 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Override
-    public boolean hasModulePermission(Long userId, Long datasourceId, String module) {
+    public boolean hasModulePermission(Long userId, String module) {
         // 先查询用户信息
         User user = userMapper.selectById(userId);
         if (user == null) {
@@ -58,6 +58,9 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
             return true;
         }
 
+        // 根据模块名称获取数据源ID
+        Long datasourceId = getDatasourceIdByModule(module);
+
         // 检查用户是否拥有此模块的权限
         UserModulePermission permission = userModulePermissionMapper.select(userId, datasourceId, module);
         return permission != null;
@@ -65,22 +68,25 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
 
     @Override
     @Transactional
-    public UserModulePermissionDTO grantModulePermission(Long userId, Long datasourceId, String module) {
+    public UserModulePermissionDTO grantModulePermission(Long userId, String module) {
         // 检查用户是否存在
         User user = userMapper.selectById(userId);
         if (user == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
+        // 检查模块是否存在
+        if (!moduleExists(module)) {
+            throw new BusinessException(ErrorCode.MODULE_NOT_FOUND, "未找到模块: " + module);
+        }
+
+        // 根据模块名称获取数据源ID
+        Long datasourceId = getDatasourceIdByModule(module);
+
         // 检查数据源是否存在
         Datasource datasource = datasourceMapper.selectById(datasourceId);
         if (datasource == null) {
             throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
-        }
-
-        // 检查模块是否存在
-        if (!moduleExists(module)) {
-            throw new BusinessException(ErrorCode.MODULE_NOT_FOUND, "未找到模块: " + module);
         }
 
         // 检查权限是否已存在
@@ -105,17 +111,11 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
 
     @Override
     @Transactional
-    public void revokeModulePermission(Long userId, Long datasourceId, String module) {
+    public void revokeModulePermission(Long userId, String module) {
         // 检查用户是否存在
         User user = userMapper.selectById(userId);
         if (user == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
-
-        // 检查数据源是否存在
-        Datasource datasource = datasourceMapper.selectById(datasourceId);
-        if (datasource == null) {
-            throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
         }
 
         // 检查模块是否存在
@@ -123,17 +123,8 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
             throw new BusinessException(ErrorCode.MODULE_NOT_FOUND, "未找到模块: " + module);
         }
 
-        // 删除权限
-        userModulePermissionMapper.delete(userId, datasourceId, module);
-    }
-
-    @Override
-    public List<UserModulePermissionDTO> getUserModulePermissions(Long userId, Long datasourceId) {
-        // 检查用户是否存在
-        User user = userMapper.selectById(userId);
-        if (user == null) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
+        // 根据模块名称获取数据源ID
+        Long datasourceId = getDatasourceIdByModule(module);
 
         // 检查数据源是否存在
         Datasource datasource = datasourceMapper.selectById(datasourceId);
@@ -141,8 +132,20 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
             throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
         }
 
-        // 获取用户在指定数据源的所有模块权限
-        List<UserModulePermission> permissions = userModulePermissionMapper.selectByUserAndDatasource(userId, datasourceId);
+        // 删除权限
+        userModulePermissionMapper.delete(userId, datasourceId, module);
+    }
+
+    @Override
+    public List<UserModulePermissionDTO> getUserModulePermissions(Long userId) {
+        // 检查用户是否存在
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        // 获取用户的所有模块权限
+        List<UserModulePermission> permissions = userModulePermissionMapper.selectByUser(userId);
 
         // 转换为DTO
         return permissions.stream()
@@ -256,6 +259,27 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
         }
 
         return false;
+    }
+
+    /**
+     * 根据模块名称获取数据源ID
+     *
+     * @param module 模块名称
+     * @return 数据源ID
+     */
+    private Long getDatasourceIdByModule(String module) {
+        if (!StringUtils.hasText(module)) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块名称不能为空");
+        }
+
+        List<LogstashProcess> processes = logstashProcessMapper.selectAll();
+        for (LogstashProcess process : processes) {
+            if (module.equals(process.getModule())) {
+                return process.getDatasourceId();
+            }
+        }
+
+        throw new BusinessException(ErrorCode.MODULE_NOT_FOUND, "未找到模块: " + module);
     }
 
     /**

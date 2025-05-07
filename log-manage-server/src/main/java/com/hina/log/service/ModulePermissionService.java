@@ -14,40 +14,36 @@ public interface ModulePermissionService {
     /**
      * 检查用户对指定模块的访问权限
      *
-     * @param userId       用户ID
-     * @param datasourceId 数据源ID
-     * @param module       模块名称
+     * @param userId 用户ID
+     * @param module 模块名称
      * @return 是否有权限
      */
-    boolean hasModulePermission(Long userId, Long datasourceId, String module);
+    boolean hasModulePermission(Long userId, String module);
 
     /**
      * 授予用户对指定模块的访问权限
      *
-     * @param userId       用户ID
-     * @param datasourceId 数据源ID
-     * @param module       模块名称
+     * @param userId 用户ID
+     * @param module 模块名称
      * @return 创建的权限DTO
      */
-    UserModulePermissionDTO grantModulePermission(Long userId, Long datasourceId, String module);
+    UserModulePermissionDTO grantModulePermission(Long userId, String module);
 
     /**
      * 撤销用户对指定模块的访问权限
      *
-     * @param userId       用户ID
-     * @param datasourceId 数据源ID
-     * @param module       模块名称
+     * @param userId 用户ID
+     * @param module 模块名称
      */
-    void revokeModulePermission(Long userId, Long datasourceId, String module);
+    void revokeModulePermission(Long userId, String module);
 
     /**
-     * 获取用户在指定数据源的所有模块权限
+     * 获取用户的所有模块权限
      *
-     * @param userId       用户ID
-     * @param datasourceId 数据源ID
+     * @param userId 用户ID
      * @return 模块权限列表
      */
-    List<UserModulePermissionDTO> getUserModulePermissions(Long userId, Long datasourceId);
+    List<UserModulePermissionDTO> getUserModulePermissions(Long userId);
 
     /**
      * 获取当前用户可访问的所有模块

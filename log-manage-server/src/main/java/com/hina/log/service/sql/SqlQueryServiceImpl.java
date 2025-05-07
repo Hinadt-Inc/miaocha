@@ -354,12 +354,12 @@ public class SqlQueryServiceImpl implements SqlQueryService {
             // 为了单元测试的兼容性，检查是否在测试环境中
             if (sqlQueryExecutor == null) {
                 // 测试环境，同步执行
-                return getSchemaInfoSync(user, userId, datasourceId, datasource, schemaInfo);
+                return getSchemaInfoSync(user, userId, datasource, schemaInfo);
             }
 
             // 生产环境，使用CompletableFuture异步获取Schema信息
             return CompletableFuture
-                    .supplyAsync(() -> getSchemaInfoSync(user, userId, datasourceId, datasource, schemaInfo),
+                    .supplyAsync(() -> getSchemaInfoSync(user, userId, datasource, schemaInfo),
                             getExecutor())
                     .exceptionally(throwable -> {
                         logger.error("获取Schema信息失败", throwable);
@@ -387,8 +387,7 @@ public class SqlQueryServiceImpl implements SqlQueryService {
     /**
      * 同步获取schema信息
      */
-    private SchemaInfoDTO getSchemaInfoSync(User user, Long userId, Long datasourceId,
-            Datasource datasource, SchemaInfoDTO schemaInfo) {
+    private SchemaInfoDTO getSchemaInfoSync(User user, Long userId, Datasource datasource, SchemaInfoDTO schemaInfo) {
         try {
             // 获取JDBC连接
             Connection conn = jdbcQueryExecutor.getConnection(datasource);
@@ -405,7 +404,7 @@ public class SqlQueryServiceImpl implements SqlQueryService {
                 permittedTables = metadataService.getAllTables(conn);
             } else {
                 // 获取用户有权限的表
-                permittedTables = permissionChecker.getPermittedTables(userId, datasourceId, conn);
+                permittedTables = permissionChecker.getPermittedTables(userId, conn);
             }
 
             // 获取表信息
