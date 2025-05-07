@@ -78,35 +78,4 @@ public class MultipleKeywordsAndWhereSqlTest {
         assertTrue(conditions.contains("(service_name = 'user-service')"));
         assertTrue(conditions.contains(" AND "));
     }
-
-    @Test
-    public void testBackwardCompatibility() {
-        LogSearchDTO dto = new LogSearchDTO();
-
-        // 测试旧的keyword字段
-        dto.setKeyword("error");
-        String conditions = searchConditionManager.buildSearchConditions(dto);
-        assertEquals("message MATCH_ANY 'error'", conditions);
-
-        // 测试旧的whereSql字段
-        dto = new LogSearchDTO();
-        dto.setWhereSql("level = 'ERROR'");
-        conditions = searchConditionManager.buildSearchConditions(dto);
-        assertEquals("level = 'ERROR'", conditions);
-
-        // 测试新旧字段同时存在（应该优先使用新字段）
-        dto = new LogSearchDTO();
-        dto.setKeyword("old-keyword");
-        dto.setKeywords(Arrays.asList("new-keyword1", "new-keyword2"));
-        dto.setWhereSql("old-where-sql");
-        dto.setWhereSqls(Arrays.asList("new-where-sql1", "new-where-sql2"));
-
-        conditions = searchConditionManager.buildSearchConditions(dto);
-        assertTrue(conditions.contains("message MATCH_ANY 'new-keyword1'"));
-        assertTrue(conditions.contains("message MATCH_ANY 'new-keyword2'"));
-        assertTrue(conditions.contains("(new-where-sql1)"));
-        assertTrue(conditions.contains("(new-where-sql2)"));
-        assertTrue(!conditions.contains("old-keyword"));
-        assertTrue(!conditions.contains("old-where-sql"));
-    }
 }

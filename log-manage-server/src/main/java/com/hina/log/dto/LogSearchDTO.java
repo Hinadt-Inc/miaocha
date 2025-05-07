@@ -17,9 +17,9 @@ public class LogSearchDTO {
     @NotNull(message = "数据源ID不能为空")
     private Long datasourceId;
 
-    @Schema(description = "日志表的完整限定名", example = "log_db.log_table", required = true)
-    @NotBlank(message = "日志表名不能为空")
-    private String tableName;
+    @Schema(description = "模块名称", example = "nginx", required = true)
+    @NotBlank(message = "模块名称不能为空")
+    private String module;
 
     @Schema(description = "搜索关键字列表，每个关键字支持多种格式：\n"
             + "1. 单个关键字: error\n"
@@ -30,13 +30,6 @@ public class LogSearchDTO {
 
     @Schema(description = "WHERE 条件SQL列表，每个条件直接拼接到SQL语句中，多个条件之间使用AND连接", example = "['level = \'ERROR\'', 'service_name = \'user-service\'']")
     private List<String> whereSqls;
-
-    // 为了向后兼容，保留原有的字段
-    @Schema(description = "搜索关键字（已废弃，请使用keywords）", deprecated = true)
-    private String keyword;
-
-    @Schema(description = "WHERE 条件后续SQL（已废弃，请使用whereSqls）", deprecated = true)
-    private String whereSql;
 
     @Schema(description = "开始时间", example = "2023-06-01 10:00:00")
     private String startTime;

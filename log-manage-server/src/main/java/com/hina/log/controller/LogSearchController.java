@@ -48,17 +48,17 @@ public class LogSearchController {
      *
      * @param user         当前用户
      * @param datasourceId 数据源ID
-     * @param tableName    表名
+     * @param module       模块名称
      * @return 字段详细信息列表
      */
     @GetMapping("/columns")
-    @Operation(summary = "获取日志表字段", description = "获取指定日志表的字段详细信息列表，包含字段名、类型、注释等信息，用于前端构建查询界面")
+    @Operation(summary = "获取日志表字段", description = "获取指定模块的字段详细信息列表，包含字段名、类型、注释等信息，用于前端构建查询界面")
     public ApiResponse<List<SchemaInfoDTO.ColumnInfoDTO>> getTableColumns(
             @CurrentUser UserDTO user,
             @Parameter(description = "数据源ID", required = true) @RequestParam("datasourceId") Long datasourceId,
-            @Parameter(description = "表名", required = true) @RequestParam("tableName") String tableName) {
+            @Parameter(description = "模块名称", required = true) @RequestParam("module") String module) {
         List<SchemaInfoDTO.ColumnInfoDTO> columns = logSearchService.getTableColumns(user.getId(), datasourceId,
-                tableName);
+                module);
         return ApiResponse.success(columns);
     }
 

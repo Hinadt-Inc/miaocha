@@ -1,0 +1,59 @@
+package com.hina.log.service;
+
+import com.hina.log.dto.permission.UserModulePermissionDTO;
+import com.hina.log.dto.permission.UserPermissionModuleStructureDTO;
+
+import java.util.List;
+
+/**
+ * 模块权限服务接口
+ * 用于处理基于模块的权限管理
+ */
+public interface ModulePermissionService {
+
+    /**
+     * 检查用户对指定模块的访问权限
+     *
+     * @param userId       用户ID
+     * @param datasourceId 数据源ID
+     * @param module       模块名称
+     * @return 是否有权限
+     */
+    boolean hasModulePermission(Long userId, Long datasourceId, String module);
+
+    /**
+     * 授予用户对指定模块的访问权限
+     *
+     * @param userId       用户ID
+     * @param datasourceId 数据源ID
+     * @param module       模块名称
+     * @return 创建的权限DTO
+     */
+    UserModulePermissionDTO grantModulePermission(Long userId, Long datasourceId, String module);
+
+    /**
+     * 撤销用户对指定模块的访问权限
+     *
+     * @param userId       用户ID
+     * @param datasourceId 数据源ID
+     * @param module       模块名称
+     */
+    void revokeModulePermission(Long userId, Long datasourceId, String module);
+
+    /**
+     * 获取用户在指定数据源的所有模块权限
+     *
+     * @param userId       用户ID
+     * @param datasourceId 数据源ID
+     * @return 模块权限列表
+     */
+    List<UserModulePermissionDTO> getUserModulePermissions(Long userId, Long datasourceId);
+
+    /**
+     * 获取当前用户可访问的所有模块
+     *
+     * @param userId 用户ID
+     * @return 用户可访问的模块结构列表
+     */
+    List<UserPermissionModuleStructureDTO> getUserAccessibleModules(Long userId);
+}

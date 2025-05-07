@@ -22,12 +22,12 @@ public class LogSqlBuilder {
     /**
      * 构建日志分布统计SQL
      */
-    public String buildDistributionSql(LogSearchDTO dto, String timeUnit) {
+    public String buildDistributionSql(LogSearchDTO dto, String tableName, String timeUnit) {
         StringBuilder sql = new StringBuilder();
 
         sql.append("SELECT date_trunc(log_time, '").append(timeUnit).append("') AS log_time_, ")
                 .append(" COUNT(1) AS count ")
-                .append("FROM ").append(dto.getTableName())
+                .append("FROM ").append(tableName)
                 .append(" WHERE log_time >= '").append(dto.getStartTime()).append("'")
                 .append(" AND log_time <= '").append(dto.getEndTime()).append("'");
 
@@ -42,7 +42,7 @@ public class LogSqlBuilder {
     /**
      * 构建详细日志查询SQL
      */
-    public String buildDetailSql(LogSearchDTO dto) {
+    public String buildDetailSql(LogSearchDTO dto, String tableName) {
         StringBuilder sql = new StringBuilder();
 
         if (dto.getFields() != null && !dto.getFields().isEmpty()) {
@@ -51,7 +51,7 @@ public class LogSqlBuilder {
             sql.append("SELECT *");
         }
 
-        sql.append(" FROM ").append(dto.getTableName())
+        sql.append(" FROM ").append(tableName)
                 .append(" WHERE log_time >= '").append(dto.getStartTime()).append("'")
                 .append(" AND log_time <= '").append(dto.getEndTime()).append("'");
 
@@ -66,7 +66,7 @@ public class LogSqlBuilder {
 
     /**
      * 仅构建搜索条件字符串
-     * 
+     *
      * @param dto 日志搜索DTO
      * @return 搜索条件字符串（不包含前置AND）
      */

@@ -24,9 +24,9 @@ public interface LogSearchService {
      *
      * @param userId       用户ID
      * @param datasourceId 数据源ID
-     * @param tableName    表名
+     * @param module       模块名称
      * @return 表结构信息（包含列名、数据类型、是否主键等详细信息）
      */
-    List<SchemaInfoDTO.ColumnInfoDTO> getTableColumns(Long userId, Long datasourceId, String tableName);
+    List<SchemaInfoDTO.ColumnInfoDTO> getTableColumns(Long userId, Long datasourceId, String module);
 
 }

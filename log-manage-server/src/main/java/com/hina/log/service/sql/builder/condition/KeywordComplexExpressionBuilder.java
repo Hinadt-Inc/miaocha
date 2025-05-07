@@ -23,7 +23,7 @@ public class KeywordComplexExpressionBuilder implements SearchConditionBuilder {
 
     @Override
     public boolean supports(LogSearchDTO dto) {
-        // 先检查新的keywords列表
+        // 检查keywords列表
         if (dto.getKeywords() != null && !dto.getKeywords().isEmpty()) {
             for (String keyword : dto.getKeywords()) {
                 if (StringUtils.isNotBlank(keyword)) {
@@ -39,19 +39,7 @@ public class KeywordComplexExpressionBuilder implements SearchConditionBuilder {
                 }
             }
         }
-
-        // 向后兼容，检查旧的keyword字段
-        if (StringUtils.isBlank(dto.getKeyword())) {
-            return false;
-        }
-        String keyword = dto.getKeyword().trim();
-
-        // 检查是否包含括号或复杂运算符组合
-        boolean containsParentheses = keyword.contains("(") && keyword.contains(")");
-        boolean containsComplexOperators = (keyword.contains("&&") && keyword.contains("||")) ||
-                keyword.contains("(") || keyword.contains(")");
-
-        return containsParentheses || containsComplexOperators;
+        return false;
     }
 
     @Override
@@ -63,7 +51,7 @@ public class KeywordComplexExpressionBuilder implements SearchConditionBuilder {
         StringBuilder condition = new StringBuilder();
         boolean isFirst = true;
 
-        // 先处理新的keywords列表
+        // 处理keywords列表
         if (dto.getKeywords() != null && !dto.getKeywords().isEmpty()) {
             for (String keyword : dto.getKeywords()) {
                 if (StringUtils.isNotBlank(keyword)) {
@@ -94,28 +82,8 @@ public class KeywordComplexExpressionBuilder implements SearchConditionBuilder {
                     }
                 }
             }
-
-            if (condition.length() > 0) {
-                return condition.toString();
-            }
         }
 
-        // 向后兼容，处理旧的keyword字段
-        if (StringUtils.isNotBlank(dto.getKeyword())) {
-            // 使用表达式解析器解析复杂表达式
-            ParseResult parseResult = KeywordExpressionParser.parse(dto.getKeyword().trim());
-
-            // 如果语法错误，抛出异常
-            if (!parseResult.isSuccess()) {
-                // 记录错误日志
-                logger.warn("关键字表达式语法错误: {}, 表达式: {}", parseResult.getErrorMessage(), dto.getKeyword());
-                // 抛出自定义异常
-                throw new KeywordSyntaxException(parseResult.getErrorMessage(), dto.getKeyword());
-            }
-
-            return parseResult.getResult();
-        }
-
-        return "";
+        return condition.length() > 0 ? condition.toString() : "";
     }
 }

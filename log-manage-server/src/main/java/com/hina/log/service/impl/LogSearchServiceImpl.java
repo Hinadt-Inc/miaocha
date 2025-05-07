@@ -11,6 +11,7 @@ import com.hina.log.exception.KeywordSyntaxException;
 import com.hina.log.mapper.DatasourceMapper;
 import com.hina.log.mapper.UserMapper;
 import com.hina.log.service.LogSearchService;
+import com.hina.log.service.ModuleTableMappingService;
 import com.hina.log.service.database.DatabaseMetadataService;
 import com.hina.log.service.database.DatabaseMetadataServiceFactory;
 import com.hina.log.service.sql.JdbcQueryExecutor;
@@ -60,6 +61,9 @@ public class LogSearchServiceImpl implements LogSearchService {
 
     @Autowired
     private DatabaseMetadataServiceFactory metadataServiceFactory;
+
+    @Autowired
+    private ModuleTableMappingService moduleTableMappingService;
 
 
     @Override
@@ -116,9 +120,12 @@ public class LogSearchServiceImpl implements LogSearchService {
         LogSearchResultDTO result = new LogSearchResultDTO();
         result.setSuccess(true);
 
+        // 获取模块对应的表名
+        String tableName = moduleTableMappingService.getTableNameByModule(dto.getModule());
+
         try (Connection conn = jdbcQueryExecutor.getConnection(datasource)) {
             // 1. 执行分布统计查询
-            String distributionSql = logSqlBuilder.buildDistributionSql(dto, timeUnit);
+            String distributionSql = logSqlBuilder.buildDistributionSql(dto, tableName, timeUnit);
             logger.debug("分布统计SQL: {}", distributionSql);
 
             // 执行分布查询并获取原始结果
@@ -128,7 +135,7 @@ public class LogSearchServiceImpl implements LogSearchService {
             resultProcessor.processDistributionResult(distributionQueryResult, result);
 
             // 2. 执行详细日志查询
-            String detailSql = logSqlBuilder.buildDetailSql(dto);
+            String detailSql = logSqlBuilder.buildDetailSql(dto, tableName);
             logger.debug("详细日志SQL: {}", detailSql);
 
             // 执行详细查询并获取原始结果
@@ -139,7 +146,7 @@ public class LogSearchServiceImpl implements LogSearchService {
 
             // 3. 执行总数查询
             StringBuilder countSql = new StringBuilder();
-            countSql.append("SELECT COUNT(1) as total FROM ").append(dto.getTableName())
+            countSql.append("SELECT COUNT(1) as total FROM ").append(tableName)
                     .append(" WHERE log_time >= '").append(dto.getStartTime()).append("'")
                     .append(" AND log_time <= '").append(dto.getEndTime()).append("'");
 
@@ -177,7 +184,7 @@ public class LogSearchServiceImpl implements LogSearchService {
     }
 
     @Override
-    public List<SchemaInfoDTO.ColumnInfoDTO> getTableColumns(Long userId, Long datasourceId, String tableName) {
+    public List<SchemaInfoDTO.ColumnInfoDTO> getTableColumns(Long userId, Long datasourceId, String module) {
         // 获取数据源
         Datasource datasource = datasourceMapper.selectById(datasourceId);
         if (datasource == null) {
@@ -189,6 +196,9 @@ public class LogSearchServiceImpl implements LogSearchService {
         if (user == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
+
+        // 获取模块对应的表名
+        String tableName = moduleTableMappingService.getTableNameByModule(module);
 
         try (Connection conn = jdbcQueryExecutor.getConnection(datasource)) {
             // 获取对应数据库类型的元数据服务

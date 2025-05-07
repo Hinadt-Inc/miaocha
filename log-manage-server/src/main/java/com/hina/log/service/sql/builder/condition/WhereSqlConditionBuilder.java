@@ -15,9 +15,8 @@ public class WhereSqlConditionBuilder implements SearchConditionBuilder {
 
     @Override
     public boolean supports(LogSearchDTO dto) {
-        // 支持新的whereSqls列表或旧的whereSql字段
-        return (dto.getWhereSqls() != null && !dto.getWhereSqls().isEmpty()) ||
-               StringUtils.isNotBlank(dto.getWhereSql());
+        // 支持whereSqls列表
+        return dto.getWhereSqls() != null && !dto.getWhereSqls().isEmpty();
     }
 
     @Override
@@ -28,7 +27,7 @@ public class WhereSqlConditionBuilder implements SearchConditionBuilder {
 
         StringBuilder condition = new StringBuilder();
 
-        // 优先处理新的whereSqls列表
+        // 处理whereSqls列表
         if (dto.getWhereSqls() != null && !dto.getWhereSqls().isEmpty()) {
             boolean isFirst = true;
             for (String whereSql : dto.getWhereSqls()) {
@@ -41,11 +40,6 @@ public class WhereSqlConditionBuilder implements SearchConditionBuilder {
                 }
             }
             return condition.toString();
-        }
-
-        // 向后兼容，处理旧的whereSql字段
-        if (StringUtils.isNotBlank(dto.getWhereSql())) {
-            return dto.getWhereSql().trim();
         }
 
         return "";

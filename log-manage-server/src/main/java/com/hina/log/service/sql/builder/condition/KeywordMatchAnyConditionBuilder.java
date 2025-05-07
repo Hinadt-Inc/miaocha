@@ -15,7 +15,7 @@ public class KeywordMatchAnyConditionBuilder implements SearchConditionBuilder {
 
     @Override
     public boolean supports(LogSearchDTO dto) {
-        // 先检查新的keywords列表
+        // 检查keywords列表
         if (dto.getKeywords() != null && !dto.getKeywords().isEmpty()) {
             for (String keyword : dto.getKeywords()) {
                 if (StringUtils.isNotBlank(keyword)) {
@@ -27,14 +27,7 @@ public class KeywordMatchAnyConditionBuilder implements SearchConditionBuilder {
                 }
             }
         }
-
-        // 向后兼容，检查旧的keyword字段
-        if (StringUtils.isBlank(dto.getKeyword())) {
-            return false;
-        }
-        String keyword = dto.getKeyword().trim();
-        // 排除复杂表达式和AND关系的表达式
-        return !keyword.contains(" && ") && !keyword.contains("(") && !keyword.contains(")");
+        return false;
     }
 
     @Override
@@ -46,7 +39,7 @@ public class KeywordMatchAnyConditionBuilder implements SearchConditionBuilder {
         StringBuilder condition = new StringBuilder();
         boolean isFirstCondition = true;
 
-        // 先处理新的keywords列表
+        // 处理keywords列表
         if (dto.getKeywords() != null && !dto.getKeywords().isEmpty()) {
             for (String keyword : dto.getKeywords()) {
                 if (StringUtils.isNotBlank(keyword)) {
@@ -88,39 +81,6 @@ public class KeywordMatchAnyConditionBuilder implements SearchConditionBuilder {
                             isFirstCondition = false;
                         }
                     }
-                }
-            }
-
-            if (condition.length() > 0) {
-                return condition.toString();
-            }
-        }
-
-        // 向后兼容，处理旧的keyword字段
-        if (StringUtils.isNotBlank(dto.getKeyword())) {
-            String keyword = dto.getKeyword().trim();
-
-            if (keyword.contains(" || ")) {
-                // 处理OR关系的关键字
-                String[] keywords = keyword.split(" \\|\\| ");
-                StringBuilder matchAnyClause = new StringBuilder();
-                for (int i = 0; i < keywords.length; i++) {
-                    String key = keywords[i].trim().replaceAll("^'|'$", ""); // 去除可能的引号
-                    if (StringUtils.isNotBlank(key)) {
-                        if (i > 0) {
-                            matchAnyClause.append(" ");
-                        }
-                        matchAnyClause.append(key);
-                    }
-                }
-                if (matchAnyClause.length() > 0) {
-                    condition.append("message MATCH_ANY '").append(matchAnyClause).append("'");
-                }
-            } else {
-                // 处理单个关键字
-                String key = keyword.replaceAll("^'|'$", ""); // 去除可能的引号
-                if (StringUtils.isNotBlank(key)) {
-                    condition.append("message MATCH_ANY '").append(key).append("'");
                 }
             }
         }

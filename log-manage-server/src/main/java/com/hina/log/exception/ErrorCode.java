@@ -62,6 +62,7 @@ public enum ErrorCode {
     LOGSTASH_CONFIG_DORIS_MISSING("7009", "Logstash配置缺少Doris输出配置"),
     LOGSTASH_CONFIG_TABLE_MISSING("7010", "Logstash配置缺少表名"),
     LOGSTASH_TARGET_TABLE_NOT_FOUND("7011", "目标数据源中不存在指定的表"),
+    MODULE_NOT_FOUND("7012", "未找到指定的模块"),
 
     // 任务相关错误码
     TASK_EXECUTION_FAILED("8001", "任务执行失败"),

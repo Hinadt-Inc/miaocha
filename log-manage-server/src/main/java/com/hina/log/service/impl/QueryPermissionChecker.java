@@ -1,11 +1,10 @@
 package com.hina.log.service.impl;
 
-import com.hina.log.dto.permission.UserDatasourcePermissionDTO;
 import com.hina.log.entity.User;
 import com.hina.log.entity.enums.UserRole;
 import com.hina.log.exception.BusinessException;
 import com.hina.log.exception.ErrorCode;
-import com.hina.log.service.UserDatasourcePermissionService;
+import com.hina.log.service.ModulePermissionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -19,6 +18,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * 查询权限检查器
@@ -42,7 +42,7 @@ public class QueryPermissionChecker {
             "(\"([^\"]+)\"|'([^']+)'|`([^`]+)`|\\[([^\\]]+)\\]|([\\w\\d_\\.]+))",
             Pattern.CASE_INSENSITIVE);
 
-    private final UserDatasourcePermissionService permissionService;
+    private final ModulePermissionService modulePermissionService;
 
     /**
      * 检查用户是否有权限执行指定的查询
@@ -64,8 +64,9 @@ public class QueryPermissionChecker {
         // 提取所有表名并检查权限
         Set<String> tableNames = extractTableNames(sql);
         for (String tableName : tableNames) {
-            if (!permissionService.hasTablePermission(user.getId(), datasourceId, tableName)) {
-                throw new BusinessException(ErrorCode.PERMISSION_DENIED, "没有访问表的权限: " + tableName);
+            // 检查模块权限
+            if (!modulePermissionService.hasModulePermission(user.getId(), datasourceId, tableName)) {
+                throw new BusinessException(ErrorCode.PERMISSION_DENIED, "没有访问模块的权限: " + tableName);
             }
         }
     }
@@ -81,27 +82,20 @@ public class QueryPermissionChecker {
     public List<String> getPermittedTables(Long userId, Long datasourceId, Connection conn) throws SQLException {
         List<String> permittedTables = new ArrayList<>();
 
-        // 查询用户有权限的表
-        List<UserDatasourcePermissionDTO> permissions = permissionService.getUserDatasourcePermissions(userId,
-                datasourceId);
+        // 获取用户可访问的所有模块
+        List<String> permittedModules = modulePermissionService.getUserAccessibleModules(userId).stream()
+                .flatMap(structure -> structure.getModules().stream())
+                .map(moduleInfo -> moduleInfo.getModuleName())
+                .collect(Collectors.toList());
 
-        // 如果有通配符权限，可以查看所有表
-        boolean hasWildcardPermission = permissions.stream()
-                .anyMatch(p -> "*".equals(p.getTableName()));
-
-        if (hasWildcardPermission) {
-            // 获取所有表
-            DatabaseMetaData metaData = conn.getMetaData();
-            try (ResultSet rs = metaData.getTables(conn.getCatalog(), null, "%", new String[]{"TABLE"})) {
-                while (rs.next()) {
-                    permittedTables.add(rs.getString("TABLE_NAME"));
-                }
-            }
-        } else {
-            // 只返回有权限的表
-            for (UserDatasourcePermissionDTO permission : permissions) {
-                if (!permission.getTableName().equals("*")) {
-                    permittedTables.add(permission.getTableName());
+        // 获取所有表
+        DatabaseMetaData metaData = conn.getMetaData();
+        try (ResultSet rs = metaData.getTables(conn.getCatalog(), null, "%", new String[]{"TABLE"})) {
+            while (rs.next()) {
+                String tableName = rs.getString("TABLE_NAME");
+                // 如果表名与模块名称匹配，或者用户是管理员，则添加到有权限的表列表中
+                if (permittedModules.contains(tableName)) {
+                    permittedTables.add(tableName);
                 }
             }
         }
