@@ -16,9 +16,14 @@
   from { transform: scaleX(0); }
   to { transform: scaleX(1); }
 }
-
+.editor-header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 /* SQL编辑器容器 */
 .sql-editor-container {
+  
   height: calc(100vh - 150px);
   display: flex;
   flex-direction: column;
@@ -41,7 +46,6 @@
   display: flex;
   justify-content: end;
   align-items: center;
-  margin-bottom: 8px;
   
   .sql-editor-actions {
     display: flex;

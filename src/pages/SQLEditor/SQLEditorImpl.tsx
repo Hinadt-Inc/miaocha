@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDataSources } from './hooks/useDataSources';
 import { useQueryExecution } from './hooks/useQueryExecution';
 import { useEditorSettings } from './hooks/useEditorSettings';
@@ -113,6 +113,11 @@ const SQLEditorImpl: React.FC = () => {
   // 添加编辑器高度和收起状态
   const [editorHeight, setEditorHeight] = useState(300);
   const [editorCollapsed, setEditorCollapsed] = useState(false);
+  
+  // 添加侧边栏收起状态
+  const [siderCollapsed, setSiderCollapsed] = useState(false);
+  // 添加侧边栏宽度设置 - 收起时宽度变小
+  const siderWidth = siderCollapsed ? 80 : 250;
   
   // 检查SQL语法有效性
   const validateSQL = (query: string): boolean => {
@@ -532,30 +537,25 @@ const SQLEditorImpl: React.FC = () => {
   const handleEditorCollapsedChange = (collapsed: boolean) => {
     setEditorCollapsed(collapsed);
   };
+  
+  // 添加侧边栏折叠切换函数
+  const toggleSider = useCallback(() => {
+    setSiderCollapsed(prev => !prev);
+  }, []);
 
   return (
-    <PageContainer title="">
-      <EditorHeader
-        dataSources={dataSources}
-        selectedSource={selectedSource}
-        setSelectedSource={setSelectedSource}
-        loadingSchema={loadingSchema}
-        loadingDataSources={loadingDataSources}
-        loadingResults={loadingResults}
-        executeQuery={executeQueryDebounced}
-        toggleHistory={() => setHistoryDrawerVisible(true)}
-        toggleSettings={() => setSettingsDrawerVisible(true)}
-        toggleFullscreen={() => setFullscreen(prev => !(prev))}
-        sqlQuery={sqlQuery}
-        fullscreen={fullscreen}
-      />
-
-      <Layout className={`layout-content ${fullscreen ? 'fullscreen' : ''}`}>
+    <Card>
+      <Layout>
         <Sider 
-          width={250} 
+          width={siderWidth} 
           theme="light" 
           className="sider-container"
+          collapsible
+          collapsed={siderCollapsed}
+          onCollapse={setSiderCollapsed}
+          trigger={null}
         >
+          {/* 正确使用React.memo方式 */}
           <SchemaTree
             databaseSchema={databaseSchema}
             loadingSchema={loadingSchema}
@@ -565,6 +565,8 @@ const SQLEditorImpl: React.FC = () => {
             handleTreeNodeDoubleClick={handleTreeNodeDoubleClick}
             handleInsertTable={handleInsertTable}
             fullscreen={fullscreen}
+            collapsed={siderCollapsed}
+            toggleSider={toggleSider}
           />
         </Sider>
         
@@ -572,20 +574,37 @@ const SQLEditorImpl: React.FC = () => {
           <Content className="content-container">
             <div className="editor-results-container">
               <Card
+                hoverable={false}
                 title={
-                  <Space>
-                    <span>SQL 查询</span>
-                    <Tooltip title="复制 SQL">
-                      <Button
-                        type="text"
-                        size="small"
-                        icon={<CopyOutlined />}
-                        onClick={() => copyToClipboard(sqlQuery)}
-                        disabled={!sqlQuery.trim()}
-                        aria-label="复制SQL语句"
-                      />
-                    </Tooltip>
-                  </Space>
+                  <div className="editor-header-container">
+                    <Space>
+                      <span>SQL 查询</span>
+                      <Tooltip title="复制 SQL">
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<CopyOutlined />}
+                          onClick={() => copyToClipboard(sqlQuery)}
+                          disabled={!sqlQuery.trim()}
+                          aria-label="复制SQL语句"
+                        />
+                      </Tooltip>
+                    </Space>
+                    <EditorHeader
+                      dataSources={dataSources}
+                      selectedSource={selectedSource}
+                      setSelectedSource={setSelectedSource}
+                      loadingSchema={loadingSchema}
+                      loadingDataSources={loadingDataSources}
+                      loadingResults={loadingResults}
+                      executeQuery={executeQueryDebounced}
+                      toggleHistory={() => setHistoryDrawerVisible(true)}
+                      toggleSettings={() => setSettingsDrawerVisible(true)}
+                      toggleFullscreen={() => setFullscreen(prev => !(prev))}
+                      sqlQuery={sqlQuery}
+                      fullscreen={fullscreen}
+                    />
+                  </div>
                 }
                 className="editor-card"
               >
@@ -679,12 +698,11 @@ const SQLEditorImpl: React.FC = () => {
       />
 
       <SettingsDrawer
-        visible={settingsDrawerVisible}
         onClose={() => setSettingsDrawerVisible(false)}
         editorSettings={editorSettings}
         updateEditorSettings={saveSettings}
       />
-    </PageContainer>
+    </Card>
   );
 };
 
