@@ -2,7 +2,7 @@ import React, { memo, useState, useRef, useEffect, useCallback } from 'react';
 import Editor, { OnMount } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import { Spin, Button, Tooltip } from 'antd';
-import { UpOutlined, DownOutlined, DragOutlined } from '@ant-design/icons';
+import { UpOutlined, DownOutlined } from '@ant-design/icons';
 import { EditorSettings } from '../types';
 import './QueryEditor.less';
 
@@ -29,156 +29,216 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
   onChange,
   onEditorMount,
   editorSettings,
-  height = 300,
+  height = 200,
   minHeight = 100,
   maxHeight = 800,
   collapsed = false,
   onCollapsedChange,
   onHeightChange
 }) => {
-  const [currentHeight, setCurrentHeight] = useState(height);
+  // 状态 - 确保初始高度不小于最小高度
+  const initialHeight = Math.max(height, minHeight);
+  const [currentHeight, setCurrentHeight] = useState(initialHeight);
   const [isCollapsed, setIsCollapsed] = useState(collapsed);
   const [isDragging, setIsDragging] = useState(false);
+  
+  // refs
+  const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
-  const editorWrapperRef = useRef<HTMLDivElement>(null);
-  const resizeRef = useRef<HTMLDivElement>(null);
-  const startYRef = useRef(0);
-  const startHeightRef = useRef(0);
-  const editorInstanceRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
-
-  // 同步外部传入的高度和collapsed状态
+  // 使用ref保存状态，避免拖拽过程中的状态更新导致的重渲染
+  const heightRef = useRef(initialHeight);
+  
+  // 更新ref中保存的高度值
   useEffect(() => {
-    if (!isCollapsed) {
-      updateEditorHeight(height);
+    heightRef.current = currentHeight;
+  }, [currentHeight]);
+  
+  // 组件挂载时，强制设置初始高度
+  useEffect(() => {
+    if (!isCollapsed && containerRef.current) {
+      // 安全检查：确保高度不为0
+      const safeHeight = Math.max(initialHeight, minHeight, 100);
+      setCurrentHeight(safeHeight);
+      heightRef.current = safeHeight;
+      
+      // 延迟执行布局更新，确保DOM已经渲染
+      setTimeout(() => {
+        if (editorRef.current) {
+          editorRef.current.layout();
+        }
+      }, 100);
     }
-  }, [height, isCollapsed]);
+  }, []);
+  
+  // 同步外部传入的高度和折叠状态
+  useEffect(() => {
+    if (!isCollapsed && !isDragging && height !== currentHeight) {
+      const newHeight = Math.max(height, minHeight);
+      setCurrentHeight(newHeight);
+      heightRef.current = newHeight;
+    }
+  }, [height, isCollapsed, currentHeight, minHeight, isDragging]);
   
   useEffect(() => {
     setIsCollapsed(collapsed);
   }, [collapsed]);
-
-  // 直接更新DOM元素高度，避免React渲染周期的干扰
-  const updateEditorHeight = useCallback((newHeight: number) => {
-    setCurrentHeight(newHeight);
-    
-    // 直接设置DOM元素高度，避免CSS变量可能的问题
-    if (editorWrapperRef.current) {
-      editorWrapperRef.current.style.height = `${newHeight}px`;
-    }
-    
-    // 通知Monaco编辑器布局变化
-    if (editorInstanceRef.current) {
+  
+  // 更新编辑器布局 - 使用useCallback减少函数创建
+  const updateEditorLayout = useCallback(() => {
+    if (editorRef.current && !isCollapsed) {
       try {
-        // 使用setTimeout确保高度变化后再调整布局
-        setTimeout(() => {
-          editorInstanceRef.current?.layout();
-        }, 10);
-      } catch (e) {
-        console.error('布局更新失败:', e);
+        editorRef.current.layout();
+      } catch (error) {
+        console.error('编辑器布局更新失败', error);
       }
     }
-    
-    // 通知父组件高度变化
-    if (onHeightChange) {
-      onHeightChange(newHeight);
-    }
-  }, [onHeightChange]);
-
-  // 处理拖拽开始 - 使用mousedown原生事件而非React合成事件
-  const setupResizeHandle = useCallback(() => {
-    const resizeHandle = resizeRef.current;
-    if (!resizeHandle) return;
-    
-    const handleMouseDown = (e: MouseEvent) => {
-      console.log('Native mousedown triggered');
-      e.preventDefault();
-      e.stopPropagation();
-      
-      document.body.style.cursor = 'row-resize';
-      setIsDragging(true);
-      startYRef.current = e.clientY;
-      startHeightRef.current = currentHeight;
-      
-      // 添加事件监听 - 在document上监听，确保不会丢失事件
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    };
-    
-    // 将监听器直接添加到DOM元素，避免React合成事件系统
-    resizeHandle.addEventListener('mousedown', handleMouseDown as EventListener);
-    
-    return () => {
-      resizeHandle.removeEventListener('mousedown', handleMouseDown as EventListener);
-    };
-  }, [currentHeight]); // 只依赖currentHeight，避免频繁重建
-  
-  // 在组件挂载后设置拖拽处理
-  useEffect(() => {
-    const cleanup = setupResizeHandle();
-    return cleanup;
-  }, [setupResizeHandle]);
-  
-  // 处理拖拽移动 - 定义在组件外部，避免重建
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!isDragging) return;
-    
-    // 计算鼠标移动的垂直距离
-    const deltaY = e.clientY - startYRef.current;
-    // 根据拖拽移动距离计算新的高度，并确保在最小和最大高度范围内
-    const newHeight = Math.max(minHeight, Math.min(maxHeight, startHeightRef.current + deltaY));
-    
-    // 直接更新DOM元素高度
-    updateEditorHeight(newHeight);
-    
-    // 阻止事件进一步传播
-    e.preventDefault();
-    e.stopPropagation();
-  };
-  
-  // 处理拖拽结束
-  const handleMouseUp = (e: MouseEvent) => {
-    document.body.style.cursor = '';
-    setIsDragging(false);
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
-    
-    // 阻止事件进一步传播
-    e.preventDefault();
-    e.stopPropagation();
-  };
+  }, [isCollapsed]);
   
   // 处理收起/展开
-  const toggleCollapse = () => {
+  const handleToggleCollapse = useCallback(() => {
     const newCollapsedState = !isCollapsed;
     setIsCollapsed(newCollapsedState);
     
-    if (!newCollapsedState && editorWrapperRef.current) {
-      // 从收起状态恢复时，确保高度正确设置
-      setTimeout(() => updateEditorHeight(currentHeight), 50);
+    if (!newCollapsedState) {
+      // 确保从收起状态恢复时有一个合理的高度
+      const restoreHeight = Math.max(heightRef.current, minHeight);
+      setCurrentHeight(restoreHeight);
+      heightRef.current = restoreHeight;
+      
+      // 从收起状态恢复时，确保在下一个事件循环中更新布局
+      setTimeout(updateEditorLayout, 100);
     }
     
     if (onCollapsedChange) {
       onCollapsedChange(newCollapsedState);
     }
-  };
-
-  // 保存Monaco编辑器实例
-  const handleEditorDidMount: OnMount = (editor, monaco) => {
-    editorInstanceRef.current = editor;
+  }, [isCollapsed, minHeight, onCollapsedChange, updateEditorLayout]);
+  
+  // 处理编辑器挂载
+  const handleEditorDidMount: OnMount = useCallback((editor, monacoInstance) => {
+    editorRef.current = editor;
     
-    // 调用原始的onEditorMount
+    // 确保编辑器在挂载后正确布局
+    setTimeout(() => {
+      editor.layout();
+    }, 100);
+    
     if (onEditorMount) {
-      onEditorMount(editor, monaco);
+      onEditorMount(editor, monacoInstance);
     }
-  };
-
+  }, [onEditorMount]);
+  
+  // 拖动开始
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    // 防止重复触发
+    if (isDragging) return;
+    
+    // 开始拖动状态
+    setIsDragging(true);
+    document.body.style.cursor = 'row-resize';
+    
+    // 获取初始位置
+    const startY = e.clientY;
+    const startHeight = heightRef.current;
+    
+    // 添加阻止默认选中文本的样式
+    document.body.classList.add('no-select');
+    
+    // 拖动中处理函数
+    const handleDragMove = (moveEvent: MouseEvent) => {
+      moveEvent.preventDefault();
+      
+      // 计算高度变化
+      const deltaY = moveEvent.clientY - startY;
+      const newHeight = Math.max(minHeight, Math.min(maxHeight, startHeight + deltaY));
+      
+      // 直接更新DOM元素样式，避免React重渲染
+      if (editorContainerRef.current) {
+        editorContainerRef.current.style.height = `${newHeight}px`;
+      }
+      
+      // 更新ref中的高度值，但不触发状态更新
+      heightRef.current = newHeight;
+      
+      // 实时更新编辑器布局
+      if (editorRef.current) {
+        editorRef.current.layout();
+      }
+    };
+    
+    // 拖动结束处理函数
+    const handleDragEnd = (upEvent: MouseEvent) => {
+      // 移除事件监听
+      document.removeEventListener('mousemove', handleDragMove);
+      document.removeEventListener('mouseup', handleDragEnd);
+      
+      // 恢复默认鼠标样式和文本选择
+      document.body.style.cursor = '';
+      document.body.classList.remove('no-select');
+      
+      // 结束拖动状态
+      setIsDragging(false);
+      
+      // 使用setTimeout确保状态更新在拖动结束后进行
+      setTimeout(() => {
+        // 更新React状态
+        setCurrentHeight(heightRef.current);
+        
+        // 通知父组件
+        if (onHeightChange) {
+          onHeightChange(heightRef.current);
+        }
+        
+        // 再次确保编辑器布局更新
+        updateEditorLayout();
+      }, 10);
+    };
+    
+    // 添加全局事件监听
+    document.addEventListener('mousemove', handleDragMove);
+    document.addEventListener('mouseup', handleDragEnd);
+  }, [isDragging, minHeight, maxHeight, onHeightChange, updateEditorLayout]);
+  
+  // 如果折叠，则返回一个简单的视图
+  if (isCollapsed) {
+    return (
+      <div className="editor-container collapsed">
+        <div className="editor-wrapper collapsed" />
+        
+        {/* 收起/展开按钮 */}
+        <div className="editor-collapse-button">
+          <Tooltip title="展开编辑器">
+            <Button 
+              type="text" 
+              icon={<DownOutlined />}
+              onClick={handleToggleCollapse}
+              size="small"
+            />
+          </Tooltip>
+        </div>
+      </div>
+    );
+  }
+  
   return (
-    <div className={`editor-container ${isCollapsed ? 'collapsed' : ''}`} ref={editorContainerRef}>
+    <div className="editor-container" ref={containerRef}>
+      {/* 直接使用固定高度的容器，避免高度计算问题 */}
       <div 
-        className={`editor-wrapper ${isCollapsed ? 'collapsed' : ''}`}
-        ref={editorWrapperRef}
+        ref={editorContainerRef}
+        style={{ 
+          position: 'relative', 
+          height: `${currentHeight}px`,
+          minHeight: `${minHeight}px`,
+          border: '1px solid #e8e8e8',
+          borderRadius: '2px',
+          overflow: 'hidden'
+        }}
       >
         <Editor
+          height="100%"
           language="sql"
           value={sqlQuery}
           onChange={onChange}
@@ -191,7 +251,7 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
             folding: true,
             lineNumbers: 'on',
             wordWrap: editorSettings.wordWrap ? 'on' : 'off',
-            automaticLayout: true, // 保留automaticLayout以支持宽度变化
+            automaticLayout: true,
             fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace',
             fontSize: editorSettings.fontSize,
             tabSize: editorSettings.tabSize,
@@ -201,22 +261,21 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
         />
       </div>
       
-      {/* 调整大小控制条 */}
+      {/* 拖动调整大小区域 */}
       <div 
-        className={`editor-resize-handle ${isDragging ? 'dragging' : ''} ${isCollapsed ? 'hidden' : ''}`}
-        ref={resizeRef}
+        className={`editor-resize-handle ${isDragging ? 'dragging' : ''}`}
+        onMouseDown={handleDragStart}
       >
-        <DragOutlined />
         <span className="resize-handle-text">拖动调整高度</span>
       </div>
       
       {/* 收起/展开按钮 */}
       <div className="editor-collapse-button">
-        <Tooltip title={isCollapsed ? "展开编辑器" : "收起编辑器"}>
+        <Tooltip title="收起编辑器">
           <Button 
             type="text" 
-            icon={isCollapsed ? <DownOutlined /> : <UpOutlined />} 
-            onClick={toggleCollapse}
+            icon={<UpOutlined />}
+            onClick={handleToggleCollapse}
             size="small"
           />
         </Tooltip>
@@ -225,5 +284,4 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
   );
 };
 
-// 使用 memo 避免不必要的重渲染
 export default memo(QueryEditor);

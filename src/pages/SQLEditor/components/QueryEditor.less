@@ -12,7 +12,6 @@
   border-radius: 2px;
   overflow: hidden;
   transition: height 0.3s ease;
-  height: 200px; /* 默认高度 */
   
   &:focus-within {
     border-color: #40a9ff;
@@ -21,81 +20,69 @@
   
   &.collapsed {
     height: 0 !important;
-  }
-  
-  &.height-auto {
-    height: auto !important;
+    transition: height 0.2s ease;
   }
 }
 
-/* 调整大小控制条使其更明显可操作 */
+/* 拖动调整大小控制条 */
 .editor-resize-handle {
   height: 20px;
-  border-top: 1px solid #e8e8e8;
   background: #f5f5f5;
   text-align: center;
   cursor: row-resize;
-  transition: background-color 0.2s;
-  -webkit-user-select: none;
   user-select: none;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-top: 1px solid #e8e8e8;
+  border-bottom: 1px solid #e8e8e8;
   position: relative;
-  z-index: 100 !important; /* 保证最高层级 */
-  margin-top: -1px; /* 修复边框重叠问题 */
+  margin-top: 1px;
   
   &:hover {
     background-color: #e6f7ff;
     border-top: 1px dashed #1890ff;
+    border-bottom: 1px dashed #1890ff;
+  }
+  
+  &:active {
+    background-color: #bae7ff;
+    border-top: 1px solid #1890ff;
+    border-bottom: 1px solid #1890ff;
   }
   
   &.dragging {
     background-color: #bae7ff;
     border-top: 2px solid #1890ff;
+    border-bottom: 2px solid #1890ff;
   }
   
-  .anticon {
-    color: #666;
-    font-size: 12px;
-    margin-right: 4px;
-  }
-
   .resize-handle-text {
     font-size: 12px;
     color: #666;
     pointer-events: none; /* 防止文字干扰拖拽操作 */
   }
   
-  &.hidden {
-    display: none;
-  }
-  
-  /* 增大可点击区域 */
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 12px;
-    top: -6px;
-    cursor: row-resize;
-    z-index: 10;
-  }
-  
   /* 添加视觉提示 */
-  &::after {
-    content: '...........';
+  &::before {
+    content: "• • • • • • • • • • • • • •";
     letter-spacing: 3px;
-    color: #ccc;
+    color: #aaa;
     position: absolute;
+    top: 0;
     left: 0;
     right: 0;
-    top: 3px;
     text-align: center;
-    font-size: 12px;
-    line-height: 1;
+    pointer-events: none;
   }
+}
+
+/* 防止拖动过程中选中文本 */
+:global(.no-select) {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
 }
 
 .editor-collapse-button {
@@ -117,13 +104,4 @@
       background-color: #f0f0f0;
     }
   }
-}
-
-/* 编辑器高度类 */
-.editor-height-0 {
-  height: 0;
-}
-
-.editor-height-normal {
-  height: var(--editor-height, 300px);
 }
