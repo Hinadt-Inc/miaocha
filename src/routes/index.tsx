@@ -6,7 +6,6 @@ import App from '../App'
 // 动态导入页面组件
 const LoginPage = lazy(() => import('../pages/LoginPage'))
 const HomePage = lazy(() => import('../pages/HomePage'))
-const DashboardPage = lazy(() => import('../pages/DashboardPage'))
 const UserManagementPage = lazy(() => import('../pages/system/UserManagementPage'))
 const DataSourceManagementPage = lazy(() => import('../pages/system/DataSourceManagementPage'))
 const PermissionManagementPage = lazy(() => import('../pages/system/PermissionManagementPage'))
@@ -33,10 +32,6 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: withSuspense(HomePage),
-      },
-      {
-        path: 'dashboard',
-        element: withSuspense(DashboardPage),
       },
       {
         path: 'system/user',
