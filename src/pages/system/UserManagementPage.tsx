@@ -85,7 +85,11 @@ const UserManagementPage = () => {
   // 加载用户数据
   useEffect(() => {
     const abortController = new AbortController();
-    fetchUsers({ signal: abortController.signal });
+    fetchUsers({ signal: abortController.signal }).catch((error:{name:string}) => {
+      if (error.name !== 'CanceledError') {
+        message.error('加载用户数据失败');
+      }
+    });
     return () => abortController.abort();
   }, []);
 
@@ -121,7 +125,10 @@ const UserManagementPage = () => {
 
   // 重新加载数据
   const handleReload = () => {
-    fetchUsers();
+    fetchUsers().catch(() => {
+      message.error('加载用户数据失败');
+    }
+    );
   };
 
   // 处理表格变更（分页、排序、筛选）
@@ -139,7 +146,9 @@ const UserManagementPage = () => {
   const handleSearch = (value: string) => {
     setSearchText(value);
     if (!value) {
-      fetchUsers();
+      fetchUsers().catch(() => {
+        message.error('加载用户数据失败');
+      });
       return;
     }
     const filteredData = data.filter(user => 
@@ -147,12 +156,13 @@ const UserManagementPage = () => {
       (user.name?.toLowerCase().includes(value.toLowerCase())) ||
       (user.email?.toLowerCase().includes(value.toLowerCase()))
     );
+    console.log('Filtered Data:', data);
     setData(filteredData);
   };
 
   // 处理添加/编辑用户
   const handleAddEdit = (record?: UserData) => {
-    setSelectedRecord(record || null);
+    setSelectedRecord(record ?? null);
     form.resetFields();
     if (record) {
       form.setFieldsValue({
@@ -246,7 +256,7 @@ const UserManagementPage = () => {
       key: 'role',
       width: 100,
       filters: roleOptions.map(role => ({ text: role.label, value: role.value })),
-      filteredValue: filteredInfo.role || null,
+      filteredValue: filteredInfo.role ?? null,
       onFilter: (value, record) => record.role === value,
       render: (role: string) => {
         let color = 'blue';
