@@ -57,6 +57,11 @@ public enum ErrorCode {
     LOGSTASH_START_FAILED("7004", "Logstash启动失败"),
     LOGSTASH_STOP_FAILED("7005", "Logstash停止失败"),
     LOGSTASH_CONFIG_NOT_FOUND("7006", "Logstash配置不存在"),
+    LOGSTASH_CONFIG_INVALID("7007", "Logstash配置无效"),
+    LOGSTASH_CONFIG_KAFKA_MISSING("7008", "Logstash配置缺少Kafka输入配置"),
+    LOGSTASH_CONFIG_DORIS_MISSING("7009", "Logstash配置缺少Doris输出配置"),
+    LOGSTASH_CONFIG_TABLE_MISSING("7010", "Logstash配置缺少表名"),
+    LOGSTASH_TARGET_TABLE_NOT_FOUND("7011", "目标数据源中不存在指定的表"),
 
     // 任务相关错误码
     TASK_EXECUTION_FAILED("8001", "任务执行失败"),

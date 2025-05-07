@@ -40,7 +40,7 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
                     throw new BusinessException(ErrorCode.LOGSTASH_PROCESS_NOT_FOUND);
                 }
 
-                actualConfigContent = process.getConfigJson();
+                actualConfigContent = process.getConfigContent();
                 if (!StringUtils.hasText(actualConfigContent)) {
                     throw new BusinessException(ErrorCode.VALIDATION_ERROR, "数据库中的配置为空");
                 }

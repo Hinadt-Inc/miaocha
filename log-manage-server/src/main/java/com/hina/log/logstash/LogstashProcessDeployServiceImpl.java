@@ -1,6 +1,5 @@
 package com.hina.log.logstash;
 
-import com.hina.log.config.LogstashProperties;
 import com.hina.log.dto.TaskDetailDTO;
 import com.hina.log.entity.LogstashProcess;
 import com.hina.log.entity.Machine;
@@ -8,13 +7,10 @@ import com.hina.log.logstash.command.LogstashCommand;
 import com.hina.log.logstash.command.LogstashCommandFactory;
 import com.hina.log.logstash.enums.LogstashProcessState;
 import com.hina.log.logstash.enums.LogstashProcessStep;
-import com.hina.log.logstash.enums.StepStatus;
 import com.hina.log.logstash.enums.TaskOperationType;
 import com.hina.log.logstash.state.LogstashProcessStateManager;
 import com.hina.log.logstash.task.TaskService;
-import com.hina.log.mapper.LogstashMachineMapper;
 import com.hina.log.mapper.LogstashProcessMapper;
-import com.hina.log.ssh.SshClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -255,7 +251,7 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
                 List.of(LogstashProcessStep.CREATE_CONFIG.getId()));
 
         // 更新进程配置
-        process.setConfigJson(configJson);
+        process.setConfigContent(configJson);
         logstashProcessMapper.update(process);
 
         // 使用状态管理器执行配置更新操作

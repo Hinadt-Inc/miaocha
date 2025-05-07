@@ -22,8 +22,8 @@ public class LogstashProcessDTO {
     @Schema(description = "模块名称", example = "nginx")
     private String module;
 
-    @Schema(description = "Logstash配置文件JSON")
-    private String configJson;
+    @Schema(description = "Logstash配置文件内容")
+    private String configContent;
 
     @Schema(description = "与Logstash配置对应的Doris日志表SQL")
     private String dorisSql;
@@ -33,6 +33,9 @@ public class LogstashProcessDTO {
 
     @Schema(description = "关联的数据源名称", example = "Doris日志库")
     private String datasourceName;
+
+    @Schema(description = "Doris表名", example = "log_table_test_env")
+    private String tableName;
 
     @Schema(description = "进程状态", example = "NOT_STARTED")
     private String state;

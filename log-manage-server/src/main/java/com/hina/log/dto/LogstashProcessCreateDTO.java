@@ -22,8 +22,8 @@ public class LogstashProcessCreateDTO {
     @NotBlank(message = "模块名称不能为空")
     private String module;
 
-    @Schema(description = "Logstash配置文件JSON")
-    private String configJson;
+    @Schema(description = "Logstash配置文件内容")
+    private String configContent;
 
     @Schema(description = "与Logstash配置对应的Doris日志表SQL")
     private String dorisSql;
@@ -31,6 +31,9 @@ public class LogstashProcessCreateDTO {
     @Schema(description = "关联的数据源ID", example = "1")
     @NotNull(message = "数据源ID不能为空")
     private Long datasourceId;
+
+    @Schema(description = "Doris表名, 选择性手动指定, 不指定的话会从配置中解析", example = "log_table_test_env")
+    private String tableName;
 
     @Schema(description = "部署的机器ID列表")
     @NotEmpty(message = "部署机器不能为空")

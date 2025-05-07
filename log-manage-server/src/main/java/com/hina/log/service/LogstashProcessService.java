@@ -25,10 +25,11 @@ public interface LogstashProcessService {
      * 更新Logstash配置
      *
      * @param id         Logstash进程ID
-     * @param configJson 新的配置JSON
+     * @param configContent 新的配置内容
+     * @param tableName  手动指定的表名（可为空）
      * @return 更新后的Logstash进程信息
      */
-    LogstashProcessDTO updateLogstashConfig(Long id, String configJson);
+    LogstashProcessDTO updateLogstashConfig(Long id, String configContent, String tableName);
 
     /**
      * 手动刷新Logstash配置到目标机器

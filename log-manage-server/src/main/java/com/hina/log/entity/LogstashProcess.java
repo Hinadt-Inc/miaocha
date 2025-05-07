@@ -20,14 +20,17 @@ public class LogstashProcess {
     @Schema(description = "模块名称", example = "nginx")
     private String module;
 
-    @Schema(description = "Logstash采集配置文件不标准JSON,JSON块")
-    private String configJson;
+    @Schema(description = "Logstash配置文件内容")
+    private String configContent;
 
     @Schema(description = "与Logstash配置对应的Doris日志表SQL")
     private String dorisSql;
 
     @Schema(description = "关联的数据源ID", example = "1")
     private Long datasourceId;
+
+    @Schema(description = "Doris表名", example = "log_table_test_env")
+    private String tableName;
 
     @Schema(description = "进程状态", example = "NOT_STARTED")
     private String state;

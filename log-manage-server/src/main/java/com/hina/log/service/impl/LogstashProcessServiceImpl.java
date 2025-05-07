@@ -11,8 +11,10 @@ import com.hina.log.exception.ErrorCode;
 import com.hina.log.logstash.LogstashProcessDeployService;
 import com.hina.log.logstash.enums.LogstashProcessState;
 import com.hina.log.logstash.enums.TaskStatus;
+import com.hina.log.logstash.parser.LogstashConfigParser;
 import com.hina.log.mapper.*;
 import com.hina.log.service.LogstashProcessService;
+import com.hina.log.service.TableValidationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -43,6 +45,8 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
     private final LogstashTaskMachineStepMapper stepMapper;
     private final TaskSummaryConverter taskSummaryConverter;
     private final TaskStepsGroupConverter taskStepsGroupConverter;
+    private final LogstashConfigParser logstashConfigParser;
+    private final TableValidationService tableValidationService;
 
     public LogstashProcessServiceImpl(
             LogstashProcessMapper logstashProcessMapper,
@@ -55,7 +59,9 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             LogstashTaskMapper taskMapper,
             LogstashTaskMachineStepMapper stepMapper,
             TaskSummaryConverter taskSummaryConverter,
-            TaskStepsGroupConverter taskStepsGroupConverter) {
+            TaskStepsGroupConverter taskStepsGroupConverter,
+            LogstashConfigParser logstashConfigParser,
+            TableValidationService tableValidationService) {
         this.logstashProcessMapper = logstashProcessMapper;
         this.logstashMachineMapper = logstashMachineMapper;
         this.machineMapper = machineMapper;
@@ -67,6 +73,8 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         this.stepMapper = stepMapper;
         this.taskSummaryConverter = taskSummaryConverter;
         this.taskStepsGroupConverter = taskStepsGroupConverter;
+        this.logstashConfigParser = logstashConfigParser;
+        this.tableValidationService = tableValidationService;
     }
 
     @Override
@@ -101,6 +109,21 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         // 检查数据源是否存在
         if (datasourceMapper.selectById(dto.getDatasourceId()) == null) {
             throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND, "指定的数据源不存在");
+        }
+
+        // 如果有配置文件，验证配置文件并提取表名
+        if (StringUtils.hasText(dto.getConfigContent())) {
+            // 验证Logstash配置
+            LogstashConfigParser.ValidationResult validationResult = logstashConfigParser.validateConfig(dto.getConfigContent());
+            if (!validationResult.isValid()) {
+                throw new BusinessException(validationResult.getErrorCode(), validationResult.getErrorMessage());
+            }
+
+            // 如果没有手动指定表名，尝试从配置中提取
+            if (!StringUtils.hasText(dto.getTableName())) {
+                Optional<String> tableName = logstashConfigParser.extractTableName(dto.getConfigContent());
+                tableName.ifPresent(dto::setTableName);
+            }
         }
 
         // 创建进程记录
@@ -263,8 +286,20 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         }
 
         // 检查配置是否完整
-        if (!StringUtils.hasText(process.getConfigJson())) {
+        if (!StringUtils.hasText(process.getConfigContent())) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "Logstash配置不能为空");
+        }
+
+        // 检查表名是否存在
+        if (!StringUtils.hasText(process.getTableName())) {
+            throw new BusinessException(ErrorCode.LOGSTASH_CONFIG_TABLE_MISSING, "表名不能为空，无法启动进程");
+        }
+
+        // 检查目标数据源中是否存在该表
+        if (!tableValidationService.isTableExists(process.getDatasourceId(), process.getTableName())) {
+            throw new BusinessException(ErrorCode.LOGSTASH_TARGET_TABLE_NOT_FOUND,
+                    String.format("目标数据源(ID: %d)中不存在表 '%s'，请先创建表后再启动进程",
+                            process.getDatasourceId(), process.getTableName()));
         }
 
         // 获取进程关联的所有机器
@@ -577,14 +612,14 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
 
     @Override
     @Transactional
-    public LogstashProcessDTO updateLogstashConfig(Long id, String configJson) {
+    public LogstashProcessDTO updateLogstashConfig(Long id, String configContent, String tableName) {
         // 参数校验
         if (id == null) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
         }
 
-        if (!StringUtils.hasText(configJson)) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "配置JSON不能为空");
+        if (!StringUtils.hasText(configContent)) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "配置内容不能为空");
         }
 
         // 检查进程是否存在
@@ -609,13 +644,36 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程未关联任何机器");
         }
 
+        // 验证Logstash配置
+        LogstashConfigParser.ValidationResult validationResult = logstashConfigParser.validateConfig(configContent);
+        if (!validationResult.isValid()) {
+            throw new BusinessException(validationResult.getErrorCode(), validationResult.getErrorMessage());
+        }
+
+        // 如果手动指定了表名，优先使用手动指定的
+        if (StringUtils.hasText(tableName)) {
+            logger.info("使用手动指定的表名: {}", tableName);
+            process.setTableName(tableName);
+        } else {
+            // 如果没有手动指定表名，尝试从配置中提取
+            Optional<String> extractedTableName = logstashConfigParser.extractTableName(configContent);
+            if (extractedTableName.isPresent()) {
+                String extractedName = extractedTableName.get();
+                // 如果表名不同，更新表名
+                if (!extractedName.equals(process.getTableName())) {
+                    logger.info("从配置中提取到新的表名: {}，原表名: {}", extractedName, process.getTableName());
+                    process.setTableName(extractedName);
+                }
+            }
+        }
+
         // 更新进程配置
-        process.setConfigJson(configJson);
+        process.setConfigContent(configContent);
         process.setUpdateTime(LocalDateTime.now());
         logstashProcessMapper.update(process);
 
         // 异步更新机器上的配置文件
-        logstashDeployService.updateConfigAsync(id, configJson, machines);
+        logstashDeployService.updateConfigAsync(id, configContent, machines);
 
         return getLogstashProcess(id);
     }
@@ -651,7 +709,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         }
 
         // 检查配置是否为空
-        if (!StringUtils.hasText(process.getConfigJson())) {
+        if (!StringUtils.hasText(process.getConfigContent())) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程配置为空，无法刷新");
         }
 

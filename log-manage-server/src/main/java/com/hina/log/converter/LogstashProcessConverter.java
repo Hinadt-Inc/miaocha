@@ -24,9 +24,10 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         entity.setId(dto.getId());
         entity.setName(dto.getName());
         entity.setModule(dto.getModule());
-        entity.setConfigJson(dto.getConfigJson());
+        entity.setConfigContent(dto.getConfigContent());
         entity.setDorisSql(dto.getDorisSql());
         entity.setDatasourceId(dto.getDatasourceId());
+        entity.setTableName(dto.getTableName());
         entity.setState(dto.getState());
         entity.setCreateTime(dto.getCreateTime());
         entity.setUpdateTime(dto.getUpdateTime());
@@ -45,9 +46,10 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         LogstashProcess entity = new LogstashProcess();
         entity.setName(dto.getName());
         entity.setModule(dto.getModule());
-        entity.setConfigJson(dto.getConfigJson());
+        entity.setConfigContent(dto.getConfigContent());
         entity.setDorisSql(dto.getDorisSql());
         entity.setDatasourceId(dto.getDatasourceId());
+        entity.setTableName(dto.getTableName());
 
         return entity;
     }
@@ -65,9 +67,10 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         dto.setId(entity.getId());
         dto.setName(entity.getName());
         dto.setModule(entity.getModule());
-        dto.setConfigJson(entity.getConfigJson());
+        dto.setConfigContent(entity.getConfigContent());
         dto.setDorisSql(entity.getDorisSql());
         dto.setDatasourceId(entity.getDatasourceId());
+        dto.setTableName(entity.getTableName());
         dto.setState(entity.getState());
         dto.setCreateTime(entity.getCreateTime());
         dto.setUpdateTime(entity.getUpdateTime());
@@ -86,9 +89,10 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
 
         entity.setName(dto.getName());
         entity.setModule(dto.getModule());
-        entity.setConfigJson(dto.getConfigJson());
+        entity.setConfigContent(dto.getConfigContent());
         entity.setDorisSql(dto.getDorisSql());
         entity.setDatasourceId(dto.getDatasourceId());
+        entity.setTableName(dto.getTableName());
         entity.setState(dto.getState());
 
         return entity;
@@ -104,9 +108,10 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
 
         entity.setName(dto.getName());
         entity.setModule(dto.getModule());
-        entity.setConfigJson(dto.getConfigJson());
+        entity.setConfigContent(dto.getConfigContent());
         entity.setDorisSql(dto.getDorisSql());
         entity.setDatasourceId(dto.getDatasourceId());
+        entity.setTableName(dto.getTableName());
 
         return entity;
     }

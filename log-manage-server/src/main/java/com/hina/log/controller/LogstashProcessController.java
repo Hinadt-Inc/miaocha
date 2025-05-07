@@ -50,7 +50,8 @@ public class LogstashProcessController {
     public ApiResponse<LogstashProcessDTO> updateLogstashConfig(
             @Parameter(description = "Logstash进程数据库ID", required = true) @PathVariable("id") Long id,
             @Parameter(description = "Logstash配置信息", required = true) @Valid @RequestBody LogstashConfigUpdateDTO configDTO) {
-        return ApiResponse.success(logstashProcessService.updateLogstashConfig(id, configDTO.getConfigJson()));
+        // 如果手动指定了表名，则使用手动指定的表名，否则会自动从配置中提取
+        return ApiResponse.success(logstashProcessService.updateLogstashConfig(id, configDTO.getConfigContent(), configDTO.getTableName()));
     }
 
     /**

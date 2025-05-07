@@ -55,7 +55,7 @@ public class LogstashCommandFactory {
      */
     public LogstashCommand createConfigCommand(LogstashProcess process) {
         return new CreateConfigCommand(sshClient, logstashProperties.getDeployDir(),
-                process.getId(), process.getConfigJson());
+                process.getId(), process.getConfigContent());
     }
 
     /**
