@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useMemo } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { init, getInstanceByDom } from 'echarts';
 import type { EChartsOption, ECharts } from 'echarts';
 import debounce from 'lodash/debounce';
@@ -35,16 +35,16 @@ const OptimizedChart: React.FC<OptimizedChartProps> = ({
     if (!chartRef.current) return;
 
     // 检查是否已经有图表实例
-    let chart = chartRef.current.getAttribute('_echarts_instance_')
+    const chart = chartRef.current.getAttribute('_echarts_instance_')
       ? getInstanceByDom(chartRef.current)
       : init(chartRef.current, theme);
       
     // 存储图表实例
-    setChartInstance(chart);
+    setChartInstance(chart ?? null);
 
     // 处理 resize 事件
     const resizeHandler = debounce(() => {
-      chart.resize();
+      chart?.resize();
     }, 100);
     
     window.addEventListener('resize', resizeHandler);
@@ -52,7 +52,7 @@ const OptimizedChart: React.FC<OptimizedChartProps> = ({
     return () => {
       window.removeEventListener('resize', resizeHandler);
       // 在组件卸载时销毁图表实例
-      chart.dispose();
+      chart?.dispose();
     };
   }, [theme]);
 

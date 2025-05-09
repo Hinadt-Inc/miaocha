@@ -1,20 +1,31 @@
-import { createBrowserRouter } from 'react-router-dom'
-import { Suspense, lazy } from 'react'
-import Loading from '../components/Loading'
-import App from '../App'
+import { createBrowserRouter } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
+import Loading from '@/components/Loading';
+import App from '@/App';
 
 // 动态导入页面组件
-const LoginPage = lazy(() => import('../pages/Login'))
-const HomePage = lazy(() => import('../pages/HomePage'))
-const UserManagementPage = lazy(() => import('../pages/system/UserManagementPage'))
-const DataSourceManagementPage = lazy(() => import('../pages/system/DataSourceManagementPage'))
-const PermissionManagementPage = lazy(() => import('../pages/system/PermissionManagementPage'))
-const SQLEditorPage = lazy(() => import('../pages/SQLEditor/SQLEditorImpl'))
-const MachineManagementPage = lazy(() => import('../pages/system/MachineManagementPage'))
-const LogstashManagementPage = lazy(() => import('../pages/system/LogstashManagementPage'))
+const LoginPage = lazy(() => import('@/pages/Login'));
+const HomePage = lazy(() => import('@/pages/HomePage'));
+const UserManagementPage = lazy(() => import('@/pages/system/UserManagementPage'));
+const DataSourceManagementPage = lazy(() => import('@/pages/system/DataSourceManagementPage'));
+const PermissionManagementPage = lazy(() => import('@/pages/system/PermissionManagementPage'));
+const SQLEditorPage = lazy(() => import('@/pages/SQLEditor/SQLEditorImpl'));
+const MachineManagementPage = lazy(() => import('@/pages/system/MachineManagementPage'));
+const LogstashManagementPage = lazy(() => import('@/pages/system/LogstashManagementPage'));
 
 const withSuspense = (Component: React.ComponentType) => (
-  <Suspense fallback={<Loading delay={300} />}>
+  <Suspense
+    fallback={
+      <Loading
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+        }}
+      />
+    }
+  >
     <Component />
   </Suspense>
 );
@@ -59,4 +70,4 @@ export const router = createBrowserRouter([
       },
     ],
   },
-])
+]);

@@ -1,4 +1,7 @@
+
+import './UserManagementPage.less';
 import { useState, useEffect } from 'react';
+
 import { 
   getUsers,
   createUser,
@@ -22,7 +25,8 @@ import {
   Avatar,
   Card,
   Row,
-  Col
+  Col,
+  Breadcrumb
 } from 'antd';
 import { 
   SearchOutlined, 
@@ -41,12 +45,12 @@ import type {
   FilterValue,
   SorterResult 
 } from 'antd/es/table/interface';
-import { PageContainer } from '@ant-design/pro-components';
 import dayjs from 'dayjs';
+import { Link } from 'react-router-dom';
+import './UserManagementPage.less';
 
 interface UserData extends User {
   key: string;
-  status: number;
   department: string;
   lastLoginTime: string;
   name: string;
@@ -59,7 +63,6 @@ const transformUserData = (users: User[]): UserData[] => {
   return users.map(user => ({
     ...user,
     key: user.id.toString(),
-    status: user.status,
     name: user.nickname ?? user.username,
     username: user.uid ?? user.username,
     createTime: user.createTime ?? user.createdAt,
@@ -82,7 +85,11 @@ const UserManagementPage = () => {
   // 加载用户数据
   useEffect(() => {
     const abortController = new AbortController();
-    fetchUsers({ signal: abortController.signal });
+    fetchUsers({ signal: abortController.signal }).catch((error:{name:string}) => {
+      if (error.name !== 'CanceledError') {
+        message.error('加载用户数据失败');
+      }
+    });
     return () => abortController.abort();
   }, []);
 
@@ -92,9 +99,13 @@ const UserManagementPage = () => {
       const users = await getUsers(config);
       setData(transformUserData(users));
       message.success('用户数据加载成功');
-    } catch (_error) {
-      if (!(_error instanceof Error && _error.name === 'CanceledError')) {
-        message.error('加载用户数据失败');
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.name !== 'CanceledError') {
+          message.error('加载用户数据失败');
+        }
+      } else {
+        console.error('Unexpected error:', error);
       }
     } finally {
       setLoading(false);
@@ -114,7 +125,10 @@ const UserManagementPage = () => {
 
   // 重新加载数据
   const handleReload = () => {
-    fetchUsers();
+    fetchUsers().catch(() => {
+      message.error('加载用户数据失败');
+    }
+    );
   };
 
   // 处理表格变更（分页、排序、筛选）
@@ -132,7 +146,9 @@ const UserManagementPage = () => {
   const handleSearch = (value: string) => {
     setSearchText(value);
     if (!value) {
-      fetchUsers();
+      fetchUsers().catch(() => {
+        message.error('加载用户数据失败');
+      });
       return;
     }
     const filteredData = data.filter(user => 
@@ -140,17 +156,17 @@ const UserManagementPage = () => {
       (user.name?.toLowerCase().includes(value.toLowerCase())) ||
       (user.email?.toLowerCase().includes(value.toLowerCase()))
     );
+    console.log('Filtered Data:', data);
     setData(filteredData);
   };
 
   // 处理添加/编辑用户
   const handleAddEdit = (record?: UserData) => {
-    setSelectedRecord(record || null);
+    setSelectedRecord(record ?? null);
     form.resetFields();
     if (record) {
       form.setFieldsValue({
-        ...record,
-        status: record.status === 1
+        ...record
       });
     }
     setIsModalVisible(true);
@@ -170,52 +186,45 @@ const UserManagementPage = () => {
   // 处理表单提交
   const handleSubmit = async () => {
     try {
-      const values = await form.validateFields();
+      const values = await form.validateFields() as {
+        nickname: string;
+        email: string;
+        role: string;
+        password?: string;
+        confirmPassword?: string;
+      };
       
       if (selectedRecord) {
         // 编辑现有用户
         await updateUser({
           id: selectedRecord.key,
           nickname: values.nickname,
-          ...values,
-          status: values.status ? 1 : 0
+          email: values.email,
+          role: values.role
         });
         message.success('用户信息已更新');
       } else {
         // 添加新用户
+        if (!values.password || values.password !== values.confirmPassword) {
+          message.error('密码和确认密码必须一致');
+          return;
+        }
+        
         await createUser({
-          username: values.name,
+          username: values.nickname,
           nickname: values.nickname,
           password: values.password,
           email: values.email,
-          phone: values.phone,
-          role: values.role,
-          status: values.status ? 1 : 0
+          role: values.role
         });
         message.success('用户已添加');
       }
       
       setIsModalVisible(false);
-      fetchUsers(); // 刷新数据
-    } catch {
-      console.log('操作失败');
-    }
-  };
-
-  // 处理状态变更
-  const handleStatusChange = async (checked: boolean, key: string) => {
-    try {
-      const newStatus = checked ? 1 : 0;
-      await updateUser({
-        id: key,
-        status: newStatus
-      });
-      setData(data.map(item => 
-        item.key === key ? { ...item, status: newStatus } : item
-      ));
-      message.success(`用户状态已${checked ? '启用' : '禁用'}`);
-    } catch {
-      message.error('更新用户状态失败');
+      await fetchUsers(); // 刷新数据
+    } catch (error) {
+      message.error('操作失败');
+      console.error('操作失败:', error);
     }
   };
 
@@ -247,7 +256,7 @@ const UserManagementPage = () => {
       key: 'role',
       width: 100,
       filters: roleOptions.map(role => ({ text: role.label, value: role.value })),
-      filteredValue: filteredInfo.role || null,
+      filteredValue: filteredInfo.role ?? null,
       onFilter: (value, record) => record.role === value,
       render: (role: string) => {
         let color = 'blue';
@@ -261,25 +270,6 @@ const UserManagementPage = () => {
         }
         return <Tag color={color}>{label}</Tag>;
       }
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      width: 80,
-      filters: [
-        { text: '启用', value: true },
-        { text: '禁用', value: false }
-      ],
-      filteredValue: filteredInfo.status || null,
-      onFilter: (value, record) => record.status === value,
-      render: (status: number, record) => (
-        <Switch 
-          checked={status === 1} 
-          onChange={(checked) => handleStatusChange(checked, record.key)}
-          size="small"
-        />
-      ),
     },
     {
       title: '创建时间',
@@ -309,7 +299,7 @@ const UserManagementPage = () => {
               <Popconfirm
                 title="确定要删除此用户吗？"
                 description="此操作不可撤销"
-                onConfirm={() => handleDelete(record.key)}
+                onConfirm={() => {return void handleDelete(record.key)}}
                 okText="确定"
                 cancelText="取消"
               >
@@ -323,13 +313,18 @@ const UserManagementPage = () => {
   ];
 
   return (
-    <PageContainer
-      header={{
-        title: '用户管理',
-        subTitle: '管理系统用户、分配角色和权限',
-      }}
-    >
+    <div className="user-management-page">
       <Card>
+      <div className="user-management-page-header">
+        <Breadcrumb>
+          <Breadcrumb.Item>
+            <Link to="/">首页</Link>
+          </Breadcrumb.Item>
+          <Breadcrumb.Item>
+            <Link to="/system">系统设置</Link>
+          </Breadcrumb.Item>
+          <Breadcrumb.Item>用户管理</Breadcrumb.Item>
+        </Breadcrumb>
         <Space style={{ marginBottom: 16 }}>
           <Input
             placeholder="搜索昵称/邮箱"
@@ -354,6 +349,10 @@ const UserManagementPage = () => {
             刷新
           </Button>
         </Space>
+      </div>
+      
+      <div className="table-container">
+        
 
         <Table 
           columns={columns} 
@@ -364,7 +363,7 @@ const UserManagementPage = () => {
           scroll={{ x: 1300 }}
           onChange={handleTableChange}
         />
-      </Card>
+      </div>
 
       <Modal
         title={selectedRecord ? '编辑用户' : '添加用户'}
@@ -377,7 +376,6 @@ const UserManagementPage = () => {
         <Form
           form={form}
           layout="vertical"
-          initialValues={{ status: true }}
         >
           <Row gutter={16}>
             <Col span={12}>
@@ -414,15 +412,6 @@ const UserManagementPage = () => {
                   options={roleOptions}
                   placeholder="请选择角色"
                 />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="status"
-                label="状态"
-                valuePropName="checked"
-              >
-                <Switch checkedChildren="启用" unCheckedChildren="禁用" />
               </Form.Item>
             </Col>
           </Row>
@@ -463,7 +452,8 @@ const UserManagementPage = () => {
           </Row>
         </Form>
       </Modal>
-    </PageContainer>
+      </Card>
+    </div>
   );
 };
 

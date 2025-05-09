@@ -16,9 +16,14 @@
   from { transform: scaleX(0); }
   to { transform: scaleX(1); }
 }
-
+.editor-header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 /* SQL编辑器容器 */
 .sql-editor-container {
+  
   height: calc(100vh - 150px);
   display: flex;
   flex-direction: column;
@@ -39,9 +44,8 @@
 /* SQL编辑器头部 */
 .sql-editor-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: end;
   align-items: center;
-  margin-bottom: 8px;
   
   .sql-editor-actions {
     display: flex;
@@ -105,7 +109,7 @@
   flex: 1;
   border-radius: 4px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
+  overflow: auto;
   display: flex;
   flex-direction: column;
 }
@@ -355,5 +359,84 @@
     .toolbar-group {
       width: 100%;
     }
+  }
+}
+
+/* 平板和小屏幕设备 */
+@media (max-width: 768px) {
+  .layout-content {
+    height: auto;
+    flex-direction: column;
+  }
+  
+  .sider-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 auto !important;
+    margin-right: 0;
+    margin-bottom: 16px;
+    height: 100%;
+  }
+  
+  .editor-results-container {
+    flex-direction: column;
+  }
+  
+  .query-editor {
+    height: 200px;
+  }
+  
+  .results-container {
+    max-height: 400px;
+  }
+}
+
+/* 移动设备 */
+@media (max-width: 576px) {
+  .sql-editor-header .sql-editor-actions .ant-space {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    
+    .ant-space-item {
+      margin-right: 0 !important;
+      margin-bottom: 8px;
+      width: 100%;
+      
+      .ant-select,
+      .ant-btn {
+        width: 100%;
+      }
+    }
+  }
+  
+  .table-header {
+    flex-direction: column;
+    align-items: flex-start;
+    
+    .results-tabs {
+      width: 100%;
+      margin-bottom: 8px;
+    }
+    
+    .ant-btn {
+      width: 100%;
+    }
+  }
+  
+  .visualization-panel .visualization-toolbar {
+    gap: 8px;
+    
+    .ant-select {
+      width: 100%;
+    }
+  }
+  
+  .query-editor {
+    height: 150px;
+  }
+  
+  .results-container {
+    max-height: 300px;
   }
 }

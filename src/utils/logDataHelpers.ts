@@ -27,10 +27,11 @@ export const generateMockData = (start: number, count: number): LogData[] => {
   return Array(count).fill(null).map((_, index) => {
     const actualIndex = start + index;
     return {
-      key: actualIndex,
+      key: actualIndex.toString(),
       timestamp: `2025-04-${(actualIndex % 14) + 1} ${(actualIndex % 24)}:${(actualIndex % 60).toString().padStart(2, '0')}:00`,
       message: `这是日志消息 ${actualIndex}`,
       host: `server-${actualIndex % 5}.example.com`,
+      level: ['info', 'warning', 'error'][actualIndex % 3],
       source: actualIndex % 3 === 0 ? 'nginx' : (actualIndex % 3 === 1 ? 'application' : 'database'),
       status: actualIndex % 10 === 0 ? 500 : (actualIndex % 5 === 0 ? 404 : 200),
       bytes: Math.floor(Math.random() * 10000),

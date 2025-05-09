@@ -1,9 +1,8 @@
-import { App as AntdApp, Button, Space, Tooltip } from 'antd';
+import { App as AntdApp, Space } from 'antd';
 import { ProLayout } from '@ant-design/pro-components';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   CompassOutlined,
-  DashboardOutlined,
   ConsoleSqlOutlined,
   SettingOutlined,
   UserOutlined,
@@ -11,48 +10,35 @@ import {
   SafetyCertificateOutlined,
   DesktopOutlined,
   CloudServerOutlined,
-  LogoutOutlined,
-  BulbOutlined,
-  BulbFilled,
 } from '@ant-design/icons';
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 import UserProfile from './components/User/UserProfile';
 import { useTheme } from './providers/ThemeProvider';
-import { logout } from './store/userSlice';
+import { useState } from 'react';
 
 function AppWrapper() {
   const location = useLocation();
   const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const { mode, toggleTheme } = useTheme();
+  const { mode } = useTheme();
   const user = useSelector((state: { user: { name: string; isLoggedIn: boolean } }) => state.user);
 
   // 当前路径判断，用于菜单高亮和展开
   const currentPath = location.pathname;
 
-  // 确定需要展开的菜单
-  const openKeys = currentPath.startsWith('/system') ? ['/system'] : [];
-
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate('/login');
-  };
+  // 确定需要展开的菜单，使用useState管理
+  const [openKeys, setOpenKeys] = useState<string[]>(
+    currentPath.startsWith('/system') ? ['/system'] : [],
+  );
 
   return (
     <ProLayout
       location={location}
       className="app-wrapper"
-      siderMenuType="group"
       fixSiderbar
       fixedHeader
-      layout="mix"
+      layout="top"
       splitMenus
       title="日志查询平台"
-      contentStyle={{
-        background: mode === 'dark' ? '#141414' : '#f0f2f5',
-        padding: '16px',
-        minHeight: 'calc(100vh - 64px)',
-      }}
       openKeys={openKeys}
       logo="/logo.png"
       breakpoint={false}
@@ -61,7 +47,8 @@ function AppWrapper() {
       colorPrimary="#0038FF"
       route={{
         path: '/',
-        routes: [
+        type: 'group',
+        children: [
           {
             path: '/',
             name: '数据发现',
@@ -73,15 +60,11 @@ function AppWrapper() {
             icon: <ConsoleSqlOutlined />,
           },
           {
-            path: '/dashboard',
-            name: '仪表盘',
-            icon: <DashboardOutlined />,
-          },
-          {
-            path: '/system/user',
+            path: '/system',
             name: '系统管理',
             icon: <SettingOutlined />,
-            routes: [
+            type: 'group',
+            children: [
               {
                 path: '/system/user',
                 name: '用户管理',
@@ -111,29 +94,72 @@ function AppWrapper() {
           },
         ],
       }}
-      menuItemRender={(item, dom) => <Link to={item.path || '/'}>{dom}</Link>}
-      // actionsRender={() => [
-      //   <Tooltip title={mode === 'dark' ? '切换到亮色模式' : '切换到暗色模式'}>
-      //     <Button
-      //       type="text"
-      //       icon={mode === 'dark' ? <BulbOutlined /> : <BulbFilled />}
-      //       onClick={toggleTheme}
-      //     />
-      //   </Tooltip>,
-      // ]}
+      menuProps={{
+        defaultSelectedKeys: [currentPath],
+        selectedKeys: [currentPath],
+        openKeys: openKeys,
+        onOpenChange: (keys) => {
+          const newOpenKeys = keys.filter((key) => key !== currentPath);
+          setOpenKeys(newOpenKeys);
+        },
+        items: [
+          {
+            key: '/',
+            label: '数据发现',
+            icon: <CompassOutlined />,
+          },
+          {
+            key: '/sql-editor',
+            label: 'SQL编辑器',
+            icon: <ConsoleSqlOutlined />,
+          },
+          {
+            key: '/system',
+            label: '系统管理',
+            icon: <SettingOutlined />,
+            children: [
+              {
+                key: '/system/user',
+                label: '用户管理',
+                icon: <UserOutlined />,
+              },
+              {
+                key: '/system/datasource',
+                label: '数据源管理',
+                icon: <DatabaseOutlined />,
+              },
+              {
+                key: '/system/permission',
+                label: '权限管理',
+                icon: <SafetyCertificateOutlined />,
+              },
+              {
+                key: '/system/machine',
+                label: '服务器管理',
+                icon: <DesktopOutlined />,
+              },
+              {
+                key: '/system/logstash',
+                label: 'Logstash管理',
+                icon: <CloudServerOutlined />,
+              },
+            ],
+          },
+        ],
+        onClick: (info) => {
+          // 使用React Router进行导航
+          const path = info.key;
+          if (path && location.pathname !== path) {
+            void navigate(path);
+          }
+        },
+      }}
+      menuItemRender={(item, dom) => <Link to={item.path ?? '/'}>{dom}</Link>}
       avatarProps={{
         render: () =>
           user.isLoggedIn && (
             <Space size={12}>
               <UserProfile />
-              {/* <Tooltip title="退出登录">
-                <Button 
-                  icon={<LogoutOutlined />}
-                  type="text" 
-                  danger 
-                  onClick={handleLogout}
-                />
-              </Tooltip> */}
             </Space>
           ),
       }}

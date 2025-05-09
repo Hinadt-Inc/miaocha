@@ -1,12 +1,10 @@
 import { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import { Layout, Space, Button, Modal, Form, Input, Select, Tag, Skeleton } from 'antd';
-import { getOperatorsByFieldType, getFieldTypeColor, debounce, memoize, throttle } from '../utils/logDataHelpers';
+import { getOperatorsByFieldType, getFieldTypeColor, throttle } from '../utils/logDataHelpers';
 import { 
   CompressOutlined,
   ExpandOutlined,
   PlusOutlined,
-  ReloadOutlined,
-  WarningOutlined,
   InfoCircleOutlined
 } from '@ant-design/icons';
 import { useLogData } from '../hooks/useLogData';
@@ -26,9 +24,6 @@ const HistogramChart = lazy(() => import('../components/HomePage/HistogramChart'
 })));
 const KibanaTimePicker = lazy(() => import('../components/HomePage/KibanaTimePicker').then(module => ({ 
   default: module.KibanaTimePicker 
-})));
-const FilterPanel = lazy(() => import('../components/HomePage/FilterPanel').then(module => ({ 
-  default: module.FilterPanel 
 })));
 
 const { Content, Sider } = Layout;
@@ -272,14 +267,11 @@ const HomePage = () => {
   
   // 优化 useFilters 钩子的使用
   const { 
-    filters,
     showFilterModal,
     setShowFilterModal,
     selectedFilterField,
-    openFilterModal,
     handleFilterFieldChange,
     addFilter,
-    removeFilter
   } = useFilters();
 
   // 优化字段选择逻辑，使用带记忆的回调

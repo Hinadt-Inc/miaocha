@@ -7,7 +7,6 @@ import {
   testDataSourceConnection
 } from '../../api/datasource';
 import type { DataSource, CreateDataSourceParams, TestConnectionParams } from '../../types/datasourceTypes';
-import { PageContainer } from '@ant-design/pro-components';
 import { 
   ProTable, 
   ProFormText,
@@ -15,8 +14,8 @@ import {
   DrawerForm,
   ProForm 
 } from '@ant-design/pro-components';
-import { Button, Tag, message, Popconfirm } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined } from '@ant-design/icons';
+import { Button, Tag, message, Popconfirm, Breadcrumb, Card } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, HomeOutlined } from '@ant-design/icons';
 import type { ProColumns, ActionType, RequestData, ParamsType } from '@ant-design/pro-components';
 import type { SortOrder } from 'antd/lib/table/interface';
 
@@ -87,8 +86,8 @@ const DataSourceManagementPage = () => {
       // 前端筛选
       let filteredData = data;
       
-      if (params.name && params.name.trim()) {
-        filteredData = filteredData.filter(item => item.name.includes(params.name as string));
+      if (params?.name?.trim()) {
+        filteredData = filteredData.filter(item => item.name.includes(params.name!));
       }
       
       if (params.type) {
@@ -100,8 +99,8 @@ const DataSourceManagementPage = () => {
       }
       
       // 分页处理
-      const pageSize = params.pageSize || 10;
-      const current = params.current || 1;
+      const pageSize = params.pageSize ?? 10;
+      const current = params.current ?? 1;
       const start = (current - 1) * pageSize;
       const end = start + pageSize;
       
@@ -127,9 +126,7 @@ const DataSourceManagementPage = () => {
     try {
       await deleteDataSource(id);
       message.success('数据源删除成功');
-      if (actionRef.current) {
-        actionRef.current.reload();
-      }
+      void actionRef.current!.reload();
     } catch {
       message.error('删除数据源失败');
     }
@@ -153,9 +150,7 @@ const DataSourceManagementPage = () => {
       }
       
       setDrawerVisible(false);
-      if (actionRef.current) {
-        actionRef.current.reload();
-      }
+      void actionRef.current!.reload();
       return true;
     } catch {
       message.error(currentDataSource ? '更新数据源失败' : '创建数据源失败');
@@ -219,7 +214,7 @@ const DataSourceManagementPage = () => {
       valueEnum: Object.fromEntries(dataSourceTypeOptions.map(option => [option.value, option.label])),
       render: (_, record) => {
         const typeOption = dataSourceTypeOptions.find(option => option.value === record.type);
-        return typeOption?.label || record.type;
+        return typeOption?.label ?? record.type;
       },
     },
     {
@@ -281,7 +276,7 @@ const DataSourceManagementPage = () => {
         <Popconfirm
           key="delete"
           title="确定要删除此数据源吗?"
-          onConfirm={() => handleDelete(record.id)}
+          onConfirm={() => { void handleDelete(record.id); }}
         >
           <a><DeleteOutlined /> 删除</a>
         </Popconfirm>,
@@ -290,15 +285,27 @@ const DataSourceManagementPage = () => {
   ];
   
   return (
-    <PageContainer>
+    <div className="data-source-management-page">
+      <Card>
       <ProTable<DataSourceItem>
-        headerTitle="数据源管理"
+        className="table-container"
+        bordered
+        search={{
+          filterType: 'light',
+          labelWidth: 'auto'
+        }}
+        headerTitle={
+          <Breadcrumb>
+            <Breadcrumb.Item href="/">
+              <HomeOutlined />
+            </Breadcrumb.Item>
+            <Breadcrumb.Item>数据源管理</Breadcrumb.Item>
+          </Breadcrumb>
+        }
         actionRef={actionRef}
         rowKey="id"
-        search={{
-          labelWidth: 'auto',
-        }}
         toolBarRender={() => [
+          <div className="table-toolbar" key="toolbar">
           <Button 
             key="button" 
             icon={<PlusOutlined />} 
@@ -306,7 +313,8 @@ const DataSourceManagementPage = () => {
             onClick={openCreateDrawer}
           >
             新增数据源
-          </Button>,
+          </Button>
+          </div>,
         ]}
         request={fetchDataSources}
         columns={columns}
@@ -320,11 +328,11 @@ const DataSourceManagementPage = () => {
         title={currentDataSource ? '编辑数据源' : '新增数据源'}
         width="500px"
         open={drawerVisible}
-        onVisibleChange={setDrawerVisible}
+        onOpenChange={setDrawerVisible}
         onFinish={handleFormSubmit}
         initialValues={currentDataSource}
         submitter={{
-          render: (props, doms) => {
+          render: (props, doms: React.ReactNode[]) => {
             return [
               <Button 
                 key="test" 
@@ -333,8 +341,10 @@ const DataSourceManagementPage = () => {
                 icon={<LinkOutlined />}
                 onClick={() => {
                   // 获取当前表单的值，并测试连接
-                  const values = props.form?.getFieldsValue();
-                  handleTestConnection(values);
+                  const values = props.form?.getFieldsValue() as TestConnectionParams;
+                  void handleTestConnection(values).catch(() => {
+                    message.error('连接测试失败');
+                  });
                 }}
               >
                 测试连接
@@ -413,7 +423,8 @@ const DataSourceManagementPage = () => {
           rules={[{ required: true, message: '请选择状态' }]}
         />
       </DrawerForm>
-    </PageContainer>
+      </Card>
+    </div>
   );
 };
 

@@ -58,3 +58,5 @@ __snapshots__
 # 其他
 .thumbs
 Thumbs.db
+
+.vscode

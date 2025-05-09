@@ -18,17 +18,14 @@ const Loading: React.FC<LoadingProps> = ({
   size = 'large',
   delay = 200,
   className = '',
-  style = {}
+  style = {},
 }) => {
   return (
-    <div className={`loading-container ${fullScreen ? 'fullscreen' : ''} ${className}`}
+    <div
+      className={`loading-container ${fullScreen ? 'fullscreen' : ''} ${className}`}
       style={style}
     >
-      <Spin 
-        size={size} 
-        tip={tip}
-        delay={delay}
-      />
+      <Spin size={size} tip={tip} delay={delay} />
     </div>
   );
 };

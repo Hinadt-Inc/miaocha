@@ -1,18 +1,36 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { resolve } from 'path'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { resolve } from 'path';
+import dynamicImport from 'vite-plugin-dynamic-import';
+import monacoEditorPlugin from 'vite-plugin-monaco-editor';
+// 添加类型断言解决.default的类型问题
+const monacoPlugin = monacoEditorPlugin as unknown as { default: typeof monacoEditorPlugin };
 
 // https://vite.dev/config/
 export default defineConfig({
   base: '/',
   plugins: [
-    react(),
+    monacoPlugin.default({
+      publicPath: 'node_modules/monaco-editor/min',
+      customDistPath: (root: string) => {
+        return resolve(root, 'node_modules/monaco-editor/min');
+      },
+    }),
+    dynamicImport(),
+    react({
+      babel: {
+        plugins: [
+          ['@babel/plugin-transform-react-jsx', { runtime: 'automatic' }],
+          '@babel/plugin-syntax-dynamic-import',
+        ],
+      },
+    }),
   ],
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src')
+      '@': resolve(__dirname, './src'),
     },
-    extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json']
+    extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json'],
   },
   build: {
     // 输出目录
@@ -43,10 +61,10 @@ export default defineConfig({
           'ant-design-pro': ['@ant-design/pro-components'],
           'echarts-core': ['echarts'],
           'echarts-react': ['echarts-for-react'],
-          'animation': ['@react-spring/web'],
-          'utils': ['lodash', 'dayjs', 'axios']
-        }
-      }
+          animation: ['@react-spring/web'],
+          utils: ['lodash', 'dayjs', 'axios'],
+        },
+      },
     },
     // 避免超大的chunk警告限制
     chunkSizeWarningLimit: 2000,
@@ -58,9 +76,9 @@ export default defineConfig({
     terserOptions: {
       compress: {
         drop_console: true, // 生产环境去除console
-        drop_debugger: true // 生产环境去除debugger
-      }
-    }
+        drop_debugger: true, // 生产环境去除debugger
+      },
+    },
   },
   css: {
     preprocessorOptions: {
@@ -81,14 +99,14 @@ export default defineConfig({
       '/api': {
         target: 'http://10.254.133.210:32088',
         changeOrigin: true,
-      }
-    }
+      },
+    },
   },
   // 预构建优化
   optimizeDeps: {
     include: [
-      'react', 
-      'react-dom', 
+      'react',
+      'react-dom',
       'react-router-dom',
       'antd',
       '@ant-design/icons',
@@ -98,15 +116,15 @@ export default defineConfig({
       '@react-spring/web',
       'lodash',
       'axios',
-      'dayjs'
+      'dayjs',
     ],
-    exclude: [] // 可以排除一些不需要预构建的依赖
+    exclude: [], // 可以排除一些不需要预构建的依赖
   },
   esbuild: {
     jsxInject: `import React from 'react'`,
     // 处理JSX
     jsx: 'automatic',
     // 去除生产环境console
-    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : []
+    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
   },
-})
+});

@@ -2,7 +2,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, PlayCircleOutlined, StopOut
 import { Button, message, Popconfirm, Space, Table, Breadcrumb, Tooltip, Modal, Progress, Tag, Descriptions } from 'antd';
 import './LogstashManagementPage.less';
 import { Link } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { 
   createLogstashProcess,
   deleteLogstashProcess,
@@ -16,6 +16,7 @@ import {
 } from '../../api/logstash';
 import type { LogstashProcess, LogstashTaskSummary, TaskStepsResponse } from '../../types/logstashTypes';
 import LogstashEditModal from './components/LogstashEditModal';
+import { useRef, useState } from 'react';
 
 export default function LogstashManagementPage() {
   const [data, setData] = useState<LogstashProcess[]>([]);
@@ -63,7 +64,10 @@ export default function LogstashManagementPage() {
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData().catch(err => {
+      message.error('组件加载失败');
+      console.error('组件加载失败:', err);
+    });
   }, []);
 
   const handleAdd = () => {
@@ -100,9 +104,11 @@ export default function LogstashManagementPage() {
           await fetchData();
           return;
         }
-        setTimeout(pollStatus, 2000);
+        setTimeout(() => pollStatus, 2000);
       };
-      pollStatus();
+      pollStatus().catch(() => {
+        message.error('获取任务状态失败');
+      })
     } catch (err) {
       message.error('启动失败');
       console.error('启动Logstash进程失败:', err);
@@ -122,9 +128,11 @@ export default function LogstashManagementPage() {
           await fetchData();
           return;
         }
-        setTimeout(pollStatus, 2000);
+        setTimeout(() => pollStatus, 2000);
       };
-      pollStatus();
+      pollStatus().catch(() => {
+        message.error('获取任务状态失败');
+      })
     } catch (err) {
       message.error('停止失败');
       console.error('停止Logstash进程失败:', err);
@@ -166,14 +174,14 @@ export default function LogstashManagementPage() {
             <Button 
               type="text" 
               icon={<HistoryOutlined />} 
-              onClick={() => showTaskSummaries(record.id)}
+              onClick={() =>{void showTaskSummaries(record.id)}}
             />
           </Tooltip>
           <Tooltip title="删除">
             <Popconfirm
               title="确认删除"
               description="确定要删除这个Logstash进程吗？"
-              onConfirm={() => handleDelete(record.id)}
+              onConfirm={() => {void  handleDelete(record.id)}}
               okText="确认"
               cancelText="取消"
               okType="danger"
@@ -294,7 +302,7 @@ export default function LogstashManagementPage() {
                   <Button 
                     type="link" 
                     icon={<InfoCircleOutlined />}
-                    onClick={() => showTaskSteps(record.taskId)}
+                    onClick={() => {void showTaskSteps(record.taskId)}}
                   >
                     详情
                   </Button>

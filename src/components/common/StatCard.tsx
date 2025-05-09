@@ -1,3 +1,4 @@
+import {isValidElement} from 'react';
 import { Statistic, Card } from 'antd';
 import { useTheme } from '../../providers/ThemeProvider';
 import { withPureComponent } from '../../utils/withPureComponent';
@@ -40,7 +41,7 @@ const StatCard: React.FC<StatCardProps> = ({
   // 处理值的渲染方式
   const renderValue = () => {
     // 如果值是 React 元素，直接渲染它
-    if (React.isValidElement(value)) {
+    if (isValidElement(value)) {
       return (
         <div style={{ 
           fontSize: '24px', 

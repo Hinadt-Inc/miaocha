@@ -1,6 +1,6 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState, memo } from 'react';
 import { Button, Card, Empty, Space, Spin, Tooltip, Tree } from 'antd';
-import { CopyOutlined, FileSearchOutlined, ReloadOutlined, TableOutlined } from '@ant-design/icons';
+import { CopyOutlined, FileSearchOutlined, ReloadOutlined, TableOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
 import { SchemaResult } from '../types';
 import './SchemaTree.less';
 
@@ -9,8 +9,10 @@ interface SchemaTreeProps {
   loadingSchema: boolean;
   refreshSchema: () => void;
   handleTreeNodeDoubleClick: (tableName: string) => void;
-  handleInsertTable: (tableName: string, columns: Array<{ columnName: string }>) => void;
+  handleInsertTable: (tableName: string, columns: SchemaResult['tables'][0]['columns']) => void;
   fullscreen: boolean;
+  collapsed?: boolean;
+  toggleSider?: () => void;
 }
 
 const SchemaTree: React.FC<SchemaTreeProps> = ({
@@ -19,11 +21,24 @@ const SchemaTree: React.FC<SchemaTreeProps> = ({
   refreshSchema,
   handleTreeNodeDoubleClick,
   handleInsertTable,
-  fullscreen
+  fullscreen,
+  collapsed = false,
+  toggleSider
 }) => {
-  // 树形结构数据
+  // 延迟加载状态
+  const [lazyLoadStarted, setLazyLoadStarted] = useState(false);
+  // 表节点展开状态缓存 - 减少重新渲染
+  const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+
+  // 树形结构数据 - 只在必要时计算
   const treeData = useMemo(() => {
     if (!databaseSchema) return [];
+    
+    // 第一次加载延迟200ms，减少同时大量节点渲染
+    if (!lazyLoadStarted) {
+      setLazyLoadStarted(true);
+      return [];
+    }
     
     return databaseSchema.tables.map(table => ({
       title: table.tableName + (table.tableComment ? ` (${table.tableComment})` : ''),
@@ -35,11 +50,27 @@ const SchemaTree: React.FC<SchemaTreeProps> = ({
         isLeaf: true
       }))
     }));
-  }, [databaseSchema]);
+  }, [databaseSchema, lazyLoadStarted]);
+
+  // 使用useCallback包装函数，避免不必要的重新渲染
+  const handleExpand = useCallback((keys: string[]) => {
+    setExpandedKeys(keys);
+  }, []);
 
   // 渲染树节点标题
   const renderTreeNodeTitle = useCallback((node: { key: string; title: string; content?: string }) => {
-    const isTable = node.key.indexOf('-') === -1;
+    // 折叠状态下只显示图标
+    if (collapsed) {
+      const isTable = !node.key.includes('-');
+      return (
+        <div className="tree-node-wrapper-collapsed">
+          {isTable ? <TableOutlined className="tree-table-icon" /> : 
+            <span className="tree-spacer"></span>}
+        </div>
+      );
+    }
+
+    const isTable = !node.key.includes('-');
     return (
       <div 
         className="tree-node-wrapper"
@@ -68,37 +99,60 @@ const SchemaTree: React.FC<SchemaTreeProps> = ({
         )}
       </div>
     );
-  }, [databaseSchema, handleInsertTable, handleTreeNodeDoubleClick]);
+  }, [collapsed, databaseSchema, handleInsertTable, handleTreeNodeDoubleClick]);
+
+  // 延迟加载树节点
+  React.useEffect(() => {
+    if (databaseSchema && !lazyLoadStarted) {
+      const timer = setTimeout(() => {
+        setLazyLoadStarted(true);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [databaseSchema, lazyLoadStarted]);
 
   return (
     <Card 
       title={
         <Space>
-          <FileSearchOutlined />
-          <span>数据库结构</span>
-          <Tooltip title="刷新数据库结构">
-            <Button 
-              type="text" 
-              size="small" 
-              icon={<ReloadOutlined />} 
-              onClick={refreshSchema}
-              loading={loadingSchema}
+          {toggleSider && (
+            <Button
+              type="text"
+              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              onClick={toggleSider}
+              size="small"
             />
-          </Tooltip>
+          )}
+          {!collapsed && (
+            <>
+              <FileSearchOutlined />
+              <span>数据库结构</span>
+              <Tooltip title="刷新数据库结构">
+                <Button 
+                  type="text" 
+                  size="small" 
+                  icon={<ReloadOutlined />} 
+                  onClick={refreshSchema}
+                  loading={loadingSchema}
+                />
+              </Tooltip>
+            </>
+          )}
         </Space>
       } 
-      style={{overflowY: 'auto' }}
+      className={`schema-tree-card ${collapsed ? 'schema-tree-card-collapsed' : ''}`}
+      bodyStyle={{ padding: collapsed ? '8px 0' : undefined }}
     >
       {(() => {
         if (loadingSchema) {
           return (
             <div className="loading-spinner">
-              <Spin tip="加载中..." />
+              <Spin tip={collapsed ? undefined : "加载中..."} />
             </div>
           );
         }
         
-        if (databaseSchema?.tables) {
+        if (databaseSchema?.tables && lazyLoadStarted) {
           return (
             <Tree
               showLine
@@ -106,14 +160,17 @@ const SchemaTree: React.FC<SchemaTreeProps> = ({
               titleRender={renderTreeNodeTitle}
               treeData={treeData}
               height={fullscreen ? window.innerHeight - 250 : undefined}
-              virtual={treeData.length > 100} // 大数据量时启用虚拟滚动
+              virtual={true} // 始终启用虚拟滚动提高性能
+              expandedKeys={expandedKeys}
+              onExpand={handleExpand}
+              motion={{}} // 禁用动画，提高性能
             />
           );
         }
         
         return (
           <Empty 
-            description="请选择数据源获取数据库结构" 
+            description={collapsed ? undefined : "请选择数据源获取数据库结构"} 
             image={Empty.PRESENTED_IMAGE_SIMPLE} 
           />
         );
@@ -122,4 +179,5 @@ const SchemaTree: React.FC<SchemaTreeProps> = ({
   );
 };
 
-export default SchemaTree;
+// 使用React.memo包装组件，避免不必要的重新渲染
+export default memo(SchemaTree);

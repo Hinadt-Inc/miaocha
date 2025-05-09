@@ -1,7 +1,6 @@
 import ReactECharts from 'echarts-for-react';
 import { EChartsOption } from 'echarts';
-import { message, Button } from 'antd';
-import { MinusOutlined } from '@ant-design/icons';
+import { message } from 'antd';
 import { useMemo, useEffect } from 'react';
 
 interface HistogramChartProps {
@@ -17,9 +16,7 @@ interface HistogramChartProps {
 
 export const HistogramChart = ({ 
   show,
-  onTimeRangeChange,
-  onToggle,
-  distributionData,
+  onTimeRangeChange,  distributionData,
   timeGrouping = 'minute'
 }: HistogramChartProps) => {
   // 增强调试日志，检查组件接收到的数据

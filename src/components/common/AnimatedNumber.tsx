@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
-import { useSpring, animated } from '@react-spring/web';
-import { withPureComponent } from '../../utils/withPureComponent';
+import React, { useState, useEffect } from 'react';
+import { useSpringValue } from '@react-spring/web';
+import { withPureComponent } from '@/utils/withPureComponent';
 
 interface AnimatedNumberProps {
   value: number;
   duration?: number;
-  delay?: number;
   formatter?: (value: number) => string;
   className?: string;
   style?: React.CSSProperties;
@@ -14,29 +13,25 @@ interface AnimatedNumberProps {
 const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
   value,
   duration = 1000,
-  delay = 0,
   formatter = (val) => val.toFixed(0),
   className = '',
-  style = {}
+  style = {},
 }) => {
-  const [prevValue, setPrevValue] = useState(0);
-  
+  const number = useSpringValue(0, { config: { duration } });
+  const [displayValue, setDisplayValue] = useState(formatter(0));
+
   useEffect(() => {
-    // 存储前一个值，用于动画起点
-    setPrevValue(value);
-  }, [value]);
-  
-  const { number } = useSpring({
-    from: { number: prevValue },
-    to: { number: value },
-    delay,
-    config: { duration },
-  });
-  
+    number.start(value);
+    const raf = requestAnimationFrame(() => {
+      setDisplayValue(formatter(number.get()));
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [value, number, formatter]);
+
   return (
-    <animated.span className={className} style={style}>
-      {number.to(formatter)}
-    </animated.span>
+    <span className={className} style={style}>
+      {displayValue}
+    </span>
   );
 };
 

@@ -61,6 +61,19 @@
   }
 }
 
+/* 折叠状态下的样式 */
+.tree-node-wrapper-collapsed {
+  width: 100%;
+  padding: 2px 0;
+  text-align: center;
+  cursor: pointer;
+  
+  .tree-table-icon {
+    color: #1890ff;
+    font-size: 16px;
+  }
+}
+
 /* 树组件样式增强 */
 .schema-tree {
   .ant-tree {
@@ -94,6 +107,28 @@
         background-color: rgba(24, 144, 255, 0.05);
       }
     }
+  }
+}
+
+/* 折叠状态下的卡片样式 */
+.schema-tree-card-collapsed {
+  text-align: center;
+  
+  .ant-card-head {
+    min-height: 40px;
+    padding: 0;
+    
+    .ant-card-head-title {
+      padding: 8px 0;
+    }
+  }
+  
+  .ant-card-body {
+    padding: 8px 0;
+  }
+  
+  .ant-tree-list-holder-inner {
+    padding: 4px 0;
   }
 }
 

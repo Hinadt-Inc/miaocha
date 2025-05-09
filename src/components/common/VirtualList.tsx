@@ -1,9 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Table, Tag, Space, Tooltip, Typography } from 'antd';
+import { Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import type { LogData } from '../../types/logDataTypes';
-
-const { Text } = Typography;
 
 interface VirtualListProps<T> {
   data: T[];
@@ -40,6 +37,7 @@ export const VirtualList = <T extends Record<string, any>>({
     
     const containerScrollTop = containerRef.current.scrollTop;
     setScrollTop(containerScrollTop);
+    console.log('当前滚动位置:', scrollTop);
     
     const start = Math.max(0, Math.floor(containerScrollTop / itemHeight) - 5);
     const end = Math.min(data.length, start + visibleCount);
@@ -146,7 +144,7 @@ export const VirtualList = <T extends Record<string, any>>({
             <div>
               {visibleData.map((item, index) => (
                 <div
-                  key={`${item.key || index}-${visibleRange.start + index}`}
+                  key={`${item.key?? index}-${visibleRange.start + index}`}
                   style={{ height: `${itemHeight}px` }}
                 >
                   {renderItem ? renderItem(item) : JSON.stringify(item)}

@@ -24,7 +24,7 @@ export default tseslint.config(
         ...globals.node
       },
       parserOptions: {
-        project: ['./tsconfig.json', './tsconfig.node.json'],
+        project: ['./tsconfig.json', './tsconfig.node.json', './tsconfig.app.json'],
         tsconfigRootDir: import.meta.dirname,
         ecmaFeatures: {
           jsx: true

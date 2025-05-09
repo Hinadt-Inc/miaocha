@@ -5,17 +5,13 @@ export const initMonacoEditor = (): void => {
   // 修改为更可靠的CDN源
   loader.config({
     paths: {
-      vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs'
+      vs: '/node_modules/monaco-editor/min/vs'
     },
     // 添加monaco-editor的CSP标头支持
     'vs/nls': {
       availableLanguages: {
         '*': 'zh-cn'
       }
-    },
-    // 设置一个超时时间
-    'vs/editor/editor.main': {
-      timeout: 30000 // 30秒超时
     }
   });
 
@@ -24,14 +20,23 @@ export const initMonacoEditor = (): void => {
     window.MonacoEnvironment = {
       getWorkerUrl: function (_moduleId, label) {
         if (label === 'sql' || label === 'mysql') {
-          return '/monaco-editor/sql.worker.js';
+          return '/node_modules/monaco-editor/min/vs/language/sql/sql.worker.js';
         }
-        return '/monaco-editor/editor.worker.js';
+        return '/node_modules/monaco-editor/min/vs/editor/editor.worker.js';
       }
     };
     
-    loader.init()
-      .then(monaco => {
+    // 添加超时处理
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Monaco editor 加载超时')), 30000)
+    );
+    
+    Promise.race([
+      loader.init(),
+      timeoutPromise
+    ])
+      .then((value: unknown) => {
+        const monaco = value as typeof import('monaco-editor');
         console.log('Monaco editor 加载成功');
         // 定义自定义 SQL 主题
         monaco.editor.defineTheme('sqlTheme', {
