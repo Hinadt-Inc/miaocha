@@ -1,4 +1,4 @@
-import { Button, Checkbox, Form, Input, Alert, message, Typography } from 'antd';
+import { Button, Form, Input, Alert, message, Typography } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -18,7 +18,7 @@ const LoginPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [form] = Form.useForm();
 
-  const onFinish = async (values: { username: string; password: string; remember: boolean }) => {
+  const onFinish = async (values: { username: string; password: string }) => {
     setLoading(true);
     setError(null);
     
@@ -27,7 +27,6 @@ const LoginPage = () => {
         email: values.username,
         password: values.password,
       });
-      console.log('Login response:', response);
       
       dispatch(login({
         userId: response.userId,
@@ -59,56 +58,55 @@ const LoginPage = () => {
         playsInline
         className={styles.videoBackground}
         poster={login_bg_poster}
-      ><source src={login_bg_video} type="video/mp4" /></video>
-      <div className={`${styles.loginFormContainer} ${styles.fadeIn}`}>
-        <div className={styles.loginBanner}>
-          <div className={styles.loginBannerText}>
-            <Title level={2} style={{ color: '#fff', marginBottom: 16 }}>
-              欢迎使用
-            </Title>
-            <Title level={1} style={{ color: '#fff', margin: 0 }}>
-              日志查询平台
-            </Title>
-            <Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 16, marginTop: 24, display: 'block' }}>
-              智能大数据分析 · 数据可视化 · 商业智能
-            </Text>
+      >
+        <source src={login_bg_video} type="video/mp4" />
+      </video>
+      <div className={styles.overlay} />
+
+      <div className={styles.contentWrapper}>
+        <div className={styles.brandSection}>
+          <div className={styles.logoContainer}>
+            <img src="/logo.png" alt="Logo" className={styles.logo} />
+            <Title level={2} className={styles.brandName}>秒查</Title>
+          </div>
+          <div className={styles.slogan}>
+            <Text>一站式日志采集、日志查询、日志分析</Text>
           </div>
         </div>
-        
-        <div className={styles.loginForm}>
-          <div className={styles.loginLogo}>
-            <img src="/logo.png" alt="Logo" />
-            <Title level={3} className={styles.brandName}>日志查询平台</Title>
+
+        <div className={styles.loginCard}>
+          <div className={styles.cardHeader}>
+            <Title level={3}>欢迎使用秒查</Title>
+            <Text type="secondary">请登录您的账号</Text>
           </div>
-          
-          <Title level={4} className={styles.welcomeText}>欢迎登录</Title>
-          
+
           {error && (
             <Alert 
               message={error} 
               type="error" 
               showIcon 
               closable 
-              style={{ marginBottom: 24 }} 
+              className={styles.errorAlert}
             />
           )}
-          
+
           <Form
             form={form}
             name="login"
-            initialValues={{ remember: true }}
             onFinish={onFinish}
             size="large"
             layout="vertical"
+            className={styles.loginForm}
           >
             <Form.Item
               name="username"
               rules={[{ required: true, message: '请输入用户名!' }]}
             >
               <Input 
-                prefix={<UserOutlined className={styles.siteFormItemIcon} />} 
+                prefix={<UserOutlined className={styles.inputIcon} />} 
                 placeholder="用户名" 
                 allowClear
+                className={styles.formInput}
               />
             </Form.Item>
 
@@ -120,17 +118,11 @@ const LoginPage = () => {
               ]}
             >
               <Input.Password 
-                prefix={<LockOutlined className={styles.siteFormItemIcon} />} 
+                prefix={<LockOutlined className={styles.inputIcon} />} 
                 placeholder="密码"
+                className={styles.formInput}
               />
             </Form.Item>
-
-            <div className={styles.loginFormOptions}>
-              <Form.Item name="remember" valuePropName="checked" noStyle>
-                <Checkbox>记住我</Checkbox>
-              </Form.Item>
-              <a className={styles.forgotPassword} href="#/reset-password">忘记密码？</a>
-            </div>
 
             <Form.Item>
               <Button
@@ -146,9 +138,9 @@ const LoginPage = () => {
           </Form>
         </div>
       </div>
-      
-      <div className={styles.loginFooter}>
-        <Text type="secondary">© 2025 日志查询系统 - 版权所有</Text>
+
+      <div className={styles.footer}>
+        <Text type="secondary">© 2025 秒查 - 版权所有</Text>
       </div>
     </div>
   );
