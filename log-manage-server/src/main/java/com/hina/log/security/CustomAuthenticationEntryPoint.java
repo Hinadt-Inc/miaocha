@@ -27,9 +27,9 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
-            AuthenticationException authException)
+                         AuthenticationException authException)
             throws IOException {
-        log.error("认证异常: {}", authException.getMessage());
+        log.warn("认证异常: {}", authException.getMessage());
 
         ApiResponse<Void> apiResponse;
 

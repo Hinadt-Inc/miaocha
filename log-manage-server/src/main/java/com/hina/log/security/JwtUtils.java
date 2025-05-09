@@ -1,8 +1,10 @@
 package com.hina.log.security;
 
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtBuilder;
+import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import io.jsonwebtoken.security.SignatureException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -108,7 +110,7 @@ public class JwtUtils {
 
     /**
      * 检查令牌是否即将过期
-     * 
+     *
      * @param token JWT token
      * @return 是否即将过期
      */
@@ -176,31 +178,9 @@ public class JwtUtils {
      * 验证token是否有效
      *
      * @param token JWT token
-     * @return 是否有效
      */
-    public boolean validateToken(String token) {
-        try {
-            Jwts.parser().verifyWith(getSigningKey()).build().parseSignedClaims(token);
-
-            // 如果token即将过期，也视为无效
-            if (isTokenNearExpiration(token)) {
-                log.warn("JWT token is about to expire");
-                return false;
-            }
-
-            return true;
-        } catch (SignatureException e) {
-            log.error("Invalid JWT signature: {}", e.getMessage());
-        } catch (MalformedJwtException e) {
-            log.error("Invalid JWT token: {}", e.getMessage());
-        } catch (ExpiredJwtException e) {
-            log.error("JWT token is expired: {}", e.getMessage());
-        } catch (UnsupportedJwtException e) {
-            log.error("JWT token is unsupported: {}", e.getMessage());
-        } catch (IllegalArgumentException e) {
-            log.error("JWT claims string is empty: {}", e.getMessage());
-        }
-        return false;
+    public void validateToken(String token) {
+        Jwts.parser().verifyWith(getSigningKey()).build().parseSignedClaims(token);
     }
 
     private SecretKey getSigningKey() {

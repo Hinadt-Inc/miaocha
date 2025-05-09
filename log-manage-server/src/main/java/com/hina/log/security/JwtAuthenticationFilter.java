@@ -2,7 +2,6 @@ package com.hina.log.security;
 
 import com.hina.log.dto.user.UserDTO;
 import com.hina.log.service.UserService;
-import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -39,25 +38,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String jwt = parseJwt(request);
             if (jwt != null) {
                 try {
-                    if (jwtUtils.validateToken(jwt)) {
-                        String uid = jwtUtils.getUidFromToken(jwt);
-                        UserDTO user = userService.getUserByUid(uid);
+                    jwtUtils.validateToken(jwt);
+                    String uid = jwtUtils.getUidFromToken(jwt);
+                    UserDTO user = userService.getUserByUid(uid);
 
-                        if (user != null && user.getStatus() == 1) {
-                            List<SimpleGrantedAuthority> authorities = List.of(
-                                    new SimpleGrantedAuthority("ROLE_" + user.getRole()));
+                    if (user != null && user.getStatus() == 1) {
+                        List<SimpleGrantedAuthority> authorities = List.of(
+                                new SimpleGrantedAuthority("ROLE_" + user.getRole()));
 
-                            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                                    user.getUid(), null, authorities);
+                        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                                user.getUid(), null, authorities);
 
-                            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                            SecurityContextHolder.getContext().setAuthentication(authentication);
-                        }
+                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
                     }
-                } catch (ExpiredJwtException e) {
-                    // 保存令牌过期异常到请求属性中，供后续处理
+
+                } catch (Exception e) {
+                    // 保存异常到请求属性中，供后续处理
                     request.setAttribute("jwtException", e);
-                    log.warn("JWT token has expired: {}", e.getMessage());
                 }
             }
         } catch (Exception e) {
