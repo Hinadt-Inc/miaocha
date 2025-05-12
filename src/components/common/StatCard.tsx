@@ -1,4 +1,4 @@
-import {isValidElement} from 'react';
+import { isValidElement } from 'react';
 import { Statistic, Card } from 'antd';
 import { useTheme } from '../../providers/ThemeProvider';
 import { withPureComponent } from '../../utils/withPureComponent';
@@ -27,51 +27,53 @@ const StatCard: React.FC<StatCardProps> = ({
   trend,
   precision = 0,
   valueStyle,
-  onClick
+  onClick,
 }) => {
   const { isDarkMode } = useTheme();
-  
+
   // 根据趋势设置图标颜色
   const getTrendColor = () => {
     if (trend === 'up') return '#52c41a';
     if (trend === 'down') return '#f5222d';
     return '#faad14';
   };
-  
+
   // 处理值的渲染方式
   const renderValue = () => {
     // 如果值是 React 元素，直接渲染它
     if (isValidElement(value)) {
       return (
-        <div style={{ 
-          fontSize: '24px', 
-          fontWeight: 600,
-          color: trend ? getTrendColor() : 'var(--text-primary, rgba(0, 0, 0, 0.85))',
-          ...valueStyle 
-        }}>
+        <div
+          style={{
+            fontSize: '24px',
+            fontWeight: 600,
+            color: trend ? getTrendColor() : 'rgba(0, 0, 0, 0.85)',
+            ...valueStyle,
+          }}
+        >
           {value}
         </div>
       );
     }
-    
+
     // 否则使用 Statistic 组件
     return (
-      <Statistic 
-        value={value as (number | string)} 
+      <Statistic
+        value={value as number | string}
         precision={precision}
-        valueStyle={{ 
-          fontSize: '24px', 
+        valueStyle={{
+          fontSize: '24px',
           color: trend ? getTrendColor() : undefined,
-          ...valueStyle 
+          ...valueStyle,
         }}
         prefix={prefix}
         suffix={suffix}
       />
     );
   };
-  
+
   return (
-    <Card 
+    <Card
       className={`stat-card ${isDarkMode ? 'dark' : ''}`}
       loading={loading}
       onClick={onClick}
@@ -83,9 +85,7 @@ const StatCard: React.FC<StatCardProps> = ({
           <div className="stat-card-title">{title}</div>
           {renderValue()}
           {trend && (
-            <div 
-              className={`stat-card-trend stat-card-trend-${trend}`}
-            >
+            <div className={`stat-card-trend stat-card-trend-${trend}`}>
               {trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→'}
               <span className="trend-text">
                 {trend === 'up' ? '上升' : trend === 'down' ? '下降' : '稳定'}

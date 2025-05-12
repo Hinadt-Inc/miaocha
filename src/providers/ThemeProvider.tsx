@@ -87,24 +87,24 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   };
 
   // 当主题改变时更新 body 的类名，以便可以在全局 CSS 中使用
-  useEffect(() => {
-    document.body.classList.remove('light-mode', 'dark-mode');
-    document.body.classList.add(`${mode}-mode`);
+  // useEffect(() => {
+  //   document.body.classList.remove('light-mode', 'dark-mode');
+  //   document.body.classList.add(`${mode}-mode`);
     
-    // 设置 CSS 变量
-    document.documentElement.style.setProperty(
-      '--card-bg', 
-      mode === 'dark' ? '#1f1f1f' : '#ffffff'
-    );
-    document.documentElement.style.setProperty(
-      '--text-primary', 
-      mode === 'dark' ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.85)'
-    );
-    document.documentElement.style.setProperty(
-      '--text-secondary', 
-      mode === 'dark' ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.45)'
-    );
-  }, [mode]);
+  //   // 设置 CSS 变量
+  //   document.documentElement.style.setProperty(
+  //     '--card-bg', 
+  //     mode === 'dark' ? '#1f1f1f' : '#ffffff'
+  //   );
+  //   document.documentElement.style.setProperty(
+  //     '--text-primary', 
+  //     mode === 'dark' ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.85)'
+  //   );
+  //   document.documentElement.style.setProperty(
+  //     '--text-secondary', 
+  //     mode === 'dark' ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.45)'
+  //   );
+  // }, [mode]);
 
   // 创建 Ant Design 主题配置
   const antTheme = {

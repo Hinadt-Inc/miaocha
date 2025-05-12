@@ -1,0 +1,44 @@
+/* SearchBar.module.less - 仅包含搜索栏相关样式 */
+
+.searchBarContainer {
+  margin-bottom: 1px;
+  :global {
+    .ant-card {
+      // background-color: #eee;
+      border: none;
+      .ant-card-body {
+        padding: 10px;
+        .ant-select-selector {
+          border: 1px solid rgba(5, 5, 5, 0.06);
+        }
+      }
+    }
+  }
+  .searchSections {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    .item {
+      &:first-child {
+        flex: 1;
+      }
+      &:nth-child(2) {
+        flex: 1;
+      }
+      .space {
+        column-gap: 0 !important;
+        :global {
+          .ant-btn {
+            padding: 0 4px;
+          }
+        }
+      }
+    }
+  }
+  .filterTags {
+    display: flex;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+}

@@ -1,5 +1,5 @@
-import { get, post, request } from './request'
-import type { DatasourcePermission } from '../types/permissionTypes'
+import { get, post, request } from './request';
+import type { DatasourcePermission } from '../types/permissionTypes';
 
 /**
  * 授予用户表权限
@@ -11,9 +11,9 @@ import type { DatasourcePermission } from '../types/permissionTypes'
 export function grantTablePermission(
   userId: string,
   datasourceId: string,
-  tableName: string
+  tableName: string,
 ): Promise<DatasourcePermission> {
-  return post(`/api/permissions/user/${userId}/datasource/${datasourceId}/table/${tableName}`)
+  return post(`/api/permissions/user/${userId}/datasource/${datasourceId}/table/${tableName}`);
 }
 
 /**
@@ -26,12 +26,12 @@ export function grantTablePermission(
 export function revokeTablePermission(
   userId: string,
   datasourceId: string,
-  tableName: string
+  tableName: string,
 ): Promise<void> {
   return request({
     method: 'DELETE',
-    url: `/api/permissions/user/${userId}/datasource/${datasourceId}/table/${tableName}`
-  })
+    url: `/api/permissions/user/${userId}/datasource/${datasourceId}/table/${tableName}`,
+  });
 }
 
 /**
@@ -42,9 +42,9 @@ export function revokeTablePermission(
  */
 export function getUserDatasourcePermissions(
   userId: string,
-  datasourceId: string
+  datasourceId: string,
 ): Promise<DatasourcePermission[]> {
-  return get(`/api/permissions/user/${userId}/datasource/${datasourceId}`)
+  return get(`/api/permissions/user/${userId}/datasource/${datasourceId}`);
 }
 
 /**
@@ -52,7 +52,7 @@ export function getUserDatasourcePermissions(
  * @returns Promise<DatasourcePermission[]>
  */
 export function getMyTablePermissions(): Promise<DatasourcePermission[]> {
-  return get('/api/permissions/my/tables')
+  return get('/api/permissions/my/tables');
 }
 
 /**
@@ -63,6 +63,11 @@ export function getMyTablePermissions(): Promise<DatasourcePermission[]> {
 export function revokePermissionById(permissionId: string): Promise<void> {
   return request({
     method: 'DELETE',
-    url: `/api/permissions/${permissionId}`
-  })
+    url: `/api/permissions/${permissionId}`,
+  });
+}
+
+// 获取我的模块权限
+export function getMyModules(): Promise<any> {
+  return get('/api/permissions/modules/my');
 }

@@ -2,10 +2,20 @@ import { createBrowserRouter } from 'react-router-dom';
 import { Suspense, lazy } from 'react';
 import Loading from '@/components/Loading';
 import App from '@/App';
+import {
+  CompassOutlined,
+  ConsoleSqlOutlined,
+  SettingOutlined,
+  UserOutlined,
+  DatabaseOutlined,
+  SafetyCertificateOutlined,
+  DesktopOutlined,
+  CloudServerOutlined,
+} from '@ant-design/icons';
 
 // 动态导入页面组件
 const LoginPage = lazy(() => import('@/pages/Login'));
-const HomePage = lazy(() => import('@/pages/HomePage'));
+const HomePage = lazy(() => import('@/pages/Home'));
 const UserManagementPage = lazy(() => import('@/pages/system/UserManagementPage'));
 const DataSourceManagementPage = lazy(() => import('@/pages/system/DataSourceManagementPage'));
 const PermissionManagementPage = lazy(() => import('@/pages/system/PermissionManagementPage'));
@@ -30,6 +40,111 @@ const withSuspense = (Component: React.ComponentType) => (
   </Suspense>
 );
 
+// 定义路由配置接口
+export interface RouteConfig {
+  path: string;
+  name: string;
+  icon?: React.ReactNode;
+  element?: React.ReactNode;
+  children?: RouteConfig[];
+  type?: 'group';
+}
+
+// 统一的路由配置
+export const routes: RouteConfig[] = [
+  {
+    path: '/',
+    name: '数据发现',
+    icon: <CompassOutlined />,
+    element: withSuspense(HomePage),
+  },
+  {
+    path: '/sql-editor',
+    name: 'SQL编辑器',
+    icon: <ConsoleSqlOutlined />,
+    element: withSuspense(SQLEditorPage),
+  },
+  {
+    path: '/system',
+    name: '系统管理',
+    icon: <SettingOutlined />,
+    type: 'group',
+    children: [
+      {
+        path: '/system/user',
+        name: '用户管理',
+        icon: <UserOutlined />,
+        element: withSuspense(UserManagementPage),
+      },
+      {
+        path: '/system/datasource',
+        name: '数据源管理',
+        icon: <DatabaseOutlined />,
+        element: withSuspense(DataSourceManagementPage),
+      },
+      {
+        path: '/system/permission',
+        name: '权限管理',
+        icon: <SafetyCertificateOutlined />,
+        element: withSuspense(PermissionManagementPage),
+      },
+      {
+        path: '/system/machine',
+        name: '服务器管理',
+        icon: <DesktopOutlined />,
+        element: withSuspense(MachineManagementPage),
+      },
+      {
+        path: '/system/logstash',
+        name: 'Logstash管理',
+        icon: <CloudServerOutlined />,
+        element: withSuspense(LogstashManagementPage),
+      },
+    ],
+  },
+];
+
+// 将路由配置转换为 React Router 的路由配置
+const convertToRouterConfig = (
+  routes: RouteConfig[],
+): Array<{
+  path: string;
+  element?: React.ReactNode;
+  children?: Array<{
+    path: string;
+    element?: React.ReactNode;
+    children?: any;
+  }>;
+}> => {
+  return routes.map((route) => ({
+    path: route.path,
+    element: route.element,
+    children: route.children ? convertToRouterConfig(route.children) : undefined,
+  }));
+};
+
+// 将路由配置转换为菜单项
+export const convertToMenuItems = (
+  routes: RouteConfig[],
+): Array<{
+  key: string;
+  label: string;
+  icon?: React.ReactNode;
+  children?: Array<{
+    key: string;
+    label: string;
+    icon?: React.ReactNode;
+    children?: any;
+  }>;
+}> => {
+  return routes.map((route) => ({
+    key: route.path,
+    label: route.name,
+    icon: route.icon,
+    children: route.children ? convertToMenuItems(route.children) : undefined,
+  }));
+};
+
 // 创建路由
 export const router = createBrowserRouter([
   {
@@ -39,35 +154,6 @@ export const router = createBrowserRouter([
   {
     path: '/',
     element: withSuspense(App),
-    children: [
-      {
-        index: true,
-        element: withSuspense(HomePage),
-      },
-      {
-        path: 'system/user',
-        element: withSuspense(UserManagementPage),
-      },
-      {
-        path: 'system/datasource',
-        element: withSuspense(DataSourceManagementPage),
-      },
-      {
-        path: 'system/permission',
-        element: withSuspense(PermissionManagementPage),
-      },
-      {
-        path: 'sql-editor',
-        element: withSuspense(SQLEditorPage),
-      },
-      {
-        path: 'system/machine',
-        element: withSuspense(MachineManagementPage),
-      },
-      {
-        path: 'system/logstash',
-        element: withSuspense(LogstashManagementPage),
-      },
-    ],
+    children: convertToRouterConfig(routes),
   },
 ]);

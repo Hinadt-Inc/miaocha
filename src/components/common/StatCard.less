@@ -4,11 +4,11 @@
   border-radius: 8px;
   overflow: hidden;
   .transition();
-  .box-shadow(1);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
   
   &:hover {
     transform: translateY(-5px);
-    .box-shadow(2);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
   }
   
   // 暗色主题适配
@@ -55,7 +55,7 @@
   
   .stat-card-title {
     font-size: 14px;
-    color: var(--text-secondary, rgba(0, 0, 0, 0.45));
+    color: rgba(0, 0, 0, 0.45);
     margin-bottom: 8px;
   }
   

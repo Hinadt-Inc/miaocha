@@ -1,20 +1,11 @@
 import { App as AntdApp, Space } from 'antd';
 import { ProLayout } from '@ant-design/pro-components';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import {
-  CompassOutlined,
-  ConsoleSqlOutlined,
-  SettingOutlined,
-  UserOutlined,
-  DatabaseOutlined,
-  SafetyCertificateOutlined,
-  DesktopOutlined,
-  CloudServerOutlined,
-} from '@ant-design/icons';
 import { useSelector } from 'react-redux';
 import UserProfile from './components/User/UserProfile';
 import { useTheme } from './providers/ThemeProvider';
 import { useState } from 'react';
+import { routes, convertToMenuItems } from './routes';
 
 function AppWrapper() {
   const location = useLocation();
@@ -34,7 +25,6 @@ function AppWrapper() {
     <ProLayout
       location={location}
       className="app-wrapper"
-      fixSiderbar
       fixedHeader
       layout="top"
       splitMenus
@@ -48,51 +38,7 @@ function AppWrapper() {
       route={{
         path: '/',
         type: 'group',
-        children: [
-          {
-            path: '/',
-            name: '数据发现',
-            icon: <CompassOutlined />,
-          },
-          {
-            path: '/sql-editor',
-            name: 'SQL编辑器',
-            icon: <ConsoleSqlOutlined />,
-          },
-          {
-            path: '/system',
-            name: '系统管理',
-            icon: <SettingOutlined />,
-            type: 'group',
-            children: [
-              {
-                path: '/system/user',
-                name: '用户管理',
-                icon: <UserOutlined />,
-              },
-              {
-                path: '/system/datasource',
-                name: '数据源管理',
-                icon: <DatabaseOutlined />,
-              },
-              {
-                path: '/system/permission',
-                name: '权限管理',
-                icon: <SafetyCertificateOutlined />,
-              },
-              {
-                path: '/system/machine',
-                name: '服务器管理',
-                icon: <DesktopOutlined />,
-              },
-              {
-                path: '/system/logstash',
-                name: 'Logstash管理',
-                icon: <CloudServerOutlined />,
-              },
-            ],
-          },
-        ],
+        children: routes,
       }}
       menuProps={{
         defaultSelectedKeys: [currentPath],
@@ -102,52 +48,8 @@ function AppWrapper() {
           const newOpenKeys = keys.filter((key) => key !== currentPath);
           setOpenKeys(newOpenKeys);
         },
-        items: [
-          {
-            key: '/',
-            label: '数据发现',
-            icon: <CompassOutlined />,
-          },
-          {
-            key: '/sql-editor',
-            label: 'SQL编辑器',
-            icon: <ConsoleSqlOutlined />,
-          },
-          {
-            key: '/system',
-            label: '系统管理',
-            icon: <SettingOutlined />,
-            children: [
-              {
-                key: '/system/user',
-                label: '用户管理',
-                icon: <UserOutlined />,
-              },
-              {
-                key: '/system/datasource',
-                label: '数据源管理',
-                icon: <DatabaseOutlined />,
-              },
-              {
-                key: '/system/permission',
-                label: '权限管理',
-                icon: <SafetyCertificateOutlined />,
-              },
-              {
-                key: '/system/machine',
-                label: '服务器管理',
-                icon: <DesktopOutlined />,
-              },
-              {
-                key: '/system/logstash',
-                label: 'Logstash管理',
-                icon: <CloudServerOutlined />,
-              },
-            ],
-          },
-        ],
+        items: convertToMenuItems(routes),
         onClick: (info) => {
-          // 使用React Router进行导航
           const path = info.key;
           if (path && location.pathname !== path) {
             void navigate(path);

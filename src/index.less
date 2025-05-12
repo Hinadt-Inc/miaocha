@@ -1,4 +1,3 @@
-@import './styles/theme-variables.less';
 @import './styles/responsive.less';
 
 body {
@@ -7,24 +6,14 @@ body {
     'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
     'Noto Color Emoji';
   line-height: 1.5;
-  background-color: var(--body-bg);
-  color: var(--text-primary);
-  transition: background-color var(--animation-duration) var(--animation-timing-function),
-              color var(--animation-duration) var(--animation-timing-function);
+  background-color: #f0f2f5;
+  color: rgba(0, 0, 0, 0.85);
 }
+
 
 /* ant-pro-layout 内容区域样式 */
 .ant-pro-layout .ant-pro-layout-content {
-  padding: 12px;
-}
-
-
-.site-layout-content {
-  min-height: 280px;
-  padding: 24px;
-  background: var(--component-bg);
-  border-radius: 4px;
-  .box-shadow(1);
+  padding: 0;
 }
 
 #root {
@@ -48,56 +37,5 @@ body {
   
   &:hover {
     background: rgba(0, 0, 0, 0.3);
-  }
-}
-
-// 暗色主题滚动条
-.dark-mode {
-  ::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-  }
-  
-  ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    
-    &:hover {
-      background: rgba(255, 255, 255, 0.3);
-    }
-  }
-}
-
-// 全局动画类
-.fade-in {
-  animation: fadeIn var(--animation-duration) var(--animation-timing-function);
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.slide-up {
-  animation: slideUp var(--animation-duration) var(--animation-timing-function);
-}
-
-@keyframes slideUp {
-  from { 
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to { 
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-// 全局卡片悬停效果
-.card-hover-effect {
-  transition: transform var(--animation-duration) var(--animation-timing-function),
-              box-shadow var(--animation-duration) var(--animation-timing-function);
-  
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--shadow-2);
   }
 }
