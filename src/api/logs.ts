@@ -32,10 +32,13 @@ export const searchLogs = async (params: SearchLogsParams): Promise<SearchLogsRe
   return post('/api/logs/search', params);
 };
 
-export const getTableColumns = async (datasourceId: string, tableName: string): Promise<Array<{columnName: string; dataType: string}>> => {
+export const getTableColumns = async (
+  datasourceId: string,
+  module: string,
+): Promise<Array<{ columnName: string; dataType: string }>> => {
   return get(`/api/logs/columns`, {
-    params: { datasourceId, tableName }
-  }) as Promise<Array<{columnName: string; dataType: string}>>;
+    params: { datasourceId, module },
+  }) as Promise<Array<{ columnName: string; dataType: string }>>;
 };
 
 export const getTimeDistribution = async (params: {
@@ -45,10 +48,10 @@ export const getTimeDistribution = async (params: {
   startTime?: string;
   endTime?: string;
   interval?: string;
-}): Promise<Array<{time: string; count: number}>> => {
+}): Promise<Array<{ time: string; count: number }>> => {
   return get(`/api/logs/time-distribution`, {
-    params
-  }) as Promise<Array<{time: string; count: number}>>;
+    params,
+  }) as Promise<Array<{ time: string; count: number }>>;
 };
 
 // 添加日志分布数据获取函数，与 useLogData.ts 中使用的函数签名保持一致
@@ -64,21 +67,24 @@ export const getLogDistribution = async (params: {
   try {
     // 预处理whereSql，确保它是有效的SQL条件
     let processedWhereSql = params.whereSql;
-    
+
     // 如果whereSql不是有效的SQL条件格式，则将其转换为搜索条件
-    if (processedWhereSql && !/\s*[A-Za-z0-9_]+\s*(=|>|<|>=|<=|LIKE|IN|IS|BETWEEN)\s*/.test(processedWhereSql)) {
+    if (
+      processedWhereSql &&
+      !/\s*[A-Za-z0-9_]+\s*(=|>|<|>=|<=|LIKE|IN|IS|BETWEEN)\s*/.test(processedWhereSql)
+    ) {
       // 如果不是SQL条件格式，则清空whereSql
       processedWhereSql = '';
-      
+
       // 如果keyword为空，可以将whereSql的值转移到keyword
       if (!params.keyword && params.whereSql) {
         params = {
           ...params,
-          keyword: params.whereSql
+          keyword: params.whereSql,
         };
       }
     }
-    
+
     // 使用已有的 getTimeDistribution 函数，但转换参数和返回值
     // const response = await get(`/api/logs/time-distribution`, {
     //   params: {
@@ -92,7 +98,7 @@ export const getLogDistribution = async (params: {
     //     whereSql: processedWhereSql
     //   }
     // });
-    
+
     // 转换结果格式以符合 DistributionPoint 类型
     // if (Array.isArray(response)) {
     //   return response.map(item => ({
@@ -100,7 +106,7 @@ export const getLogDistribution = async (params: {
     //     count: item.count
     //   }));
     // }
-    
+
     return [];
   } catch (error) {
     console.error('Failed to get log distribution:', error);

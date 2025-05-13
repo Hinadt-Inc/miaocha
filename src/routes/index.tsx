@@ -1,10 +1,12 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { Suspense, lazy } from 'react';
+import MainLayout from '@/layouts/MainLayout';
 import Loading from '@/components/Loading';
 import App from '@/App';
 import {
   CompassOutlined,
   ConsoleSqlOutlined,
+  BarChartOutlined,
   SettingOutlined,
   UserOutlined,
   DatabaseOutlined,
@@ -22,6 +24,7 @@ const PermissionManagementPage = lazy(() => import('@/pages/system/PermissionMan
 const SQLEditorPage = lazy(() => import('@/pages/SQLEditor/SQLEditorImpl'));
 const MachineManagementPage = lazy(() => import('@/pages/system/MachineManagementPage'));
 const LogstashManagementPage = lazy(() => import('@/pages/system/LogstashManagementPage'));
+const LogAnalysisPage = lazy(() => import('@/pages/LogAnalysis'));
 
 const withSuspense = (Component: React.ComponentType) => (
   <Suspense
@@ -63,6 +66,16 @@ export const routes: RouteConfig[] = [
     name: 'SQL编辑器',
     icon: <ConsoleSqlOutlined />,
     element: withSuspense(SQLEditorPage),
+  },
+  {
+    path: '/log-analysis',
+    name: '日志分析',
+    icon: <BarChartOutlined />,
+    element: (
+      <MainLayout>
+        <LogAnalysisPage />
+      </MainLayout>
+    ),
   },
   {
     path: '/system',

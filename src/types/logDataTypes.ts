@@ -1,6 +1,6 @@
 // 过滤器操作符类型
-export type FilterOperator = 
-  | 'is' // 等于 
+export type FilterOperator =
+  | 'is' // 等于
   | 'is_not' // 不等于
   | 'contains' // 包含
   | 'does_not_contain' // 不包含
@@ -10,7 +10,7 @@ export type FilterOperator =
   | 'is_not_one_of' // 不是其中之一
   | 'greater_than' // 大于
   | 'less_than' // 小于
-  | 'is_between' // 在...之间
+  | 'is_between'; // 在...之间
 
 // 过滤器类型定义
 export interface Filter {
@@ -34,7 +34,6 @@ export interface LogData {
     count: number;
   }>;
   [key: string]: unknown;
-  
 }
 
 // 表格类型定义
@@ -58,7 +57,7 @@ export interface UseFiltersReturn {
   selectedFilterOperator: FilterOperator;
   openFilterModal: () => void;
   handleFilterFieldChange: (fieldName: string) => void;
-  addFilter: (values: { 
+  addFilter: (values: {
     field: string;
     operator: FilterOperator;
     value: string | string[] | [number, number] | null;
@@ -72,6 +71,30 @@ export interface APILogData {
 }
 
 // 日志分布点类型
+export interface SearchLogsParams {
+  datasourceId: number;
+  tableName: string;
+  keyword?: string;
+  whereSql?: string;
+  startTime?: string;
+  endTime?: string;
+  timeRange?: string;
+  timeGrouping?: string;
+  pageSize?: number;
+  offset?: number;
+  fields?: string[];
+}
+
+export interface SearchLogsResult {
+  success: boolean;
+  errorMessage?: string;
+  executionTimeMs: number;
+  columns: string[];
+  rows: Record<string, unknown>[];
+  totalCount: number;
+  distributionData?: DistributionPoint[];
+}
+
 export type DistributionPoint = {
   timePoint: string;
   count: number;
