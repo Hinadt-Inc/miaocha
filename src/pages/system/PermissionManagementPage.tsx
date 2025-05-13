@@ -10,12 +10,13 @@ import {
   revokePermissionById,
 } from '../../api/permission';
 import type { DatasourcePermission, TablePermission } from '../../types/permissionTypes';
-import { HomeOutlined } from '@ant-design/icons';
+import { HomeOutlined, SearchOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 
 const PermissionManagementPage = () => {
   const { message, modal } = App.useApp();
   const [permissions, setPermissions] = useState<DatasourcePermission[]>([]);
+  const [filteredPermissions, setFilteredPermissions] = useState<DatasourcePermission[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchParams, setSearchParams] = useState({
     userId: '',
@@ -24,20 +25,13 @@ const PermissionManagementPage = () => {
   const [users, setUsers] = useState<{ label: string; value: string }[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>();
 
-  // 获取权限列表
+  // 初始获取全部权限数据
   const fetchPermissions = async () => {
     setLoading(true);
     try {
-      if (searchParams.userId && searchParams.datasourceId) {
-        const data = await getUserDatasourcePermissions(
-          searchParams.userId,
-          searchParams.datasourceId,
-        );
-        setPermissions(data);
-      } else {
-        const data = await getMyTablePermissions();
-        setPermissions(data);
-      }
+      const data = await getMyTablePermissions();
+      setPermissions(data);
+      setFilteredPermissions(data); // 初始化时显示全部数据
     } catch {
       message.error('获取权限列表失败');
     } finally {
@@ -45,9 +39,26 @@ const PermissionManagementPage = () => {
     }
   };
 
+  // 前端搜索过滤方法
+  const filterPermissions = (data: DatasourcePermission[], searchValue: string) => {
+    if (!searchValue) return data;
+    const lowerValue = searchValue.toLowerCase();
+    return data.filter(
+      (permission) =>
+        permission.datasourceId.toString().toLowerCase().includes(lowerValue) ||
+        permission.datasourceName.toLowerCase().includes(lowerValue) ||
+        permission.modules.some((module) => module.moduleName.toLowerCase().includes(lowerValue)),
+    );
+  };
+
   useEffect(() => {
-    fetchPermissions();
-  }, [searchParams]);
+    // 当搜索参数变化时执行前端过滤
+    const filtered = filterPermissions(
+      permissions,
+      searchParams.userId || searchParams.datasourceId,
+    );
+    setFilteredPermissions(filtered);
+  }, [searchParams, permissions]);
 
   // 授予权限 (保留用于未来扩展)
   useEffect(() => {
@@ -65,6 +76,7 @@ const PermissionManagementPage = () => {
       }
     };
     loadUsers();
+    fetchPermissions();
   }, []);
 
   const handleGrant = async (moduleName: string) => {
@@ -126,7 +138,7 @@ const PermissionManagementPage = () => {
   const expandedRowRender = (record: DatasourcePermission) => {
     const columns: ColumnsType<TablePermission> = [
       {
-        title: '表名',
+        title: '模块名',
         dataIndex: 'moduleName',
         key: 'moduleName',
       },
@@ -175,34 +187,32 @@ const PermissionManagementPage = () => {
 
   return (
     <Card>
-      <Breadcrumb style={{ marginBottom: 16 }}>
-        <Breadcrumb.Item>
-          <Link to="/home">
-            <HomeOutlined />
-          </Link>
-        </Breadcrumb.Item>
-        <Breadcrumb.Item>权限管理</Breadcrumb.Item>
-      </Breadcrumb>
-      <Space style={{ marginBottom: 16 }}>
-        <Input
-          placeholder="用户ID"
-          value={searchParams.userId}
-          onChange={(e) => setSearchParams({ ...searchParams, userId: e.target.value })}
-          allowClear
-        />
-        <Input
-          placeholder="数据源ID"
-          value={searchParams.datasourceId}
-          onChange={(e) => setSearchParams({ ...searchParams, datasourceId: e.target.value })}
-          allowClear
-        />
-        <Button type="primary" onClick={fetchPermissions}>
-          搜索
-        </Button>
-      </Space>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Breadcrumb style={{ marginBottom: 16 }}>
+          <Breadcrumb.Item>
+            <Link to="/home">
+              <HomeOutlined />
+            </Link>
+          </Breadcrumb.Item>
+          <Breadcrumb.Item>权限管理</Breadcrumb.Item>
+        </Breadcrumb>
+        <Space style={{ marginBottom: 16 }}>
+          <Input
+            placeholder="搜索数据源ID/名称/模块名"
+            value={searchParams.userId || searchParams.datasourceId}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearchParams({ ...searchParams, userId: value, datasourceId: value });
+            }}
+            allowClear
+            suffix={<SearchOutlined />}
+            style={{ width: 300 }}
+          />
+        </Space>
+      </div>
       <Table
         columns={columns}
-        dataSource={permissions}
+        dataSource={filteredPermissions}
         rowKey="datasourceId"
         loading={loading}
         expandable={{

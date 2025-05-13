@@ -1,9 +1,29 @@
-import { PlusOutlined, EditOutlined, DeleteOutlined, PlayCircleOutlined, StopOutlined, HistoryOutlined, InfoCircleOutlined } from '@ant-design/icons';
-import { Button, message, Popconfirm, Space, Table, Breadcrumb, Tooltip, Modal, Progress, Tag, Descriptions } from 'antd';
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  PlayCircleOutlined,
+  StopOutlined,
+  HistoryOutlined,
+  InfoCircleOutlined,
+} from '@ant-design/icons';
+import {
+  Button,
+  message,
+  Popconfirm,
+  Space,
+  Table,
+  Breadcrumb,
+  Tooltip,
+  Modal,
+  Progress,
+  Tag,
+  Descriptions,
+} from 'antd';
 import './LogstashManagementPage.less';
 import { Link } from 'react-router-dom';
 import { useEffect } from 'react';
-import { 
+import {
   createLogstashProcess,
   deleteLogstashProcess,
   getLogstashProcesses,
@@ -12,9 +32,13 @@ import {
   updateLogstashProcess,
   getLogstashTaskStatus,
   getLogstashTaskSummaries,
-  getTaskSteps
+  getTaskSteps,
 } from '../../api/logstash';
-import type { LogstashProcess, LogstashTaskSummary, TaskStepsResponse } from '../../types/logstashTypes';
+import type {
+  LogstashProcess,
+  LogstashTaskSummary,
+  TaskStepsResponse,
+} from '../../types/logstashTypes';
 import LogstashEditModal from './components/LogstashEditModal';
 import { useRef, useState } from 'react';
 
@@ -64,7 +88,7 @@ export default function LogstashManagementPage() {
   };
 
   useEffect(() => {
-    fetchData().catch(err => {
+    fetchData().catch((err) => {
       message.error('组件加载失败');
       console.error('组件加载失败:', err);
     });
@@ -96,7 +120,7 @@ export default function LogstashManagementPage() {
       await startLogstashProcess(id);
       message.success('启动成功');
       await fetchData();
-      
+
       const pollStatus = async () => {
         const status = await getLogstashTaskStatus(id);
         if (status.status === 'COMPLETED' || status.status === 'FAILED') {
@@ -108,7 +132,7 @@ export default function LogstashManagementPage() {
       };
       pollStatus().catch(() => {
         message.error('获取任务状态失败');
-      })
+      });
     } catch (err) {
       message.error('启动失败');
       console.error('启动Logstash进程失败:', err);
@@ -120,7 +144,7 @@ export default function LogstashManagementPage() {
       await stopLogstashProcess(id);
       message.success('停止成功');
       await fetchData();
-      
+
       const pollStatus = async () => {
         const status = await getLogstashTaskStatus(id);
         if (status.status === 'COMPLETED' || status.status === 'FAILED') {
@@ -132,7 +156,7 @@ export default function LogstashManagementPage() {
       };
       pollStatus().catch(() => {
         message.error('获取任务状态失败');
-      })
+      });
     } catch (err) {
       message.error('停止失败');
       console.error('停止Logstash进程失败:', err);
@@ -143,55 +167,61 @@ export default function LogstashManagementPage() {
     {
       title: '名称',
       dataIndex: 'name',
-      key: 'name'
+      key: 'name',
     },
     {
       title: '模块',
       dataIndex: 'module',
-      key: 'module'
+      key: 'module',
     },
     {
       title: '状态',
       dataIndex: 'stateDescription',
-      key: 'state'
+      key: 'state',
     },
     {
       title: '操作',
       key: 'action',
       render: (_: unknown, record: LogstashProcess) => (
         <Space size="middle">
-          <Tooltip title="编辑">
-            <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          </Tooltip>
-          <Tooltip title={record.state === 'RUNNING' ? '停止' : '启动'}>
-            <Button 
-              type="text" 
-              icon={record.state === 'RUNNING' ? <StopOutlined /> : <PlayCircleOutlined />}
-              onClick={() => record.state === 'RUNNING' ? handleStop(record.id) : handleStart(record.id)}
-            />
-          </Tooltip>
-          <Tooltip title="任务历史">
-            <Button 
-              type="text" 
-              icon={<HistoryOutlined />} 
-              onClick={() =>{void showTaskSummaries(record.id)}}
-            />
-          </Tooltip>
-          <Tooltip title="删除">
-            <Popconfirm
-              title="确认删除"
-              description="确定要删除这个Logstash进程吗？"
-              onConfirm={() => {void  handleDelete(record.id)}}
-              okText="确认"
-              cancelText="取消"
-              okType="danger"
-            >
-              <Button type="text" danger icon={<DeleteOutlined />} />
-            </Popconfirm>
-          </Tooltip>
+          <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
+            编辑
+          </Button>
+          <Button
+            type="link"
+            icon={record.state === 'RUNNING' ? <StopOutlined /> : <PlayCircleOutlined />}
+            onClick={() =>
+              record.state === 'RUNNING' ? handleStop(record.id) : handleStart(record.id)
+            }
+          >
+            {record.state === 'RUNNING' ? '停止' : '启动'}
+          </Button>
+          <Button
+            type="link"
+            icon={<HistoryOutlined />}
+            onClick={() => {
+              void showTaskSummaries(record.id);
+            }}
+          >
+            历史
+          </Button>
+          <Popconfirm
+            title="确认删除"
+            description="确定要删除这个Logstash进程吗？"
+            onConfirm={() => {
+              void handleDelete(record.id);
+            }}
+            okText="确认"
+            cancelText="取消"
+            okType="danger"
+          >
+            <Button type="link" danger icon={<DeleteOutlined />}>
+              删除
+            </Button>
+          </Popconfirm>
         </Space>
-      )
-    }
+      ),
+    },
   ];
 
   return (
@@ -201,9 +231,6 @@ export default function LogstashManagementPage() {
           <Breadcrumb.Item>
             <Link to="/">首页</Link>
           </Breadcrumb.Item>
-          <Breadcrumb.Item>
-            <Link to="/system">系统设置</Link>
-          </Breadcrumb.Item>
           <Breadcrumb.Item>Logstash管理</Breadcrumb.Item>
         </Breadcrumb>
         <div className="actions">
@@ -212,15 +239,9 @@ export default function LogstashManagementPage() {
           </Button>
         </div>
       </div>
-      
+
       <div className="table-container">
-        <Table 
-          columns={columns}
-          dataSource={data}
-          rowKey="id"
-          loading={loading}
-          bordered
-        />
+        <Table columns={columns} dataSource={data} rowKey="id" loading={loading} bordered />
         <LogstashEditModal
           visible={editModalVisible}
           onCancel={() => setEditModalVisible(false)}
@@ -256,25 +277,30 @@ export default function LogstashManagementPage() {
               {
                 title: '任务ID',
                 dataIndex: 'taskId',
-                key: 'taskId'
+                key: 'taskId',
               },
               {
                 title: '操作类型',
                 dataIndex: 'operationType',
-                key: 'operationType'
+                key: 'operationType',
               },
               {
                 title: '状态',
                 dataIndex: 'status',
                 key: 'status',
                 render: (status: string) => (
-                  <Tag color={
-                    status === 'COMPLETED' ? 'success' : 
-                    status === 'FAILED' ? 'error' : 'processing'
-                  }>
+                  <Tag
+                    color={
+                      status === 'COMPLETED'
+                        ? 'success'
+                        : status === 'FAILED'
+                          ? 'error'
+                          : 'processing'
+                    }
+                  >
                     {status}
                   </Tag>
-                )
+                ),
               },
               {
                 title: '进度',
@@ -284,30 +310,35 @@ export default function LogstashManagementPage() {
                   <Progress
                     percent={record.progressPercentage}
                     status={
-                      record.status === 'FAILED' ? 'exception' : 
-                      record.status === 'COMPLETED' ? 'success' : 'active'
+                      record.status === 'FAILED'
+                        ? 'exception'
+                        : record.status === 'COMPLETED'
+                          ? 'success'
+                          : 'active'
                     }
                   />
-                )
+                ),
               },
               {
                 title: '开始时间',
                 dataIndex: 'startTime',
-                key: 'startTime'
+                key: 'startTime',
               },
               {
                 title: '操作',
                 key: 'action',
                 render: (_: unknown, record: LogstashTaskSummary) => (
-                  <Button 
-                    type="link" 
+                  <Button
+                    type="link"
                     icon={<InfoCircleOutlined />}
-                    onClick={() => {void showTaskSteps(record.taskId)}}
+                    onClick={() => {
+                      void showTaskSteps(record.taskId);
+                    }}
                   >
                     详情
                   </Button>
-                )
-              }
+                ),
+              },
             ]}
           />
         </Modal>
@@ -320,24 +351,24 @@ export default function LogstashManagementPage() {
         >
           {taskSteps && (
             <div>
-              <Descriptions 
-                bordered
-                size="small"
-                column={2}
-                style={{ marginBottom: 16 }}
-              >
+              <Descriptions bordered size="small" column={2} style={{ marginBottom: 16 }}>
                 <Descriptions.Item label="任务ID">{taskSteps.taskId}</Descriptions.Item>
                 <Descriptions.Item label="任务名称">{taskSteps.taskName}</Descriptions.Item>
                 <Descriptions.Item label="任务状态">
-                  <Tag color={
-                    taskSteps.taskStatus === 'COMPLETED' ? 'success' : 
-                    taskSteps.taskStatus === 'FAILED' ? 'error' : 'processing'
-                  }>
+                  <Tag
+                    color={
+                      taskSteps.taskStatus === 'COMPLETED'
+                        ? 'success'
+                        : taskSteps.taskStatus === 'FAILED'
+                          ? 'error'
+                          : 'processing'
+                    }
+                  >
                     {taskSteps.taskStatus}
                   </Tag>
                 </Descriptions.Item>
               </Descriptions>
-              
+
               <Table
                 dataSource={taskSteps.steps}
                 rowKey="stepId"
@@ -345,49 +376,49 @@ export default function LogstashManagementPage() {
                   {
                     title: '步骤ID',
                     dataIndex: 'stepId',
-                    key: 'stepId'
+                    key: 'stepId',
                   },
                   {
                     title: '步骤名称',
                     dataIndex: 'stepName',
-                    key: 'stepName'
+                    key: 'stepName',
                   },
                   {
                     title: '完成',
                     dataIndex: 'completedCount',
-                    key: 'completedCount'
+                    key: 'completedCount',
                   },
                   {
                     title: '失败',
                     dataIndex: 'failedCount',
-                    key: 'failedCount'
+                    key: 'failedCount',
                   },
                   {
                     title: '待处理',
                     dataIndex: 'pendingCount',
-                    key: 'pendingCount'
+                    key: 'pendingCount',
                   },
                   {
                     title: '运行中',
                     dataIndex: 'runningCount',
-                    key: 'runningCount'
+                    key: 'runningCount',
                   },
                   {
                     title: '跳过',
                     dataIndex: 'skippedCount',
-                    key: 'skippedCount'
+                    key: 'skippedCount',
                   },
                   {
                     title: '总计',
                     dataIndex: 'totalCount',
-                    key: 'totalCount'
-                  }
+                    key: 'totalCount',
+                  },
                 ]}
                 expandable={{
                   expandedRowRender: (step) => (
                     <div style={{ padding: '8px 16px', background: '#fafafa' }}>
-                      {step.machineSteps.map(machine => (
-                        <Descriptions 
+                      {step.machineSteps.map((machine) => (
+                        <Descriptions
                           key={machine.machineId}
                           bordered
                           size="small"
@@ -398,15 +429,24 @@ export default function LogstashManagementPage() {
                           <Descriptions.Item label="名称">{machine.machineName}</Descriptions.Item>
                           <Descriptions.Item label="IP">{machine.machineIp}</Descriptions.Item>
                           <Descriptions.Item label="状态">
-                            <Tag color={
-                              machine.status === 'COMPLETED' ? 'success' : 
-                              machine.status === 'FAILED' ? 'error' : 'processing'
-                            }>
+                            <Tag
+                              color={
+                                machine.status === 'COMPLETED'
+                                  ? 'success'
+                                  : machine.status === 'FAILED'
+                                    ? 'error'
+                                    : 'processing'
+                              }
+                            >
                               {machine.status}
                             </Tag>
                           </Descriptions.Item>
-                          <Descriptions.Item label="开始时间">{machine.startTime}</Descriptions.Item>
-                          <Descriptions.Item label="结束时间">{machine.endTime || '-'}</Descriptions.Item>
+                          <Descriptions.Item label="开始时间">
+                            {machine.startTime}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="结束时间">
+                            {machine.endTime || '-'}
+                          </Descriptions.Item>
                           {machine.errorMessage && (
                             <Descriptions.Item label="错误信息" span={2}>
                               {machine.errorMessage}
@@ -415,7 +455,7 @@ export default function LogstashManagementPage() {
                         </Descriptions>
                       ))}
                     </div>
-                  )
+                  ),
                 }}
               />
             </div>
