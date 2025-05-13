@@ -1,73 +1,75 @@
-import { useState, useEffect } from 'react'
-import { Card, Table, Button, Space, Input, Select, Breadcrumb } from 'antd'
-import { App } from 'antd'
-import { getUsers } from '../../api/user'
-import type { ColumnsType } from 'antd/es/table'
+import { useState, useEffect } from 'react';
+import { Card, Table, Button, Space, Input, Select, Breadcrumb } from 'antd';
+import { App } from 'antd';
+import { getUsers } from '../../api/user';
+import type { ColumnsType } from 'antd/es/table';
 import {
   grantTablePermission,
   getUserDatasourcePermissions,
   getMyTablePermissions,
-  revokePermissionById
-} from '../../api/permission'
-import type { DatasourcePermission, TablePermission } from '../../types/permissionTypes'
-import { HomeOutlined } from '@ant-design/icons'
-import { Link } from 'react-router-dom'
+  revokePermissionById,
+} from '../../api/permission';
+import type { DatasourcePermission, TablePermission } from '../../types/permissionTypes';
+import { HomeOutlined } from '@ant-design/icons';
+import { Link } from 'react-router-dom';
 
 const PermissionManagementPage = () => {
-  const { message, modal } = App.useApp()
-  const [permissions, setPermissions] = useState<DatasourcePermission[]>([])
-  const [loading, setLoading] = useState(false)
+  const { message, modal } = App.useApp();
+  const [permissions, setPermissions] = useState<DatasourcePermission[]>([]);
+  const [loading, setLoading] = useState(false);
   const [searchParams, setSearchParams] = useState({
     userId: '',
-    datasourceId: ''
-  })
-  const [users, setUsers] = useState<{label: string, value: string}[]>([])
-  const [selectedUser, setSelectedUser] = useState<string>()
+    datasourceId: '',
+  });
+  const [users, setUsers] = useState<{ label: string; value: string }[]>([]);
+  const [selectedUser, setSelectedUser] = useState<string>();
 
   // 获取权限列表
   const fetchPermissions = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       if (searchParams.userId && searchParams.datasourceId) {
         const data = await getUserDatasourcePermissions(
           searchParams.userId,
-          searchParams.datasourceId
-        )
-        setPermissions(data)
+          searchParams.datasourceId,
+        );
+        setPermissions(data);
       } else {
-        const data = await getMyTablePermissions()
-        setPermissions(data)
+        const data = await getMyTablePermissions();
+        setPermissions(data);
       }
     } catch {
-      message.error('获取权限列表失败')
+      message.error('获取权限列表失败');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchPermissions()
-  }, [searchParams])
+    fetchPermissions();
+  }, [searchParams]);
 
   // 授予权限 (保留用于未来扩展)
   useEffect(() => {
     const loadUsers = async () => {
       try {
-        const userList = await getUsers()
-        setUsers(userList.map(user => ({
-          label: user.nickname ?? user.username,
-          value: user.id
-        })))
+        const userList = await getUsers();
+        setUsers(
+          userList.map((user) => ({
+            label: user.nickname ?? user.username,
+            value: user.id,
+          })),
+        );
       } catch {
-        message.error('加载用户列表失败')
+        message.error('加载用户列表失败');
       }
-    }
-    loadUsers()
-  }, [])
+    };
+    loadUsers();
+  }, []);
 
-  const handleGrant = async (datasourceId: string, tableName: string) => {
-    let currentSelectedUser = selectedUser
-    
+  const handleGrant = async (moduleName: string) => {
+    let currentSelectedUser = selectedUser;
+
     modal.confirm({
       title: '授予表权限',
       content: (
@@ -78,8 +80,8 @@ const PermissionManagementPage = () => {
             options={users}
             placeholder="请选择用户"
             onChange={(value) => {
-              currentSelectedUser = value
-              setSelectedUser(value)
+              currentSelectedUser = value;
+              setSelectedUser(value);
             }}
           />
         </div>
@@ -88,43 +90,45 @@ const PermissionManagementPage = () => {
       cancelText: '取消',
       onOk: async () => {
         if (!currentSelectedUser) {
-          message.error('请选择用户')
-          return Promise.reject()
+          message.error('请选择用户');
+          return Promise.reject();
         }
         try {
-          await grantTablePermission(currentSelectedUser, datasourceId, tableName)
-          message.success('权限授予成功')
-          fetchPermissions()
-          return Promise.resolve()
+          await grantTablePermission(currentSelectedUser, {
+            module: moduleName,
+          });
+          message.success('权限授予成功');
+          fetchPermissions();
+          return Promise.resolve();
         } catch {
-          message.error('权限授予失败')
-          return Promise.reject()
+          message.error('权限授予失败');
+          return Promise.reject();
         }
-      }
-    })
-  }
+      },
+    });
+  };
 
   // 撤销权限
   const handleRevoke = async (permissionId: string) => {
     if (!permissionId) {
-      message.error('无效的权限ID')
-      return
+      message.error('无效的权限ID');
+      return;
     }
     try {
-      await revokePermissionById(permissionId)
-      message.success('权限撤销成功')
-      fetchPermissions()
+      await revokePermissionById(permissionId);
+      message.success('权限撤销成功');
+      fetchPermissions();
     } catch {
-      message.error('权限撤销失败')
+      message.error('权限撤销失败');
     }
-  }
+  };
 
   const expandedRowRender = (record: DatasourcePermission) => {
     const columns: ColumnsType<TablePermission> = [
       {
         title: '表名',
-        dataIndex: 'tableName',
-        key: 'tableName',
+        dataIndex: 'moduleName',
+        key: 'moduleName',
       },
       {
         title: '操作',
@@ -132,36 +136,24 @@ const PermissionManagementPage = () => {
         render: (_, table) => (
           <Space size="middle">
             {table.permissionId && (
-              <Button
-                type="link"
-                danger
-                onClick={() => handleRevoke(table.permissionId as string)}
-              >
+              <Button type="link" danger onClick={() => handleRevoke(table.permissionId as string)}>
                 撤销
               </Button>
             )}
             {!table.permissionId && (
-              <Button
-                type="link"
-                onClick={() => handleGrant(record.datasourceId.toString(), table.tableName)}
-              >
+              <Button type="link" onClick={() => handleGrant(table.moduleName)}>
                 授予
               </Button>
             )}
           </Space>
-        )
-      }
-    ]
+        ),
+      },
+    ];
 
     return (
-      <Table
-        columns={columns}
-        dataSource={record.tables}
-        rowKey="tableName"
-        pagination={false}
-      />
-    )
-  }
+      <Table columns={columns} dataSource={record.modules} rowKey="tableName" pagination={false} />
+    );
+  };
 
   const columns: ColumnsType<DatasourcePermission> = [
     {
@@ -178,8 +170,8 @@ const PermissionManagementPage = () => {
       title: '数据库名',
       dataIndex: 'databaseName',
       key: 'databaseName',
-    }
-  ]
+    },
+  ];
 
   return (
     <Card>
@@ -195,17 +187,13 @@ const PermissionManagementPage = () => {
         <Input
           placeholder="用户ID"
           value={searchParams.userId}
-          onChange={(e) =>
-            setSearchParams({ ...searchParams, userId: e.target.value })
-          }
+          onChange={(e) => setSearchParams({ ...searchParams, userId: e.target.value })}
           allowClear
         />
         <Input
           placeholder="数据源ID"
           value={searchParams.datasourceId}
-          onChange={(e) =>
-            setSearchParams({ ...searchParams, datasourceId: e.target.value })
-          }
+          onChange={(e) => setSearchParams({ ...searchParams, datasourceId: e.target.value })}
           allowClear
         />
         <Button type="primary" onClick={fetchPermissions}>
@@ -219,11 +207,11 @@ const PermissionManagementPage = () => {
         loading={loading}
         expandable={{
           expandedRowRender,
-          rowExpandable: (record) => record.tables.length > 0,
+          rowExpandable: (record) => record.modules.length > 0,
         }}
       />
     </Card>
-  )
-}
+  );
+};
 
-export default PermissionManagementPage
+export default PermissionManagementPage;

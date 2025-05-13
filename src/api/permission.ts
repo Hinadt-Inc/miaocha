@@ -10,10 +10,9 @@ import type { DatasourcePermission } from '../types/permissionTypes';
  */
 export function grantTablePermission(
   userId: string,
-  datasourceId: string,
-  tableName: string,
+  query: { module: string },
 ): Promise<DatasourcePermission> {
-  return post(`/api/permissions/user/${userId}/datasource/${datasourceId}/table/${tableName}`);
+  return post(`/api/permissions/modules/user/${userId}/grant?module=${query.module}`);
 }
 
 /**
@@ -52,7 +51,8 @@ export function getUserDatasourcePermissions(
  * @returns Promise<DatasourcePermission[]>
  */
 export function getMyTablePermissions(): Promise<DatasourcePermission[]> {
-  return get('/api/permissions/my/tables');
+  // return get('/api/permissions/my/tables');
+  return get('/api/permissions/modules/my');
 }
 
 /**

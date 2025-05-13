@@ -2,7 +2,16 @@
 export interface DataSource {
   id: string;
   name: string;
-  type: 'mysql' | 'postgresql' | 'sqlserver' | 'oracle' | 'mongodb' | 'redis' | 'elasticsearch' | 'clickhouse' | 'hive';
+  type:
+    | 'mysql'
+    | 'postgresql'
+    | 'sqlserver'
+    | 'oracle'
+    | 'mongodb'
+    | 'redis'
+    | 'elasticsearch'
+    | 'clickhouse'
+    | 'hive';
   host: string;
   port: number;
   username: string;
@@ -12,6 +21,9 @@ export interface DataSource {
   status?: 'active' | 'inactive';
   createdAt: string;
   updatedAt: string;
+  jdbcParams?: {
+    connectTimeout: number;
+  };
 }
 
 // 创建数据源请求参数
@@ -24,6 +36,9 @@ export interface CreateDataSourceParams {
   password: string;
   database: string;
   description?: string;
+  jdbcParams?: {
+    connectTimeout: number;
+  };
 }
 
 // 更新数据源请求参数
@@ -39,4 +54,7 @@ export interface TestConnectionParams {
   username: string;
   password: string;
   database: string;
+  jdbcParams?: {
+    connectTimeout: number;
+  };
 }
