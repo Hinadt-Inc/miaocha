@@ -64,23 +64,19 @@ const DataSourceManagementPage = () => {
 
   // 在组件挂载后自动加载数据源数据
   useEffect(() => {
-    // 只在数据未加载时请求一次
-    if (!dataSourcesLoaded) {
-      setTableLoading(true);
-      getAllDataSources()
-        .then((data) => {
-          if (data) {
-            setAllDataSources(data);
-            setDataSourcesLoaded(true);
-          }
-        })
-        .catch(() => {
-          message.error('获取数据源列表失败');
-        })
-        .finally(() => {
-          setTableLoading(false);
-        });
-    }
+    setTableLoading(true);
+    getAllDataSources()
+      .then((data) => {
+        if (data) {
+          setAllDataSources(data);
+        }
+      })
+      .catch(() => {
+        message.error('获取数据源列表失败');
+      })
+      .finally(() => {
+        setTableLoading(false);
+      });
   }, []); // 空依赖数组，只在组件挂载时执行一次
 
   // 获取数据源列表
@@ -92,62 +88,51 @@ const DataSourceManagementPage = () => {
     _: Record<string, SortOrder>,
     __: Record<string, (string | number)[] | null>,
   ) => Promise<RequestData<DataSourceItem>> = async (params) => {
-    // 只有初次加载或者明确需要刷新数据时才请求接口
-    if (!dataSourcesLoaded) {
-      setTableLoading(true);
-      try {
-        const data = await getAllDataSources();
-        if (!data) {
-          return {
-            data: [],
-            success: false,
-            total: 0,
-          };
-        }
-        // 存储所有数据到状态中
-        setAllDataSources(data);
-        setDataSourcesLoaded(true);
-      } catch {
-        message.error('获取数据源列表失败');
+    try {
+      const data = await getAllDataSources();
+      if (!data) {
         return {
           data: [],
           success: false,
           total: 0,
         };
-      } finally {
-        setTableLoading(false);
       }
+
+      // 直接使用最新获取的数据进行过滤
+      let filteredData = [...data];
+
+      // 使用 searchKeyword 状态进行前端筛选
+      const keyword = searchKeyword.trim();
+      if (keyword) {
+        const lowercaseKeyword = keyword.toLowerCase();
+        filteredData = filteredData.filter(
+          (item) =>
+            item.name.toLowerCase().includes(lowercaseKeyword) ||
+            item.database.toLowerCase().includes(lowercaseKeyword) ||
+            ((item.host || (item as any).ip) &&
+              (item.host || (item as any).ip).toLowerCase().includes(lowercaseKeyword)) ||
+            (item.description && item.description.toLowerCase().includes(lowercaseKeyword)),
+        );
+      }
+
+      // 分页处理
+      const pageSize = params.pageSize ?? 10;
+      const current = params.current ?? 1;
+      const start = (current - 1) * pageSize;
+      const end = start + pageSize;
+
+      return {
+        data: filteredData.slice(start, end),
+        success: true,
+        total: filteredData.length,
+      };
+    } catch {
+      return {
+        data: [],
+        success: false,
+        total: 0,
+      };
     }
-
-    // 前端本地搜索（使用缓存数据）
-    let filteredData = [...allDataSources]; // 使用状态中存储的数据
-
-    // 使用 searchKeyword 状态进行前端筛选
-    const keyword = searchKeyword.trim();
-
-    if (keyword) {
-      const lowercaseKeyword = keyword.toLowerCase();
-      filteredData = filteredData.filter(
-        (item) =>
-          item.name.toLowerCase().includes(lowercaseKeyword) ||
-          item.database.toLowerCase().includes(lowercaseKeyword) ||
-          ((item.host || (item as any).ip) &&
-            (item.host || (item as any).ip).toLowerCase().includes(lowercaseKeyword)) ||
-          (item.description && item.description.toLowerCase().includes(lowercaseKeyword)),
-      );
-    }
-
-    // 分页处理
-    const pageSize = params.pageSize ?? 10;
-    const current = params.current ?? 1;
-    const start = (current - 1) * pageSize;
-    const end = start + pageSize;
-
-    return {
-      data: filteredData.slice(start, end),
-      success: true,
-      total: filteredData.length,
-    };
   };
 
   // 删除数据源
@@ -408,11 +393,6 @@ const DataSourceManagementPage = () => {
               <Input.Search
                 placeholder="搜索数据源名称/主机/数据库/描述"
                 allowClear
-                enterButton={
-                  <>
-                    <SearchOutlined /> 搜索
-                  </>
-                }
                 style={{ width: 300 }}
                 onChange={(e) => {
                   // 当输入变化时立即搜索，提供更即时的反馈
@@ -437,7 +417,7 @@ const DataSourceManagementPage = () => {
             </div>,
           ]}
           request={fetchDataSources}
-          defaultData={allDataSources.length > 0 ? allDataSources.slice(0, 10) : []}
+          defaultData={[]}
           columns={columns}
           pagination={{
             pageSize: 10,
