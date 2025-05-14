@@ -1,55 +1,99 @@
 import { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
-import { Layout, Space, Button, Modal, Form, Input, Select, Tag, Skeleton } from 'antd';
-import { getOperatorsByFieldType, getFieldTypeColor, throttle } from '@/utils/logDataHelpers';
-import {
-  CompressOutlined,
-  ExpandOutlined,
-  PlusOutlined,
-  InfoCircleOutlined,
-} from '@ant-design/icons';
+import { Space, Modal, Statistic, Spin } from 'antd';
+import { throttle } from '@/utils/logDataHelpers';
 import { useRequest } from 'ahooks';
 import { useLogData } from '@/hooks/useLogData';
 import { useFilters } from '@/hooks/useFilters';
-import { useGlobalLoading } from '@/hooks/useLoading';
 import SearchBar from './SearchBar';
-import { DataTable } from '@/components/HomePage/DataTable';
+import Log from './Log';
 import SiderComponent from './Sider';
 import * as api from '@/api/permission';
-import { getTableColumns } from '@/api/logs';
-import Loading from '@/components/Loading';
+import { getTableColumns, searchLogs } from '@/api/logs';
 import styles from './index.module.less';
 
 // 使用懒加载优化初始加载时间
-const HistogramChart = lazy(() =>
-  import('@/components/HomePage/HistogramChart').then((module) => ({
-    default: module.HistogramChart,
-  })),
-);
+const HistogramChart = lazy(() => import('./HistogramChart'));
+
 const KibanaTimePicker = lazy(() =>
   import('@/components/HomePage/KibanaTimePicker').then((module) => ({
     default: module.KibanaTimePicker,
   })),
 );
 
-const { Content, Sider } = Layout;
-
-interface TableColumn {
-  columnName: string;
-  dataType: string;
-  columnComment?: string;
-  isPrimaryKey?: boolean;
-  isNullable?: boolean;
-}
-
-interface TablePermission {
-  tableName: string;
-  tableComment?: string;
-  columns?: TableColumn[];
-}
-
 const HomePage = () => {
-  const [form] = Form.useForm();
-  const [collapsed, setCollapsed] = useState(false);
+  // 模块名称列表，用于字段选择等组件
+  const [moduleNames, setModuleNames] = useState<IStatus[]>([]);
+
+  // 日志数据
+  const [log, setLog] = useState<ISearchLogsResponse | null>(null);
+
+  const [searchParams, setSearchParams] = useState<ISearchLogsParams>({
+    pageSize: 20,
+    datasourceId: undefined,
+    module: undefined,
+  });
+
+  // 监听 searchParams 变化，执行 fetchLog
+  const fetchLog = useRequest(searchLogs, {
+    manual: true,
+    onSuccess: (res) => {
+      const { rows } = res;
+      // 为每条记录添加唯一ID
+      (rows || []).map((item, index) => {
+        item.key = `${Date.now()}-${index}`;
+      });
+      setLog(res);
+    },
+  });
+
+  useEffect(() => {
+    // 只判断 datasourceId，因为这是查询的必要参数
+    if (searchParams.datasourceId) {
+      fetchLog.run({
+        ...searchParams,
+        pageSize: searchParams.pageSize,
+      });
+    }
+  }, [searchParams]);
+
+  // 获取模块名称
+  const fetchModuleNames = useRequest(api.getMyModules, {
+    onSuccess: (res) => {
+      const target: IStatus[] = [];
+      res?.forEach((item) => {
+        const { modules, datasourceId, datasourceName } = item;
+        const sub = {};
+        Object.assign(sub, {
+          label: String(datasourceName),
+          value: String(datasourceId),
+        });
+        const children: IStatus[] = [];
+        if (modules?.length > 0) {
+          const names = modules?.map((m: any) => ({
+            value: String(m.moduleName),
+            label: String(m.moduleName),
+          }));
+          children.push(...names);
+        }
+        Object.assign(sub, {
+          children,
+        });
+        target.push(sub);
+      });
+
+      // 如果 searchParams 中没有 datasourceId，则使用第一个数据源的 ID
+      if (target[0] && (!searchParams.datasourceId || !searchParams.module)) {
+        setSearchParams((prev) => ({
+          ...prev,
+          datasourceId: Number(target[0].value),
+          module: target[0]?.children[0]?.value,
+        }));
+      }
+      setModuleNames(target);
+    },
+  });
+
+  // 旧的 ================================
   const [selectedFields, setSelectedFields] = useState<string[]>(['log_time', 'message']);
   const [viewMode, setViewMode] = useState<'table' | 'json'>('table');
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,14 +104,6 @@ const HomePage = () => {
   const [timeDisplayText, setTimeDisplayText] = useState<string | undefined>(undefined);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedTable, setSelectedTable] = useState<string>('');
-
-  // 模块名称
-  const [moduleNames, setModuleNames] = useState<string[]>([]);
-
-  // 使用全局加载状态
-  // const { isLoading: isGlobalLoading, startLoading, endLoading } = useGlobalLoading();
-
-  // 使用refs优化状态管理，减少重新渲染
   const lastAddedFieldRef = useRef<string | null>(null);
   const lastRemovedFieldRef = useRef<string | null>(null);
   const [renderKey, setRenderKey] = useState<number>(0); // 用于强制更新UI的key
@@ -196,37 +232,7 @@ const HomePage = () => {
   // 使用useMemo优化搜索参数构建，减少不必要的对象创建
   const [timeGrouping, setTimeGrouping] = useState<'minute' | 'hour' | 'day' | 'month'>('minute');
 
-  const searchParams = useMemo(
-    () => ({
-      datasourceId: selectedTable ? Number(selectedTable.split('-')[0]) : 1,
-      tableName: selectedTable ? selectedTable.split('-')[1] : '',
-      keyword: searchQuery,
-      whereSql: whereSql,
-      timeRange: timeRange ? `${timeRange[0]}-${timeRange[1]}` : undefined,
-      timeGrouping: timeGrouping,
-      pageSize: 50,
-      offset: 0,
-      fields: selectedFields,
-      startTime: timeRange ? timeRange[0] : undefined,
-      endTime: timeRange ? timeRange[1] : undefined,
-    }),
-    [selectedTable, searchQuery, whereSql, timeRange, selectedFields, timeGrouping],
-  );
-
-  // 初始化，获取模块
-  const { loading: moduleNamesLoading, run: getMyModules } = useRequest(api.getMyModules, {
-    // manual: true,
-    onSuccess: (res: []) => {
-      console.log(111, res);
-      const target: string[] = [];
-      res?.forEach((item: any) => {
-        const { modules } = item;
-        const names = modules?.map((sub: any) => sub.moduleName);
-        target.push(...names);
-      });
-      setModuleNames(target);
-    },
-  });
+  console.log('timeGrouping', timeGrouping);
 
   // 获取表权限数据，优化为仅在组件挂载时执行一次
   useEffect(() => {
@@ -392,44 +398,48 @@ const HomePage = () => {
   // 优化字段选择组件的props
   const fieldSelectorProps = useMemo(
     () => ({
-      selectedTable,
-      availableFields,
-      selectedFields,
-      onToggleField: toggleFieldSelection,
-      lastAddedField: lastAddedFieldRef.current,
-      lastRemovedField: lastRemovedFieldRef.current,
-      availableTables: availableTablesRef.current,
-      onTableChange: handleTableChange,
-      collapsed,
-      loading: fieldLoading,
+      // selectedTable,
+      // availableFields,
+      // selectedFields,
+      // onToggleField: toggleFieldSelection,
+      // lastAddedField: lastAddedFieldRef.current,
+      // lastRemovedField: lastRemovedFieldRef.current,
+      // availableTables: availableTablesRef.current,
+      // onTableChange: handleTableChange,
+      // collapsed,
+      // loading: fieldLoading,
+      moduleNames,
+      fetchModuleNames,
     }),
     [
-      selectedTable,
-      availableFields,
-      selectedFields,
-      toggleFieldSelection,
-      collapsed,
-      renderKey,
-      fieldLoading,
-      handleTableChange,
+      // selectedTable,
+      // availableFields,
+      // selectedFields,
+      // toggleFieldSelection,
+      // collapsed,
+      // renderKey,
+      // fieldLoading,
+      // handleTableChange,
       moduleNames,
-      moduleNamesLoading,
+      fetchModuleNames,
     ],
   );
 
   // 优化DataTable组件的props
   const dataTableProps = useMemo(
     () => ({
-      data: tableData,
-      loading,
-      hasMore,
-      selectedFields,
-      searchQuery,
-      viewMode,
-      onScroll: handleScroll,
-      lastAddedField: lastAddedFieldRef.current,
+      log,
+      // data: tableData,
+      fetchLog,
+      // hasMore,
+      // selectedFields,
+      // searchQuery,
+      // viewMode,
+      // onScroll: handleScroll,
+      // lastAddedField: lastAddedFieldRef.current,
     }),
-    [tableData, loading, hasMore, selectedFields, searchQuery, viewMode, handleScroll, renderKey],
+    // [tableData, loading, hasMore, selectedFields, searchQuery, viewMode, handleScroll, renderKey],
+    [log, fetchLog],
   );
 
   // 优化视图模式切换的处理函数
@@ -451,7 +461,7 @@ const HomePage = () => {
   //   });
   // }, [showHistogram, distributionData]);
 
-  const [siderWidth, setSiderWidth] = useState(280);
+  const [siderWidth, setSiderWidth] = useState(200);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartX = useRef(0);
   const dragStartWidth = useRef(0);
@@ -493,7 +503,8 @@ const HomePage = () => {
   }, [isDragging, handleDragMove, handleDragEnd]);
 
   return (
-    <Layout className={styles.layoutMain}>
+    <div className={styles.layout}>
+      {/* 搜索 */}
       <SearchBar
         searchQuery={searchQuery}
         whereSql={whereSql}
@@ -508,57 +519,22 @@ const HomePage = () => {
         onTimeRangeChange={handleTimeRangeChange}
         onOpenTimeSelector={() => setShowTimePicker(true)}
         onTimeGroupingChange={setTimeGrouping}
+        totalCount={log?.totalCount}
       />
 
-      <Layout className={styles.layoutContent}>
-        <Sider className={styles.siderContainer} width={siderWidth}>
+      <div className={styles.container}>
+        {/* 模块 */}
+        <div className={styles.left} style={{ width: siderWidth }}>
           <SiderComponent {...fieldSelectorProps} />
           <div className={styles.dragHandle} onMouseDown={handleDragStart} />
-        </Sider>
+        </div>
 
-        <Content className={styles.contentContainer}>
-          <div className={styles.tableHeader}>
-            <div>
-              <span>
-                找到 <b>{totalCount}</b> 条记录
-              </span>
-              {!selectedTable && (
-                <Tag color="warning" icon={<InfoCircleOutlined />}>
-                  请选择数据表
-                </Tag>
-              )}
-            </div>
-            <Space>
-              {!showHistogram && distributionData && distributionData.length > 0 && (
-                <Button
-                  size="small"
-                  type="text"
-                  icon={<PlusOutlined />}
-                  onClick={() => handleToggleHistogram(true)}
-                >
-                  显示直方图
-                </Button>
-              )}
-              <Space.Compact>
-                <Button
-                  type={viewMode === 'table' ? 'primary' : 'default'}
-                  icon={<CompressOutlined />}
-                  onClick={() => handleViewModeChange('table')}
-                />
-                <Button
-                  type={viewMode === 'json' ? 'primary' : 'default'}
-                  icon={<ExpandOutlined />}
-                  onClick={() => handleViewModeChange('json')}
-                />
-              </Space.Compact>
-            </Space>
-          </div>
-          <div className={styles.scrollContainer} onScroll={handleScroll}>
-            <DataTable {...dataTableProps} />
-          </div>
-        </Content>
-      </Layout>
-    </Layout>
+        {/* 内容 */}
+        <div className={styles.right}>
+          <Log {...dataTableProps} />
+        </div>
+      </div>
+    </div>
   );
 };
 

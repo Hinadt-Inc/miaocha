@@ -12,6 +12,7 @@ import {
   Flex,
   Row,
   Col,
+  Statistic,
 } from 'antd';
 import {
   SearchOutlined,
@@ -87,6 +88,7 @@ interface SearchBarProps {
   timeRangePreset?: string | null;
   timeDisplayText?: string;
   timeGrouping?: 'minute' | 'hour' | 'day' | 'month';
+  totalCount?: number;
   onSearch: (query: string) => void;
   onWhereSqlChange: (sql: string) => void;
   onSubmitSearch: () => void;
@@ -103,6 +105,7 @@ const SearchBar = ({
   timeRangePreset,
   timeDisplayText,
   timeGrouping,
+  totalCount = 0,
   onSearch,
   onWhereSqlChange,
   onSubmitSearch,
@@ -428,125 +431,118 @@ const SearchBar = ({
   ]);
 
   return (
-    <div className={styles.searchBarContainer}>
-      <Card>
-        <div className={styles.searchSections}>
-          <div className={styles.item}>
-            <Space.Compact style={{ width: '100%' }}>
-              <AutoComplete
-                allowClear
-                placeholder="输入关键词搜索"
-                style={{ width: '100%' }}
-                value={searchInputValue}
-                onChange={handleSearchInputChange}
-                options={searchHistory.map((query) => ({
-                  value: query,
-                  label: query,
-                }))}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleKeywordSearch();
-                  }
-                }}
-              />
-            </Space.Compact>
-          </div>
-
-          <div className={styles.item}>
-            <Space.Compact style={{ width: '100%' }}>
-              <AutoComplete
-                allowClear
-                placeholder="SQL语句，如: level = 'ERROR' AND marker.reqType = 'EXECUTE'"
-                style={{ width: '100%' }}
-                value={sqlInputValue}
-                onChange={handleSqlInputChange}
-                options={[
-                  ...sqlHistory.map((sql) => ({
-                    value: sql,
-                    label: sql,
-                  })),
-                  ...LOG_FIELDS.map((field) => ({
-                    value: `${field.value} = ''`,
-                    label: `${field.label}: ${field.example}`,
-                  })),
-                ]}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSqlSearch();
-                  }
-                }}
-              />
-              {/* <Button icon={<CodeOutlined />} type="primary" onClick={handleSqlSearch} /> */}
-            </Space.Compact>
-          </div>
-          <div className={styles.item}>
-            <Button size="small" type="primary" onClick={handleKeywordSearch}>
-              搜索
-            </Button>
-          </div>
-          <div className={styles.item}>
-            <Space className={styles.space}>
-              <Dropdown menu={{ items: templateMenuItems }} trigger={['hover']}>
-                <Button type="link" size="small">
-                  模板
-                </Button>
-              </Dropdown>
-              {/* <Button
-                  type="text"
-                  size="small"
-                  icon={<TagsOutlined />}
-                  onClick={() => setShowFieldSelector(!showFieldSelector)}
-                >
-                  字段筛选
-                </Button> */}
-              <Button
-                type="link"
-                size="small"
-                onClick={() => {
-                  if (whereSql) {
-                    const name = prompt('请输入查询名称:');
-                    if (name) saveCurrentQuery(name);
-                  } else {
-                    alert('请先输入查询条件');
-                  }
-                }}
-              >
-                保存查询
-              </Button>
-              {/* 将Dropdown替换为Popover */}
-              <Popover
-                content={
-                  <KibanaTimePicker
-                    value={timeRange!}
-                    presetKey={timeRangePreset ?? undefined}
-                    onChange={(range, preset, displayText) => {
-                      if (onTimeRangeChange) {
-                        onTimeRangeChange(range, preset, displayText);
-                        setActiveFilters((prev) => ({ ...prev, time: true }));
-                        setShowTimePicker(false);
-                      }
-                    }}
-                    timeGrouping={timeGrouping}
-                    onTimeGroupingChange={onTimeGroupingChange}
-                  />
-                }
-                trigger="hover"
-                open={showTimePicker}
-                onOpenChange={setShowTimePicker}
-                placement="bottomRight"
-                style={{ width: 'auto', maxWidth: '450px' }}
-                arrow={true}
-              >
-                <Button type="link" size="small">
-                  时间范围
-                </Button>
-              </Popover>
-            </Space>
-          </div>
+    <div className={styles.searchBar}>
+      <div className={styles.top}>
+        <div className={styles.left}>
+          <Space>
+            找到
+            <b>
+              <Statistic value={totalCount} />
+            </b>
+            条记录
+          </Space>
         </div>
-        {/* 显示过滤条件标签 */}
+        <div className={styles.right}>
+          <Dropdown menu={{ items: templateMenuItems }} trigger={['hover']}>
+            <Button type="link" size="small">
+              模板
+            </Button>
+          </Dropdown>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => {
+              if (whereSql) {
+                const name = prompt('请输入查询名称:');
+                if (name) saveCurrentQuery(name);
+              } else {
+                alert('请先输入查询条件');
+              }
+            }}
+          >
+            保存查询
+          </Button>
+          {/* 将Dropdown替换为Popover */}
+          <Popover
+            content={
+              <KibanaTimePicker
+                value={timeRange!}
+                presetKey={timeRangePreset ?? undefined}
+                onChange={(range, preset, displayText) => {
+                  if (onTimeRangeChange) {
+                    onTimeRangeChange(range, preset, displayText);
+                    setActiveFilters((prev) => ({ ...prev, time: true }));
+                    setShowTimePicker(false);
+                  }
+                }}
+                timeGrouping={timeGrouping}
+                onTimeGroupingChange={onTimeGroupingChange}
+              />
+            }
+            trigger="hover"
+            open={showTimePicker}
+            onOpenChange={setShowTimePicker}
+            placement="bottomRight"
+            style={{ width: 'auto', maxWidth: '450px' }}
+            arrow={true}
+          >
+            <Button type="link" size="small">
+              时间范围
+            </Button>
+          </Popover>
+        </div>
+      </div>
+      <div className={styles.form}>
+        <div className={styles.item}>
+          <Space.Compact style={{ width: '100%' }}>
+            <AutoComplete
+              allowClear
+              placeholder="输入关键词搜索"
+              style={{ width: '100%' }}
+              value={searchInputValue}
+              onChange={handleSearchInputChange}
+              options={searchHistory.map((query) => ({
+                value: query,
+                label: query,
+              }))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleKeywordSearch();
+                }
+              }}
+            />
+          </Space.Compact>
+        </div>
+        <div className={styles.item}>
+          <Space.Compact style={{ width: '100%' }}>
+            <AutoComplete
+              allowClear
+              placeholder="输入关键词搜索"
+              style={{ width: '100%' }}
+              value={searchInputValue}
+              onChange={handleSearchInputChange}
+              options={searchHistory.map((query) => ({
+                value: query,
+                label: query,
+              }))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleKeywordSearch();
+                }
+              }}
+            />
+          </Space.Compact>
+        </div>
+        <div className={styles.item}>
+          <Button size="small" type="primary" onClick={handleKeywordSearch}>
+            搜索
+          </Button>
+        </div>
+      </div>
+
+      <div className={styles.footer}>
         {(activeFilters.keywords || activeFilters.sql || activeFilters.time) && filterTags}
-      </Card>
+      </div>
     </div>
   );
 };

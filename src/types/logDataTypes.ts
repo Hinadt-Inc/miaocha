@@ -1,6 +1,6 @@
 // 过滤器操作符类型
-export type FilterOperator = 
-  | 'is' // 等于 
+export type FilterOperator =
+  | 'is' // 等于
   | 'is_not' // 不等于
   | 'contains' // 包含
   | 'does_not_contain' // 不包含
@@ -10,7 +10,7 @@ export type FilterOperator =
   | 'is_not_one_of' // 不是其中之一
   | 'greater_than' // 大于
   | 'less_than' // 小于
-  | 'is_between' // 在...之间
+  | 'is_between'; // 在...之间
 
 // 过滤器类型定义
 export interface Filter {
@@ -33,8 +33,7 @@ export interface LogData {
     timePoint: string;
     count: number;
   }>;
-  [key: string]: unknown;
-  
+  [key: string]: any;
 }
 
 // 表格类型定义
@@ -58,7 +57,7 @@ export interface UseFiltersReturn {
   selectedFilterOperator: FilterOperator;
   openFilterModal: () => void;
   handleFilterFieldChange: (fieldName: string) => void;
-  addFilter: (values: { 
+  addFilter: (values: {
     field: string;
     operator: FilterOperator;
     value: string | string[] | [number, number] | null;

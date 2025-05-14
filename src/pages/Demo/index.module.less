@@ -1,0 +1,25 @@
+/* 登录页面主容器 */
+.loginPage {
+  height: calc(100vh - 56px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  .top {
+    background-color: red;
+  }
+  .bottom {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    .left {
+      width: 200px;
+      background-color: blue;
+    }
+    .right {
+      flex: 1;
+      background-color: green;
+      overflow-y: auto;
+      height: 100%;
+    }
+  }
+}
