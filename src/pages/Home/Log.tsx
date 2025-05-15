@@ -38,9 +38,11 @@ const Log = (props: IProps) => {
 
   return (
     <div className={styles.logContainer}>
-      <Suspense fallback={<></>}>
-        <HistogramChart data={log?.distributionData} />
-      </Suspense>
+      <div className={styles.chart}>
+        <Suspense fallback={<></>}>
+          <HistogramChart data={log?.distributionData} />
+        </Suspense>
+      </div>
       <div className={styles.table}>
         <VirtualTable
           data={allRows}

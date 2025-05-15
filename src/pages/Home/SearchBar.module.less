@@ -6,16 +6,20 @@
     justify-content: space-between;
     margin-top: 4px;
     .left {
-      font-size: 14px;
+      font-size: 12px;
       :global {
         .ant-statistic-content {
           font-size: 14px;
+          color: #000;
         }
       }
 
     }
     .right {
       :global {
+        .ant-btn {
+          font-size: 13px;
+        }
         .ant-btn:last-child {
           padding-right: 0;
         }
@@ -35,16 +39,43 @@
       &:nth-child(2) {
         flex: 1;
       }
+      &:last-child {
+        :global {
+         .ant-btn {
+            font-size: 13px;
+            height: 30px;
+            padding: 0 12px;
+          }
+        }
+      }
     }
   }
   .footer {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    margin-top: 8px;
-    .filterTags {
+    margin-top: 4px;
+    padding-bottom: 8px;
+    .filter {
       display: flex;
       flex-wrap: wrap;
+      :global {
+        .ant-space {
+          column-gap: 0;
+          row-gap: 2px;
+        }
+        .ant-tag {
+          line-height: 16px;
+          padding: 0 4px;
+        }
+        .ant-tag-close-icon {
+          margin-left: 4px;
+        }
+
+      }
+      .checkableTag {
+        cursor: pointer;
+      }
     }
   }
 }

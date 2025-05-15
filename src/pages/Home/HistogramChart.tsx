@@ -18,7 +18,6 @@ interface IProps {
 const HistogramChart = (props: IProps) => {
   const { data, show, onTimeRangeChange, distributionData, timeGrouping = 'minute' } = props;
 
-  console.log('data', data);
   // 增强调试日志，检查组件接收到的数据
   // useEffect(() => {
   //   console.log('HistogramChart 详细数据:', {
@@ -33,7 +32,7 @@ const HistogramChart = (props: IProps) => {
   // 根据timeGrouping聚合数据
   const aggregatedData = useMemo(() => {
     if (!data || data.length === 0) {
-      console.log('没有分布数据，返回空结果');
+      // console.log('没有分布数据，返回空结果');
       return { values: [], labels: [], originalData: [] };
     }
 
@@ -112,7 +111,7 @@ const HistogramChart = (props: IProps) => {
       grid: {
         top: '5%', // 距离容器上边距
         right: '2%', // 距离容器右边距
-        bottom: '2%', // 距离容器下边距，为时间轴留出空间
+        bottom: '0%', // 距离容器下边距，为时间轴留出空间
         left: '2%', // 距离容器左边距
         containLabel: true, // 是否包含坐标轴的标签
       },
@@ -255,15 +254,13 @@ const HistogramChart = (props: IProps) => {
   }
 
   return (
-    <div className="">
-      <ReactECharts
-        option={option}
-        style={{ height: 150, width: '100%' }}
-        // onEvents={{
-        //   click: handleChartClick,
-        // }}
-      />
-    </div>
+    <ReactECharts
+      option={option}
+      style={{ height: 180, width: '100%' }}
+      // onEvents={{
+      //   click: handleChartClick,
+      // }}
+    />
   );
 };
 

@@ -33,7 +33,6 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const user = useSelector((state: { user: IStoreUser }) => state.user);
-  console.log(222, user);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const { modal } = App.useApp();
 
