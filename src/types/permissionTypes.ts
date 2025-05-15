@@ -15,6 +15,8 @@ export interface DatasourcePermission {
 export interface TablePermission {
   moduleName: string;
   permissionId: string | null;
+  tableName: string; // 新增tableName属性
+  permissions: string[]; // 新增权限数组
 }
 
 /**

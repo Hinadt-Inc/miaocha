@@ -51,7 +51,6 @@ export function getUserDatasourcePermissions(
  * @returns Promise<DatasourcePermission[]>
  */
 export function getMyTablePermissions(): Promise<DatasourcePermission[]> {
-  // return get('/api/permissions/my/tables');
   return get('/api/permissions/modules/my');
 }
 
