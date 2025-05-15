@@ -1,37 +1,6 @@
 import { post, get } from './request';
 import type { DistributionPoint } from '../types/logDataTypes';
 
-interface SearchLogsParams {
-  datasourceId: number;
-  tableName: string;
-  keyword?: string;
-  whereSql?: string;
-  startTime?: string;
-  endTime?: string;
-  timeRange?: string;
-  timeGrouping?: string;
-  pageSize?: number;
-  offset?: number;
-  fields?: string[];
-}
-
-interface SearchLogsResult {
-  success: boolean;
-  errorMessage?: string;
-  executionTimeMs: number;
-  columns: string[];
-  rows: Record<string, unknown>[];
-  totalCount: number;
-  distributionData?: Array<{
-    timePoint: string;
-    count: number;
-  }>;
-}
-
-export const searchLogs = async (params: SearchLogsParams): Promise<SearchLogsResult> => {
-  return post('/api/logs/search', params);
-};
-
 export const getTableColumns = async (
   datasourceId: string,
   module: string,
@@ -40,6 +9,13 @@ export const getTableColumns = async (
     params: { datasourceId, module },
   }) as Promise<Array<{ columnName: string; dataType: string }>>;
 };
+
+// 执行日志检索
+export const searchLogs = (params: ISearchLogsParams) => {
+  return post('/api/logs/search', params) as Promise<ISearchLogsResponse>;
+};
+
+// 旧
 
 export const getTimeDistribution = async (params: {
   datasourceId: number;

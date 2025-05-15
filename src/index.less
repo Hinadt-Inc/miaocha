@@ -6,15 +6,9 @@ body {
     'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
     'Noto Color Emoji';
   line-height: 1.5;
-  background-color: #f0f2f5;
   color: rgba(0, 0, 0, 0.85);
 }
 
-
-/* ant-pro-layout 内容区域样式 */
-.ant-pro-layout .ant-pro-layout-content {
-  padding: 0;
-}
 
 #root {
   height: 100vh;
@@ -27,15 +21,27 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.04);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.08);
   border-radius: 4px;
   
   &:hover {
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.2);
   }
+}
+.ant-pro-sider-collapsed-button {
+  top: 18px;
+  right: -10px;
+}
+
+.ant-pro-layout .ant-pro-layout-content {
+  padding: 0;
+}
+
+.ant-pro-layout .ant-pro-layout-bg-list {
+  background: #fff !important;
 }

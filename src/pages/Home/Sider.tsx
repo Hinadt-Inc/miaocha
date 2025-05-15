@@ -1,148 +1,168 @@
-import { Collapse, Space, Tag, Cascader } from 'antd';
-import { EyeOutlined } from '@ant-design/icons';
+import { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
+import { Collapse, Space, Tag, Cascader, Select, Spin } from 'antd';
+import { useRequest } from 'ahooks';
+import { getTableColumns } from '@/api/logs';
 import { getFieldTypeColor } from '../../utils/logDataHelpers';
 import styles from './Sider.module.less';
 
-interface FieldSelectorProps {
-  selectedTable: string;
-  availableFields: Array<{ columnName: string; dataType: string }>;
-  selectedFields: string[];
-  onToggleField: (fieldName: string) => void;
-  lastAddedField: string | null;
-  lastRemovedField: string | null;
-  availableTables: Array<{
-    datasourceId: number;
-    datasourceName: string;
-    databaseName: string;
-    tables: Array<{
-      tableName: string;
-      tableComment: string;
-      columns: Array<{
-        columnName: string;
-        dataType: string;
-        columnComment: string;
-        isPrimaryKey: boolean;
-        isNullable: boolean;
-      }>;
-    }>;
-  }>;
-  onTableChange: (value: string) => void;
-  collapsed: boolean;
+interface IProps {
+  // selectedTable: string;
+  // availableFields: Array<{ columnName: string; dataType: string }>;
+  // selectedFields: string[];
+  // onToggleField: (fieldName: string) => void;
+  // lastAddedField: string | null;
+  // lastRemovedField: string | null;
+  // availableTables: Array<{
+  //   datasourceId: number;
+  //   datasourceName: string;
+  //   databaseName: string;
+  //   tables: Array<{
+  //     tableName: string;
+  //     tableComment: string;
+  //     columns: Array<{
+  //       columnName: string;
+  //       dataType: string;
+  //       columnComment: string;
+  //       isPrimaryKey: boolean;
+  //       isNullable: boolean;
+  //     }>;
+  //   }>;
+  // }>;
+  // onTableChange: (value: string) => void;
+  // collapsed: boolean;
+  moduleNames: IStatus[]; // 模块名称列表
+  fetchModuleNames: any;
 }
 
-const Sider = ({
-  selectedTable,
-  availableFields,
-  selectedFields,
-  onToggleField,
-  lastAddedField,
-  lastRemovedField,
-  availableTables,
-  onTableChange,
-  collapsed,
-}: FieldSelectorProps) => {
-  if (collapsed) {
-    return null;
-  }
+const Sider: React.FC<IProps> = (props) => {
+  const {
+    moduleNames,
+    fetchModuleNames,
+    // 以下是旧的属性
+    selectedTable,
+    availableFields,
+    selectedFields,
+    onToggleField,
+    lastAddedField,
+    lastRemovedField,
+    availableTables,
+    onTableChange,
+    collapsed,
+  } = props;
+
+  // 日志字段
+  const [logColumns, setLogColumns] = useState<ILogColumnsResponse[]>([]);
+  // 已选模块
+  const [selectedModule, setSelectedModule] = useState<string[] | undefined>(undefined);
+
+  // 获取日志字段
+  const fetchLogColumns = useRequest(getTableColumns, {
+    manual: true,
+    onSuccess: (res: ILogColumnsResponse[]) => {
+      setLogColumns(res);
+    },
+  });
+
+  // 选择模块时触发，避免重复请求和状态更新
+  const changeLogColumns = (value: any[]) => {
+    if (!value) {
+      setSelectedModule(undefined);
+      return;
+    }
+    const [datasourceId, module] = value;
+    const newValue = [String(datasourceId), String(module)];
+
+    if (selectedModule && selectedModule[0] === newValue[0] && selectedModule[1] === newValue[1]) {
+      return;
+    }
+    setSelectedModule(newValue);
+    fetchLogColumns.run({ datasourceId: Number(datasourceId), module: String(module) });
+  };
+
+  // 当 moduleNames 加载完成后，自动选择第一个数据源和第一个模块
+  useEffect(() => {
+    if (moduleNames?.length > 0 && !selectedModule) {
+      const firstModule = moduleNames[0];
+      if (firstModule.children?.[0]) {
+        const datasourceId = String(firstModule.value);
+        const module = String(firstModule.children[0].value);
+        setSelectedModule([datasourceId, module]);
+        fetchLogColumns.run({ datasourceId: Number(datasourceId), module });
+      }
+    }
+  }, [moduleNames]);
+
+  const toggleColumns = (item: ILogColumnsResponse, index: number) => {
+    console.log(item, index);
+    logColumns[index].selected = !logColumns[index].selected;
+    setLogColumns([...logColumns]);
+  };
 
   return (
-    <div>
-      <div>
-        <div>
-          <Cascader
-            placeholder="请选择模块"
-            style={{ width: '100%' }}
-            options={availableTables.map((ds) => ({
-              value: `ds-${ds.datasourceId}`,
-              label: ds.datasourceName,
-              children: ds.tables.map((table) => ({
-                value: `tbl-${table.tableName}`,
-                label: table.tableName,
-                children: table.columns.map((col) => ({
-                  value: `col-${col.columnName}`,
-                  label: `${col.columnName} (${col.dataType})`,
-                })),
-              })),
-            }))}
-            value={
-              selectedTable && availableTables.length > 0
-                ? [`ds-${selectedTable.split('-')[0]}`, `tbl-${selectedTable.split('-')[1]}`]
-                : undefined
-            }
-            loading={availableTables.length === 0}
-            onChange={(value: string[]) => {
-              if (value && value.length > 0) {
-                const tableName = value[value.length - 1].split('-')[1];
-                const datasourceId = value[0].split('-')[1];
-                onTableChange(`${datasourceId}-${tableName}`);
-              } else {
-                onTableChange('');
-              }
-            }}
-            allowClear
-            showSearch
-            displayRender={(labels) => labels[labels.length - 1]}
-          />
-        </div>
-      </div>
-
-      <Collapse
-        defaultActiveKey={['available']}
-        ghost
-        items={[
-          {
-            key: 'available',
-            label: '可用字段',
-            children: availableFields.map((field) => {
-              const isSelected = selectedFields.includes(field.columnName);
-              const isAdded = lastAddedField === field.columnName;
-              const isRemoved = lastRemovedField === field.columnName;
-              return (
-                <div
-                  key={field.columnName}
-                  className={[
-                    styles.fieldSelectionItem,
-                    isAdded ? styles.fieldAdded : '',
-                    isRemoved ? styles.fieldRemoved : '',
-                    isSelected ? styles.selected : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                  onClick={() => onToggleField(field.columnName)}
-                >
-                  <Space>
-                    <Tag color={getFieldTypeColor(field.dataType)} style={{ marginRight: 8 }}>
-                      {field.dataType.substr(0, 1).toUpperCase()}
-                    </Tag>
-                    {field.columnName}
-                  </Space>
-                  {isSelected && <EyeOutlined style={{ color: '#1890ff' }} />}
-                </div>
-              );
-            }),
-          },
-          {
-            key: 'selected',
-            label: '已选字段',
-            children: selectedFields.map((fieldName) => {
-              const field = availableFields.find((f) => f.columnName === fieldName);
-              if (!field) return null;
-
-              return (
-                <div key={field.columnName} className={styles.selectedFieldItem}>
-                  <Space>
-                    <Tag color={getFieldTypeColor(field.dataType)} style={{ marginRight: 8 }}>
-                      {field.dataType.substr(0, 1).toUpperCase()}
-                    </Tag>
-                    {field.columnName}
-                  </Space>
-                  <EyeOutlined style={{ color: '#1890ff' }} />
-                </div>
-              );
-            }),
-          },
-        ]}
+    <div className={styles.layoutSider}>
+      <Cascader
+        variant="filled"
+        placeholder="请选择模块"
+        style={{ width: '100%' }}
+        options={moduleNames}
+        expandTrigger="hover"
+        value={selectedModule}
+        onChange={changeLogColumns}
+        allowClear
+        showSearch
+        loading={fetchModuleNames.loading}
       />
+
+      <Spin spinning={fetchLogColumns.loading} size="small">
+        <Collapse
+          size="small"
+          className={styles.collapse}
+          defaultActiveKey={['selected', 'available']}
+          ghost
+          items={[
+            {
+              key: 'selected',
+              label: '已选字段',
+              children: logColumns?.map((item: ILogColumnsResponse, index: number) => {
+                if (!item.selected) return null;
+
+                return (
+                  <div
+                    className={styles.item}
+                    key={item.columnName}
+                    onClick={() => toggleColumns(item, index)}
+                  >
+                    <Tag color={getFieldTypeColor(item.dataType)}>
+                      {item.dataType.substr(0, 1).toUpperCase()}
+                    </Tag>
+                    {item.columnName}
+                  </div>
+                );
+              }),
+            },
+            {
+              key: 'available',
+              label: '可用字段',
+              children: logColumns?.map((item: ILogColumnsResponse, index: number) => {
+                if (item.selected) return null;
+                return (
+                  <div
+                    className={styles.item}
+                    key={item.columnName}
+                    onClick={() => toggleColumns(item, index)}
+                  >
+                    <Tag color={getFieldTypeColor(item.dataType)}>
+                      {item.dataType.substr(0, 1).toUpperCase()}
+                    </Tag>
+                    {item.columnName}
+                    {/* <EyeOutlined style={{ color: '#1890ff' }} /> */}
+                  </div>
+                );
+              }),
+            },
+          ]}
+        />
+      </Spin>
     </div>
   );
 };

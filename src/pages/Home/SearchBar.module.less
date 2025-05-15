@@ -1,23 +1,36 @@
-/* SearchBar.module.less - 仅包含搜索栏相关样式 */
-
-.searchBarContainer {
-  margin-bottom: 1px;
-  :global {
-    .ant-card {
-      // background-color: #eee;
-      border: none;
-      .ant-card-body {
-        padding: 10px;
-        .ant-select-selector {
-          border: 1px solid rgba(5, 5, 5, 0.06);
-        }
-      }
-    }
-  }
-  .searchSections {
+.searchBar {
+  padding: 0 12px;
+  .top {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
+    justify-content: space-between;
+    margin-top: 4px;
+    .left {
+      font-size: 12px;
+      :global {
+        .ant-statistic-content {
+          font-size: 14px;
+          color: #000;
+        }
+      }
+
+    }
+    .right {
+      :global {
+        .ant-btn {
+          font-size: 13px;
+        }
+        .ant-btn:last-child {
+          padding-right: 0;
+        }
+      }
+
+    }
+  }
+  .form {
+    display: flex;
+    align-items: center;
+    margin-top: 2px;
     gap: 8px;
     .item {
       &:first-child {
@@ -26,19 +39,43 @@
       &:nth-child(2) {
         flex: 1;
       }
-      .space {
-        column-gap: 0 !important;
+      &:last-child {
         :global {
-          .ant-btn {
-            padding: 0 4px;
+         .ant-btn {
+            font-size: 13px;
+            height: 30px;
+            padding: 0 12px;
           }
         }
       }
     }
   }
-  .filterTags {
+  .footer {
     display: flex;
+    align-items: center;
     flex-wrap: wrap;
-    margin-top: 8px;
+    margin-top: 4px;
+    padding-bottom: 8px;
+    .filter {
+      display: flex;
+      flex-wrap: wrap;
+      :global {
+        .ant-space {
+          column-gap: 0;
+          row-gap: 2px;
+        }
+        .ant-tag {
+          line-height: 16px;
+          padding: 0 4px;
+        }
+        .ant-tag-close-icon {
+          margin-left: 4px;
+        }
+
+      }
+      .checkableTag {
+        cursor: pointer;
+      }
+    }
   }
 }

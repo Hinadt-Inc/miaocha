@@ -33,7 +33,7 @@ export interface LogData {
     timePoint: string;
     count: number;
   }>;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 // 表格类型定义

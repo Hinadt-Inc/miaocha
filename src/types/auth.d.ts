@@ -8,13 +8,13 @@ declare global {
 
   // 登录，刷新token
   interface ILoginResponse {
-    userId: number;
-    nickname: string;
-    token: string;
-    refreshToken: string;
     expiresAt: number;
+    nickname: string;
     refreshExpiresAt: number;
+    refreshToken: string;
     role: string;
+    token: string;
+    userId: number;
   }
 
   // 刷新token
@@ -24,13 +24,13 @@ declare global {
 
   // 用户信息
   interface IUserInfoResponse {
+    createTime: string;
+    email: string;
     id: number;
     nickname: string;
-    email: string;
-    uid: string;
     role: string;
     status: number;
-    createTime: string;
+    uid: string;
     updateTime: string;
   }
 

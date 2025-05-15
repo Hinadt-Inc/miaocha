@@ -67,6 +67,6 @@ export function revokePermissionById(permissionId: string): Promise<void> {
 }
 
 // 获取我的模块权限
-export function getMyModules(): Promise<any> {
-  return get('/api/permissions/modules/my');
-}
+export const getMyModules = () => {
+  return get('/api/permissions/modules/my') as Promise<IModulesResponse[]>;
+};

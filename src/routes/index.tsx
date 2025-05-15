@@ -17,6 +17,7 @@ import {
 
 // 动态导入页面组件
 const LoginPage = lazy(() => import('@/pages/Login'));
+const Demo = lazy(() => import('@/pages/Demo'));
 const HomePage = lazy(() => import('@/pages/Home'));
 const UserManagementPage = lazy(() => import('@/pages/system/UserManagementPage'));
 const DataSourceManagementPage = lazy(() => import('@/pages/system/DataSourceManagementPage'));
@@ -67,6 +68,12 @@ export const routes: RouteConfig[] = [
     icon: <ConsoleSqlOutlined />,
     element: withSuspense(SQLEditorPage),
   },
+  // {
+  //   path: '/demo',
+  //   name: 'Demo',
+  //   icon: <ConsoleSqlOutlined />,
+  //   element: withSuspense(Demo),
+  // },
   {
     path: '/log-analysis',
     name: '日志分析',
@@ -86,31 +93,26 @@ export const routes: RouteConfig[] = [
       {
         path: '/system/user',
         name: '用户管理',
-        icon: <UserOutlined />,
         element: withSuspense(UserManagementPage),
       },
       {
         path: '/system/datasource',
         name: '数据源管理',
-        icon: <DatabaseOutlined />,
         element: withSuspense(DataSourceManagementPage),
       },
       {
         path: '/system/permission',
         name: '权限管理',
-        icon: <SafetyCertificateOutlined />,
         element: withSuspense(PermissionManagementPage),
       },
       {
         path: '/system/machine',
         name: '服务器管理',
-        icon: <DesktopOutlined />,
         element: withSuspense(MachineManagementPage),
       },
       {
         path: '/system/logstash',
         name: 'Logstash管理',
-        icon: <CloudServerOutlined />,
         element: withSuspense(LogstashManagementPage),
       },
     ],

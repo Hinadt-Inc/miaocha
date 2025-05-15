@@ -176,7 +176,7 @@ export const userSlice: any = createSlice({
       })
       .addCase(fetchUserInfo.fulfilled, (state, action) => {
         state.loading = false;
-        state.userId = action.payload.userId;
+        state.userId = action.payload.id;
         state.name = action.payload.nickname;
         state.email = action.payload.email;
         state.role = action.payload.role;
