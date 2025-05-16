@@ -247,14 +247,14 @@ const DataSourceManagementPage = () => {
     {
       title: '数据源名称',
       dataIndex: 'name',
-      width: 180,
       ellipsis: true,
+      width: '10%',
       hideInSearch: true,
     },
     {
       title: '类型',
       dataIndex: 'type',
-      width: 120,
+      width: '8%',
       valueEnum: Object.fromEntries(
         dataSourceTypeOptions.map((option) => [option.value, option.label]),
       ),
@@ -267,14 +267,14 @@ const DataSourceManagementPage = () => {
     {
       title: '描述',
       dataIndex: 'description',
-      width: 180,
+      width: '12%',
       ellipsis: true,
       hideInSearch: true,
     },
     {
       title: '主机',
       dataIndex: 'host',
-      width: 150,
+      width: '10%',
       ellipsis: true,
       hideInSearch: true,
       render: (_, record) => record.host || (record as any).ip,
@@ -282,20 +282,20 @@ const DataSourceManagementPage = () => {
     {
       title: '端口',
       dataIndex: 'port',
-      width: 80,
+      width: '6%',
       hideInSearch: true,
     },
     {
       title: '数据库名称',
       dataIndex: 'database',
-      width: 140,
+      width: '10%',
       ellipsis: true,
       hideInSearch: true,
     },
     {
       title: 'JDBC参数',
       dataIndex: 'jdbcParams',
-      width: 180,
+      width: '12%',
       ellipsis: true,
       hideInSearch: true,
       render: (text) => {
@@ -310,26 +310,28 @@ const DataSourceManagementPage = () => {
     {
       title: '创建时间',
       dataIndex: 'createTime',
-      width: 180,
+      width: '12%',
       hideInSearch: true,
       render: (text, record) => {
         const time = text || (record as any).createdAt;
         return time ? dayjs(time as string).format('YYYY-MM-DD HH:mm:ss') : '-';
       },
+      responsive: ['lg'],
     },
     {
       title: '更新时间',
       dataIndex: 'updateTime',
-      width: 180,
+      width: '12%',
       hideInSearch: true,
       render: (text, record) => {
         const time = text || (record as any).updatedAt;
         return time ? dayjs(time as string).format('YYYY-MM-DD HH:mm:ss') : '-';
       },
+      responsive: ['lg'],
     },
     {
       title: '操作',
-      width: 120,
+      width: '8%',
       align: 'center',
       valueType: 'option',
       fixed: 'right',
@@ -388,12 +390,14 @@ const DataSourceManagementPage = () => {
           }
           actionRef={actionRef}
           rowKey="id"
+          scroll={{ x: 'max-content' }}
+          cardProps={{ bodyStyle: { padding: '0px' } }}
           toolBarRender={() => [
-            <Space key="search">
+            <Space key="search" style={{ width: '100%' }}>
               <Input.Search
                 placeholder="搜索数据源名称/主机/数据库/描述"
                 allowClear
-                style={{ width: 300 }}
+                style={{ width: '100%', minWidth: 200, maxWidth: 300 }}
                 onChange={(e) => {
                   // 当输入变化时立即搜索，提供更即时的反馈
                   setSearchKeyword(e.target.value);
@@ -422,6 +426,8 @@ const DataSourceManagementPage = () => {
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
+            responsive: true,
+            showTotal: (total) => `共 ${total} 条`,
           }}
         />
 

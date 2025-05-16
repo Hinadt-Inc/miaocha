@@ -4,6 +4,10 @@
   border-radius: 8px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 
+  @media screen and (max-width: 768px) {
+    padding: 12px;
+  }
+
   .header {
     display: flex;
     justify-content: space-between;
@@ -31,6 +35,11 @@
     padding: 12px;
     background: rgba(0, 0, 0, 0.04);
     border-radius: 8px;
+
+    @media screen and (max-width: 768px) {
+      flex-direction: column;
+      align-items: flex-start;
+    }
   }
 
     .table-container {
@@ -40,7 +49,12 @@
     border-radius: 8px;
     border: 1px solid #f0f0f0;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-    
+    overflow: auto;
+
+    @media screen and (max-width: 768px) {
+      padding: 8px;
+    }
+
     .ant-table {
       border: 1px solid #f0f0f0;
       border-radius: 8px;
@@ -49,10 +63,17 @@
         background-color:rgba(0, 0, 0, 0.04);
         font-weight: 500;
         border-bottom: 1px solid #f0f0f0 !important;
+        white-space: nowrap;
       }
       
       .ant-table-tbody > tr > td {
         border-bottom: 1px solid #f0f0f0;
+      }
+
+      // 确保固定列在滚动时正常显示
+      .ant-table-cell-fix-right,
+      .ant-table-cell-fix-left {
+        z-index: 2;
       }
     }
     
@@ -60,6 +81,12 @@
       margin: 16px 0 0;
       padding-top: 16px;
       border-top: 1px solid #f0f0f0;
+
+      @media screen and (max-width: 576px) {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
     }
   }
 
