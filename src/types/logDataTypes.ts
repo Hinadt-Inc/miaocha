@@ -93,30 +93,4 @@ export interface SearchLogsResult {
   columns: string[];
   rows: Record<string, unknown>[];
   totalCount: number;
-  distributionData?: DistributionPoint[];
-  fieldDistributions?: FieldDistribution[]; // 字段分布数据（后端暂未实现）
-  records?: never; // 该字段已废弃，请使用rows
-  distribution?: DistributionPoint[]; // 修正类型定义
 }
-
-// 字段分布类型
-export interface FieldDistribution {
-  fieldName: string;
-  valueDistributions: ValueDistribution[];
-  totalCount: number;
-  nonNullCount: number;
-  nullCount: number;
-  uniqueValueCount: number;
-}
-
-// 值分布类型
-export interface ValueDistribution {
-  value: string;
-  count: number;
-  percentage: number;
-}
-
-export type DistributionPoint = {
-  timePoint: string;
-  count: number;
-};

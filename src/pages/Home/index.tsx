@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Modal } from 'antd';
 import { throttle } from '@/utils/logDataHelpers';
 import { useRequest } from 'ahooks';
-import { useLogData } from '@/hooks/useLogData';
 import { useFilters } from '@/hooks/useFilters';
 import SearchBar from './SearchBar';
 import Log from './Log';
@@ -273,22 +272,6 @@ const HomePage = () => {
     // };
     // fetchTablePermissions();
   }, []);
-
-  // 使用优化的 useLogData 钩子
-  // const {
-  //   tableData,
-  //   loading,
-  //   hasMore,
-  //   loadMoreData,
-  //   resetData,
-  //   distributionData = [],
-  //   totalCount,
-  // } = useLogData({
-  //   ...searchParams,
-  //   tableName: selectedTable ? selectedTable.split('-')[1] : '',
-  //   datasourceId: selectedTable ? Number(selectedTable.split('-')[0]) : 1,
-  //   fields: selectedFields,
-  // });
 
   // 将数据加载状态与全局加载状态集成
   // useEffect(() => {

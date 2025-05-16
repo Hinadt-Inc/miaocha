@@ -6,7 +6,6 @@ import App from '@/App';
 import {
   CompassOutlined,
   ConsoleSqlOutlined,
-  BarChartOutlined,
   SettingOutlined,
   UserOutlined,
   DatabaseOutlined,
@@ -25,7 +24,6 @@ const PermissionManagementPage = lazy(() => import('@/pages/system/PermissionMan
 const SQLEditorPage = lazy(() => import('@/pages/SQLEditor/SQLEditorImpl'));
 const MachineManagementPage = lazy(() => import('@/pages/system/MachineManagementPage'));
 const LogstashManagementPage = lazy(() => import('@/pages/system/LogstashManagementPage'));
-const LogAnalysisPage = lazy(() => import('@/pages/LogAnalysis'));
 
 const withSuspense = (Component: React.ComponentType) => (
   <Suspense
@@ -74,16 +72,6 @@ export const routes: RouteConfig[] = [
   //   icon: <ConsoleSqlOutlined />,
   //   element: withSuspense(Demo),
   // },
-  {
-    path: '/log-analysis',
-    name: '日志分析',
-    icon: <BarChartOutlined />,
-    element: (
-      <MainLayout>
-        <LogAnalysisPage />
-      </MainLayout>
-    ),
-  },
   {
     path: '/system',
     name: '系统管理',
