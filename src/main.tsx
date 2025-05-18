@@ -22,14 +22,12 @@ const SessionInitializer = () => {
 };
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <Provider store={store}>
-      <SessionInitializer />
-      <QueryProvider>
-        <LoadingProvider>
-          <RouterProvider router={router} />
-        </LoadingProvider>
-      </QueryProvider>
-    </Provider>
-  </StrictMode>,
+  <Provider store={store}>
+    <SessionInitializer />
+    <QueryProvider>
+      <LoadingProvider>
+        <RouterProvider router={router} />
+      </LoadingProvider>
+    </QueryProvider>
+  </Provider>,
 );

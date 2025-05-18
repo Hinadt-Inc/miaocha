@@ -28,7 +28,7 @@ const VirtualTable = (props: IProps) => {
 
       // 添加动态列（除了log_time，因为它已经作为固定列添加）
       const additionalColumns = dynamicColumns
-        .filter((col) => col.selected && col.columnName !== 'log_time')
+        .filter((col) => col.selected && col.columnName !== 'log_time' && col.columnName !== '_source')
         .map((col) =>
           columnHelper.accessor(col.columnName, {
             header: col.columnName,
@@ -37,16 +37,19 @@ const VirtualTable = (props: IProps) => {
         );
 
       // 检查是否只有log_time列被选中
-      const hasOtherSelected = dynamicColumns.some((col) => col.selected && col.columnName !== 'log_time');
+      const hasOtherSelected = dynamicColumns.some(
+        (col) => col.selected && col.columnName !== 'log_time' && col.columnName !== '_source',
+      );
       const columns = [logTimeColumn];
 
       // 如果没有其他列被选中，添加_source列显示整行数据
-      if (!hasOtherSelected) {
+      if (!hasOtherSelected && dynamicColumns.length > 0) {
         columns.push(
           columnHelper.accessor((row) => row, {
             header: '_source',
             cell: (info) => {
-              return JSON.stringify(info.getValue(), null, 2);
+              const rowData = info.row.original;
+              return rowData ? JSON.stringify(rowData) : '';
             },
           }) as any,
         );
@@ -131,7 +134,7 @@ const VirtualTable = (props: IProps) => {
                   }}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className={styles.tableCell}>
+                    <td key={`${item.index}_${cell.id}`} className={styles.tableCell}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
