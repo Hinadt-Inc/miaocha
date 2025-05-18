@@ -36,6 +36,7 @@ const Sider: React.FC<IProps> = (props) => {
       if (!hasOtherSelected) {
         processedColumns.unshift({
           columnName: '_source',
+          dataType: 'TEXT',
           selected: true,
           isFixed: true, // 标记为不可删除
         });

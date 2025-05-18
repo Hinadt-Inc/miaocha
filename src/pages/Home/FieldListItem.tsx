@@ -13,10 +13,13 @@ interface IProps {
 
 const FieldListItem: React.FC<IProps> = ({ item, index, fieldDistributions, isSelected, onToggle }) => {
   const [activeKey, setActiveKey] = useState<string[]>([]);
-
   const handleCollapseChange = useCallback((key: string | string[]) => {
     setActiveKey(key as string[]);
   }, []);
+
+  if (item.isFixed) {
+    return null;
+  }
 
   return (
     <Collapse
@@ -31,7 +34,7 @@ const FieldListItem: React.FC<IProps> = ({ item, index, fieldDistributions, isSe
           label: (
             <div className={styles.bar}>
               <div>
-                <Tag color={getFieldTypeColor(item.dataType)}>{item.dataType.substr(0, 1).toUpperCase()}</Tag>
+                <Tag color={getFieldTypeColor(item.dataType)}>{item.dataType?.substr(0, 1)?.toUpperCase()}</Tag>
                 {item.columnName}
               </div>
               {!(isSelected && item.columnName === 'log_time') && (

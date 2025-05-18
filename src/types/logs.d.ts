@@ -21,7 +21,7 @@ declare global {
 
   interface ILogColumnsResponse {
     columnName?: string;
-    dataType?: string;
+    dataType: string;
     selected?: boolean;
     columnComment?: string;
     isPrimaryKey?: boolean;

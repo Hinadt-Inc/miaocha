@@ -194,7 +194,6 @@ const SearchBar = (props: IProps) => {
 
   // 移动时间范围
   // const moveTime = (direction: 'forward' | 'backward') => {
-  //   console.log('【打印日志】timeOption:', timeOption);
   //   const { value = '', range, format = [], number, unit } = timeOption;
   //   const start = dayjs(range[0]);
   //   const end = dayjs(range[1]);
@@ -230,7 +229,6 @@ const SearchBar = (props: IProps) => {
   //       value: label,
   //       range: times,
   //     };
-  //     console.log('【打印日志】option:', option);
   //   }
 
   //   setTimeOption((prev) => ({ ...prev, ...option }));
@@ -238,7 +236,6 @@ const SearchBar = (props: IProps) => {
 
   // 提交时间范围
   const onSubmitTime = (params: ISubmitTime) => {
-    console.log('【打印日志】params:', params);
     setTimeOption(params);
     setOpenTime(false);
   };

@@ -14,7 +14,6 @@ interface IProps {
 
 const VirtualTable = (props: IProps) => {
   const { data, loading = false, onLoadMore, hasMore = false, dynamicColumns = [] } = props;
-  console.log('【打印日志】props:', props);
   const containerRef = useRef<HTMLDivElement>(null); // 滚动容器的ref
   const columnHelper = createColumnHelper<any>(); // 列辅助函数
 
@@ -46,7 +45,9 @@ const VirtualTable = (props: IProps) => {
         columns.push(
           columnHelper.accessor((row) => row, {
             header: '_source',
-            cell: (info) => JSON.stringify(info.getValue(), null, 2),
+            cell: (info) => {
+              return JSON.stringify(info.getValue(), null, 2);
+            },
           }) as any,
         );
       }
@@ -62,7 +63,6 @@ const VirtualTable = (props: IProps) => {
     columns, // 列
     getCoreRowModel: getCoreRowModel(), // 负责把原始数据(raw data)转换成表格能直接使用的格式
   });
-  console.log('【打印日志】table:', table);
 
   // 设置虚拟滚动
   const { rows } = table.getRowModel(); // 将原始数据转换为表格可用的行结构
@@ -108,38 +108,36 @@ const VirtualTable = (props: IProps) => {
               </tr>
             ))}
           </thead>
-          <tbody>
-            <tr>
-              <td colSpan={table.getAllColumns().length}>
-                <div
-                  className={styles.tableBody}
+          <tbody
+            style={{
+              height: `${rowVirtualizer.getTotalSize()}px`,
+              position: 'relative',
+            }}
+          >
+            {rowVirtualizer.getVirtualItems().map((item) => {
+              const row = rows[item.index];
+              return (
+                <tr
+                  key={item.index}
+                  data-index={item.index}
+                  ref={rowVirtualizer.measureElement}
+                  className={styles.tableRow}
                   style={{
-                    height: `${rowVirtualizer.getTotalSize()}px`,
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${item.start}px)`,
                   }}
                 >
-                  {rowVirtualizer.getVirtualItems().map((item) => {
-                    const row = rows[item.index];
-                    return (
-                      <div
-                        key={item.index}
-                        data-index={item.index}
-                        ref={rowVirtualizer.measureElement}
-                        className={styles.tableRow}
-                        style={{
-                          transform: `translateY(${item.start}px)`,
-                        }}
-                      >
-                        {row.getVisibleCells().map((cell) => (
-                          <div key={cell.id} className={styles.tableCell}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })}
-                </div>
-              </td>
-            </tr>
+                  {row.getVisibleCells().map((cell) => (
+                    <td key={cell.id} className={styles.tableCell}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </Spin>
