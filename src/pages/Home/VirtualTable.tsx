@@ -102,7 +102,7 @@ const VirtualTable = (props: IProps) => {
           <thead className={styles.tableHeader}>
             {/* 获取表格的表 */}
             {table.getHeaderGroups().map((item) => (
-              <tr key={item.id}>
+              <tr key={item.id} className={styles.headerRow}>
                 {item.headers.map((sub) => (
                   <th key={sub.id} className={styles.headerCell}>
                     {flexRender(sub.column.columnDef.header, sub.getContext())}
@@ -126,10 +126,6 @@ const VirtualTable = (props: IProps) => {
                   ref={rowVirtualizer.measureElement}
                   className={styles.tableRow}
                   style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
                     transform: `translateY(${item.start}px)`,
                   }}
                 >
