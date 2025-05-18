@@ -1,19 +1,14 @@
 import { useEffect, useRef, useMemo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import {
-  createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
+import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import { Spin } from 'antd';
 import styles from './VirtualTable.module.less';
 
 interface IProps {
-  data: any[];
-  loading?: boolean;
-  onLoadMore: () => void;
-  hasMore?: boolean;
+  data: any[]; // 数据
+  loading?: boolean; // 加载状态
+  onLoadMore: () => void; // 加载更多数据的回调函数
+  hasMore?: boolean; // 是否还有更多数据
 }
 
 const VirtualTable = (props: IProps) => {

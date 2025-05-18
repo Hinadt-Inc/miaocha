@@ -1,62 +1,41 @@
-import { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
-import { Collapse, Space, Tag, Cascader, Select, Spin } from 'antd';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { Collapse, Cascader, Spin } from 'antd';
 import { useRequest } from 'ahooks';
+// import classNames from 'classnames';
 import { getTableColumns } from '@/api/logs';
-import { getFieldTypeColor } from '../../utils/logDataHelpers';
 import styles from './Sider.module.less';
 
+import FieldListItem from './FieldListItem';
+
+// 字段值分布列表，按数量降序排序
+interface IValueDistributions {
+  count: number; // 出现次数
+  percentage: number; // 占比百分比
+  value: string; // 字段值
+}
+interface IFieldDistributions {
+  fieldName: string; // 字段名称
+  nonNullCount: number; // 非空记录数
+  nullCount: number; // 空记录数
+  totalCount: number; // 总记录数
+  uniqueValueCount: number; // 唯一值数量
+  valueDistributions: IValueDistributions[];
+}
+
 interface IProps {
-  // selectedTable: string;
-  // availableFields: Array<{ columnName: string; dataType: string }>;
-  // selectedFields: string[];
-  // onToggleField: (fieldName: string) => void;
-  // lastAddedField: string | null;
-  // lastRemovedField: string | null;
-  // availableTables: Array<{
-  //   datasourceId: number;
-  //   datasourceName: string;
-  //   databaseName: string;
-  //   tables: Array<{
-  //     tableName: string;
-  //     tableComment: string;
-  //     columns: Array<{
-  //       columnName: string;
-  //       dataType: string;
-  //       columnComment: string;
-  //       isPrimaryKey: boolean;
-  //       isNullable: boolean;
-  //     }>;
-  //   }>;
-  // }>;
-  // onTableChange: (value: string) => void;
-  // collapsed: boolean;
   moduleNames: IStatus[]; // 模块名称列表
-  fetchModuleNames: any;
+  logLoading: boolean; // 日志数据是否正在加载
+  moduleLoading: boolean; // 模块名称是否正在加载
+  fieldDistributions: IFieldDistributions[]; // 字段值分布列表
 }
 
 const Sider: React.FC<IProps> = (props) => {
-  const {
-    moduleNames,
-    fetchModuleNames,
-    // 以下是旧的属性
-    selectedTable,
-    availableFields,
-    selectedFields,
-    onToggleField,
-    lastAddedField,
-    lastRemovedField,
-    availableTables,
-    onTableChange,
-    collapsed,
-  } = props;
-
-  // 日志字段
-  const [logColumns, setLogColumns] = useState<ILogColumnsResponse[]>([]);
-  // 已选模块
-  const [selectedModule, setSelectedModule] = useState<string[] | undefined>(undefined);
+  const { fieldDistributions, logLoading, moduleNames, moduleLoading } = props;
+  const [logColumns, setLogColumns] = useState<ILogColumnsResponse[]>([]); // 日志字段
+  const [selectedModule, setSelectedModule] = useState<string[] | undefined>(undefined); // 已选模块
 
   // 获取日志字段
-  const fetchLogColumns = useRequest(getTableColumns, {
+  const fetchColumns = useRequest(getTableColumns, {
     manual: true,
     onSuccess: (res: ILogColumnsResponse[]) => {
       setLogColumns(res);
@@ -76,7 +55,7 @@ const Sider: React.FC<IProps> = (props) => {
       return;
     }
     setSelectedModule(newValue);
-    fetchLogColumns.run({ datasourceId: Number(datasourceId), module: String(module) });
+    fetchColumns.run({ datasourceId: Number(datasourceId), module: String(module) });
   };
 
   // 当 moduleNames 加载完成后，自动选择第一个数据源和第一个模块
@@ -87,13 +66,13 @@ const Sider: React.FC<IProps> = (props) => {
         const datasourceId = String(firstModule.value);
         const module = String(firstModule.children[0].value);
         setSelectedModule([datasourceId, module]);
-        fetchLogColumns.run({ datasourceId: Number(datasourceId), module });
+        fetchColumns.run({ datasourceId: Number(datasourceId), module });
       }
     }
   }, [moduleNames]);
 
-  const toggleColumns = (item: ILogColumnsResponse, index: number) => {
-    console.log(item, index);
+  // 切换字段选中状态
+  const toggleColumns = (_: any, index: number) => {
     logColumns[index].selected = !logColumns[index].selected;
     setLogColumns([...logColumns]);
   };
@@ -101,64 +80,56 @@ const Sider: React.FC<IProps> = (props) => {
   return (
     <div className={styles.layoutSider}>
       <Cascader
-        variant="filled"
-        placeholder="请选择模块"
-        style={{ width: '100%' }}
-        options={moduleNames}
-        expandTrigger="hover"
-        value={selectedModule}
-        onChange={changeLogColumns}
         allowClear
         showSearch
-        loading={fetchModuleNames.loading}
+        variant="filled"
+        placeholder="请选择模块"
+        expandTrigger="hover"
+        options={moduleNames}
+        value={selectedModule}
+        onChange={changeLogColumns}
+        loading={moduleLoading}
+        disabled={moduleLoading || logLoading}
       />
 
-      <Spin spinning={fetchLogColumns.loading} size="small">
+      <Spin spinning={fetchColumns.loading || logLoading} size="small">
         <Collapse
+          ghost
           size="small"
           className={styles.collapse}
           defaultActiveKey={['selected', 'available']}
-          ghost
           items={[
             {
               key: 'selected',
               label: '已选字段',
-              children: logColumns?.map((item: ILogColumnsResponse, index: number) => {
-                if (!item.selected) return null;
-
-                return (
-                  <div
-                    className={styles.item}
+              children: logColumns?.map((item, index) =>
+                !item.selected ? null : (
+                  <FieldListItem
                     key={item.columnName}
-                    onClick={() => toggleColumns(item, index)}
-                  >
-                    <Tag color={getFieldTypeColor(item.dataType)}>
-                      {item.dataType.substr(0, 1).toUpperCase()}
-                    </Tag>
-                    {item.columnName}
-                  </div>
-                );
-              }),
+                    item={item}
+                    index={index}
+                    fieldDistributions={fieldDistributions}
+                    isSelected={true}
+                    onToggle={toggleColumns}
+                  />
+                ),
+              ),
             },
             {
               key: 'available',
               label: '可用字段',
-              children: logColumns?.map((item: ILogColumnsResponse, index: number) => {
-                if (item.selected) return null;
-                return (
-                  <div
-                    className={styles.item}
+              children: logColumns?.map((item, index) =>
+                item.selected ? null : (
+                  <FieldListItem
                     key={item.columnName}
-                    onClick={() => toggleColumns(item, index)}
-                  >
-                    <Tag color={getFieldTypeColor(item.dataType)}>
-                      {item.dataType.substr(0, 1).toUpperCase()}
-                    </Tag>
-                    {item.columnName}
-                    {/* <EyeOutlined style={{ color: '#1890ff' }} /> */}
-                  </div>
-                );
-              }),
+                    item={item}
+                    index={index}
+                    fieldDistributions={fieldDistributions}
+                    isSelected={false}
+                    onToggle={toggleColumns}
+                  />
+                ),
+              ),
             },
           ]}
         />

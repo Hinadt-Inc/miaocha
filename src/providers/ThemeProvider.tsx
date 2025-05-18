@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ConfigProvider, theme as antdTheme } from 'antd';
+import { colorPrimary } from '@/utils/utils';
 
 // 主题模式类型
 export type ThemeMode = 'light' | 'dark';
@@ -28,7 +29,7 @@ interface ThemeProviderProps {
 const themeConfig = {
   light: {
     token: {
-      colorPrimary: '#1677ff',
+      colorPrimary,
       borderRadius: 4,
       colorBgContainer: '#ffffff',
       colorBgElevated: '#ffffff',
@@ -67,9 +68,9 @@ const themeConfig = {
 };
 
 // 主题提供者组件
-export const ThemeProvider: React.FC<ThemeProviderProps> = ({ 
-  children, 
-  defaultMode = 'light' 
+export const ThemeProvider: React.FC<ThemeProviderProps> = ({
+  children,
+  defaultMode = 'light',
 }) => {
   // 优先从本地存储中获取主题模式
   const [mode, setMode] = useState<ThemeMode>(() => {
@@ -90,18 +91,18 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   // useEffect(() => {
   //   document.body.classList.remove('light-mode', 'dark-mode');
   //   document.body.classList.add(`${mode}-mode`);
-    
+
   //   // 设置 CSS 变量
   //   document.documentElement.style.setProperty(
-  //     '--card-bg', 
+  //     '--card-bg',
   //     mode === 'dark' ? '#1f1f1f' : '#ffffff'
   //   );
   //   document.documentElement.style.setProperty(
-  //     '--text-primary', 
+  //     '--text-primary',
   //     mode === 'dark' ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.85)'
   //   );
   //   document.documentElement.style.setProperty(
-  //     '--text-secondary', 
+  //     '--text-secondary',
   //     mode === 'dark' ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.45)'
   //   );
   // }, [mode]);
@@ -113,14 +114,14 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   };
 
   return (
-    <ThemeContext.Provider value={{ 
-      mode, 
-      toggleTheme, 
-      isDarkMode: mode === 'dark' 
-    }}>
-      <ConfigProvider theme={antTheme}>
-        {children}
-      </ConfigProvider>
+    <ThemeContext.Provider
+      value={{
+        mode,
+        toggleTheme,
+        isDarkMode: mode === 'dark',
+      }}
+    >
+      <ConfigProvider theme={antTheme}>{children}</ConfigProvider>
     </ThemeContext.Provider>
   );
 };

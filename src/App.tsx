@@ -2,11 +2,16 @@ import { App as AntdApp } from 'antd';
 import { ProLayout } from '@ant-design/pro-components';
 import { Link, Outlet } from 'react-router-dom';
 import Profile from '@/components/Profile';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { colorPrimary } from '@/utils/utils';
 import { routes } from './routes';
 
 const App = () => {
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(true); // 菜单是否收起状态
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--primary-color', colorPrimary);
+  }, []);
 
   return (
     <ProLayout
@@ -17,7 +22,7 @@ const App = () => {
       onCollapse={setCollapsed}
       breakpoint={false}
       siderWidth={200}
-      colorPrimary="#0038FF"
+      colorPrimary={colorPrimary}
       route={{
         // 成菜单和面包屑
         path: '/',

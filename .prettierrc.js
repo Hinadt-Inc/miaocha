@@ -1,17 +1,17 @@
 export default {
   singleQuote: true,
   arrowParens: 'always',
-  parser: "typescript",
+  parser: 'typescript',
   useTabs: false,
   bracketSpacing: true,
-  endOfLine: "auto",
+  endOfLine: 'auto',
   semi: true,
   tabWidth: 2,
-  printWidth: 100,
+  printWidth: 120,
   trailingComma: 'all',
   singleQuote: true,
   bracketSameLine: false,
   jsxSingleQuote: false,
   quoteProps: 'as-needed',
-  htmlWhitespaceSensitivity: 'css'
-}
+  htmlWhitespaceSensitivity: 'css',
+};

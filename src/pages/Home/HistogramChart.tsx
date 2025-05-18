@@ -1,7 +1,8 @@
+import { useMemo, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { EChartsOption } from 'echarts';
 import { message } from 'antd';
-import { useMemo, useEffect } from 'react';
+import { colorPrimary } from '@/utils/utils';
 
 interface IProps {
   data: ISearchLogsResponse['distributionData'];
@@ -159,8 +160,8 @@ const HistogramChart = (props: IProps) => {
           data: aggregatedData.values, // 数据数组
           barWidth: '40%', // 柱条宽度，相对于类目宽度的百分比
           itemStyle: {
-            color: '#0038ff', // 柱状图填充颜色
-            borderRadius: [4, 4, 0, 0], // 柱状图圆角，[左上, 右上, 右下, 左下]
+            color: colorPrimary, // 柱状图填充颜色
+            borderRadius: [8, 8, 0, 0], // 柱状图圆角，[左上, 右上, 右下, 左下]
           },
           emphasis: {
             itemStyle: {

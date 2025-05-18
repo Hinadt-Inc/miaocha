@@ -19,19 +19,14 @@ const PageContainer: React.FC<PageContainerProps> = ({
   style = {},
 }) => {
   const { isDarkMode } = useTheme();
-  
+
   return (
-    <div 
-      className={`page-container ${isDarkMode ? 'dark' : ''} ${className}`}
-      style={style}
-    >
+    <div className={`page-container ${isDarkMode ? 'dark' : ''} ${className}`} style={style}>
       <div className="page-title">
         <h1>{title}</h1>
         {extra && <div className="page-extra">{extra}</div>}
       </div>
-      <div className="page-content">
-        {children}
-      </div>
+      <div className="page-content">{children}</div>
     </div>
   );
 };

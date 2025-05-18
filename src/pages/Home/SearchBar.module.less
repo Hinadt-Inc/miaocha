@@ -1,5 +1,5 @@
 .searchBar {
-  padding: 0 12px;
+  padding: 0 10px;
   .top {
     display: flex;
     align-items: center;
@@ -11,6 +11,7 @@
         .ant-statistic-content {
           font-size: 14px;
           color: #000;
+          font-weight: 600;
         }
       }
 
@@ -20,11 +21,16 @@
         .ant-btn {
           font-size: 13px;
         }
-        .ant-btn:last-child {
-          padding-right: 0;
-        }
       }
-
+      // .moveTime {
+      //   padding: 0 ;
+      //   position: relative;
+      //   top: 2px;
+      //   left: 2px;
+      //   &:last-child {
+      //     left: -2px;
+      //   }
+      // }
     }
   }
   .form {
@@ -65,16 +71,15 @@
           row-gap: 2px;
         }
         .ant-tag {
-          line-height: 16px;
-          padding: 0 4px;
+          line-height: 18px;
+          padding: 0 6px;
+          cursor: pointer;
+
         }
         .ant-tag-close-icon {
           margin-left: 4px;
         }
 
-      }
-      .checkableTag {
-        cursor: pointer;
       }
     }
   }
