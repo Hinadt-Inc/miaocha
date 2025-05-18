@@ -9,40 +9,66 @@ interface IProps {
   loading?: boolean; // 加载状态
   onLoadMore: () => void; // 加载更多数据的回调函数
   hasMore?: boolean; // 是否还有更多数据
+  dynamicColumns?: { columnName: string; selected: boolean }[]; // 动态列配置
 }
 
 const VirtualTable = (props: IProps) => {
-  const { data, loading = false, onLoadMore, hasMore = false } = props;
-  const containerRef = useRef<HTMLDivElement>(null);
-  const columnHelper = createColumnHelper<any>();
+  const { data, loading = false, onLoadMore, hasMore = false, dynamicColumns = [] } = props;
+  console.log('【打印日志】props:', props);
+  const containerRef = useRef<HTMLDivElement>(null); // 滚动容器的ref
+  const columnHelper = createColumnHelper<any>(); // 列辅助函数
 
   // 定义表格列
   const columns = useMemo(
-    () => [
-      columnHelper.accessor('log_time', {
-        header: 'log_time',
-        cell: (info) => info.getValue()?.replace('T', ' '),
-      }),
-      columnHelper.accessor('message', {
-        header: 'message',
-        cell: (info) => info.getValue(),
-      }),
-    ],
-    [],
+    () => {
+      // 始终显示log_time列作为第一列
+      const logTimeColumn = columnHelper.accessor('log_time', {
+        header: 'log_time', // 表头
+        cell: (info) => info.getValue()?.replace('T', ' '), // 单元格渲染函数
+      });
+
+      // 添加动态列（除了log_time，因为它已经作为固定列添加）
+      const additionalColumns = dynamicColumns
+        .filter((col) => col.selected && col.columnName !== 'log_time')
+        .map((col) =>
+          columnHelper.accessor(col.columnName, {
+            header: col.columnName,
+            cell: (info) => info.getValue(),
+          }),
+        );
+
+      // 检查是否只有log_time列被选中
+      const hasOtherSelected = dynamicColumns.some((col) => col.selected && col.columnName !== 'log_time');
+      const columns = [logTimeColumn];
+
+      // 如果没有其他列被选中，添加_source列显示整行数据
+      if (!hasOtherSelected) {
+        columns.push(
+          columnHelper.accessor((row) => row, {
+            header: '_source',
+            cell: (info) => JSON.stringify(info.getValue(), null, 2),
+          }) as any,
+        );
+      }
+
+      return [...columns, ...additionalColumns];
+    },
+    [dynamicColumns], // 依赖项添加dynamicColumns，当动态列变化时重新计算
   );
 
   // 初始化表格实例
   const table = useReactTable({
-    data,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
+    data, // 数据
+    columns, // 列
+    getCoreRowModel: getCoreRowModel(), // 负责把原始数据(raw data)转换成表格能直接使用的格式
   });
+  console.log('【打印日志】table:', table);
 
   // 设置虚拟滚动
-  const { rows } = table.getRowModel();
+  const { rows } = table.getRowModel(); // 将原始数据转换为表格可用的行结构
   const rowVirtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => containerRef.current,
+    count: rows.length, // 总行数
+    getScrollElement: () => containerRef.current, // 滚动容器
     estimateSize: () => 35, // 预估的行高
     overscan: 10, // 预加载的行数
   });
@@ -67,63 +93,56 @@ const VirtualTable = (props: IProps) => {
   }, [loading, hasMore, onLoadMore]);
 
   return (
-    <div ref={containerRef} className={styles.virtualTable}>
-      <table className={styles.table}>
-        <thead className={styles.tableHeader}>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <th key={header.id} className={styles.headerCell}>
-                  {flexRender(header.column.columnDef.header, header.getContext())}
-                </th>
-              ))}
+    <div ref={containerRef} className={styles.virtualLayout}>
+      <Spin spinning={loading}>
+        <table className={styles.table}>
+          <thead className={styles.tableHeader}>
+            {/* 获取表格的表 */}
+            {table.getHeaderGroups().map((item) => (
+              <tr key={item.id}>
+                {item.headers.map((sub) => (
+                  <th key={sub.id} className={styles.headerCell}>
+                    {flexRender(sub.column.columnDef.header, sub.getContext())}
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            <tr>
+              <td colSpan={table.getAllColumns().length}>
+                <div
+                  className={styles.tableBody}
+                  style={{
+                    height: `${rowVirtualizer.getTotalSize()}px`,
+                  }}
+                >
+                  {rowVirtualizer.getVirtualItems().map((item) => {
+                    const row = rows[item.index];
+                    return (
+                      <div
+                        key={item.index}
+                        data-index={item.index}
+                        ref={rowVirtualizer.measureElement}
+                        className={styles.tableRow}
+                        style={{
+                          transform: `translateY(${item.start}px)`,
+                        }}
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <div key={cell.id} className={styles.tableCell}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              </td>
             </tr>
-          ))}
-        </thead>
-        <tbody>
-          <tr>
-            <td colSpan={table.getAllColumns().length}>
-              <div
-                style={{
-                  height: `${rowVirtualizer.getTotalSize()}px`,
-                  width: '100%',
-                  position: 'relative',
-                }}
-              >
-                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                  const row = rows[virtualRow.index];
-                  return (
-                    <div
-                      key={virtualRow.index}
-                      data-index={virtualRow.index}
-                      ref={rowVirtualizer.measureElement}
-                      className={styles.tableRow}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        transform: `translateY(${virtualRow.start}px)`,
-                      }}
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <div key={cell.id} className={styles.tableCell}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      {loading && (
-        <div className={styles.loadingContainer}>
-          <Spin />
-        </div>
-      )}
+          </tbody>
+        </table>
+      </Spin>
     </div>
   );
 };

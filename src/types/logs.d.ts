@@ -20,12 +20,13 @@ declare global {
   }
 
   interface ILogColumnsResponse {
-    columnName: string;
-    dataType: string;
+    columnName?: string;
+    dataType?: string;
     selected?: boolean;
     columnComment?: string;
     isPrimaryKey?: boolean;
     isNullable?: boolean;
+    isFixed?: boolean;
   }
 
   interface ISearchLogsParams {

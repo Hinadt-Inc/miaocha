@@ -12,10 +12,12 @@ interface IProps {
     rows?: any[];
   };
   fetchLog: any;
+  logColumns?: { columnName: string; selected: boolean }[]; // 添加动态列配置
 }
 
 const Log = (props: IProps) => {
-  const { log, fetchLog } = props;
+  const { log, fetchLog, logColumns = [] } = props;
+
   const { rows } = log || {};
   // 用于存储所有历史数据的状态
   const [allRows, setAllRows] = useState<any[]>([]);
@@ -49,6 +51,7 @@ const Log = (props: IProps) => {
           loading={fetchLog.loading}
           onLoadMore={handleLoadMore}
           hasMore={true}
+          dynamicColumns={logColumns}
         />
       </div>
     </div>

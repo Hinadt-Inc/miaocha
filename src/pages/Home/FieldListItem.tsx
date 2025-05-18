@@ -34,14 +34,16 @@ const FieldListItem: React.FC<IProps> = ({ item, index, fieldDistributions, isSe
                 <Tag color={getFieldTypeColor(item.dataType)}>{item.dataType.substr(0, 1).toUpperCase()}</Tag>
                 {item.columnName}
               </div>
-              <Button
-                color={isSelected ? 'danger' : 'primary'}
-                variant="link"
-                className={styles.footBtn}
-                onClick={() => onToggle(item, index)}
-              >
-                {isSelected ? '移除' : '添加'}
-              </Button>
+              {!(isSelected && item.columnName === 'log_time') && (
+                <Button
+                  color={isSelected ? 'danger' : 'primary'}
+                  variant="link"
+                  className={styles.footBtn}
+                  onClick={() => onToggle(item, index)}
+                >
+                  {isSelected ? '移除' : '添加'}
+                </Button>
+              )}
             </div>
           ),
           children: (

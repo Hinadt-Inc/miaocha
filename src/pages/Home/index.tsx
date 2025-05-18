@@ -11,6 +11,7 @@ import styles from './index.module.less';
 const HomePage = () => {
   const [moduleNames, setModuleNames] = useState<IStatus[]>([]); // 模块名称列表，用于字段选择等组件
   const [log, setLog] = useState<ISearchLogsResponse | null>(null); // 日志数据
+  const [logColumns, setLogColumns] = useState<ILogColumnsResponse[]>([]); // 日志字段列表
   // 搜索参数
   const [searchParams, setSearchParams] = useState<ISearchLogsParams>({
     pageSize: 20,
@@ -90,6 +91,11 @@ const HomePage = () => {
   // 使用useMemo优化搜索参数构建，减少不必要的对象创建
   // const [timeGrouping, setTimeGrouping] = useState<'minute' | 'hour' | 'day' | 'month'>('minute');
 
+  // 处理列变化
+  const handleColumnsChange = (columns: ILogColumnsResponse[]) => {
+    setLogColumns(columns);
+  };
+
   // 优化字段选择组件的props
   const siderProps = useMemo(
     () => ({
@@ -97,6 +103,7 @@ const HomePage = () => {
       moduleLoading: fetchModuleNames.loading,
       logLoading: fetchLog.loading,
       fieldDistributions: log?.fieldDistributions,
+      onColumnsChange: handleColumnsChange,
     }),
     [log?.fieldDistributions, fetchLog.loading, moduleNames, fetchModuleNames.loading],
   );
@@ -106,8 +113,9 @@ const HomePage = () => {
     () => ({
       log,
       fetchLog,
+      logColumns,
     }),
-    [log, fetchLog],
+    [log, fetchLog, logColumns],
   );
 
   // 搜索栏组件props
