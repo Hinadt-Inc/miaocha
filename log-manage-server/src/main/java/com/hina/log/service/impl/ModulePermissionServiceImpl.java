@@ -240,6 +240,17 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
         return new ArrayList<>(resultMap.values());
     }
 
+    @Override
+    public List<UserModulePermissionDTO> getAllUsersModulePermissions() {
+        // 获取所有用户的模块权限
+        List<UserModulePermission> allPermissions = userModulePermissionMapper.selectAll();
+
+        // 转换为DTO
+        return allPermissions.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
     /**
      * 检查模块是否存在
      *

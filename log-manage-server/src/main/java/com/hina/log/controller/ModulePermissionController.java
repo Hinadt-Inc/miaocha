@@ -96,4 +96,15 @@ public class ModulePermissionController {
     public ApiResponse<List<UserPermissionModuleStructureDTO>> getMyAccessibleModules(@CurrentUser UserDTO user) {
         return ApiResponse.success(modulePermissionService.getUserAccessibleModules(user.getId()));
     }
+
+    /**
+     * 获取所有用户的模块权限
+     *
+     * @return 所有用户的模块权限列表
+     */
+    @GetMapping("/users/all")
+    @Operation(summary = "获取所有用户的模块权限", description = "获取系统中所有用户的模块权限列表")
+    public ApiResponse<List<UserModulePermissionDTO>> getAllUsersModulePermissions() {
+        return ApiResponse.success(modulePermissionService.getAllUsersModulePermissions());
+    }
 }

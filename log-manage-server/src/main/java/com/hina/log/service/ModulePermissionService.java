@@ -52,4 +52,11 @@ public interface ModulePermissionService {
      * @return 用户可访问的模块结构列表
      */
     List<UserPermissionModuleStructureDTO> getUserAccessibleModules(Long userId);
+
+    /**
+     * 获取所有用户的模块权限
+     *
+     * @return 所有用户的模块权限列表
+     */
+    List<UserModulePermissionDTO> getAllUsersModulePermissions();
 }
