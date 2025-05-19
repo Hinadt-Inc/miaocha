@@ -86,6 +86,7 @@ const HomePage = () => {
       endTime: searchParams.endTime,
       ...params,
     });
+    setLog(null);
   };
 
   // 使用useMemo优化搜索参数构建，减少不必要的对象创建

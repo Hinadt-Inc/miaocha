@@ -20,12 +20,11 @@ const Log = (props: IProps) => {
   const { log, fetchLog, dynamicColumns = [] } = props;
   const { rows } = log || {};
   const [allRows, setAllRows] = useState<any[]>([]); // 用于存储所有历史数据的状态
-
   // 当新数据到达时，将其添加到历史数据中
   useEffect(() => {
     if (rows && rows.length > 0) {
       setAllRows((prevRows: any) => [...prevRows, ...rows]);
-    } else if (log?.totalCount === 0 && rows?.length === 0) {
+    } else if (!log?.totalCount && (rows || [])?.length === 0) {
       setAllRows([]);
     }
   }, [rows, log]);
