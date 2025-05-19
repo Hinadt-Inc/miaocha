@@ -189,7 +189,13 @@ const MachineManagementPage = () => {
         </div>
 
         <div className="table-container">
-          <SimpleTable dataSource={machines} columns={columns} loading={loading} rowKey="id" />
+          <SimpleTable
+            dataSource={machines}
+            columns={columns}
+            loading={loading}
+            size="small"
+            rowKey="id"
+          />
         </div>
 
         <Modal

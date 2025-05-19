@@ -43,6 +43,10 @@ const DataSourceManagementPage = () => {
   const [searchKeyword, setSearchKeyword] = useState<string>('');
   const [allDataSources, setAllDataSources] = useState<DataSourceItem[]>([]);
   const [dataSourcesLoaded, setDataSourcesLoaded] = useState<boolean>(false);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+  });
   const [loading, setLoading] = useState({
     table: false,
     submit: false,
@@ -116,8 +120,8 @@ const DataSourceManagementPage = () => {
       }
 
       // 分页处理
-      const pageSize = params.pageSize ?? 10;
-      const current = params.current ?? 1;
+      const pageSize = params.pageSize ?? pagination.pageSize;
+      const current = params.current ?? pagination.current;
       const start = (current - 1) * pageSize;
       const end = start + pageSize;
 
@@ -142,11 +146,19 @@ const DataSourceManagementPage = () => {
       // 更新本地缓存
       setAllDataSources((prev) => prev.filter((item) => item.id !== id));
       message.success('数据源删除成功');
-      // 刷新表格显示
-      actionRef.current?.reloadAndRest?.();
+      // 刷新表格显示，保留分页设置
+      actionRef.current?.reload();
     } catch {
       message.error('删除数据源失败');
     }
+  };
+
+  // 处理分页变更
+  const handlePageChange = (page: number, pageSize: number) => {
+    setPagination({
+      current: page,
+      pageSize,
+    });
   };
 
   // 处理表单提交
@@ -186,6 +198,7 @@ const DataSourceManagementPage = () => {
       }
 
       setModalVisible(false);
+      // 保留当前分页设置进行重新加载
       void actionRef.current!.reload();
       return true;
     } catch {
@@ -401,11 +414,15 @@ const DataSourceManagementPage = () => {
                 onChange={(e) => {
                   // 当输入变化时立即搜索，提供更即时的反馈
                   setSearchKeyword(e.target.value);
-                  actionRef.current?.reloadAndRest?.();
+                  // 搜索时重置为第一页，但保留每页条数
+                  setPagination((prev) => ({ ...prev, current: 1 }));
+                  actionRef.current?.reload();
                 }}
                 onSearch={(value) => {
                   setSearchKeyword(value);
-                  actionRef.current?.reloadAndRest?.();
+                  // 搜索时重置为第一页，但保留每页条数
+                  setPagination((prev) => ({ ...prev, current: 1 }));
+                  actionRef.current?.reload();
                 }}
               />
             </Space>,
@@ -419,7 +436,9 @@ const DataSourceManagementPage = () => {
           defaultData={[]}
           columns={columns}
           pagination={{
-            pageSize: 10,
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            onChange: handlePageChange,
             showSizeChanger: true,
             responsive: true,
             showTotal: (total) => `共 ${total} 条`,
