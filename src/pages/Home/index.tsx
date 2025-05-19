@@ -1,6 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Splitter } from 'antd';
 import { useRequest } from 'ahooks';
+<<<<<<< HEAD
+=======
+import { useFilters } from '@/hooks/useFilters';
+>>>>>>> feature/zhangyongjian/除发现部分的其他修改
 import SearchBar from './SearchBar';
 import Log from './Log';
 import Sider from './Sider';
@@ -89,7 +93,91 @@ const HomePage = () => {
   };
 
   // 使用useMemo优化搜索参数构建，减少不必要的对象创建
+<<<<<<< HEAD
   // const [timeGrouping, setTimeGrouping] = useState<'minute' | 'hour' | 'day' | 'month'>('minute');
+=======
+  const [timeGrouping, setTimeGrouping] = useState<'minute' | 'hour' | 'day' | 'month'>('minute');
+
+  // 获取表权限数据，优化为仅在组件挂载时执行一次
+  useEffect(() => {
+    // const fetchTablePermissions = async () => {
+    //   setTableLoading(true);
+    //   try {
+    //     const data = await getMyTablePermissions();
+    //     const transformedData = data.map((ds) => ({
+    //       datasourceId: ds.datasourceId,
+    //       datasourceName: ds.datasourceName,
+    //       databaseName: ds.databaseName,
+    //       tables: ds.tables.map((table: TablePermission) => ({
+    //         tableName: table.tableName,
+    //         tableComment: table.tableComment || '',
+    //         columns: (table.columns || []).map((col: TableColumn) => ({
+    //           columnName: col.columnName,
+    //           dataType: col.dataType,
+    //           columnComment: col.columnComment || '',
+    //           isPrimaryKey: col.isPrimaryKey || false,
+    //           isNullable: col.isNullable || false,
+    //         })),
+    //       })),
+    //     }));
+    //     // 使用ref存储数据，减少重渲染
+    //     availableTablesRef.current = transformedData;
+    //     setRenderKey((prev) => prev + 1);
+    //     // 默认选择第一个数据源和第一个表
+    //     if (data.length > 0 && data[0].tables.length > 0) {
+    //       const defaultTable = `${data[0].datasourceId}-${data[0].tables[0].tableName}`;
+    //       setSelectedTable(defaultTable);
+    //       throttledFetchColumns(defaultTable);
+    //     }
+    //   } catch (error) {
+    //     console.error('获取表权限失败:', error);
+    //     Modal.error({
+    //       title: '获取表权限失败',
+    //       content: '无法获取表权限信息，请检查网络连接或联系管理员',
+    //     });
+    //   } finally {
+    //     setTableLoading(false);
+    //   }
+    // };
+    // fetchTablePermissions();
+  }, []);
+
+  // 将数据加载状态与全局加载状态集成
+  // useEffect(() => {
+  //   if (loading && !isGlobalLoading) {
+  //     startLoading('dataLoading');
+  //   } else if (!loading && isGlobalLoading) {
+  //     // 延迟结束加载状态，避免闪烁
+  //     const timer = setTimeout(() => {
+  //       endLoading('dataLoading');
+  //     }, 300);
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [loading, isGlobalLoading, startLoading, endLoading]);
+
+  // 优化 useFilters 钩子的使用
+  // const {
+  //   showFilterModal,
+  //   setShowFilterModal,
+  //   selectedFilterField,
+  //   handleFilterFieldChange,
+  //   addFilter,
+  // } = useFilters();
+
+  // 优化字段选择逻辑，使用带记忆的回调
+  // const toggleFieldSelection = useCallback((fieldName: string) => {
+  //   setSelectedFields((prev) => {
+  //     if (prev.includes(fieldName)) {
+  //       lastRemovedFieldRef.current = fieldName;
+  //       lastAddedFieldRef.current = null;
+  //       return prev.filter((f) => f !== fieldName);
+  //     } else {
+  //       lastAddedFieldRef.current = fieldName;
+  //       lastRemovedFieldRef.current = null;
+  //       return [...prev, fieldName];
+  //     }
+  //   });
+>>>>>>> feature/zhangyongjian/除发现部分的其他修改
 
   // 处理列变化
   const handleColumnsChange = (columns: ILogColumnsResponse[]) => {

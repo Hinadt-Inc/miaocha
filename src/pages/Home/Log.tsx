@@ -1,14 +1,10 @@
-import { Suspense, lazy, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import styles from './Log.module.less';
 import VirtualTable from './VirtualTable';
-
-// 使用懒加载优化初始加载时间
-const HistogramChart = lazy(() => import('./HistogramChart'));
 
 interface IProps {
   log: {
     totalCount?: number;
-    distributionData?: any;
     rows?: any[];
   };
   fetchLog: any;
@@ -40,11 +36,6 @@ const Log = (props: IProps) => {
 
   return (
     <div className={styles.logContainer}>
-      <div className={styles.chart}>
-        <Suspense fallback={<></>}>
-          <HistogramChart data={log?.distributionData} />
-        </Suspense>
-      </div>
       <div className={styles.table}>
         <VirtualTable
           data={allRows}

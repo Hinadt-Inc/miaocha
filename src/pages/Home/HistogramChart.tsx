@@ -234,9 +234,7 @@ const HistogramChart = (props: IProps) => {
 
       if (groupItems.length > 0) {
         // 对分组内的数据按时间排序
-        groupItems.sort(
-          (a, b) => new Date(a.timePoint).getTime() - new Date(b.timePoint).getTime(),
-        );
+        groupItems.sort((a, b) => new Date(a.timePoint).getTime() - new Date(b.timePoint).getTime());
 
         // 获取时间范围
         const start = groupItems[0].timePoint;

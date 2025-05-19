@@ -71,7 +71,26 @@ export interface APILogData {
 }
 
 // 日志分布点类型
-export type DistributionPoint = {
-  timePoint: string;
-  count: number;
-};
+export interface SearchLogsParams {
+  datasourceId: number;
+  module: string;
+  tableName: string; // 新增表名字段
+  keyword?: string;
+  whereSql?: string;
+  startTime?: string;
+  endTime?: string;
+  timeRange?: string;
+  timeGrouping?: string;
+  pageSize?: number;
+  offset?: number;
+  fields?: string[];
+}
+
+export interface SearchLogsResult {
+  success: boolean;
+  errorMessage?: string;
+  executionTimeMs: number;
+  columns: string[];
+  rows: Record<string, unknown>[];
+  totalCount: number;
+}

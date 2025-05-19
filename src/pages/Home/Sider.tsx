@@ -47,7 +47,7 @@ const Sider: React.FC<IProps> = (props) => {
         onColumnsChange(processedColumns);
       }
     },
-  });
+  }) as any;
 
   // 选择模块时触发，避免重复请求和状态更新
   const changeLogColumns = (value: any[]) => {

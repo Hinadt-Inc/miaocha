@@ -26,6 +26,17 @@ export default defineConfig({
       },
     }),
   ],
+  optimizeDeps: {
+    include: [
+      'monaco-editor',
+      'monaco-editor/esm/vs/editor/editor.worker',
+      'monaco-editor/esm/vs/language/json/json.worker',
+      'monaco-editor/esm/vs/language/css/css.worker',
+      'monaco-editor/esm/vs/language/html/html.worker',
+      'monaco-editor/esm/vs/language/typescript/ts.worker',
+      'monaco-editor/esm/vs/basic-languages/sql/sql',
+    ],
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
@@ -101,24 +112,6 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
-  },
-  // 预构建优化
-  optimizeDeps: {
-    include: [
-      'react',
-      'react-dom',
-      'react-router-dom',
-      'antd',
-      '@ant-design/icons',
-      '@ant-design/pro-components',
-      'echarts',
-      'echarts-for-react',
-      '@react-spring/web',
-      'lodash',
-      'axios',
-      'dayjs',
-    ],
-    exclude: [], // 可以排除一些不需要预构建的依赖
   },
   esbuild: {
     jsxInject: `import React from 'react'`,
