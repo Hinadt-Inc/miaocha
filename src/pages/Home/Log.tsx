@@ -1,10 +1,14 @@
-import { useState, useEffect } from 'react';
+import { Suspense, lazy, useState, useEffect } from 'react';
 import styles from './Log.module.less';
 import VirtualTable from './VirtualTable';
+
+// 使用懒加载优化初始加载时间
+const HistogramChart = lazy(() => import('./HistogramChart'));
 
 interface IProps {
   log: {
     totalCount?: number;
+    distributionData?: any;
     rows?: any[];
   };
   fetchLog: any;
@@ -21,9 +25,11 @@ const Log = (props: IProps) => {
   // 当新数据到达时，将其添加到历史数据中
   useEffect(() => {
     if (rows && rows.length > 0) {
-      setAllRows((prevRows) => [...prevRows, ...rows]);
+      setAllRows((prevRows: any) => [...prevRows, ...rows]);
+    } else if (log?.totalCount === 0 && rows?.length === 0) {
+      setAllRows([]);
     }
-  }, [rows]);
+  }, [rows, log]);
 
   const handleLoadMore = () => {
     if (!fetchLog.loading) {
@@ -36,6 +42,11 @@ const Log = (props: IProps) => {
 
   return (
     <div className={styles.logContainer}>
+      <div className={styles.chart}>
+        <Suspense fallback={<></>}>
+          <HistogramChart data={log?.distributionData} />
+        </Suspense>
+      </div>
       <div className={styles.table}>
         <VirtualTable
           data={allRows}

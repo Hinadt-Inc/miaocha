@@ -32,8 +32,8 @@ declare global {
   interface ISearchLogsParams {
     datasourceId?: number;
     module?: string;
-    keywords?: string;
-    whereSqls?: string;
+    keywords?: string[];
+    whereSqls?: string[];
     startTime?: string;
     endTime?: string;
     timeRange?: string;

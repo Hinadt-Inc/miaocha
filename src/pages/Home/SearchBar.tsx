@@ -97,10 +97,10 @@ const SearchBar = (props: IProps) => {
       offset: 0,
     };
     if (keywords.length > 0) {
-      params['keywords'] = keywords.join();
+      params['keywords'] = keywords;
     }
     if (sqls.length > 0) {
-      params['whereSqls'] = sqls.join(' AND ');
+      params['whereSqls'] = sqls;
     }
 
     // 时间

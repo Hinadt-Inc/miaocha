@@ -1,12 +1,10 @@
 import { post, get } from './request';
 
-export const getTableColumns = async (
-  datasourceId: string,
-  module: string,
-): Promise<Array<{ columnName: string; dataType: string }>> => {
-  return get(`/api/logs/columns`, {
-    params: { datasourceId, module },
-  }) as Promise<Array<{ columnName: string; dataType: string }>>;
+// 获取日志字段
+export const getTableColumns = (params: ILogColumnsParams) => {
+  return get('/api/logs/columns', {
+    params,
+  }) as Promise<ILogColumnsResponse[]>;
 };
 
 // 执行日志检索
