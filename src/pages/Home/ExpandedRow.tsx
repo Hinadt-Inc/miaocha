@@ -9,17 +9,16 @@ interface IProps {
 
 const ExpandedRow = (props: IProps) => {
   const { data } = props;
+  console.log('【打印日志】data22:', data);
   const columns = [
     {
       title: '字段',
       dataIndex: 'field',
-      key: 'field',
       width: 150,
     },
     {
       title: '值',
       dataIndex: 'value',
-      key: 'value',
       render: (_text: string, record: any) => {
         // message字段或内容较长时自动换行
         if (record.field === 'message' || String(record.value).length > 100) {
@@ -44,14 +43,7 @@ const ExpandedRow = (props: IProps) => {
       key: 'Table',
       label: 'Table',
       children: (
-        <Table
-          bordered
-          dataSource={dataSource}
-          columns={columns}
-          pagination={false}
-          size="small"
-          rowKey="key"
-        />
+        <Table bordered dataSource={dataSource} columns={columns} pagination={false} size="small" rowKey="key" />
       ),
     },
     {
@@ -70,9 +62,7 @@ const ExpandedRow = (props: IProps) => {
     },
   ];
 
-  return (
-    <Tabs className={styles.expandedRow} size="small" defaultActiveKey="table" items={items} />
-  );
+  return <Tabs className={styles.expandedRow} size="small" defaultActiveKey="table" items={items} />;
 };
 
 export default ExpandedRow;

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useMemo, useState, Fragment } from 'react';
-import { Table, Spin, Button, Segmented, Space, Switch, Typography } from 'antd';
+import { useEffect, useRef, useState, Fragment } from 'react';
+import { Table } from 'antd';
 import ExpandedRow from './ExpandedRow';
 import styles from './VirtualTable.module.less';
 
@@ -116,10 +116,9 @@ const VirtualTable = (props: IProps) => {
         dataSource={data}
         pagination={false}
         columns={columns}
-        // scroll={{ x: 'max-content', y: containerHeight - headerHeight }}
-        scroll={{ x: 700, y: containerHeight - headerHeight }}
+        scroll={{ x: 800, y: containerHeight - headerHeight }}
         expandable={{
-          columnWidth: 48,
+          columnWidth: 26,
           expandedRowRender: (record) => <ExpandedRow data={record} />,
         }}
       />
