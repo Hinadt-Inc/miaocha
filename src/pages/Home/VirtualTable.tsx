@@ -1,7 +1,8 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import { Spin } from 'antd';
+import ExpandedRow from './ExpandedRow';
 import styles from './VirtualTable.module.less';
 
 interface IProps {
@@ -16,10 +17,31 @@ const VirtualTable = (props: IProps) => {
   const { data, loading = false, onLoadMore, hasMore = false, dynamicColumns = [] } = props;
   const containerRef = useRef<HTMLDivElement>(null); // 滚动容器的ref
   const columnHelper = createColumnHelper<any>(); // 列辅助函数
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({}); // 展开状态
 
   // 定义表格列
   const columns = useMemo(
     () => {
+      // 添加展开按钮列
+      const expandColumn = columnHelper.display({
+        id: 'expand',
+        header: '收起/展开',
+        cell: ({ row }) => (
+          <button
+            onClick={() => {
+              setExpandedRows((prev) => ({
+                ...prev,
+                [row.id]: !prev[row.id],
+              }));
+            }}
+            className={styles.expandButton}
+          >
+            {expandedRows[row.id] ? '▼' : '▶'}
+          </button>
+        ),
+        size: 30,
+      });
+
       // 始终显示log_time列作为第一列
       const logTimeColumn = columnHelper.accessor('log_time', {
         header: 'log_time', // 表头
@@ -57,7 +79,7 @@ const VirtualTable = (props: IProps) => {
 
       return [...columns, ...additionalColumns];
     },
-    [dynamicColumns], // 依赖项添加dynamicColumns，当动态列变化时重新计算
+    [dynamicColumns, expandedRows], // 依赖项添加dynamicColumns，当动态列变化时重新计算
   );
 
   // 初始化表格实例
@@ -65,6 +87,7 @@ const VirtualTable = (props: IProps) => {
     data, // 数据
     columns, // 列
     getCoreRowModel: getCoreRowModel(), // 负责把原始数据(raw data)转换成表格能直接使用的格式
+    getRowId: (row) => row.id || Math.random().toString(36).substring(2, 9), // 为每行生成唯一ID
   });
 
   // 设置虚拟滚动
@@ -72,7 +95,10 @@ const VirtualTable = (props: IProps) => {
   const rowVirtualizer = useVirtualizer({
     count: rows.length, // 总行数
     getScrollElement: () => containerRef.current, // 滚动容器
-    estimateSize: () => 35, // 预估的行高
+    estimateSize: (index) => {
+      const row = rows[index];
+      return expandedRows[row.id] ? 335 : 35; // 展开行高度=普通行35px + 展开内容300px
+    },
     overscan: 10, // 预加载的行数
   });
 
@@ -119,22 +145,43 @@ const VirtualTable = (props: IProps) => {
           >
             {rowVirtualizer.getVirtualItems().map((item) => {
               const row = rows[item.index];
+              console.log('【打印日志】item:', item);
               return (
-                <tr
-                  key={item.index}
-                  data-index={item.index}
-                  ref={rowVirtualizer.measureElement}
-                  className={styles.tableRow}
-                  style={{
-                    transform: `translateY(${item.start}px)`,
-                  }}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={`${item.index}_${cell.id}`} className={styles.tableCell}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
-                </tr>
+                <>
+                  <tr
+                    key={item.index}
+                    data-index={item.index}
+                    ref={rowVirtualizer.measureElement}
+                    className={styles.tableRow}
+                    style={{
+                      position: 'absolute',
+                      top: `${item.start}px`,
+                      width: '100%',
+                    }}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={`${item.index}_${cell.id}`} className={styles.tableCell}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                  {expandedRows[row.id] && (
+                    <tr
+                      key={`${row.id}-expanded`}
+                      className={styles.expandedRow}
+                      style={{
+                        position: 'absolute',
+                        top: `${item.start}px`,
+                        width: '100%',
+                        height: expandedRows[row.id] ? '335px' : '35px',
+                      }}
+                    >
+                      <td colSpan={row.getVisibleCells().length}>
+                        <ExpandedRow data={row.original} />
+                      </td>
+                    </tr>
+                  )}
+                </>
               );
             })}
           </tbody>
