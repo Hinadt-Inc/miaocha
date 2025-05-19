@@ -67,7 +67,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
 
                         // 用户查看自己权限的接口
-                        .requestMatchers("/api/permissions/my/tables").authenticated()
+                        .requestMatchers("/api/permissions/modules/my").authenticated()
 
                         // 其他权限管理接口
                         .requestMatchers("/api/permissions/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
