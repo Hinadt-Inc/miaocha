@@ -30,6 +30,7 @@ import {
   HomeOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
+import AuthCheck from '@/components/AuthCheck';
 import type { ProColumns, ActionType, RequestData, ParamsType } from '@ant-design/pro-components';
 import type { SortOrder } from 'antd/lib/table/interface';
 
@@ -113,8 +114,7 @@ const DataSourceManagementPage = () => {
           (item) =>
             item.name.toLowerCase().includes(lowercaseKeyword) ||
             item.database.toLowerCase().includes(lowercaseKeyword) ||
-            ((item.host || (item as any).ip) &&
-              (item.host || (item as any).ip).toLowerCase().includes(lowercaseKeyword)) ||
+            (item.ip && item.ip.toLowerCase().includes(lowercaseKeyword)) ||
             (item.description && item.description.toLowerCase().includes(lowercaseKeyword)),
         );
       }
@@ -165,11 +165,11 @@ const DataSourceManagementPage = () => {
   const handleFormSubmit = async (values: Omit<CreateDataSourceParams, 'id'>) => {
     setSubmitLoading(true);
     try {
-      // 确保数据兼容性，如果后端期望ip字段而不是host
+      // 确保数据兼容性，如果后端期望ip字段而不是ip
       const formattedValues = {
         ...values,
         // 如果后端API实际使用的是ip字段，可以启用下面的映射
-        // ip: values.host,
+        // ip: values.ip,
       };
 
       if (currentDataSource) {
@@ -215,34 +215,48 @@ const DataSourceManagementPage = () => {
   };
 
   const openEditModal = (record: DataSourceItem) => {
-    // 确保数据中的ip字段映射到host字段上
+    // 确保数据中的ip字段映射到ip字段上
     const mappedRecord = {
       ...record,
-      // 如果record有ip字段但没有host字段，则使用ip值作为host值
-      host: record.host || (record as any).ip,
+      // 如果record有ip字段但没有ip字段，则使用ip值作为ip值
+      ip: record.ip,
+      // 保持jdbcParams作为对象
+      jdbcParams: record.jdbcParams
+        ? typeof record.jdbcParams === 'string'
+          ? JSON.parse(record.jdbcParams)
+          : record.jdbcParams
+        : undefined,
     };
-    setCurrentDataSource(mappedRecord as DataSourceItem);
+    setCurrentDataSource(mappedRecord);
     setModalVisible(true);
   };
 
   // 测试数据库连接
   const handleTestConnection = async (values: TestConnectionParams) => {
-    if (!values.host || !values.port || !values.database || !values.username) {
+    if (!values.ip || !values.port || !values.database || !values.username) {
       message.error('请填写完整的连接信息');
       return;
     }
 
     setTestLoading(true);
     try {
-      const success = await testDataSourceConnection({
+      // 准备测试连接参数
+      const testParams = {
+        name: values.name, // 添加数据源名称
         type: values.type,
-        host: values.host,
+        ip: values.ip,
         port: Number(values.port),
         database: values.database,
         username: values.username,
         password: values.password,
-        jdbcParams: values.jdbcParams,
-      });
+      } as TestConnectionParams;
+
+      // 如果有 JDBC 参数，则添加到请求中
+      if (values.jdbcParams) {
+        testParams.jdbcParams = values.jdbcParams;
+      }
+
+      const success = await testDataSourceConnection(testParams);
 
       if (success) {
         message.success('连接测试成功！');
@@ -286,11 +300,11 @@ const DataSourceManagementPage = () => {
     },
     {
       title: '主机',
-      dataIndex: 'host',
+      dataIndex: 'ip',
       width: '10%',
       ellipsis: true,
       hideInSearch: true,
-      render: (_, record) => record.host || (record as any).ip,
+      render: (_, record) => record.ip,
     },
     {
       title: '端口',
@@ -503,7 +517,7 @@ const DataSourceManagementPage = () => {
           />
           <ProFormText
             colProps={{ span: 12 }}
-            name="host"
+            name="ip"
             label="主机"
             placeholder="请输入主机地址"
             rules={[{ required: true, message: '请输入主机地址' }]}
@@ -559,14 +573,13 @@ const DataSourceManagementPage = () => {
             name="jdbcParams"
             label="JDBC参数"
             placeholder='请输入JDBC参数，例如: {"connectTimeout": 3000}'
-            initialValue={JSON.stringify({ connectTimeout: 3000 })}
             labelCol={{ span: 3 }}
             wrapperCol={{ span: 21 }}
             fieldProps={{
               rows: 3,
               allowClear: true,
             }}
-            tooltip="JSON格式的额外连接参数配置"
+            tooltip="JSON格式的额外连接参数配置（可留空）"
             rules={[
               {
                 validator: async (_: any, value: string) => {
@@ -581,11 +594,19 @@ const DataSourceManagementPage = () => {
               },
             ]}
             transform={(value: any) => {
-              if (!value) return { jdbcParams: { connectTimeout: 3000 } };
+              if (!value) return { jdbcParams: undefined };
               try {
                 return { jdbcParams: JSON.parse(value) };
               } catch (e) {
-                return { jdbcParams: { connectTimeout: 3000 } };
+                return { jdbcParams: undefined };
+              }
+            }}
+            convertValue={(value: any) => {
+              if (!value) return '';
+              try {
+                return typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+              } catch (e) {
+                return '';
               }
             }}
           />
@@ -595,4 +616,5 @@ const DataSourceManagementPage = () => {
   );
 };
 
-export default DataSourceManagementPage;
+import withSystemAccess from '@/utils/withSystemAccess';
+export default withSystemAccess(DataSourceManagementPage);

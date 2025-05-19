@@ -303,4 +303,5 @@ const MachineManagementPage = () => {
   );
 };
 
-export default MachineManagementPage;
+import withSystemAccess from '@/utils/withSystemAccess';
+export default withSystemAccess(MachineManagementPage);
