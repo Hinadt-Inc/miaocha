@@ -494,4 +494,5 @@ const UserManagementPage = () => {
   );
 };
 
-export default UserManagementPage;
+import withSystemAccess from '@/utils/withSystemAccess';
+export default withSystemAccess(UserManagementPage);

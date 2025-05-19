@@ -464,4 +464,5 @@ const PermissionManagementPage = () => {
   );
 };
 
-export default PermissionManagementPage;
+import withSystemAccess from '@/utils/withSystemAccess';
+export default withSystemAccess(PermissionManagementPage);

@@ -42,7 +42,7 @@ import type {
 import LogstashEditModal from './components/LogstashEditModal';
 import { useRef, useState } from 'react';
 
-export default function LogstashManagementPage() {
+function LogstashManagementPage() {
   const [data, setData] = useState<LogstashProcess[]>([]);
   const [loading, setLoading] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -472,3 +472,6 @@ export default function LogstashManagementPage() {
     </div>
   );
 }
+
+import withSystemAccess from '@/utils/withSystemAccess';
+export default withSystemAccess(LogstashManagementPage);

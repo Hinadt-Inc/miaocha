@@ -16,7 +16,7 @@ import {
 
 // 动态导入页面组件
 const LoginPage = lazy(() => import('@/pages/Login'));
-const Demo = lazy(() => import('@/pages/Demo'));
+// const Demo = lazy(() => import('@/pages/Demo'));
 const HomePage = lazy(() => import('@/pages/Home'));
 const UserManagementPage = lazy(() => import('@/pages/system/UserManagementPage'));
 const DataSourceManagementPage = lazy(() => import('@/pages/system/DataSourceManagementPage'));
@@ -50,6 +50,7 @@ export interface RouteConfig {
   element?: React.ReactNode;
   children?: RouteConfig[];
   type?: 'group';
+  access?: string[]; // 新增: 定义访问该路由所需的角色权限
 }
 
 // 统一的路由配置
@@ -77,31 +78,37 @@ export const routes: RouteConfig[] = [
     name: '系统管理',
     icon: <SettingOutlined />,
     type: 'group',
+    access: ['ADMIN', 'SUPER_ADMIN'], // 只有管理员和超级管理员可以访问
     children: [
       {
         path: '/system/user',
         name: '用户管理',
         element: withSuspense(UserManagementPage),
+        access: ['ADMIN', 'SUPER_ADMIN'],
       },
       {
         path: '/system/datasource',
         name: '数据源管理',
         element: withSuspense(DataSourceManagementPage),
+        access: ['ADMIN', 'SUPER_ADMIN'],
       },
       {
         path: '/system/permission',
         name: '权限管理',
         element: withSuspense(PermissionManagementPage),
+        access: ['ADMIN', 'SUPER_ADMIN'],
       },
       {
         path: '/system/machine',
         name: '服务器管理',
         element: withSuspense(MachineManagementPage),
+        access: ['ADMIN', 'SUPER_ADMIN'],
       },
       {
         path: '/system/logstash',
         name: 'Logstash管理',
         element: withSuspense(LogstashManagementPage),
+        access: ['ADMIN', 'SUPER_ADMIN'],
       },
     ],
   },
@@ -126,6 +133,31 @@ const convertToRouterConfig = (
   }));
 };
 
+// 过滤路由配置，根据用户角色显示相应的菜单项
+export const getAuthorizedRoutes = (userRole: string) => {
+  // 如果没有角色信息，只返回不需要权限的路由
+  if (!userRole) {
+    return routes.filter((route) => !route.access);
+  }
+
+  // 递归过滤路由配置
+  const filterRoutes = (routes: RouteConfig[]): RouteConfig[] => {
+    return routes
+      .filter((route) => !route.access || route.access.includes(userRole))
+      .map((route) => {
+        if (route.children) {
+          return {
+            ...route,
+            children: filterRoutes(route.children),
+          };
+        }
+        return route;
+      });
+  };
+
+  return filterRoutes(routes);
+};
+
 // 将路由配置转换为菜单项
 export const convertToMenuItems = (
   routes: RouteConfig[],
@@ -148,7 +180,8 @@ export const convertToMenuItems = (
   }));
 };
 
-// 创建路由
+// 创建路由 - 注意这里不做权限校验，因为路由访问权限需要在组件内进行控制
+// 这里创建完整的路由配置，但菜单显示会根据权限过滤
 export const router = createBrowserRouter([
   {
     path: '/login',

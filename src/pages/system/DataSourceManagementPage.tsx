@@ -30,6 +30,7 @@ import {
   HomeOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
+import AuthCheck from '@/components/AuthCheck';
 import type { ProColumns, ActionType, RequestData, ParamsType } from '@ant-design/pro-components';
 import type { SortOrder } from 'antd/lib/table/interface';
 
@@ -615,4 +616,5 @@ const DataSourceManagementPage = () => {
   );
 };
 
-export default DataSourceManagementPage;
+import withSystemAccess from '@/utils/withSystemAccess';
+export default withSystemAccess(DataSourceManagementPage);

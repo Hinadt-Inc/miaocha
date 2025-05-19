@@ -4,11 +4,18 @@ import { ProLayout } from '@ant-design/pro-components';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import Profile from '@/components/Profile';
 import { useState, useMemo, useEffect } from 'react';
-import { routes } from './routes';
+import { getAuthorizedRoutes } from './routes';
+import { useSelector } from 'react-redux';
 
 const App = () => {
   const [collapsed, setCollapsed] = useState(true);
   const location = useLocation();
+  const userRole = useSelector((state: { user: IStoreUser }) => state.user.role);
+
+  // 根据用户角色获取有权限的路由
+  const authorizedRoutes = useMemo(() => {
+    return getAuthorizedRoutes(userRole);
+  }, [userRole]);
 
   // 计算当前选中的菜单项和打开的菜单
   const { selectedKeys, openKeys } = useMemo(() => {
@@ -72,7 +79,7 @@ const App = () => {
         // 成菜单和面包屑
         path: '/',
         type: 'group',
-        children: routes,
+        children: authorizedRoutes,
       }}
       menuItemRender={(item, dom) => <Link to={item.path ?? '/'}>{dom}</Link>}
       avatarProps={{
