@@ -56,7 +56,7 @@ const FieldListItem: React.FC<IProps> = ({ item, index, fieldDistributions, isSe
                 .map((sub: IFieldDistributions, i: number) => (
                   <div key={`header${index}${item.columnName}${i}`} className={styles.header}>
                     <b>TOP5 </b>
-                    {sub.nonNullCount}/{sub.totalCount} 记录
+                    {sub.nonNullCount} / {sub.totalCount} 记录
                   </div>
                 ))}
               <div className={styles.ul}>
@@ -78,12 +78,12 @@ const FieldListItem: React.FC<IProps> = ({ item, index, fieldDistributions, isSe
                           </Typography.Paragraph>
                         </div>
                         <div className={styles.right}>
-                          {/* <Button color="primary" variant="link">
+                          <Button color="primary" variant="link">
                             <i className="iconfont icon-fangda"></i>
                           </Button>
                           <Button color="primary" variant="link">
                             <i className="iconfont icon-suoxiao1"></i>
-                          </Button> */}
+                          </Button>
                         </div>
                       </div>
                       <div className={styles.two}>

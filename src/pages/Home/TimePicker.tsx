@@ -62,33 +62,45 @@ const TimePicker = (props: IProps) => {
 
   return (
     <div className={styles.timePickerLayout}>
-      <Tabs activeKey={activeTab} onChange={setActiveTab}>
-        <TabPane tab="快速选择" key="quick">
-          {quickRender}
-        </TabPane>
-        <TabPane tab="相对时间" key="relative">
-          <Suspense fallback={<SpinIndicator />}>
-            <Relative onSubmitTime={onSubmitTime} />
-          </Suspense>
-        </TabPane>
-        <TabPane tab="绝对时间" key="absolute">
-          {useMemo(
-            () => (
-              <Space.Compact block>
-                <RangePicker showTime format="YYYY-MM-DD HH:mm:ss" onChange={onRangeChange} />
-                <Button
-                  type="primary"
-                  onClick={() => onSubmitTime(absoluteOption as any)}
-                  disabled={!absoluteOption?.value}
-                >
-                  确定
-                </Button>
-              </Space.Compact>
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={[
+          {
+            key: 'quick',
+            label: '快速选择',
+            children: quickRender,
+          },
+          {
+            key: 'relative',
+            label: '相对时间',
+            children: (
+              <Suspense fallback={<SpinIndicator />}>
+                <Relative onSubmitTime={onSubmitTime} />
+              </Suspense>
             ),
-            [absoluteOption],
-          )}
-        </TabPane>
-      </Tabs>
+          },
+          {
+            key: 'absolute',
+            label: '绝对时间',
+            children: useMemo(
+              () => (
+                <Space.Compact block>
+                  <RangePicker showTime format="YYYY-MM-DD HH:mm:ss" onChange={onRangeChange} />
+                  <Button
+                    type="primary"
+                    onClick={() => onSubmitTime(absoluteOption as any)}
+                    disabled={!absoluteOption?.value}
+                  >
+                    确定
+                  </Button>
+                </Space.Compact>
+              ),
+              [absoluteOption],
+            ),
+          },
+        ]}
+      />
     </div>
   );
 };

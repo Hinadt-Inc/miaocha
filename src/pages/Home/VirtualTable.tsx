@@ -1,5 +1,6 @@
-import { useEffect, useRef, useMemo, useState } from 'react';
+import { useEffect, useRef, useMemo, useState, Fragment } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import classNames from 'classnames';
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import { Spin } from 'antd';
 import ExpandedRow from './ExpandedRow';
@@ -10,7 +11,7 @@ interface IProps {
   loading?: boolean; // 加载状态
   onLoadMore: () => void; // 加载更多数据的回调函数
   hasMore?: boolean; // 是否还有更多数据
-  dynamicColumns?: { columnName: string; selected: boolean }[]; // 动态列配置
+  dynamicColumns?: ILogColumnsResponse[]; // 动态列配置
 }
 
 const VirtualTable = (props: IProps) => {
@@ -22,7 +23,7 @@ const VirtualTable = (props: IProps) => {
   // 定义表格列
   const columns = useMemo(
     () => {
-      // 添加展开按钮列
+      // 添加展开按钮列，display：创建自定义显示的列
       const expandColumn = columnHelper.display({
         id: 'expand',
         header: '收起/展开',
@@ -62,7 +63,7 @@ const VirtualTable = (props: IProps) => {
       const hasOtherSelected = dynamicColumns.some(
         (col) => col.selected && col.columnName !== 'log_time' && col.columnName !== '_source',
       );
-      const columns = [logTimeColumn];
+      const columns = [expandColumn, logTimeColumn];
 
       // 如果没有其他列被选中，添加_source列显示整行数据
       if (!hasOtherSelected && dynamicColumns.length > 0) {
@@ -121,6 +122,7 @@ const VirtualTable = (props: IProps) => {
     return () => container.removeEventListener('scroll', handleScroll);
   }, [loading, hasMore, onLoadMore]);
 
+  console.log('【打印日志】rowVirtualizer.getTotalSize():', rowVirtualizer.getTotalSize());
   return (
     <div ref={containerRef} className={styles.virtualLayout}>
       <Spin spinning={loading}>
@@ -145,11 +147,10 @@ const VirtualTable = (props: IProps) => {
           >
             {rowVirtualizer.getVirtualItems().map((item) => {
               const row = rows[item.index];
-              console.log('【打印日志】item:', item);
               return (
-                <>
+                <Fragment key={`${row.id}-fragment`}>
                   <tr
-                    key={item.index}
+                    key={`${row.id}-row`}
                     data-index={item.index}
                     ref={rowVirtualizer.measureElement}
                     className={styles.tableRow}
@@ -168,7 +169,7 @@ const VirtualTable = (props: IProps) => {
                   {expandedRows[row.id] && (
                     <tr
                       key={`${row.id}-expanded`}
-                      className={styles.expandedRow}
+                      className={classNames(styles.tableRow, styles.expandedRow)}
                       style={{
                         position: 'absolute',
                         top: `${item.start}px`,
@@ -181,7 +182,7 @@ const VirtualTable = (props: IProps) => {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               );
             })}
           </tbody>

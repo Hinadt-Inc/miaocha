@@ -20,13 +20,14 @@ declare global {
   }
 
   interface ILogColumnsResponse {
-    columnName?: string;
-    dataType: string;
-    selected?: boolean;
-    columnComment?: string;
-    isPrimaryKey?: boolean;
-    isNullable?: boolean;
-    isFixed?: boolean;
+    dataType: string; // 数据类型
+    columnName: string; // 列名
+    columnType?: string; // 列类型
+    columnComment?: string; // 列注释
+    isPrimaryKey?: boolean; // 是否为主键
+    isNullable?: boolean; // 是否可为空
+    isFixed?: boolean; // 是否为固定列
+    selected?: boolean; // 是否选中
   }
 
   interface ISearchLogsParams {
