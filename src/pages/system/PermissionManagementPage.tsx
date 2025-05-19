@@ -405,7 +405,7 @@ const PermissionManagementPage = () => {
   ];
 
   return (
-    <Card bodyStyle={{ padding: '12px 16px' }}>
+    <Card>
       <div
         style={{
           display: 'flex',
@@ -423,7 +423,7 @@ const PermissionManagementPage = () => {
           <Breadcrumb.Item>权限管理</Breadcrumb.Item>
         </Breadcrumb>
         <Space>
-          <Button type="primary" onClick={() => showGlobalGrantModal()} size="small">
+          <Button type="primary" onClick={() => showGlobalGrantModal()}>
             授予新权限
           </Button>
           <Input
@@ -435,7 +435,6 @@ const PermissionManagementPage = () => {
               setPagination((prev) => ({ ...prev, current: 1 })); // 搜索时重置到第一页
             }}
             allowClear
-            size="small"
             suffix={<SearchOutlined />}
             style={{ width: 240 }}
           />
