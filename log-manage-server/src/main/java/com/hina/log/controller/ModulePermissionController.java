@@ -2,6 +2,7 @@ package com.hina.log.controller;
 
 import com.hina.log.annotation.CurrentUser;
 import com.hina.log.dto.ApiResponse;
+import com.hina.log.dto.permission.ModulePermissionBatchRequestDTO;
 import com.hina.log.dto.permission.UserModulePermissionDTO;
 import com.hina.log.dto.permission.UserPermissionModuleStructureDTO;
 import com.hina.log.dto.user.UserDTO;
@@ -9,6 +10,7 @@ import com.hina.log.service.ModulePermissionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -41,6 +43,23 @@ public class ModulePermissionController {
     }
 
     /**
+     * 批量授予用户对多个模块的权限
+     *
+     * @param userId 用户ID
+     * @param request 模块权限批量请求DTO
+     * @return 创建的权限列表
+     */
+    @PostMapping("/user/{userId}/batch-grant")
+    @Operation(summary = "批量授予模块权限", description = "批量授予用户对多个模块的访问权限")
+    public ApiResponse<List<UserModulePermissionDTO>> batchGrantModulePermissions(
+            @Parameter(description = "用户ID", required = true) @PathVariable("userId") Long userId,
+            @Parameter(description = "模块权限批量请求", required = true) @Valid @RequestBody ModulePermissionBatchRequestDTO request) {
+        // 确保请求中的用户ID与路径中的用户ID一致
+        request.setUserId(userId);
+        return ApiResponse.success(modulePermissionService.batchGrantModulePermissions(userId, request.getModules()));
+    }
+
+    /**
      * 撤销用户对模块的权限
      *
      * @param userId 用户ID
@@ -53,6 +72,24 @@ public class ModulePermissionController {
             @Parameter(description = "用户ID", required = true) @PathVariable("userId") Long userId,
             @Parameter(description = "模块名称", required = true) @RequestParam("module") String module) {
         modulePermissionService.revokeModulePermission(userId, module);
+        return ApiResponse.success();
+    }
+
+    /**
+     * 批量撤销用户对多个模块的权限
+     *
+     * @param userId 用户ID
+     * @param request 模块权限批量请求DTO
+     * @return 结果
+     */
+    @DeleteMapping("/user/{userId}/batch-revoke")
+    @Operation(summary = "批量撤销模块权限", description = "批量撤销用户对多个模块的访问权限")
+    public ApiResponse<Void> batchRevokeModulePermissions(
+            @Parameter(description = "用户ID", required = true) @PathVariable("userId") Long userId,
+            @Parameter(description = "模块权限批量请求", required = true) @Valid @RequestBody ModulePermissionBatchRequestDTO request) {
+        // 确保请求中的用户ID与路径中的用户ID一致
+        request.setUserId(userId);
+        modulePermissionService.batchRevokeModulePermissions(userId, request.getModules());
         return ApiResponse.success();
     }
 

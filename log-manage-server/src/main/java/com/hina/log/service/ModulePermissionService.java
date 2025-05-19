@@ -59,4 +59,21 @@ public interface ModulePermissionService {
      * @return 所有用户的模块权限列表
      */
     List<UserModulePermissionDTO> getAllUsersModulePermissions();
+
+    /**
+     * 批量授予用户对多个模块的访问权限
+     *
+     * @param userId  用户ID
+     * @param modules 模块名称列表
+     * @return 创建的权限DTO列表
+     */
+    List<UserModulePermissionDTO> batchGrantModulePermissions(Long userId, List<String> modules);
+
+    /**
+     * 批量撤销用户对多个模块的访问权限
+     *
+     * @param userId  用户ID
+     * @param modules 模块名称列表
+     */
+    void batchRevokeModulePermissions(Long userId, List<String> modules);
 }

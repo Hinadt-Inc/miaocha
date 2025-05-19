@@ -251,6 +251,107 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional
+    public List<UserModulePermissionDTO> batchGrantModulePermissions(Long userId, List<String> modules) {
+        // 检查用户是否存在
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        if (modules == null || modules.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<UserModulePermissionDTO> result = new ArrayList<>();
+
+        // 对每个模块授予权限
+        for (String module : modules) {
+            try {
+                // 检查模块是否存在
+                if (!moduleExists(module)) {
+                    log.warn("模块不存在: {}", module);
+                    continue;
+                }
+
+                // 根据模块名称获取数据源ID
+                Long datasourceId = getDatasourceIdByModule(module);
+
+                // 检查数据源是否存在
+                Datasource datasource = datasourceMapper.selectById(datasourceId);
+                if (datasource == null) {
+                    log.warn("数据源不存在: {}", datasourceId);
+                    continue;
+                }
+
+                // 检查权限是否已存在
+                UserModulePermission existingPermission = userModulePermissionMapper.select(userId, datasourceId, module);
+                if (existingPermission != null) {
+                    // 权限已存在，直接添加到结果中
+                    result.add(convertToDTO(existingPermission));
+                    continue;
+                }
+
+                // 创建新的权限
+                UserModulePermission permission = new UserModulePermission();
+                permission.setUserId(userId);
+                permission.setDatasourceId(datasourceId);
+                permission.setModule(module);
+
+                // 插入数据库
+                userModulePermissionMapper.insert(permission);
+
+                // 添加到结果中
+                result.add(convertToDTO(permission));
+            } catch (Exception e) {
+                log.error("授予模块权限失败: {}, 用户ID: {}, 错误: {}", module, userId, e.getMessage());
+            }
+        }
+
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public void batchRevokeModulePermissions(Long userId, List<String> modules) {
+        // 检查用户是否存在
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        if (modules == null || modules.isEmpty()) {
+            return;
+        }
+
+        // 对每个模块撤销权限
+        for (String module : modules) {
+            try {
+                // 检查模块是否存在
+                if (!moduleExists(module)) {
+                    log.warn("模块不存在: {}", module);
+                    continue;
+                }
+
+                // 根据模块名称获取数据源ID
+                Long datasourceId = getDatasourceIdByModule(module);
+
+                // 检查数据源是否存在
+                Datasource datasource = datasourceMapper.selectById(datasourceId);
+                if (datasource == null) {
+                    log.warn("数据源不存在: {}", datasourceId);
+                    continue;
+                }
+
+                // 删除权限
+                userModulePermissionMapper.delete(userId, datasourceId, module);
+            } catch (Exception e) {
+                log.error("撤销模块权限失败: {}, 用户ID: {}, 错误: {}", module, userId, e.getMessage());
+            }
+        }
+    }
+
     /**
      * 检查模块是否存在
      *
