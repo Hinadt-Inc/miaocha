@@ -12,7 +12,7 @@ export interface DataSource {
     | 'elasticsearch'
     | 'clickhouse'
     | 'hive';
-  host: string;
+  ip: string;
   port: number;
   username: string;
   password?: string;
@@ -48,8 +48,9 @@ export interface UpdateDataSourceParams extends Partial<CreateDataSourceParams> 
 
 // 测试连接请求参数
 export interface TestConnectionParams {
+  name?: string; // 添加可选的数据源名称
   type: 'mysql' | 'postgresql' | 'sqlserver' | 'oracle' | 'mongodb' | 'redis' | 'elasticsearch';
-  host: string;
+  ip: string;
   port: number;
   username: string;
   password: string;

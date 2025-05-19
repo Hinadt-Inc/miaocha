@@ -5,7 +5,7 @@ import { CSVRowData } from '../utils/editorUtils';
 export enum ChartType {
   Bar = 'bar',
   Line = 'line',
-  Pie = 'pie'
+  Pie = 'pie',
 }
 
 // 数据源类型
@@ -13,7 +13,7 @@ export interface DataSource {
   id: string;
   name: string;
   type: string;
-  host: string;
+  ip: string;
 }
 
 // 查询结果类型
@@ -88,8 +88,8 @@ export function isValidQueryHistory(obj: unknown): obj is QueryHistory {
     typeof (obj as Record<string, unknown>).sql === 'string' &&
     typeof (obj as Record<string, unknown>).dataSourceId === 'string' && // 确保检查dataSourceId字段
     typeof (obj as Record<string, unknown>).timestamp === 'string' &&
-    ((obj as Record<string, unknown>).status === 'success' || 
-     (obj as Record<string, unknown>).status === 'error')
+    ((obj as Record<string, unknown>).status === 'success' ||
+      (obj as Record<string, unknown>).status === 'error')
   );
 }
 
