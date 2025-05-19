@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, useState } from 'react';
+import { useEffect, useRef, useMemo, useState, Fragment } from 'react';
 import { Table, Spin, Button, Segmented, Space, Switch, Typography } from 'antd';
 import ExpandedRow from './ExpandedRow';
 import styles from './VirtualTable.module.less';
@@ -22,6 +22,27 @@ const VirtualTable = (props: IProps) => {
     {
       title: 'log_time',
       dataIndex: 'log_time',
+      width: 190,
+    },
+    {
+      title: '_source',
+      dataIndex: '_source',
+      width: undefined,
+      ellipsis: false,
+      render: (_: any, record: ILogColumnsResponse) => {
+        return (
+          <dl className={styles.source}>
+            {Object.entries(record).map(([key, value]) => (
+              <Fragment key={key}>
+                <dt>{key}</dt>
+                <dd>
+                  <span>{value}</span>
+                </dd>
+              </Fragment>
+            ))}
+          </dl>
+        );
+      },
     },
   ];
 
@@ -95,7 +116,8 @@ const VirtualTable = (props: IProps) => {
         dataSource={data}
         pagination={false}
         columns={columns}
-        scroll={{ x: 'max-content', y: containerHeight - headerHeight }}
+        // scroll={{ x: 'max-content', y: containerHeight - headerHeight }}
+        scroll={{ x: 700, y: containerHeight - headerHeight }}
         expandable={{
           columnWidth: 48,
           expandedRowRender: (record) => <ExpandedRow data={record} />,

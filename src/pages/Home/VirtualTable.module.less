@@ -4,7 +4,40 @@
   :global {
     .ant-table-cell {
       font-size: 12px;
-      font-family: monospace,'Fira Code', Consolas, 'Courier New';
+      font-family: "Lucida Console", Monaco, monospace;
+    }
+    .ant-table-row {
+      max-height: 118px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 5;
+      line-clamp: 5;
+      -webkit-box-orient: vertical;
+      text-overflow: ellipsis;
+    }
+  }
+  .source {
+    max-height: 144px !important;
+    display: inline-block;
+    margin: 0;
+    padding: 0;
+    line-height: 2.2;
+    word-break: break-all;
+    :global {
+      dt {
+        display: inline;
+        background-color: rgba(0, 46, 63, 0.1);
+        color: #000;
+        padding: 1px 5px;
+        margin-right: 5px;
+        word-break: normal;
+        border-radius: 2px;
+      }
+      dd {
+        display: inline;
+        margin: 0 5px 0 0;
+        color: #2d2d2d;
+      }
     }
   }
 }
