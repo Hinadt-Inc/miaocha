@@ -1,42 +1,40 @@
+import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
+import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
+import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
+import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
+import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
+
 /**
  * 配置 Monaco Editor Workers
- * 在生产环境和开发环境中正确加载 Monaco Editor 的 web workers
- * 使用CDN方式加载资源，避免打包问题导致的"Unexpected token '<'"错误
+ * 本地加载 Monaco Editor 的 web workers 而非使用CDN
  */
 export function setupMonacoWorkers() {
-  // 使用CDN资源，而不是本地打包
-  const cdnPath =
-    (window as any).monacoFallbackCdnBase ||
-    'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs';
-
-  // Monaco Editor worker 路径配置
-  window.MonacoEnvironment = {
-    getWorkerUrl: function (_moduleId, label) {
-      // 根据语言类型返回对应的worker
-      if (label === 'sql' || label === 'mysql') {
-        return `${cdnPath}/language/sql/sql.worker.js`;
-      }
-
+  // 本地化配置 Monaco workers
+  self.MonacoEnvironment = {
+    getWorker(_, label) {
       if (label === 'json') {
-        return `${cdnPath}/language/json/json.worker.js`;
+        return new jsonWorker();
       }
-
       if (label === 'css' || label === 'scss' || label === 'less') {
-        return `${cdnPath}/language/css/css.worker.js`;
+        return new cssWorker();
       }
-
       if (label === 'html' || label === 'handlebars' || label === 'razor') {
-        return `${cdnPath}/language/html/html.worker.js`;
+        return new htmlWorker();
       }
-
       if (label === 'typescript' || label === 'javascript') {
-        return `${cdnPath}/language/typescript/ts.worker.js`;
+        return new tsWorker();
       }
-
+      if (label === 'sql' || label === 'mysql') {
+        // SQL 语言使用通用编辑器worker
+        return new editorWorker();
+      }
       // 默认的编辑器worker
-      return `${cdnPath}/editor/editor.worker.js`;
+      return new editorWorker();
     },
   };
+
+  // 确保在全局 window 对象上也设置 MonacoEnvironment
+  window.MonacoEnvironment = self.MonacoEnvironment;
 }
 
 export default setupMonacoWorkers;

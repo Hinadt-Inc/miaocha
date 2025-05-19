@@ -241,7 +241,14 @@ export default function LogstashManagementPage() {
       </div>
 
       <div className="table-container">
-        <Table columns={columns} dataSource={data} rowKey="id" loading={loading} bordered />
+        <Table
+          columns={columns}
+          dataSource={data}
+          size="small"
+          rowKey="id"
+          loading={loading}
+          bordered
+        />
         <LogstashEditModal
           visible={editModalVisible}
           onCancel={() => setEditModalVisible(false)}

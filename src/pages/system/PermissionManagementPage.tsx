@@ -26,6 +26,10 @@ const PermissionManagementPage = () => {
     userId: '',
     datasourceId: '',
   });
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+  });
   const [users, setUsers] = useState<{ label: string; value: string }[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>();
 
@@ -315,6 +319,14 @@ const PermissionManagementPage = () => {
     }
   };
 
+  // 处理分页变更
+  const handlePageChange = (page: number, pageSize: number) => {
+    setPagination({
+      current: page,
+      pageSize,
+    });
+  };
+
   const expandedRowRender = (record: DatasourcePermission) => {
     const columns: ColumnsType<TablePermission> = [
       {
@@ -326,14 +338,25 @@ const PermissionManagementPage = () => {
         title: '操作',
         key: 'action',
         render: (_, table) => (
-          <Space size="middle">
+          <Space size="small">
             {table.permissionId && (
-              <Button type="link" danger onClick={() => handleRevoke(table.permissionId as string)}>
+              <Button
+                type="link"
+                danger
+                size="small"
+                onClick={() => handleRevoke(table.permissionId as string)}
+                style={{ padding: '0 4px' }}
+              >
                 撤销
               </Button>
             )}
             {!table.permissionId && (
-              <Button type="link" onClick={() => handleGrant(table.moduleName)}>
+              <Button
+                type="link"
+                size="small"
+                onClick={() => handleGrant(table.moduleName)}
+                style={{ padding: '0 4px' }}
+              >
                 授予
               </Button>
             )}
@@ -343,7 +366,14 @@ const PermissionManagementPage = () => {
     ];
 
     return (
-      <Table columns={columns} dataSource={record.modules} rowKey="moduleName" pagination={false} />
+      <Table
+        columns={columns}
+        dataSource={record.modules}
+        rowKey="moduleName"
+        pagination={false}
+        size="small"
+        style={{ margin: '0' }}
+      />
     );
   };
 
@@ -367,7 +397,7 @@ const PermissionManagementPage = () => {
       title: '操作',
       key: 'action',
       render: (_, record) => (
-        <Button type="primary" onClick={() => showGrantModal(record)}>
+        <Button type="primary" size="small" onClick={() => showGrantModal(record)}>
           授权
         </Button>
       ),
@@ -375,9 +405,16 @@ const PermissionManagementPage = () => {
   ];
 
   return (
-    <Card>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Breadcrumb style={{ marginBottom: 16 }}>
+    <Card bodyStyle={{ padding: '12px 16px' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 12,
+        }}
+      >
+        <Breadcrumb>
           <Breadcrumb.Item>
             <Link to="/home">
               <HomeOutlined />
@@ -385,8 +422,8 @@ const PermissionManagementPage = () => {
           </Breadcrumb.Item>
           <Breadcrumb.Item>权限管理</Breadcrumb.Item>
         </Breadcrumb>
-        <Space style={{ marginBottom: 16 }}>
-          <Button type="primary" onClick={() => showGlobalGrantModal()}>
+        <Space>
+          <Button type="primary" onClick={() => showGlobalGrantModal()} size="small">
             授予新权限
           </Button>
           <Input
@@ -395,10 +432,12 @@ const PermissionManagementPage = () => {
             onChange={(e) => {
               const value = e.target.value;
               setSearchParams({ ...searchParams, userId: value, datasourceId: value });
+              setPagination((prev) => ({ ...prev, current: 1 })); // 搜索时重置到第一页
             }}
             allowClear
+            size="small"
             suffix={<SearchOutlined />}
-            style={{ width: 300 }}
+            style={{ width: 240 }}
           />
         </Space>
       </div>
@@ -407,6 +446,15 @@ const PermissionManagementPage = () => {
         dataSource={filteredPermissions}
         rowKey="datasourceId"
         loading={loading}
+        size="small"
+        pagination={{
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          onChange: handlePageChange,
+          showSizeChanger: true,
+          responsive: true,
+          showTotal: (total) => `共 ${total} 条`,
+        }}
         expandable={{
           expandedRowRender,
           // rowExpandable: (record) => record.modules.length > 0,
