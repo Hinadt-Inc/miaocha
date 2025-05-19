@@ -7,7 +7,6 @@ import { useDatabaseSchema } from './hooks/useDatabaseSchema';
 import { Alert, Button, Card, Layout, message, Space, Tabs, Tooltip } from 'antd';
 import { CopyOutlined } from '@ant-design/icons';
 import { OnMount } from '@monaco-editor/react';
-import * as monacoReact from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import copy from 'copy-to-clipboard';
 import { debounce } from 'lodash';
