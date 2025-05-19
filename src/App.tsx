@@ -11,45 +11,40 @@ const App = () => {
   const [collapsed, setCollapsed] = useState(true);
   const location = useLocation();
   const userRole = useSelector((state: { user: IStoreUser }) => state.user.role);
+  const [openKeys, setOpenKeys] = useState<string[]>([]);
 
   // 根据用户角色获取有权限的路由
   const authorizedRoutes = useMemo(() => {
     return getAuthorizedRoutes(userRole);
   }, [userRole]);
 
-  // 计算当前选中的菜单项和打开的菜单
-  const { selectedKeys, openKeys } = useMemo(() => {
+  // 计算当前选中的菜单项
+  const selectedKeys = useMemo(() => {
     // 获取当前路径并规范化
     let pathname = location.pathname;
     if (pathname === '' || pathname === '/') {
       // 确保根路径一定会高亮
-      console.log('当前处于首页路径');
-      return {
-        selectedKeys: ['/'], // 一定要匹配菜单项的 key
-        openKeys: [],
-      };
+      return ['/'];
     }
 
-    // 如果是子路径，需要同时选中父菜单
-    if (pathname.startsWith('/system/')) {
-      return {
-        selectedKeys: [pathname],
-        openKeys: ['/system'],
-      };
-    }
-
-    // 处理其他路径
-    return {
-      selectedKeys: [pathname],
-      openKeys: [],
-    };
+    // 返回当前路径作为选中的菜单项
+    return [pathname];
   }, [location.pathname]);
 
-  // 强制重新计算当前项
+  // 初始化打开的菜单项
   useEffect(() => {
-    // 这里可以添加额外的处理逻辑
-    console.log('路径变更:', location.pathname, '选中项:', selectedKeys);
-  }, [location.pathname, selectedKeys]);
+    // 如果是系统管理的子路径，自动展开系统管理菜单
+    if (location.pathname.startsWith('/system/')) {
+      setOpenKeys(['/system']);
+    }
+  }, [location.pathname]);
+
+  // 处理菜单展开/收起
+  const handleOpenChange = (keys: string[] | boolean) => {
+    if (Array.isArray(keys)) {
+      setOpenKeys(keys);
+    }
+  };
 
   return (
     <ProLayout
@@ -64,6 +59,7 @@ const App = () => {
       location={{ pathname: location.pathname }} // 确保 location 对象只包含 pathname
       selectedKeys={selectedKeys}
       openKeys={openKeys}
+      onOpenChange={handleOpenChange}
       defaultSelectedKeys={['/']} // 设置默认选中项为首页
       fixSiderbar={true} // 固定侧边栏
       menuProps={{
