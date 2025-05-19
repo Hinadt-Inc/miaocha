@@ -1,19 +1,104 @@
 .visualization-container {
   margin-top: 16px;
-  padding: 16px;
+  padding: 24px;
   background-color: #fff;
-  border: 1px solid #e8e8e8;
-  border-radius: 2px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   
   .chart-controls {
-    margin-bottom: 16px;
+    margin-bottom: 24px;
+    padding: 16px;
+    background-color: #fafafa;
+    border-radius: 6px;
     
-    .ant-form-item {
-      margin-right: 16px;
+    .ant-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      
+      .ant-form-item {
+        margin: 0;
+        flex-shrink: 0;
+        
+        .ant-select {
+          min-width: 160px;
+        }
+      }
     }
   }
   
   .chart-container {
+    position: relative;
     min-height: 400px;
+    padding: 16px;
+    border-radius: 6px;
+    background: #fff;
+    
+    .echarts-for-react {
+      .echarts-container {
+        canvas {
+          border-radius: 6px;
+        }
+      }
+    }
+    
+    &.fullscreen {
+      height: calc(100vh - 180px);
+    }
+  }
+}
+
+// 图表样式优化
+:global {
+  .echarts-tooltip {
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(4px);
+    border: none !important;
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    padding: 8px 12px !important;
+    
+    .tooltip-title {
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    
+    .tooltip-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      
+      .marker {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+      
+      .label {
+        color: #666;
+      }
+      
+      .value {
+        font-weight: 500;
+      }
+    }
+  }
+  
+  // 图表轴线样式
+  .echarts-axis-line {
+    stroke-width: 1;
+    stroke: #eee;
+  }
+  
+  // 网格线样式
+  .echarts-grid-line {
+    stroke: #f5f5f5;
+    stroke-width: 1;
+  }
+  
+  // 标签样式
+  .echarts-axis-label {
+    fill: #666;
+    font-size: 12px;
   }
 }
