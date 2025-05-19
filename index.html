@@ -1,14 +1,22 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" href="/logo.png" />
-    <link rel="stylesheet" href="//at.alicdn.com/t/c/font_4924284_6638quf0elg.css" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>秒查</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="/logo.png" />
+  <link rel="stylesheet" href="//at.alicdn.com/t/c/font_4924284_6638quf0elg.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>秒查</title>
+  <!-- 预加载Monaco Editor资源，避免"Unexpected token '<'"错误 -->
+  <script>
+    // 配置Monaco编辑器的后备CDN
+    window.monacoFallbackCdnBase = 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min';
+  </script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

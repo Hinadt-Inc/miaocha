@@ -9,6 +9,10 @@ import { restoreSession } from './store/userSlice';
 import { router } from './routes';
 import './index.less';
 
+// 配置 Monaco Editor Workers
+import { setupMonacoWorkers } from './utils/monacoWorker';
+setupMonacoWorkers();
+
 // 会话恢复组件
 const SessionInitializer = () => {
   const dispatch = useDispatch<AppDispatch>();

@@ -9,7 +9,11 @@ import {
   getMyTablePermissions,
   revokePermissionById,
 } from '../../api/permission';
-import type { DatasourcePermission, TablePermission } from '../../types/permissionTypes';
+import type {
+  DatasourcePermission,
+  TablePermission,
+  PermissionResponse,
+} from '../../types/permissionTypes';
 import { HomeOutlined, SearchOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 
@@ -25,13 +29,123 @@ const PermissionManagementPage = () => {
   const [users, setUsers] = useState<{ label: string; value: string }[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>();
 
+  // 将新格式的权限数据转换为原来的格式
+  const transformPermissionsData = (data: PermissionResponse[]): DatasourcePermission[] => {
+    // 按数据源ID分组
+    const groupByDatasource = data.reduce(
+      (acc, permission) => {
+        const datasourceId = permission.datasourceId;
+
+        if (!acc[datasourceId]) {
+          acc[datasourceId] = {
+            modules: [],
+            datasourceId,
+            datasourceName: `数据源 ${datasourceId}`, // 默认数据源名称，如果API没提供
+            databaseName: '-',
+            tables: [],
+          };
+        }
+
+        // 添加模块信息
+        acc[datasourceId].modules.push({
+          moduleName: permission.module,
+          permissionId: permission.id.toString(),
+          tableName: permission.module, // 使用模块名作为表名
+          permissions: [],
+        });
+
+        return acc;
+      },
+      {} as Record<number, DatasourcePermission>,
+    );
+
+    // 转换为数组
+    return Object.values(groupByDatasource);
+  };
+
+  // 全局授权模态框
+  const showGlobalGrantModal = () => {
+    let currentSelectedUser = selectedUser;
+    let selectedModules: string[] = []; // 改为数组以支持多选
+    let allModules: string[] = [];
+
+    // 收集所有模块
+    permissions.forEach((datasource) => {
+      datasource.modules.forEach((module) => {
+        if (!allModules.includes(module.moduleName)) {
+          allModules.push(module.moduleName);
+        }
+      });
+    });
+
+    modal.confirm({
+      title: '授予新权限',
+      width: 500,
+      content: (
+        <div style={{ margin: '16px 0' }}>
+          <div style={{ marginBottom: 8 }}>选择用户:</div>
+          <Select
+            style={{ width: '100%', marginBottom: 16 }}
+            options={users}
+            placeholder="请选择用户"
+            onChange={(value) => {
+              currentSelectedUser = value;
+              setSelectedUser(value);
+            }}
+          />
+          <div style={{ marginBottom: 8 }}>选择模块（可多选）:</div>
+          <Select
+            mode="multiple"
+            style={{ width: '100%' }}
+            placeholder="请选择要授权的模块"
+            onChange={(values) => {
+              selectedModules = values;
+            }}
+            optionFilterProp="children"
+            allowClear
+          >
+            {allModules.map((module) => (
+              <Select.Option key={module} value={module}>
+                {module}
+              </Select.Option>
+            ))}
+          </Select>
+        </div>
+      ),
+      okText: '授权',
+      cancelText: '取消',
+      onOk: async () => {
+        if (!currentSelectedUser) {
+          message.error('请选择用户');
+          return Promise.reject();
+        }
+        if (!selectedModules.length) {
+          message.error('请至少选择一个模块');
+          return Promise.reject();
+        }
+        try {
+          await grantTablePermission(currentSelectedUser, {
+            modules: selectedModules,
+          });
+          message.success('权限授予成功');
+          fetchPermissions();
+          return Promise.resolve();
+        } catch {
+          message.error('权限授予失败');
+          return Promise.reject();
+        }
+      },
+    });
+  };
+
   // 初始获取全部权限数据
   const fetchPermissions = async () => {
     setLoading(true);
     try {
-      const data = await getMyTablePermissions();
-      setPermissions(data);
-      setFilteredPermissions(data); // 初始化时显示全部数据
+      const data = (await getMyTablePermissions()) as unknown as PermissionResponse[];
+      const transformedData = transformPermissionsData(data);
+      setPermissions(transformedData);
+      setFilteredPermissions(transformedData); // 初始化时显示全部数据
     } catch {
       message.error('获取权限列表失败');
     } finally {
@@ -79,6 +193,72 @@ const PermissionManagementPage = () => {
     fetchPermissions();
   }, []);
 
+  // 显示授权模态框（对数据源整体授权）
+  const showGrantModal = (record: DatasourcePermission) => {
+    let currentSelectedUser = selectedUser;
+    let selectedModules: string[] = [];
+
+    modal.confirm({
+      title: '授予权限',
+      width: 500,
+      content: (
+        <div style={{ margin: '16px 0' }}>
+          <div style={{ marginBottom: 8 }}>选择用户:</div>
+          <Select
+            style={{ width: '100%', marginBottom: 16 }}
+            options={users}
+            placeholder="请选择用户"
+            onChange={(value) => {
+              currentSelectedUser = value;
+              setSelectedUser(value);
+            }}
+          />
+          <div style={{ marginBottom: 8 }}>选择模块（可多选）:</div>
+          <Select
+            mode="multiple"
+            style={{ width: '100%' }}
+            placeholder="请选择要授权的模块"
+            onChange={(values) => {
+              selectedModules = values;
+            }}
+            optionFilterProp="children"
+            allowClear
+          >
+            {record.modules.map((module) => (
+              <Select.Option key={module.moduleName} value={module.moduleName}>
+                {module.moduleName}
+              </Select.Option>
+            ))}
+          </Select>
+        </div>
+      ),
+      okText: '授予',
+      cancelText: '取消',
+      onOk: async () => {
+        if (!currentSelectedUser) {
+          message.error('请选择用户');
+          return Promise.reject();
+        }
+        if (!selectedModules.length) {
+          message.error('请至少选择一个模块');
+          return Promise.reject();
+        }
+        try {
+          await grantTablePermission(currentSelectedUser, {
+            modules: selectedModules,
+          });
+          message.success('权限授予成功');
+          fetchPermissions();
+          return Promise.resolve();
+        } catch {
+          message.error('权限授予失败');
+          return Promise.reject();
+        }
+      },
+    });
+  };
+
+  // 授权单个模块
   const handleGrant = async (moduleName: string) => {
     let currentSelectedUser = selectedUser;
 
@@ -107,7 +287,7 @@ const PermissionManagementPage = () => {
         }
         try {
           await grantTablePermission(currentSelectedUser, {
-            module: moduleName,
+            modules: [moduleName],
           });
           message.success('权限授予成功');
           fetchPermissions();
@@ -163,7 +343,7 @@ const PermissionManagementPage = () => {
     ];
 
     return (
-      <Table columns={columns} dataSource={record.modules} rowKey="tableName" pagination={false} />
+      <Table columns={columns} dataSource={record.modules} rowKey="moduleName" pagination={false} />
     );
   };
 
@@ -183,6 +363,15 @@ const PermissionManagementPage = () => {
       dataIndex: 'databaseName',
       key: 'databaseName',
     },
+    {
+      title: '操作',
+      key: 'action',
+      render: (_, record) => (
+        <Button type="primary" onClick={() => showGrantModal(record)}>
+          授权
+        </Button>
+      ),
+    },
   ];
 
   return (
@@ -197,6 +386,9 @@ const PermissionManagementPage = () => {
           <Breadcrumb.Item>权限管理</Breadcrumb.Item>
         </Breadcrumb>
         <Space style={{ marginBottom: 16 }}>
+          <Button type="primary" onClick={() => showGlobalGrantModal()}>
+            授予新权限
+          </Button>
           <Input
             placeholder="搜索数据源ID/名称/模块名"
             value={searchParams.userId || searchParams.datasourceId}
@@ -217,7 +409,7 @@ const PermissionManagementPage = () => {
         loading={loading}
         expandable={{
           expandedRowRender,
-          rowExpandable: (record) => record.modules.length > 0,
+          // rowExpandable: (record) => record.modules.length > 0,
         }}
       />
     </Card>

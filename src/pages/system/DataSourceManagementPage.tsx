@@ -16,7 +16,7 @@ import {
   ProTable,
   ProFormText,
   ProFormSelect,
-  DrawerForm,
+  ModalForm,
   ProForm,
   ProFormDigit,
   ProFormTextArea,
@@ -38,7 +38,7 @@ type DataSourceItem = DataSource;
 const dataSourceTypeOptions = [{ label: 'Doris', value: 'Doris' }];
 
 const DataSourceManagementPage = () => {
-  const [drawerVisible, setDrawerVisible] = useState<boolean>(false);
+  const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [currentDataSource, setCurrentDataSource] = useState<DataSourceItem | undefined>(undefined);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
   const [allDataSources, setAllDataSources] = useState<DataSourceItem[]>([]);
@@ -185,7 +185,7 @@ const DataSourceManagementPage = () => {
         }
       }
 
-      setDrawerVisible(false);
+      setModalVisible(false);
       void actionRef.current!.reload();
       return true;
     } catch {
@@ -196,12 +196,12 @@ const DataSourceManagementPage = () => {
     }
   };
 
-  const openCreateDrawer = () => {
+  const openCreateModal = () => {
     setCurrentDataSource(undefined);
-    setDrawerVisible(true);
+    setModalVisible(true);
   };
 
-  const openEditDrawer = (record: DataSourceItem) => {
+  const openEditModal = (record: DataSourceItem) => {
     // 确保数据中的ip字段映射到host字段上
     const mappedRecord = {
       ...record,
@@ -209,7 +209,7 @@ const DataSourceManagementPage = () => {
       host: record.host || (record as any).ip,
     };
     setCurrentDataSource(mappedRecord as DataSourceItem);
-    setDrawerVisible(true);
+    setModalVisible(true);
   };
 
   // 测试数据库连接
@@ -341,7 +341,7 @@ const DataSourceManagementPage = () => {
             key="edit"
             type="link"
             size="small"
-            onClick={() => openEditDrawer(record)}
+            onClick={() => openEditModal(record)}
             icon={<EditOutlined />}
             style={{ padding: '0 4px' }}
           >
@@ -410,12 +410,7 @@ const DataSourceManagementPage = () => {
               />
             </Space>,
             <div className="table-toolbar" key="toolbar">
-              <Button
-                key="button"
-                icon={<PlusOutlined />}
-                type="primary"
-                onClick={openCreateDrawer}
-              >
+              <Button key="button" icon={<PlusOutlined />} type="primary" onClick={openCreateModal}>
                 新增数据源
               </Button>
             </div>,
@@ -431,12 +426,23 @@ const DataSourceManagementPage = () => {
           }}
         />
 
-        <DrawerForm
+        <ModalForm
           title={currentDataSource ? '编辑数据源' : '新增数据源'}
-          width="500px"
-          open={drawerVisible}
-          onOpenChange={setDrawerVisible}
+          width="850px"
+          open={modalVisible}
+          onOpenChange={setModalVisible}
           onFinish={handleFormSubmit}
+          modalProps={{
+            destroyOnClose: true,
+            maskClosable: false,
+            centered: true,
+            bodyStyle: { padding: '24px 24px 8px' },
+          }}
+          layout="horizontal"
+          labelCol={{ span: 6 }}
+          wrapperCol={{ span: 18 }}
+          grid={true}
+          rowProps={{ gutter: [16, 0] }}
           initialValues={currentDataSource}
           submitter={{
             render: (props, doms: React.ReactNode[]) => {
@@ -461,73 +467,87 @@ const DataSourceManagementPage = () => {
             },
           }}
         >
-          <ProForm.Group>
-            <ProFormText
-              width="md"
-              name="name"
-              label="数据源名称"
-              placeholder="请输入数据源名称"
-              rules={[{ required: true, message: '请输入数据源名称' }]}
-            />
-            <ProFormSelect
-              width="md"
-              name="type"
-              label="类型"
-              options={dataSourceTypeOptions}
-              placeholder="请选择数据源类型"
-              rules={[{ required: true, message: '请选择数据源类型' }]}
-            />
-          </ProForm.Group>
-
-          <ProForm.Group>
-            <ProFormText
-              width="md"
-              name="host"
-              label="主机"
-              placeholder="请输入主机地址"
-              rules={[{ required: true, message: '请输入主机地址' }]}
-            />
-            <ProFormText
-              width="md"
-              name="port"
-              label="端口"
-              placeholder="请输入端口号"
-              rules={[{ required: true, message: '请输入端口号' }]}
-            />
-          </ProForm.Group>
-
-          <ProForm.Group>
-            <ProFormText
-              width="md"
-              name="database"
-              label="数据库名称"
-              placeholder="请输入数据库名称"
-              rules={[{ required: true, message: '请输入数据库名称' }]}
-            />
-            <ProFormText
-              width="md"
-              name="username"
-              label="用户名"
-              placeholder="请输入用户名"
-              rules={[{ required: true, message: '请输入用户名' }]}
-            />
-          </ProForm.Group>
-
+          <ProFormText
+            colProps={{ span: 12 }}
+            name="name"
+            label="数据源名称"
+            placeholder="请输入数据源名称"
+            rules={[{ required: true, message: '请输入数据源名称' }]}
+          />
+          <ProFormSelect
+            colProps={{ span: 12 }}
+            name="type"
+            label="类型"
+            options={dataSourceTypeOptions}
+            placeholder="请选择数据源类型"
+            rules={[{ required: true, message: '请选择数据源类型' }]}
+          />
+          <ProFormText
+            colProps={{ span: 12 }}
+            name="host"
+            label="主机"
+            placeholder="请输入主机地址"
+            rules={[{ required: true, message: '请输入主机地址' }]}
+            tooltip="数据库服务器地址，可以是IP或域名"
+          />
+          <ProFormText
+            colProps={{ span: 12 }}
+            name="port"
+            label="端口"
+            placeholder="请输入端口号"
+            rules={[
+              { required: true, message: '请输入端口号' },
+              { pattern: /^\d+$/, message: '端口号必须为数字' },
+            ]}
+          />
+          <ProFormText
+            colProps={{ span: 12 }}
+            name="database"
+            label="数据库名称"
+            placeholder="请输入数据库名称"
+            rules={[{ required: true, message: '请输入数据库名称' }]}
+          />
+          <ProFormText
+            colProps={{ span: 12 }}
+            name="username"
+            label="用户名"
+            placeholder="请输入用户名"
+            rules={[{ required: true, message: '请输入用户名' }]}
+          />
           <ProFormText.Password
-            width="md"
+            colProps={{ span: 12 }}
             name="password"
             label="密码"
             placeholder="请输入密码"
-            rules={[{ required: !currentDataSource, message: '请输入密码' }]}
+            rules={[{ required: true, message: '请输入密码' }]}
+            tooltip={currentDataSource ? '不修改密码请留空' : ''}
           />
           <ProFormTextArea
+            colProps={{ span: 24 }}
+            name="description"
+            label="数据源描述"
+            placeholder="请输入数据源描述信息（选填）"
+            labelCol={{ span: 3 }}
+            wrapperCol={{ span: 21 }}
+            fieldProps={{
+              rows: 2,
+              maxLength: 200,
+              showCount: true,
+            }}
+          />
+          <ProFormTextArea
+            colProps={{ span: 24 }}
             name="jdbcParams"
-            label="JDBC参数 (JSON格式)"
+            label="JDBC参数"
             placeholder='请输入JDBC参数，例如: {"connectTimeout": 3000}'
             initialValue={JSON.stringify({ connectTimeout: 3000 })}
+            labelCol={{ span: 3 }}
+            wrapperCol={{ span: 21 }}
             fieldProps={{
-              rows: 4,
+              rows: 3,
+              allowClear: true,
             }}
+            tooltip="JSON格式的额外连接参数配置"
             rules={[
               {
                 validator: async (_: any, value: string) => {
@@ -550,7 +570,7 @@ const DataSourceManagementPage = () => {
               }
             }}
           />
-        </DrawerForm>
+        </ModalForm>
       </Card>
     </div>
   );

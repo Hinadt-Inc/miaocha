@@ -1,18 +1,18 @@
 import { get, post, request } from './request';
-import type { DatasourcePermission } from '../types/permissionTypes';
+import type { DatasourcePermission, PermissionResponse } from '../types/permissionTypes';
 
 /**
  * 授予用户表权限
  * @param userId 用户ID
- * @param datasourceId 数据源ID
- * @param tableName 表名
+ * @param query 权限参数
  * @returns Promise
  */
 export function grantTablePermission(
   userId: string,
-  query: { module: string },
+  query: { modules: string[] },
 ): Promise<DatasourcePermission> {
-  return post(`/api/permissions/modules/user/${userId}/grant?module=${query.module}`);
+  const modulesParam = query.modules.map((m) => `module=${encodeURIComponent(m)}`).join('&');
+  return post(`/api/permissions/modules/user/${userId}/grant?${modulesParam}`);
 }
 
 /**
@@ -48,10 +48,10 @@ export function getUserDatasourcePermissions(
 
 /**
  * 获取当前用户可访问的表
- * @returns Promise<DatasourcePermission[]>
+ * @returns Promise<PermissionResponse[]>
  */
-export function getMyTablePermissions(): Promise<DatasourcePermission[]> {
-  return get('/api/permissions/modules/my');
+export function getMyTablePermissions(): Promise<PermissionResponse[]> {
+  return get('/api/permissions/modules/users/all');
 }
 
 /**
