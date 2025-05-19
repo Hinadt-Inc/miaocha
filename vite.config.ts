@@ -2,20 +2,13 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 import dynamicImport from 'vite-plugin-dynamic-import';
-import monacoEditorPlugin from 'vite-plugin-monaco-editor';
-// 添加类型断言解决.default的类型问题
-const monacoPlugin = monacoEditorPlugin as unknown as { default: typeof monacoEditorPlugin };
 
 // https://vite.dev/config/
 export default defineConfig({
   base: '/',
   plugins: [
-    monacoPlugin.default({
-      publicPath: 'node_modules/monaco-editor/min',
-      customDistPath: (root: string) => {
-        return resolve(root, 'node_modules/monaco-editor/min');
-      },
-    }),
+    // 移除Monaco编辑器插件，采用另一种方式加载
+    dynamicImport(),
     dynamicImport(),
     react({
       babel: {
@@ -35,6 +28,7 @@ export default defineConfig({
       'monaco-editor/esm/vs/language/html/html.worker',
       'monaco-editor/esm/vs/language/typescript/ts.worker',
       'monaco-editor/esm/vs/basic-languages/sql/sql',
+      'monaco-sql-languages',
     ],
   },
   resolve: {
