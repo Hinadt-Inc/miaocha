@@ -20,6 +20,18 @@ export interface TablePermission {
 }
 
 /**
+ * 新的权限响应类型
+ */
+export interface PermissionResponse {
+  id: number;
+  userId: number;
+  datasourceId: number;
+  module: string;
+  createTime: string;
+  updateTime: string;
+}
+
+/**
  * 用户数据源权限查询参数
  */
 export interface UserDatasourcePermissionQuery {
