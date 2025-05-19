@@ -399,6 +399,8 @@ const UserManagementPage = () => {
             loading={loading}
             scroll={{ x: 1300 }}
             onChange={handleTableChange}
+            size="small"
+            bordered
           />
         </div>
 
