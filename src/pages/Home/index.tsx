@@ -26,7 +26,7 @@ const HomePage = () => {
       const { rows } = res;
       // 为每条记录添加唯一ID
       (rows || []).map((item, index) => {
-        item.key = `${Date.now()}-${index}`;
+        item._key = `${Date.now()}_${index}`;
       });
       setLog(res);
     },
@@ -113,7 +113,7 @@ const HomePage = () => {
     () => ({
       log,
       fetchLog,
-      logColumns,
+      dynamicColumns: logColumns,
     }),
     [log, fetchLog, logColumns],
   );

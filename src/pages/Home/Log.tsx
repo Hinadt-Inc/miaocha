@@ -1,4 +1,5 @@
-import { Suspense, lazy, useState, useEffect } from 'react';
+import { Suspense, lazy, useState, useEffect, useMemo } from 'react';
+import SpinIndicator from '@/components/SpinIndicator';
 import styles from './Log.module.less';
 import VirtualTable from './VirtualTable';
 
@@ -6,21 +7,19 @@ import VirtualTable from './VirtualTable';
 const HistogramChart = lazy(() => import('./HistogramChart'));
 
 interface IProps {
+  fetchLog: any; // 加载日志数据的函数
   log: {
-    totalCount?: number;
-    distributionData?: any;
-    rows?: any[];
+    totalCount?: number; // 总行数
+    distributionData?: any; // 直方图数据
+    rows?: any[]; // 表格数据
   };
-  fetchLog: any;
-  logColumns?: { columnName: string; selected: boolean }[]; // 添加动态列配置
+  dynamicColumns?: ILogColumnsResponse[]; // 添加动态列配置
 }
 
 const Log = (props: IProps) => {
-  const { log, fetchLog, logColumns = [] } = props;
-
+  const { log, fetchLog, dynamicColumns = [] } = props;
   const { rows } = log || {};
-  // 用于存储所有历史数据的状态
-  const [allRows, setAllRows] = useState<any[]>([]);
+  const [allRows, setAllRows] = useState<any[]>([]); // 用于存储所有历史数据的状态
 
   // 当新数据到达时，将其添加到历史数据中
   useEffect(() => {
@@ -40,21 +39,25 @@ const Log = (props: IProps) => {
     }
   };
 
+  const tableProps = useMemo(
+    () => ({
+      data: allRows,
+      loading: fetchLog.loading,
+      onLoadMore: handleLoadMore,
+      hasMore: log?.totalCount ? allRows.length < log.totalCount : false,
+      dynamicColumns,
+    }),
+    [allRows, fetchLog?.loading, log?.totalCount, handleLoadMore, dynamicColumns],
+  );
   return (
     <div className={styles.logContainer}>
       <div className={styles.chart}>
-        <Suspense fallback={<></>}>
+        <Suspense fallback={<SpinIndicator />}>
           <HistogramChart data={log?.distributionData} />
         </Suspense>
       </div>
       <div className={styles.table}>
-        <VirtualTable
-          data={allRows}
-          loading={fetchLog.loading}
-          onLoadMore={handleLoadMore}
-          hasMore={true}
-          dynamicColumns={logColumns}
-        />
+        <VirtualTable {...tableProps} />
       </div>
     </div>
   );
