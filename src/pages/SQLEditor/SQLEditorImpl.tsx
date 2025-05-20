@@ -675,7 +675,7 @@ const SQLEditorImpl: React.FC = () => {
                     queryResults={queryResults}
                     loading={loadingResults}
                     downloadResults={handleDownloadResults}
-                    formatTableCell={formatTableCell}
+                    formatTableCell={(value) => formatTableCell(value)}
                   />
                 ) : (
                   <VisualizationPanel

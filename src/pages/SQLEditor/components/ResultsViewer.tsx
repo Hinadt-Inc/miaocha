@@ -304,14 +304,18 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({
       title: col,
       dataIndex: col,
       key: col,
-      width: columnWidths[col] || (isMessageColumn ? 400 : isPathColumn ? 300 : isTimeColumn ? 180 : 150), // 为特殊列提供更宽的默认宽度
-      render: (value: any) => formatTableCell(value, col),
+      width:
+        columnWidths[col] ||
+        (isMessageColumn ? 400 : isPathColumn ? 300 : isTimeColumn ? 180 : 150), // 为特殊列提供更宽的默认宽度
+      render: (value: any) => formatTableCell(value),
       // 对于特殊类型的列，禁用文本省略
       ellipsis: !shouldNotEllipsis,
       sorter: (a: Record<string, unknown>, b: Record<string, unknown>) =>
         compareValues(a[col], b[col]),
       onHeaderCell: () => ({
-        width: columnWidths[col] || (isMessageColumn ? 400 : isPathColumn ? 300 : isTimeColumn ? 180 : 150),
+        width:
+          columnWidths[col] ||
+          (isMessageColumn ? 400 : isPathColumn ? 300 : isTimeColumn ? 180 : 150),
         onResize: (width: number) => {
           setColumnWidths((prev) => ({
             ...prev,
@@ -322,12 +326,12 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({
       }),
       // 为特殊类型的列添加特殊样式
       onCell: () => ({
-        className: isMessageColumn 
-          ? 'message-column' 
-          : isPathColumn 
-            ? 'path-column' 
-            : isTimeColumn 
-              ? 'time-column' 
+        className: isMessageColumn
+          ? 'message-column'
+          : isPathColumn
+            ? 'path-column'
+            : isTimeColumn
+              ? 'time-column'
               : '',
       }),
     };
