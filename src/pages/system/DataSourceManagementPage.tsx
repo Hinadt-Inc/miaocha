@@ -404,6 +404,7 @@ const DataSourceManagementPage = () => {
         <ProTable<DataSourceItem>
           className="table-container"
           bordered
+          size="small"
           search={false}
           options={false}
           headerTitle={
