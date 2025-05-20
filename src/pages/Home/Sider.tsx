@@ -32,15 +32,15 @@ const Sider: React.FC<IProps> = (props) => {
       });
 
       // 如果没有其他已选字段，自动添加_source字段
-      const hasOtherSelected = processedColumns.some((col) => col.selected && col.columnName !== 'log_time');
-      if (!hasOtherSelected) {
-        processedColumns.unshift({
-          columnName: '_source',
-          dataType: 'TEXT',
-          selected: true,
-          isFixed: true, // 标记为不可删除
-        });
-      }
+      // const hasOtherSelected = processedColumns.some((col) => col.selected && col.columnName !== 'log_time');
+      // if (!hasOtherSelected) {
+      //   // processedColumns.unshift({
+      //   //   columnName: '_source',
+      //   //   dataType: 'TEXT',
+      //   //   selected: true,
+      //   //   isFixed: true, // 标记为不可删除
+      //   // });
+      // }
       setLogColumns(processedColumns);
       // 初始加载时也通知父组件列变化
       if (onColumnsChange) {

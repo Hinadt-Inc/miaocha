@@ -3,24 +3,20 @@
   height: 100%;
   :global {
     .ant-table-cell {
+      word-break: break-all;
       font-size: 12px;
       font-family: "Lucida Console", Monaco, monospace;
     }
     .ant-table-row {
-      max-height: 144px;
+      max-height: 155px;
       overflow: hidden;
-      display: -webkit-box;
-      -webkit-line-clamp: 5;
-      line-clamp: 5;
-      -webkit-box-orient: vertical;
-      text-overflow: ellipsis;
     }
   }
   .source {
     display: inline-block;
     margin: 0;
     padding: 0;
-    line-height: 2.2;
+    line-height: 2;
     word-break: break-all;
     :global {
       dt {
@@ -37,6 +33,11 @@
         margin: 0 5px 0 0;
         color: #2d2d2d;
       }
+    }
+    .highlight {
+      background-color: #ffff00;
+      padding: 0 2px;
+      border-radius: 2px;
     }
   }
 }

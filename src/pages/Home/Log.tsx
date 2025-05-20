@@ -13,11 +13,12 @@ interface IProps {
     distributionData?: any; // 直方图数据
     rows?: any[]; // 表格数据
   };
+  searchParams: ISearchLogsParams; // 搜索参数
   dynamicColumns?: ILogColumnsResponse[]; // 添加动态列配置
 }
 
 const Log = (props: IProps) => {
-  const { log, fetchLog, dynamicColumns = [] } = props;
+  const { log, fetchLog, dynamicColumns = [], searchParams } = props;
   const { rows } = log || {};
   const [allRows, setAllRows] = useState<any[]>([]); // 用于存储所有历史数据的状态
   // 当新数据到达时，将其添加到历史数据中
@@ -41,12 +42,13 @@ const Log = (props: IProps) => {
   const tableProps = useMemo(
     () => ({
       data: allRows,
+      searchParams,
       loading: fetchLog.loading,
       onLoadMore: handleLoadMore,
       hasMore: log?.totalCount ? allRows.length < log.totalCount : false,
       dynamicColumns,
     }),
-    [allRows, fetchLog?.loading, log?.totalCount, handleLoadMore, dynamicColumns],
+    [allRows, fetchLog?.loading, log?.totalCount, handleLoadMore, dynamicColumns, searchParams],
   );
   return (
     <div className={styles.logContainer}>

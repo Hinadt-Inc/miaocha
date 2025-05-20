@@ -114,9 +114,10 @@ const HomePage = () => {
     () => ({
       log,
       fetchLog,
+      searchParams,
       dynamicColumns: logColumns,
     }),
-    [log, fetchLog, logColumns],
+    [log, fetchLog, logColumns, searchParams],
   );
 
   // 搜索栏组件props

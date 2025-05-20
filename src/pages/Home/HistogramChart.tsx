@@ -5,7 +5,7 @@ import { message } from 'antd';
 import { colorPrimary } from '@/utils/utils';
 
 interface IProps {
-  data: ISearchLogsResponse['distributionData'];
+  data: any;
   // show?: boolean;
   // onTimeRangeChange: (range: [string, string]) => void;
   // onToggle: () => void;

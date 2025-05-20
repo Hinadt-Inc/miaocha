@@ -40,6 +40,12 @@ export const LOG_TEMPLATES: IStatus[] = [
 
 // 时间范围预设选项
 export const QUICK_RANGES: Record<string, IStatus> = {
+  last_5m: {
+    label: '最近5分钟',
+    from: () => dayjs().subtract(5, 'minute'),
+    to: () => dayjs(),
+    format: [DATE_FORMAT, DATE_FORMAT],
+  },
   last_15m: {
     label: '最近15分钟',
     from: () => dayjs().subtract(15, 'minute'),
@@ -58,39 +64,15 @@ export const QUICK_RANGES: Record<string, IStatus> = {
     to: () => dayjs(),
     format: [DATE_FORMAT, DATE_FORMAT],
   },
-  last_3h: {
-    label: '最近3小时',
-    from: () => dayjs().subtract(3, 'hour'),
-    to: () => dayjs(),
-    format: [DATE_FORMAT, DATE_FORMAT],
-  },
-  last_6h: {
-    label: '最近6小时',
-    from: () => dayjs().subtract(6, 'hour'),
-    to: () => dayjs(),
-    format: [DATE_FORMAT, DATE_FORMAT],
-  },
-  last_12h: {
-    label: '最近12小时',
-    from: () => dayjs().subtract(12, 'hour'),
+  last_8h: {
+    label: '最近8小时',
+    from: () => dayjs().subtract(8, 'hour'),
     to: () => dayjs(),
     format: [DATE_FORMAT, DATE_FORMAT],
   },
   last_24h: {
     label: '最近24小时',
     from: () => dayjs().subtract(24, 'hour'),
-    to: () => dayjs(),
-    format: [DATE_FORMAT, DATE_FORMAT],
-  },
-  last_7d: {
-    label: '最近7天',
-    from: () => dayjs().subtract(7, 'day'),
-    to: () => dayjs(),
-    format: [DATE_FORMAT, DATE_FORMAT],
-  },
-  last_30d: {
-    label: '最近30天',
-    from: () => dayjs().subtract(30, 'day'),
     to: () => dayjs(),
     format: [DATE_FORMAT, DATE_FORMAT],
   },
@@ -106,28 +88,10 @@ export const QUICK_RANGES: Record<string, IStatus> = {
     to: () => dayjs().subtract(1, 'day').endOf('day'),
     format: ['YYYY-MM-DD 00:00:00', 'YYYY-MM-DD 23:59:59'],
   },
-  this_week: {
-    label: '本周',
-    from: () => dayjs().startOf('week'),
-    to: () => dayjs(),
-    format: ['YYYY-MM-DD 00:00:00', 'YYYY-MM-DD 23:59:59'],
-  },
-  this_month: {
-    label: '本月',
-    from: () => dayjs().startOf('month'),
-    to: () => dayjs(),
-    format: ['YYYY-MM-DD 00:00:00', 'YYYY-MM-DD 23:59:59'],
-  },
-  last_month: {
-    label: '上个月',
-    from: () => dayjs().subtract(1, 'month').startOf('month'),
-    to: () => dayjs().subtract(1, 'month').endOf('month'),
-    format: ['YYYY-MM-DD 00:00:00', 'YYYY-MM-DD 23:59:59'],
-  },
-  this_year: {
-    label: '今年',
-    from: () => dayjs().startOf('year'),
-    to: () => dayjs(),
+  last_week: {
+    label: '上周',
+    from: () => dayjs().subtract(1, 'week').startOf('week'),
+    to: () => dayjs().subtract(1, 'week').endOf('week'),
     format: ['YYYY-MM-DD 00:00:00', 'YYYY-MM-DD 23:59:59'],
   },
 };
