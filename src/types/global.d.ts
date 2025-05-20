@@ -21,6 +21,7 @@ declare global {
     value?: string; // 值
     range: string[]; // 时间范围
     format?: string[]; // 时间格式
+    value?: string; // 值
     [key: string]: any;
   }
 

@@ -36,6 +36,7 @@ const SearchBar = (props: IProps) => {
     const value = 'last_15m'; // 默认时间范围
     const { from, to, format } = QUICK_RANGES[value];
     return {
+      value,
       range: [from().format(format[0]), to().format(format[1])],
       ...QUICK_RANGES[value],
     } as any;
@@ -81,7 +82,13 @@ const SearchBar = (props: IProps) => {
             </Tag>
           ))}
 
-          {timeOption?.range?.length === 2 && (
+          {/* 时间 */}
+          {timeOption?.value && QUICK_RANGES[timeOption?.value] && (
+            <Tag color="blue" onClick={() => setOpenTime(true)}>
+              {timeOption?.label}
+            </Tag>
+          )}
+          {timeOption?.value && !QUICK_RANGES[timeOption?.value] && timeOption?.range?.length === 2 && (
             <Tag color="blue" onClick={() => setOpenTime(true)}>
               {timeOption?.range[0]} ~ {timeOption?.range[1]}
             </Tag>
@@ -105,7 +112,10 @@ const SearchBar = (props: IProps) => {
 
     // 时间
     const { range = [], value = '' } = timeOption || {};
-    if (range?.length === 2 && value) {
+    // 快捷选择
+    if (value && QUICK_RANGES[value]) {
+      params['timeRange'] = value;
+    } else if (value && range?.length === 2) {
       params['startTime'] = range[0];
       params['endTime'] = range[1];
     }
@@ -236,6 +246,7 @@ const SearchBar = (props: IProps) => {
 
   // 提交时间范围
   const onSubmitTime = (params: ISubmitTime) => {
+    console.log('【打印日志】params2:', params);
     setTimeOption(params);
     setOpenTime(false);
   };
