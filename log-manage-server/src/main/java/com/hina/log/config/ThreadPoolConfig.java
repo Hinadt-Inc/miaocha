@@ -13,7 +13,6 @@ import java.util.concurrent.ThreadPoolExecutor;
  * 包含所有应用使用的线程池配置：
  * 1. logstashTaskExecutor - 用于异步执行Logstash相关任务
  * 2. logQueryExecutor - 用于并行执行日志查询和分析
- * 3. fieldStatisticsExecutor - 用于并行计算字段分布统计信息
  */
 @Configuration
 @EnableAsync
@@ -69,29 +68,5 @@ public class ThreadPoolConfig {
         return executor;
     }
 
-    /**
-     * 字段统计线程池
-     * 用于并行计算字段分布统计信息
-     */
-    @Bean("fieldStatisticsExecutor")
-    public Executor fieldStatisticsExecutor() {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        // 核心线程数
-        executor.setCorePoolSize(4);
-        // 最大线程数
-        executor.setMaxPoolSize(8);
-        // 队列容量
-        executor.setQueueCapacity(500);
-        // 线程名前缀
-        executor.setThreadNamePrefix("field-stats-");
-        // 拒绝策略：由调用线程处理
-        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
-        // 等待所有任务结束后再关闭线程池
-        executor.setWaitForTasksToCompleteOnShutdown(true);
-        // 等待时间
-        executor.setAwaitTerminationSeconds(30);
-        // 初始化线程池
-        executor.initialize();
-        return executor;
-    }
+
 }

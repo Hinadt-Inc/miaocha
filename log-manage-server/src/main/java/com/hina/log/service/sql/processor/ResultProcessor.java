@@ -1,6 +1,8 @@
 package com.hina.log.service.sql.processor;
 
-import com.hina.log.dto.LogSearchResultDTO;
+import com.hina.log.dto.LogDetailResultDTO;
+import com.hina.log.dto.LogFieldDistributionResultDTO;
+import com.hina.log.dto.LogHistogramResultDTO;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -16,18 +18,18 @@ public class ResultProcessor {
 
     /**
      * 处理日志分布统计查询结果
-     * 
+     *
      * @param queryResult 查询返回的原始结果
-     * @param result      日志搜索结果DTO，用于填充分布数据
+     * @param result      日志时间分布结果DTO，用于填充分布数据
      */
-    public void processDistributionResult(Map<String, Object> queryResult, LogSearchResultDTO result) {
-        List<LogSearchResultDTO.LogDistributionData> distributionData = new ArrayList<>();
+    public void processDistributionResult(Map<String, Object> queryResult, LogHistogramResultDTO result) {
+        List<LogHistogramResultDTO.LogDistributionData> distributionData = new ArrayList<>();
 
         List<Map<String, Object>> rows = (List<Map<String, Object>>) queryResult.get("rows");
 
         if (rows != null) {
             for (Map<String, Object> row : rows) {
-                LogSearchResultDTO.LogDistributionData data = new LogSearchResultDTO.LogDistributionData();
+                LogHistogramResultDTO.LogDistributionData data = new LogHistogramResultDTO.LogDistributionData();
                 if (row.containsKey("log_time_")) {
                     data.setTimePoint(row.get("log_time_").toString());
                 }
@@ -42,22 +44,26 @@ public class ResultProcessor {
         result.setDistributionData(distributionData);
     }
 
+
+
     /**
      * 处理详细日志查询结果
-     * 
+     *
      * @param queryResult 查询返回的原始结果
-     * @param result      日志搜索结果DTO，用于填充列名和数据行
+     * @param result      日志明细结果DTO，用于填充列名和数据行
      */
-    public void processDetailResult(Map<String, Object> queryResult, LogSearchResultDTO result) {
+    public void processDetailResult(Map<String, Object> queryResult, LogDetailResultDTO result) {
         if (queryResult != null) {
             result.setColumns((List<String>) queryResult.get("columns"));
             result.setRows((List<Map<String, Object>>) queryResult.get("rows"));
         }
     }
 
+
+
     /**
      * 处理总数查询结果
-     * 
+     *
      * @param queryResult 查询返回的原始结果
      * @return 总数值
      */

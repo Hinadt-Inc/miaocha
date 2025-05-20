@@ -6,6 +6,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 /**
  * SQL语句构建器
  */
@@ -60,6 +63,33 @@ public class LogSqlBuilder {
         sql.append(" ORDER BY log_time DESC")
                 .append(" LIMIT ").append(dto.getPageSize())
                 .append(" OFFSET ").append(dto.getOffset());
+
+        return sql.toString();
+    }
+
+    /**
+     * 构建字段分布TOP N查询SQL，使用Doris的TOPN函数
+     *
+     * @param dto 日志搜索DTO
+     * @param tableName 表名
+     * @param fields 需要统计的字段列表
+     * @param topN 每个字段取前N个值
+     * @return 字段分布查询SQL
+     */
+    public String buildFieldDistributionSql(LogSearchDTO dto, String tableName, List<String> fields, int topN) {
+        StringBuilder sql = new StringBuilder();
+
+        // 构建TOPN函数调用列表
+        String topnColumns = fields.stream()
+                .map(field -> String.format("TOPN(%s, %d)", field, topN))
+                .collect(Collectors.joining(", "));
+
+        sql.append("SELECT ").append(topnColumns)
+           .append(" FROM ").append(tableName)
+           .append(" WHERE log_time >= '").append(dto.getStartTime()).append("'")
+           .append(" AND log_time <= '").append(dto.getEndTime()).append("'");
+
+        appendSearchConditions(sql, dto);
 
         return sql.toString();
     }
