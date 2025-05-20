@@ -9,10 +9,9 @@ import type { DatasourcePermission, PermissionResponse } from '../types/permissi
  */
 export function grantTablePermission(
   userId: string,
-  query: { modules: string[] },
+  query: { userId: string; modules: string[] },
 ): Promise<DatasourcePermission> {
-  const modulesParam = query.modules.map((m) => `module=${encodeURIComponent(m)}`).join('&');
-  return post(`/api/permissions/modules/user/${userId}/grant?${modulesParam}`);
+  return post(`/api/permissions/modules/user/${userId}/batch-grant`, query);
 }
 
 /**

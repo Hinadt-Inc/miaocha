@@ -43,7 +43,6 @@ const DataSourceManagementPage = () => {
   const [currentDataSource, setCurrentDataSource] = useState<DataSourceItem | undefined>(undefined);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
   const [allDataSources, setAllDataSources] = useState<DataSourceItem[]>([]);
-  const [dataSourcesLoaded, setDataSourcesLoaded] = useState<boolean>(false);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,

@@ -5,7 +5,6 @@ import { getUsers } from '../../api/user';
 import type { ColumnsType } from 'antd/es/table';
 import {
   grantTablePermission,
-  getUserDatasourcePermissions,
   getMyTablePermissions,
   revokePermissionById,
 } from '../../api/permission';
@@ -47,6 +46,7 @@ const PermissionManagementPage = () => {
             datasourceName: `数据源 ${datasourceId}`, // 默认数据源名称，如果API没提供
             databaseName: '-',
             tables: [],
+            id: '',
           };
         }
 
@@ -56,6 +56,7 @@ const PermissionManagementPage = () => {
           permissionId: permission.id.toString(),
           tableName: permission.module, // 使用模块名作为表名
           permissions: [],
+          id: permission.id.toString(),
         });
 
         return acc;
@@ -129,13 +130,14 @@ const PermissionManagementPage = () => {
         }
         try {
           await grantTablePermission(currentSelectedUser, {
+            userId: currentSelectedUser,
             modules: selectedModules,
           });
-          message.success('权限授予成功');
+          message.success(`成功授予 ${selectedModules.length} 个模块权限`);
           fetchPermissions();
           return Promise.resolve();
-        } catch {
-          message.error('权限授予失败');
+        } catch (error: any) {
+          message.error(`权限授予失败: ${error.message || '未知错误'}`);
           return Promise.reject();
         }
       },
@@ -249,6 +251,7 @@ const PermissionManagementPage = () => {
         }
         try {
           await grantTablePermission(currentSelectedUser, {
+            userId: currentSelectedUser,
             modules: selectedModules,
           });
           message.success('权限授予成功');
@@ -291,6 +294,7 @@ const PermissionManagementPage = () => {
         }
         try {
           await grantTablePermission(currentSelectedUser, {
+            userId: currentSelectedUser,
             modules: [moduleName],
           });
           message.success('权限授予成功');
@@ -310,13 +314,23 @@ const PermissionManagementPage = () => {
       message.error('无效的权限ID');
       return;
     }
-    try {
-      await revokePermissionById(permissionId);
-      message.success('权限撤销成功');
-      fetchPermissions();
-    } catch {
-      message.error('权限撤销失败');
-    }
+
+    modal.confirm({
+      title: '确认撤销权限',
+      content: '确定要撤销该权限吗？此操作不可恢复',
+      okText: '确认撤销',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await revokePermissionById(permissionId);
+          message.success('权限撤销成功');
+          fetchPermissions();
+        } catch {
+          message.error('权限撤销失败');
+        }
+      },
+    });
   };
 
   // 处理分页变更
