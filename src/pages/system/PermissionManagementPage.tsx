@@ -43,10 +43,10 @@ const PermissionManagementPage = () => {
           acc[datasourceId] = {
             modules: [],
             datasourceId,
-            datasourceName: `数据源 ${datasourceId}`, // 默认数据源名称，如果API没提供
-            databaseName: '-',
+            datasourceName: `数据源 ${datasourceId} (JDBC)`, // 显示JDBC标识
+            databaseName: 'JDBC连接', // 显示数据库类型
             tables: [],
-            id: '',
+            id: permission.id.toString(),
           };
         }
 
@@ -55,7 +55,7 @@ const PermissionManagementPage = () => {
           moduleName: permission.module,
           permissionId: permission.id.toString(),
           tableName: permission.module, // 使用模块名作为表名
-          permissions: [],
+          permissions: ['read', 'write'], // 默认权限
           id: permission.id.toString(),
         });
 
