@@ -1,6 +1,5 @@
-package com.hina.log.dto;
+package com.hina.log.dto.logstash;
 
-import com.hina.log.entity.Machine;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -37,14 +36,14 @@ public class LogstashProcessDTO {
     @Schema(description = "Doris表名", example = "log_table_test_env")
     private String tableName;
 
-    @Schema(description = "进程状态", example = "NOT_STARTED")
-    private String state;
+    @Schema(description = "JVM配置选项模板")
+    private String jvmOptions;
 
-    @Schema(description = "进程状态描述", example = "未启动")
-    private String stateDescription;
+    @Schema(description = "Logstash系统配置模板")
+    private String logstashYml;
 
     @Schema(description = "部署的机器列表")
-    private List<MachineDTO> machines;
+    private List<LogstashMachineDTO> machines;
 
     @Schema(description = "创建时间")
     private LocalDateTime createTime;

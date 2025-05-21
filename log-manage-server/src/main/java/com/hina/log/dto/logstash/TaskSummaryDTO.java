@@ -1,4 +1,4 @@
-package com.hina.log.dto;
+package com.hina.log.dto.logstash;
 
 import java.time.LocalDateTime;
 

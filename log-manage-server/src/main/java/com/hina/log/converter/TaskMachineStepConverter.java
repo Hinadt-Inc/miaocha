@@ -1,7 +1,6 @@
 package com.hina.log.converter;
 
-import com.hina.log.dto.TaskDetailDTO;
-import com.hina.log.dto.TaskDetailDTO.MachineStepDTO;
+import com.hina.log.dto.logstash.TaskDetailDTO.MachineStepDTO;
 import com.hina.log.entity.Machine;
 import com.hina.log.entity.LogstashTaskMachineStep;
 import com.hina.log.mapper.MachineMapper;

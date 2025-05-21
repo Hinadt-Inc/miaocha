@@ -13,7 +13,7 @@ class LogstashConfigParserTest {
     @Test
     void testExtractTableName() {
         // 测试样例配置
-        String configJson = "input { \n" +
+        String configContent = "input { \n" +
                 "  kafka { \n" +
                 "    bootstrap_servers => \"10.0.20.25:9092,10.0.20.26:9092,10.0.20.27:9092\" \n" +
                 "    topics => [\"doris-input-topic\"] \n" +
@@ -46,7 +46,7 @@ class LogstashConfigParserTest {
                 "  } \n" +
                 "}";
 
-        Optional<String> tableName = parser.extractTableName(configJson);
+        Optional<String> tableName = parser.extractTableName(configContent);
         assertTrue(tableName.isPresent());
         assertEquals("log_table_test_env", tableName.get());
     }
@@ -54,7 +54,7 @@ class LogstashConfigParserTest {
     @Test
     void testExtractTableNameWithNoTable() {
         // 测试没有表名的配置
-        String configJson = "input { \n" +
+        String configContent = "input { \n" +
                 "  kafka { \n" +
                 "    bootstrap_servers => \"10.0.20.25:9092\" \n" +
                 "    topics => [\"doris-input-topic\"] \n" +
@@ -70,14 +70,14 @@ class LogstashConfigParserTest {
                 "  } \n" +
                 "}";
 
-        Optional<String> tableName = parser.extractTableName(configJson);
+        Optional<String> tableName = parser.extractTableName(configContent);
         assertFalse(tableName.isPresent());
     }
 
     @Test
     void testValidateKafkaConfig() {
         // 测试有效的Kafka配置
-        String configJson = "input { \n" +
+        String configContent = "input { \n" +
                 "  kafka { \n" +
                 "    bootstrap_servers => \"10.0.20.25:9092\" \n" +
                 "    topics => [\"doris-input-topic\"] \n" +
@@ -90,14 +90,14 @@ class LogstashConfigParserTest {
                 "  } \n" +
                 "}";
 
-        LogstashConfigParser.ValidationResult result = parser.validateKafkaConfig(configJson);
+        LogstashConfigParser.ValidationResult result = parser.validateKafkaConfig(configContent);
         assertTrue(result.isValid());
     }
 
     @Test
     void testValidateKafkaConfigWithNoBootstrapServers() {
         // 测试没有bootstrap_servers的配置
-        String configJson = "input { \n" +
+        String configContent = "input { \n" +
                 "  kafka { \n" +
                 "    topics => [\"doris-input-topic\"] \n" +
                 "  } \n" +
@@ -109,7 +109,7 @@ class LogstashConfigParserTest {
                 "  } \n" +
                 "}";
 
-        LogstashConfigParser.ValidationResult result = parser.validateKafkaConfig(configJson);
+        LogstashConfigParser.ValidationResult result = parser.validateKafkaConfig(configContent);
         assertFalse(result.isValid());
         assertEquals("未找到Kafka bootstrap_servers配置", result.getErrorMessage());
     }
@@ -117,7 +117,7 @@ class LogstashConfigParserTest {
     @Test
     void testValidateKafkaConfigWithNoTopics() {
         // 测试没有topics的配置
-        String configJson = "input { \n" +
+        String configContent = "input { \n" +
                 "  kafka { \n" +
                 "    bootstrap_servers => \"10.0.20.25:9092\" \n" +
                 "  } \n" +
@@ -129,7 +129,7 @@ class LogstashConfigParserTest {
                 "  } \n" +
                 "}";
 
-        LogstashConfigParser.ValidationResult result = parser.validateKafkaConfig(configJson);
+        LogstashConfigParser.ValidationResult result = parser.validateKafkaConfig(configContent);
         assertFalse(result.isValid());
         assertEquals("未找到Kafka topics配置", result.getErrorMessage());
     }
@@ -137,7 +137,7 @@ class LogstashConfigParserTest {
     @Test
     void testValidateDorisOutput() {
         // 测试有效的Doris输出配置
-        String configJson = "input { \n" +
+        String configContent = "input { \n" +
                 "  kafka { \n" +
                 "    bootstrap_servers => \"10.0.20.25:9092\" \n" +
                 "    topics => [\"doris-input-topic\"] \n" +
@@ -150,14 +150,14 @@ class LogstashConfigParserTest {
                 "  } \n" +
                 "}";
 
-        LogstashConfigParser.ValidationResult result = parser.validateDorisOutput(configJson);
+        LogstashConfigParser.ValidationResult result = parser.validateDorisOutput(configContent);
         assertTrue(result.isValid());
     }
 
     @Test
     void testValidateDorisOutputWithNoTable() {
         // 测试没有表名的Doris输出配置
-        String configJson = "input { \n" +
+        String configContent = "input { \n" +
                 "  kafka { \n" +
                 "    bootstrap_servers => \"10.0.20.25:9092\" \n" +
                 "    topics => [\"doris-input-topic\"] \n" +
@@ -169,7 +169,7 @@ class LogstashConfigParserTest {
                 "  } \n" +
                 "}";
 
-        LogstashConfigParser.ValidationResult result = parser.validateDorisOutput(configJson);
+        LogstashConfigParser.ValidationResult result = parser.validateDorisOutput(configContent);
         assertFalse(result.isValid());
         assertEquals("未找到Doris表名配置", result.getErrorMessage());
     }
@@ -177,7 +177,7 @@ class LogstashConfigParserTest {
     @Test
     void testValidateConfig() {
         // 测试完整有效的配置
-        String configJson = "input { \n" +
+        String configContent = "input { \n" +
                 "  kafka { \n" +
                 "    bootstrap_servers => \"10.0.20.25:9092\" \n" +
                 "    topics => [\"doris-input-topic\"] \n" +
@@ -190,7 +190,7 @@ class LogstashConfigParserTest {
                 "  } \n" +
                 "}";
 
-        LogstashConfigParser.ValidationResult result = parser.validateConfig(configJson);
+        LogstashConfigParser.ValidationResult result = parser.validateConfig(configContent);
         assertTrue(result.isValid());
     }
 }

@@ -1,21 +1,24 @@
 package com.hina.log.service.impl;
 
-import com.hina.log.converter.LogstashProcessConverter;
-import com.hina.log.converter.MachineConverter;
-import com.hina.log.converter.TaskStepsGroupConverter;
-import com.hina.log.converter.TaskSummaryConverter;
-import com.hina.log.dto.*;
-import com.hina.log.service.sql.JdbcQueryExecutor;
-import com.hina.log.entity.*;
+import com.hina.log.converter.*;
+import com.hina.log.dto.logstash.LogstashProcessConfigUpdateRequestDTO;
+import com.hina.log.dto.logstash.LogstashProcessCreateDTO;
+import com.hina.log.dto.logstash.LogstashProcessResponseDTO;
+import com.hina.log.entity.Datasource;
+import com.hina.log.entity.LogstashMachine;
+import com.hina.log.entity.LogstashProcess;
+import com.hina.log.entity.Machine;
 import com.hina.log.exception.BusinessException;
 import com.hina.log.exception.ErrorCode;
 import com.hina.log.logstash.LogstashProcessDeployService;
-import com.hina.log.logstash.enums.LogstashProcessState;
-import com.hina.log.logstash.enums.TaskStatus;
+import com.hina.log.logstash.enums.LogstashMachineState;
 import com.hina.log.logstash.parser.LogstashConfigParser;
+import com.hina.log.logstash.service.LogstashConfigSyncService;
+import com.hina.log.logstash.task.TaskService;
 import com.hina.log.mapper.*;
 import com.hina.log.service.LogstashProcessService;
 import com.hina.log.service.TableValidationService;
+import com.hina.log.service.sql.JdbcQueryExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -24,7 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -41,14 +46,12 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
     private final DatasourceMapper datasourceMapper;
     private final LogstashProcessDeployService logstashDeployService;
     private final LogstashProcessConverter logstashProcessConverter;
-    private final MachineConverter machineConverter;
-    private final LogstashTaskMapper taskMapper;
-    private final LogstashTaskMachineStepMapper stepMapper;
-    private final TaskSummaryConverter taskSummaryConverter;
-    private final TaskStepsGroupConverter taskStepsGroupConverter;
+    private final LogstashMachineConverter logstashMachineConverter;
     private final LogstashConfigParser logstashConfigParser;
     private final TableValidationService tableValidationService;
     private final JdbcQueryExecutor jdbcQueryExecutor;
+    private final TaskService taskService;
+    private final LogstashConfigSyncService configSyncService;
 
     public LogstashProcessServiceImpl(
             LogstashProcessMapper logstashProcessMapper,
@@ -57,33 +60,82 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             DatasourceMapper datasourceMapper,
             @Qualifier("logstashDeployServiceImpl") LogstashProcessDeployService logstashDeployService,
             LogstashProcessConverter logstashProcessConverter,
-            MachineConverter machineConverter,
-            LogstashTaskMapper taskMapper,
-            LogstashTaskMachineStepMapper stepMapper,
-            TaskSummaryConverter taskSummaryConverter,
-            TaskStepsGroupConverter taskStepsGroupConverter,
+            LogstashMachineConverter logstashMachineConverter,
             LogstashConfigParser logstashConfigParser,
             TableValidationService tableValidationService,
-            JdbcQueryExecutor jdbcQueryExecutor) {
+            JdbcQueryExecutor jdbcQueryExecutor,
+            TaskService taskService,
+            LogstashConfigSyncService configSyncService) {
         this.logstashProcessMapper = logstashProcessMapper;
         this.logstashMachineMapper = logstashMachineMapper;
         this.machineMapper = machineMapper;
         this.datasourceMapper = datasourceMapper;
         this.logstashDeployService = logstashDeployService;
         this.logstashProcessConverter = logstashProcessConverter;
-        this.machineConverter = machineConverter;
-        this.taskMapper = taskMapper;
-        this.stepMapper = stepMapper;
-        this.taskSummaryConverter = taskSummaryConverter;
-        this.taskStepsGroupConverter = taskStepsGroupConverter;
+        this.logstashMachineConverter = logstashMachineConverter;
         this.logstashConfigParser = logstashConfigParser;
         this.tableValidationService = tableValidationService;
         this.jdbcQueryExecutor = jdbcQueryExecutor;
+        this.taskService = taskService;
+        this.configSyncService = configSyncService;
+    }
+
+    /**
+     * 获取并验证进程、机器和关联关系
+     *
+     * @param id        Logstash进程ID
+     * @param machineId 机器ID
+     * @return 包含验证后实体的对象
+     */
+    private ValidatedEntities getAndValidateObjects(Long id, Long machineId) {
+        // 参数校验
+        if (id == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
+        }
+
+        if (machineId == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "机器ID不能为空");
+        }
+
+        // 检查进程是否存在
+        LogstashProcess process = logstashProcessMapper.selectById(id);
+        if (process == null) {
+            throw new BusinessException(ErrorCode.LOGSTASH_PROCESS_NOT_FOUND);
+        }
+
+        // 检查机器是否存在
+        Machine machine = machineMapper.selectById(machineId);
+        if (machine == null) {
+            throw new BusinessException(ErrorCode.MACHINE_NOT_FOUND);
+        }
+
+        // 检查进程与机器的关联关系
+        LogstashMachine relation = logstashMachineMapper.selectByLogstashProcessIdAndMachineId(id, machineId);
+        if (relation == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "指定的机器未与该进程关联");
+        }
+
+        return new ValidatedEntities(process, machine, relation);
+    }
+
+    /**
+     * 用于存储验证后的实体对象
+     */
+    private static class ValidatedEntities {
+        final LogstashProcess process;
+        final Machine machine;
+        final LogstashMachine relation;
+
+        ValidatedEntities(LogstashProcess process, Machine machine, LogstashMachine relation) {
+            this.process = process;
+            this.machine = machine;
+            this.relation = relation;
+        }
     }
 
     @Override
     @Transactional
-    public LogstashProcessDTO createLogstashProcess(LogstashProcessCreateDTO dto) {
+    public LogstashProcessResponseDTO createLogstashProcess(LogstashProcessCreateDTO dto) {
         // 参数校验
         if (dto == null) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "参数不能为空");
@@ -132,8 +184,6 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
 
         // 创建进程记录
         LogstashProcess process = logstashProcessConverter.toEntity(dto);
-        // 初始状态为初始化中状态
-        process.setState(LogstashProcessState.INITIALIZING.name());
         process.setCreateTime(LocalDateTime.now());
         process.setUpdateTime(LocalDateTime.now());
         logstashProcessMapper.insert(process);
@@ -144,9 +194,8 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                 throw new BusinessException(ErrorCode.MACHINE_NOT_FOUND, "指定的机器不存在: ID=" + machineId);
             }
 
-            LogstashMachine logstashMachine = new LogstashMachine();
-            logstashMachine.setLogstashProcessId(process.getId());
-            logstashMachine.setMachineId(machineId);
+            // 使用转换器创建LogstashMachine，并复制配置
+            LogstashMachine logstashMachine = logstashMachineConverter.createFromProcess(process, machineId);
             logstashMachineMapper.insert(logstashMachine);
         }
 
@@ -154,7 +203,16 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         List<Machine> machines = getMachinesForProcess(process.getId());
 
         // 执行进程环境初始化
-        logstashDeployService.initializeProcessAsync(process, machines);
+        logstashDeployService.initializeProcess(process, machines);
+
+        // 检查jvmOptions和logstashYml是否为空，如果为空则异步同步配置文件
+        boolean needSyncJvmOptions = !StringUtils.hasText(dto.getJvmOptions());
+        boolean needSyncLogstashYml = !StringUtils.hasText(dto.getLogstashYml());
+
+        if (needSyncJvmOptions || needSyncLogstashYml) {
+            // 使用配置同步服务，异步执行配置同步
+            configSyncService.syncConfigurationAsync(process.getId(), needSyncJvmOptions, needSyncLogstashYml);
+        }
 
         return getLogstashProcess(process.getId());
     }
@@ -162,16 +220,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
     @Override
     @Transactional
     public void deleteLogstashProcess(Long id) {
-        // 参数校验
-        if (id == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
-        }
-
-        // 检查进程是否存在
-        LogstashProcess process = logstashProcessMapper.selectById(id);
-        if (process == null) {
-            throw new BusinessException(ErrorCode.LOGSTASH_PROCESS_NOT_FOUND);
-        }
+        LogstashProcess process = getAndValidateProcess(id);
 
         // 获取进程对应的机器
         List<Machine> machines = getMachinesForProcess(id);
@@ -179,45 +228,21 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             logger.warn("进程没有关联的机器，进程ID: {}", id);
         } else {
             // 检查进程是否正在运行，运行中的进程不能删除
-            if (LogstashProcessState.RUNNING.name().equals(process.getState()) ||
-                    LogstashProcessState.STARTING.name().equals(process.getState())) {
+            List<LogstashMachine> machineRelations = logstashMachineMapper.selectByLogstashProcessId(id);
+            boolean anyRunning = machineRelations.stream().anyMatch(m ->
+                    LogstashMachineState.RUNNING.name().equals(m.getState()) ||
+                            LogstashMachineState.STARTING.name().equals(m.getState()));
+
+            if (anyRunning) {
                 throw new BusinessException(ErrorCode.VALIDATION_ERROR, "运行中的进程不能删除，请先停止进程");
             }
 
             // 删除进程物理目录 - 直接调用，不依赖状态管理
-            try {
-                CompletableFuture<Boolean> deleteFuture = logstashDeployService.deleteProcessDirectory(id, machines);
-                boolean success = deleteFuture.get(); // 等待删除完成
-                if (!success) {
-                    logger.warn("删除进程物理目录出现部分失败，但会继续删除数据库记录，进程ID: {}", id);
-                } else {
-                    logger.info("成功删除进程物理目录，进程ID: {}", id);
-                }
-            } catch (Exception e) {
-                logger.error("删除进程物理目录时发生错误: {}", e.getMessage(), e);
-                // 继续进行数据库记录删除
-            }
+            deleteProcessDirectories(id, machines);
         }
 
         // 删除与进程相关的所有任务和步骤
-        try {
-            // 获取所有与进程相关的任务
-            List<String> taskIds = logstashDeployService.getAllProcessTaskIds(id);
-            if (!taskIds.isEmpty()) {
-                logger.info("找到{}个与进程关联的任务，进程ID: {}", taskIds.size(), id);
-
-                // 删除每个任务及其步骤
-                for (String taskId : taskIds) {
-                    logger.info("删除进程关联的任务: {}", taskId);
-                    deleteProcessTask(taskId);
-                }
-            } else {
-                logger.info("没有找到与进程关联的任务，进程ID: {}", id);
-            }
-        } catch (Exception e) {
-            logger.error("删除进程相关任务时发生错误: {}", e.getMessage(), e);
-            // 继续删除其他数据
-        }
+        deleteProcessTasks(id);
 
         // 删除与进程相关的所有机器关联
         logstashMachineMapper.deleteByLogstashProcessId(id);
@@ -229,264 +254,246 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
     }
 
     /**
+     * 删除进程物理目录
+     */
+    private void deleteProcessDirectories(Long processId, List<Machine> machines) {
+        try {
+            CompletableFuture<Boolean> deleteFuture = logstashDeployService.deleteProcessDirectory(processId, machines);
+            boolean success = deleteFuture.get(); // 等待删除完成
+            if (!success) {
+                logger.warn("删除进程物理目录出现部分失败，但会继续删除数据库记录，进程ID: {}", processId);
+            } else {
+                logger.info("成功删除进程物理目录，进程ID: {}", processId);
+            }
+        } catch (Exception e) {
+            logger.error("删除进程物理目录时发生错误: {}", e.getMessage(), e);
+            // 继续进行数据库记录删除
+        }
+    }
+
+    /**
+     * 删除进程关联的所有任务
+     */
+    private void deleteProcessTasks(Long processId) {
+        try {
+            // 获取所有与进程相关的任务
+            List<String> taskIds = taskService.getAllProcessTaskIds(processId);
+            if (!taskIds.isEmpty()) {
+                logger.info("找到{}个与进程关联的任务，进程ID: {}", taskIds.size(), processId);
+
+                // 删除每个任务及其步骤
+                for (String taskId : taskIds) {
+                    logger.info("删除进程关联的任务: {}", taskId);
+                    deleteProcessTask(taskId);
+                }
+            } else {
+                logger.info("没有找到与进程关联的任务，进程ID: {}", processId);
+            }
+        } catch (Exception e) {
+            logger.error("删除进程相关任务时发生错误: {}", e.getMessage(), e);
+            // 继续删除其他数据
+        }
+    }
+
+    /**
      * 删除进程关联的任务及步骤
      */
     private void deleteProcessTask(String taskId) {
         try {
             // 先删除任务步骤
-            logstashDeployService.deleteTaskSteps(taskId);
+            taskService.deleteTaskSteps(taskId);
             // 再删除任务
-            logstashDeployService.deleteTask(taskId);
+            taskService.deleteTask(taskId);
         } catch (Exception e) {
             logger.error("删除任务失败: {}", taskId, e);
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "删除任务数据失败: " + e.getMessage());
         }
     }
 
-    @Override
-    public LogstashProcessDTO getLogstashProcess(Long id) {
-        // 检查进程是否存在
+    /**
+     * 获取并验证Logstash进程
+     *
+     * @param id 进程ID
+     * @return 验证后的进程实体
+     */
+    private LogstashProcess getAndValidateProcess(Long id) {
+        if (id == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
+        }
+
         LogstashProcess process = logstashProcessMapper.selectById(id);
         if (process == null) {
             throw new BusinessException(ErrorCode.LOGSTASH_PROCESS_NOT_FOUND);
         }
 
-        return enhanceDTO(logstashProcessConverter.toDto(process));
+        return process;
     }
 
     @Override
-    public List<LogstashProcessDTO> getAllLogstashProcesses() {
-        return logstashProcessMapper.selectAll().stream()
-                .map(logstashProcessConverter::toDto)
-                .map(this::enhanceDTO)
+    public LogstashProcessResponseDTO getLogstashProcess(Long id) {
+        LogstashProcess process = getAndValidateProcess(id);
+        return logstashProcessConverter.toResponseDTO(process);
+    }
+
+    @Override
+    public List<LogstashProcessResponseDTO> getAllLogstashProcesses() {
+        List<LogstashProcess> processes = logstashProcessMapper.selectAll();
+        return processes.stream()
+                .map(logstashProcessConverter::toResponseDTO)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional
-    public LogstashProcessDTO startLogstashProcess(Long id) {
-        // 参数校验
-        if (id == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
+    public LogstashProcessResponseDTO startLogstashProcess(Long id) {
+        LogstashProcess process = getAndValidateProcess(id);
+
+        // 验证配置
+        validateProcessConfig(process);
+
+        // 获取进程关联的可启动机器
+        List<Machine> machinesToStart = getStartableMachines(id);
+        if (machinesToStart.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "没有处于可启动状态的机器实例");
         }
 
-        // 检查进程是否存在
-        LogstashProcess process = logstashProcessMapper.selectById(id);
-        if (process == null) {
-            throw new BusinessException(ErrorCode.LOGSTASH_PROCESS_NOT_FOUND);
-        }
-
-        // 检查进程状态
-        if (LogstashProcessState.RUNNING.name().equals(process.getState())) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程已经在运行中");
-        }
-
-        if (LogstashProcessState.INITIALIZING.name().equals(process.getState())) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程正在初始化中");
-        }
-
-        if (LogstashProcessState.STARTING.name().equals(process.getState())) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程正在启动中");
-        }
-
-        // 检查配置是否完整
-        if (!StringUtils.hasText(process.getConfigContent())) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "Logstash配置不能为空");
-        }
-
-        // 检查表名是否存在
-        if (!StringUtils.hasText(process.getTableName())) {
-            throw new BusinessException(ErrorCode.LOGSTASH_CONFIG_TABLE_MISSING, "表名不能为空，无法启动进程");
-        }
-
-        // 检查目标数据源中是否存在该表
-        if (!tableValidationService.isTableExists(process.getDatasourceId(), process.getTableName())) {
-            throw new BusinessException(ErrorCode.LOGSTASH_TARGET_TABLE_NOT_FOUND,
-                    String.format("目标数据源(ID: %d)中不存在表 '%s'，请先创建表后再启动进程",
-                            process.getDatasourceId(), process.getTableName()));
-        }
-
-        // 获取进程关联的所有机器
-        List<Machine> machines = getMachinesForProcess(id);
-        if (machines.isEmpty()) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程未关联任何机器");
-        }
-
-        // 异步启动Logstash（不再包含部署/初始化步骤）
-        logstashDeployService.startProcessAsync(process, machines);
-
-        return getLogstashProcess(id);
-    }
-
-    @Override
-    @Transactional
-    public LogstashProcessDTO stopLogstashProcess(Long id) {
-        // 参数校验
-        if (id == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
-        }
-
-        // 检查进程是否存在
-        LogstashProcess process = logstashProcessMapper.selectById(id);
-        if (process == null) {
-            throw new BusinessException(ErrorCode.LOGSTASH_PROCESS_NOT_FOUND);
-        }
-
-        // 检查进程状态
-        if (LogstashProcessState.NOT_STARTED.name().equals(process.getState()) ||
-                LogstashProcessState.START_FAILED.name().equals(process.getState()) ||
-                LogstashProcessState.STOP_FAILED.name().equals(process.getState())) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程未运行，无需停止");
-        }
-
-        if (LogstashProcessState.STOPPING.name().equals(process.getState())) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程正在停止中，请稍后");
-        }
-
-        // 获取进程关联的所有机器
-        List<Machine> machines = getMachinesForProcess(id);
-        if (machines.isEmpty()) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程未关联任何机器");
-        }
-
-        // 异步停止Logstash
-        logstashDeployService.stopProcessAsync(id, machines);
+        // 启动进程
+        logstashDeployService.startProcess(process, machinesToStart);
 
         return getLogstashProcess(id);
     }
 
     /**
-     * 重试失败的任务
+     * 获取可以启动的机器列表
      *
-     * @param id 进程ID
-     * @return 重试操作结果
+     * @param processId 进程ID
+     * @return 可启动的机器列表
      */
-    @Override
-    @Transactional
-    public LogstashProcessDTO retryLogstashProcessOps(Long id) {
-        // 参数校验
-        if (id == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
-        }
-
-        // 检查进程是否存在
-        LogstashProcess process = logstashProcessMapper.selectById(id);
-        if (process == null) {
-            throw new BusinessException(ErrorCode.LOGSTASH_PROCESS_NOT_FOUND);
-        }
-
-        // 检查进程状态，只有失败状态的进程可以重试
-        if (!isFailedState(process.getState())) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "只有失败状态的进程可以重试");
-        }
-
-        // 获取进程关联的所有机器
-        List<Machine> machines = getMachinesForProcess(id);
+    private List<Machine> getStartableMachines(Long processId) {
+        // 获取进程对应的所有机器
+        List<Machine> machines = getMachinesForProcess(processId);
         if (machines.isEmpty()) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程未关联任何机器");
+            throw new BusinessException(ErrorCode.MACHINE_NOT_FOUND, "进程未关联任何机器");
         }
 
-        // 重置进程状态为未启动
-        logstashProcessMapper.updateState(id, LogstashProcessState.NOT_STARTED.name());
-        logger.info("重置进程 [{}] 状态为未启动，准备重新尝试操作", id);
+        // 获取进程关联的机器状态
+        List<LogstashMachine> machineRelations = logstashMachineMapper.selectByLogstashProcessId(processId);
 
-        String failedState = process.getState();
+        // 过滤出可以启动的机器
+        List<Machine> machinesToStart = new ArrayList<>();
+        for (LogstashMachine relation : machineRelations) {
+            // 只有 NOT_STARTED 或 START_FAILED 状态的机器可以启动
+            if (LogstashMachineState.NOT_STARTED.name().equals(relation.getState()) ||
+                    LogstashMachineState.START_FAILED.name().equals(relation.getState())) {
 
-        // 根据失败状态来决定是重试初始化还是启动操作
-        if (LogstashProcessState.START_FAILED.name().equals(failedState)) {
-            // 如果是启动失败，则只重试启动操作
-            logstashDeployService.startProcessAsync(process, machines);
-        } else {
-            // 如果是停止失败，则只重试停止操作
-            logstashDeployService.stopProcessAsync(id, machines);
-        }
+                Optional<Machine> machine = machines.stream()
+                        .filter(m -> m.getId().equals(relation.getMachineId()))
+                        .findFirst();
 
-        return getLogstashProcess(id);
-    }
-
-    /**
-     * 查询进程任务执行状态 - 返回详细信息
-     *
-     * @param id 进程ID
-     * @return 任务详情DTO
-     */
-    @Override
-    public TaskDetailDTO getTaskDetailStatus(Long id) {
-        // 参数校验
-        if (id == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
-        }
-
-        // 检查进程是否存在
-        LogstashProcess process = logstashProcessMapper.selectById(id);
-        if (process == null) {
-            throw new BusinessException(ErrorCode.LOGSTASH_PROCESS_NOT_FOUND);
-        }
-
-        // 获取最新任务详情
-        Optional<TaskDetailDTO> taskDetailOpt = logstashDeployService.getLatestProcessTaskDetail(id);
-        if (!taskDetailOpt.isPresent()) {
-            // 如果没有任务记录，返回空状态
-            TaskDetailDTO emptyDetail = new TaskDetailDTO();
-            emptyDetail.setBusinessId(id);
-            emptyDetail.setName("未找到与进程关联的任务");
-            emptyDetail.setStatus("无任务");
-            emptyDetail.setTotalSteps(0);
-            emptyDetail.setSuccessCount(0);
-            emptyDetail.setFailedCount(0);
-            emptyDetail.setSkippedCount(0);
-            // 进度为0
-            emptyDetail.setProgressPercentage(0);
-            emptyDetail.setMachineProgressPercentages(Map.of());
-            return emptyDetail;
-        }
-
-        TaskDetailDTO taskDetail = taskDetailOpt.get();
-
-        // 计算总体进度百分比
-        taskDetail.getProgressPercentage();
-
-        // 计算每台机器的进度百分比
-        taskDetail.getMachineProgressPercentages();
-
-        return taskDetail;
-    }
-
-    /**
-     * 增强DTO对象，添加额外信息
-     */
-    private LogstashProcessDTO enhanceDTO(LogstashProcessDTO dto) {
-        if (dto == null) {
-            return null;
-        }
-
-        // 设置状态描述
-        try {
-            LogstashProcessState state = LogstashProcessState.valueOf(dto.getState());
-            dto.setStateDescription(state.getDescription());
-        } catch (IllegalArgumentException e) {
-            dto.setStateDescription("未知状态");
-        }
-
-        // 获取数据源名称
-        try {
-            dto.setDatasourceName(datasourceMapper.selectById(dto.getDatasourceId()).getName());
-        } catch (Exception e) {
-            dto.setDatasourceName("未知数据源");
-        }
-
-        // 获取机器列表
-        List<MachineDTO> machines = new ArrayList<>();
-        List<LogstashMachine> relations = logstashMachineMapper.selectByLogstashProcessId(dto.getId());
-        for (LogstashMachine relation : relations) {
-            Machine machine = machineMapper.selectById(relation.getMachineId());
-            if (machine != null) {
-                machines.add(machineConverter.toDto(machine));
+                machine.ifPresent(machinesToStart::add);
             }
         }
-        dto.setMachines(machines);
 
-        return dto;
+        return machinesToStart;
+    }
+
+    @Override
+    @Transactional
+    public LogstashProcessResponseDTO startMachineProcess(Long id, Long machineId) {
+        // 获取进程和机器信息
+        LogstashProcess process = getAndValidateProcess(id);
+        Machine machine = machineMapper.selectById(machineId);
+        if (machine == null) {
+            throw new BusinessException(ErrorCode.MACHINE_NOT_FOUND);
+        }
+
+        // 验证进程配置
+        validateProcessConfig(process);
+
+        // 启动单台机器上的进程
+        logstashDeployService.startMachine(process, machine);
+        
+        return getLogstashProcess(id);
+    }
+
+    @Override
+    @Transactional
+    public LogstashProcessResponseDTO stopLogstashProcess(Long id) {
+        // 参数校验
+        if (id == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
+        }
+
+        // 检查进程是否存在
+        LogstashProcess process = logstashProcessMapper.selectById(id);
+        if (process == null) {
+            throw new BusinessException(ErrorCode.LOGSTASH_PROCESS_NOT_FOUND);
+        }
+
+        // 获取进程关联的可停止机器
+        List<Machine> machinesToStop = getStoppableMachines(id);
+        if (machinesToStop.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "没有处于可停止状态的机器实例");
+        }
+
+        // 停止进程
+        logstashDeployService.stopProcess(id, machinesToStop);
+
+        return getLogstashProcess(id);
+    }
+
+    /**
+     * 获取可以停止的机器列表
+     *
+     * @param processId 进程ID
+     * @return 可停止的机器列表
+     */
+    private List<Machine> getStoppableMachines(Long processId) {
+        // 获取进程对应的所有机器
+        List<Machine> machines = getMachinesForProcess(processId);
+        if (machines.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程未关联任何机器");
+        }
+
+        // 获取进程关联的机器状态
+        List<LogstashMachine> machineRelations = logstashMachineMapper.selectByLogstashProcessId(processId);
+
+        // 过滤出可以停止的机器
+        List<Machine> machinesToStop = new ArrayList<>();
+        for (LogstashMachine relation : machineRelations) {
+            // 只有 RUNNING 或 STOP_FAILED 状态的机器可以停止
+            if (LogstashMachineState.RUNNING.name().equals(relation.getState()) ||
+                    LogstashMachineState.STOP_FAILED.name().equals(relation.getState())) {
+
+                Optional<Machine> machine = machines.stream()
+                        .filter(m -> m.getId().equals(relation.getMachineId()))
+                        .findFirst();
+
+                machine.ifPresent(machinesToStop::add);
+            }
+        }
+
+        return machinesToStop;
+    }
+
+    @Override
+    @Transactional
+    public LogstashProcessResponseDTO stopMachineProcess(Long id, Long machineId) {
+        // 验证进程ID
+        if (id == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
+        }
+
+        // 获取机器信息
+        Machine machine = machineMapper.selectById(machineId);
+        if (machine == null) {
+            throw new BusinessException(ErrorCode.MACHINE_NOT_FOUND);
+        }
+
+        // 停止单台机器上的进程
+        logstashDeployService.stopMachine(id, machine);
+        
+        return getLogstashProcess(id);
     }
 
     private List<Machine> getMachinesForProcess(Long processId) {
@@ -501,250 +508,212 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         return machines;
     }
 
-    /**
-     * 检查进程是否处于失败状态
-     */
-    private boolean isFailedState(String state) {
-        return LogstashProcessState.START_FAILED.name().equals(state) ||
-                LogstashProcessState.STOP_FAILED.name().equals(state);
-    }
-
     @Override
-    public List<TaskSummaryDTO> getProcessTaskSummaries(Long id) {
-        // 参数校验
-        if (id == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
+    @Transactional
+    public LogstashProcessResponseDTO updateSingleMachineConfig(Long id, Long machineId, String configContent, String jvmOptions, String logstashYml) {
+        // 验证进程和机器是否存在，以及它们之间的关系
+        ValidatedEntities entities = getAndValidateObjects(id, machineId);
+        
+        // 参数校验 - 至少有一个配置需要更新
+        boolean hasUpdate = StringUtils.hasText(configContent) || 
+                            StringUtils.hasText(jvmOptions) || 
+                            StringUtils.hasText(logstashYml);
+        
+        if (!hasUpdate) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "至少需要指定一项配置内容进行更新");
         }
-
-        // 检查进程是否存在
-        LogstashProcess process = logstashProcessMapper.selectById(id);
-        if (process == null) {
-            throw new BusinessException(ErrorCode.LOGSTASH_PROCESS_NOT_FOUND);
-        }
-
-        // 获取该进程关联的所有任务
-        List<LogstashTask> tasks = taskMapper.findByProcessId(id);
-        if (tasks.isEmpty()) {
-            return List.of();
-        }
-
-        // 转换为DTO
-        List<TaskSummaryDTO> summaries = new ArrayList<>();
-        for (LogstashTask task : tasks) {
-            // 获取任务对应的所有步骤
-            List<LogstashTaskMachineStep> steps = stepMapper.findByTaskId(task.getId());
-
-            // 使用转换器生成摘要DTO
-            TaskSummaryDTO summary = taskSummaryConverter.convert(task, steps);
-            summaries.add(summary);
-        }
-
-        // 按状态优先级和时间排序
-        summaries.sort((a, b) -> {
-            // 首先按状态排序
-            int statusCompare = compareStatus(a.getStatus(), b.getStatus());
-            if (statusCompare != 0) {
-                return statusCompare;
+        
+        // 验证配置内容
+        if (StringUtils.hasText(configContent)) {
+            LogstashConfigParser.ValidationResult validationResult = 
+                logstashConfigParser.validateConfig(configContent);
+            if (!validationResult.isValid()) {
+                throw new BusinessException(validationResult.getErrorCode(), validationResult.getErrorMessage());
             }
-
-            // 其次按开始时间倒序排序
-            if (a.getStartTime() != null && b.getStartTime() != null) {
-                return b.getStartTime().compareTo(a.getStartTime());
-            } else if (a.getStartTime() != null) {
-                return -1;
-            } else if (b.getStartTime() != null) {
-                return 1;
-            }
-
-            return 0;
-        });
-
-        return summaries;
-    }
-
-    // 辅助方法：比较任务状态的优先级
-    private int compareStatus(String status1, String status2) {
-        Map<String, Integer> statusPriority = new HashMap<>();
-        statusPriority.put(TaskStatus.RUNNING.name(), 1);
-        statusPriority.put(TaskStatus.FAILED.name(), 2);
-        statusPriority.put(TaskStatus.COMPLETED.name(), 3);
-        statusPriority.put(TaskStatus.CANCELLED.name(), 4);
-        statusPriority.put(TaskStatus.PENDING.name(), 5);
-
-        Integer priority1 = statusPriority.getOrDefault(status1, 99);
-        Integer priority2 = statusPriority.getOrDefault(status2, 99);
-
-        return priority1.compareTo(priority2);
-    }
-
-    @Override
-    public TaskStepsGroupDTO getTaskStepsGrouped(String taskId) {
-        // 参数校验
-        if (taskId == null || taskId.trim().isEmpty()) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "任务ID不能为空");
         }
-
-        // 获取任务信息
-        Optional<LogstashTask> taskOpt = taskMapper.findById(taskId);
-        if (!taskOpt.isPresent()) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "未找到指定任务");
-        }
-
-        LogstashTask task = taskOpt.get();
-
-        // 获取任务关联的所有步骤
-        List<LogstashTaskMachineStep> allSteps = stepMapper.findByTaskId(taskId);
-        if (allSteps.isEmpty()) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "任务没有关联的步骤");
-        }
-
-        // 获取所有机器信息
-        Set<Long> machineIds = allSteps.stream()
-                .map(LogstashTaskMachineStep::getMachineId)
-                .collect(Collectors.toSet());
-
-        Map<Long, Machine> machineMap = new HashMap<>();
-        if (!machineIds.isEmpty()) {
-            List<Machine> machines = machineMapper.selectByIds(new ArrayList<>(machineIds));
-            machineMap = machines.stream()
-                    .collect(Collectors.toMap(Machine::getId, m -> m));
-        }
-
-        // 使用转换器生成DTO
-        return taskStepsGroupConverter.convert(task, allSteps, machineMap);
+        
+        // 更新配置
+        List<Machine> machines = new ArrayList<>();
+        machines.add(entities.machine);
+        logstashDeployService.updateMultipleConfigs(id, machines, configContent, jvmOptions, logstashYml);
+        
+        return getLogstashProcess(id);
     }
 
     @Override
     @Transactional
-    public LogstashProcessDTO updateLogstashConfig(Long id, String configContent, String tableName) {
-        // 参数校验
-        if (id == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
-        }
+    public LogstashProcessResponseDTO updateLogstashConfig(Long id, LogstashProcessConfigUpdateRequestDTO dto) {
+        LogstashProcess process = getAndValidateProcess(id);
+        validateUpdateConfigDto(dto);
 
-        if (!StringUtils.hasText(configContent)) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "配置内容不能为空");
-        }
-
-        // 检查进程是否存在
-        LogstashProcess process = logstashProcessMapper.selectById(id);
-        if (process == null) {
-            throw new BusinessException(ErrorCode.LOGSTASH_PROCESS_NOT_FOUND);
-        }
-
-        // 检查进程是否正在运行，运行中的进程不能修改
-        if (LogstashProcessState.RUNNING.name().equals(process.getState()) ||
-                LogstashProcessState.STARTING.name().equals(process.getState())) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "运行中的进程不能修改配置，请先停止进程");
-        }
-
-        if (LogstashProcessState.INITIALIZING.name().equals(process.getState())) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "初始化中的进程不能修改配置");
-        }
-
-        // 获取进程对应的机器
-        List<Machine> machines = getMachinesForProcess(id);
-        if (machines.isEmpty()) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程未关联任何机器");
-        }
-
-        // 验证Logstash配置
-        LogstashConfigParser.ValidationResult validationResult = logstashConfigParser.validateConfig(configContent);
-        if (!validationResult.isValid()) {
-            throw new BusinessException(validationResult.getErrorCode(), validationResult.getErrorMessage());
-        }
-
-        // 如果手动指定了表名，优先使用手动指定的
-        if (StringUtils.hasText(tableName)) {
-            logger.info("使用手动指定的表名: {}", tableName);
-            process.setTableName(tableName);
-        } else {
-            // 如果没有手动指定表名，尝试从配置中提取
-            Optional<String> extractedTableName = logstashConfigParser.extractTableName(configContent);
-            if (extractedTableName.isPresent()) {
-                String extractedName = extractedTableName.get();
-                // 如果表名不同，更新表名
-                if (!extractedName.equals(process.getTableName())) {
-                    logger.info("从配置中提取到新的表名: {}，原表名: {}", extractedName, process.getTableName());
-                    process.setTableName(extractedName);
-                }
+        // 如果更新主配置文件，验证配置内容
+        if (StringUtils.hasText(dto.getConfigContent())) {
+            LogstashConfigParser.ValidationResult validationResult = 
+                logstashConfigParser.validateConfig(dto.getConfigContent());
+            if (!validationResult.isValid()) {
+                throw new BusinessException(validationResult.getErrorCode(), validationResult.getErrorMessage());
             }
-        }
 
-        // 更新进程配置
-        process.setConfigContent(configContent);
+            // 更新进程的主配置
+            process.setConfigContent(dto.getConfigContent());
+        }
+        
+        // 更新JVM配置（如果有）
+        if (StringUtils.hasText(dto.getJvmOptions())) {
+            process.setJvmOptions(dto.getJvmOptions());
+        }
+        
+        // 更新Logstash系统配置（如果有）
+        if (StringUtils.hasText(dto.getLogstashYml())) {
+            process.setLogstashYml(dto.getLogstashYml());
+        }
+        
+        // 更新时间
         process.setUpdateTime(LocalDateTime.now());
         logstashProcessMapper.update(process);
+        
+        // 同步更新所有关联LogstashMachine的配置
+        configSyncService.updateConfigForAllMachines(
+            id, 
+            StringUtils.hasText(dto.getConfigContent()) ? dto.getConfigContent() : null, 
+            StringUtils.hasText(dto.getJvmOptions()) ? dto.getJvmOptions() : null, 
+            StringUtils.hasText(dto.getLogstashYml()) ? dto.getLogstashYml() : null
+        );
+        
+        // 使用LogstashProcessDeployService更新配置
+        if (dto.getMachineIds() != null && !dto.getMachineIds().isEmpty()) {
+            // 获取并更新指定机器的配置
+            List<Machine> targetMachines = getTargetMachinesForConfig(id, dto.getMachineIds());
+            logstashDeployService.updateMultipleConfigs(
+                id, 
+                targetMachines, 
+                dto.getConfigContent(), 
+                dto.getJvmOptions(), 
+                dto.getLogstashYml()
+            );
+        } else {
+            // 更新所有机器
+            List<Machine> allMachines = getMachinesForProcess(id);
+            logstashDeployService.updateMultipleConfigs(
+                id, 
+                allMachines, 
+                dto.getConfigContent(), 
+                dto.getJvmOptions(), 
+                dto.getLogstashYml()
+            );
+        }
 
-        // 异步更新机器上的配置文件
-        logstashDeployService.updateConfigAsync(id, configContent, machines);
+        return getLogstashProcess(id);
+    }
+
+    /**
+     * 验证配置更新DTO
+     */
+    private void validateUpdateConfigDto(LogstashProcessConfigUpdateRequestDTO dto) {
+        if (dto == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "配置更新请求不能为空");
+        }
+
+        // 至少有一个配置项需要更新
+        boolean hasUpdate = StringUtils.hasText(dto.getConfigContent()) ||
+                StringUtils.hasText(dto.getJvmOptions()) ||
+                StringUtils.hasText(dto.getLogstashYml());
+
+        if (!hasUpdate) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "至少需要指定一项配置内容进行更新");
+        }
+    }
+
+    /**
+     * 获取要更新配置的目标机器列表
+     */
+    private List<Machine> getTargetMachinesForConfig(Long processId, List<Long> machineIds) {
+        List<Machine> targetMachines;
+        if (machineIds != null && !machineIds.isEmpty()) {
+            // 针对指定机器更新配置
+            targetMachines = new ArrayList<>();
+            for (Long machineId : machineIds) {
+                // 验证指定的机器是否与该进程关联
+                LogstashMachine relation = logstashMachineMapper.selectByLogstashProcessIdAndMachineId(processId, machineId);
+                if (relation == null) {
+                    throw new BusinessException(ErrorCode.VALIDATION_ERROR,
+                            "指定的机器未与该进程关联: 机器ID=" + machineId);
+                }
+
+                Machine machine = machineMapper.selectById(machineId);
+                if (machine == null) {
+                    throw new BusinessException(ErrorCode.MACHINE_NOT_FOUND, "指定的机器不存在: ID=" + machineId);
+                }
+
+                targetMachines.add(machine);
+            }
+        } else {
+            // 全局更新，获取所有关联的机器
+            targetMachines = getMachinesForProcess(processId);
+        }
+
+        if (targetMachines.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "没有找到要更新配置的目标机器");
+        }
+
+        return targetMachines;
+    }
+
+    @Override
+    @Transactional
+    public LogstashProcessResponseDTO refreshLogstashConfig(Long id, LogstashProcessConfigUpdateRequestDTO dto) {
+        LogstashProcess process = getAndValidateProcess(id);
+        
+        // 验证配置
+        validateProcessConfig(process);
+        
+        // 同步更新所有关联LogstashMachine的配置
+        configSyncService.updateConfigForAllMachines(
+            id, 
+            process.getConfigContent(), 
+            process.getJvmOptions(), 
+            process.getLogstashYml()
+        );
+        
+        // 获取要刷新配置的机器列表
+        List<Long> machineIds = dto != null ? dto.getMachineIds() : null;
+        List<Machine> machinesToRefresh;
+
+        if (machineIds != null && !machineIds.isEmpty()) {
+            // 刷新指定机器的配置
+            machinesToRefresh = getTargetMachinesForConfig(id, machineIds);
+        } else {
+            // 刷新所有机器的配置
+            machinesToRefresh = getMachinesForProcess(id);
+        }
+
+        // 刷新配置
+        logstashDeployService.refreshConfig(id, machinesToRefresh);
 
         return getLogstashProcess(id);
     }
 
     @Override
     @Transactional
-    public LogstashProcessDTO refreshLogstashConfig(Long id) {
-        // 参数校验
-        if (id == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
-        }
-
-        // 检查进程是否存在
-        LogstashProcess process = logstashProcessMapper.selectById(id);
-        if (process == null) {
-            throw new BusinessException(ErrorCode.LOGSTASH_PROCESS_NOT_FOUND);
-        }
-
-        // 检查进程是否正在运行，运行中的进程不能修改
-        if (LogstashProcessState.RUNNING.name().equals(process.getState()) ||
-                LogstashProcessState.STARTING.name().equals(process.getState())) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "运行中的进程不能刷新配置，请先停止进程");
-        }
-
-        if (LogstashProcessState.INITIALIZING.name().equals(process.getState())) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "初始化中的进程不能刷新配置");
-        }
-
-        // 获取进程对应的机器
-        List<Machine> machines = getMachinesForProcess(id);
-        if (machines.isEmpty()) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程未关联任何机器");
-        }
-
-        // 检查配置是否为空
-        if (!StringUtils.hasText(process.getConfigContent())) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程配置为空，无法刷新");
-        }
-
-        // 异步刷新机器上的配置文件
-        logstashDeployService.refreshConfigAsync(id, machines);
-
-        return getLogstashProcess(id);
-    }
-
-    @Override
-    @Transactional
-    public LogstashProcessDTO executeDorisSql(Long id, String sql) {
-        // 参数校验
-        if (id == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
-        }
+    public LogstashProcessResponseDTO executeDorisSql(Long id, String sql) {
+        LogstashProcess process = getAndValidateProcess(id);
 
         if (!StringUtils.hasText(sql)) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "SQL语句不能为空");
         }
 
-        // 检查进程是否存在
-        LogstashProcess process = logstashProcessMapper.selectById(id);
-        if (process == null) {
-            throw new BusinessException(ErrorCode.LOGSTASH_PROCESS_NOT_FOUND);
+        // 获取进程对应的机器状态
+        List<LogstashMachine> machineRelations = logstashMachineMapper.selectByLogstashProcessId(id);
+        if (machineRelations.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程未关联任何机器");
         }
 
-        // 检查进程状态，只有未启动状态的进程可以执行Doris SQL
-        if (!LogstashProcessState.NOT_STARTED.name().equals(process.getState())) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR,
-                    "只有未启动状态的进程可以执行Doris SQL，当前状态: " + process.getState());
+        // 检查是否有任何机器不处于未启动状态
+        boolean anyNotStopped = machineRelations.stream().anyMatch(m ->
+                m.getState() != null && !LogstashMachineState.NOT_STARTED.name().equals(m.getState()));
+
+        if (anyNotStopped) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "只有当所有进程实例都处于未启动状态时才能执行Doris SQL");
         }
 
         // 检查dorisSql字段是否已有值
@@ -781,4 +750,29 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "执行Doris SQL失败: " + e.getMessage());
         }
     }
+
+    /**
+     * 验证进程配置是否完整
+     *
+     * @param process 进程实体
+     */
+    private void validateProcessConfig(LogstashProcess process) {
+        // 检查配置是否完整
+        if (!StringUtils.hasText(process.getConfigContent())) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "Logstash配置不能为空");
+        }
+
+        // 检查表名是否存在
+        if (!StringUtils.hasText(process.getTableName())) {
+            throw new BusinessException(ErrorCode.LOGSTASH_CONFIG_TABLE_MISSING, "表名不能为空，无法启动进程");
+        }
+
+        // 检查目标数据源中是否存在该表
+        if (!tableValidationService.isTableExists(process.getDatasourceId(), process.getTableName())) {
+            throw new BusinessException(ErrorCode.LOGSTASH_TARGET_TABLE_NOT_FOUND,
+                    String.format("目标数据源(ID: %d)中不存在表 '%s'，请先创建表后再启动进程",
+                            process.getDatasourceId(), process.getTableName()));
+        }
+    }
+
 }

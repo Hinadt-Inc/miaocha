@@ -16,8 +16,8 @@ public interface LogstashTaskMapper {
     /**
      * 插入任务记录
      */
-    @Insert("INSERT INTO logstash_task (id, process_id, name, description, status, operation_type) " +
-            "VALUES (#{id}, #{processId}, #{name}, #{description}, #{status}, #{operationType})")
+    @Insert("INSERT INTO logstash_task (id, process_id, machine_id, name, description, status, operation_type) " +
+            "VALUES (#{id}, #{processId}, #{machineId}, #{name}, #{description}, #{status}, #{operationType})")
     void insert(LogstashTask task);
 
     /**
@@ -61,6 +61,46 @@ public interface LogstashTaskMapper {
      */
     @Select("SELECT * FROM logstash_task WHERE process_id = #{processId} ORDER BY create_time DESC LIMIT 1")
     Optional<LogstashTask> findLatestByProcessId(Long processId);
+
+    /**
+     * 获取进程在指定机器上的最近一次任务 (使用新增的machine_id字段)
+     */
+    @Select("SELECT * FROM logstash_task " +
+           "WHERE process_id = #{processId} AND machine_id = #{machineId} " +
+           "ORDER BY create_time DESC LIMIT 1")
+    Optional<LogstashTask> findLatestByProcessIdAndMachineId(@Param("processId") Long processId, @Param("machineId") Long machineId);
+
+    /**
+     * 获取进程在指定机器上的所有任务 (使用新增的machine_id字段)
+     */
+    @Select("SELECT * FROM logstash_task " +
+           "WHERE process_id = #{processId} AND machine_id = #{machineId} " +
+           "ORDER BY create_time DESC")
+    List<LogstashTask> findByProcessIdAndMachineId(@Param("processId") Long processId, @Param("machineId") Long machineId);
+    
+    /**
+     * 获取进程在指定机器上的所有任务ID
+     */
+    @Select("SELECT id FROM logstash_task " +
+           "WHERE process_id = #{processId} AND machine_id = #{machineId} " +
+           "ORDER BY create_time DESC")
+    List<String> findTaskIdsByProcessIdAndMachineId(@Param("processId") Long processId, @Param("machineId") Long machineId);
+
+    /**
+     * 获取进程相关的所有机器特定任务
+     */
+    @Select("SELECT * FROM logstash_task " +
+           "WHERE process_id = #{processId} AND machine_id IS NOT NULL " +
+           "ORDER BY create_time DESC")
+    List<LogstashTask> findMachineTasksByProcessId(Long processId);
+
+    /**
+     * 获取进程相关的所有全局任务
+     */
+    @Select("SELECT * FROM logstash_task " +
+           "WHERE process_id = #{processId} AND machine_id IS NULL " +
+           "ORDER BY create_time DESC")
+    List<LogstashTask> findGlobalTasksByProcessId(Long processId);
 
     /**
      * 删除任务

@@ -1,7 +1,7 @@
 package com.hina.log.logstash.task;
 
-import com.hina.log.dto.TaskDetailDTO;
-import com.hina.log.dto.TaskStepsGroupDTO;
+import com.hina.log.dto.logstash.TaskDetailDTO;
+import com.hina.log.dto.logstash.TaskStepsGroupDTO;
 import com.hina.log.entity.Machine;
 import com.hina.log.logstash.enums.StepStatus;
 import com.hina.log.logstash.enums.TaskOperationType;
@@ -17,7 +17,34 @@ import java.util.Optional;
 public interface TaskService {
 
     /**
-     * 创建新任务
+     * 创建新任务（全局任务，不针对特定机器）
+     *
+     * @param processId     进程ID
+     * @param name          任务名称
+     * @param description   任务描述
+     * @param operationType 操作类型
+     * @param stepIds       步骤ID列表
+     * @return 任务ID
+     */
+    String createGlobalTask(Long processId, String name, String description,
+            TaskOperationType operationType, List<String> stepIds);
+
+    /**
+     * 创建新任务（针对单一机器）
+     *
+     * @param processId     进程ID
+     * @param machineId     机器ID
+     * @param name          任务名称
+     * @param description   任务描述
+     * @param operationType 操作类型
+     * @param stepIds       步骤ID列表
+     * @return 任务ID
+     */
+    String createMachineTask(Long processId, Long machineId, String name, String description,
+            TaskOperationType operationType, List<String> stepIds);
+
+    /**
+     * 创建新任务（批量创建多个机器任务）
      *
      * @param processId     进程ID
      * @param name          任务名称
@@ -25,9 +52,9 @@ public interface TaskService {
      * @param operationType 操作类型
      * @param machines      关联机器列表
      * @param stepIds       步骤ID列表
-     * @return 任务ID
+     * @return 机器ID到任务ID的映射
      */
-    String createTask(Long processId, String name, String description,
+    Map<Long, String> createMachineTasks(Long processId, String name, String description,
             TaskOperationType operationType, List<Machine> machines,
             List<String> stepIds);
 
@@ -102,17 +129,6 @@ public interface TaskService {
     Map<String, Map<String, Integer>> getTaskMachineStepStatusStats(String taskId);
 
     /**
-     * 重置进程关联的任务状态
-     * 将进程ID关联的所有任务及步骤状态设置为未执行状态，便于重试
-     * 
-     * @deprecated 任务应当被视为历史记录，不应重置状态，新的操作应创建新的任务记录
-     * @param processId 进程ID
-     * @return 是否成功重置
-     */
-    @Deprecated
-    boolean resetTasksForBusiness(Long processId);
-
-    /**
      * 删除任务记录
      *
      * @param taskId 任务ID
@@ -134,4 +150,30 @@ public interface TaskService {
      * @return 任务步骤分组信息
      */
     TaskStepsGroupDTO getTaskStepsGrouped(String taskId);
+
+    /**
+     * 获取指定机器上的进程最新任务详情
+     *
+     * @param processId 进程ID
+     * @param machineId 机器ID
+     * @return 任务详情
+     */
+    Optional<TaskDetailDTO> getLatestMachineTaskDetail(Long processId, Long machineId);
+
+    /**
+     * 获取与指定机器上的进程关联的所有任务ID
+     *
+     * @param processId 进程ID
+     * @param machineId 机器ID
+     * @return 任务ID列表
+     */
+    List<String> getAllMachineTaskIds(Long processId, Long machineId);
+    
+    /**
+     * 重置任务所有步骤的状态
+     *
+     * @param taskId 任务ID
+     * @param status 重置后的步骤状态
+     */
+    void resetStepStatuses(String taskId, StepStatus status);
 }

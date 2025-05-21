@@ -32,8 +32,11 @@ public class LogstashProcess {
     @Schema(description = "Doris表名", example = "log_table_test_env")
     private String tableName;
 
-    @Schema(description = "进程状态", example = "NOT_STARTED")
-    private String state;
+    @Schema(description = "JVM配置选项模板")
+    private String jvmOptions;
+
+    @Schema(description = "Logstash系统配置模板")
+    private String logstashYml;
 
     @Schema(description = "创建时间")
     private LocalDateTime createTime;

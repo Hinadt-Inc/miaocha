@@ -10,6 +10,7 @@ public enum TaskOperationType {
     INITIALIZE("初始化"),
     START("启动"),
     STOP("停止"),
+    RESTART("重启"),
     UPDATE_CONFIG("更新配置"),
     REFRESH_CONFIG("刷新配置");
 

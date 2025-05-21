@@ -1,6 +1,6 @@
 package com.hina.log.converter;
 
-import com.hina.log.dto.TaskDetailDTO;
+import com.hina.log.dto.logstash.TaskDetailDTO;
 import com.hina.log.entity.LogstashTask;
 import com.hina.log.entity.LogstashTaskMachineStep;
 import org.springframework.stereotype.Component;

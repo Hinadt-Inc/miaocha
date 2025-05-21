@@ -13,18 +13,18 @@ import org.springframework.stereotype.Component;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * 运行中状态处理器
+ * 停止失败状态处理器
  */
 @Component
-public class RunningStateHandler extends AbstractLogstashMachineStateHandler {
+public class StopFailedStateHandler extends AbstractLogstashMachineStateHandler {
 
-    public RunningStateHandler(TaskService taskService, LogstashCommandFactory commandFactory) {
+    public StopFailedStateHandler(TaskService taskService, LogstashCommandFactory commandFactory) {
         super(taskService, commandFactory);
     }
 
     @Override
     public LogstashMachineState getState() {
-        return LogstashMachineState.RUNNING;
+        return LogstashMachineState.STOP_FAILED;
     }
 
     @Override
@@ -32,7 +32,10 @@ public class RunningStateHandler extends AbstractLogstashMachineStateHandler {
         Long processId = process.getId();
         Long machineId = machine.getId();
         
-        logger.info("停止机器 [{}] 上的Logstash进程 [{}]", machineId, processId);
+        logger.info("重试停止机器 [{}] 上的Logstash进程 [{}]", machineId, processId);
+        
+        // 重置步骤状态
+        taskService.resetStepStatuses(taskId, StepStatus.PENDING);
         
         taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.STOP_PROCESS.getId(), StepStatus.RUNNING);
         LogstashCommand stopCommand = commandFactory.stopProcessCommand(processId);

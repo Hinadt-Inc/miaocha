@@ -17,6 +17,9 @@ public class LogstashTask {
     @Schema(description = "Logstash进程ID", example = "1")
     private Long processId;
 
+    @Schema(description = "机器ID，如果是针对特定机器的任务", example = "1")
+    private Long machineId;
+
     @Schema(description = "任务名称", example = "部署Nginx日志收集进程")
     private String name;
 

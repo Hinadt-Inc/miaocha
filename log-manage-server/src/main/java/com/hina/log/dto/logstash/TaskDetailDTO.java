@@ -1,4 +1,4 @@
-package com.hina.log.dto;
+package com.hina.log.dto.logstash;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;

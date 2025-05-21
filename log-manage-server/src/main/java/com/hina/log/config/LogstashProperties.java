@@ -21,4 +21,14 @@ public class LogstashProperties {
      * Logstash 远程部署目录
      */
     private String deployDir;
+    
+    /**
+     * 获取部署基础目录
+     * 兼容性方法，实际返回的是deployDir
+     *
+     * @return 部署基础目录
+     */
+    public String getDeployBaseDir() {
+        return deployDir;
+    }
 }

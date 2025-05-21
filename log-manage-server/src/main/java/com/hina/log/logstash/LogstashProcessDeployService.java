@@ -1,44 +1,90 @@
 package com.hina.log.logstash;
 
-import com.hina.log.dto.TaskDetailDTO;
 import com.hina.log.entity.LogstashProcess;
 import com.hina.log.entity.Machine;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 /**
  * Logstash进程服务接口 - 负责Logstash进程的部署、启动和停止
+ * 所有批量机器操作默认并行执行
  */
 public interface LogstashProcessDeployService {
 
     /**
-     * 异步初始化Logstash进程环境
+     * 初始化Logstash进程环境（在多台机器上并行执行）
      *
      * @param process  Logstash进程
      * @param machines 目标机器列表
      */
-    void initializeProcessAsync(LogstashProcess process, List<Machine> machines);
+    void initializeProcess(LogstashProcess process, List<Machine> machines);
 
     /**
-     * 异步启动Logstash进程
+     * 启动Logstash进程（在多台机器上并行执行）
      *
      * @param process  Logstash进程
      * @param machines 目标机器列表
      */
-    void startProcessAsync(LogstashProcess process, List<Machine> machines);
+    void startProcess(LogstashProcess process, List<Machine> machines);
+
 
     /**
-     * 异步停止指定进程ID的Logstash进程
+     * 停止Logstash进程（在多台机器上并行执行）
      *
      * @param processId 进程ID
      * @param machines  目标机器列表
      */
-    void stopProcessAsync(Long processId, List<Machine> machines);
+    void stopProcess(Long processId, List<Machine> machines);
+
 
     /**
-     * 删除进程目录
+     * 更新多种Logstash配置并部署到目标机器（在多台机器上并行执行）
+     * 可以同时更新主配置、JVM配置和系统配置
+     *
+     * @param processId      进程ID
+     * @param machines       目标机器列表
+     * @param configContent  主配置内容 (可为null)
+     * @param jvmOptions     JVM配置内容 (可为null)
+     * @param logstashYml    系统配置内容 (可为null)
+     */
+    void updateMultipleConfigs(Long processId, List<Machine> machines, String configContent, String jvmOptions, String logstashYml);
+
+    /**
+     * 刷新Logstash配置到目标机器（在多台机器上并行执行）
+     *
+     * @param processId 进程ID
+     * @param machines  目标机器列表
+     */
+    void refreshConfig(Long processId, List<Machine> machines);
+
+    /**
+     * 在单台机器上启动Logstash进程
+     *
+     * @param process Logstash进程
+     * @param machine 目标机器
+     */
+    void startMachine(LogstashProcess process, Machine machine);
+
+    /**
+     * 在单台机器上停止Logstash进程
+     *
+     * @param processId 进程ID
+     * @param machine   目标机器
+     */
+    void stopMachine(Long processId, Machine machine);
+
+    /**
+     * 重启单台机器上的Logstash进程
+     *
+     * @param processId 进程ID
+     * @param machine   目标机器
+     */
+    void restartMachine(Long processId, Machine machine);
+
+
+    /**
+     * 删除进程目录（清理）
      *
      * @param processId 进程ID
      * @param machines  目标机器列表
@@ -47,51 +93,9 @@ public interface LogstashProcessDeployService {
     CompletableFuture<Boolean> deleteProcessDirectory(Long processId, List<Machine> machines);
 
     /**
-     * 查询Logstash进程任务详情
-     *
-     * @param processId Logstash进程ID
-     * @return 任务详情
-     */
-    Optional<TaskDetailDTO> getLatestProcessTaskDetail(Long processId);
-
-    /**
-     * 获取与进程关联的所有任务ID
+     * 获取Logstash进程部署的基础目录
      * 
-     * @param processId 进程ID
-     * @return 任务ID列表
+     * @return 基础目录路径
      */
-    List<String> getAllProcessTaskIds(Long processId);
-
-    /**
-     * 删除任务记录
-     *
-     * @param taskId 任务ID
-     */
-    void deleteTask(String taskId);
-
-    /**
-     * 删除任务所有步骤记录
-     *
-     * @param taskId 任务ID
-     */
-    void deleteTaskSteps(String taskId);
-
-    /**
-     * 更新Logstash配置并刷新到目标机器
-     *
-     * @param processId  进程ID
-     * @param configJson 新的配置JSON
-     * @param machines   目标机器列表
-     * @return 是否成功
-     */
-    void updateConfigAsync(Long processId, String configJson, List<Machine> machines);
-
-    /**
-     * 刷新Logstash配置到目标机器
-     *
-     * @param processId 进程ID
-     * @param machines  目标机器列表
-     * @return 是否成功
-     */
-    void refreshConfigAsync(Long processId, List<Machine> machines);
+    String getDeployBaseDir();
 }

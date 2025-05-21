@@ -1,4 +1,4 @@
-package com.hina.log.dto;
+package com.hina.log.dto.logstash;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
@@ -18,6 +18,9 @@ public class LogstashProcessCreateDTO {
     @NotBlank(message = "进程名称不能为空")
     private String name;
 
+    @Schema(description = "Logstash进程的描述", example = "Processes web server logs")
+    private String description;
+
     @Schema(description = "模块名称", example = "nginx")
     @NotBlank(message = "模块名称不能为空")
     private String module;
@@ -27,6 +30,15 @@ public class LogstashProcessCreateDTO {
 
     @Schema(description = "与Logstash配置对应的Doris日志表SQL")
     private String dorisSql;
+
+    @Schema(description = "JVM配置选项模板")
+    private String jvmOptions;
+
+    @Schema(description = "Logstash系统配置模板")
+    private String logstashYml;
+
+    @Schema(description = "自定义的Logstash安装包路径，如果为空则使用系统默认路径")
+    private String customPackagePath;
 
     @Schema(description = "关联的数据源ID", example = "1")
     @NotNull(message = "数据源ID不能为空")

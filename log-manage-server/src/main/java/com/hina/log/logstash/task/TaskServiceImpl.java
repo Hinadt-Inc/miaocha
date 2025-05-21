@@ -2,8 +2,8 @@ package com.hina.log.logstash.task;
 
 import com.hina.log.converter.TaskDetailConverter;
 import com.hina.log.converter.TaskMachineStepConverter;
-import com.hina.log.dto.TaskDetailDTO;
-import com.hina.log.dto.TaskStepsGroupDTO;
+import com.hina.log.dto.logstash.TaskDetailDTO;
+import com.hina.log.dto.logstash.TaskStepsGroupDTO;
 import com.hina.log.entity.LogstashTask;
 import com.hina.log.entity.LogstashTaskMachineStep;
 import com.hina.log.entity.Machine;
@@ -55,9 +55,10 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional
-    public String createTask(Long processId, String name, String description,
-                             TaskOperationType operationType, List<Machine> machines,
-                             List<String> stepIds) {
+    public String createGlobalTask(Long processId, String name, String description,
+                       TaskOperationType operationType, List<String> stepIds) {
+        logger.info("创建全局任务, 进程ID: {}", processId);
+        
         // 创建任务
         String taskId = UUID.randomUUID().toString();
         LogstashTask task = new LogstashTask();
@@ -66,27 +67,74 @@ public class TaskServiceImpl implements TaskService {
         task.setName(name);
         task.setDescription(description);
         task.setStatus(TaskStatus.PENDING.name());
-        task.setOperationType(operationType.name());
+        task.setOperationType(operationType != null ? operationType.name() : null);
         taskMapper.insert(task);
 
-        // 创建各机器的步骤记录
+        logger.info("已创建全局任务: {}, 进程ID: {}", taskId, processId);
+        return taskId;
+    }
+
+    @Override
+    @Transactional
+    public String createMachineTask(Long processId, Long machineId, String name, String description,
+                       TaskOperationType operationType, List<String> stepIds) {
+        logger.info("创建机器任务, 进程ID: {}, 机器ID: {}", processId, machineId);
+        
+        // 获取机器信息
+        Machine machine = machineMapper.selectById(machineId);
+        if (machine == null) {
+            logger.error("创建任务失败: 找不到机器ID: {}", machineId);
+            return null;
+        }
+        
+        // 创建任务
+        String taskId = UUID.randomUUID().toString();
+        LogstashTask task = new LogstashTask();
+        task.setId(taskId);
+        task.setProcessId(processId);
+        task.setMachineId(machineId); // 设置任务的机器ID
+        task.setName(name);
+        task.setDescription(description);
+        task.setStatus(TaskStatus.PENDING.name());
+        task.setOperationType(operationType != null ? operationType.name() : null);
+        taskMapper.insert(task);
+
+        // 创建步骤记录
         List<LogstashTaskMachineStep> steps = new ArrayList<>();
-        for (Machine machine : machines) {
             for (String stepId : stepIds) {
                 LogstashTaskMachineStep step = new LogstashTaskMachineStep();
                 step.setTaskId(taskId);
-                step.setMachineId(machine.getId());
+            step.setMachineId(machineId);
                 step.setStepId(stepId);
                 // 根据stepId获取步骤名称（可扩展为从配置或枚举中获取）
                 step.setStepName(stepId);
                 step.setStatus(StepStatus.PENDING.name());
                 steps.add(step);
-            }
         }
         stepMapper.batchInsert(steps);
 
-        logger.info("已创建任务: {}, 进程ID: {}", taskId, processId);
+        logger.info("已创建机器任务: {}, 进程ID: {}, 机器ID: {}", taskId, processId, machineId);
         return taskId;
+    }
+
+    @Override
+    @Transactional
+    public Map<Long, String> createMachineTasks(Long processId, String name, String description,
+                                  TaskOperationType operationType, List<Machine> machines,
+                                  List<String> stepIds) {
+        logger.info("批量创建机器任务, 进程ID: {}, 机器数量: {}", processId, machines.size());
+        
+        Map<Long, String> machineTaskMap = new HashMap<>();
+        
+        // 为每台机器创建单独的任务
+        for (Machine machine : machines) {
+            String taskName = name + " - " + machine.getName();
+            String taskId = createMachineTask(processId, machine.getId(), taskName, description, operationType, stepIds);
+            machineTaskMap.put(machine.getId(), taskId);
+        }
+
+        logger.info("已完成批量创建机器任务, 进程ID: {}, 创建任务数: {}", processId, machineTaskMap.size());
+        return machineTaskMap;
     }
 
     @Override
@@ -311,48 +359,6 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
-    /**
-     * 重置进程关联的任务状态
-     * 将进程ID关联的所有任务及步骤状态设置为未执行状态，便于重试
-     *
-     * @param processId 进程ID
-     * @return 是否成功重置
-     * @deprecated 任务应当被视为历史记录，不应重置状态，新的操作应创建新的任务记录
-     */
-    @Override
-    @Transactional
-    @Deprecated
-    public boolean resetTasksForBusiness(Long processId) {
-        try {
-            // 获取该进程最新的任务
-            List<LogstashTask> tasks = taskMapper.findByProcessId(processId);
-            if (tasks.isEmpty()) {
-                logger.info("No tasks found for process ID: {}", processId);
-                return true;
-            }
-
-            // 获取最新任务ID
-            String latestTaskId = tasks.get(0).getId();
-
-            // 重置任务状态为PENDING
-            taskMapper.updateStatus(latestTaskId, TaskStatus.PENDING.name());
-
-            // 重置任务步骤状态为PENDING
-            stepMapper.resetStepStatuses(latestTaskId, StepStatus.PENDING.name());
-
-            // 清除任务和步骤的错误信息
-            taskMapper.updateErrorMessage(latestTaskId, null);
-            stepMapper.clearStepErrorMessages(latestTaskId);
-
-            logger.info("Successfully reset task status for process ID: {}, task ID: {}", processId, latestTaskId);
-            return true;
-        } catch (Exception e) {
-            logger.error("Failed to reset tasks for process ID: {}", processId, e);
-            return false;
-        }
-    }
-
-
     @Override
     public TaskStepsGroupDTO getTaskStepsGrouped(String taskId) {
         Optional<LogstashTask> taskOpt = taskMapper.findById(taskId);
@@ -491,5 +497,58 @@ public class TaskServiceImpl implements TaskService {
 
         result.setSteps(stepGroupList);
         return result;
+    }
+
+    @Override
+    public Optional<TaskDetailDTO> getLatestMachineTaskDetail(Long processId, Long machineId) {
+        // 获取指定进程的最新任务，并且该任务包含指定机器的步骤
+        Optional<LogstashTask> taskOpt = taskMapper.findLatestByProcessIdAndMachineId(processId, machineId);
+        if (!taskOpt.isPresent()) {
+            return Optional.empty();
+        }
+
+        // 获取任务信息
+        LogstashTask task = taskOpt.get();
+        TaskDetailDTO dto = taskDetailConverter.convertToTaskDetail(task);
+
+        // 只获取指定机器的步骤信息
+        List<LogstashTaskMachineStep> steps = stepMapper.findByTaskIdAndMachineId(task.getId(), machineId);
+
+        // 按机器分组步骤
+        Map<Long, List<LogstashTaskMachineStep>> machineStepsMap = new HashMap<>();
+        machineStepsMap.put(machineId, steps);
+
+        // 使用转换器将基于机器ID的步骤转换为基于机器名称的步骤
+        Map<String, List<TaskDetailDTO.MachineStepDTO>> nameBasedStepMap = taskMachineStepConverter
+                .convertToNameBasedMap(machineStepsMap);
+
+        dto.setMachineSteps(nameBasedStepMap);
+
+        // 计算统计信息
+        int[] counts = countStepStatus(steps);
+        dto.setTotalSteps(steps.size());
+        dto.setSuccessCount(counts[0]);
+        dto.setFailedCount(counts[1]);
+        dto.setSkippedCount(counts[2]);
+
+        return Optional.of(dto);
+    }
+
+    @Override
+    public List<String> getAllMachineTaskIds(Long processId, Long machineId) {
+        if (processId == null || machineId == null) {
+            return Collections.emptyList();
+        }
+        return taskMapper.findTaskIdsByProcessIdAndMachineId(processId, machineId);
+    }
+
+    @Override
+    @Transactional
+    public void resetStepStatuses(String taskId, StepStatus status) {
+        if (taskId == null || status == null) {
+            return;
+        }
+        stepMapper.resetStepStatuses(taskId, status.name());
+        logger.info("Reset all step statuses for task [{}] to [{}]", taskId, status.name());
     }
 }

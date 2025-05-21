@@ -1,8 +1,7 @@
-package com.hina.log.dto;
+package com.hina.log.dto.logstash;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 任务步骤分组DTO，用于展示按步骤分组的任务执行情况

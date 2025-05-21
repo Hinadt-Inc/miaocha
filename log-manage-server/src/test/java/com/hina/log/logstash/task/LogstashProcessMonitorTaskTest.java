@@ -4,7 +4,7 @@ import com.hina.log.entity.LogstashMachine;
 import com.hina.log.entity.LogstashProcess;
 import com.hina.log.entity.Machine;
 import com.hina.log.exception.SshException;
-import com.hina.log.logstash.enums.LogstashProcessState;
+import com.hina.log.logstash.enums.LogstashMachineState;
 import com.hina.log.mapper.LogstashMachineMapper;
 import com.hina.log.mapper.LogstashProcessMapper;
 import com.hina.log.mapper.MachineMapper;
@@ -53,13 +53,12 @@ public class LogstashProcessMonitorTaskTest {
         logstashMachine.setLogstashProcessId(100L);
         logstashMachine.setMachineId(200L);
         logstashMachine.setProcessPid("12345");
+        logstashMachine.setState(LogstashMachineState.RUNNING.name());
 
         logstashProcess = new LogstashProcess();
         logstashProcess.setId(100L);
         logstashProcess.setName("test-logstash");
-        logstashProcess.setState(LogstashProcessState.RUNNING.name());
-        // 设置更新时间为6分钟前，确保满足最小运行时间
-        logstashProcess.setUpdateTime(LocalDateTime.now().minusMinutes(6));
+        logstashProcess.setUpdateTime(LocalDateTime.now().minusMinutes(10)); // 已运行10分钟
 
         machine = new Machine();
         machine.setId(200L);
@@ -102,7 +101,7 @@ public class LogstashProcessMonitorTaskTest {
         verify(sshClient).executeCommand(eq(machine), contains("ps -p 12345"));
 
         // 确认状态没有被更新
-        verify(logstashProcessMapper, never()).updateState(anyLong(), anyString());
+        verify(logstashMachineMapper, never()).updateState(anyLong(), anyLong(), anyString());
         verify(logstashMachineMapper, never()).updateProcessPid(anyLong(), anyLong(), anyString());
     }
 
@@ -112,7 +111,7 @@ public class LogstashProcessMonitorTaskTest {
         when(logstashMachineMapper.selectAllWithProcessPid()).thenReturn(List.of(logstashMachine));
         when(logstashProcessMapper.selectById(anyLong())).thenReturn(logstashProcess);
         when(machineMapper.selectById(anyLong())).thenReturn(machine);
-        when(logstashProcessMapper.updateState(anyLong(), anyString())).thenReturn(1);
+        when(logstashMachineMapper.updateState(anyLong(), anyLong(), anyString())).thenReturn(1);
         when(logstashMachineMapper.updateProcessPid(anyLong(), anyLong(), isNull())).thenReturn(1);
 
         // 模拟进程已死亡
@@ -128,7 +127,7 @@ public class LogstashProcessMonitorTaskTest {
         verify(sshClient).executeCommand(eq(machine), contains("ps -p 12345"));
 
         // 确认状态被更新
-        verify(logstashProcessMapper).updateState(eq(100L), eq(LogstashProcessState.NOT_STARTED.name()));
+        verify(logstashMachineMapper).updateState(eq(100L), eq(200L), eq(LogstashMachineState.NOT_STARTED.name()));
         verify(logstashMachineMapper).updateProcessPid(eq(100L), eq(200L), isNull());
     }
 
@@ -153,17 +152,15 @@ public class LogstashProcessMonitorTaskTest {
         verify(sshClient).executeCommand(eq(machine), contains("ps -p 12345"));
 
         // 确认状态没有被更新 (安全起见，SSH错误时不更改状态)
-        verify(logstashProcessMapper, never()).updateState(anyLong(), anyString());
+        verify(logstashMachineMapper, never()).updateState(anyLong(), anyLong(), anyString());
         verify(logstashMachineMapper, never()).updateProcessPid(anyLong(), anyLong(), anyString());
     }
 
     @Test
-    void testMonitorLogstashProcesses_ProcessNotRunning() {
-        // 模拟有记录但进程不是运行状态
+    void testMonitorLogstashProcesses_MachineNotRunning() {
+        // 模拟有记录但机器状态不是运行状态
+        logstashMachine.setState(LogstashMachineState.NOT_STARTED.name());
         when(logstashMachineMapper.selectAllWithProcessPid()).thenReturn(List.of(logstashMachine));
-
-        // 进程状态不是RUNNING
-        logstashProcess.setState(LogstashProcessState.NOT_STARTED.name());
         when(logstashProcessMapper.selectById(anyLong())).thenReturn(logstashProcess);
 
         // 执行监控任务
@@ -175,7 +172,7 @@ public class LogstashProcessMonitorTaskTest {
         verifyNoInteractions(sshClient);
 
         // 确认状态没有被更新
-        verify(logstashProcessMapper, never()).updateState(anyLong(), anyString());
+        verify(logstashMachineMapper, never()).updateState(anyLong(), anyLong(), anyString());
         verify(logstashMachineMapper, never()).updateProcessPid(anyLong(), anyLong(), anyString());
     }
 
@@ -198,7 +195,7 @@ public class LogstashProcessMonitorTaskTest {
         verifyNoInteractions(machineMapper);
 
         // 确认状态没有被更新
-        verify(logstashProcessMapper, never()).updateState(anyLong(), anyString());
+        verify(logstashMachineMapper, never()).updateState(anyLong(), anyLong(), anyString());
         verify(logstashMachineMapper, never()).updateProcessPid(anyLong(), anyLong(), anyString());
     }
 
@@ -221,7 +218,7 @@ public class LogstashProcessMonitorTaskTest {
         verifyNoInteractions(machineMapper);
 
         // 确认状态没有被更新
-        verify(logstashProcessMapper, never()).updateState(anyLong(), anyString());
+        verify(logstashMachineMapper, never()).updateState(anyLong(), anyLong(), anyString());
         verify(logstashMachineMapper, never()).updateProcessPid(anyLong(), anyLong(), anyString());
     }
 }

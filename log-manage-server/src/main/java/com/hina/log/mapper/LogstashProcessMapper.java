@@ -11,18 +11,17 @@ import java.util.List;
 @Mapper
 public interface LogstashProcessMapper {
 
-        @Insert("INSERT INTO logstash_process (name, module, config_content, doris_sql, datasource_id, table_name, state, create_time, update_time) "
+        @Insert("INSERT INTO logstash_process (name, module, config_content, doris_sql, jvm_options, logstash_yml, datasource_id, table_name, create_time, update_time) "
                         +
-                        "VALUES (#{name}, #{module}, #{configContent}, #{dorisSql}, #{datasourceId}, #{tableName}, #{state}, NOW(), NOW())")
+                        "VALUES (#{name}, #{module}, #{configContent}, #{dorisSql}, #{jvmOptions}, #{logstashYml}, #{datasourceId}, #{tableName}, NOW(), NOW())")
         @Options(useGeneratedKeys = true, keyProperty = "id")
         int insert(LogstashProcess logstashProcess);
 
         @Update("UPDATE logstash_process SET name=#{name}, module=#{module}, " +
-                        "config_content=#{configContent}, doris_sql=#{dorisSql}, datasource_id=#{datasourceId}, table_name=#{tableName}, update_time=NOW() WHERE id=#{id}")
+                        "config_content=#{configContent}, doris_sql=#{dorisSql}, jvm_options=#{jvmOptions}, logstash_yml=#{logstashYml}, " +
+                        "datasource_id=#{datasourceId}, table_name=#{tableName}, update_time=NOW() WHERE id=#{id}")
         int update(LogstashProcess logstashProcess);
 
-        @Update("UPDATE logstash_process SET state=#{state}, update_time=NOW() WHERE id=#{id}")
-        int updateState(@Param("id") Long id, @Param("state") String state);
 
         @Delete("DELETE FROM logstash_process WHERE id=#{id}")
         int deleteById(Long id);

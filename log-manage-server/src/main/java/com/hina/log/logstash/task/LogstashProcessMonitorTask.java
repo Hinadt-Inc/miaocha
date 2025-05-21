@@ -4,7 +4,7 @@ import com.hina.log.entity.LogstashMachine;
 import com.hina.log.entity.LogstashProcess;
 import com.hina.log.entity.Machine;
 import com.hina.log.exception.SshException;
-import com.hina.log.logstash.enums.LogstashProcessState;
+import com.hina.log.logstash.enums.LogstashMachineState;
 import com.hina.log.mapper.LogstashMachineMapper;
 import com.hina.log.mapper.LogstashProcessMapper;
 import com.hina.log.mapper.MachineMapper;
@@ -108,17 +108,17 @@ public class LogstashProcessMonitorTask {
             return false;
         }
 
-        // 获取进程信息
+        // 获取进程信息，只用于获取更新时间
         LogstashProcess process = logstashProcessMapper.selectById(processId);
         if (process == null) {
             logger.warn("找不到ID为{}的Logstash进程记录，可能已被删除", processId);
             return false;
         }
 
-        // 只检查运行中的进程
-        if (!LogstashProcessState.RUNNING.name().equals(process.getState())) {
-            logger.debug("Logstash进程[{}]状态为{}，不是运行中状态，跳过检查",
-                    processId, process.getState());
+        // 只检查运行中的机器
+        if (!LogstashMachineState.RUNNING.name().equals(logstashMachine.getState())) {
+            logger.debug("Logstash进程[{}]在机器[{}]上状态为{}，不是运行中状态，跳过检查",
+                    processId, logstashMachine.getMachineId(), logstashMachine.getState());
             return false;
         }
 
@@ -209,12 +209,12 @@ public class LogstashProcessMonitorTask {
                 processId, machine.getIp(), pid);
 
         try {
-            // 更新进程状态为未启动
-            int updateResult = logstashProcessMapper.updateState(processId, LogstashProcessState.NOT_STARTED.name());
+            // 更新机器上的进程状态为未启动
+            int updateResult = logstashMachineMapper.updateState(processId, machine.getId(), LogstashMachineState.NOT_STARTED.name());
             if (updateResult > 0) {
-                logger.info("已将Logstash进程[{}]状态更新为未启动", processId);
+                logger.info("已将Logstash进程[{}]在机器[{}]上的状态更新为未启动", processId, machine.getId());
             } else {
-                logger.warn("更新Logstash进程[{}]状态失败，可能已被删除", processId);
+                logger.warn("更新Logstash进程[{}]在机器[{}]上的状态失败，可能已被删除", processId, machine.getId());
             }
 
             // 清空PID记录

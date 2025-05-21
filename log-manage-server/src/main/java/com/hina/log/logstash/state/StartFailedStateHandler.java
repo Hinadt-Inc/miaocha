@@ -15,20 +15,20 @@ import org.springframework.stereotype.Component;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * 未启动状态处理器
+ * 启动失败状态处理器
  */
 @Component
-public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler {
+public class StartFailedStateHandler extends AbstractLogstashMachineStateHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(NotStartedStateHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(StartFailedStateHandler.class);
 
-    public NotStartedStateHandler(TaskService taskService, LogstashCommandFactory commandFactory) {
+    public StartFailedStateHandler(TaskService taskService, LogstashCommandFactory commandFactory) {
         super(taskService, commandFactory);
     }
 
     @Override
     public LogstashMachineState getState() {
-        return LogstashMachineState.NOT_STARTED;
+        return LogstashMachineState.START_FAILED;
     }
 
     @Override
@@ -36,7 +36,10 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
         Long processId = process.getId();
         Long machineId = machine.getId();
         
-        logger.info("启动机器 [{}] 上的Logstash进程 [{}]", machineId, processId);
+        logger.info("重试启动机器 [{}] 上的Logstash进程 [{}]", machineId, processId);
+        
+        // 重置所有步骤的状态
+        taskService.resetStepStatuses(taskId, StepStatus.PENDING);
         
         CompletableFuture<Boolean> result = CompletableFuture.completedFuture(true);
         

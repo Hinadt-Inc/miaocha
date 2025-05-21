@@ -13,18 +13,19 @@ import org.springframework.stereotype.Component;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * 初始化中状态处理器
+ * 初始化失败状态处理器
+ * 允许重新初始化进程
  */
 @Component
-public class InitializingStateHandler extends AbstractLogstashMachineStateHandler {
+public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHandler {
 
-    public InitializingStateHandler(TaskService taskService, LogstashCommandFactory commandFactory) {
+    public InitializeFailedStateHandler(TaskService taskService, LogstashCommandFactory commandFactory) {
         super(taskService, commandFactory);
     }
 
     @Override
     public LogstashMachineState getState() {
-        return LogstashMachineState.INITIALIZING;
+        return LogstashMachineState.INITIALIZE_FAILED;
     }
 
     @Override
@@ -32,7 +33,10 @@ public class InitializingStateHandler extends AbstractLogstashMachineStateHandle
         Long processId = process.getId();
         Long machineId = machine.getId();
         
-        logger.info("初始化机器 [{}] 上的Logstash进程 [{}]", machineId, processId);
+        logger.info("重新初始化机器 [{}] 上的Logstash进程 [{}]", machineId, processId);
+        
+        // 重置所有初始化步骤的状态
+        taskService.resetStepStatuses(taskId, StepStatus.PENDING);
         
         CompletableFuture<Boolean> result = CompletableFuture.completedFuture(true);
         
@@ -131,7 +135,7 @@ public class InitializingStateHandler extends AbstractLogstashMachineStateHandle
 
     @Override
     public boolean canInitialize() {
-        return true;
+        return true; // 允许重新初始化
     }
 
     @Override
@@ -141,4 +145,4 @@ public class InitializingStateHandler extends AbstractLogstashMachineStateHandle
         }
         return getState(); // 默认保持当前状态
     }
-}
+} 

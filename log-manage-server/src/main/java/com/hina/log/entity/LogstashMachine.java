@@ -23,6 +23,18 @@ public class LogstashMachine {
     @Schema(description = "目标机器上的进程PID", example = "12345")
     private String processPid;
 
+    @Schema(description = "进程在机器上的状态", example = "NOT_STARTED")
+    private String state;
+
+    @Schema(description = "机器特定的Logstash配置文件内容")
+    private String configContent;
+
+    @Schema(description = "JVM配置选项")
+    private String jvmOptions;
+
+    @Schema(description = "Logstash系统配置")
+    private String logstashYml;
+
     @Schema(description = "执行状态", example = "SUCCESS")
     private String executionStatus;
 

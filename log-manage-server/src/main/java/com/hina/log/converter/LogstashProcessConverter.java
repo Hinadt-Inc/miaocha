@@ -1,15 +1,105 @@
 package com.hina.log.converter;
 
-import com.hina.log.dto.LogstashProcessCreateDTO;
-import com.hina.log.dto.LogstashProcessDTO;
+import com.hina.log.dto.logstash.LogstashMachineDTO;
+import com.hina.log.dto.logstash.LogstashProcessCreateDTO;
+import com.hina.log.dto.logstash.LogstashProcessDTO;
+import com.hina.log.dto.logstash.LogstashProcessResponseDTO;
+import com.hina.log.entity.LogstashMachine;
 import com.hina.log.entity.LogstashProcess;
+import com.hina.log.entity.Machine;
+import com.hina.log.logstash.enums.LogstashMachineState;
+import com.hina.log.mapper.LogstashMachineMapper;
+import com.hina.log.mapper.MachineMapper;
 import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Logstash进程实体与DTO转换器
  */
 @Component
 public class LogstashProcessConverter implements Converter<LogstashProcess, LogstashProcessDTO> {
+
+    private final LogstashMachineMapper logstashMachineMapper;
+    private final MachineMapper machineMapper;
+
+    public LogstashProcessConverter(LogstashMachineMapper logstashMachineMapper, MachineMapper machineMapper) {
+        this.logstashMachineMapper = logstashMachineMapper;
+        this.machineMapper = machineMapper;
+    }
+
+    /**
+     * 将LogstashProcess实体转换为LogstashProcessResponseDTO
+     * 包括机器状态信息
+     * 
+     * @param process Logstash进程实体
+     * @return 包含机器状态信息的响应DTO
+     */
+    public LogstashProcessResponseDTO toResponseDTO(LogstashProcess process) {
+        if (process == null) {
+            return null;
+        }
+        
+        LogstashProcessResponseDTO responseDTO = new LogstashProcessResponseDTO();
+        responseDTO.setId(process.getId());
+        responseDTO.setName(process.getName());
+        responseDTO.setModule(process.getModule());
+        responseDTO.setConfigContent(process.getConfigContent());
+        responseDTO.setJvmOptions(process.getJvmOptions());
+        responseDTO.setLogstashYml(process.getLogstashYml());
+        responseDTO.setCreateTime(process.getCreateTime());
+        responseDTO.setUpdateTime(process.getUpdateTime());
+        
+        // 获取关联的机器状态
+        List<LogstashMachine> machineRelations = logstashMachineMapper.selectByLogstashProcessId(process.getId());
+        List<LogstashProcessResponseDTO.LogstashMachineStatusInfoDTO> machineStatuses = new ArrayList<>();
+        
+        for (LogstashMachine relation : machineRelations) {
+            Machine machine = machineMapper.selectById(relation.getMachineId());
+            if (machine != null) {
+                LogstashProcessResponseDTO.LogstashMachineStatusInfoDTO statusInfo = new LogstashProcessResponseDTO.LogstashMachineStatusInfoDTO();
+                statusInfo.setMachineId(machine.getId());
+                statusInfo.setMachineName(machine.getName());
+                statusInfo.setMachineIp(machine.getIp());
+                statusInfo.setState(LogstashMachineState.valueOf(relation.getState()));
+                statusInfo.setStateDescription(getStateDescription(relation));
+                
+                machineStatuses.add(statusInfo);
+            }
+        }
+        
+        responseDTO.setMachineStatuses(machineStatuses);
+        return responseDTO;
+    }
+    
+    /**
+     * 获取状态描述信息
+     */
+    private String getStateDescription(LogstashMachine machine) {
+        LogstashMachineState state = LogstashMachineState.valueOf(machine.getState());
+        
+        switch (state) {
+            case INITIALIZING:
+                return "正在初始化";
+            case INITIALIZE_FAILED:
+                return "初始化失败";
+            case NOT_STARTED:
+                return "未启动";
+            case STARTING:
+                return "正在启动";
+            case START_FAILED:
+                return "启动失败";
+            case RUNNING:
+                return "运行中";
+            case STOPPING:
+                return "正在停止";
+            case STOP_FAILED:
+                return "停止失败";
+            default:
+                return state.name();
+        }
+    }
 
     /**
      * 将DTO转换为实体
@@ -28,7 +118,6 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         entity.setDorisSql(dto.getDorisSql());
         entity.setDatasourceId(dto.getDatasourceId());
         entity.setTableName(dto.getTableName());
-        entity.setState(dto.getState());
         entity.setCreateTime(dto.getCreateTime());
         entity.setUpdateTime(dto.getUpdateTime());
 
@@ -48,6 +137,8 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         entity.setModule(dto.getModule());
         entity.setConfigContent(dto.getConfigContent());
         entity.setDorisSql(dto.getDorisSql());
+        entity.setJvmOptions(dto.getJvmOptions());
+        entity.setLogstashYml(dto.getLogstashYml());
         entity.setDatasourceId(dto.getDatasourceId());
         entity.setTableName(dto.getTableName());
 
@@ -69,9 +160,10 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         dto.setModule(entity.getModule());
         dto.setConfigContent(entity.getConfigContent());
         dto.setDorisSql(entity.getDorisSql());
+        dto.setJvmOptions(entity.getJvmOptions());
+        dto.setLogstashYml(entity.getLogstashYml());
         dto.setDatasourceId(entity.getDatasourceId());
         dto.setTableName(entity.getTableName());
-        dto.setState(entity.getState());
         dto.setCreateTime(entity.getCreateTime());
         dto.setUpdateTime(entity.getUpdateTime());
 
@@ -91,9 +183,10 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         entity.setModule(dto.getModule());
         entity.setConfigContent(dto.getConfigContent());
         entity.setDorisSql(dto.getDorisSql());
+        entity.setJvmOptions(dto.getJvmOptions());
+        entity.setLogstashYml(dto.getLogstashYml());
         entity.setDatasourceId(dto.getDatasourceId());
         entity.setTableName(dto.getTableName());
-        entity.setState(dto.getState());
 
         return entity;
     }
@@ -110,6 +203,8 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         entity.setModule(dto.getModule());
         entity.setConfigContent(dto.getConfigContent());
         entity.setDorisSql(dto.getDorisSql());
+        entity.setJvmOptions(dto.getJvmOptions());
+        entity.setLogstashYml(dto.getLogstashYml());
         entity.setDatasourceId(dto.getDatasourceId());
         entity.setTableName(dto.getTableName());
 
