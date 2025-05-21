@@ -118,7 +118,7 @@ const VirtualTable = (props: IProps) => {
         const { scrollHeight, scrollTop, clientHeight } = scrollElement;
         const distanceToBottom = scrollHeight - scrollTop - clientHeight;
 
-        if (distanceToBottom < 100) {
+        if (distanceToBottom < 150) {
           onLoadMore();
         }
       }

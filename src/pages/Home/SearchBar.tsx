@@ -11,7 +11,7 @@ interface IProps {
   searchParams: ILogSearchParams; // 搜索参数
   totalCount?: number; // 记录总数
   loading?: boolean; // 是否加载中
-  onSubmit: (data: ILogSearchParams) => void; // 搜索回调函数
+  onSubmit: (params: ILogSearchParams) => void; // 搜索回调函数
 }
 
 const SearchBar = (props: IProps) => {
@@ -54,6 +54,8 @@ const SearchBar = (props: IProps) => {
   const changeSql = (value: string) => {
     setSql(value || '');
   };
+
+  console.log('【打印日志】Keywords:', keywords);
 
   // 显示关键字、sql、时间的标签
   const filterRender = useMemo(() => {
@@ -117,12 +119,20 @@ const SearchBar = (props: IProps) => {
 
   // 当keywords或sqls或时间变化时触发搜索
   useEffect(() => {
+    console.log('【打印日志】7777:', keywords);
     const params = {
+      ...searchParams,
       ...(keywords.length > 0 && { keywords }),
       ...(sqls.length > 0 && { whereSqls: sqls }),
       ...getTimeParams(),
     };
 
+    if (keywords.length === 0) {
+      delete params.keywords;
+    }
+    if (sqls.length === 0) {
+      delete params.whereSqls;
+    }
     onSubmit(params as ILogSearchParams);
   }, [keywords, sqls, timeOption]);
 
@@ -130,7 +140,6 @@ const SearchBar = (props: IProps) => {
   const handleParams = () => {
     // 保存搜索历史
     const keywordTrim = String(keyword || '')?.trim();
-    setKeyword(keywordTrim);
     if (keywordTrim) {
       if (!keywordHistory.includes(keywordTrim)) {
         const newHistory = [keywordTrim, ...keywordHistory].slice(0, 10);
@@ -143,18 +152,25 @@ const SearchBar = (props: IProps) => {
     }
 
     // 保存SQL历史
-    if (sql) {
-      if (!sqlHistory.includes(sql)) {
-        const newHistory = [sql, ...sqlHistory].slice(0, 10);
+    const sqlTrim = String(sql || '')?.trim();
+    if (sqlTrim) {
+      if (!sqlHistory.includes(sqlTrim)) {
+        const newHistory = [sqlTrim, ...sqlHistory].slice(0, 10);
         setSqlHistory(newHistory);
         localStorage.setItem('sqlHistory', JSON.stringify(newHistory));
       }
-      if (!sqls.includes(sql)) {
-        setSqls((prev) => [...prev, sql]);
+      if (!sqls.includes(sqlTrim)) {
+        setSqls((prev) => [...prev, sqlTrim]);
       }
     }
     setKeyword('');
     setSql('');
+
+    if (!keywordTrim && !sql) {
+      console.log('【打印日志】1111:', 1111);
+      console.log('keywords:', keywords);
+      onSubmit({ ...searchParams });
+    }
   };
 
   // 左侧渲染内容
@@ -252,6 +268,7 @@ const SearchBar = (props: IProps) => {
 
   const changeTimeGroup = (text: string) => {
     onSubmit({
+      ...searchParams,
       timeGrouping: text,
     } as any);
     setOpenTimeGroup(false);

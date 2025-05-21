@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Splitter } from 'antd';
 import { useRequest } from 'ahooks';
 import * as api from '@/api/logs';
@@ -86,40 +86,13 @@ const HomePage = () => {
     },
   });
 
-  // 执行字段分布查询
-  const getLogDistributions = useRequest(api.fetchLogDistributions, {
-    manual: true,
-    onSuccess: (res) => {
-      // const { rows } = res;
-      // // 为每条记录添加唯一ID
-      // (rows || []).map((item, index) => {
-      //   item._key = `${Date.now()}_${index}`;
-      // });
-      // setDetailData(res);
-    },
-  });
-
   useEffect(() => {
     // 只判断 datasourceId和module，因为这是查询的必要参数
     if (searchParams.datasourceId && searchParams.module) {
       getDetailData.run(searchParams);
       getHistogramData.run(searchParams);
-      // getLogDistributions.run({ ...searchParams, fields: ['host'] });
     }
   }, [searchParams]);
-
-  // 合并搜索参数
-  const combineSearchParams = (params: ILogSearchParams) => {
-    const data = {
-      ...defaultSearchParams,
-      ...searchParams,
-      ...params,
-    };
-    setSearchParams((prev) => ({
-      ...prev,
-      ...data,
-    }));
-  };
 
   // 处理列变化
   const handleChangeColumns = (columns: ILogColumnsResponse[]) => {
@@ -133,7 +106,7 @@ const HomePage = () => {
     moduleLoading: getMyModules.loading,
     detailLoading: getDetailData.loading,
     onChangeColumns: handleChangeColumns,
-    onSearch: combineSearchParams,
+    onSearch: setSearchParams,
   };
 
   // 优化log组件的props
@@ -155,9 +128,9 @@ const HomePage = () => {
       searchParams,
       totalCount: detailData?.totalCount,
       loading: getDetailData?.loading || getHistogramData.loading,
-      onSubmit: combineSearchParams,
+      onSubmit: setSearchParams,
     }),
-    [searchParams, detailData?.totalCount, getDetailData?.loading, getHistogramData.loading, combineSearchParams],
+    [searchParams, detailData?.totalCount, getDetailData?.loading, getHistogramData.loading, setSearchParams],
   );
 
   return (

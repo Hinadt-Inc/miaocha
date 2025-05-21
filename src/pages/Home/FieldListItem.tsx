@@ -20,14 +20,10 @@ interface IProps {
 
 const FieldListItem: React.FC<IProps> = ({ column, columnIndex, fieldData }) => {
   const { distributions = {}, isSelected, onSearch, searchParams } = fieldData;
-  console.log('【打印日志】fieldData:', fieldData);
-  console.log('【打印日志】column:', column);
   const [activeKey, setActiveKey] = useState<string[]>([]);
   const handleCollapseChange = useCallback((key: string | string[]) => {
     setActiveKey(key as string[]);
   }, []);
-
-  console.log('【打印日志】activeKey:', activeKey);
 
   if (column.isFixed) {
     return null;
