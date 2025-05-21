@@ -259,14 +259,14 @@ const DataSourceManagementPage = () => {
       const success = await testDataSourceConnection(testParams);
 
       if (success) {
-        messageApi.success('✅ 连接测试成功！数据库连接正常');
+        messageApi.success('连接测试成功！数据库连接正常');
       } else {
         messageApi.error(
-          '❌ 连接测试失败，请检查以下信息：\n1. 主机地址是否正确\n2. 端口是否开放\n3. 用户名密码是否正确\n4. 数据库是否存在',
+          '连接测试失败，请检查以下信息：\n1. 主机地址是否正确\n2. 端口是否开放\n3. 用户名密码是否正确\n4. 数据库是否存在',
         );
       }
     } catch (error) {
-      messageApi.error(`❌ 连接测试失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      messageApi.error(`连接测试失败: ${error instanceof Error ? error.message : '未知错误'}`);
     } finally {
       setTestLoading(false);
     }
