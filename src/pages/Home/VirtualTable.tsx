@@ -42,6 +42,11 @@ const VirtualTable = (props: IProps) => {
       title: 'log_time',
       dataIndex: 'log_time',
       width: 190,
+      sorter: (a: any, b: any) => {
+        const dateA = new Date(a.log_time).getTime();
+        const dateB = new Date(b.log_time).getTime();
+        return dateA - dateB;
+      },
       render: (text: string) => text?.replace('T', ' '),
     },
     {
@@ -65,7 +70,17 @@ const VirtualTable = (props: IProps) => {
         );
       },
     },
-    ...getColumns,
+    ...getColumns.map((column) => ({
+      ...column,
+      sorter: (a: any, b: any) => {
+        const valueA = a[column.dataIndex];
+        const valueB = b[column.dataIndex];
+        if (typeof valueA === 'string' && typeof valueB === 'string') {
+          return valueA.localeCompare(valueB);
+        }
+        return (valueA || '').toString().localeCompare((valueB || '').toString());
+      },
+    })),
   ];
 
   useEffect(() => {
@@ -139,7 +154,7 @@ const VirtualTable = (props: IProps) => {
         pagination={false}
         columns={columns}
         loading={loading}
-        scroll={{ x: 1300, y: containerHeight - headerHeight }}
+        scroll={{ x: 1300, y: containerHeight - headerHeight - 1 }}
         expandable={{
           columnWidth: 26,
           expandedRowRender: (record) => <ExpandedRow data={record} keywords={searchParams?.keywords || []} />,
