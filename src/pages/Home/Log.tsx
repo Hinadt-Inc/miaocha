@@ -4,7 +4,7 @@ import HistogramChart from './HistogramChart';
 import styles from './Log.module.less';
 import VirtualTable from './VirtualTable';
 interface IProps {
-  histogramData: ILogHistogramData; // 直方图数据
+  histogramData: ILogHistogramData[]; // 直方图数据
   histogramDataLoading: boolean; // 直方图数据是否正在加载
   fetchLog: any; // 加载日志数据的函数
   log: {
@@ -54,7 +54,7 @@ const Log = (props: IProps) => {
     <div className={styles.logContainer}>
       <div className={styles.chart}>
         <Spin size="small" spinning={histogramDataLoading}>
-          <HistogramChart data={histogramData} />
+          <HistogramChart data={histogramData} searchParams={searchParams} />
         </Spin>
       </div>
       <div className={styles.table}>

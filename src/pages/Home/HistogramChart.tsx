@@ -1,92 +1,21 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { EChartsOption } from 'echarts';
-import { message, Empty } from 'antd';
+import { Empty } from 'antd';
 import { colorPrimary } from '@/utils/utils';
 
 interface IProps {
-  data: any;
-  // show?: boolean;
-  // onTimeRangeChange: (range: [string, string]) => void;
-  // onToggle: () => void;
-  // distributionData?: Array<{
-  //   timePoint: string;
-  //   count: number;
-  // }>;
-  // timeGrouping?: 'minute' | 'hour' | 'day' | 'month';
+  data: ILogHistogramData[]; // 直方图数据
+  searchParams: ILogSearchParams; // 搜索参数
 }
 
 const HistogramChart = (props: IProps) => {
-  const { data, show, onTimeRangeChange, distributionData, timeGrouping = 'minute' } = props;
-
-  // 增强调试日志，检查组件接收到的数据
-  // useEffect(() => {
-  //   console.log('HistogramChart 详细数据:', {
-  //     show,
-  //     distributionData,
-  //     dataLength: distributionData ? distributionData.length : 0,
-  //     dataValid: distributionData && Array.isArray(distributionData) && distributionData.length > 0,
-  //     firstItem: distributionData && distributionData.length > 0 ? distributionData[0] : null,
-  //   });
-  // }, [show, distributionData]);
+  const { data, searchParams } = props;
+  const { timeGrouping, timeRange = '' } = searchParams;
+  console.log('【打印日志】props:', props);
 
   // 根据timeGrouping聚合数据
   const aggregatedData = useMemo(() => {
-    if (!data || data.length === 0) {
-      // console.log('没有分布数据，返回空结果');
-      return { values: [], labels: [], originalData: [] };
-    }
-
-    // 当只有一个时间点时，直接使用该时间点
-    // if (distributionData.length === 1) {
-    //   const timePoint = distributionData[0].timePoint;
-    //   const count = distributionData[0].count;
-    //   return {
-    //     values: [count],
-    //     labels: [timePoint],
-    //     originalData: [{ timePoint, count }],
-    //   };
-    // }
-
-    // 按不同粒度聚合数据
-    // const groupMap = new Map<string, number>();
-    // const original: Array<{ timePoint: string; count: number }> = [];
-
-    // // 对数据按时间排序
-    // const sortedData = [...distributionData].sort((a, b) => {
-    //   return new Date(a.timePoint).getTime() - new Date(b.timePoint).getTime();
-    // });
-
-    // // 聚合数据
-    // sortedData.forEach((item) => {
-    //   const date = new Date(item.timePoint);
-    //   let groupKey = '';
-
-    //   switch (timeGrouping) {
-    //     case 'minute':
-    //       groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-    //       break;
-    //     case 'hour':
-    //       groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:00`;
-    //       break;
-    //     case 'day':
-    //       groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    //       break;
-    //     case 'month':
-    //       groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    //       break;
-    //     default:
-    //       groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:00`;
-    //   }
-
-    //   if (!groupMap.has(groupKey)) {
-    //     groupMap.set(groupKey, 0);
-    //   }
-
-    //   groupMap.set(groupKey, (groupMap.get(groupKey) || 0) + item.count);
-    //   original.push(item);
-    // });
-
     // 转换为数组
     const labels: string[] = [];
     const values: number[] = [];
@@ -123,16 +52,32 @@ const HistogramChart = (props: IProps) => {
         axisLabel: {
           fontSize: 10,
           formatter: (value: string) => {
-            // 标签格式化函数
+            // 根据时间范围和时间分组动态调整显示格式
+            // 当时间范围较大时（如上周、上月），显示更高粒度的格式
+            if (timeRange.includes('week') || timeRange.includes('month') || timeRange.includes('year')) {
+              switch (timeGrouping) {
+                case 'second':
+                case 'minute':
+                  return timeRange.includes('week') ? value.substring(5, 10) : value.substring(0, 10);
+                case 'hour':
+                  return value.substring(11, 13) + ':00';
+                case 'day':
+                  return value.substring(5, 10);
+                default:
+                  return value.substring(0, 10);
+              }
+            }
+
+            // 默认按时间分组显示
             switch (timeGrouping) {
+              case 'second':
+                return value.substring(11, 19);
               case 'minute':
-                return value.substring(11, 16); // 显示时分
+                return value.substring(11, 16);
               case 'hour':
-                return value.substring(11, 13) + ':00'; // 显示小时
+                return value.substring(11, 13) + ':00';
               case 'day':
-                return value.substring(5, 10); // 显示月日
-              case 'month':
-                return value.substring(5, 7) + '月'; // 显示月份
+                return value.substring(5, 10);
               default:
                 return value.substring(11, 16);
             }
@@ -205,66 +150,12 @@ const HistogramChart = (props: IProps) => {
     [data],
   );
 
-  // 处理图表点击事件
-  const handleChartClick = (params: any) => {
-    if (params.componentType === 'series') {
-      const index = params.dataIndex;
-      const selectedGroup = aggregatedData.labels[index];
-
-      // 查找对应分组内的第一个和最后一个时间点
-      const groupItems = aggregatedData.originalData.filter((item) => {
-        const date = new Date(item.timePoint);
-        let groupKey = '';
-
-        switch (timeGrouping) {
-          case 'minute':
-            groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-            break;
-          case 'hour':
-            groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:00`;
-            break;
-          case 'day':
-            groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-            break;
-          case 'month':
-            groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-            break;
-          default:
-            groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:00`;
-        }
-
-        return groupKey === selectedGroup;
-      });
-
-      if (groupItems.length > 0) {
-        // 对分组内的数据按时间排序
-        groupItems.sort((a, b) => new Date(a.timePoint).getTime() - new Date(b.timePoint).getTime());
-
-        // 获取时间范围
-        const start = groupItems[0].timePoint;
-        const end = groupItems[groupItems.length - 1].timePoint;
-
-        // 调用回调函数更新时间范围
-        onTimeRangeChange([start, end]);
-        message.success(`已选择 ${start} 至 ${end} 的数据`);
-      }
-    }
-  };
-
   // 如果没有数据或显示标志为false，则不显示图表
   if (!data || data?.length === 0) {
     return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />;
   }
 
-  return (
-    <ReactECharts
-      option={option}
-      style={{ height: 180, width: '100%' }}
-      // onEvents={{
-      //   click: handleChartClick,
-      // }}
-    />
-  );
+  return <ReactECharts option={option} style={{ height: 180, width: '100%' }} />;
 };
 
 export default HistogramChart;
