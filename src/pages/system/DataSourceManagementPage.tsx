@@ -43,6 +43,7 @@ const DataSourceManagementPage = () => {
   const [currentDataSource, setCurrentDataSource] = useState<DataSourceItem | undefined>(undefined);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
   const [allDataSources, setAllDataSources] = useState<DataSourceItem[]>([]);
+  const [messageApi, contextHolder] = message.useMessage();
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
@@ -76,7 +77,7 @@ const DataSourceManagementPage = () => {
         }
       })
       .catch(() => {
-        message.error('获取数据源列表失败');
+        messageApi.error('获取数据源列表失败');
       })
       .finally(() => {
         setTableLoading(false);
@@ -144,11 +145,11 @@ const DataSourceManagementPage = () => {
       await deleteDataSource(id);
       // 更新本地缓存
       setAllDataSources((prev) => prev.filter((item) => item.id !== id));
-      message.success('数据源删除成功');
+      messageApi.success('数据源删除成功');
       // 刷新表格显示，保留分页设置
       actionRef.current?.reload();
     } catch {
-      message.error('删除数据源失败');
+      messageApi.error('删除数据源失败');
     }
   };
 
@@ -184,7 +185,7 @@ const DataSourceManagementPage = () => {
               item.id === currentDataSource.id ? { ...item, ...formattedValues } : item,
             ),
           );
-          message.success('数据源更新成功');
+          messageApi.success('数据源更新成功');
         }
       } else {
         // 新增操作
@@ -192,7 +193,7 @@ const DataSourceManagementPage = () => {
         if (newDataSource) {
           // 更新本地缓存
           setAllDataSources((prev) => [...prev, newDataSource]);
-          message.success('数据源创建成功');
+          messageApi.success('数据源创建成功');
         }
       }
 
@@ -201,7 +202,7 @@ const DataSourceManagementPage = () => {
       void actionRef.current!.reload();
       return true;
     } catch {
-      message.error(currentDataSource ? '更新数据源失败' : '创建数据源失败');
+      messageApi.error(currentDataSource ? '更新数据源失败' : '创建数据源失败');
       return false;
     } finally {
       setSubmitLoading(false);
@@ -233,7 +234,7 @@ const DataSourceManagementPage = () => {
   // 测试数据库连接
   const handleTestConnection = async (values: TestConnectionParams) => {
     if (!values.ip || !values.port || !values.database || !values.username) {
-      message.error('请填写完整的连接信息');
+      messageApi.error('请填写完整的连接信息');
       return;
     }
 
@@ -258,12 +259,14 @@ const DataSourceManagementPage = () => {
       const success = await testDataSourceConnection(testParams);
 
       if (success) {
-        message.success('连接测试成功！');
+        messageApi.success('✅ 连接测试成功！数据库连接正常');
       } else {
-        message.error('连接测试失败，请检查连接信息');
+        messageApi.error(
+          '❌ 连接测试失败，请检查以下信息：\n1. 主机地址是否正确\n2. 端口是否开放\n3. 用户名密码是否正确\n4. 数据库是否存在',
+        );
       }
-    } catch {
-      message.error('连接测试失败');
+    } catch (error) {
+      messageApi.error(`❌ 连接测试失败: ${error instanceof Error ? error.message : '未知错误'}`);
     } finally {
       setTestLoading(false);
     }
@@ -400,6 +403,7 @@ const DataSourceManagementPage = () => {
 
   return (
     <div className="data-source-management-page">
+      {contextHolder}
       <Card>
         <ProTable<DataSourceItem>
           className="table-container"
@@ -489,7 +493,7 @@ const DataSourceManagementPage = () => {
                     // 获取当前表单的值，并测试连接
                     const values = props.form?.getFieldsValue() as TestConnectionParams;
                     void handleTestConnection(values).catch(() => {
-                      message.error('连接测试失败');
+                      messageApi.error('连接测试失败');
                     });
                   }}
                 >
