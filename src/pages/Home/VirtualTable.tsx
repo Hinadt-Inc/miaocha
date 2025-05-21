@@ -7,7 +7,7 @@ import { highlightText } from '@/utils/highlightText';
 interface IProps {
   data: any[]; // 数据
   loading?: boolean; // 加载状态
-  searchParams: ISearchLogsParams; // 搜索参数
+  searchParams: ILogSearchParams; // 搜索参数
   onLoadMore: () => void; // 加载更多数据的回调函数
   hasMore?: boolean; // 是否还有更多数据
   dynamicColumns?: ILogColumnsResponse[]; // 动态列配置
@@ -20,7 +20,6 @@ const VirtualTable = (props: IProps) => {
   const [containerHeight, setContainerHeight] = useState<number>(0); // 容器高度
   const [headerHeight, setHeaderHeight] = useState<number>(0); // 表头高度
 
-  console.log('dynamicColumns', dynamicColumns);
   const getColumns = useMemo(() => {
     const otherColumns = dynamicColumns?.filter((item) => item.selected && item.columnName !== 'log_time');
     const _columns: any[] = [];
@@ -140,7 +139,7 @@ const VirtualTable = (props: IProps) => {
         pagination={false}
         columns={columns}
         loading={loading}
-        scroll={{ x: 1500, y: containerHeight - headerHeight }}
+        scroll={{ x: 1300, y: containerHeight - headerHeight }}
         expandable={{
           columnWidth: 26,
           expandedRowRender: (record) => <ExpandedRow data={record} keywords={searchParams?.keywords || []} />,

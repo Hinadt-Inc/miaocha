@@ -1,24 +1,23 @@
-import { Suspense, lazy, useState, useEffect, useMemo } from 'react';
-import SpinIndicator from '@/components/SpinIndicator';
+import { useState, useEffect, useMemo } from 'react';
+import { Spin } from 'antd';
+import HistogramChart from './HistogramChart';
 import styles from './Log.module.less';
 import VirtualTable from './VirtualTable';
-
-// 使用懒加载优化初始加载时间
-const HistogramChart = lazy(() => import('./HistogramChart'));
-
 interface IProps {
+  histogramData: ILogHistogramData; // 直方图数据
+  histogramDataLoading: boolean; // 直方图数据是否正在加载
   fetchLog: any; // 加载日志数据的函数
   log: {
     totalCount?: number; // 总行数
     distributionData?: any; // 直方图数据
     rows?: any[]; // 表格数据
   };
-  searchParams: ISearchLogsParams; // 搜索参数
+  searchParams: ILogSearchParams; // 搜索参数
   dynamicColumns?: ILogColumnsResponse[]; // 添加动态列配置
 }
 
 const Log = (props: IProps) => {
-  const { log, fetchLog, dynamicColumns = [], searchParams } = props;
+  const { histogramData, histogramDataLoading, log, fetchLog, dynamicColumns = [], searchParams } = props;
   const { rows } = log || {};
   const [allRows, setAllRows] = useState<any[]>([]); // 用于存储所有历史数据的状态
   // 当新数据到达时，将其添加到历史数据中
@@ -50,12 +49,13 @@ const Log = (props: IProps) => {
     }),
     [allRows, fetchLog?.loading, log?.totalCount, handleLoadMore, dynamicColumns, searchParams],
   );
+
   return (
     <div className={styles.logContainer}>
       <div className={styles.chart}>
-        <Suspense fallback={<SpinIndicator />}>
-          <HistogramChart data={log?.distributionData} />
-        </Suspense>
+        <Spin size="small" spinning={histogramDataLoading}>
+          <HistogramChart data={histogramData} />
+        </Spin>
       </div>
       <div className={styles.table}>
         <VirtualTable {...tableProps} />

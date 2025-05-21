@@ -6,6 +6,18 @@ declare global {
     [key: string]: any;
   }
 
+  // 时间组件的提交参数
+  interface ILogTimeSubmitParams {
+    label?: string; // 显示的标签, 如：'最近7天'
+    value?: string; // 值, 如：'last_7d'
+    range?: string[]; // 时间范围，如：['2020-01-01 12:26:38', '2020-03-02 12:26:38']
+    format?: string[]; // 时间格式，如：['YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD HH:mm:ss']
+    form?: () => void; // dayjs函数
+    to?: () => void; // dayjs函数
+  }
+
+  // 旧
+
   // 相对时间
   interface IRelativeTime {
     label: string; // 显示的标签
@@ -13,16 +25,6 @@ declare global {
     unitCN: string; // 单位中文
     unitEN: string; // 单位英文
     format: string; // 时间格式
-  }
-
-  // 时间组件的提交参数
-  interface ISubmitTime {
-    label?: string; // 显示的标签
-    value?: string; // 值
-    range: string[]; // 时间范围
-    format?: string[]; // 时间格式
-    value?: string; // 值
-    [key: string]: any;
   }
 
   // 字段值分布列表，按数量降序排序

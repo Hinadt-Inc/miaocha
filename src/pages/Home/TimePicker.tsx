@@ -10,16 +10,16 @@ const { TabPane } = Tabs;
 const { RangePicker } = DatePicker;
 
 interface IProps {
-  onSubmitTime: (params: ISubmitTime) => void; // 提交时间
+  onSubmit: (params: ILogTimeSubmitParams) => void; // 提交时间
 }
 
 const TimePicker = (props: IProps) => {
-  const { onSubmitTime } = props;
+  const { onSubmit } = props;
 
   // 选项卡值
   const [activeTab, setActiveTab] = useState('quick');
   const [selectedTag, setSelectedTag] = useState<string>('last_15m'); // 选中的标签
-  const [absoluteOption, setAbsoluteOption] = useState<ISubmitTime>(); // 绝对时间
+  const [absoluteOption, setAbsoluteOption] = useState<ILogTimeSubmitParams>(); // 绝对时间
 
   // 切换标签
   const changeTag = (value: string) => {
@@ -27,13 +27,13 @@ const TimePicker = (props: IProps) => {
     const isExist = QUICK_RANGES[value];
     if (!isExist) return;
     const { from, to, format } = isExist;
-    const params: ISubmitTime = {
+    const params: ILogTimeSubmitParams = {
       value,
       range: [from().format(format[0]), to().format(format[1])],
       ...isExist,
     };
     setSelectedTag(value);
-    onSubmitTime(params);
+    onSubmit(params);
   };
 
   const quickRender = useMemo(() => {
@@ -68,7 +68,7 @@ const TimePicker = (props: IProps) => {
         </TabPane>
         <TabPane tab="相对时间" key="relative">
           <Suspense fallback={<SpinIndicator />}>
-            <Relative onSubmitTime={onSubmitTime} />
+            <Relative onSubmit={onSubmit} />
           </Suspense>
         </TabPane>
         <TabPane tab="绝对时间" key="absolute">
@@ -78,7 +78,7 @@ const TimePicker = (props: IProps) => {
                 <RangePicker showTime format="YYYY-MM-DD HH:mm:ss" onChange={onRangeChange} />
                 <Button
                   type="primary"
-                  onClick={() => onSubmitTime(absoluteOption as any)}
+                  onClick={() => onSubmit(absoluteOption as any)}
                   disabled={!absoluteOption?.value}
                 >
                   确定

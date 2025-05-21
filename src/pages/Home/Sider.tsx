@@ -1,116 +1,132 @@
 import { useState, useEffect } from 'react';
 import { Collapse, Cascader, Spin } from 'antd';
 import { useRequest } from 'ahooks';
-import { getTableColumns } from '@/api/logs';
+import * as api from '@/api/logs';
 import styles from './Sider.module.less';
 
 import FieldListItem from './FieldListItem';
 
 interface IProps {
-  moduleNames: IStatus[]; // 模块名称列表
-  logLoading: boolean; // 日志数据是否正在加载
+  searchParams: ILogSearchParams; // 搜索参数
+  modules: IStatus[]; // 模块名称列表
   moduleLoading: boolean; // 模块名称是否正在加载
-  fieldDistributions: IFieldDistributions[]; // 字段值分布列表
-  onColumnsChange?: (columns: ILogColumnsResponse[]) => void; // 列变化回调函数
+  detailLoading: boolean; // 日志数据是否正在加载
+  onSearch: (params: ILogSearchParams) => void; // 搜索回调函数
+  onChangeColumns?: (params: ILogColumnsResponse[]) => void; // 列变化回调函数
 }
 
 const Sider: React.FC<IProps> = (props) => {
-  const { fieldDistributions, logLoading, moduleNames, moduleLoading, onColumnsChange } = props;
-  const [logColumns, setLogColumns] = useState<ILogColumnsResponse[]>([]); // 日志字段
-  const [selectedModule, setSelectedModule] = useState<string[] | undefined>(undefined); // 已选模块
+  const { detailLoading, modules, moduleLoading, onChangeColumns, onSearch, searchParams } = props;
+  const [columns, setColumns] = useState<ILogColumnsResponse[]>([]); // 日志表字段
+  const [selectedModule, setSelectedModule] = useState<string[]>([]); // 已选模块
+  const [distributions, setDistributions] = useState<Record<string, IFieldDistributions>>({}); // 字段值分布列表
 
   // 获取日志字段
-  const fetchColumns = useRequest(getTableColumns, {
+  const getColumns = useRequest(api.fetchColumns, {
     manual: true,
-    onSuccess: (res: ILogColumnsResponse[]) => {
+    onSuccess: (res) => {
       // 确保log_time和message字段默认被选中
-      const processedColumns = res.map((column) => {
+      const processedColumns = res?.map((column) => {
         if (column.columnName === 'log_time') {
           return { ...column, selected: true };
         }
         return column;
       });
 
-      // 如果没有其他已选字段，自动添加_source字段
-      // const hasOtherSelected = processedColumns.some((col) => col.selected && col.columnName !== 'log_time');
-      // if (!hasOtherSelected) {
-      //   // processedColumns.unshift({
-      //   //   columnName: '_source',
-      //   //   dataType: 'TEXT',
-      //   //   selected: true,
-      //   //   isFixed: true, // 标记为不可删除
-      //   // });
-      // }
-      setLogColumns(processedColumns);
+      setColumns(processedColumns);
       // 初始加载时也通知父组件列变化
-      if (onColumnsChange) {
-        onColumnsChange(processedColumns);
+      if (onChangeColumns) {
+        onChangeColumns(processedColumns);
       }
     },
-  }) as any;
+    onError: () => {
+      setColumns([]);
+    },
+  });
+
+  // 获取指定字段的TOP5分布数据
+  const queryDistribution = useRequest(api.fetchDistributions, {
+    manual: true,
+    onSuccess: (res, params: ILogSearchParams[]) => {
+      const fieldName = params[0]?.fields?.[0];
+      if (!fieldName) {
+        return;
+      }
+      setDistributions({
+        ...distributions,
+        [fieldName]: res?.fieldDistributions?.[0],
+      } as any);
+    },
+  });
 
   // 选择模块时触发，避免重复请求和状态更新
-  const changeLogColumns = (value: any[]) => {
+  const changeModules = (value: any[]) => {
+    console.log('changeModules', value);
     if (!value) {
-      setSelectedModule(undefined);
+      setSelectedModule([]);
       return;
     }
     const [datasourceId, module] = value;
-    const newValue = [String(datasourceId), String(module)];
-
-    if (selectedModule && selectedModule[0] === newValue[0] && selectedModule[1] === newValue[1]) {
-      return;
-    }
-    setSelectedModule(newValue);
-    fetchColumns.run({ datasourceId: Number(datasourceId), module: String(module) });
+    setSelectedModule([String(datasourceId), String(module)]);
+    getColumns.run({ datasourceId: Number(datasourceId), module: String(module) });
   };
 
-  // 当 moduleNames 加载完成后，自动选择第一个数据源和第一个模块
+  // 当 modules 加载完成后，自动选择第一个数据源和第一个模块
   useEffect(() => {
-    if (moduleNames?.length > 0 && !selectedModule) {
-      const firstModule = moduleNames[0];
-      if (firstModule.children?.[0]) {
-        const datasourceId = String(firstModule.value);
-        const module = String(firstModule.children[0].value);
+    if (modules?.length > 0 && selectedModule?.length === 0) {
+      const first = modules[0];
+      if (first?.children?.[0]) {
+        const datasourceId = String(first.value);
+        const module = String(first.children[0].value);
         setSelectedModule([datasourceId, module]);
-        fetchColumns.run({ datasourceId: Number(datasourceId), module });
+        getColumns.run({ datasourceId: Number(datasourceId), module });
       }
     }
-  }, [moduleNames]);
+  }, [modules]);
 
   // 切换字段选中状态
-  const toggleColumns = (_: any, index: number) => {
+  const toggleColumn = (_: any, index: number) => {
     // 如果是log_time字段，不允许取消选择
-    if (logColumns[index].columnName === 'log_time' || logColumns[index].isFixed) {
+    if (columns[index].columnName === 'log_time' || columns[index].isFixed) {
       return;
     }
 
-    logColumns[index].selected = !logColumns[index].selected;
-    const updatedColumns = [...logColumns];
-    setLogColumns(updatedColumns);
+    columns[index].selected = !columns[index].selected;
+    const updatedColumns = [...columns];
+    setColumns(updatedColumns);
 
     // 通知父组件列变化
-    if (onColumnsChange) {
-      onColumnsChange(updatedColumns);
+    if (onChangeColumns) {
+      onChangeColumns(updatedColumns);
     }
+  };
+
+  const getDistribution = (data: ILogColumnsResponse, activeKey: string) => {
+    console.log('getDistribution', data, activeKey);
+    if (activeKey) return;
+    const params: ILogSearchParams = {
+      ...searchParams,
+      fields: [data.columnName] as any,
+    };
+    queryDistribution.run(params);
   };
 
   return (
     <div className={styles.layoutSider}>
       <Cascader
-        allowClear
         showSearch
+        allowClear={false}
         variant="filled"
         placeholder="请选择模块"
         expandTrigger="hover"
-        options={moduleNames}
+        options={modules}
         value={selectedModule}
-        onChange={changeLogColumns}
+        onChange={changeModules}
         loading={moduleLoading}
-        disabled={moduleLoading || logLoading}
+        disabled={moduleLoading || detailLoading}
       />
 
-      <Spin spinning={fetchColumns.loading || logLoading} size="small">
+      <Spin spinning={getColumns.loading || detailLoading || queryDistribution.loading} size="small">
         <Collapse
           ghost
           size="small"
@@ -120,15 +136,20 @@ const Sider: React.FC<IProps> = (props) => {
             {
               key: 'selected',
               label: '已选字段',
-              children: logColumns?.map((item, index) =>
+              children: columns?.map((item, index) =>
                 !item.selected ? null : (
                   <FieldListItem
                     key={item.columnName}
-                    item={item}
-                    index={index}
-                    fieldDistributions={fieldDistributions}
-                    isSelected={true}
-                    onToggle={toggleColumns}
+                    column={item}
+                    columnIndex={index}
+                    fieldData={{
+                      searchParams,
+                      distributions,
+                      isSelected: true,
+                      onToggle: toggleColumn,
+                      onSearch,
+                      onDistribution: (activeKey: string) => getDistribution(item, activeKey),
+                    }}
                   />
                 ),
               ),
@@ -136,15 +157,20 @@ const Sider: React.FC<IProps> = (props) => {
             {
               key: 'available',
               label: '可用字段',
-              children: logColumns?.map((item, index) =>
+              children: columns?.map((item, index) =>
                 item.selected ? null : (
                   <FieldListItem
                     key={item.columnName}
-                    item={item}
-                    index={index}
-                    fieldDistributions={fieldDistributions}
-                    isSelected={false}
-                    onToggle={toggleColumns}
+                    column={item}
+                    columnIndex={index}
+                    fieldData={{
+                      searchParams,
+                      isSelected: false,
+                      distributions,
+                      onToggle: toggleColumn,
+                      onSearch,
+                      onDistribution: (activeKey: string) => getDistribution(item, activeKey),
+                    }}
                   />
                 ),
               ),

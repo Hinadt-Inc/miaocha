@@ -2,6 +2,6 @@ import { Spin } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
 
 const SpinIndicator = () => {
-  return <Spin indicator={<LoadingOutlined spin />} size="small" />;
+  return <Spin size="small" />;
 };
 export default SpinIndicator;

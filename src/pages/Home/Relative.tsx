@@ -7,7 +7,7 @@ import { RELATIVE_TIME, DATE_FORMAT } from './utils';
 const { Text } = Typography;
 
 interface IProps {
-  onSubmitTime: (params: ISubmitTime) => void; // 提交时间
+  onSubmit: (params: ILogTimeSubmitParams) => void; // 提交时间
 }
 
 interface ITime extends IRelativeTime {
@@ -17,7 +17,7 @@ interface ITime extends IRelativeTime {
 
 const TimePicker = (props: IProps) => {
   const CURRENT = '现在';
-  const { onSubmitTime } = props;
+  const { onSubmit } = props;
   const defaultTime = RELATIVE_TIME[0];
 
   // 开始时间的配置项
@@ -96,8 +96,8 @@ const TimePicker = (props: IProps) => {
       label: `${startLabel} ~ ${endLabel}`,
       value: `${startLabel} ~ ${endLabel}`,
     };
-    onSubmitTime(params);
-  }, [startTimeText, endTimeText, startOption, endOption, onSubmitTime, getTimeText]);
+    onSubmit(params);
+  }, [startTimeText, endTimeText, startOption, endOption, onSubmit, getTimeText]);
 
   return (
     <div className={styles.relativeLayout}>

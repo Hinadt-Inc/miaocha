@@ -137,3 +137,12 @@ export const RELATIVE_TIME: IRelativeTime[] = [
   { label: '月后', value: '月后', unitCN: '月', format: 'YYYY-MM-01 00:00:00', unitEN: 'month' },
   { label: '年后', value: '年后', unitCN: '年', format: 'YYYY-01-01 00:00:00', unitEN: 'year' },
 ];
+
+// 时间分组
+export const TIME_GROUP: Record<string, string> = {
+  second: '秒',
+  minute: '分钟',
+  hour: '小时',
+  day: '天',
+  auto: '自动',
+};

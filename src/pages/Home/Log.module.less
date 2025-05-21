@@ -4,7 +4,18 @@
   height: 100%;
 
   .chart {
+    width: 100%;
     height: 200px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid #d9d9d9;
+    border-radius: 8px;
+    :global {
+      .ant-spin-nested-loading {
+        width: 100%;
+      }
+    }
   }
   .table {
     width: 100%;
