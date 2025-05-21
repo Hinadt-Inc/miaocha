@@ -242,6 +242,7 @@ const UserManagementPage = () => {
         nickname: string;
         email: string;
         role: string;
+        status: number;
         password?: string;
         confirmPassword?: string;
       };
@@ -253,6 +254,7 @@ const UserManagementPage = () => {
           nickname: values.nickname,
           email: values.email,
           role: values.role,
+          status: values.status,
         });
         message.success('用户信息已更新');
       } else {
@@ -268,6 +270,7 @@ const UserManagementPage = () => {
           password: values.password,
           email: values.email,
           role: values.role,
+          status: values.status,
         });
         message.success('用户已添加');
       }
@@ -322,6 +325,21 @@ const UserManagementPage = () => {
         }
         return <Tag color={color}>{label}</Tag>;
       },
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 80,
+      filters: [
+        { text: '启用', value: 1 },
+        { text: '禁用', value: 0 },
+      ],
+      filteredValue: filteredInfo.status ?? null,
+      onFilter: (value, record) => record.status === value,
+      render: (status: number) => (
+        <Tag color={status === 1 ? 'green' : 'red'}>{status === 1 ? '启用' : '禁用'}</Tag>
+      ),
     },
     {
       title: '创建时间',
@@ -445,6 +463,22 @@ const UserManagementPage = () => {
                   rules={[{ required: true, message: '请选择角色' }]}
                 >
                   <Select options={roleOptions} placeholder="请选择角色" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="status"
+                  label="状态"
+                  initialValue={1}
+                  rules={[{ required: true, message: '请选择状态' }]}
+                >
+                  <Select
+                    options={[
+                      { value: 1, label: '启用' },
+                      { value: 0, label: '禁用' },
+                    ]}
+                    placeholder="请选择状态"
+                  />
                 </Form.Item>
               </Col>
             </Row>
