@@ -23,8 +23,8 @@
 }
 /* SQL编辑器容器 */
 .sql-editor-container {
-  
-  height: calc(100vh - 150px);
+  height: 100%;
+  min-height: calc(100vh - 150px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -74,7 +74,8 @@
 /* 主布局样式 - 匹配HomePage */
 .layout-content {
   background: #f0f2f5;
-  height: calc(100vh - 180px);
+  height: 100%;
+  min-height: calc(100vh - 180px);
   
   &.fullscreen {
     height: calc(100vh - 100px);
@@ -99,6 +100,7 @@
 /* 内部布局样式 - 匹配HomePage */
 .layout-inner {
   background: #f0f2f5;
+  height: 100%;
 }
 
 /* 内容容器样式 - 匹配HomePage */
@@ -109,9 +111,9 @@
   flex: 1;
   border-radius: 4px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  overflow: auto;
   display: flex;
   flex-direction: column;
+  height: 100vh;
 }
 
 /* 结果容器 */
@@ -120,20 +122,6 @@
   overflow: auto;
   padding: 0;
   
-  .ant-table-wrapper {
-    height: 100%;
-    
-    .ant-spin-nested-loading,
-    .ant-spin-container,
-    .ant-table {
-      height: 100%;
-    }
-    
-    .ant-table-container {
-      height: calc(100% - 44px);
-      overflow: auto;
-    }
-  }
 }
 
 /* 查询编辑器卡片 */

@@ -554,8 +554,8 @@ const SQLEditorImpl: React.FC = () => {
   }, []);
 
   return (
-    <Card>
-      <Layout>
+    <>
+      <Layout style={{ height: '100vh' }}>
         <Sider
           width={siderWidth}
           theme="light"
@@ -610,9 +610,7 @@ const SQLEditorImpl: React.FC = () => {
                       executeQuery={executeQueryDebounced}
                       toggleHistory={() => setHistoryDrawerVisible(true)}
                       toggleSettings={() => setSettingsDrawerVisible(true)}
-                      toggleFullscreen={() => setFullscreen((prev) => !prev)}
                       sqlQuery={sqlQuery}
-                      fullscreen={fullscreen}
                     />
                   </div>
                 }
@@ -624,8 +622,6 @@ const SQLEditorImpl: React.FC = () => {
                   onEditorMount={handleEditorDidMount}
                   editorSettings={editorSettings}
                   height={editorHeight}
-                  minHeight={100}
-                  maxHeight={800}
                   collapsed={editorCollapsed}
                   onCollapsedChange={handleEditorCollapsedChange}
                   onHeightChange={handleEditorHeightChange}
@@ -712,7 +708,7 @@ const SQLEditorImpl: React.FC = () => {
         updateEditorSettings={saveSettings}
         visible={settingsDrawerVisible}
       />
-    </Card>
+    </>
   );
 };
 

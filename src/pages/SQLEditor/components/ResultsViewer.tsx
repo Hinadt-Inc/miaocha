@@ -21,7 +21,7 @@ interface ResultsViewerProps {
 }
 
 // 常量
-const TABLE_HEIGHT = '800px'; // 表格高度
+const TABLE_HEIGHT = '30vh'; // 表格高度
 const PAGE_SIZE_OPTIONS = ['10', '20', '50', '100'];
 const MIN_COLUMN_WIDTH = 100; // 最小列宽  // 可调整宽度的表头组件
 interface ResizableTitleProps extends React.HTMLAttributes<HTMLElement> {
@@ -223,7 +223,9 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({
 
     // 计算每列的初始宽度
     queryResults.columns.forEach((col) => {
-      widths[col] = estimateColumnWidth(col, queryResults.rows);
+      if (queryResults.rows) {
+        widths[col] = estimateColumnWidth(col, queryResults.rows);
+      }
     });
 
     setColumnWidths(widths);
@@ -355,7 +357,9 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({
 
             const widths: Record<string, number> = {};
             queryResults.columns.forEach((col) => {
-              widths[col] = estimateColumnWidth(col, queryResults.rows);
+              if (queryResults.rows) {
+                widths[col] = estimateColumnWidth(col, queryResults.rows);
+              }
             });
 
             setColumnWidths(widths);

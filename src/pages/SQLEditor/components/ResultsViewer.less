@@ -9,6 +9,7 @@
     align-items: center;
     height: 300px;
   }
+
   
   .results-header {
     display: flex;
@@ -44,7 +45,8 @@
 }
 
 .execution-info {
-  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
   
   .toolbar {
     display: flex;
@@ -250,4 +252,13 @@
       }
     }
   }
+}
+
+.editor-results-container {
+  height: 100vh;
+  .ant-card-body {
+      height: auto;
+    }
+    
+  
 }

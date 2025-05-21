@@ -48,7 +48,8 @@ const SchemaTree: React.FC<SchemaTreeProps> = ({
     }
 
     return databaseSchema.tables.map((table) => ({
-      title: table.tableName + (table.tableComment ? ` (${table.tableComment})` : ''),
+      title: table.tableName,
+      content: table.tableComment || '',
       key: table.tableName,
       children: table.columns.map((column) => ({
         title: `${column.columnName} ${column.isPrimaryKey ? '🔑 ' : ''}(${column.dataType})`,
@@ -60,8 +61,8 @@ const SchemaTree: React.FC<SchemaTreeProps> = ({
   }, [databaseSchema, lazyLoadStarted]);
 
   // 使用useCallback包装函数，避免不必要的重新渲染
-  const handleExpand = useCallback((keys: string[]) => {
-    setExpandedKeys(keys);
+  const handleExpand = useCallback((keys: React.Key[]) => {
+    setExpandedKeys(keys as string[]);
   }, []);
 
   // 渲染树节点标题
