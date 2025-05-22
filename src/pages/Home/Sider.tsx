@@ -13,10 +13,11 @@ interface IProps {
   detailLoading: boolean; // 日志数据是否正在加载
   onSearch: (params: ILogSearchParams) => void; // 搜索回调函数
   onChangeColumns?: (params: ILogColumnsResponse[]) => void; // 列变化回调函数
+  onChangeSql: (params: string) => void; // SQL变化回调函数
 }
 
 const Sider: React.FC<IProps> = (props) => {
-  const { detailLoading, modules, moduleLoading, onChangeColumns, onSearch, searchParams } = props;
+  const { detailLoading, modules, moduleLoading, onChangeColumns, onSearch, searchParams, onChangeSql } = props;
   const [columns, setColumns] = useState<ILogColumnsResponse[]>([]); // 日志表字段
   const [selectedModule, setSelectedModule] = useState<string[]>([]); // 已选模块
   const [distributions, setDistributions] = useState<Record<string, IFieldDistributions>>({}); // 字段值分布列表
@@ -54,14 +55,13 @@ const Sider: React.FC<IProps> = (props) => {
       }
       setDistributions({
         ...distributions,
-        [fieldName]: res?.fieldDistributions?.[0],
+        [fieldName]: { ...(res?.fieldDistributions?.[0] || {}) },
       } as any);
     },
   });
 
   // 选择模块时触发，避免重复请求和状态更新
   const changeModules = (value: any[]) => {
-    console.log('changeModules', value);
     if (!value) {
       setSelectedModule([]);
       return;
@@ -101,13 +101,17 @@ const Sider: React.FC<IProps> = (props) => {
     }
   };
 
-  const getDistribution = (data: ILogColumnsResponse, activeKey: string) => {
-    console.log('getDistribution', data, activeKey);
-    if (activeKey) return;
+  const getDistribution = (data: ILogColumnsResponse, activeKey: string, sql?: string | undefined) => {
+    if (activeKey && !sql) return;
+
     const params: ILogSearchParams = {
       ...searchParams,
       fields: [data.columnName] as any,
     };
+    if (sql) {
+      params.whereSqls = [...(searchParams?.whereSqls || []), sql];
+    }
+
     queryDistribution.run(params);
   };
 
@@ -126,7 +130,7 @@ const Sider: React.FC<IProps> = (props) => {
         disabled={moduleLoading || detailLoading}
       />
 
-      <Spin spinning={getColumns.loading || detailLoading || queryDistribution.loading} size="small">
+      <Spin spinning={getColumns.loading || queryDistribution.loading} size="small">
         <Collapse
           ghost
           size="small"
@@ -148,7 +152,9 @@ const Sider: React.FC<IProps> = (props) => {
                       isSelected: true,
                       onToggle: toggleColumn,
                       onSearch,
-                      onDistribution: (activeKey: string) => getDistribution(item, activeKey),
+                      onChangeSql,
+                      onDistribution: (activeKey: string, sql: string | undefined) =>
+                        getDistribution(item, activeKey, sql),
                     }}
                   />
                 ),
@@ -169,7 +175,9 @@ const Sider: React.FC<IProps> = (props) => {
                       distributions,
                       onToggle: toggleColumn,
                       onSearch,
-                      onDistribution: (activeKey: string) => getDistribution(item, activeKey),
+                      onChangeSql,
+                      onDistribution: (activeKey: string, sql: string | undefined) =>
+                        getDistribution(item, activeKey, sql),
                     }}
                   />
                 ),

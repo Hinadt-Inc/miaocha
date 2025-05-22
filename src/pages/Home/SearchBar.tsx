@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, Suspense, lazy } from 'react';
+import { useState, useMemo, useEffect, Suspense, lazy, forwardRef, useImperativeHandle, useRef } from 'react';
 import { AutoComplete, Button, Space, Tag, Popover, Statistic } from 'antd';
 import CountUp from 'react-countup';
 import SpinIndicator from '@/components/SpinIndicator';
@@ -14,7 +14,9 @@ interface IProps {
   onSubmit: (params: ILogSearchParams) => void; // 搜索回调函数
 }
 
-const SearchBar = (props: IProps) => {
+const SearchBar = forwardRef((props: IProps, ref) => {
+  const searchBarRef = useRef<HTMLDivElement>(null);
+
   const { searchParams, totalCount = 0, loading, onSubmit } = props;
   const [keyword, setKeyword] = useState<string>(''); // 关键词
   const [keywords, setKeywords] = useState<string[]>([]); // 关键词列表
@@ -28,6 +30,13 @@ const SearchBar = (props: IProps) => {
     const saved = localStorage.getItem('sqlHistory');
     return saved ? JSON.parse(saved) : [];
   });
+
+  useImperativeHandle(ref, () => ({
+    // 渲染sql
+    renderSql: (sql: string) => {
+      setSqls((prev) => [...prev, sql]);
+    },
+  }));
 
   // 获取默认时间选项配置
   const getDefaultTimeOption = () => {
@@ -54,8 +63,6 @@ const SearchBar = (props: IProps) => {
   const changeSql = (value: string) => {
     setSql(value || '');
   };
-
-  console.log('【打印日志】Keywords:', keywords);
 
   // 显示关键字、sql、时间的标签
   const filterRender = useMemo(() => {
@@ -119,12 +126,12 @@ const SearchBar = (props: IProps) => {
 
   // 当keywords或sqls或时间变化时触发搜索
   useEffect(() => {
-    console.log('【打印日志】7777:', keywords);
     const params = {
       ...searchParams,
       ...(keywords.length > 0 && { keywords }),
       ...(sqls.length > 0 && { whereSqls: sqls }),
       ...getTimeParams(),
+      offset: 0,
     };
 
     if (keywords.length === 0) {
@@ -167,9 +174,7 @@ const SearchBar = (props: IProps) => {
     setSql('');
 
     if (!keywordTrim && !sql) {
-      console.log('【打印日志】1111:', 1111);
-      console.log('keywords:', keywords);
-      onSubmit({ ...searchParams });
+      onSubmit({ ...searchParams, offset: 0 } as any);
     }
   };
 
@@ -270,6 +275,7 @@ const SearchBar = (props: IProps) => {
     onSubmit({
       ...searchParams,
       timeGrouping: text,
+      offset: 0,
     } as any);
     setOpenTimeGroup(false);
   };
@@ -302,7 +308,7 @@ const SearchBar = (props: IProps) => {
   }, [searchParams, openTimeGroup, loading]);
 
   return (
-    <div className={styles.searchBar}>
+    <div className={styles.searchBar} ref={searchBarRef}>
       <div className={styles.top}>
         <div className={styles.left}>{leftRender}</div>
         <div className={styles.right}>
@@ -314,7 +320,7 @@ const SearchBar = (props: IProps) => {
         <div className={styles.item}>{keywordRender}</div>
         <div className={styles.item}>{sqlRender}</div>
         <div className={styles.item}>
-          <Button size="small" type="primary" onClick={handleParams}>
+          <Button size="small" type="primary" onClick={handleParams} loading={loading}>
             搜索
           </Button>
         </div>
@@ -322,6 +328,6 @@ const SearchBar = (props: IProps) => {
       <div className={styles.footer}>{filterRender}</div>
     </div>
   );
-};
+});
 
 export default SearchBar;

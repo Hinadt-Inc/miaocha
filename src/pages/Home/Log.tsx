@@ -6,33 +6,37 @@ import VirtualTable from './VirtualTable';
 interface IProps {
   histogramData: ILogHistogramData[]; // 直方图数据
   histogramDataLoading: boolean; // 直方图数据是否正在加载
-  fetchLog: any; // 加载日志数据的函数
-  log: {
-    totalCount?: number; // 总行数
-    distributionData?: any; // 直方图数据
-    rows?: any[]; // 表格数据
-  };
+  getDetailData: any; // 加载日志数据的函数
+  detailData: ILogDetailsResponse; // 日志数据;
   searchParams: ILogSearchParams; // 搜索参数
   dynamicColumns?: ILogColumnsResponse[]; // 添加动态列配置
 }
 
 const Log = (props: IProps) => {
-  const { histogramData, histogramDataLoading, log, fetchLog, dynamicColumns = [], searchParams } = props;
-  const { rows } = log || {};
+  const { histogramData, histogramDataLoading, detailData, getDetailData, dynamicColumns = [], searchParams } = props;
+  const { rows = [], totalCount } = detailData || {};
   const [allRows, setAllRows] = useState<any[]>([]); // 用于存储所有历史数据的状态
+
   // 当新数据到达时，将其添加到历史数据中
   useEffect(() => {
-    if (rows && rows.length > 0) {
+    const { offset } = getDetailData.params?.[0] || {};
+    if (offset === 0) {
+      if (rows.length > 0) {
+        setAllRows(rows);
+      } else {
+        setAllRows([]);
+      }
+    } else if (rows.length > 0) {
       setAllRows((prevRows: any) => [...prevRows, ...rows]);
-    } else if (!log?.totalCount && (rows || [])?.length === 0) {
+    } else {
       setAllRows([]);
     }
-  }, [rows, log]);
+  }, [rows, totalCount]);
 
   const handleLoadMore = () => {
-    if (!fetchLog.loading) {
-      fetchLog.run({
-        ...fetchLog.params?.[0],
+    if (!getDetailData.loading) {
+      getDetailData.run({
+        ...getDetailData.params?.[0],
         offset: allRows.length || 0,
       });
     }
@@ -42,12 +46,12 @@ const Log = (props: IProps) => {
     () => ({
       data: allRows,
       searchParams,
-      loading: fetchLog.loading,
+      loading: getDetailData.loading,
       onLoadMore: handleLoadMore,
-      hasMore: log?.totalCount ? allRows.length < log.totalCount : false,
+      hasMore: totalCount ? allRows.length < totalCount : false,
       dynamicColumns,
     }),
-    [allRows, fetchLog?.loading, log?.totalCount, handleLoadMore, dynamicColumns, searchParams],
+    [allRows, getDetailData?.loading, totalCount, handleLoadMore, dynamicColumns, searchParams],
   );
 
   return (

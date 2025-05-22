@@ -117,8 +117,7 @@ const VirtualTable = (props: IProps) => {
       if (scrollElement) {
         const { scrollHeight, scrollTop, clientHeight } = scrollElement;
         const distanceToBottom = scrollHeight - scrollTop - clientHeight;
-
-        if (distanceToBottom < 150) {
+        if (distanceToBottom > 0 && distanceToBottom < 600) {
           onLoadMore();
         }
       }
@@ -153,7 +152,7 @@ const VirtualTable = (props: IProps) => {
         dataSource={data}
         pagination={false}
         columns={columns}
-        loading={loading}
+        loading={{ spinning: loading, size: 'small' }}
         scroll={{ x: 1300, y: containerHeight - headerHeight - 1 }}
         expandable={{
           columnWidth: 26,

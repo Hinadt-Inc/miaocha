@@ -52,7 +52,6 @@ service.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     const res = error.response?.data || {};
-    console.log('error', error);
 
     // 如果是401错误且不是刷新token请求
     if (error.response?.status === 401 && !originalRequest._retry) {

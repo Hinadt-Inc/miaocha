@@ -9,7 +9,8 @@ interface IFieldData {
   isSelected: boolean; // 是否选中
   onToggle: (column: ILogColumnsResponse, index: number) => void; // 切换选中状态
   onSearch: (params: ILogSearchParams) => void; // 搜索
-  onDistribution: (params: string) => void; // 分布
+  onDistribution: (params: string, sql?: string) => void; // 分布
+  onChangeSql: (params: string) => void; // SQL变化回调函数
 }
 
 interface IProps {
@@ -19,7 +20,7 @@ interface IProps {
 }
 
 const FieldListItem: React.FC<IProps> = ({ column, columnIndex, fieldData }) => {
-  const { distributions = {}, isSelected, onSearch, searchParams } = fieldData;
+  const { distributions = {}, isSelected, onSearch, searchParams, onChangeSql, onDistribution, onToggle } = fieldData;
   const [activeKey, setActiveKey] = useState<string[]>([]);
   const handleCollapseChange = useCallback((key: string | string[]) => {
     setActiveKey(key as string[]);
@@ -29,13 +30,18 @@ const FieldListItem: React.FC<IProps> = ({ column, columnIndex, fieldData }) => 
     return null;
   }
 
-  // const add = (parent: ILogColumnsResponse, son: IValueDistributions) => {
-  //   const { columnName } = parent;
-  //   const { value } = son;
-  //   onSearch({
-  //     whereSqls: [...(searchParams?.whereSqls || []), `${columnName} = '${value}'`],
-  //   });
-  // };
+  const query = (flag: '=' | '!=', parent: ILogColumnsResponse, son: IValueDistributions) => {
+    const { columnName } = parent;
+    const { value } = son;
+    const sql = `${columnName} ${flag} '${value}'`;
+    onChangeSql(sql);
+    onSearch({
+      ...searchParams,
+      offset: 0,
+      whereSqls: [...(searchParams?.whereSqls || []), sql],
+    });
+    onDistribution(activeKey[0] || '', sql);
+  };
 
   return (
     <Collapse
@@ -48,7 +54,7 @@ const FieldListItem: React.FC<IProps> = ({ column, columnIndex, fieldData }) => 
         {
           key: `${column.columnName}`,
           label: (
-            <div className={styles.bar} onClick={() => fieldData.onDistribution(activeKey[0])}>
+            <div className={styles.bar} onClick={() => onDistribution(activeKey[0] || '')}>
               <div>
                 <Tag color={getFieldTypeColor(column.dataType)}>{column.dataType?.substr(0, 1)?.toUpperCase()}</Tag>
                 {column.columnName}
@@ -60,7 +66,7 @@ const FieldListItem: React.FC<IProps> = ({ column, columnIndex, fieldData }) => 
                   className={styles.footBtn}
                   onClick={(e) => {
                     e.stopPropagation();
-                    fieldData.onToggle(column, columnIndex);
+                    onToggle(column, columnIndex);
                   }}
                 >
                   {isSelected ? '移除' : '添加'}
@@ -96,21 +102,10 @@ const FieldListItem: React.FC<IProps> = ({ column, columnIndex, fieldData }) => 
                           </Typography.Paragraph>
                         </div>
                         <div className={styles.right}>
-                          <Button
-                            color="primary"
-                            variant="link"
-                            // onClick={() =>
-                            //   fieldData.onSearch({
-                            //     whereSqls: [
-                            //       ...(fieldData.searchParams?.whereSqls || []),
-                            //       `${column.columnName} = '${sub.value}'`,
-                            //     ],
-                            //   })
-                            // }
-                          >
+                          <Button color="primary" variant="link" onClick={() => query('=', column, sub)}>
                             <i className="iconfont icon-fangda"></i>
                           </Button>
-                          <Button color="primary" variant="link">
+                          <Button color="primary" variant="link" onClick={() => query('!=', column, sub)}>
                             <i className="iconfont icon-suoxiao1"></i>
                           </Button>
                         </div>

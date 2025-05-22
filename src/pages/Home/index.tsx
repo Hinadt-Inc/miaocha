@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Splitter } from 'antd';
 import { useRequest } from 'ahooks';
 import * as api from '@/api/logs';
@@ -12,6 +12,8 @@ const HomePage = () => {
   const [detailData, setDetailData] = useState<ILogDetailsResponse | null>(null); // 日志数据
   const [logTableColumns, setLogTableColumns] = useState<ILogColumnsResponse[]>([]); // 日志字段列表
   const [histogramData, setHistogramData] = useState<ILogHistogramData[] | null>(null); // 日志时间分布列表
+
+  const searchBarRef = useRef<HTMLDivElement>(null);
 
   // 默认的搜索参数
   const defaultSearchParams: ILogSearchParams = {
@@ -68,7 +70,7 @@ const HomePage = () => {
       (rows || []).map((item, index) => {
         item._key = `${Date.now()}_${index}`;
       });
-      setDetailData(res || []);
+      setDetailData(res);
     },
     onError: () => {
       setDetailData(null);
@@ -105,8 +107,9 @@ const HomePage = () => {
     modules: moduleOptions,
     moduleLoading: getMyModules.loading,
     detailLoading: getDetailData.loading,
-    onChangeColumns: handleChangeColumns,
     onSearch: setSearchParams,
+    onChangeColumns: handleChangeColumns,
+    onChangeSql: (sql: string) => (searchBarRef?.current as any)?.renderSql?.(sql),
   };
 
   // 优化log组件的props
@@ -114,8 +117,8 @@ const HomePage = () => {
     () => ({
       histogramData,
       histogramDataLoading: getHistogramData.loading,
-      log: detailData,
-      fetchLog: getDetailData,
+      detailData,
+      getDetailData,
       searchParams,
       dynamicColumns: logTableColumns,
     }),
@@ -135,7 +138,7 @@ const HomePage = () => {
 
   return (
     <div className={styles.layout}>
-      <SearchBar {...searchBarProps} />
+      <SearchBar ref={searchBarRef} {...searchBarProps} />
 
       <Splitter className={styles.container}>
         <Splitter.Panel collapsible defaultSize={260} min={260} max="70%">
