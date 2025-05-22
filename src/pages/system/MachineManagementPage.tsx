@@ -1,11 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  getMachines,
-  createMachine,
-  deleteMachine,
-  updateMachine,
-  testMachineConnection,
-} from '../../api/machine';
+import { getMachines, createMachine, deleteMachine, updateMachine, testMachineConnection } from '../../api/machine';
 import type { Machine, CreateMachineParams } from '../../types/machineTypes';
 import { SimpleTable } from '../../components/common/SimpleTable';
 import type { TableColumnsType } from 'antd';
@@ -88,12 +82,12 @@ const MachineManagementPage = () => {
     try {
       const success = await testMachineConnection(id);
       if (success) {
-        message.success('连接测试成功');
+        messageApi.success('连接测试成功');
       } else {
-        message.error('连接测试失败');
+        messageApi.error('连接测试失败');
       }
     } catch {
-      message.error('连接测试失败');
+      messageApi.error('连接测试失败');
     } finally {
       setTestingConnectionId(null);
     }
@@ -178,24 +172,14 @@ const MachineManagementPage = () => {
             ]}
           />
           <div className="actions">
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => setCreateModalVisible(true)}
-            >
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateModalVisible(true)}>
               新增机器
             </Button>
           </div>
         </div>
 
         <div className="table-container">
-          <SimpleTable
-            dataSource={machines}
-            columns={columns}
-            loading={loading}
-            size="small"
-            rowKey="id"
-          />
+          <SimpleTable dataSource={machines} columns={columns} loading={loading} size="small" rowKey="id" />
         </div>
 
         <Modal
@@ -205,32 +189,16 @@ const MachineManagementPage = () => {
           onOk={() => form.submit()}
         >
           <Form form={form} layout="vertical" onFinish={handleCreate}>
-            <Form.Item
-              name="name"
-              label="名称"
-              rules={[{ required: true, message: '请输入机器名称' }]}
-            >
+            <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入机器名称' }]}>
               <Input placeholder="测试服务器" />
             </Form.Item>
-            <Form.Item
-              name="ip"
-              label="IP地址"
-              rules={[{ required: true, message: '请输入IP地址' }]}
-            >
+            <Form.Item name="ip" label="IP地址" rules={[{ required: true, message: '请输入IP地址' }]}>
               <Input placeholder="192.168.1.100" />
             </Form.Item>
-            <Form.Item
-              name="port"
-              label="端口"
-              rules={[{ required: true, message: '请输入端口号' }]}
-            >
+            <Form.Item name="port" label="端口" rules={[{ required: true, message: '请输入端口号' }]}>
               <InputNumber min={1} max={65535} style={{ width: '100%' }} />
             </Form.Item>
-            <Form.Item
-              name="username"
-              label="用户名"
-              rules={[{ required: true, message: '请输入用户名' }]}
-            >
+            <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入用户名' }]}>
               <Input placeholder="root" />
             </Form.Item>
             <Form.Item name="password" label="密码">
@@ -252,32 +220,16 @@ const MachineManagementPage = () => {
           onOk={() => form.submit()}
         >
           <Form form={form} layout="vertical" onFinish={handleEdit}>
-            <Form.Item
-              name="name"
-              label="名称"
-              rules={[{ required: true, message: '请输入机器名称' }]}
-            >
+            <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入机器名称' }]}>
               <Input placeholder="测试服务器" />
             </Form.Item>
-            <Form.Item
-              name="ip"
-              label="IP地址"
-              rules={[{ required: true, message: '请输入IP地址' }]}
-            >
+            <Form.Item name="ip" label="IP地址" rules={[{ required: true, message: '请输入IP地址' }]}>
               <Input placeholder="192.168.1.100" />
             </Form.Item>
-            <Form.Item
-              name="port"
-              label="端口"
-              rules={[{ required: true, message: '请输入端口号' }]}
-            >
+            <Form.Item name="port" label="端口" rules={[{ required: true, message: '请输入端口号' }]}>
               <InputNumber min={1} max={65535} style={{ width: '100%' }} />
             </Form.Item>
-            <Form.Item
-              name="username"
-              label="用户名"
-              rules={[{ required: true, message: '请输入用户名' }]}
-            >
+            <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入用户名' }]}>
               <Input placeholder="root" />
             </Form.Item>
             <Form.Item name="password" label="密码">

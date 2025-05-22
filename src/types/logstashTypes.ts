@@ -88,7 +88,16 @@ export interface TaskStepsResponse {
   steps: TaskStepDetail[];
 }
 
-export type LogstashProcessState = 'NOT_STARTED' | 'RUNNING' | 'STOPPED' | 'ERROR';
+export type LogstashProcessState =
+  | 'NOT_STARTED'
+  | 'RUNNING'
+  | 'STOPPED'
+  | 'ERROR'
+  | 'STARTING'
+  | 'STOPPING'
+  | 'RESTARTING'
+  | 'UNKNOWN'
+  | 'STOP_FAILED';
 
 export interface LogstashProcess {
   id: number;
