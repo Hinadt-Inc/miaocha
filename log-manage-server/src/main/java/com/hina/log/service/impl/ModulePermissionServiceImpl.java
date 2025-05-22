@@ -25,8 +25,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -321,35 +323,49 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
-        if (modules == null || modules.isEmpty()) {
-            return;
-        }
-
-        // 对每个模块撤销权限
+        // 批量撤销权限
         for (String module : modules) {
             try {
-                // 检查模块是否存在
-                if (!moduleExists(module)) {
-                    log.warn("模块不存在: {}", module);
-                    continue;
-                }
-
-                // 根据模块名称获取数据源ID
-                Long datasourceId = getDatasourceIdByModule(module);
-
-                // 检查数据源是否存在
-                Datasource datasource = datasourceMapper.selectById(datasourceId);
-                if (datasource == null) {
-                    log.warn("数据源不存在: {}", datasourceId);
-                    continue;
-                }
-
-                // 删除权限
-                userModulePermissionMapper.delete(userId, datasourceId, module);
+                revokeModulePermission(userId, module);
             } catch (Exception e) {
-                log.error("撤销模块权限失败: {}, 用户ID: {}, 错误: {}", module, userId, e.getMessage());
+                log.error("撤销模块权限失败: userId={}, module={}", userId, module, e);
+                // 继续处理其他模块
             }
         }
+    }
+
+    @Override
+    public List<String> getUserUnauthorizedModules(Long userId) {
+        // 检查用户是否存在
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+        
+        // 超级管理员和管理员拥有所有模块的权限，返回空列表
+        String role = user.getRole();
+        if (UserRole.SUPER_ADMIN.name().equals(role) || UserRole.ADMIN.name().equals(role)) {
+            return new ArrayList<>();
+        }
+        
+        // 获取所有模块
+        List<LogstashProcess> allProcesses = logstashProcessMapper.selectAll();
+        
+        // 获取用户已有的模块权限
+        List<UserModulePermission> userPermissions = userModulePermissionMapper.selectByUser(userId);
+        
+        // 将用户已有的模块权限转换为模块名称集合
+        Set<String> userModules = userPermissions.stream()
+                .map(UserModulePermission::getModule)
+                .collect(Collectors.toSet());
+        
+        // 筛选出用户没有权限的模块
+        return allProcesses.stream()
+                .map(LogstashProcess::getModule)
+                .filter(StringUtils::hasText) // 过滤掉空模块名
+                .filter(module -> !userModules.contains(module)) // 过滤掉用户已有权限的模块
+                .distinct() // 去重
+                .collect(Collectors.toList());
     }
 
     /**

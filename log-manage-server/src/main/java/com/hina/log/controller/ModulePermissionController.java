@@ -144,4 +144,17 @@ public class ModulePermissionController {
     public ApiResponse<List<UserModulePermissionDTO>> getAllUsersModulePermissions() {
         return ApiResponse.success(modulePermissionService.getAllUsersModulePermissions());
     }
+    
+    /**
+     * 获取用户没有权限的模块列表
+     *
+     * @param userId 用户ID
+     * @return 用户没有权限的模块列表
+     */
+    @GetMapping("/user/{userId}/unauthorized")
+    @Operation(summary = "获取用户未授权的模块", description = "获取用户没有权限的所有模块列表，方便前端授权")
+    public ApiResponse<List<String>> getUserUnauthorizedModules(
+            @Parameter(description = "用户ID", required = true) @PathVariable("userId") Long userId) {
+        return ApiResponse.success(modulePermissionService.getUserUnauthorizedModules(userId));
+    }
 }

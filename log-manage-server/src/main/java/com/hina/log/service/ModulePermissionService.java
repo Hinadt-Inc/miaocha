@@ -76,4 +76,12 @@ public interface ModulePermissionService {
      * @param modules 模块名称列表
      */
     void batchRevokeModulePermissions(Long userId, List<String> modules);
+
+    /**
+     * 获取用户没有权限的所有模块
+     *
+     * @param userId 用户ID
+     * @return 用户没有权限的模块列表
+     */
+    List<String> getUserUnauthorizedModules(Long userId);
 }
