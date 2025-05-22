@@ -9,10 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 /**
  * 模块与表名映射服务实现类
  */
@@ -22,36 +18,23 @@ public class ModuleTableMappingServiceImpl implements ModuleTableMappingService 
     @Autowired
     private LogstashProcessMapper logstashProcessMapper;
     
-    // 缓存模块与表名的映射关系，提高性能
-    private final Map<String, String> moduleTableCache = new ConcurrentHashMap<>();
-    
     @Override
     public String getTableNameByModule(String module) {
         if (!StringUtils.hasText(module)) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块名称不能为空");
         }
         
-        // 先从缓存中查找
-        String tableName = moduleTableCache.get(module);
-        if (tableName != null) {
-            return tableName;
+        // 使用精准SQL查询，只查询表名字段
+        String tableName = logstashProcessMapper.selectTableNameByModule(module);
+        if (tableName == null) {
+            throw new BusinessException(ErrorCode.MODULE_NOT_FOUND, "未找到模块: " + module);
         }
         
-        // 从数据库中查找
-        List<LogstashProcess> processes = logstashProcessMapper.selectAll();
-        for (LogstashProcess process : processes) {
-            if (module.equals(process.getModule())) {
-                if (!StringUtils.hasText(process.getTableName())) {
-                    throw new BusinessException(ErrorCode.INTERNAL_ERROR, "模块 " + module + " 对应的表名未配置");
-                }
-                
-                // 更新缓存
-                moduleTableCache.put(module, process.getTableName());
-                return process.getTableName();
-            }
+        if (!StringUtils.hasText(tableName)) {
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "模块 " + module + " 对应的表名未配置");
         }
         
-        throw new BusinessException(ErrorCode.MODULE_NOT_FOUND, "未找到模块: " + module);
+        return tableName;
     }
     
     @Override
@@ -60,23 +43,8 @@ public class ModuleTableMappingServiceImpl implements ModuleTableMappingService 
             return false;
         }
         
-        // 先从缓存中查找
-        if (moduleTableCache.containsKey(module)) {
-            return true;
-        }
-        
-        // 从数据库中查找
-        List<LogstashProcess> processes = logstashProcessMapper.selectAll();
-        for (LogstashProcess process : processes) {
-            if (module.equals(process.getModule())) {
-                // 如果找到了模块，但表名为空，也认为模块存在
-                if (StringUtils.hasText(process.getTableName())) {
-                    moduleTableCache.put(module, process.getTableName());
-                }
-                return true;
-            }
-        }
-        
-        return false;
+        // 使用精准SQL查询，只查询计数
+        int count = logstashProcessMapper.countByModule(module);
+        return count > 0;
     }
 }

@@ -39,6 +39,12 @@ public interface LogstashProcessMapper {
 
         @Select("SELECT * FROM logstash_process WHERE module=#{module}")
         LogstashProcess selectByModule(String module);
+        
+        @Select("SELECT table_name FROM logstash_process WHERE module=#{module}")
+        String selectTableNameByModule(String module);
+        
+        @Select("SELECT COUNT(id) FROM logstash_process WHERE module=#{module}")
+        int countByModule(String module);
 
         @Select("SELECT * FROM logstash_process")
         List<LogstashProcess> selectAll();
