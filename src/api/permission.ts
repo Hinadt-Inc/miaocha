@@ -57,6 +57,7 @@ export function revokePermissionById(permissionId: string): Promise<void> {
     url: `/api/permissions/${permissionId}`,
   });
 }
+<<<<<<< HEAD
 
 /**
  * 批量撤销用户模块权限
@@ -76,3 +77,5 @@ export function batchRevokeModulePermissions(userId: string, modules: string[]):
 export const getMyModules = () => {
   return get('/api/permissions/modules/my') as Promise<IModulesResponse[]>;
 };
+=======
+>>>>>>> feature/zhiqian_shi/数据ui

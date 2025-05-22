@@ -1,10 +1,20 @@
 .expandedRow {
+  width: 50%;
+  margin: 20px auto;
+  background-color: aqua;
+
   :global {
     .react-json-view,
     .ant-tabs-nav {
       margin-left: 40px;
+      font-size: 12px;
     }
-    
+    .ant-table-row {
+      display: table-row !important;
+    }
+    .ant-table-cell {
+      word-break: break-all;
+    }
   }
   .longText {
     white-space: pre-wrap;

@@ -24,8 +24,6 @@ const LoginPage = () => {
         password: values.password,
       });
 
-      console.log(33, response);
-
       dispatch(
         login({
           userId: response.userId,
@@ -51,14 +49,7 @@ const LoginPage = () => {
 
   return (
     <div className={styles.loginPage}>
-      <video
-        autoPlay
-        muted
-        loop
-        playsInline
-        className={styles.videoBackground}
-        poster={login_bg_poster}
-      >
+      <video autoPlay muted loop playsInline className={styles.videoBackground} poster={login_bg_poster}>
         <source src={login_bg_video} type="video/mp4" />
       </video>
 
@@ -73,24 +64,13 @@ const LoginPage = () => {
 
         <div className={styles.loginCard}>
           <div className={styles.cardHeader}>欢迎登录</div>
-          <Form
-            form={form}
-            onFinish={onFinish}
-            size="large"
-            layout="vertical"
-            className={styles.loginForm}
-          >
+          <Form form={form} onFinish={onFinish} size="large" layout="vertical" className={styles.loginForm}>
             <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
               <Input prefix={<UserOutlined />} placeholder="用户名" allowClear maxLength={30} />
             </Form.Item>
 
             <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
-              <Input.Password
-                prefix={<LockOutlined />}
-                placeholder="密码"
-                allowClear
-                maxLength={30}
-              />
+              <Input.Password prefix={<LockOutlined />} placeholder="密码" allowClear maxLength={30} />
             </Form.Item>
 
             <Form.Item>

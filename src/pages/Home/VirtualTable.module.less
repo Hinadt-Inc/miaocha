@@ -1,77 +1,43 @@
 .virtualLayout {
   width: 100%;
   height: 100%;
-  overflow: auto;
-  position: relative;
-  border: 1px solid #f0f0f0;
   :global {
-    .ant-spin {
-      top: auto !important;
-      bottom: 50px !important;
+    .ant-table-cell {
+      word-break: break-all;
+      font-size: 12px;
+      font-family: "Lucida Console", Monaco, monospace;
+    }
+    .ant-table-row {
+      max-height: 155px;
+      overflow: hidden;
     }
   }
-
-  .table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-    font-family: monospace,'Fira Code', Consolas, 'Courier New';
-
-    .tableHeader {
-      background-color: #fafafa;
-      position: sticky;
-      top: 0;
-      z-index: 1;
-      .headerRow {
-        display: flex;
-        align-items: center;
-      }
-      .headerCell {
-        padding: 12px 16px;
-        font-weight: 500;
-        text-align: left;
-        border-bottom: 1px solid #f0f0f0;
-        white-space: nowrap;
-        font-weight: 700;
-        font-size: 12px;
+  .source {
+    display: inline-block;
+    margin: 0;
+    padding: 0;
+    line-height: 2;
+    word-break: break-all;
+    :global {
+      dt {
+        display: inline;
+        background-color: rgba(0, 46, 63, 0.1);
         color: #000;
-        flex: 1;
-        &:first-child {
-          max-width: 200px;
-        }
+        padding: 1px 5px;
+        margin-right: 5px;
+        word-break: normal;
+        border-radius: 2px;
+      }
+      dd {
+        display: inline;
+        margin: 0 5px 0 0;
+        color: #2d2d2d;
       }
     }
-    .tableRow {
-      display: flex;
-      align-items: center;
-      border-bottom: 1px solid #f0f0f0;
-      background-color: #fff;
-      transition: background-color 0.3s;
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-
-      &:hover {
-        background-color: #fafafa;
-      }
-
-      .tableCell {
-        padding: 8px 16px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        word-break: break-all;
-        display: -webkit-box;
-        -webkit-line-clamp: 5;
-        line-clamp: 5;
-        -webkit-box-orient: vertical;
-        max-height: 7.3em;
-        line-height: 1.3em;
-        flex: 1;
-        &:first-child {
-          max-width: 200px;
-        }
-      }
+    .highlight {
+      background-color: #ffff00;
+      padding: 0 2px;
+      border-radius: 2px;
     }
   }
 }
