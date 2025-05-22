@@ -21,8 +21,7 @@ const HomePage = () => {
     pageSize: 20,
     datasourceId: null,
     module: null,
-    // timeRange: 'last_15m',
-    timeRange: 'today',
+    timeRange: 'last_15m',
     timeGrouping: 'minute',
   };
   // 日志检索请求参数

@@ -22,6 +22,7 @@ service.interceptors.request.use(
     return config;
   },
   (error) => {
+    window.dispatchEvent(new CustomEvent('unhandledrejection', { detail: { reason: error } }));
     return Promise.reject(error);
   },
 );
@@ -35,21 +36,19 @@ let retryQueue: Array<() => void> = [];
 service.interceptors.response.use(
   (response: AxiosResponse) => {
     const res = response.data;
+    const { success, errorMessage } = res?.data || {};
+    const isBizError = !success && errorMessage;
+    const isCodeError = res.code !== '0000';
     // 根据后端接口返回结构调整
-    if (res.code !== '0000') {
-      // 处理业务错误
-      // 全局提示信息
-      // 动态导入message组件以避免循环依赖
-      import('../hooks/useMessage').then(({ useMessage }) => {
-        const message = useMessage();
-        message.error(res.message || '操作失败');
-      });
-
-      return Promise.reject(new Error(res.message || 'Error'));
+    if (isBizError || isCodeError) {
+      const err = new Error(errorMessage);
+      window.dispatchEvent(new CustomEvent('unhandledrejection', { detail: { reason: err } }));
+      throw err;
     }
     return res.data;
   },
   async (error) => {
+    console.error('============service.interceptors.response.error:', error);
     const originalRequest = error.config;
     const res = error.response?.data || {};
 
@@ -113,6 +112,7 @@ service.interceptors.response.use(
     }
 
     // 处理其他HTTP错误
+    window.dispatchEvent(new CustomEvent('unhandledrejection', { detail: { reason: error } }));
     return Promise.reject(error);
   },
 );
@@ -131,5 +131,3 @@ export function get<T = unknown>(url: string, config?: AxiosRequestConfig): Prom
 export function post<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
   return request({ ...config, method: 'POST', url, data });
 }
-
-// 其他请求方法可以根据需要继续封装...

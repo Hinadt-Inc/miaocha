@@ -19,7 +19,6 @@ const VirtualTable = (props: IProps) => {
   const tblRef: Parameters<typeof Table>[0]['ref'] = useRef(null); // 表格的ref
   const [containerHeight, setContainerHeight] = useState<number>(0); // 容器高度
   const [headerHeight, setHeaderHeight] = useState<number>(0); // 表头高度
-
   const getColumns = useMemo(() => {
     const otherColumns = dynamicColumns?.filter((item) => item.selected && item.columnName !== 'log_time');
     const _columns: any[] = [];
