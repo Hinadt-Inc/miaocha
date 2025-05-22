@@ -4,34 +4,65 @@ import { getFieldTypeColor } from '@/utils/logDataHelpers';
 import styles from './Sider.module.less';
 
 interface IFieldData {
+  activeColumns: string[]; // 选中的列
   searchParams: ILogSearchParams; // 搜索参数
   distributions: Record<string, IFieldDistributions>; // 字段分布
-  isSelected: boolean; // 是否选中
   onToggle: (column: ILogColumnsResponse, index: number) => void; // 切换选中状态
   onSearch: (params: ILogSearchParams) => void; // 搜索
-  onDistribution: (params: string, sql?: string) => void; // 分布
+  onDistribution: (columnName: string, newActiveColumns: string[], sql: string) => void; // 分布
   onChangeSql: (params: string) => void; // SQL变化回调函数
+  onActiveColumns: (params: string[]) => void; // 选中的列
 }
 
 interface IProps {
+  isSelected: boolean; // 是否选中
   columnIndex: number; // 字段索引
   column: ILogColumnsResponse; // 字段数据
   fieldData: IFieldData; // 合并后的字段数据
 }
 
-const FieldListItem: React.FC<IProps> = ({ column, columnIndex, fieldData }) => {
-  const { distributions = {}, isSelected, onSearch, searchParams, onChangeSql, onDistribution, onToggle } = fieldData;
+const FieldListItem: React.FC<IProps> = ({ isSelected, column, columnIndex, fieldData }) => {
+  const {
+    distributions = {},
+    activeColumns = [],
+    onActiveColumns,
+    onSearch,
+    searchParams,
+    onChangeSql,
+    onDistribution,
+    onToggle,
+  } = fieldData;
   const [activeKey, setActiveKey] = useState<string[]>([]);
-  const handleCollapseChange = useCallback((key: string | string[]) => {
-    setActiveKey(key as string[]);
-  }, []);
+
+  // 切换折叠面板
+  const handleCollapseChange = useCallback(
+    (key: string[]) => {
+      const { columnName = '' } = column;
+      // 只有当折叠面板状态变化时才更新activeColumns
+      if (key.length > 0) {
+        if (!activeColumns.includes(columnName)) {
+          const newActiveColumns = [...activeColumns, columnName];
+          onActiveColumns(newActiveColumns);
+          onDistribution(columnName, newActiveColumns, '');
+        }
+      } else {
+        // 移除
+        const newActiveColumns = activeColumns.filter((item) => item !== columnName);
+        onActiveColumns(newActiveColumns);
+        onDistribution(columnName, newActiveColumns, '');
+      }
+      setActiveKey(key as string[]);
+    },
+    [activeColumns, column.columnName, onActiveColumns],
+  );
 
   if (column.isFixed) {
     return null;
   }
 
+  // 点击查询
   const query = (flag: '=' | '!=', parent: ILogColumnsResponse, son: IValueDistributions) => {
-    const { columnName } = parent;
+    const { columnName = '' } = parent;
     const { value } = son;
     const sql = `${columnName} ${flag} '${value}'`;
     onChangeSql(sql);
@@ -40,7 +71,7 @@ const FieldListItem: React.FC<IProps> = ({ column, columnIndex, fieldData }) => 
       offset: 0,
       whereSqls: [...(searchParams?.whereSqls || []), sql],
     });
-    onDistribution(activeKey[0] || '', sql);
+    // onDistribution(columnName, activeColumns, sql);
   };
 
   return (
@@ -54,7 +85,7 @@ const FieldListItem: React.FC<IProps> = ({ column, columnIndex, fieldData }) => 
         {
           key: `${column.columnName}`,
           label: (
-            <div className={styles.bar} onClick={() => onDistribution(activeKey[0] || '')}>
+            <div className={styles.bar}>
               <div>
                 <Tag color={getFieldTypeColor(column.dataType)}>{column.dataType?.substr(0, 1)?.toUpperCase()}</Tag>
                 {column.columnName}

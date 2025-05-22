@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Collapse, Cascader, Spin } from 'antd';
 import { useRequest } from 'ahooks';
 import * as api from '@/api/logs';
@@ -21,6 +21,7 @@ const Sider: React.FC<IProps> = (props) => {
   const [columns, setColumns] = useState<ILogColumnsResponse[]>([]); // 日志表字段
   const [selectedModule, setSelectedModule] = useState<string[]>([]); // 已选模块
   const [distributions, setDistributions] = useState<Record<string, IFieldDistributions>>({}); // 字段值分布列表
+  const [activeColumns, setActiveColumns] = useState<string[]>([]); // 激活的字段
 
   // 获取日志字段
   const getColumns = useRequest(api.fetchColumns, {
@@ -57,6 +58,9 @@ const Sider: React.FC<IProps> = (props) => {
         ...distributions,
         [fieldName]: { ...(res?.fieldDistributions?.[0] || {}) },
       } as any);
+    },
+    onError: () => {
+      setDistributions({});
     },
   });
 
@@ -101,19 +105,33 @@ const Sider: React.FC<IProps> = (props) => {
     }
   };
 
-  const getDistribution = (data: ILogColumnsResponse, activeKey: string, sql?: string | undefined) => {
-    if (activeKey && !sql) return;
-
+  // 获取字段值分布
+  const getDistribution = (columnName: string, newActiveColumns: string[], sql: string) => {
+    if (!newActiveColumns.includes(columnName)) return;
     const params: ILogSearchParams = {
       ...searchParams,
-      fields: [data.columnName] as any,
+      fields: newActiveColumns,
+      offset: 0,
     };
     if (sql) {
       params.whereSqls = [...(searchParams?.whereSqls || []), sql];
     }
-
     queryDistribution.run(params);
   };
+
+  const fieldListProps = useMemo(() => {
+    return {
+      searchParams,
+      distributions,
+      activeColumns,
+      onToggle: toggleColumn,
+      onSearch,
+      onChangeSql,
+      onActiveColumns: setActiveColumns,
+      onDistribution: (columnName: string, newActiveColumns: string[], sql: string) =>
+        getDistribution(columnName, newActiveColumns, sql),
+    };
+  }, [searchParams, distributions, activeColumns, toggleColumn, onSearch, onChangeSql, getDistribution]);
 
   return (
     <div className={styles.layoutSider}>
@@ -140,48 +158,34 @@ const Sider: React.FC<IProps> = (props) => {
             {
               key: 'selected',
               label: '已选字段',
-              children: columns?.map((item, index) =>
-                !item.selected ? null : (
+              children: columns?.map((item, index) => {
+                if (!item.selected) return null;
+                return (
                   <FieldListItem
                     key={item.columnName}
+                    isSelected
                     column={item}
                     columnIndex={index}
-                    fieldData={{
-                      searchParams,
-                      distributions,
-                      isSelected: true,
-                      onToggle: toggleColumn,
-                      onSearch,
-                      onChangeSql,
-                      onDistribution: (activeKey: string, sql: string | undefined) =>
-                        getDistribution(item, activeKey, sql),
-                    }}
+                    fieldData={fieldListProps}
                   />
-                ),
-              ),
+                );
+              }),
             },
             {
               key: 'available',
               label: '可用字段',
-              children: columns?.map((item, index) =>
-                item.selected ? null : (
+              children: columns?.map((item, index) => {
+                if (item.selected) return null;
+                return (
                   <FieldListItem
                     key={item.columnName}
+                    isSelected={false}
                     column={item}
                     columnIndex={index}
-                    fieldData={{
-                      searchParams,
-                      isSelected: false,
-                      distributions,
-                      onToggle: toggleColumn,
-                      onSearch,
-                      onChangeSql,
-                      onDistribution: (activeKey: string, sql: string | undefined) =>
-                        getDistribution(item, activeKey, sql),
-                    }}
+                    fieldData={fieldListProps}
                   />
-                ),
-              ),
+                );
+              }),
             },
           ]}
         />
