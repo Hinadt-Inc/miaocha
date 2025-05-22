@@ -7,12 +7,9 @@ import {
   grantTablePermission,
   getMyTablePermissions,
   revokePermissionById,
+  batchRevokeModulePermissions,
 } from '../../api/permission';
-import type {
-  DatasourcePermission,
-  TablePermission,
-  PermissionResponse,
-} from '../../types/permissionTypes';
+import type { DatasourcePermission, TablePermission, PermissionResponse } from '../../types/permissionTypes';
 import { HomeOutlined, SearchOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 
@@ -173,10 +170,7 @@ const PermissionManagementPage = () => {
 
   useEffect(() => {
     // 当搜索参数变化时执行前端过滤
-    const filtered = filterPermissions(
-      permissions,
-      searchParams.userId || searchParams.datasourceId,
-    );
+    const filtered = filterPermissions(permissions, searchParams.userId || searchParams.datasourceId);
     setFilteredPermissions(filtered);
   }, [searchParams, permissions]);
 
@@ -309,25 +303,47 @@ const PermissionManagementPage = () => {
   };
 
   // 撤销权限
-  const handleRevoke = async (permissionId: string) => {
-    if (!permissionId) {
-      message.error('无效的权限ID');
+  const handleRevoke = async (permissionId: string, moduleName: string) => {
+    if (!permissionId || !moduleName) {
+      message.error('无效的权限信息');
       return;
     }
 
+    let currentSelectedUser = selectedUser;
+
     modal.confirm({
-      title: '确认撤销权限',
-      content: '确定要撤销该权限吗？此操作不可恢复',
+      title: '撤销权限',
+      width: 500,
+      content: (
+        <div style={{ margin: '16px 0' }}>
+          <div style={{ marginBottom: 8 }}>选择用户:</div>
+          <Select
+            style={{ width: '100%' }}
+            options={users}
+            placeholder="请选择要撤销权限的用户"
+            onChange={(value) => {
+              currentSelectedUser = value;
+              setSelectedUser(value);
+            }}
+          />
+        </div>
+      ),
       okText: '确认撤销',
       cancelText: '取消',
       okButtonProps: { danger: true },
       onOk: async () => {
+        if (!currentSelectedUser) {
+          message.error('请选择用户');
+          return Promise.reject();
+        }
         try {
-          await revokePermissionById(permissionId);
+          await batchRevokeModulePermissions(currentSelectedUser, [moduleName]);
           message.success('权限撤销成功');
           fetchPermissions();
-        } catch {
-          message.error('权限撤销失败');
+          return Promise.resolve();
+        } catch (error: any) {
+          message.error(`权限撤销失败: ${error.message || '未知错误'}`);
+          return Promise.reject();
         }
       },
     });
@@ -358,7 +374,7 @@ const PermissionManagementPage = () => {
                 type="link"
                 danger
                 size="small"
-                onClick={() => handleRevoke(table.permissionId as string)}
+                onClick={() => handleRevoke(table.permissionId as string, table.moduleName)}
                 style={{ padding: '0 4px' }}
               >
                 撤销

@@ -21,11 +21,7 @@ export function grantTablePermission(
  * @param tableName 表名
  * @returns Promise
  */
-export function revokeTablePermission(
-  userId: string,
-  datasourceId: string,
-  tableName: string,
-): Promise<void> {
+export function revokeTablePermission(userId: string, datasourceId: string, tableName: string): Promise<void> {
   return request({
     method: 'DELETE',
     url: `/api/permissions/user/${userId}/datasource/${datasourceId}/table/${tableName}`,
@@ -38,10 +34,7 @@ export function revokeTablePermission(
  * @param datasourceId 数据源ID
  * @returns Promise<DatasourcePermission[]>
  */
-export function getUserDatasourcePermissions(
-  userId: string,
-  datasourceId: string,
-): Promise<DatasourcePermission[]> {
+export function getUserDatasourcePermissions(userId: string, datasourceId: string): Promise<DatasourcePermission[]> {
   return get(`/api/permissions/user/${userId}/datasource/${datasourceId}`);
 }
 
@@ -62,6 +55,20 @@ export function revokePermissionById(permissionId: string): Promise<void> {
   return request({
     method: 'DELETE',
     url: `/api/permissions/${permissionId}`,
+  });
+}
+
+/**
+ * 批量撤销用户模块权限
+ * @param userId 用户ID
+ * @param modules 模块列表
+ * @returns Promise<void>
+ */
+export function batchRevokeModulePermissions(userId: string, modules: string[]): Promise<void> {
+  return request({
+    method: 'DELETE',
+    url: `/api/permissions/modules/user/${userId}/batch-revoke`,
+    data: { userId, modules },
   });
 }
 
