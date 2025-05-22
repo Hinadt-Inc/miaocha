@@ -37,7 +37,7 @@ public class LogSqlBuilder {
         appendSearchConditions(sql, dto);
 
         sql.append(" GROUP BY date_trunc(log_time, '").append(timeUnit).append("')")
-                .append(" ORDER BY log_time_ DESC");
+                .append(" ORDER BY log_time_ ASC");
 
         return sql.toString();
     }

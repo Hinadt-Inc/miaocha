@@ -29,7 +29,7 @@ public class ResultProcessor {
         List<Map<String, Object>> rows = (List<Map<String, Object>>) queryResult.get("rows");
 
         if (rows != null) {
-            // 直接使用数据库返回的顺序，因为SQL已经按log_time_降序排序
+            // 直接使用数据库返回的顺序，因为SQL已经按log_time_升序排序
             for (Map<String, Object> row : rows) {
                 LogHistogramResultDTO.LogDistributionData data = new LogHistogramResultDTO.LogDistributionData();
                 if (row.containsKey("log_time_")) {
