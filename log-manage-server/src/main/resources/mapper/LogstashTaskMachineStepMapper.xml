@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hina.log.mapper.LogstashTaskMachineStepMapper">
+    
+    <!-- 插入步骤记录 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO logstash_task_machine_step (task_id, machine_id, step_id, step_name, status)
+        VALUES (#{taskId}, #{machineId}, #{stepId}, #{stepName}, #{status})
+    </insert>
+    
+    <!-- 批量插入步骤记录 -->
+    <insert id="batchInsert">
+        INSERT INTO logstash_task_machine_step (task_id, machine_id, step_id, step_name, status) VALUES
+        <foreach collection="steps" item="step" separator=",">
+            (#{step.taskId}, #{step.machineId}, #{step.stepId}, #{step.stepName}, #{step.status})
+        </foreach>
+    </insert>
+    
+    <!-- 根据任务ID查询所有步骤 -->
+    <select id="findByTaskId" resultType="com.hina.log.entity.LogstashTaskMachineStep">
+        SELECT * FROM logstash_task_machine_step WHERE task_id = #{taskId} ORDER BY machine_id, id
+    </select>
+    
+    <!-- 根据任务ID和机器ID查询所有步骤 -->
+    <select id="findByTaskIdAndMachineId" resultType="com.hina.log.entity.LogstashTaskMachineStep">
+        SELECT * FROM logstash_task_machine_step WHERE task_id = #{taskId} AND machine_id = #{machineId} ORDER BY id
+    </select>
+    
+    <!-- 更新步骤状态 -->
+    <update id="updateStatus">
+        UPDATE logstash_task_machine_step SET status = #{status}, update_time = NOW()
+        WHERE task_id = #{taskId} AND machine_id = #{machineId} AND step_id = #{stepId}
+    </update>
+    
+    <!-- 更新步骤开始时间 -->
+    <update id="updateStartTime">
+        UPDATE logstash_task_machine_step SET start_time = #{startTime}, update_time = NOW()
+        WHERE task_id = #{taskId} AND machine_id = #{machineId} AND step_id = #{stepId}
+    </update>
+    
+    <!-- 更新步骤结束时间 -->
+    <update id="updateEndTime">
+        UPDATE logstash_task_machine_step SET end_time = #{endTime}, update_time = NOW()
+        WHERE task_id = #{taskId} AND machine_id = #{machineId} AND step_id = #{stepId}
+    </update>
+    
+    <!-- 更新步骤错误信息 -->
+    <update id="updateErrorMessage">
+        UPDATE logstash_task_machine_step SET error_message = #{errorMessage}, update_time = NOW()
+        WHERE task_id = #{taskId} AND machine_id = #{machineId} AND step_id = #{stepId}
+    </update>
+    
+    <!-- 根据任务ID统计各状态步骤数量 -->
+    <select id="countStepStatusByTaskId" resultType="object">
+        SELECT status, COUNT(*) as count FROM logstash_task_machine_step
+        WHERE task_id = #{taskId} GROUP BY status
+    </select>
+    
+    <!-- 重置任务所有步骤的状态 -->
+    <update id="resetStepStatuses">
+        UPDATE logstash_task_machine_step SET status = #{status}, start_time = NULL, end_time = NULL, update_time = NOW()
+        WHERE task_id = #{taskId}
+    </update>
+    
+    <!-- 清除任务所有步骤的错误信息 -->
+    <update id="clearStepErrorMessages">
+        UPDATE logstash_task_machine_step SET error_message = NULL, update_time = NOW()
+        WHERE task_id = #{taskId}
+    </update>
+    
+    <!-- 删除任务所有步骤 -->
+    <delete id="deleteByTaskId">
+        DELETE FROM logstash_task_machine_step WHERE task_id = #{taskId}
+    </delete>
+    
+</mapper> 

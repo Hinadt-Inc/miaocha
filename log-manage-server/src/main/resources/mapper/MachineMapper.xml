@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hina.log.mapper.MachineMapper">
+    
+    <!-- 插入机器记录 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO machine (name, ip, port, username, password, ssh_key, create_time, update_time)
+        VALUES (#{name}, #{ip}, #{port}, #{username}, #{password}, #{sshKey}, NOW(), NOW())
+    </insert>
+    
+    <!-- 更新机器记录 -->
+    <update id="update">
+        UPDATE machine SET name=#{name}, ip=#{ip}, port=#{port}, username=#{username},
+        password=#{password}, ssh_key=#{sshKey}, update_time=NOW() WHERE id=#{id}
+    </update>
+    
+    <!-- 删除机器记录 -->
+    <delete id="deleteById">
+        DELETE FROM machine WHERE id=#{id}
+    </delete>
+    
+    <!-- 根据ID查询机器 -->
+    <select id="selectById" resultType="com.hina.log.entity.Machine">
+        SELECT * FROM machine WHERE id=#{id}
+    </select>
+    
+    <!-- 根据名称查询机器 -->
+    <select id="selectByName" resultType="com.hina.log.entity.Machine">
+        SELECT * FROM machine WHERE name=#{name}
+    </select>
+    
+    <!-- 根据ID列表查询机器 -->
+    <select id="selectByIds" resultType="com.hina.log.entity.Machine">
+        SELECT * FROM machine WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+    
+    <!-- 查询所有机器 -->
+    <select id="selectAll" resultType="com.hina.log.entity.Machine">
+        SELECT * FROM machine
+    </select>
+    
+</mapper> 

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hina.log.mapper.DatasourceMapper">
+    
+    <!-- 插入数据源 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO datasource (name, type, description, ip, port, username, password, `database`, jdbc_params, create_time, update_time)
+        VALUES (#{name}, #{type}, #{description}, #{ip}, #{port}, #{username}, #{password}, #{database}, #{jdbcParams},
+        NOW(), NOW())
+    </insert>
+    
+    <!-- 更新数据源 -->
+    <update id="update">
+        UPDATE datasource SET name=#{name}, type=#{type}, description=#{description},
+        ip=#{ip}, port=#{port}, username=#{username}, password=#{password},
+        database=#{database}, jdbc_params=#{jdbcParams}, update_time=NOW() WHERE id=#{id}
+    </update>
+    
+    <!-- 删除数据源 -->
+    <delete id="deleteById">
+        DELETE FROM datasource WHERE id=#{id}
+    </delete>
+    
+    <!-- 根据ID查询数据源 -->
+    <select id="selectById" resultType="com.hina.log.entity.Datasource">
+        SELECT * FROM datasource WHERE id=#{id}
+    </select>
+    
+    <!-- 根据名称查询数据源 -->
+    <select id="selectByName" resultType="com.hina.log.entity.Datasource">
+        SELECT * FROM datasource WHERE name=#{name}
+    </select>
+    
+    <!-- 查询所有数据源 -->
+    <select id="selectAll" resultType="com.hina.log.entity.Datasource">
+        SELECT * FROM datasource
+    </select>
+    
+</mapper> 
