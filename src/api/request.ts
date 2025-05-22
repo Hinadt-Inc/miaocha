@@ -40,9 +40,9 @@ service.interceptors.response.use(
       // 处理业务错误
       // 全局提示信息
       // 动态导入message组件以避免循环依赖
-      import('../hooks/useMessage').then(({ useMessage }) => {
-        const message = useMessage();
-        message.error(res.message || '操作失败');
+      import('antd').then(({ message }) => {
+        const [messageApi] = message.useMessage();
+        messageApi.error(res.message || '操作失败');
       });
 
       return Promise.reject(new Error(res.message || 'Error'));
@@ -129,11 +129,7 @@ export function get<T = unknown>(url: string, config?: AxiosRequestConfig): Prom
 }
 
 // 封装POST请求
-export function post<T = unknown>(
-  url: string,
-  data?: unknown,
-  config?: AxiosRequestConfig,
-): Promise<T> {
+export function post<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
   return request({ ...config, method: 'POST', url, data });
 }
 
