@@ -1,144 +1,153 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Splitter } from 'antd';
 import { useRequest } from 'ahooks';
+import * as api from '@/api/logs';
 import SearchBar from './SearchBar';
 import Log from './Log';
 import Sider from './Sider';
-import * as api from '@/api/permission';
-import { searchLogs } from '@/api/logs';
 import styles from './index.module.less';
 
 const HomePage = () => {
-  const [moduleNames, setModuleNames] = useState<IStatus[]>([]); // 模块名称列表，用于字段选择等组件
-  const [log, setLog] = useState<ISearchLogsResponse | null>(null); // 日志数据
-  const [logColumns, setLogColumns] = useState<ILogColumnsResponse[]>([]); // 日志字段列表
-  // 搜索参数
-  const [searchParams, setSearchParams] = useState<ISearchLogsParams>({
+  const [moduleOptions, setModuleOptions] = useState<IStatus[]>([]); // 模块名称列表，用于字段选择等组件
+  const [detailData, setDetailData] = useState<ILogDetailsResponse | null>(null); // 日志数据
+  const [logTableColumns, setLogTableColumns] = useState<ILogColumnsResponse[]>([]); // 日志字段列表
+  const [histogramData, setHistogramData] = useState<ILogHistogramData[] | null>(null); // 日志时间分布列表
+
+  const searchBarRef = useRef<HTMLDivElement>(null);
+
+  // 默认的搜索参数
+  const defaultSearchParams: ILogSearchParams = {
+    offset: 0,
     pageSize: 20,
-    datasourceId: undefined,
-    module: undefined,
+    datasourceId: null,
+    module: null,
+    // timeRange: 'last_15m',
+    timeRange: 'today',
+    timeGrouping: 'minute',
+  };
+  // 日志检索请求参数
+  const [searchParams, setSearchParams] = useState<ILogSearchParams>(defaultSearchParams);
+
+  // 获取模块名称
+  const generateModuleHierarchy = (modulesData: IMyModulesResponse[]): IStatus[] => {
+    return (
+      modulesData?.map(({ modules, datasourceId, datasourceName }) => ({
+        label: String(datasourceName),
+        value: String(datasourceId),
+        children:
+          modules?.map(({ moduleName }) => ({
+            value: String(moduleName),
+            label: String(moduleName),
+          })) || [],
+      })) || []
+    );
+  };
+
+  // 获取模块列表
+  const getMyModules = useRequest(api.fetchMyModules, {
+    onSuccess: (res) => {
+      const moduleHierarchy = generateModuleHierarchy(res);
+
+      // 设置默认数据源和模块
+      if ((!searchParams.datasourceId || !searchParams.module) && moduleHierarchy[0]) {
+        setSearchParams((prev) => ({
+          ...prev,
+          datasourceId: Number(moduleHierarchy[0].value),
+          module: moduleHierarchy[0]?.children[0]?.value,
+        }));
+      } else {
+        // todo 当切换时，需要更新数据源和模块，并更新日志数据
+      }
+      setModuleOptions(moduleHierarchy);
+    },
   });
 
-  // 查询日志
-  const fetchLog = useRequest(searchLogs, {
+  // 执行日志明细查询
+  const getDetailData = useRequest(api.fetchLogDetails, {
     manual: true,
     onSuccess: (res) => {
       const { rows } = res;
       // 为每条记录添加唯一ID
       (rows || []).map((item, index) => {
-        item.key = `${Date.now()}-${index}`;
+        item._key = `${Date.now()}_${index}`;
       });
-      setLog(res);
+      setDetailData(res);
+    },
+    onError: () => {
+      setDetailData(null);
+    },
+  });
+
+  // 执行日志时间分布查询
+  const getHistogramData = useRequest(api.fetchLogHistogram, {
+    manual: true,
+    onSuccess: (res) => {
+      setHistogramData(res?.distributionData || []);
+    },
+    onError: () => {
+      setHistogramData(null);
     },
   });
 
   useEffect(() => {
-    // 只判断 datasourceId，因为这是查询的必要参数
+    // 只判断 datasourceId和module，因为这是查询的必要参数
     if (searchParams.datasourceId && searchParams.module) {
-      fetchLog.run(searchParams);
+      getDetailData.run(searchParams);
+      getHistogramData.run(searchParams);
     }
   }, [searchParams]);
 
-  // 获取模块名称
-  const fetchModuleNames = useRequest(api.getMyModules, {
-    onSuccess: (res) => {
-      const target: IStatus[] = [];
-      res?.forEach((item) => {
-        const { modules, datasourceId, datasourceName } = item;
-        const sub = {};
-        Object.assign(sub, {
-          label: String(datasourceName),
-          value: String(datasourceId),
-        });
-        const children: IStatus[] = [];
-        if (modules?.length > 0) {
-          const names = modules?.map((m: any) => ({
-            value: String(m.moduleName),
-            label: String(m.moduleName),
-          }));
-          children.push(...names);
-        }
-        Object.assign(sub, {
-          children,
-        });
-        target.push(sub);
-      });
-
-      // 如果 searchParams 中没有 datasourceId，则使用第一个数据源的 ID
-      if (target[0] && (!searchParams.datasourceId || !searchParams.module)) {
-        setSearchParams((prev) => ({
-          ...prev,
-          datasourceId: Number(target[0].value),
-          module: target[0]?.children[0]?.value,
-        }));
-      }
-      setModuleNames(target);
-    },
-  });
-
-  // 搜索
-  const onSearch = (params: ISearchLogsParams) => {
-    setSearchParams({
-      datasourceId: searchParams.datasourceId,
-      module: searchParams.module,
-      pageSize: searchParams.pageSize,
-      startTime: searchParams.startTime,
-      endTime: searchParams.endTime,
-      ...params,
-    });
-  };
-
-  // 使用useMemo优化搜索参数构建，减少不必要的对象创建
-  // const [timeGrouping, setTimeGrouping] = useState<'minute' | 'hour' | 'day' | 'month'>('minute');
-
   // 处理列变化
-  const handleColumnsChange = (columns: ILogColumnsResponse[]) => {
-    setLogColumns(columns);
+  const handleChangeColumns = (columns: ILogColumnsResponse[]) => {
+    setLogTableColumns(columns);
   };
 
   // 优化字段选择组件的props
-  const siderProps = useMemo(
-    () => ({
-      moduleNames,
-      moduleLoading: fetchModuleNames.loading,
-      logLoading: fetchLog.loading,
-      fieldDistributions: log?.fieldDistributions,
-      onColumnsChange: handleColumnsChange,
-    }),
-    [log?.fieldDistributions, fetchLog.loading, moduleNames, fetchModuleNames.loading],
-  );
+  const siderProps = {
+    searchParams,
+    modules: moduleOptions,
+    moduleLoading: getMyModules.loading,
+    detailLoading: getDetailData.loading,
+    onSearch: setSearchParams,
+    onChangeColumns: handleChangeColumns,
+    onChangeSql: (sql: string) => (searchBarRef?.current as any)?.renderSql?.(sql),
+  };
 
-  // 优化DataTable组件的props
-  const dataTableProps = useMemo(
+  // 优化log组件的props
+  const logProps: any = useMemo(
     () => ({
-      log,
-      fetchLog,
-      logColumns,
+      histogramData,
+      histogramDataLoading: getHistogramData.loading,
+      detailData,
+      getDetailData,
+      searchParams,
+      dynamicColumns: logTableColumns,
     }),
-    [log, fetchLog, logColumns],
+    [histogramData, getHistogramData.loading, detailData, getDetailData, logTableColumns, searchParams],
   );
 
   // 搜索栏组件props
   const searchBarProps = useMemo(
     () => ({
-      onSearch,
-      totalCount: log?.totalCount,
-      loading: fetchLog?.loading,
+      searchParams,
+      totalCount: detailData?.totalCount,
+      loading: getDetailData?.loading || getHistogramData.loading,
+      onSubmit: setSearchParams,
     }),
-    [fetchLog.loading, onSearch, log?.totalCount],
+    [searchParams, detailData?.totalCount, getDetailData?.loading, getHistogramData.loading, setSearchParams],
   );
 
   return (
     <div className={styles.layout}>
-      <SearchBar {...searchBarProps} />
+      <SearchBar ref={searchBarRef} {...searchBarProps} />
 
       <Splitter className={styles.container}>
         <Splitter.Panel collapsible defaultSize={260} min={260} max="70%">
-          <Sider {...(siderProps as any)} />
+          <Sider {...siderProps} />
         </Splitter.Panel>
         <Splitter.Panel collapsible>
           <div className={styles.right}>
-            <Log {...(dataTableProps as any)} />
+            <Log {...logProps} />
           </div>
         </Splitter.Panel>
       </Splitter>

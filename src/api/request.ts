@@ -52,7 +52,6 @@ service.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     const res = error.response?.data || {};
-    console.log('error', error);
 
     // 如果是401错误且不是刷新token请求
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -129,11 +128,7 @@ export function get<T = unknown>(url: string, config?: AxiosRequestConfig): Prom
 }
 
 // 封装POST请求
-export function post<T = unknown>(
-  url: string,
-  data?: unknown,
-  config?: AxiosRequestConfig,
-): Promise<T> {
+export function post<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
   return request({ ...config, method: 'POST', url, data });
 }
 

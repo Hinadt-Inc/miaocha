@@ -2,32 +2,25 @@ import { Table, Tabs } from 'antd';
 import { useMemo } from 'react';
 import ReactJson from 'react-json-view';
 import styles from './ExpandedRow.module.less';
+import { highlightText } from '@/utils/highlightText';
 
 interface IProps {
   data: Record<string, any>;
+  keywords: string[]; // 搜索参数
 }
 
 const ExpandedRow = (props: IProps) => {
-  const { data } = props;
+  const { data, keywords } = props;
   const columns = [
     {
       title: '字段',
       dataIndex: 'field',
-      key: 'field',
       width: 150,
     },
     {
       title: '值',
       dataIndex: 'value',
-      key: 'value',
-      render: (_text: string, record: any) => {
-        // message字段或内容较长时自动换行
-        if (record.field === 'message' || String(record.value).length > 100) {
-          return <span className={styles.longText}>{record.value}</span>;
-        }
-        // 其他字段省略显示
-        return record.value;
-      },
+      render: (text: string) => highlightText(text, keywords),
     },
   ];
 
@@ -44,35 +37,17 @@ const ExpandedRow = (props: IProps) => {
       key: 'Table',
       label: 'Table',
       children: (
-        <Table
-          bordered
-          dataSource={dataSource}
-          columns={columns}
-          pagination={false}
-          size="small"
-          rowKey="key"
-        />
+        <Table bordered dataSource={dataSource} columns={columns} pagination={false} size="small" rowKey="key" />
       ),
     },
     {
       key: 'JSON',
       label: 'JSON',
-      children: (
-        <ReactJson
-          src={data}
-          collapsed={2}
-          enableClipboard={true}
-          displayDataTypes={false}
-          name={false}
-          style={{ fontSize: 12 }}
-        />
-      ),
+      children: <ReactJson src={data} collapsed={2} enableClipboard={true} displayDataTypes={false} name={false} />,
     },
   ];
 
-  return (
-    <Tabs className={styles.expandedRow} size="small" defaultActiveKey="table" items={items} />
-  );
+  return <Tabs className={styles.expandedRow} size="small" defaultActiveKey="table" items={items} />;
 };
 
 export default ExpandedRow;

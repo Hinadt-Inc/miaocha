@@ -8,10 +8,7 @@ import type { DatasourcePermission } from '../types/permissionTypes';
  * @param tableName 表名
  * @returns Promise
  */
-export function grantTablePermission(
-  userId: string,
-  query: { module: string },
-): Promise<DatasourcePermission> {
+export function grantTablePermission(userId: string, query: { module: string }): Promise<DatasourcePermission> {
   return post(`/api/permissions/modules/user/${userId}/grant?module=${query.module}`);
 }
 
@@ -22,11 +19,7 @@ export function grantTablePermission(
  * @param tableName 表名
  * @returns Promise
  */
-export function revokeTablePermission(
-  userId: string,
-  datasourceId: string,
-  tableName: string,
-): Promise<void> {
+export function revokeTablePermission(userId: string, datasourceId: string, tableName: string): Promise<void> {
   return request({
     method: 'DELETE',
     url: `/api/permissions/user/${userId}/datasource/${datasourceId}/table/${tableName}`,
@@ -39,10 +32,7 @@ export function revokeTablePermission(
  * @param datasourceId 数据源ID
  * @returns Promise<DatasourcePermission[]>
  */
-export function getUserDatasourcePermissions(
-  userId: string,
-  datasourceId: string,
-): Promise<DatasourcePermission[]> {
+export function getUserDatasourcePermissions(userId: string, datasourceId: string): Promise<DatasourcePermission[]> {
   return get(`/api/permissions/user/${userId}/datasource/${datasourceId}`);
 }
 
@@ -65,8 +55,3 @@ export function revokePermissionById(permissionId: string): Promise<void> {
     url: `/api/permissions/${permissionId}`,
   });
 }
-
-// 获取我的模块权限
-export const getMyModules = () => {
-  return get('/api/permissions/modules/my') as Promise<IModulesResponse[]>;
-};
