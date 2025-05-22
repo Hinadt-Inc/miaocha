@@ -4,6 +4,9 @@ import com.hina.log.dto.ApiResponse;
 import com.hina.log.dto.logstash.LogstashProcessConfigUpdateRequestDTO;
 import com.hina.log.dto.logstash.LogstashProcessCreateDTO;
 import com.hina.log.dto.logstash.LogstashProcessResponseDTO;
+import com.hina.log.dto.logstash.TaskDetailDTO;
+import com.hina.log.exception.ErrorCode;
+import com.hina.log.logstash.task.TaskService;
 import com.hina.log.service.LogstashProcessService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -14,6 +17,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Logstash进程管理控制器
@@ -27,6 +32,7 @@ import java.util.List;
 public class LogstashProcessController {
 
     private final LogstashProcessService logstashProcessService;
+    private final TaskService taskService;
 
     /**
      * 创建Logstash进程
@@ -69,8 +75,8 @@ public class LogstashProcessController {
     /**
      * 更新Logstash进程配置
      * 支持同时更新主配置、JVM配置、系统配置中的任意组合
-     * 
-     * @param id Logstash进程数据库ID
+     *
+     * @param id  Logstash进程数据库ID
      * @param dto 配置更新请求DTO
      * @return 更新后的Logstash进程
      */
@@ -86,7 +92,7 @@ public class LogstashProcessController {
      * 手动刷新Logstash配置
      * 将数据库中的配置刷新到目标机器（不更改配置内容）
      *
-     * @param id Logstash进程数据库ID
+     * @param id  Logstash进程数据库ID
      * @param dto 配置刷新请求DTO，可指定要刷新的机器
      * @return 操作结果
      */
@@ -145,7 +151,7 @@ public class LogstashProcessController {
     /**
      * 启动单台机器上的Logstash进程
      *
-     * @param id Logstash进程ID
+     * @param id        Logstash进程ID
      * @param machineId 机器ID
      * @return 启动后的Logstash进程信息
      */
@@ -160,7 +166,7 @@ public class LogstashProcessController {
     /**
      * 停止单台机器上的Logstash进程
      *
-     * @param id Logstash进程ID
+     * @param id        Logstash进程ID
      * @param machineId 机器ID
      * @return 停止后的Logstash进程信息
      */
@@ -170,5 +176,121 @@ public class LogstashProcessController {
             @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id,
             @Parameter(description = "机器ID", required = true) @PathVariable("machineId") Long machineId) {
         return ApiResponse.success(logstashProcessService.stopMachineProcess(id, machineId));
+    }
+
+    /**
+     * 获取Logstash进程的所有任务信息
+     *
+     * @param id Logstash进程ID
+     * @return 进程的所有任务详情列表
+     */
+    @GetMapping("/{id}/tasks")
+    @Operation(summary = "获取进程任务信息", description = "获取指定Logstash进程的所有任务信息，包括步骤执行状态和进度")
+    public ApiResponse<List<TaskDetailDTO>> getProcessTasks(
+            @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id) {
+
+        List<String> taskIds = taskService.getAllProcessTaskIds(id);
+        List<TaskDetailDTO> taskDetails = taskIds.stream()
+                .map(taskId -> taskService.getTaskDetail(taskId).orElse(null))
+                .filter(task -> task != null)
+                .collect(Collectors.toList());
+
+        return ApiResponse.success(taskDetails);
+    }
+
+    /**
+     * 获取Logstash进程在特定机器上的所有任务信息
+     *
+     * @param id        Logstash进程ID
+     * @param machineId 机器ID
+     * @return 特定机器上进程的所有任务详情列表
+     */
+    @GetMapping("/{id}/machines/{machineId}/tasks")
+    @Operation(summary = "获取特定机器上的进程任务信息", description = "获取指定Logstash进程在特定机器上的所有任务信息，包括步骤执行状态和进度")
+    public ApiResponse<List<TaskDetailDTO>> getMachineProcessTasks(
+            @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id,
+            @Parameter(description = "机器ID", required = true) @PathVariable("machineId") Long machineId) {
+
+        List<String> taskIds = taskService.getAllMachineTaskIds(id, machineId);
+        List<TaskDetailDTO> taskDetails = taskIds.stream()
+                .map(taskId -> taskService.getTaskDetail(taskId).orElse(null))
+                .filter(task -> task != null)
+                .collect(Collectors.toList());
+
+        return ApiResponse.success(taskDetails);
+    }
+
+    /**
+     * 获取Logstash进程在特定机器上的最新任务信息
+     *
+     * @param id        Logstash进程ID
+     * @param machineId 机器ID
+     * @return 特定机器上进程的最新任务详情
+     */
+    @GetMapping("/{id}/machines/{machineId}/tasks/latest")
+    @Operation(summary = "获取特定机器上的最新进程任务信息", description = "获取指定Logstash进程在特定机器上的最新任务信息，包括步骤执行状态和进度")
+    public ApiResponse<TaskDetailDTO> getLatestMachineProcessTask(
+            @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id,
+            @Parameter(description = "机器ID", required = true) @PathVariable("machineId") Long machineId) {
+
+        Optional<TaskDetailDTO> latestTask = taskService.getLatestMachineTaskDetail(id, machineId);
+        return latestTask.map(ApiResponse::success)
+                .orElseGet(() -> ApiResponse.error(ErrorCode.TASK_NOT_FOUND, "找不到任务信息"));
+    }
+
+    /**
+     * 更新单台机器上的Logstash进程配置
+     * 支持同时更新主配置、JVM配置、系统配置中的任意组合
+     *
+     * @param id        Logstash进程ID
+     * @param machineId 机器ID
+     * @param dto       配置更新请求DTO
+     * @return 更新后的Logstash进程
+     */
+    @PutMapping("/{id}/machines/{machineId}/config")
+    @Operation(summary = "更新单台机器上的Logstash配置", description = "更新特定机器上的Logstash进程配置信息。可以同时更新任意组合的：主配置文件、JVM配置、Logstash系统配置。")
+    public ApiResponse<LogstashProcessResponseDTO> updateMachineConfig(
+            @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id,
+            @Parameter(description = "机器ID", required = true) @PathVariable("machineId") Long machineId,
+            @Parameter(description = "Logstash配置更新请求", required = true) @Valid @RequestBody LogstashProcessConfigUpdateRequestDTO dto) {
+
+        return ApiResponse.success(logstashProcessService.updateSingleMachineConfig(id, machineId, dto.getConfigContent(), dto.getJvmOptions(), dto.getLogstashYml()));
+    }
+
+    /**
+     * 刷新单台机器上的Logstash进程配置
+     * 将数据库中的配置刷新到目标机器（不更改配置内容）
+     *
+     * @param id        Logstash进程ID
+     * @param machineId 机器ID
+     * @return 操作结果
+     */
+    @PostMapping("/{id}/machines/{machineId}/config/refresh")
+    @Operation(summary = "刷新单台机器上的Logstash配置", description = "手动将数据库中的配置刷新到特定机器（不更改配置内容）。")
+    public ApiResponse<LogstashProcessResponseDTO> refreshMachineConfig(
+            @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id,
+            @Parameter(description = "机器ID", required = true) @PathVariable("machineId") Long machineId) {
+
+        // 创建请求DTO并设置目标机器ID
+        LogstashProcessConfigUpdateRequestDTO dto = new LogstashProcessConfigUpdateRequestDTO();
+        dto.setMachineIds(List.of(machineId));
+
+        return ApiResponse.success(logstashProcessService.refreshLogstashConfig(id, dto));
+    }
+
+    /**
+     * 执行Doris SQL语句（主要用于创建表）
+     *
+     * @param id  Logstash进程ID
+     * @param sql SQL语句，通常是CREATE TABLE
+     * @return 更新后的Logstash进程
+     */
+    @PostMapping("/{id}/execute-sql")
+    @Operation(summary = "执行Doris SQL语句", description = "执行Doris SQL语句，主要用于创建表。只有当所有进程实例都处于未启动状态时才能执行。")
+    public ApiResponse<LogstashProcessResponseDTO> executeDorisSql(
+            @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id,
+            @Parameter(description = "SQL语句", required = true) @RequestBody String sql) {
+        
+        return ApiResponse.success(logstashProcessService.executeDorisSql(id, sql));
     }
 }

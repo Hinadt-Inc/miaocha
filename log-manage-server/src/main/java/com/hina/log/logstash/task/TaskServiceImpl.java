@@ -56,9 +56,9 @@ public class TaskServiceImpl implements TaskService {
     @Override
     @Transactional
     public String createGlobalTask(Long processId, String name, String description,
-                       TaskOperationType operationType, List<String> stepIds) {
+                                   TaskOperationType operationType, List<String> stepIds) {
         logger.info("创建全局任务, 进程ID: {}", processId);
-        
+
         // 创建任务
         String taskId = UUID.randomUUID().toString();
         LogstashTask task = new LogstashTask();
@@ -77,16 +77,16 @@ public class TaskServiceImpl implements TaskService {
     @Override
     @Transactional
     public String createMachineTask(Long processId, Long machineId, String name, String description,
-                       TaskOperationType operationType, List<String> stepIds) {
+                                    TaskOperationType operationType, List<String> stepIds) {
         logger.info("创建机器任务, 进程ID: {}, 机器ID: {}", processId, machineId);
-        
+
         // 获取机器信息
         Machine machine = machineMapper.selectById(machineId);
         if (machine == null) {
             logger.error("创建任务失败: 找不到机器ID: {}", machineId);
             return null;
         }
-        
+
         // 创建任务
         String taskId = UUID.randomUUID().toString();
         LogstashTask task = new LogstashTask();
@@ -101,15 +101,15 @@ public class TaskServiceImpl implements TaskService {
 
         // 创建步骤记录
         List<LogstashTaskMachineStep> steps = new ArrayList<>();
-            for (String stepId : stepIds) {
-                LogstashTaskMachineStep step = new LogstashTaskMachineStep();
-                step.setTaskId(taskId);
+        for (String stepId : stepIds) {
+            LogstashTaskMachineStep step = new LogstashTaskMachineStep();
+            step.setTaskId(taskId);
             step.setMachineId(machineId);
-                step.setStepId(stepId);
-                // 根据stepId获取步骤名称（可扩展为从配置或枚举中获取）
-                step.setStepName(stepId);
-                step.setStatus(StepStatus.PENDING.name());
-                steps.add(step);
+            step.setStepId(stepId);
+            // 根据stepId获取步骤名称（可扩展为从配置或枚举中获取）
+            step.setStepName(stepId);
+            step.setStatus(StepStatus.PENDING.name());
+            steps.add(step);
         }
         stepMapper.batchInsert(steps);
 
@@ -120,12 +120,12 @@ public class TaskServiceImpl implements TaskService {
     @Override
     @Transactional
     public Map<Long, String> createMachineTasks(Long processId, String name, String description,
-                                  TaskOperationType operationType, List<Machine> machines,
-                                  List<String> stepIds) {
+                                                TaskOperationType operationType, List<Machine> machines,
+                                                List<String> stepIds) {
         logger.info("批量创建机器任务, 进程ID: {}, 机器数量: {}", processId, machines.size());
-        
+
         Map<Long, String> machineTaskMap = new HashMap<>();
-        
+
         // 为每台机器创建单独的任务
         for (Machine machine : machines) {
             String taskName = name + " - " + machine.getName();
@@ -171,14 +171,6 @@ public class TaskServiceImpl implements TaskService {
         return Optional.of(dto);
     }
 
-    @Override
-    public Optional<TaskDetailDTO> getLatestProcessTaskDetail(Long processId) {
-        Optional<LogstashTask> taskOpt = taskMapper.findLatestByProcessId(processId);
-        if (!taskOpt.isPresent()) {
-            return Optional.empty();
-        }
-        return getTaskDetail(taskOpt.get().getId());
-    }
 
     @Override
     public List<String> getAllProcessTaskIds(Long processId) {
@@ -223,8 +215,24 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public void updateStepErrorMessage(String taskId, Long machineId, String stepId, String errorMessage) {
-        stepMapper.updateErrorMessage(taskId, machineId, stepId, errorMessage);
+    @Transactional
+    public void updateStepStatus(String taskId, Long machineId, String stepId, StepStatus status, String errorMessage) {
+        // 更新状态
+        stepMapper.updateStatus(taskId, machineId, stepId, status.name());
+
+        // 更新开始或结束时间
+        if (status == StepStatus.RUNNING) {
+            stepMapper.updateStartTime(taskId, machineId, stepId, LocalDateTime.now());
+        }
+
+        if (status == StepStatus.COMPLETED || status == StepStatus.FAILED || status == StepStatus.SKIPPED) {
+            stepMapper.updateEndTime(taskId, machineId, stepId, LocalDateTime.now());
+        }
+
+        // 如果提供了错误信息或状态是失败状态，更新错误信息
+        if (errorMessage != null || status == StepStatus.FAILED) {
+            stepMapper.updateErrorMessage(taskId, machineId, stepId, errorMessage);
+        }
     }
 
     @Override

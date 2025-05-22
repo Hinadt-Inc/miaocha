@@ -53,8 +53,25 @@ public class StartFailedStateHandler extends AbstractLogstashMachineStateHandler
             return startCommand.execute(machine)
                     .thenApply(startSuccess -> {
                         StepStatus status = startSuccess ? StepStatus.COMPLETED : StepStatus.FAILED;
-                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.START_PROCESS.getId(), status);
+                        String errorMessage = startSuccess ? null : "启动Logstash进程失败";
+                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.START_PROCESS.getId(), status, errorMessage);
+                        
+                        if (!startSuccess) {
+                            throw new RuntimeException("启动Logstash进程失败");
+                        }
                         return startSuccess;
+                    })
+                    .exceptionally(ex -> {
+                        String errorMessage = ex.getMessage();
+                        logger.error("启动进程时发生异常: {}", errorMessage, ex);
+                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.START_PROCESS.getId(), StepStatus.FAILED, errorMessage);
+                        
+                        // 重新抛出异常，确保异常传递到外层
+                        if (ex instanceof RuntimeException) {
+                            throw (RuntimeException) ex;
+                        } else {
+                            throw new RuntimeException("启动进程时发生异常: " + errorMessage, ex);
+                        }
                     });
         });
         
@@ -68,8 +85,25 @@ public class StartFailedStateHandler extends AbstractLogstashMachineStateHandler
             return verifyCommand.execute(machine)
                     .thenApply(verifySuccess -> {
                         StepStatus status = verifySuccess ? StepStatus.COMPLETED : StepStatus.FAILED;
-                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.VERIFY_PROCESS.getId(), status);
+                        String errorMessage = verifySuccess ? null : "验证Logstash进程失败，进程可能未正常运行";
+                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.VERIFY_PROCESS.getId(), status, errorMessage);
+                        
+                        if (!verifySuccess) {
+                            throw new RuntimeException("验证Logstash进程失败，进程可能未正常运行");
+                        }
                         return verifySuccess;
+                    })
+                    .exceptionally(ex -> {
+                        String errorMessage = ex.getMessage();
+                        logger.error("验证进程时发生异常: {}", errorMessage, ex);
+                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.VERIFY_PROCESS.getId(), StepStatus.FAILED, errorMessage);
+                        
+                        // 重新抛出异常，确保异常传递到外层
+                        if (ex instanceof RuntimeException) {
+                            throw (RuntimeException) ex;
+                        } else {
+                            throw new RuntimeException("验证进程时发生异常: " + errorMessage, ex);
+                        }
                     });
         });
         
@@ -77,20 +111,70 @@ public class StartFailedStateHandler extends AbstractLogstashMachineStateHandler
     }
 
     @Override
-    public CompletableFuture<Boolean> handleUpdateConfig(LogstashProcess process, String configContent, Machine machine, String taskId) {
+    public CompletableFuture<Boolean> handleUpdateConfig(LogstashProcess process, String configContent, String jvmOptions, String logstashYml, Machine machine, String taskId) {
         Long processId = process.getId();
         Long machineId = machine.getId();
         
         logger.info("更新机器 [{}] 上的Logstash进程 [{}] 配置", machineId, processId);
         
-        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.UPDATE_MAIN_CONFIG.getId(), StepStatus.RUNNING);
-        LogstashCommand updateConfigCommand = commandFactory.updateConfigCommand(processId, configContent);
+        // 更新相关步骤的状态为运行中
+        if (configContent != null) {
+            taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.UPDATE_MAIN_CONFIG.getId(), StepStatus.RUNNING);
+        }
+        if (jvmOptions != null) {
+            taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.UPDATE_JVM_CONFIG.getId(), StepStatus.RUNNING);
+        }
+        if (logstashYml != null) {
+            taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.UPDATE_SYSTEM_CONFIG.getId(), StepStatus.RUNNING);
+        }
         
-        return updateConfigCommand.execute(machine)
+        // 创建一个命令来同时更新所有配置
+        LogstashCommand updateCommand = commandFactory.updateConfigCommand(processId, configContent, jvmOptions, logstashYml);
+        
+        // 执行更新命令
+        return updateCommand.execute(machine)
                 .thenApply(success -> {
+                    // 更新所有相关步骤的状态
                     StepStatus status = success ? StepStatus.COMPLETED : StepStatus.FAILED;
-                    taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.UPDATE_MAIN_CONFIG.getId(), status);
+                    String errorMessage = success ? null : "配置更新失败";
+                    
+                    if (configContent != null) {
+                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.UPDATE_MAIN_CONFIG.getId(), status, errorMessage);
+                    }
+                    if (jvmOptions != null) {
+                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.UPDATE_JVM_CONFIG.getId(), status, errorMessage);
+                    }
+                    if (logstashYml != null) {
+                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.UPDATE_SYSTEM_CONFIG.getId(), status, errorMessage);
+                    }
+                    
+                    if (!success) {
+                        throw new RuntimeException("配置更新失败");
+                    }
+                    
                     return success;
+                })
+                .exceptionally(ex -> {
+                    // 处理异常情况
+                    String errorMessage = ex.getMessage();
+                    logger.error("更新配置时发生异常: {}", errorMessage, ex);
+                    
+                    if (configContent != null) {
+                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.UPDATE_MAIN_CONFIG.getId(), StepStatus.FAILED, errorMessage);
+                    }
+                    if (jvmOptions != null) {
+                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.UPDATE_JVM_CONFIG.getId(), StepStatus.FAILED, errorMessage);
+                    }
+                    if (logstashYml != null) {
+                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.UPDATE_SYSTEM_CONFIG.getId(), StepStatus.FAILED, errorMessage);
+                    }
+                    
+                    // 重新抛出异常，确保异常传递到外层
+                    if (ex instanceof RuntimeException) {
+                        throw (RuntimeException) ex;
+                    } else {
+                        throw new RuntimeException("更新配置时发生异常: " + errorMessage, ex);
+                    }
                 });
     }
 
@@ -110,8 +194,26 @@ public class StartFailedStateHandler extends AbstractLogstashMachineStateHandler
         return refreshConfigCommand.execute(machine)
                 .thenApply(success -> {
                     StepStatus status = success ? StepStatus.COMPLETED : StepStatus.FAILED;
-                    taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.REFRESH_CONFIG.getId(), status);
+                    String errorMessage = success ? null : "刷新配置失败";
+                    taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.REFRESH_CONFIG.getId(), status, errorMessage);
+                    
+                    if (!success) {
+                        throw new RuntimeException("刷新配置失败");
+                    }
+                    
                     return success;
+                })
+                .exceptionally(ex -> {
+                    String errorMessage = ex.getMessage();
+                    logger.error("刷新配置时发生异常: {}", errorMessage, ex);
+                    taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.REFRESH_CONFIG.getId(), StepStatus.FAILED, errorMessage);
+                    
+                    // 重新抛出异常，确保异常传递到外层
+                    if (ex instanceof RuntimeException) {
+                        throw (RuntimeException) ex;
+                    } else {
+                        throw new RuntimeException("刷新配置时发生异常: " + errorMessage, ex);
+                    }
                 });
     }
 

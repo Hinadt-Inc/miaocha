@@ -13,9 +13,7 @@ import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -172,89 +170,17 @@ public class LogstashMachineStateManager {
      * @param taskId        任务ID
      * @return 异步操作结果
      */
-    public CompletableFuture<Boolean> updateMachineConfig(Long processId, Machine machine, 
-                                                        String configContent, String jvmOptions, 
-                                                        String logstashYml, String taskId) {
+    public CompletableFuture<Boolean> updateMachineConfig(Long processId, Machine machine,
+                                                          String configContent, String jvmOptions,
+                                                          String logstashYml, String taskId) {
         LogstashProcess process = logstashProcessMapper.selectById(processId);
         if (process == null) {
             logger.error("找不到指定的Logstash进程: {}", processId);
             return CompletableFuture.completedFuture(false);
         }
-
         LogstashMachineContext context = getMachineContext(process, machine);
-        
-        // 需要执行的任务列表
-        List<CompletableFuture<Boolean>> updateTasks = new ArrayList<>();
-        
-        // 更新主配置
-        if (StringUtils.hasText(configContent)) {
-            // 更新数据库中的配置内容
-            logstashMachineMapper.updateConfigContent(processId, machine.getId(), configContent);
-            
-            // 添加更新主配置的任务
-            CompletableFuture<Boolean> updateMainConfig = context.updateConfig(configContent, taskId);
-            updateTasks.add(updateMainConfig);
-        }
-        
-        // 更新JVM选项
-        if (StringUtils.hasText(jvmOptions)) {
-            // 更新数据库中的JVM选项
-            LogstashMachine logstashMachine = logstashMachineMapper.selectByLogstashProcessIdAndMachineId(
-                    processId, machine.getId());
-            if (logstashMachine != null) {
-                logstashMachine.setJvmOptions(jvmOptions);
-                logstashMachineMapper.update(logstashMachine);
-                
-                // 添加更新JVM配置的任务操作
-                // 这里依赖于状态处理器的实现
-                CompletableFuture<Boolean> updateJvmConfig = context.getCurrentHandler()
-                    .handleUpdateJvmOptions(process, machine, jvmOptions, taskId);
-                updateTasks.add(updateJvmConfig);
-            }
-        }
-        
-        // 更新logstash.yml
-        if (StringUtils.hasText(logstashYml)) {
-            // 更新数据库中的logstash.yml
-            LogstashMachine logstashMachine = logstashMachineMapper.selectByLogstashProcessIdAndMachineId(
-                    processId, machine.getId());
-            if (logstashMachine != null) {
-                logstashMachine.setLogstashYml(logstashYml);
-                logstashMachineMapper.update(logstashMachine);
-                
-                // 添加更新logstash.yml的任务操作
-                // 这里依赖于状态处理器的实现
-                CompletableFuture<Boolean> updateLogstashYml = context.getCurrentHandler()
-                    .handleUpdateLogstashYml(process, machine, logstashYml, taskId);
-                updateTasks.add(updateLogstashYml);
-            }
-        }
-        
-        // 如果没有任何更新任务，返回成功
-        if (updateTasks.isEmpty()) {
-            return CompletableFuture.completedFuture(true);
-        }
-        
-        // 等待所有更新任务完成
-        return CompletableFuture.allOf(updateTasks.toArray(new CompletableFuture[0]))
-            .thenApply(v -> {
-                // 检查是否所有任务都成功
-                boolean allSuccess = updateTasks.stream().allMatch(task -> {
-                    try {
-                        return task.get();
-                    } catch (Exception e) {
-                        logger.error("获取任务结果时发生异常", e);
-                        return false;
-                    }
-                });
-                
-                // 不需要改变状态，只记录日志
-                if (allSuccess) {
-                    logger.info("所有配置更新成功，维持当前状态 [{}]", context.getCurrentState().name());
-                }
-                
-                return allSuccess;
-            });
+        // 执行更新操作
+        return context.updateConfig(configContent, jvmOptions, logstashYml, taskId);
     }
 
     /**
@@ -286,7 +212,7 @@ public class LogstashMachineStateManager {
     public class LogstashMachineContext {
         /**
          * -- GETTER --
-         *  获取进程信息
+         * 获取进程信息
          *
          * @return 进程信息
          */
@@ -294,7 +220,7 @@ public class LogstashMachineStateManager {
         private final LogstashProcess process;
         /**
          * -- GETTER --
-         *  获取机器信息
+         * 获取机器信息
          *
          * @return 机器信息
          */
@@ -302,7 +228,7 @@ public class LogstashMachineStateManager {
         private final Machine machine;
         /**
          * -- GETTER --
-         *  获取当前状态
+         * 获取当前状态
          *
          * @return 当前状态
          */
@@ -310,7 +236,7 @@ public class LogstashMachineStateManager {
         private LogstashMachineState currentState;
         /**
          * -- GETTER --
-         *  获取当前状态处理器
+         * 获取当前状态处理器
          *
          * @return 当前状态处理器
          */
@@ -421,26 +347,28 @@ public class LogstashMachineStateManager {
         /**
          * 更新机器上的配置
          *
-         * @param configContent 配置内容
+         * @param configContent 主配置内容，null表示不更新
+         * @param jvmOptions    JVM配置内容，null表示不更新
+         * @param logstashYml   系统配置内容，null表示不更新
          * @param taskId        任务ID
          * @return 异步操作结果
          */
-        public CompletableFuture<Boolean> updateConfig(String configContent, String taskId) {
+        public CompletableFuture<Boolean> updateConfig(String configContent, String jvmOptions, String logstashYml, String taskId) {
             if (!currentHandler.canUpdateConfig()) {
                 throw new BusinessException(ErrorCode.VALIDATION_ERROR,
                         String.format("当前状态[%s]不允许执行更新配置操作", currentState.getDescription()));
             }
 
-            // 更新机器配置
-            logstashMachineMapper.updateConfigContent(process.getId(), machine.getId(), configContent);
-
-            // 执行更新配置操作
-            return currentHandler.handleUpdateConfig(process, configContent, machine, taskId)
+            // 执行更新配置操作，委托给当前状态处理器
+            return currentHandler.handleUpdateConfig(process, configContent, jvmOptions, logstashYml, machine, taskId)
                     .thenApply(success -> {
                         // 根据操作结果更新状态
                         LogstashMachineState nextState = currentHandler.getNextState(
                                 LogstashMachineStateHandler.OperationType.UPDATE_CONFIG, success);
-                        transitionTo(nextState);
+                        if (nextState != currentState) {
+                            transitionTo(nextState);
+                        }
+
                         return success;
                     });
         }

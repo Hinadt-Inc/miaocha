@@ -66,13 +66,6 @@ public interface TaskService {
      */
     Optional<TaskDetailDTO> getTaskDetail(String taskId);
 
-    /**
-     * 获取进程最新任务详情
-     *
-     * @param processId 进程ID
-     * @return 任务详情
-     */
-    Optional<TaskDetailDTO> getLatestProcessTaskDetail(Long processId);
 
     /**
      * 获取与进程关联的所有任务ID
@@ -101,14 +94,16 @@ public interface TaskService {
     void updateStepStatus(String taskId, Long machineId, String stepId, StepStatus status);
 
     /**
-     * 更新步骤错误信息
+     * 更新步骤状态，同时设置错误信息
      *
      * @param taskId       任务ID
      * @param machineId    机器ID
      * @param stepId       步骤ID
-     * @param errorMessage 错误信息
+     * @param status       步骤状态
+     * @param errorMessage 错误信息，如果状态是成功的则可以为null
      */
-    void updateStepErrorMessage(String taskId, Long machineId, String stepId, String errorMessage);
+    void updateStepStatus(String taskId, Long machineId, String stepId, StepStatus status, String errorMessage);
+
 
     /**
      * 执行任务

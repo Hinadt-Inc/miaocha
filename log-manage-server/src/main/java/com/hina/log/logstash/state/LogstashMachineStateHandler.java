@@ -3,6 +3,7 @@ package com.hina.log.logstash.state;
 import com.hina.log.entity.LogstashProcess;
 import com.hina.log.entity.Machine;
 import com.hina.log.logstash.enums.LogstashMachineState;
+import com.hina.log.logstash.task.TaskService;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -53,12 +54,14 @@ public interface LogstashMachineStateHandler {
      * 处理更新配置操作
      *
      * @param process       Logstash进程
-     * @param configContent 配置内容
+     * @param configContent 主配置内容，null表示不更新
+     * @param jvmOptions    JVM选项内容，null表示不更新
+     * @param logstashYml   logstash.yml配置内容，null表示不更新
      * @param machine       目标机器
      * @param taskId        任务ID，可以为null
      * @return 异步操作结果
      */
-    CompletableFuture<Boolean> handleUpdateConfig(LogstashProcess process, String configContent, Machine machine, String taskId);
+    CompletableFuture<Boolean> handleUpdateConfig(LogstashProcess process, String configContent, String jvmOptions, String logstashYml, Machine machine, String taskId);
 
     /**
      * 处理刷新配置操作
@@ -69,28 +72,6 @@ public interface LogstashMachineStateHandler {
      * @return 异步操作结果
      */
     CompletableFuture<Boolean> handleRefreshConfig(LogstashProcess process, Machine machine, String taskId);
-
-    /**
-     * 处理更新JVM选项操作
-     *
-     * @param process    Logstash进程
-     * @param machine    目标机器
-     * @param jvmOptions JVM选项内容
-     * @param taskId     任务ID，可以为null
-     * @return 异步操作结果
-     */
-    CompletableFuture<Boolean> handleUpdateJvmOptions(LogstashProcess process, Machine machine, String jvmOptions, String taskId);
-
-    /**
-     * 处理更新logstash.yml配置操作
-     *
-     * @param process     Logstash进程
-     * @param machine     目标机器
-     * @param logstashYml logstash.yml配置内容
-     * @param taskId      任务ID，可以为null
-     * @return 异步操作结果
-     */
-    CompletableFuture<Boolean> handleUpdateLogstashYml(LogstashProcess process, Machine machine, String logstashYml, String taskId);
 
     /**
      * 判断当前状态是否可以执行初始化操作
@@ -126,6 +107,13 @@ public interface LogstashMachineStateHandler {
      * @return 是否可以刷新配置
      */
     boolean canRefreshConfig();
+
+    /**
+     * 获取任务服务实例
+     *
+     * @return 任务服务实例
+     */
+    TaskService getTaskService();
 
     /**
      * 获取下一个操作完成后的状态

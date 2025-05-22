@@ -424,9 +424,9 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
         logger.info("开始更新进程 [{}] 的多种配置到 {} 台机器", processId, machines.size());
 
         // 检查输入参数
-        if (processId == null || machines == null || machines.isEmpty()) {
+        if (processId == null || machines.isEmpty()) {
             logger.error("更新配置参数无效: processId={}, machines是否为空={}",
-                    processId, machines == null || machines.isEmpty());
+                    processId, machines.isEmpty());
             return;
         }
 
@@ -434,6 +434,11 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
         if (!StringUtils.hasText(configContent) && !StringUtils.hasText(jvmOptions) && !StringUtils.hasText(logstashYml)) {
             logger.warn("进程 [{}] 更新配置任务未提供任何配置内容，无需更新", processId);
             return;
+        }
+
+        // 检查所有机器的状态，确保没有正在运行的实例
+        for (Machine machine : machines) {
+            configService.validateConfigUpdateConditions(processId, machine.getId());
         }
 
         // 创建任务记录
@@ -481,5 +486,10 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
     @Override
     public String getDeployBaseDir() {
         return logstashProperties.getDeployBaseDir();
+    }
+
+    @Override
+    public LogstashProcessConfigService getConfigService() {
+        return this.configService;
     }
 }

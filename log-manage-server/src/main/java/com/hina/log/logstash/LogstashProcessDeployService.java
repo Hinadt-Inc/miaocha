@@ -98,4 +98,11 @@ public interface LogstashProcessDeployService {
      * @return 基础目录路径
      */
     String getDeployBaseDir();
+
+    /**
+     * 获取配置服务实例
+     *
+     * @return LogstashProcessConfigService 实例
+     */
+    LogstashProcessConfigService getConfigService();
 }

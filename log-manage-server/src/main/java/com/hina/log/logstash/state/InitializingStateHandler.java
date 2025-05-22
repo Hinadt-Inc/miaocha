@@ -61,8 +61,26 @@ public class InitializingStateHandler extends AbstractLogstashMachineStateHandle
             return createDirCommand.execute(machine)
                     .thenApply(createDirSuccess -> {
                         StepStatus status = createDirSuccess ? StepStatus.COMPLETED : StepStatus.FAILED;
-                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.CREATE_REMOTE_DIR.getId(), status);
+                        String errorMessage = createDirSuccess ? null : "创建远程目录失败";
+                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.CREATE_REMOTE_DIR.getId(), status, errorMessage);
+                        
+                        if (!createDirSuccess) {
+                            throw new RuntimeException("创建远程目录失败");
+                        }
+                        
                         return createDirSuccess;
+                    })
+                    .exceptionally(ex -> {
+                        String errorMessage = ex.getMessage();
+                        logger.error("创建远程目录时发生异常: {}", errorMessage, ex);
+                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.CREATE_REMOTE_DIR.getId(), StepStatus.FAILED, errorMessage);
+                        
+                        // 重新抛出异常，确保异常传递到外层
+                        if (ex instanceof RuntimeException) {
+                            throw (RuntimeException) ex;
+                        } else {
+                            throw new RuntimeException("创建远程目录时发生异常: " + errorMessage, ex);
+                        }
                     });
         });
         
@@ -76,8 +94,26 @@ public class InitializingStateHandler extends AbstractLogstashMachineStateHandle
             return uploadCommand.execute(machine)
                     .thenApply(uploadSuccess -> {
                         StepStatus status = uploadSuccess ? StepStatus.COMPLETED : StepStatus.FAILED;
-                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.UPLOAD_PACKAGE.getId(), status);
+                        String errorMessage = uploadSuccess ? null : "上传Logstash安装包失败";
+                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.UPLOAD_PACKAGE.getId(), status, errorMessage);
+                        
+                        if (!uploadSuccess) {
+                            throw new RuntimeException("上传Logstash安装包失败");
+                        }
+                        
                         return uploadSuccess;
+                    })
+                    .exceptionally(ex -> {
+                        String errorMessage = ex.getMessage();
+                        logger.error("上传安装包时发生异常: {}", errorMessage, ex);
+                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.UPLOAD_PACKAGE.getId(), StepStatus.FAILED, errorMessage);
+                        
+                        // 重新抛出异常，确保异常传递到外层
+                        if (ex instanceof RuntimeException) {
+                            throw (RuntimeException) ex;
+                        } else {
+                            throw new RuntimeException("上传安装包时发生异常: " + errorMessage, ex);
+                        }
                     });
         });
         
@@ -91,8 +127,26 @@ public class InitializingStateHandler extends AbstractLogstashMachineStateHandle
             return extractCommand.execute(machine)
                     .thenApply(extractSuccess -> {
                         StepStatus status = extractSuccess ? StepStatus.COMPLETED : StepStatus.FAILED;
-                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.EXTRACT_PACKAGE.getId(), status);
+                        String errorMessage = extractSuccess ? null : "解压Logstash安装包失败";
+                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.EXTRACT_PACKAGE.getId(), status, errorMessage);
+                        
+                        if (!extractSuccess) {
+                            throw new RuntimeException("解压Logstash安装包失败");
+                        }
+                        
                         return extractSuccess;
+                    })
+                    .exceptionally(ex -> {
+                        String errorMessage = ex.getMessage();
+                        logger.error("解压安装包时发生异常: {}", errorMessage, ex);
+                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.EXTRACT_PACKAGE.getId(), StepStatus.FAILED, errorMessage);
+                        
+                        // 重新抛出异常，确保异常传递到外层
+                        if (ex instanceof RuntimeException) {
+                            throw (RuntimeException) ex;
+                        } else {
+                            throw new RuntimeException("解压安装包时发生异常: " + errorMessage, ex);
+                        }
                     });
         });
         
@@ -106,8 +160,26 @@ public class InitializingStateHandler extends AbstractLogstashMachineStateHandle
             return configCommand.execute(machine)
                     .thenApply(configSuccess -> {
                         StepStatus status = configSuccess ? StepStatus.COMPLETED : StepStatus.FAILED;
-                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.CREATE_CONFIG.getId(), status);
+                        String errorMessage = configSuccess ? null : "创建配置文件失败";
+                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.CREATE_CONFIG.getId(), status, errorMessage);
+                        
+                        if (!configSuccess) {
+                            throw new RuntimeException("创建配置文件失败");
+                        }
+                        
                         return configSuccess;
+                    })
+                    .exceptionally(ex -> {
+                        String errorMessage = ex.getMessage();
+                        logger.error("创建配置文件时发生异常: {}", errorMessage, ex);
+                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.CREATE_CONFIG.getId(), StepStatus.FAILED, errorMessage);
+                        
+                        // 重新抛出异常，确保异常传递到外层
+                        if (ex instanceof RuntimeException) {
+                            throw (RuntimeException) ex;
+                        } else {
+                            throw new RuntimeException("创建配置文件时发生异常: " + errorMessage, ex);
+                        }
                     });
         });
         
@@ -121,8 +193,26 @@ public class InitializingStateHandler extends AbstractLogstashMachineStateHandle
             return modifyConfigCommand.execute(machine)
                     .thenApply(modifyConfigSuccess -> {
                         StepStatus status = modifyConfigSuccess ? StepStatus.COMPLETED : StepStatus.FAILED;
-                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.MODIFY_CONFIG.getId(), status);
+                        String errorMessage = modifyConfigSuccess ? null : "修改系统配置失败";
+                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.MODIFY_CONFIG.getId(), status, errorMessage);
+                        
+                        if (!modifyConfigSuccess) {
+                            throw new RuntimeException("修改系统配置失败");
+                        }
+                        
                         return modifyConfigSuccess;
+                    })
+                    .exceptionally(ex -> {
+                        String errorMessage = ex.getMessage();
+                        logger.error("修改系统配置时发生异常: {}", errorMessage, ex);
+                        taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.MODIFY_CONFIG.getId(), StepStatus.FAILED, errorMessage);
+                        
+                        // 重新抛出异常，确保异常传递到外层
+                        if (ex instanceof RuntimeException) {
+                            throw (RuntimeException) ex;
+                        } else {
+                            throw new RuntimeException("修改系统配置时发生异常: " + errorMessage, ex);
+                        }
                     });
         });
         

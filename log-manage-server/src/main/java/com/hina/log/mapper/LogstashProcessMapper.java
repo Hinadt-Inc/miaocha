@@ -22,6 +22,11 @@ public interface LogstashProcessMapper {
                         "datasource_id=#{datasourceId}, table_name=#{tableName}, update_time=NOW() WHERE id=#{id}")
         int update(LogstashProcess logstashProcess);
 
+        @Update("UPDATE logstash_process SET config_content=#{configContent}, jvm_options=#{jvmOptions}, " +
+                        "logstash_yml=#{logstashYml}, update_time=NOW() WHERE id=#{id}")
+        int updateConfigOnly(@Param("id") Long id, @Param("configContent") String configContent,
+                           @Param("jvmOptions") String jvmOptions, @Param("logstashYml") String logstashYml);
+
 
         @Delete("DELETE FROM logstash_process WHERE id=#{id}")
         int deleteById(Long id);
@@ -31,6 +36,9 @@ public interface LogstashProcessMapper {
 
         @Select("SELECT * FROM logstash_process WHERE name=#{name}")
         LogstashProcess selectByName(String name);
+
+        @Select("SELECT * FROM logstash_process WHERE module=#{module}")
+        LogstashProcess selectByModule(String module);
 
         @Select("SELECT * FROM logstash_process")
         List<LogstashProcess> selectAll();
