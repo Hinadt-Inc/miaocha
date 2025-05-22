@@ -41,16 +41,25 @@ public abstract class AbstractLogstashCommand implements LogstashCommand {
 
                 // 如果未执行成功，则执行命令
                 return doExecute(machine)
-                        .exceptionally(e -> {
-                            logger.error("在机器 [{}] 上执行 [{}] 失败: {}",
-                                    machine.getIp(), getDescription(), e.getMessage(), e);
-                            return false;
+                        .whenComplete((success, e) -> {
+                            if (e != null) {
+                                // 记录错误但不吞异常，让它传播给调用者
+                                logger.error("在机器 [{}] 上执行 [{}] 失败: {}",
+                                        machine.getIp(), getDescription(), e.getMessage(), e);
+                            } else if (!success) {
+                                // 执行成功但返回false的情况也需要记录
+                                logger.error("在机器 [{}] 上执行 [{}] 返回失败状态",
+                                        machine.getIp(), getDescription());
+                            }
                         });
             });
         } catch (Exception e) {
-            logger.error("在机器 [{}] 上执行 [{}] 失败: {}",
+            // 捕获初始化或检查阶段的异常，将其包装为CompletableFuture异常并传播
+            logger.error("在机器 [{}] 上执行 [{}] 过程中发生异常: {}",
                     machine.getIp(), getDescription(), e.getMessage(), e);
-            return CompletableFuture.completedFuture(false);
+            CompletableFuture<Boolean> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
         }
     }
 

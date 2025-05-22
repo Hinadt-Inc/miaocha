@@ -37,7 +37,7 @@ public class UploadPackageCommand extends AbstractLogstashCommand {
             sshClient.uploadFile(machine, packagePath, processDir);
 
             // 检查文件是否上传成功
-            String checkCommand = String.format("[ -f %s ] && echo \"exists\"", targetPath);
+            String checkCommand = String.format("if [ -f \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi", targetPath);
             String checkResult = sshClient.executeCommand(machine, checkCommand);
 
             boolean success = "exists".equals(checkResult.trim());
@@ -49,7 +49,6 @@ public class UploadPackageCommand extends AbstractLogstashCommand {
 
             future.complete(success);
         } catch (Exception e) {
-            logger.error("上传Logstash安装包时发生错误: {}", e.getMessage(), e);
             future.completeExceptionally(new SshOperationException("上传Logstash安装包失败: " + e.getMessage(), e));
         }
 

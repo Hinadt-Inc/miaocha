@@ -14,7 +14,7 @@ import com.hina.log.exception.ErrorCode;
 import com.hina.log.logstash.LogstashProcessDeployService;
 import com.hina.log.logstash.enums.LogstashMachineState;
 import com.hina.log.logstash.parser.LogstashConfigParser;
-import com.hina.log.logstash.service.LogstashConfigSyncService;
+import com.hina.log.logstash.LogstashConfigSyncService;
 import com.hina.log.logstash.task.TaskService;
 import com.hina.log.mapper.DatasourceMapper;
 import com.hina.log.mapper.LogstashMachineMapper;

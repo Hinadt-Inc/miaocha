@@ -136,7 +136,7 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         entity.setName(dto.getName());
         entity.setModule(dto.getModule());
         entity.setConfigContent(dto.getConfigContent());
-        entity.setDorisSql(dto.getDorisSql());
+        // DorisSql不在创建时设置，将在后续执行时填充
         entity.setJvmOptions(dto.getJvmOptions());
         entity.setLogstashYml(dto.getLogstashYml());
         entity.setDatasourceId(dto.getDatasourceId());
@@ -202,7 +202,7 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         entity.setName(dto.getName());
         entity.setModule(dto.getModule());
         entity.setConfigContent(dto.getConfigContent());
-        entity.setDorisSql(dto.getDorisSql());
+        // DorisSql不在创建时设置，将在后续执行时填充
         entity.setJvmOptions(dto.getJvmOptions());
         entity.setLogstashYml(dto.getLogstashYml());
         entity.setDatasourceId(dto.getDatasourceId());

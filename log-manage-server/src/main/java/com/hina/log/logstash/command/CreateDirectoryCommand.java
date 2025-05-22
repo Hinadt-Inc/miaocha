@@ -26,7 +26,7 @@ public class CreateDirectoryCommand extends AbstractLogstashCommand {
             sshClient.executeCommand(machine, command);
 
             // 检查目录是否创建成功
-            String checkCommand = String.format("[ -d %s ] && echo \"exists\"", processDir);
+            String checkCommand = String.format("if [ -d \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi", processDir);
             String checkResult = sshClient.executeCommand(machine, checkCommand);
 
             boolean success = "exists".equals(checkResult.trim());

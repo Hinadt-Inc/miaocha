@@ -11,8 +11,8 @@ import java.util.List;
 @Mapper
 public interface LogstashMachineMapper {
 
-        @Insert("INSERT INTO logstash_machine (logstash_process_id, machine_id, state, create_time) " +
-                        "VALUES (#{logstashProcessId}, #{machineId}, #{state}, NOW())")
+        @Insert("INSERT INTO logstash_machine (logstash_process_id, machine_id, state, config_content, jvm_options, logstash_yml, create_time, update_time) " +
+                        "VALUES (#{logstashProcessId}, #{machineId}, #{state}, #{configContent}, #{jvmOptions}, #{logstashYml}, NOW(), NOW())")
         @Options(useGeneratedKeys = true, keyProperty = "id")
         int insert(LogstashMachine logstashMachine);
 
@@ -51,8 +51,7 @@ public interface LogstashMachineMapper {
                         "state = #{state}, " +
                         "config_content = #{configContent}, " +
                         "jvm_options = #{jvmOptions}, " +
-                        "logstash_yml = #{logstashYml}, " +
-                        "update_time = NOW() " +
+                        "logstash_yml = #{logstashYml} " +
                         "WHERE id = #{id}")
         int update(LogstashMachine logstashMachine);
 

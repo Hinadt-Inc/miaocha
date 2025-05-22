@@ -63,7 +63,7 @@ public class StartFailedStateHandler extends AbstractLogstashMachineStateHandler
                     })
                     .exceptionally(ex -> {
                         String errorMessage = ex.getMessage();
-                        logger.error("启动进程时发生异常: {}", errorMessage, ex);
+                        // 异常已在命令层记录，这里只更新任务状态
                         taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.START_PROCESS.getId(), StepStatus.FAILED, errorMessage);
                         
                         // 重新抛出异常，确保异常传递到外层
@@ -95,7 +95,7 @@ public class StartFailedStateHandler extends AbstractLogstashMachineStateHandler
                     })
                     .exceptionally(ex -> {
                         String errorMessage = ex.getMessage();
-                        logger.error("验证进程时发生异常: {}", errorMessage, ex);
+                        // 异常已在命令层记录，这里只更新任务状态
                         taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.VERIFY_PROCESS.getId(), StepStatus.FAILED, errorMessage);
                         
                         // 重新抛出异常，确保异常传递到外层
@@ -157,7 +157,7 @@ public class StartFailedStateHandler extends AbstractLogstashMachineStateHandler
                 .exceptionally(ex -> {
                     // 处理异常情况
                     String errorMessage = ex.getMessage();
-                    logger.error("更新配置时发生异常: {}", errorMessage, ex);
+                    // 异常已在命令层记录，这里只更新任务状态
                     
                     if (configContent != null) {
                         taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.UPDATE_MAIN_CONFIG.getId(), StepStatus.FAILED, errorMessage);
@@ -205,7 +205,7 @@ public class StartFailedStateHandler extends AbstractLogstashMachineStateHandler
                 })
                 .exceptionally(ex -> {
                     String errorMessage = ex.getMessage();
-                    logger.error("刷新配置时发生异常: {}", errorMessage, ex);
+                    // 异常已在命令层记录，这里只更新任务状态
                     taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.REFRESH_CONFIG.getId(), StepStatus.FAILED, errorMessage);
                     
                     // 重新抛出异常，确保异常传递到外层

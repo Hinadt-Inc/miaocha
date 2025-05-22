@@ -43,8 +43,26 @@ public class StopFailedStateHandler extends AbstractLogstashMachineStateHandler 
         return stopCommand.execute(machine)
                 .thenApply(success -> {
                     StepStatus status = success ? StepStatus.COMPLETED : StepStatus.FAILED;
-                    taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.STOP_PROCESS.getId(), status);
+                    String errorMessage = success ? null : "停止Logstash进程失败";
+                    taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.STOP_PROCESS.getId(), status, errorMessage);
+                    
+                    if (!success) {
+                        throw new RuntimeException("停止Logstash进程失败");
+                    }
+                    
                     return success;
+                })
+                .exceptionally(ex -> {
+                    String errorMessage = ex.getMessage();
+                    // 异常已在命令层记录，这里只更新任务状态
+                    taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.STOP_PROCESS.getId(), StepStatus.FAILED, errorMessage);
+                    
+                    // 重新抛出异常，确保异常传递到外层
+                    if (ex instanceof RuntimeException) {
+                        throw (RuntimeException) ex;
+                    } else {
+                        throw new RuntimeException("停止进程时发生异常: " + errorMessage, ex);
+                    }
                 });
     }
 

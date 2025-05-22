@@ -2,17 +2,15 @@ package com.hina.log.logstash;
 
 import com.hina.log.config.LogstashProperties;
 import com.hina.log.entity.LogstashProcess;
-import com.hina.log.entity.LogstashTask;
-import com.hina.log.entity.LogstashTaskMachineStep;
 import com.hina.log.entity.Machine;
 import com.hina.log.logstash.command.LogstashCommand;
 import com.hina.log.logstash.command.LogstashCommandFactory;
 import com.hina.log.logstash.enums.LogstashMachineStep;
-import com.hina.log.logstash.enums.StepStatus;
 import com.hina.log.logstash.enums.TaskOperationType;
 import com.hina.log.logstash.state.LogstashMachineStateManager;
 import com.hina.log.logstash.task.TaskService;
 import com.hina.log.mapper.LogstashProcessMapper;
+import com.hina.log.util.FutureUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -65,11 +63,14 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
         String taskName = "初始化Logstash进程[" + process.getName() + "]";
         String taskDescription = "初始化Logstash进程环境";
 
-        // 获取初始化步骤ID列表 - 不包括启动相关的步骤
+        // 获取初始化步骤ID列表 - 只包括初始化相关的步骤，明确排除不需要的步骤
         List<String> stepIds = Arrays.stream(LogstashMachineStep.values())
-                .filter(step -> step != LogstashMachineStep.STOP_PROCESS &&
-                        step != LogstashMachineStep.START_PROCESS &&
-                        step != LogstashMachineStep.VERIFY_PROCESS)
+                .filter(step ->
+                        step == LogstashMachineStep.CREATE_REMOTE_DIR ||
+                                step == LogstashMachineStep.UPLOAD_PACKAGE ||
+                                step == LogstashMachineStep.EXTRACT_PACKAGE ||
+                                step == LogstashMachineStep.CREATE_CONFIG ||
+                                step == LogstashMachineStep.MODIFY_CONFIG)
                 .map(LogstashMachineStep::getId)
                 .collect(Collectors.toList());
 
@@ -90,13 +91,15 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
 
             // 执行初始化操作
             String taskId = machineTaskMap.get(machine.getId());
-            taskService.executeAsync(taskId, () -> {
-                machineStateManager.initializeMachine(process, currentMachine, taskId)
-                        .thenAccept(initSuccess -> {
-                            logger.info("机器 [{}] 上的Logstash进程环境初始化{}",
-                                    currentMachine.getId(), initSuccess ? "成功" : "失败");
-                        });
-            }, null);
+            taskService.executeAsync(taskId,
+                    FutureUtils.toSyncRunnable(
+                            () -> machineStateManager.initializeMachine(process, currentMachine, taskId),
+                            "机器",
+                            "初始化Logstash进程环境",
+                            currentMachine.getId()
+                    ),
+                    null
+            );
         }
     }
 
@@ -134,13 +137,15 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
             String taskId = machineTaskMap.get(machine.getId());
 
             // 执行启动操作
-            taskService.executeAsync(taskId, () -> {
-                machineStateManager.startMachine(process, currentMachine, taskId)
-                        .thenAccept(startSuccess -> {
-                            logger.info("机器 [{}] 上的Logstash进程启动{}",
-                                    currentMachine.getId(), startSuccess ? "成功" : "失败");
-                        });
-            }, null);
+            taskService.executeAsync(taskId,
+                    FutureUtils.toSyncRunnable(
+                            () -> machineStateManager.startMachine(process, currentMachine, taskId),
+                            "机器",
+                            "启动Logstash进程",
+                            currentMachine.getId()
+                    ),
+                    null
+            );
         }
     }
 
@@ -182,13 +187,15 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
             String taskId = machineTaskMap.get(machine.getId());
 
             // 执行停止操作
-            taskService.executeAsync(taskId, () -> {
-                machineStateManager.stopMachine(process, currentMachine, taskId)
-                        .thenAccept(stopSuccess -> {
-                            logger.info("机器 [{}] 上的Logstash进程停止{}",
-                                    currentMachine.getId(), stopSuccess ? "成功" : "失败");
-                        });
-            }, null);
+            taskService.executeAsync(taskId,
+                    FutureUtils.toSyncRunnable(
+                            () -> machineStateManager.stopMachine(process, currentMachine, taskId),
+                            "机器",
+                            "停止Logstash进程",
+                            currentMachine.getId()
+                    ),
+                    null
+            );
         }
     }
 
@@ -276,13 +283,15 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
             String taskId = machineTaskMap.get(machine.getId());
 
             // 执行配置刷新操作
-            taskService.executeAsync(taskId, () -> {
-                machineStateManager.refreshMachineConfig(process, currentMachine, taskId)
-                        .thenAccept(refreshSuccess -> {
-                            logger.info("机器 [{}] 上的Logstash配置刷新{}",
-                                    currentMachine.getId(), refreshSuccess ? "成功" : "失败");
-                        });
-            }, null);
+            taskService.executeAsync(taskId,
+                    FutureUtils.toSyncRunnable(
+                            () -> machineStateManager.refreshMachineConfig(process, currentMachine, taskId),
+                            "机器",
+                            "刷新Logstash配置",
+                            currentMachine.getId()
+                    ),
+                    null
+            );
         }
     }
 
@@ -314,13 +323,15 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
                 stepIds);
 
         // 执行启动操作
-        taskService.executeAsync(taskId, () -> {
-            machineStateManager.startMachine(process, machine, taskId)
-                    .thenAccept(startSuccess -> {
-                        logger.info("机器 [{}] 上的Logstash进程启动{}",
-                                machine.getId(), startSuccess ? "成功" : "失败");
-                    });
-        }, null);
+        taskService.executeAsync(taskId,
+                FutureUtils.toSyncRunnable(
+                        () -> machineStateManager.startMachine(process, machine, taskId),
+                        "机器",
+                        "启动Logstash进程",
+                        machine.getId()
+                ),
+                null
+        );
     }
 
     @Override
@@ -355,13 +366,15 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
                 stepIds);
 
         // 执行停止操作
-        taskService.executeAsync(taskId, () -> {
-            machineStateManager.stopMachine(process, machine, taskId)
-                    .thenAccept(stopSuccess -> {
-                        logger.info("机器 [{}] 上的Logstash进程停止{}",
-                                machine.getId(), stopSuccess ? "成功" : "失败");
-                    });
-        }, null);
+        taskService.executeAsync(taskId,
+                FutureUtils.toSyncRunnable(
+                        () -> machineStateManager.stopMachine(process, machine, taskId),
+                        "机器",
+                        "停止Logstash进程",
+                        machine.getId()
+                ),
+                null
+        );
     }
 
     @Override
@@ -398,24 +411,28 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
                 stepIds);
 
         // 执行重启操作
-        taskService.executeAsync(taskId, () -> {
-            // 先停止进程
-            machineStateManager.stopMachine(process, machine, taskId)
-                    .thenCompose(stopSuccess -> {
-                        if (!stopSuccess) {
-                            logger.warn("机器 [{}] 上的Logstash进程停止失败，跳过启动步骤", machine.getId());
-                            return CompletableFuture.completedFuture(false);
-                        }
+        taskService.executeAsync(taskId,
+                FutureUtils.toSyncRunnable(
+                        () -> {
+                            // 先停止进程，然后在成功时启动进程
+                            return machineStateManager.stopMachine(process, machine, taskId)
+                                    .thenCompose(stopSuccess -> {
+                                        if (!stopSuccess) {
+                                            logger.warn("机器 [{}] 上的Logstash进程停止失败，跳过启动步骤", machine.getId());
+                                            return CompletableFuture.completedFuture(false);
+                                        }
 
-                        // 停止成功后启动进程
-                        logger.info("机器 [{}] 上的Logstash进程停止成功，准备启动", machine.getId());
-                        return machineStateManager.startMachine(process, machine, taskId);
-                    })
-                    .thenAccept(restartSuccess -> {
-                        logger.info("机器 [{}] 上的Logstash进程重启{}",
-                                machine.getId(), restartSuccess ? "成功" : "失败");
-                    });
-        }, null);
+                                        // 停止成功后启动进程
+                                        logger.info("机器 [{}] 上的Logstash进程停止成功，准备启动", machine.getId());
+                                        return machineStateManager.startMachine(process, machine, taskId);
+                                    });
+                        },
+                        "机器",
+                        "重启Logstash进程",
+                        machine.getId()
+                ),
+                null
+        );
     }
 
 
@@ -444,7 +461,7 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
         // 创建任务记录
         String taskName = "更新Logstash配置";
         String taskDescription = "更新Logstash配置到目标机器";
-        
+
         // 确定需要执行的步骤
         List<String> stepIds = new ArrayList<>();
         if (StringUtils.hasText(configContent)) {
@@ -456,7 +473,7 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
         if (StringUtils.hasText(logstashYml)) {
             stepIds.add(LogstashMachineStep.UPDATE_SYSTEM_CONFIG.getId());
         }
-        
+
         // 为每台机器创建任务
         Map<Long, String> machineTaskMap = taskService.createMachineTasks(
                 processId,
@@ -465,21 +482,28 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
                 TaskOperationType.UPDATE_CONFIG,
                 machines,
                 stepIds);
-        
+
         // 为每台机器并行执行任务
         for (Machine machine : machines) {
             final Machine currentMachine = machine;
             String taskId = machineTaskMap.get(machine.getId());
-            
+
             // 执行更新配置操作
-            taskService.executeAsync(taskId, () -> {
-                // 委托给状态机处理配置更新
-                machineStateManager.updateMachineConfig(processId, currentMachine, configContent, jvmOptions, logstashYml, taskId)
-                       .thenAccept(result -> {
-                           logger.info("机器 [{}] 上的Logstash配置更新{}",
-                                currentMachine.getId(), result ? "成功" : "失败");
-                       });
-            }, null);
+            taskService.executeAsync(taskId,
+                    FutureUtils.toSyncRunnable(
+                            () -> machineStateManager.updateMachineConfig(
+                                    processId,
+                                    currentMachine,
+                                    configContent,
+                                    jvmOptions,
+                                    logstashYml,
+                                    taskId),
+                            "机器",
+                            "更新Logstash配置",
+                            currentMachine.getId()
+                    ),
+                    null
+            );
         }
     }
 

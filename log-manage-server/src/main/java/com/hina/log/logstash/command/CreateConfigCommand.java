@@ -45,7 +45,7 @@ public class CreateConfigCommand extends AbstractLogstashCommand {
             sshClient.executeCommand(machine, moveCommand);
 
             // 检查配置文件是否创建成功
-            String checkCommand = String.format("[ -f %s ] && echo \"success\"", configPath);
+            String checkCommand = String.format("if [ -f \"%s\" ]; then echo \"success\"; else echo \"failed\"; fi", configPath);
             String checkResult = sshClient.executeCommand(machine, checkCommand);
 
             boolean success = "success".equals(checkResult.trim());

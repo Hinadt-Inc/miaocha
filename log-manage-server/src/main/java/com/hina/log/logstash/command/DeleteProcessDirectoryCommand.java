@@ -44,7 +44,7 @@ public class DeleteProcessDirectoryCommand extends AbstractLogstashCommand {
             String processDir = getProcessDirectory();
 
             // 检查目录是否存在
-            String checkCommand = String.format("[ -d %s ] && echo \"exists\"", processDir);
+            String checkCommand = String.format("if [ -d \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi", processDir);
             String checkResult = sshClient.executeCommand(machine, checkCommand);
 
             if ("exists".equals(checkResult.trim())) {
@@ -54,7 +54,7 @@ public class DeleteProcessDirectoryCommand extends AbstractLogstashCommand {
                 sshClient.executeCommand(machine, deleteCommand);
 
                 // 验证目录是否已删除
-                String verifyCommand = String.format("[ ! -d %s ] && echo \"deleted\"", processDir);
+                String verifyCommand = String.format("if [ ! -d \"%s\" ]; then echo \"deleted\"; else echo \"still_exists\"; fi", processDir);
                 String verifyResult = sshClient.executeCommand(machine, verifyCommand);
 
                 boolean success = "deleted".equals(verifyResult.trim());

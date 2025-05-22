@@ -72,7 +72,7 @@ public class InitializingStateHandler extends AbstractLogstashMachineStateHandle
                     })
                     .exceptionally(ex -> {
                         String errorMessage = ex.getMessage();
-                        logger.error("创建远程目录时发生异常: {}", errorMessage, ex);
+                        // 异常已在命令层记录，这里只更新任务状态
                         taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.CREATE_REMOTE_DIR.getId(), StepStatus.FAILED, errorMessage);
                         
                         // 重新抛出异常，确保异常传递到外层
@@ -105,7 +105,7 @@ public class InitializingStateHandler extends AbstractLogstashMachineStateHandle
                     })
                     .exceptionally(ex -> {
                         String errorMessage = ex.getMessage();
-                        logger.error("上传安装包时发生异常: {}", errorMessage, ex);
+                        // 异常已在命令层记录，这里只更新任务状态
                         taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.UPLOAD_PACKAGE.getId(), StepStatus.FAILED, errorMessage);
                         
                         // 重新抛出异常，确保异常传递到外层
@@ -138,7 +138,7 @@ public class InitializingStateHandler extends AbstractLogstashMachineStateHandle
                     })
                     .exceptionally(ex -> {
                         String errorMessage = ex.getMessage();
-                        logger.error("解压安装包时发生异常: {}", errorMessage, ex);
+                        // 异常已在命令层记录，这里只更新任务状态
                         taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.EXTRACT_PACKAGE.getId(), StepStatus.FAILED, errorMessage);
                         
                         // 重新抛出异常，确保异常传递到外层
@@ -171,7 +171,7 @@ public class InitializingStateHandler extends AbstractLogstashMachineStateHandle
                     })
                     .exceptionally(ex -> {
                         String errorMessage = ex.getMessage();
-                        logger.error("创建配置文件时发生异常: {}", errorMessage, ex);
+                        // 异常已在命令层记录，这里只更新任务状态
                         taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.CREATE_CONFIG.getId(), StepStatus.FAILED, errorMessage);
                         
                         // 重新抛出异常，确保异常传递到外层
@@ -188,7 +188,11 @@ public class InitializingStateHandler extends AbstractLogstashMachineStateHandle
             if (!success) return CompletableFuture.completedFuture(false);
             
             taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.MODIFY_CONFIG.getId(), StepStatus.RUNNING);
-            LogstashCommand modifyConfigCommand = commandFactory.modifySystemConfigCommand(processId);
+            
+            // 获取JVM选项和系统配置，传递给增强的ModifySystemConfigCommand
+            String jvmOptions = process.getJvmOptions();
+            String logstashYml = process.getLogstashYml();
+            LogstashCommand modifyConfigCommand = commandFactory.modifySystemConfigCommand(processId, jvmOptions, logstashYml);
             
             return modifyConfigCommand.execute(machine)
                     .thenApply(modifyConfigSuccess -> {
@@ -204,7 +208,7 @@ public class InitializingStateHandler extends AbstractLogstashMachineStateHandle
                     })
                     .exceptionally(ex -> {
                         String errorMessage = ex.getMessage();
-                        logger.error("修改系统配置时发生异常: {}", errorMessage, ex);
+                        // 异常已在命令层记录，这里只更新任务状态
                         taskService.updateStepStatus(taskId, machineId, LogstashMachineStep.MODIFY_CONFIG.getId(), StepStatus.FAILED, errorMessage);
                         
                         // 重新抛出异常，确保异常传递到外层

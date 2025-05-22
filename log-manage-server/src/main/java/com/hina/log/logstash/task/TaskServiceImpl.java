@@ -236,7 +236,6 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    @Transactional
     public void executeAsync(String taskId, Runnable action, Runnable callback) {
         taskExecutor.execute(() -> {
             try {
@@ -246,19 +245,31 @@ public class TaskServiceImpl implements TaskService {
                 // 执行任务
                 action.run();
 
-                // 更新任务状态为已完成
-                updateTaskStatus(taskId, TaskStatus.COMPLETED);
+                // 检查任务状态 - 如果执行过程中任务被标记为失败，不要将其更新为已完成
+                Optional<LogstashTask> taskAfterExecution = taskMapper.findById(taskId);
+                if (taskAfterExecution.isPresent() && !TaskStatus.FAILED.name().equals(taskAfterExecution.get().getStatus())) {
+                    // 只有当任务未被标记为失败时才更新为已完成
+                    updateTaskStatus(taskId, TaskStatus.COMPLETED);
+                }
             } catch (Exception e) {
                 // 更新任务状态为失败
+                logger.error("任务执行失败: {}", e.getMessage(), e);
                 LogstashTask task = taskMapper.findById(taskId).orElse(null);
                 if (task != null) {
-                    task.setErrorMessage(e.getMessage());
-                    taskMapper.updateErrorMessage(taskId, e.getMessage());
+                    String errorMessage = e.getMessage();
+                    if (errorMessage == null || errorMessage.isEmpty()) {
+                        errorMessage = "未知错误";
+                    }
+                    taskMapper.updateErrorMessage(taskId, errorMessage);
                 }
                 updateTaskStatus(taskId, TaskStatus.FAILED);
             } finally {
                 if (callback != null) {
-                    callback.run();
+                    try {
+                        callback.run();
+                    } catch (Exception e) {
+                        logger.error("任务回调执行失败: {}", e.getMessage(), e);
+                    }
                 }
             }
         });

@@ -109,7 +109,7 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
         String configPath = pipelineDir + "/logstash.conf";
 
         // 首先检查旧配置文件是否存在
-        String checkCommand = String.format("[ -f %s ] && echo \"exists\" || echo \"not_exists\"", configPath);
+        String checkCommand = String.format("if [ -f \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi", configPath);
         String checkResult = sshClient.executeCommand(machine, checkCommand);
 
         if ("exists".equals(checkResult.trim())) {
@@ -134,7 +134,7 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
         sshClient.executeCommand(machine, moveCommand);
 
         // 检查配置文件是否刷新成功
-        String verifyCommand = String.format("[ -f %s ] && echo \"success\"", configPath);
+        String verifyCommand = String.format("if [ -f \"%s\" ]; then echo \"success\"; else echo \"failed\"; fi", configPath);
         String verifyResult = sshClient.executeCommand(machine, verifyCommand);
 
         boolean success = "success".equals(verifyResult.trim());
@@ -169,7 +169,7 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
         String jvmFile = configDir + "/jvm.options";
 
         // 首先检查旧配置文件是否存在
-        String checkCommand = String.format("[ -f %s ] && echo \"exists\" || echo \"not_exists\"", jvmFile);
+        String checkCommand = String.format("if [ -f \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi", jvmFile);
         String checkResult = sshClient.executeCommand(machine, checkCommand);
 
         if ("exists".equals(checkResult.trim())) {
@@ -194,7 +194,7 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
         sshClient.executeCommand(machine, moveCommand);
 
         // 检查配置文件是否刷新成功
-        String verifyCommand = String.format("[ -f %s ] && echo \"success\"", jvmFile);
+        String verifyCommand = String.format("if [ -f \"%s\" ]; then echo \"success\"; else echo \"failed\"; fi", jvmFile);
         String verifyResult = sshClient.executeCommand(machine, verifyCommand);
 
         boolean success = "success".equals(verifyResult.trim());
@@ -229,7 +229,7 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
         String ymlFile = configDir + "/logstash.yml";
 
         // 首先检查旧配置文件是否存在
-        String checkCommand = String.format("[ -f %s ] && echo \"exists\" || echo \"not_exists\"", ymlFile);
+        String checkCommand = String.format("if [ -f \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi", ymlFile);
         String checkResult = sshClient.executeCommand(machine, checkCommand);
 
         if ("exists".equals(checkResult.trim())) {
@@ -254,7 +254,7 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
         sshClient.executeCommand(machine, moveCommand);
 
         // 检查配置文件是否刷新成功
-        String verifyCommand = String.format("[ -f %s ] && echo \"success\"", ymlFile);
+        String verifyCommand = String.format("if [ -f \"%s\" ]; then echo \"success\"; else echo \"failed\"; fi", ymlFile);
         String verifyResult = sshClient.executeCommand(machine, verifyCommand);
 
         boolean success = "success".equals(verifyResult.trim());

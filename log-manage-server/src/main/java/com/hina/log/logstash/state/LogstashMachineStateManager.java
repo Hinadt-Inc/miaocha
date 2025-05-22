@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 /**
  * Logstash机器状态管理器
@@ -87,6 +88,14 @@ public class LogstashMachineStateManager {
     public void updateMachineState(Long logstashProcessId, Long machineId, LogstashMachineState state) {
         logger.info("更新进程 {} 在机器 {} 上的状态: {}", logstashProcessId, machineId, state.name());
         logstashMachineMapper.updateState(logstashProcessId, machineId, state.name());
+        
+        // 如果状态变为停止状态，清除进程PID
+        if (state == LogstashMachineState.NOT_STARTED || 
+            state == LogstashMachineState.STOP_FAILED || 
+            state == LogstashMachineState.STOPPING) {
+            logstashMachineMapper.updateProcessPid(logstashProcessId, machineId, null);
+            logger.info("进程 {} 在机器 {} 上状态变更为 {}，已清除PID", logstashProcessId, machineId, state.name());
+        }
     }
 
     /**
@@ -256,17 +265,6 @@ public class LogstashMachineStateManager {
         }
 
         /**
-         * 转换到新状态
-         *
-         * @param newState 新状态
-         */
-        public void transitionTo(LogstashMachineState newState) {
-            stateManager.updateMachineState(process.getId(), machine.getId(), newState);
-            this.currentState = newState;
-            this.currentHandler = stateManager.getStateHandler(newState);
-        }
-
-        /**
          * 初始化机器上的进程环境
          *
          * @param taskId 任务ID
@@ -278,17 +276,35 @@ public class LogstashMachineStateManager {
                         String.format("当前状态[%s]不允许执行初始化操作", currentState.getDescription()));
             }
 
-            // 更新状态为初始化中
-            transitionTo(LogstashMachineState.INITIALIZING);
+            // 先获取当前状态处理器的引用
+            LogstashMachineStateHandler handlerBeforeOperation = currentHandler;
+            LogstashMachineState initialState = currentState;
+            
+            // 标记进入初始化中状态（仅DB更新）
+            stateManager.updateMachineState(process.getId(), machine.getId(), LogstashMachineState.INITIALIZING);
+            logger.info("机器 [{}] 上的进程 [{}] 开始初始化操作，状态从 [{}] 临时标记为 [INITIALIZING]", 
+                    machine.getId(), process.getId(), initialState.name());
 
-            // 执行初始化操作
-            return currentHandler.handleInitialize(process, machine, taskId)
+            // 执行初始化操作，使用初始状态的处理器
+            return handlerBeforeOperation.handleInitialize(process, machine, taskId)
                     .thenApply(success -> {
                         // 根据操作结果更新状态
-                        LogstashMachineState nextState = currentHandler.getNextState(
+                        LogstashMachineState nextState = handlerBeforeOperation.getNextState(
                                 LogstashMachineStateHandler.OperationType.INITIALIZE, success);
-                        transitionTo(nextState);
+                        // 直接更新数据库状态，不更新上下文（简化）
+                        stateManager.updateMachineState(process.getId(), machine.getId(), nextState);
+                        logger.info("机器 [{}] 上的进程 [{}] 初始化操作完成，最终状态设置为 [{}]", 
+                                machine.getId(), process.getId(), nextState.name());
                         return success;
+                    })
+                    .exceptionally(e -> {
+                        // 发生异常时直接更新状态为失败
+                        logger.error("初始化过程中发生异常: {}", e.getMessage(), e);
+                        stateManager.updateMachineState(process.getId(), machine.getId(), LogstashMachineState.INITIALIZE_FAILED);
+                        logger.info("机器 [{}] 上的进程 [{}] 初始化操作异常，最终状态设置为 [INITIALIZE_FAILED]", 
+                                machine.getId(), process.getId());
+                        // 继续传播异常以便外部任务系统能正确处理
+                        throw new CompletionException(e);
                     });
         }
 
@@ -304,17 +320,35 @@ public class LogstashMachineStateManager {
                         String.format("当前状态[%s]不允许执行启动操作", currentState.getDescription()));
             }
 
-            // 更新状态为启动中
-            transitionTo(LogstashMachineState.STARTING);
+            // 先获取当前状态处理器的引用
+            LogstashMachineStateHandler handlerBeforeOperation = currentHandler;
+            LogstashMachineState initialState = currentState;
+            
+            // 标记进入启动中状态（仅DB更新）
+            stateManager.updateMachineState(process.getId(), machine.getId(), LogstashMachineState.STARTING);
+            logger.info("机器 [{}] 上的进程 [{}] 开始启动操作，状态从 [{}] 临时标记为 [STARTING]", 
+                    machine.getId(), process.getId(), initialState.name());
 
-            // 执行启动操作
-            return currentHandler.handleStart(process, machine, taskId)
+            // 执行启动操作，使用初始状态的处理器
+            return handlerBeforeOperation.handleStart(process, machine, taskId)
                     .thenApply(success -> {
                         // 根据操作结果更新状态
-                        LogstashMachineState nextState = currentHandler.getNextState(
+                        LogstashMachineState nextState = handlerBeforeOperation.getNextState(
                                 LogstashMachineStateHandler.OperationType.START, success);
-                        transitionTo(nextState);
+                        // 直接更新数据库状态，不更新上下文（简化）
+                        stateManager.updateMachineState(process.getId(), machine.getId(), nextState);
+                        logger.info("机器 [{}] 上的进程 [{}] 启动操作完成，最终状态设置为 [{}]", 
+                                machine.getId(), process.getId(), nextState.name());
                         return success;
+                    })
+                    .exceptionally(e -> {
+                        // 发生异常时直接更新状态为失败
+                        logger.error("启动过程中发生异常: {}", e.getMessage(), e);
+                        stateManager.updateMachineState(process.getId(), machine.getId(), LogstashMachineState.START_FAILED);
+                        logger.info("机器 [{}] 上的进程 [{}] 启动操作异常，最终状态设置为 [START_FAILED]", 
+                                machine.getId(), process.getId());
+                        // 继续传播异常以便外部任务系统能正确处理
+                        throw new CompletionException(e);
                     });
         }
 
@@ -330,17 +364,35 @@ public class LogstashMachineStateManager {
                         String.format("当前状态[%s]不允许执行停止操作", currentState.getDescription()));
             }
 
-            // 更新状态为停止中
-            transitionTo(LogstashMachineState.STOPPING);
+            // 先获取当前状态处理器的引用
+            LogstashMachineStateHandler handlerBeforeOperation = currentHandler;
+            LogstashMachineState initialState = currentState;
+            
+            // 标记进入停止中状态（仅DB更新）
+            stateManager.updateMachineState(process.getId(), machine.getId(), LogstashMachineState.STOPPING);
+            logger.info("机器 [{}] 上的进程 [{}] 开始停止操作，状态从 [{}] 临时标记为 [STOPPING]", 
+                    machine.getId(), process.getId(), initialState.name());
 
-            // 执行停止操作
-            return currentHandler.handleStop(process, machine, taskId)
+            // 执行停止操作，使用初始状态的处理器
+            return handlerBeforeOperation.handleStop(process, machine, taskId)
                     .thenApply(success -> {
                         // 根据操作结果更新状态
-                        LogstashMachineState nextState = currentHandler.getNextState(
+                        LogstashMachineState nextState = handlerBeforeOperation.getNextState(
                                 LogstashMachineStateHandler.OperationType.STOP, success);
-                        transitionTo(nextState);
+                        // 直接更新数据库状态，不更新上下文（简化）
+                        stateManager.updateMachineState(process.getId(), machine.getId(), nextState);
+                        logger.info("机器 [{}] 上的进程 [{}] 停止操作完成，最终状态设置为 [{}]", 
+                                machine.getId(), process.getId(), nextState.name());
                         return success;
+                    })
+                    .exceptionally(e -> {
+                        // 发生异常时直接更新状态为失败
+                        logger.error("停止过程中发生异常: {}", e.getMessage(), e);
+                        stateManager.updateMachineState(process.getId(), machine.getId(), LogstashMachineState.STOP_FAILED);
+                        logger.info("机器 [{}] 上的进程 [{}] 停止操作异常，最终状态设置为 [STOP_FAILED]", 
+                                machine.getId(), process.getId());
+                        // 继续传播异常以便外部任务系统能正确处理
+                        throw new CompletionException(e);
                     });
         }
 
@@ -366,10 +418,16 @@ public class LogstashMachineStateManager {
                         LogstashMachineState nextState = currentHandler.getNextState(
                                 LogstashMachineStateHandler.OperationType.UPDATE_CONFIG, success);
                         if (nextState != currentState) {
-                            transitionTo(nextState);
+                            stateManager.updateMachineState(process.getId(), machine.getId(), nextState);
                         }
 
                         return success;
+                    })
+                    .exceptionally(e -> {
+                        // 记录异常但保持当前状态
+                        logger.error("更新配置过程中发生异常: {}", e.getMessage(), e);
+                        // 继续传播异常以便外部任务系统能正确处理
+                        throw new CompletionException(e);
                     });
         }
 
@@ -391,8 +449,14 @@ public class LogstashMachineStateManager {
                         // 根据操作结果更新状态
                         LogstashMachineState nextState = currentHandler.getNextState(
                                 LogstashMachineStateHandler.OperationType.REFRESH_CONFIG, success);
-                        transitionTo(nextState);
+                        stateManager.updateMachineState(process.getId(), machine.getId(), nextState);
                         return success;
+                    })
+                    .exceptionally(e -> {
+                        // 记录异常但保持当前状态
+                        logger.error("刷新配置过程中发生异常: {}", e.getMessage(), e);
+                        // 继续传播异常以便外部任务系统能正确处理
+                        throw new CompletionException(e);
                     });
         }
 

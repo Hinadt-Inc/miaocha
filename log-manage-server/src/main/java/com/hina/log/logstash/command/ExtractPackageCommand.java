@@ -36,7 +36,7 @@ public class ExtractPackageCommand extends AbstractLogstashCommand {
             sshClient.executeCommand(machine, extractCommand);
 
             // 检查解压是否成功
-            String checkCommand = String.format("[ -d %s/bin ] && [ -f %s/bin/logstash ] && echo \"success\"",
+            String checkCommand = String.format("if [ -d \"%s/bin\" ] && [ -f \"%s/bin/logstash\" ]; then echo \"success\"; else echo \"failed\"; fi",
                     processDir, processDir);
             String checkResult = sshClient.executeCommand(machine, checkCommand);
 

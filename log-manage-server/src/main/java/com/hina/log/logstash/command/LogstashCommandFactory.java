@@ -110,6 +110,13 @@ public class LogstashCommandFactory {
     }
 
     /**
+     * 创建修改系统配置命令（增强版：支持JVM选项和系统配置）
+     */
+    public LogstashCommand modifySystemConfigCommand(Long processId, String jvmOptions, String logstashYml) {
+        return new ModifySystemConfigCommand(sshClient, logstashProperties.getDeployDir(), processId, jvmOptions, logstashYml);
+    }
+
+    /**
      * 创建启动进程命令
      */
     public LogstashCommand startProcessCommand(Long processId) {
