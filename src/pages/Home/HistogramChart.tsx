@@ -38,7 +38,7 @@ const HistogramChart = (props: IProps) => {
       },
       // 直角坐标系网格配置
       grid: {
-        top: '2%', // 距离容器上边距
+        top: '5%', // 距离容器上边距
         right: '2%', // 距离容器右边距
         bottom: '0%', // 距离容器下边距，为时间轴留出空间
         left: '2%', // 距离容器左边距
