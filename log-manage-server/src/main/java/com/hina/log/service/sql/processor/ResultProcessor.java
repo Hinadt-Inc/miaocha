@@ -18,6 +18,7 @@ public class ResultProcessor {
 
     /**
      * 处理日志分布统计查询结果
+     * 注意：保持从数据库查询结果中获取的时间倒序排序（即从最新日期到最旧日期）
      *
      * @param queryResult 查询返回的原始结果
      * @param result      日志时间分布结果DTO，用于填充分布数据
@@ -28,6 +29,7 @@ public class ResultProcessor {
         List<Map<String, Object>> rows = (List<Map<String, Object>>) queryResult.get("rows");
 
         if (rows != null) {
+            // 直接使用数据库返回的顺序，因为SQL已经按log_time_降序排序
             for (Map<String, Object> row : rows) {
                 LogHistogramResultDTO.LogDistributionData data = new LogHistogramResultDTO.LogDistributionData();
                 if (row.containsKey("log_time_")) {
