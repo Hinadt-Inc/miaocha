@@ -4,9 +4,12 @@ import {
   DeleteOutlined,
   PlayCircleOutlined,
   StopOutlined,
+  SyncOutlined,
   HistoryOutlined,
   InfoCircleOutlined,
   LoadingOutlined,
+  CodeOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 import {
   Button,
@@ -28,15 +31,23 @@ import {
   createLogstashProcess,
   deleteLogstashProcess,
   getLogstashProcesses,
+  getLogstashProcess,
   startLogstashProcess,
+  startLogstashMachine,
+  stopLogstashMachine,
+  refreshLogstashMachineConfig,
+  refreshLogstashConfig,
   stopLogstashProcess,
+  executeLogstashSQL,
   updateLogstashProcess,
+  updateLogstashConfig,
   getLogstashTaskStatus,
   getLogstashTaskSummaries,
-  getTaskSteps,
+  getMachineTasks,
 } from '../../api/logstash';
-import type { LogstashProcess, LogstashTaskSummary, TaskStepsResponse } from '../../types/logstashTypes';
+import type { LogstashProcess, LogstashTaskSummary, MachineTask } from '../../types/logstashTypes';
 import LogstashEditModal from './components/LogstashEditModal';
+import LogstashMachineConfigModal from './components/LogstashMachineConfigModal';
 import { useRef, useState } from 'react';
 
 function LogstashManagementPage() {
@@ -46,26 +57,57 @@ function LogstashManagementPage() {
   const [currentProcess, setCurrentProcess] = useState<LogstashProcess | null>(null);
   const [taskSummaries, setTaskSummaries] = useState<LogstashTaskSummary[]>([]);
   const [summaryModalVisible, setSummaryModalVisible] = useState(false);
-  const [taskSteps, setTaskSteps] = useState<TaskStepsResponse | null>(null);
+  const [selectedTask, setSelectedTask] = useState<LogstashTaskSummary | null>(null);
   const [stepsModalVisible, setStepsModalVisible] = useState(false);
+  const [machineTasks, setMachineTasks] = useState<MachineTask[]>([]);
+  const [machineTasksModalVisible, setMachineTasksModalVisible] = useState(false);
+  const [currentMachine, setCurrentMachine] = useState<{
+    processId: number;
+    machineId: number;
+    configContent?: string;
+    jvmOptions?: string;
+    logstashYml?: string;
+  } | null>(null);
+  const [machineConfigModalVisible, setMachineConfigModalVisible] = useState(false);
+  const [sqlModalVisible, setSqlModalVisible] = useState(false);
+  const [sql, setSql] = useState('');
   const [messageApi, contextHolder] = message.useMessage();
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [currentDetail, setCurrentDetail] = useState<LogstashProcess | null>(null);
 
-  const showTaskSteps = async (taskId: string) => {
+  const showTaskSteps = (task: LogstashTaskSummary) => {
+    setSelectedTask(task);
+    setStepsModalVisible(true);
+  };
+
+  const showMachineTasks = async (processId: number, machineId: number) => {
     try {
-      const steps = await getTaskSteps(taskId);
-      setTaskSteps(steps);
-      setStepsModalVisible(true);
+      setCurrentMachine({ processId, machineId });
+      const tasks = await getMachineTasks(processId, machineId);
+      setMachineTasks(tasks);
+      setMachineTasksModalVisible(true);
     } catch (err) {
-      messageApi.error('获取任务步骤详情失败');
-      console.error('获取任务步骤详情失败:', err);
+      messageApi.error('获取机器任务失败');
+      console.error('获取机器任务失败:', err);
     }
   };
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await getLogstashProcesses();
-      setData(res);
+      const processes = await getLogstashProcesses();
+      // 获取每个进程的详细信息
+      const detailedProcesses = await Promise.all(
+        processes.map(async (process) => {
+          try {
+            return await getLogstashProcess(process.id);
+          } catch (err) {
+            console.error(`获取进程 ${process.id} 详情失败:`, err);
+            return process; // 返回基本信息如果获取详情失败
+          }
+        }),
+      );
+      setData(detailedProcesses);
     } catch (err) {
       messageApi.error('获取Logstash进程列表失败');
       console.error('获取Logstash进程列表失败:', err);
@@ -115,8 +157,9 @@ function LogstashManagementPage() {
 
   const handleStart = async (id: number) => {
     try {
+      messageApi.loading('正在启动Logstash进程...');
       await startLogstashProcess(id);
-      messageApi.success('启动成功');
+      messageApi.success('启动命令已发送');
       await fetchData();
 
       const pollInterval = 2000;
@@ -125,12 +168,19 @@ function LogstashManagementPage() {
       const pollStatus = async () => {
         try {
           const status = await getLogstashTaskStatus(id);
-          if (status.status === 'COMPLETED' || status.status === 'FAILED') {
-            messageApi.success(`任务${status.status === 'COMPLETED' ? '完成' : '失败'}`);
+          if (status.status === 'COMPLETED') {
+            messageApi.success('所有机器启动完成');
             await fetchData();
             clearTimeout(pollTimer);
             return;
           }
+          if (status.status === 'FAILED') {
+            messageApi.error('部分机器启动失败');
+            await fetchData();
+            clearTimeout(pollTimer);
+            return;
+          }
+          messageApi.info(`启动中: ${status.progressPercentage}%`);
           pollTimer = setTimeout(pollStatus, pollInterval);
         } catch (err) {
           messageApi.error('获取任务状态失败');
@@ -145,10 +195,78 @@ function LogstashManagementPage() {
     }
   };
 
+  const handleStartMachine = async (processId: number, machineId: number) => {
+    try {
+      messageApi.loading(`正在启动机器 ${machineId} 的Logstash实例...`);
+      await startLogstashMachine(processId, machineId);
+      messageApi.success('启动命令已发送');
+      await fetchData();
+    } catch (err) {
+      messageApi.error('启动失败');
+      console.error('启动Logstash机器实例失败:', err);
+    }
+  };
+
+  const handleRefreshConfig = async (processId: number, machineId: number) => {
+    try {
+      messageApi.loading(`正在刷新机器 ${machineId} 的配置...`);
+      await refreshLogstashMachineConfig(processId, machineId);
+      messageApi.success('配置刷新命令已发送');
+      await fetchData();
+    } catch (err) {
+      messageApi.error('配置刷新失败');
+      console.error('刷新Logstash机器配置失败:', err);
+    }
+  };
+
+  const handleRefreshAllConfig = async (processId: number) => {
+    try {
+      messageApi.loading('正在刷新所有机器配置...');
+      await refreshLogstashConfig(processId, {});
+      messageApi.success('配置刷新命令已发送');
+      await fetchData();
+    } catch (err) {
+      messageApi.error('配置刷新失败');
+      console.error('刷新Logstash配置失败:', err);
+    }
+  };
+
+  const handleStopMachine = async (processId: number, machineId: number) => {
+    try {
+      messageApi.loading(`正在停止机器 ${machineId} 的Logstash实例...`);
+      await stopLogstashMachine(processId, machineId);
+      messageApi.success('停止命令已发送');
+      await fetchData();
+    } catch (err) {
+      messageApi.error('停止失败');
+      console.error('停止Logstash机器实例失败:', err);
+    }
+  };
+
+  const handleExecuteSQL = async (processId: number) => {
+    try {
+      if (!sql.trim()) {
+        messageApi.warning('请输入SQL语句');
+        return;
+      }
+
+      messageApi.loading('正在执行SQL...');
+      await executeLogstashSQL(processId, sql);
+      messageApi.success('SQL执行成功');
+      setSqlModalVisible(false);
+      setSql('');
+      await fetchData();
+    } catch (err) {
+      messageApi.error('SQL执行失败');
+      console.error('执行SQL失败:', err);
+    }
+  };
+
   const handleStop = async (id: number) => {
     try {
+      messageApi.loading('正在停止Logstash进程...');
       await stopLogstashProcess(id);
-      messageApi.success('停止成功');
+      messageApi.success('停止命令已发送');
       await fetchData();
 
       const pollInterval = 2000;
@@ -157,12 +275,19 @@ function LogstashManagementPage() {
       const pollStatus = async () => {
         try {
           const status = await getLogstashTaskStatus(id);
-          if (status.status === 'COMPLETED' || status.status === 'FAILED') {
-            messageApi.success(`任务${status.status === 'COMPLETED' ? '完成' : '失败'}`);
+          if (status.status === 'COMPLETED') {
+            messageApi.success('所有机器停止完成');
             await fetchData();
             clearTimeout(pollTimer);
             return;
           }
+          if (status.status === 'FAILED') {
+            messageApi.error('部分机器停止失败');
+            await fetchData();
+            clearTimeout(pollTimer);
+            return;
+          }
+          messageApi.info(`停止中: ${status.progressPercentage}%`);
           pollTimer = setTimeout(pollStatus, pollInterval);
         } catch (err) {
           messageApi.error('获取任务状态失败');
@@ -182,6 +307,18 @@ function LogstashManagementPage() {
       title: '名称',
       dataIndex: 'name',
       key: 'name',
+      render: (name: string, record: LogstashProcess) => (
+        <Button
+          type="link"
+          style={{ color: '#1890ff', padding: 0 }}
+          onClick={() => {
+            setCurrentDetail(record);
+            setDetailModalVisible(true);
+          }}
+        >
+          {name}
+        </Button>
+      ),
     },
     {
       title: '模块',
@@ -190,35 +327,42 @@ function LogstashManagementPage() {
     },
     {
       title: '状态',
-      dataIndex: 'stateDescription',
       key: 'state',
-      render: (text: string, record: LogstashProcess) => {
-        if (record.state === 'STARTING' || record.state === 'STOPPING') {
-          return (
-            <Space>
-              <LoadingOutlined />
-              {text}
-            </Space>
-          );
-        }
-        return text;
-      },
+      render: (_: unknown, record: LogstashProcess) => (
+        <Space direction="vertical" size={4}>
+          {record.machineStatuses?.map((machine) => (
+            <div key={machine.machineId}>
+              <Tag color={machine.state === 'RUNNING' ? 'green' : machine.state === 'STOPPED' ? 'red' : 'orange'}>
+                {machine.machineName} ({machine.machineIp}): {machine.state}
+              </Tag>
+            </div>
+          ))}
+        </Space>
+      ),
     },
     {
       title: '操作',
       key: 'action',
       render: (_: unknown, record: LogstashProcess) => (
-        <Space size="middle">
+        <Space size="small">
           <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
             编辑
           </Button>
           <Button
             type="link"
-            icon={record.state === 'RUNNING' ? <StopOutlined /> : <PlayCircleOutlined />}
-            onClick={() => (record.state === 'RUNNING' ? handleStop(record.id) : handleStart(record.id))}
-            disabled={record.state === 'RUNNING' ? false : ['STARTING', 'STOPPING'].includes(record.state)}
+            icon={<PlayCircleOutlined />}
+            onClick={() => handleStart(record.id)}
+            disabled={['RUNNING', 'STARTING', 'STOPPING'].includes(record.state)}
           >
-            {record.state === 'RUNNING' ? '停止' : '启动'}
+            启动
+          </Button>
+          <Button
+            type="link"
+            icon={<StopOutlined />}
+            onClick={() => handleStop(record.id)}
+            disabled={['STOPPED', 'STARTING', 'STOPPING'].includes(record.state)}
+          >
+            停止
           </Button>
           <Button
             type="link"
@@ -228,6 +372,25 @@ function LogstashManagementPage() {
             }}
           >
             历史
+          </Button>
+          <Button
+            type="link"
+            icon={<CodeOutlined />}
+            onClick={() => {
+              setSqlModalVisible(true);
+              setCurrentProcess(record);
+            }}
+            disabled={record.state !== 'NOT_STARTED'}
+          >
+            SQL
+          </Button>
+          <Button
+            type="link"
+            icon={<SyncOutlined />}
+            onClick={() => handleRefreshAllConfig(record.id)}
+            disabled={record.state === 'RUNNING'}
+          >
+            刷新配置
           </Button>
           <Popconfirm
             title="确认删除"
@@ -266,23 +429,151 @@ function LogstashManagementPage() {
       </div>
 
       <div className="table-container">
-        <Table columns={columns} dataSource={data} size="small" rowKey="id" loading={loading} bordered />
+        <Table
+          columns={columns}
+          dataSource={data}
+          size="small"
+          rowKey="id"
+          loading={loading}
+          bordered
+          expandable={{
+            expandedRowRender: (record) => (
+              <Table
+                size="small"
+                bordered
+                dataSource={record.machineStatuses}
+                rowKey="machineId"
+                columns={[
+                  {
+                    title: '机器ID',
+                    dataIndex: 'machineId',
+                    key: 'machineId',
+                  },
+                  {
+                    title: '名称',
+                    dataIndex: 'machineName',
+                    key: 'machineName',
+                  },
+                  {
+                    title: 'IP',
+                    dataIndex: 'machineIp',
+                    key: 'machineIp',
+                  },
+                  {
+                    title: '状态',
+                    dataIndex: 'state',
+                    key: 'state',
+                    render: (state: string) => (
+                      <Tag color={state === 'RUNNING' ? 'green' : state === 'STOPPED' ? 'red' : 'orange'}>{state}</Tag>
+                    ),
+                  },
+                  {
+                    title: '状态描述',
+                    dataIndex: 'stateDescription',
+                    key: 'stateDescription',
+                  },
+                  {
+                    title: '操作',
+                    key: 'action',
+                    render: (_: unknown, machine: { machineId: number; state: string }) => (
+                      <Space size="small">
+                        <Button
+                          type="link"
+                          icon={<PlayCircleOutlined />}
+                          onClick={() => handleStartMachine(record.id, machine.machineId)}
+                          disabled={machine.state === 'RUNNING'}
+                        >
+                          启动
+                        </Button>
+                        <Button
+                          type="link"
+                          icon={<StopOutlined />}
+                          onClick={() => handleStopMachine(record.id, machine.machineId)}
+                          disabled={machine.state === 'STOPPED'}
+                        >
+                          停止
+                        </Button>
+                        <Button
+                          type="link"
+                          icon={<SyncOutlined />}
+                          onClick={() => handleRefreshConfig(record.id, machine.machineId)}
+                          disabled={machine.state === 'RUNNING'}
+                        >
+                          刷新配置
+                        </Button>
+                        <Button
+                          type="link"
+                          icon={<SettingOutlined />}
+                          onClick={() => {
+                            const process = data.find((p) => p.id === record.id);
+                            const machineStatus = process?.machineStatuses?.find(
+                              (m) => m.machineId === machine.machineId,
+                            );
+                            setCurrentMachine({
+                              processId: record.id,
+                              machineId: machine.machineId,
+                              configContent: process?.configContent,
+                              jvmOptions: process?.jvmOptions,
+                              logstashYml: process?.logstashYml,
+                            });
+                            setMachineConfigModalVisible(true);
+                          }}
+                          disabled={machine.state === 'RUNNING'}
+                        >
+                          编辑配置
+                        </Button>
+                        <Button
+                          type="link"
+                          icon={<HistoryOutlined />}
+                          onClick={() => showMachineTasks(record.id, machine.machineId)}
+                        >
+                          任务
+                        </Button>
+                      </Space>
+                    ),
+                  },
+                ]}
+                pagination={false}
+              />
+            ),
+          }}
+        />
         <LogstashEditModal
           visible={editModalVisible}
           onCancel={() => setEditModalVisible(false)}
           onOk={async (values: Partial<LogstashProcess>) => {
             try {
               if (currentProcess) {
-                await updateLogstashProcess(currentProcess.id, values);
-                messageApi.success('更新成功');
+                // 只更新配置相关字段
+                await updateLogstashConfig(currentProcess.id, {
+                  configContent: values.configContent,
+                  jvmOptions: values.jvmOptions,
+                  logstashYml: values.logstashYml,
+                });
+                messageApi.success('配置更新成功');
               } else {
-                await createLogstashProcess(values);
+                const process = await createLogstashProcess(values);
                 messageApi.success('创建成功');
+
+                // 如果jvmOptions或logstashYml为空，异步同步配置
+                if (!values.jvmOptions || !values.logstashYml) {
+                  setTimeout(async () => {
+                    try {
+                      await updateLogstashConfig(process.id, {
+                        jvmOptions: values.jvmOptions || '默认JVM参数',
+                        logstashYml: values.logstashYml || '默认Logstash配置',
+                      });
+                      await fetchData();
+                    } catch (err) {
+                      console.error('异步更新配置失败:', err);
+                    }
+                  }, 3000);
+                }
               }
               setEditModalVisible(false);
               await fetchData();
             } catch (err) {
-              messageApi.error(currentProcess ? '更新失败' : '创建失败');
+              messageApi.error(currentProcess ? '配置更新失败' : '创建失败');
               console.error('操作Logstash进程失败:', err);
             }
           }}
@@ -341,13 +632,7 @@ function LogstashManagementPage() {
                 title: '操作',
                 key: 'action',
                 render: (_: unknown, record: LogstashTaskSummary) => (
-                  <Button
-                    type="link"
-                    icon={<InfoCircleOutlined />}
-                    onClick={() => {
-                      void showTaskSteps(record.taskId);
-                    }}
-                  >
+                  <Button type="link" icon={<InfoCircleOutlined />} onClick={() => showTaskSteps(record)}>
                     详情
                   </Button>
                 ),
@@ -356,120 +641,357 @@ function LogstashManagementPage() {
           />
         </Modal>
         <Modal
+          title={`机器任务 - ${currentMachine?.machineId || ''}`}
+          open={machineTasksModalVisible}
+          onCancel={() => setMachineTasksModalVisible(false)}
+          footer={null}
+          width={1200}
+        >
+          {machineTasks.map((task) => (
+            <div key={task.taskId} style={{ marginBottom: 24 }}>
+              <Descriptions bordered size="small" column={2} style={{ marginBottom: 16 }}>
+                <Descriptions.Item label="任务ID">{task.taskId}</Descriptions.Item>
+                <Descriptions.Item label="任务名称">{task.name}</Descriptions.Item>
+                <Descriptions.Item label="操作类型">{task.operationType}</Descriptions.Item>
+                <Descriptions.Item label="状态">
+                  <Tag
+                    color={task.status === 'COMPLETED' ? 'success' : task.status === 'FAILED' ? 'error' : 'processing'}
+                  >
+                    {task.status}
+                  </Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label="开始时间">{task.startTime}</Descriptions.Item>
+                <Descriptions.Item label="结束时间">{task.endTime || '-'}</Descriptions.Item>
+                <Descriptions.Item label="持续时间">{task.duration}ms</Descriptions.Item>
+                <Descriptions.Item label="错误信息" span={2}>
+                  {task.errorMessage || '无'}
+                </Descriptions.Item>
+              </Descriptions>
+
+              <h4 style={{ marginBottom: 16 }}>步骤详情</h4>
+              {Object.entries(task.machineSteps).map(([machineName, steps]) => (
+                <div key={machineName} style={{ marginBottom: 16 }}>
+                  <h5>
+                    {machineName} (进度: {task.machineProgressPercentages[machineName]}%)
+                  </h5>
+                  <Table
+                    size="small"
+                    bordered
+                    dataSource={steps}
+                    rowKey="stepId"
+                    columns={[
+                      { title: '步骤ID', dataIndex: 'stepId', key: 'stepId' },
+                      { title: '步骤名称', dataIndex: 'stepName', key: 'stepName' },
+                      {
+                        title: '状态',
+                        dataIndex: 'status',
+                        key: 'status',
+                        render: (status: string) => (
+                          <Tag
+                            color={status === 'COMPLETED' ? 'success' : status === 'FAILED' ? 'error' : 'processing'}
+                          >
+                            {status}
+                          </Tag>
+                        ),
+                      },
+                      { title: '开始时间', dataIndex: 'startTime', key: 'startTime' },
+                      {
+                        title: '结束时间',
+                        dataIndex: 'endTime',
+                        key: 'endTime',
+                        render: (endTime: string) => endTime || '-',
+                      },
+                      {
+                        title: '持续时间',
+                        dataIndex: 'duration',
+                        key: 'duration',
+                        render: (duration: number) => `${duration}ms`,
+                      },
+                      {
+                        title: '错误信息',
+                        dataIndex: 'errorMessage',
+                        key: 'errorMessage',
+                        render: (errorMessage: string) => errorMessage || '-',
+                      },
+                    ]}
+                  />
+                </div>
+              ))}
+            </div>
+          ))}
+        </Modal>
+        <Modal
           title="任务步骤详情"
           open={stepsModalVisible}
           onCancel={() => setStepsModalVisible(false)}
           footer={null}
           width={1200}
         >
-          {taskSteps && (
+          {selectedTask && (
             <div>
               <Descriptions bordered size="small" column={2} style={{ marginBottom: 16 }}>
-                <Descriptions.Item label="任务ID">{taskSteps.taskId}</Descriptions.Item>
-                <Descriptions.Item label="任务名称">{taskSteps.taskName}</Descriptions.Item>
+                <Descriptions.Item label="任务ID">{selectedTask.taskId}</Descriptions.Item>
+                <Descriptions.Item label="任务名称">{selectedTask.name}</Descriptions.Item>
                 <Descriptions.Item label="任务状态">
                   <Tag
                     color={
-                      taskSteps.taskStatus === 'COMPLETED'
+                      selectedTask.status === 'COMPLETED'
                         ? 'success'
-                        : taskSteps.taskStatus === 'FAILED'
+                        : selectedTask.status === 'FAILED'
                           ? 'error'
                           : 'processing'
                     }
                   >
-                    {taskSteps.taskStatus}
+                    {selectedTask.status}
                   </Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label="开始时间">{selectedTask.startTime}</Descriptions.Item>
+                <Descriptions.Item label="结束时间">{selectedTask.endTime || '-'}</Descriptions.Item>
+                <Descriptions.Item label="持续时间">{selectedTask.duration}ms</Descriptions.Item>
+                <Descriptions.Item label="错误信息" span={2}>
+                  {selectedTask.errorMessage || '无'}
                 </Descriptions.Item>
               </Descriptions>
 
-              <Table
-                dataSource={taskSteps.steps}
-                rowKey="stepId"
-                columns={[
-                  {
-                    title: '步骤ID',
-                    dataIndex: 'stepId',
-                    key: 'stepId',
-                  },
-                  {
-                    title: '步骤名称',
-                    dataIndex: 'stepName',
-                    key: 'stepName',
-                  },
-                  {
-                    title: '完成',
-                    dataIndex: 'completedCount',
-                    key: 'completedCount',
-                  },
-                  {
-                    title: '失败',
-                    dataIndex: 'failedCount',
-                    key: 'failedCount',
-                  },
-                  {
-                    title: '待处理',
-                    dataIndex: 'pendingCount',
-                    key: 'pendingCount',
-                  },
-                  {
-                    title: '运行中',
-                    dataIndex: 'runningCount',
-                    key: 'runningCount',
-                  },
-                  {
-                    title: '跳过',
-                    dataIndex: 'skippedCount',
-                    key: 'skippedCount',
-                  },
-                  {
-                    title: '总计',
-                    dataIndex: 'totalCount',
-                    key: 'totalCount',
-                  },
-                ]}
-                expandable={{
-                  expandedRowRender: (step) => (
-                    <div style={{ padding: '8px 16px', background: '#fafafa' }}>
-                      {step.machineSteps.map((machine) => (
-                        <Descriptions
-                          key={machine.machineId}
-                          bordered
-                          size="small"
-                          column={2}
-                          style={{ marginBottom: 16 }}
-                        >
-                          <Descriptions.Item label="机器ID">{machine.machineId}</Descriptions.Item>
-                          <Descriptions.Item label="名称">{machine.machineName}</Descriptions.Item>
-                          <Descriptions.Item label="IP">{machine.machineIp}</Descriptions.Item>
-                          <Descriptions.Item label="状态">
-                            <Tag
-                              color={
-                                machine.status === 'COMPLETED'
-                                  ? 'success'
-                                  : machine.status === 'FAILED'
-                                    ? 'error'
-                                    : 'processing'
-                              }
-                            >
-                              {machine.status}
-                            </Tag>
-                          </Descriptions.Item>
-                          <Descriptions.Item label="开始时间">{machine.startTime}</Descriptions.Item>
-                          <Descriptions.Item label="结束时间">{machine.endTime || '-'}</Descriptions.Item>
-                          {machine.errorMessage && (
-                            <Descriptions.Item label="错误信息" span={2}>
-                              {machine.errorMessage}
-                            </Descriptions.Item>
-                          )}
-                        </Descriptions>
-                      ))}
-                    </div>
-                  ),
-                }}
-              />
+              <h4 style={{ marginBottom: 16 }}>机器步骤详情</h4>
+              {Object.entries(selectedTask.machineSteps).map(([machineName, steps]) => (
+                <div key={machineName} style={{ marginBottom: 24 }}>
+                  <h5>
+                    {machineName} (进度: {selectedTask.machineProgressPercentages[machineName]}%)
+                  </h5>
+                  <Table
+                    size="small"
+                    bordered
+                    dataSource={steps}
+                    rowKey="stepId"
+                    columns={[
+                      {
+                        title: '步骤ID',
+                        dataIndex: 'stepId',
+                        key: 'stepId',
+                      },
+                      {
+                        title: '步骤名称',
+                        dataIndex: 'stepName',
+                        key: 'stepName',
+                      },
+                      {
+                        title: '状态',
+                        dataIndex: 'status',
+                        key: 'status',
+                        render: (status: string) => (
+                          <Tag
+                            color={status === 'COMPLETED' ? 'success' : status === 'FAILED' ? 'error' : 'processing'}
+                          >
+                            {status}
+                          </Tag>
+                        ),
+                      },
+                      {
+                        title: '开始时间',
+                        dataIndex: 'startTime',
+                        key: 'startTime',
+                      },
+                      {
+                        title: '结束时间',
+                        dataIndex: 'endTime',
+                        key: 'endTime',
+                        render: (endTime: string) => endTime || '-',
+                      },
+                      {
+                        title: '持续时间',
+                        dataIndex: 'duration',
+                        key: 'duration',
+                        render: (duration: number) => `${duration}ms`,
+                      },
+                      {
+                        title: '错误信息',
+                        dataIndex: 'errorMessage',
+                        key: 'errorMessage',
+                        render: (errorMessage: string) => errorMessage || '-',
+                      },
+                    ]}
+                  />
+                </div>
+              ))}
             </div>
           )}
         </Modal>
+        <Modal
+          title="执行Doris SQL"
+          open={sqlModalVisible}
+          onCancel={() => {
+            setSqlModalVisible(false);
+            setSql('');
+          }}
+          onOk={() => {
+            if (currentProcess) {
+              void handleExecuteSQL(currentProcess.id);
+            }
+          }}
+          width={800}
+        >
+          <div style={{ marginBottom: 16 }}>
+            <p>请输入要执行的Doris SQL语句（主要用于创建表）：</p>
+            <p style={{ color: 'red' }}>注意：只有在状态为NOT_STARTED时才能执行SQL</p>
+          </div>
+          <textarea
+            value={sql}
+            onChange={(e) => setSql(e.target.value)}
+            style={{ width: '100%', height: '200px', padding: '8px' }}
+            placeholder="例如：CREATE TABLE log_table_test_env (...) ENGINE=OLAP ..."
+          />
+        </Modal>
+        <Modal
+          title={`Logstash进程详情 - ${currentDetail?.name || ''}`}
+          open={detailModalVisible}
+          onCancel={() => setDetailModalVisible(false)}
+          footer={null}
+          width={1000}
+        >
+          {currentDetail && (
+            <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+              <Descriptions bordered column={2} size="small">
+                <Descriptions.Item label="ID" span={1}>
+                  {currentDetail.id}
+                </Descriptions.Item>
+                <Descriptions.Item label="模块" span={1}>
+                  {currentDetail.module}
+                </Descriptions.Item>
+                <Descriptions.Item label="创建时间" span={1}>
+                  {currentDetail.createTime}
+                </Descriptions.Item>
+                <Descriptions.Item label="更新时间" span={1}>
+                  {currentDetail.updateTime}
+                </Descriptions.Item>
+                <Descriptions.Item label="描述" span={2}>
+                  {currentDetail.description || '无描述'}
+                </Descriptions.Item>
+                <Descriptions.Item label="自定义包路径" span={2}>
+                  {currentDetail.customPackagePath || '未设置'}
+                </Descriptions.Item>
+              </Descriptions>
+
+              <div style={{ margin: '16px 0' }}>
+                <h4 style={{ marginBottom: 8 }}>JVM参数</h4>
+                <pre
+                  style={{
+                    margin: 0,
+                    padding: 12,
+                    background: '#f5f5f5',
+                    borderRadius: 4,
+                    maxHeight: 200,
+                    overflow: 'auto',
+                  }}
+                >
+                  {currentDetail.jvmOptions}
+                </pre>
+              </div>
+
+              <div style={{ margin: '16px 0' }}>
+                <h4 style={{ marginBottom: 8 }}>Logstash配置</h4>
+                <pre
+                  style={{
+                    margin: 0,
+                    padding: 12,
+                    background: '#f5f5f5',
+                    borderRadius: 4,
+                    maxHeight: 200,
+                    overflow: 'auto',
+                  }}
+                >
+                  {currentDetail.logstashYml}
+                </pre>
+              </div>
+
+              <div style={{ margin: '16px 0' }}>
+                <h4 style={{ marginBottom: 8 }}>配置内容</h4>
+                <pre
+                  style={{
+                    margin: 0,
+                    padding: 12,
+                    background: '#f5f5f5',
+                    borderRadius: 4,
+                    maxHeight: 200,
+                    overflow: 'auto',
+                  }}
+                >
+                  {currentDetail.configContent}
+                </pre>
+              </div>
+
+              <div style={{ marginTop: 24 }}>
+                <h4 style={{ marginBottom: 16 }}>机器状态</h4>
+                <Table
+                  size="small"
+                  bordered
+                  dataSource={currentDetail.machineStatuses}
+                  rowKey="machineId"
+                  pagination={false}
+                  scroll={{ x: true }}
+                  columns={[
+                    {
+                      title: '机器名称',
+                      dataIndex: 'machineName',
+                      fixed: 'left',
+                      width: 150,
+                    },
+                    {
+                      title: 'IP',
+                      dataIndex: 'machineIp',
+                      width: 120,
+                    },
+                    {
+                      title: '状态',
+                      dataIndex: 'state',
+                      width: 120,
+                      render: (state: string) => (
+                        <Tag color={state === 'RUNNING' ? 'green' : state === 'STOPPED' ? 'red' : 'orange'}>
+                          {state}
+                        </Tag>
+                      ),
+                    },
+                    {
+                      title: '状态描述',
+                      dataIndex: 'stateDescription',
+                      width: 200,
+                      ellipsis: true,
+                    },
+                  ]}
+                />
+              </div>
+            </div>
+          )}
+        </Modal>
+        <LogstashMachineConfigModal
+          visible={machineConfigModalVisible}
+          onCancel={() => setMachineConfigModalVisible(false)}
+          onOk={(values: { configContent: string; jvmOptions: string; logstashYml: string }) => {
+            if (currentMachine) {
+              updateLogstashConfig(currentMachine.processId, {
+                machineIds: [currentMachine.machineId],
+                configContent: values.configContent,
+                jvmOptions: values.jvmOptions,
+                logstashYml: values.logstashYml,
+              })
+                .then(() => {
+                  messageApi.success('配置更新成功');
+                  fetchData();
+                })
+                .catch((err) => {
+                  messageApi.error('配置更新失败');
+                  console.error('更新机器配置失败:', err);
+                });
+            }
+          }}
+          processId={currentMachine?.processId || 0}
+          machineId={currentMachine?.machineId || 0}
+          initialConfig={{
+            configContent: currentMachine?.configContent,
+            jvmOptions: currentMachine?.jvmOptions,
+            logstashYml: currentMachine?.logstashYml,
+          }}
+        />
       </div>
     </div>
   );

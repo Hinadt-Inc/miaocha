@@ -1,4 +1,4 @@
-import { Form, Input, Modal, Select, Spin } from 'antd';
+import { Form, Input, Modal, Select, Spin, Table, Tag } from 'antd';
 import { useEffect, useState } from 'react';
 import type { LogstashProcess } from '../../../types/logstashTypes';
 import { getAllDataSources } from '../../../api/datasource';
@@ -13,12 +13,7 @@ interface LogstashEditModalProps {
   initialValues?: LogstashProcess | null;
 }
 
-export default function LogstashEditModal({
-  visible,
-  onCancel,
-  onOk,
-  initialValues
-}: LogstashEditModalProps) {
+export default function LogstashEditModal({ visible, onCancel, onOk, initialValues }: LogstashEditModalProps) {
   const [form] = Form.useForm();
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -30,18 +25,20 @@ export default function LogstashEditModal({
       if (visible) {
         setLoading(true);
         try {
-          const [dsRes, machineRes] = await Promise.all([
-            getAllDataSources(),
-            getMachines()
-          ]);
+          const [dsRes, machineRes] = await Promise.all([getAllDataSources(), getMachines()]);
           setDatasources(dsRes);
           setMachines(machineRes);
-          
+
           form.resetFields();
           if (initialValues) {
+            console.log('Initial values for edit:', initialValues);
+            const machineIds =
+              initialValues.machines?.map((m) => m.id) || initialValues.machineStatuses?.map((m) => m.machineId);
+            console.log('Calculated machineIds:', machineIds);
+
             form.setFieldsValue({
               ...initialValues,
-              machineIds: initialValues.machines?.map(m => m.id)
+              machineIds,
             });
           }
         } finally {
@@ -49,7 +46,7 @@ export default function LogstashEditModal({
         }
       }
     };
-    
+
     fetchData();
   }, [visible, initialValues, form]);
 
@@ -73,62 +70,70 @@ export default function LogstashEditModal({
         onOk={handleOk}
         confirmLoading={confirmLoading}
         onCancel={onCancel}
-        width={600}
+        width={800}
       >
         <Form form={form} layout="vertical">
-          <Form.Item
-            name="name"
-            label="名称"
-            rules={[{ required: true, message: '请输入名称' }]}
-          >
-            <Input />
+          <div>
+            <div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
+                  <Input placeholder="请输入Logstash进程名称，例如：订单处理服务" />
+                </Form.Item>
+                <Form.Item name="module" label="模块" rules={[{ required: true, message: '请输入模块' }]}>
+                  <Input placeholder="请输入模块名称，例如：order-service" />
+                </Form.Item>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <Form.Item name="datasourceId" label="数据源" rules={[{ required: true, message: '请选择数据源' }]}>
+                  <Select loading={loading}>
+                    {datasources.map((ds) => (
+                      <Select.Option key={ds.id} value={ds.id}>
+                        {ds.name}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+                <Form.Item name="tableName" label="表名" rules={[{ required: false, message: '请输入表名' }]}>
+                  <Input placeholder="请输入表名，例如：order_logs" />
+                </Form.Item>
+              </div>
+              <Form.Item name="machineIds" label="部署机器" rules={[{ required: true, message: '请选择部署机器' }]}>
+                <Select mode="multiple" loading={loading}>
+                  {machines.map((m) => (
+                    <Select.Option key={m.id} value={m.id}>
+                      {m.name} ({m.ip})
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+              <Form.Item name="description" label="描述">
+                <Input.TextArea rows={2} placeholder="请输入Logstash进程描述信息" />
+              </Form.Item>
+            </div>
+          </div>
+
+          <Form.Item name="configContent" label="配置内容" rules={[{ required: true, message: '请输入配置内容' }]}>
+            <Input.TextArea
+              rows={6}
+              style={{ width: '100%' }}
+              placeholder="请输入Logstash配置文件内容，例如：input { beats { port => 5044 } }"
+            />
           </Form.Item>
-          <Form.Item
-            name="module"
-            label="模块"
-            rules={[{ required: true, message: '请输入模块' }]}
-          >
-            <Input />
+
+          <Form.Item name="jvmOptions" label="JVM参数">
+            <Input.TextArea
+              rows={4}
+              style={{ width: '100%' }}
+              placeholder="请输入JVM参数，例如：-Xms1g -Xmx1g -XX:+HeapDumpOnOutOfMemoryError"
+            />
           </Form.Item>
-          <Form.Item
-            name="datasourceId"
-            label="数据源"
-            rules={[{ required: true, message: '请选择数据源' }]}
-          >
-            <Select loading={loading}>
-              {datasources.map(ds => (
-                <Select.Option key={ds.id} value={ds.id}>
-                  {ds.name}
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item
-            name="machineIds"
-            label="部署机器"
-            rules={[{ required: true, message: '请选择部署机器' }]}
-          >
-            <Select mode="multiple" loading={loading}>
-              {machines.map(m => (
-                <Select.Option key={m.id} value={m.id}>
-                  {m.name} ({m.ip})
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item
-            name="configJson"
-            label="配置JSON"
-            rules={[{ required: true, message: '请输入配置JSON' }]}
-          >
-            <Input.TextArea rows={4} />
-          </Form.Item>
-          <Form.Item
-            name="dorisSql"
-            label="Doris SQL"
-            rules={[{ required: true, message: '请输入Doris SQL' }]}
-          >
-            <Input.TextArea rows={4} />
+
+          <Form.Item name="logstashYml" label="Logstash配置">
+            <Input.TextArea
+              rows={4}
+              style={{ width: '100%' }}
+              placeholder="请输入logstash.yml配置内容，例如：http.host: 0.0.0.0"
+            />
           </Form.Item>
         </Form>
       </Modal>
