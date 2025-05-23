@@ -8,7 +8,7 @@ spring:
     name: log-manage-system
     version: '@project.version@'
   profiles:
-    active: dev
+    active: '@spring.profiles.active@'
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://${DB_HOST:mysql}:${DB_PORT:3306}/${DB_NAME:log_manage_system}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
@@ -19,6 +19,9 @@ spring:
     baseline-on-migrate: true
     locations: classpath:db/migration
     table: flyway_schema_history
+
+# 环境配置
+environment: '@environment@'
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml
