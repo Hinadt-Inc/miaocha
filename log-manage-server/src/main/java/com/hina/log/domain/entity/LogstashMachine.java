@@ -35,33 +35,9 @@ public class LogstashMachine {
     @Schema(description = "Logstash系统配置")
     private String logstashYml;
 
-    @Schema(description = "执行状态", example = "SUCCESS")
-    private String executionStatus;
-
-    @Schema(description = "执行开始时间")
-    private LocalDateTime executionStartTime;
-
-    @Schema(description = "执行结束时间")
-    private LocalDateTime executionEndTime;
-
-    @Schema(description = "执行耗时(毫秒)")
-    private Long executionDuration;
-
-    @Schema(description = "执行错误信息")
-    private String errorMessage;
-
     @Schema(description = "创建时间")
     private LocalDateTime createTime;
 
     @Schema(description = "更新时间")
     private LocalDateTime updateTime;
-
-    /**
-     * 计算执行耗时
-     */
-    public void calculateExecutionDuration() {
-        if (executionStartTime != null && executionEndTime != null) {
-            this.executionDuration = java.time.Duration.between(executionStartTime, executionEndTime).toMillis();
-        }
-    }
 }

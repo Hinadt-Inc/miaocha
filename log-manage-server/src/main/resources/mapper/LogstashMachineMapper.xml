@@ -4,7 +4,7 @@
     
     <!-- Logstash机器表所有字段 -->
     <sql id="logstashMachineColumns">
-        id, logstash_process_id, machine_id, process_pid, state, config_content, jvm_options, logstash_yml, execution_status, execution_start_time, execution_end_time, execution_duration, error_message, create_time, update_time
+        id, logstash_process_id, machine_id, process_pid, state, config_content, jvm_options, logstash_yml, create_time, update_time
     </sql>
     
     <!-- 插入 Logstash 机器记录 -->
