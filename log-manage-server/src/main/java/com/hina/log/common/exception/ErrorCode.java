@@ -11,6 +11,7 @@ public enum ErrorCode {
     SUCCESS("0000", "操作成功"),
     INTERNAL_ERROR("9999", "服务器内部错误"),
     VALIDATION_ERROR("1000", "参数校验失败"),
+    RESOURCE_NOT_FOUND("1001", "请求的资源不存在"),
 
     // 数据源相关错误码
     DATASOURCE_NOT_FOUND("2001", "数据源不存在"),

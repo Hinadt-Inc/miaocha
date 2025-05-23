@@ -12,6 +12,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
@@ -113,6 +114,17 @@ public class GlobalExceptionHandler {
         log.error("SSH异常: ", e);
         ApiResponse<Void> response = ApiResponse.error(ErrorCode.SSH_COMMAND_FAILED.getCode(), e.getMessage());
         return createResponseEntityWithUtf8(response, HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    /**
+     * 资源未找到异常处理 (404)
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNoResourceFoundException(NoResourceFoundException e) {
+        log.warn("资源未找到: {}", e.getMessage());
+        ApiResponse<Void> response = ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND.getCode(), 
+                "请求的资源不存在，请检查URL路径是否正确");
+        return createResponseEntityWithUtf8(response, HttpStatus.NOT_FOUND);
     }
 
     /**
