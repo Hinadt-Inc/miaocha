@@ -1007,24 +1007,6 @@ function LogstashManagementPage() {
         <LogstashMachineConfigModal
           visible={machineConfigModalVisible}
           onCancel={() => setMachineConfigModalVisible(false)}
-          onOk={(values: { configContent: string; jvmOptions: string; logstashYml: string }) => {
-            if (currentMachine) {
-              updateLogstashConfig(currentMachine.processId, {
-                machineIds: [currentMachine.machineId],
-                configContent: values.configContent,
-                jvmOptions: values.jvmOptions,
-                logstashYml: values.logstashYml,
-              })
-                .then(() => {
-                  messageApi.success('配置更新成功');
-                  fetchData();
-                })
-                .catch((err) => {
-                  messageApi.error('配置更新失败');
-                  console.error('更新机器配置失败:', err);
-                });
-            }
-          }}
           processId={currentMachine?.processId || 0}
           machineId={currentMachine?.machineId || 0}
           initialConfig={{

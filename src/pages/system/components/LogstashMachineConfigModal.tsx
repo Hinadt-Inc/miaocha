@@ -1,11 +1,10 @@
-import { Form, Input, Modal } from 'antd';
-import { useState } from 'react';
-import { updateLogstashMachineConfig } from '../../../api/logstash';
+import { Form, Input, Modal, message } from 'antd';
+import { useEffect, useState } from 'react';
+import { getLogstashMachineDetail, updateLogstashMachineConfig } from '../../../api/logstash';
 
 interface LogstashMachineConfigModalProps {
   visible: boolean;
   onCancel: () => void;
-  onOk: (values: { configContent: string; jvmOptions: string; logstashYml: string }) => void;
   processId: number;
   machineId: number;
   initialConfig?: {
@@ -18,20 +17,39 @@ interface LogstashMachineConfigModalProps {
 export default function LogstashMachineConfigModal({
   visible,
   onCancel,
-  onOk,
   processId,
   machineId,
   initialConfig,
 }: LogstashMachineConfigModalProps) {
   const [form] = Form.useForm();
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [messageApi, contextHolder] = message.useMessage();
+
+  useEffect(() => {
+    if (visible) {
+      const fetchDetail = async () => {
+        try {
+          const detail = await getLogstashMachineDetail(processId, machineId);
+          form.setFieldsValue({
+            configContent: detail.configContent,
+            jvmOptions: detail.jvmOptions,
+            logstashYml: detail.logstashYml,
+          });
+        } catch (error) {
+          messageApi.error('获取机器配置详情失败');
+        }
+      };
+      fetchDetail();
+    }
+  }, [visible, processId, machineId, form]);
 
   const handleOk = async () => {
     try {
       setConfirmLoading(true);
       const values = await form.validateFields();
       await updateLogstashMachineConfig(processId, machineId, values);
-      onOk(values);
+      messageApi.success('机器配置更新成功');
+      onCancel();
     } finally {
       setConfirmLoading(false);
     }
@@ -46,6 +64,7 @@ export default function LogstashMachineConfigModal({
       onCancel={onCancel}
       width={800}
     >
+      {contextHolder}
       <Form form={form} layout="vertical" initialValues={initialConfig}>
         <Form.Item name="configContent" label="配置内容">
           <Input.TextArea

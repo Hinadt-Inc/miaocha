@@ -142,4 +142,14 @@ export interface LogstashProcess {
   }[];
   createTime: string;
   updateTime: string;
+  logstashProcessId: number;
+  logstashProcessName: string;
+  logstashProcessModule: string;
+  logstashProcessDescription: string;
+  machinePort: number;
+  machineUsername: string;
+  processPid: string;
+  deployPath: string;
+  processCreateTime: string;
+  processUpdateTime: string;
 }

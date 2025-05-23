@@ -166,3 +166,10 @@ export function reinitializeMachine(processId: number, machineId: number): Promi
     method: 'POST',
   });
 }
+
+export function getLogstashMachineDetail(processId: number, machineId: number): Promise<LogstashProcess> {
+  return request({
+    url: `/api/logstash/processes/${processId}/machines/${machineId}/detail`,
+    method: 'GET',
+  });
+}
