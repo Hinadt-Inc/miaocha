@@ -30,6 +30,8 @@ import {
   getLogstashTaskStatus,
   getLogstashTaskSummaries,
   getMachineTasks,
+  reinitializeFailedMachines,
+  reinitializeMachine,
 } from '../../api/logstash';
 import type { LogstashProcess, LogstashTaskSummary, MachineTask } from '../../types/logstashTypes';
 import LogstashEditModal from './components/LogstashEditModal';
@@ -217,6 +219,18 @@ function LogstashManagementPage() {
     }
   };
 
+  const handleReinitializeFailedMachines = async (processId: number) => {
+    try {
+      messageApi.loading('正在重新初始化失败机器...');
+      await reinitializeFailedMachines(processId);
+      messageApi.success('重新初始化命令已发送');
+      await fetchData();
+    } catch (err) {
+      messageApi.error('重新初始化失败');
+      console.error('重新初始化失败机器失败:', err);
+    }
+  };
+
   const handleStopMachine = async (processId: number, machineId: number) => {
     try {
       messageApi.loading(`正在停止机器 ${machineId} 的Logstash实例...`);
@@ -226,6 +240,18 @@ function LogstashManagementPage() {
     } catch (err) {
       messageApi.error('停止失败');
       console.error('停止Logstash机器实例失败:', err);
+    }
+  };
+
+  const handleReinitializeMachine = async (processId: number, machineId: number) => {
+    try {
+      messageApi.loading(`正在重新初始化机器 ${machineId}...`);
+      await reinitializeMachine(processId, machineId);
+      messageApi.success('重新初始化命令已发送');
+      await fetchData();
+    } catch (err) {
+      messageApi.error('重新初始化失败');
+      console.error('重新初始化机器失败:', err);
     }
   };
 
@@ -379,6 +405,19 @@ function LogstashManagementPage() {
             刷新配置
           </Button>
           <Popconfirm
+            title="确认重新初始化"
+            description="确定要重新初始化所有初始化失败的机器吗？"
+            onConfirm={() => {
+              void handleReinitializeFailedMachines(record.id);
+            }}
+            okText="确认"
+            cancelText="取消"
+          >
+            <Button type="link" icon={<SyncOutlined />} disabled={record.state === 'RUNNING'}>
+              重新初始化失败机器
+            </Button>
+          </Popconfirm>
+          <Popconfirm
             title="确认删除"
             description="确定要删除这个Logstash进程吗？"
             onConfirm={() => {
@@ -463,48 +502,67 @@ function LogstashManagementPage() {
                     key: 'action',
                     render: (_: unknown, machine: { machineId: number; state: string }) => (
                       <Space size="small">
-                        <Button
-                          type="link"
-                          icon={<PlayCircleOutlined />}
-                          onClick={() => handleStartMachine(record.id, machine.machineId)}
-                          disabled={machine.state === 'RUNNING'}
-                        >
-                          启动
-                        </Button>
-                        <Button
-                          type="link"
-                          icon={<StopOutlined />}
-                          onClick={() => handleStopMachine(record.id, machine.machineId)}
-                          disabled={machine.state === 'STOPPED'}
-                        >
-                          停止
-                        </Button>
-                        <Button
-                          type="link"
-                          icon={<SyncOutlined />}
-                          onClick={() => handleRefreshConfig(record.id, machine.machineId)}
-                          disabled={machine.state === 'RUNNING'}
-                        >
-                          刷新配置
-                        </Button>
-                        <Button
-                          type="link"
-                          icon={<SettingOutlined />}
-                          onClick={() => {
-                            const process = data.find((p) => p.id === record.id);
-                            setCurrentMachine({
-                              processId: record.id,
-                              machineId: machine.machineId,
-                              configContent: process?.configContent,
-                              jvmOptions: process?.jvmOptions,
-                              logstashYml: process?.logstashYml,
-                            });
-                            setMachineConfigModalVisible(true);
-                          }}
-                          disabled={machine.state === 'RUNNING'}
-                        >
-                          编辑配置
-                        </Button>
+                        {machine.state !== 'INITIALIZE_FAILED' && (
+                          <>
+                            <Button
+                              type="link"
+                              icon={<PlayCircleOutlined />}
+                              onClick={() => handleStartMachine(record.id, machine.machineId)}
+                              disabled={machine.state === 'RUNNING'}
+                            >
+                              启动
+                            </Button>
+                            <Button
+                              type="link"
+                              icon={<StopOutlined />}
+                              onClick={() => handleStopMachine(record.id, machine.machineId)}
+                              disabled={machine.state === 'STOPPED'}
+                            >
+                              停止
+                            </Button>
+                            <Button
+                              type="link"
+                              icon={<SyncOutlined />}
+                              onClick={() => handleRefreshConfig(record.id, machine.machineId)}
+                              disabled={machine.state === 'RUNNING'}
+                            >
+                              刷新配置
+                            </Button>
+                            <Button
+                              type="link"
+                              icon={<SettingOutlined />}
+                              onClick={() => {
+                                const process = data.find((p) => p.id === record.id);
+                                setCurrentMachine({
+                                  processId: record.id,
+                                  machineId: machine.machineId,
+                                  configContent: process?.configContent,
+                                  jvmOptions: process?.jvmOptions,
+                                  logstashYml: process?.logstashYml,
+                                });
+                                setMachineConfigModalVisible(true);
+                              }}
+                              disabled={machine.state === 'RUNNING'}
+                            >
+                              编辑配置
+                            </Button>
+                          </>
+                        )}
+                        {machine.state === 'INITIALIZE_FAILED' && (
+                          <Popconfirm
+                            title="确认重新初始化"
+                            description="确定要重新初始化这台机器吗？"
+                            onConfirm={() => {
+                              void handleReinitializeMachine(record.id, machine.machineId);
+                            }}
+                            okText="确认"
+                            cancelText="取消"
+                          >
+                            <Button type="link" icon={<SyncOutlined />}>
+                              重新初始化
+                            </Button>
+                          </Popconfirm>
+                        )}
                         <Button
                           type="link"
                           icon={<HistoryOutlined />}

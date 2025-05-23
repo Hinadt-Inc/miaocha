@@ -152,3 +152,17 @@ export function updateLogstashMachineConfig(
     },
   });
 }
+
+export function reinitializeFailedMachines(processId: number): Promise<void> {
+  return request({
+    url: `/api/logstash/processes/${processId}/reinitialize`,
+    method: 'POST',
+  });
+}
+
+export function reinitializeMachine(processId: number, machineId: number): Promise<void> {
+  return request({
+    url: `/api/logstash/processes/${processId}/machines/${machineId}/reinitialize`,
+    method: 'POST',
+  });
+}
