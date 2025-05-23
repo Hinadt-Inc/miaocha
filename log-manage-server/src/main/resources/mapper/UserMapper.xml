@@ -2,34 +2,39 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.hina.log.domain.mapper.UserMapper">
     
+    <!-- 用户表所有字段 -->
+    <sql id="userColumns">
+        id, nickname, email, uid, password, role, status, create_time, update_time
+    </sql>
+    
     <!-- 根据ID查询用户 -->
     <select id="selectById" resultType="com.hina.log.domain.entity.User">
-        SELECT * FROM user WHERE id=#{id}
+        SELECT <include refid="userColumns"/> FROM user WHERE id=#{id}
     </select>
     
     <!-- 根据UID查询用户 -->
     <select id="selectByUid" resultType="com.hina.log.domain.entity.User">
-        SELECT * FROM user WHERE uid=#{uid}
+        SELECT <include refid="userColumns"/> FROM user WHERE uid=#{uid}
     </select>
     
     <!-- 根据邮箱查询用户 -->
     <select id="selectByEmail" resultType="com.hina.log.domain.entity.User">
-        SELECT * FROM user WHERE email=#{email}
+        SELECT <include refid="userColumns"/> FROM user WHERE email=#{email}
     </select>
     
     <!-- 查询所有用户 -->
     <select id="selectAll" resultType="com.hina.log.domain.entity.User">
-        SELECT * FROM user
+        SELECT <include refid="userColumns"/> FROM user
     </select>
     
     <!-- 根据角色查询用户 -->
     <select id="selectByRole" resultType="com.hina.log.domain.entity.User">
-        SELECT * FROM user WHERE role=#{role}
+        SELECT <include refid="userColumns"/> FROM user WHERE role=#{role}
     </select>
     
     <!-- 根据ID列表批量查询用户 -->
     <select id="selectByIds" resultType="com.hina.log.domain.entity.User">
-        SELECT * FROM user WHERE id IN
+        SELECT <include refid="userColumns"/> FROM user WHERE id IN
         <foreach collection="ids" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>

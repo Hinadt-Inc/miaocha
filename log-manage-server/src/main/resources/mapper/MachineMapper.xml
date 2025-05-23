@@ -2,6 +2,11 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.hina.log.domain.mapper.MachineMapper">
     
+    <!-- 机器表所有字段 -->
+    <sql id="machineColumns">
+        id, name, ip, port, username, password, ssh_key, create_time, update_time
+    </sql>
+    
     <!-- 插入机器记录 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO machine (name, ip, port, username, password, ssh_key, create_time, update_time)
@@ -21,17 +26,17 @@
     
     <!-- 根据ID查询机器 -->
     <select id="selectById" resultType="com.hina.log.domain.entity.Machine">
-        SELECT * FROM machine WHERE id=#{id}
+        SELECT <include refid="machineColumns"/> FROM machine WHERE id=#{id}
     </select>
     
     <!-- 根据名称查询机器 -->
     <select id="selectByName" resultType="com.hina.log.domain.entity.Machine">
-        SELECT * FROM machine WHERE name=#{name}
+        SELECT <include refid="machineColumns"/> FROM machine WHERE name=#{name}
     </select>
     
     <!-- 根据ID列表查询机器 -->
     <select id="selectByIds" resultType="com.hina.log.domain.entity.Machine">
-        SELECT * FROM machine WHERE id IN
+        SELECT <include refid="machineColumns"/> FROM machine WHERE id IN
         <foreach collection="ids" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
@@ -39,7 +44,7 @@
     
     <!-- 查询所有机器 -->
     <select id="selectAll" resultType="com.hina.log.domain.entity.Machine">
-        SELECT * FROM machine
+        SELECT <include refid="machineColumns"/> FROM machine
     </select>
     
 </mapper> 

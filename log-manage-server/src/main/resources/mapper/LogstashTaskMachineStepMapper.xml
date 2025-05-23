@@ -2,6 +2,11 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.hina.log.domain.mapper.LogstashTaskMachineStepMapper">
     
+    <!-- Logstash任务机器步骤表所有字段 -->
+    <sql id="logstashTaskMachineStepColumns">
+        id, task_id, machine_id, step_id, step_name, status, start_time, end_time, error_message, create_time, update_time
+    </sql>
+    
     <!-- 插入步骤记录 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO logstash_task_machine_step (task_id, machine_id, step_id, step_name, status)
@@ -18,12 +23,12 @@
     
     <!-- 根据任务ID查询所有步骤 -->
     <select id="findByTaskId" resultType="com.hina.log.domain.entity.LogstashTaskMachineStep">
-        SELECT * FROM logstash_task_machine_step WHERE task_id = #{taskId} ORDER BY machine_id, id
+        SELECT <include refid="logstashTaskMachineStepColumns"/> FROM logstash_task_machine_step WHERE task_id = #{taskId} ORDER BY machine_id, id
     </select>
     
     <!-- 根据任务ID和机器ID查询所有步骤 -->
     <select id="findByTaskIdAndMachineId" resultType="com.hina.log.domain.entity.LogstashTaskMachineStep">
-        SELECT * FROM logstash_task_machine_step WHERE task_id = #{taskId} AND machine_id = #{machineId} ORDER BY id
+        SELECT <include refid="logstashTaskMachineStepColumns"/> FROM logstash_task_machine_step WHERE task_id = #{taskId} AND machine_id = #{machineId} ORDER BY id
     </select>
     
     <!-- 更新步骤状态 -->

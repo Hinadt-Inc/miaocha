@@ -2,6 +2,11 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.hina.log.domain.mapper.LogstashTaskMapper">
     
+    <!-- Logstash任务表所有字段 -->
+    <sql id="logstashTaskColumns">
+        id, process_id, machine_id, name, description, status, operation_type, start_time, end_time, error_message, create_time, update_time
+    </sql>
+    
     <!-- 插入任务记录 -->
     <insert id="insert">
         INSERT INTO logstash_task (id, process_id, machine_id, name, description, status, operation_type)
@@ -10,12 +15,12 @@
     
     <!-- 根据ID查询任务 -->
     <select id="findById" resultType="com.hina.log.domain.entity.LogstashTask">
-        SELECT * FROM logstash_task WHERE id = #{id}
+        SELECT <include refid="logstashTaskColumns"/> FROM logstash_task WHERE id = #{id}
     </select>
     
     <!-- 根据进程ID查询关联的任务 -->
     <select id="findByProcessId" resultType="com.hina.log.domain.entity.LogstashTask">
-        SELECT * FROM logstash_task WHERE process_id = #{processId} ORDER BY create_time DESC
+        SELECT <include refid="logstashTaskColumns"/> FROM logstash_task WHERE process_id = #{processId} ORDER BY create_time DESC
     </select>
     
     <!-- 更新任务状态 -->
@@ -40,19 +45,19 @@
     
     <!-- 获取进程最近一次任务 -->
     <select id="findLatestByProcessId" resultType="com.hina.log.domain.entity.LogstashTask">
-        SELECT * FROM logstash_task WHERE process_id = #{processId} ORDER BY create_time DESC LIMIT 1
+        SELECT <include refid="logstashTaskColumns"/> FROM logstash_task WHERE process_id = #{processId} ORDER BY create_time DESC LIMIT 1
     </select>
     
     <!-- 获取进程在指定机器上的最近一次任务 -->
     <select id="findLatestByProcessIdAndMachineId" resultType="com.hina.log.domain.entity.LogstashTask">
-        SELECT * FROM logstash_task 
+        SELECT <include refid="logstashTaskColumns"/> FROM logstash_task 
         WHERE process_id = #{processId} AND machine_id = #{machineId} 
         ORDER BY create_time DESC LIMIT 1
     </select>
     
     <!-- 获取进程在指定机器上的所有任务 -->
     <select id="findByProcessIdAndMachineId" resultType="com.hina.log.domain.entity.LogstashTask">
-        SELECT * FROM logstash_task 
+        SELECT <include refid="logstashTaskColumns"/> FROM logstash_task 
         WHERE process_id = #{processId} AND machine_id = #{machineId} 
         ORDER BY create_time DESC
     </select>
@@ -66,14 +71,14 @@
     
     <!-- 获取进程相关的所有机器特定任务 -->
     <select id="findMachineTasksByProcessId" resultType="com.hina.log.domain.entity.LogstashTask">
-        SELECT * FROM logstash_task 
+        SELECT <include refid="logstashTaskColumns"/> FROM logstash_task 
         WHERE process_id = #{processId} AND machine_id IS NOT NULL 
         ORDER BY create_time DESC
     </select>
     
     <!-- 获取进程相关的所有全局任务 -->
     <select id="findGlobalTasksByProcessId" resultType="com.hina.log.domain.entity.LogstashTask">
-        SELECT * FROM logstash_task 
+        SELECT <include refid="logstashTaskColumns"/> FROM logstash_task 
         WHERE process_id = #{processId} AND machine_id IS NULL 
         ORDER BY create_time DESC
     </select>
