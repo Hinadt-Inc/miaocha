@@ -5,6 +5,7 @@ import com.hina.log.domain.converter.LogstashProcessConverter;
 import com.hina.log.domain.dto.logstash.LogstashProcessConfigUpdateRequestDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessCreateDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessResponseDTO;
+import com.hina.log.domain.dto.logstash.LogstashMachineDetailDTO;
 import com.hina.log.domain.entity.Datasource;
 import com.hina.log.domain.entity.LogstashMachine;
 import com.hina.log.domain.entity.LogstashProcess;
@@ -893,5 +894,28 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
 
         // 执行重新初始化
         logstashDeployService.initializeProcess(process, machinesToReinitialize);
+    }
+
+    @Override
+    public LogstashMachineDetailDTO getLogstashMachineDetail(Long id, Long machineId) {
+        // 参数校验
+        if (id == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
+        }
+        if (machineId == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "机器ID不能为空");
+        }
+
+        // 获取并验证进程、机器和关联关系
+        ValidatedEntities validated = getAndValidateObjects(id, machineId);
+        LogstashProcess process = validated.process;
+        Machine machine = validated.machine;
+        LogstashMachine logstashMachine = validated.relation;
+
+        // 获取部署路径
+        String deployPath = logstashDeployService.getDeployBaseDir() + "/logstash-" + process.getId();
+
+        // 使用转换器构建详细信息DTO
+        return logstashMachineConverter.toDetailDTO(logstashMachine, process, machine, deployPath);
     }
 }

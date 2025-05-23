@@ -1,6 +1,7 @@
 package com.hina.log.domain.converter;
 
 import com.hina.log.domain.dto.logstash.LogstashMachineDTO;
+import com.hina.log.domain.dto.logstash.LogstashMachineDetailDTO;
 import com.hina.log.domain.entity.LogstashMachine;
 import com.hina.log.domain.entity.LogstashProcess;
 import com.hina.log.domain.entity.Machine;
@@ -101,7 +102,7 @@ public class LogstashMachineConverter implements Converter<LogstashMachine, Logs
         // 转换枚举状态
         LogstashMachineState state = LogstashMachineState.valueOf(entity.getState());
         dto.setState(state.name());
-                dto.setStateDescription(state.getDescription());
+        dto.setStateDescription(state.getDescription());
 
         // 获取机器信息
         try {
@@ -134,5 +135,61 @@ public class LogstashMachineConverter implements Converter<LogstashMachine, Logs
         entity.setLogstashYml(dto.getLogstashYml());
 
         return entity;
+    }
+
+    /**
+     * 将LogstashMachine、LogstashProcess、Machine转换为LogstashMachineDetailDTO
+     *
+     * @param logstashMachine LogstashMachine实体
+     * @param process LogstashProcess实体
+     * @param machine Machine实体
+     * @param deployPath 部署路径
+     * @return LogstashMachineDetailDTO
+     */
+    public LogstashMachineDetailDTO toDetailDTO(LogstashMachine logstashMachine, LogstashProcess process, Machine machine, String deployPath) {
+        if (logstashMachine == null || process == null || machine == null) {
+            return null;
+        }
+
+        LogstashMachineDetailDTO detailDTO = new LogstashMachineDetailDTO();
+        
+        // 设置关联信息
+        detailDTO.setId(logstashMachine.getId());
+        detailDTO.setLogstashProcessId(process.getId());
+        detailDTO.setMachineId(machine.getId());
+        
+        // 设置进程信息
+        detailDTO.setLogstashProcessName(process.getName());
+        detailDTO.setLogstashProcessModule(process.getModule());
+        detailDTO.setLogstashProcessDescription(null); // LogstashProcess中没有description字段
+        detailDTO.setCustomPackagePath(null); // LogstashProcess中没有customPackagePath字段
+        detailDTO.setProcessCreateTime(process.getCreateTime());
+        detailDTO.setProcessUpdateTime(process.getUpdateTime());
+        
+        // 设置机器信息
+        detailDTO.setMachineName(machine.getName());
+        detailDTO.setMachineIp(machine.getIp());
+        detailDTO.setMachinePort(machine.getPort());
+        detailDTO.setMachineUsername(machine.getUsername());
+        
+        // 设置进程状态和配置信息
+        detailDTO.setProcessPid(logstashMachine.getProcessPid());
+        LogstashMachineState state = LogstashMachineState.valueOf(logstashMachine.getState());
+        detailDTO.setState(state);
+        detailDTO.setStateDescription(state.getDescription());
+        
+        // 设置机器特定的配置
+        detailDTO.setConfigContent(logstashMachine.getConfigContent());
+        detailDTO.setJvmOptions(logstashMachine.getJvmOptions());
+        detailDTO.setLogstashYml(logstashMachine.getLogstashYml());
+        
+        // 设置时间信息
+        detailDTO.setCreateTime(logstashMachine.getCreateTime());
+        detailDTO.setUpdateTime(logstashMachine.getUpdateTime());
+        
+        // 设置部署路径
+        detailDTO.setDeployPath(deployPath);
+        
+        return detailDTO;
     }
 }

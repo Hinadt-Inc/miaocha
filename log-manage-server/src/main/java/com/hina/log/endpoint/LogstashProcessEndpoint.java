@@ -5,6 +5,7 @@ import com.hina.log.domain.dto.logstash.LogstashProcessConfigUpdateRequestDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessCreateDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessResponseDTO;
 import com.hina.log.domain.dto.logstash.TaskDetailDTO;
+import com.hina.log.domain.dto.logstash.LogstashMachineDetailDTO;
 import com.hina.log.common.exception.ErrorCode;
 import com.hina.log.application.logstash.task.TaskService;
 import com.hina.log.application.service.LogstashProcessService;
@@ -322,5 +323,22 @@ public class LogstashProcessEndpoint {
             @Parameter(description = "机器ID", required = true) @PathVariable("machineId") Long machineId) {
         
         return ApiResponse.success(logstashProcessService.reinitializeLogstashMachine(id, machineId));
+    }
+
+    /**
+     * 获取Logstash进程在特定机器上的详细信息
+     *
+     * @param id        Logstash进程ID
+     * @param machineId 机器ID
+     * @return 进程在指定机器上的详细信息，包括配置、状态等
+     */
+    @GetMapping("/{id}/machines/{machineId}/detail")
+    @Operation(summary = "获取单个LogstashMachine的详细信息", 
+               description = "获取指定Logstash进程在特定机器上的完整详细信息，包括进程状态、配置内容、机器信息、部署路径等")
+    public ApiResponse<LogstashMachineDetailDTO> getLogstashMachineDetail(
+            @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id,
+            @Parameter(description = "机器ID", required = true) @PathVariable("machineId") Long machineId) {
+        
+        return ApiResponse.success(logstashProcessService.getLogstashMachineDetail(id, machineId));
     }
 }

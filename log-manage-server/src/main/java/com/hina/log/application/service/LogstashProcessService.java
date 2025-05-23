@@ -3,6 +3,7 @@ package com.hina.log.application.service;
 import com.hina.log.domain.dto.logstash.LogstashProcessConfigUpdateRequestDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessCreateDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessResponseDTO;
+import com.hina.log.domain.dto.logstash.LogstashMachineDetailDTO;
 
 import java.util.List;
 
@@ -134,4 +135,13 @@ public interface LogstashProcessService {
      * @return 重新初始化后的进程信息
      */
     LogstashProcessResponseDTO reinitializeLogstashMachine(Long id, Long machineId);
+
+    /**
+     * 获取单个LogstashMachine在特定机器上的详细信息
+     *
+     * @param id  Logstash进程ID
+     * @param machineId 机器ID
+     * @return LogstashMachine详细信息
+     */
+    LogstashMachineDetailDTO getLogstashMachineDetail(Long id, Long machineId);
 }
