@@ -143,7 +143,7 @@ const HomePage = () => {
       <SearchBar ref={searchBarRef} {...searchBarProps} />
 
       <Splitter className={styles.container}>
-        <Splitter.Panel collapsible defaultSize={260} min={260} max="70%">
+        <Splitter.Panel collapsible defaultSize={200} min={0} max="40%">
           <Sider {...siderProps} />
         </Splitter.Panel>
         <Splitter.Panel collapsible>
