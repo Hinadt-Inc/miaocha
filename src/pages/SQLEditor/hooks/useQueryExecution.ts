@@ -22,10 +22,36 @@ export const useQueryExecution = (selectedSource: string) => {
     try {
       const response = await executeSQL({
         datasourceId: selectedSource,
-        sql: sqlQuery
+        sql: sqlQuery,
       });
-      setQueryResults(response);
-      return response;
+
+      // 转换rows类型以匹配QueryResult
+      const convertedResponse: QueryResult = {
+        ...response,
+        rows: response.rows?.map((row) => {
+          const convertedRow: Record<string, string | number | boolean | null | undefined | object> = {};
+          for (const key in row) {
+            const value = row[key];
+            if (
+              typeof value === 'string' ||
+              typeof value === 'number' ||
+              typeof value === 'boolean' ||
+              value === null ||
+              value === undefined ||
+              (typeof value === 'object' && !Array.isArray(value))
+            ) {
+              convertedRow[key] = value;
+            } else {
+              // 对于不兼容的类型，转换为字符串
+              convertedRow[key] = JSON.stringify(value);
+            }
+          }
+          return convertedRow;
+        }),
+      };
+
+      setQueryResults(convertedResponse);
+      return convertedResponse;
     } catch (error) {
       console.error('执行查询失败:', error);
       message.error('执行查询失败');
@@ -39,8 +65,8 @@ export const useQueryExecution = (selectedSource: string) => {
     queryResults,
     setQueryResults,
     loading,
-    sqlQuery, 
+    sqlQuery,
     setSqlQuery,
-    executeQuery
+    executeQuery,
   };
 };

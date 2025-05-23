@@ -1,7 +1,6 @@
-import { Form, Input, Modal, Spin } from 'antd';
+import { Form, Input, Modal } from 'antd';
 import { useState } from 'react';
 import { updateLogstashMachineConfig } from '../../../api/logstash';
-import type { LogstashProcess } from '../../../types/logstashTypes';
 
 interface LogstashMachineConfigModalProps {
   visible: boolean;

@@ -25,7 +25,7 @@ const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
   copyToClipboard,
   clearHistory,
   clearAllHistory,
-  fullscreen
+  fullscreen,
 }) => {
   return (
     <Drawer
@@ -44,17 +44,11 @@ const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                 clearHistory();
               }}
             >
-              <Button 
-                type="text" 
-                danger 
-                size="small"
-                icon={<DeleteOutlined />}
-                onClick={(e) => e.stopPropagation()}
-              >
+              <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={(e) => e.stopPropagation()}>
                 清除当前历史
               </Button>
             </Popconfirm>
-            
+
             {clearAllHistory && (
               <Popconfirm
                 title="确定要清除所有数据源的历史记录吗？此操作不可恢复！"
@@ -65,12 +59,7 @@ const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                   clearAllHistory();
                 }}
               >
-                <Button 
-                  type="text" 
-                  danger 
-                  size="small"
-                  onClick={(e) => e.stopPropagation()}
-                >
+                <Button type="text" danger size="small" onClick={(e) => e.stopPropagation()}>
                   清除所有历史
                 </Button>
               </Popconfirm>
@@ -91,14 +80,14 @@ const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
             itemKey="id"
           >
             {(history) => (
-              <div 
-                key={history.id} 
+              <div
+                key={history.id}
                 className={`history-item ${history.status === 'error' ? 'error-history' : ''}`}
                 onClick={() => loadFromHistory(history.sql)}
               >
                 <div className="history-item-header">
                   <Space>
-                    <ClockCircleOutlined style={{ color: '#1890ff' }}/>
+                    <ClockCircleOutlined style={{ color: '#1890ff' }} />
                     <Text>{new Date(history.timestamp).toLocaleString()}</Text>
                   </Space>
                   <Space>
@@ -110,10 +99,10 @@ const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                     {history.status === 'success' && history.executionTime && (
                       <Text type="secondary">耗时: {history.executionTime} ms</Text>
                     )}
-                    <Button 
-                      type="text" 
-                      size="small" 
-                      icon={<CopyOutlined />} 
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<CopyOutlined />}
                       onClick={(e) => {
                         e.stopPropagation();
                         copyToClipboard(history.sql);
@@ -123,12 +112,7 @@ const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                 </div>
                 <div className="history-sql">{history.sql}</div>
                 {history.status === 'error' && history.message && (
-                  <Alert 
-                    message={history.message} 
-                    type="error" 
-                    showIcon 
-                    style={{ marginTop: 8 }} 
-                  />
+                  <Alert message={history.message} type="error" showIcon style={{ marginTop: 8 }} />
                 )}
               </div>
             )}

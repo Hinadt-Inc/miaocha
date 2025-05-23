@@ -3,7 +3,7 @@ import { getMachines, createMachine, deleteMachine, updateMachine, testMachineCo
 import type { Machine, CreateMachineParams } from '../../types/machineTypes';
 import { SimpleTable } from '../../components/common/SimpleTable';
 import type { TableColumnsType } from 'antd';
-import { Breadcrumb, Button, Form, Input, InputNumber, Modal, message, Tooltip } from 'antd';
+import { Breadcrumb, Button, Form, Input, InputNumber, Modal, message } from 'antd';
 import { EditOutlined, DeleteOutlined, ThunderboltOutlined, PlusOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import dayjs from 'dayjs';

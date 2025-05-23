@@ -1,22 +1,11 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { Suspense, lazy } from 'react';
-import MainLayout from '@/layouts/MainLayout';
 import Loading from '@/components/Loading';
 import App from '@/App';
-import {
-  CompassOutlined,
-  ConsoleSqlOutlined,
-  SettingOutlined,
-  UserOutlined,
-  DatabaseOutlined,
-  SafetyCertificateOutlined,
-  DesktopOutlined,
-  CloudServerOutlined,
-} from '@ant-design/icons';
+import { CompassOutlined, ConsoleSqlOutlined, SettingOutlined } from '@ant-design/icons';
 
 // 动态导入页面组件
 const LoginPage = lazy(() => import('@/pages/Login'));
-// const Demo = lazy(() => import('@/pages/Demo'));
 const HomePage = lazy(() => import('@/pages/Home'));
 const UserManagementPage = lazy(() => import('@/pages/system/UserManagementPage'));
 const DataSourceManagementPage = lazy(() => import('@/pages/system/DataSourceManagementPage'));

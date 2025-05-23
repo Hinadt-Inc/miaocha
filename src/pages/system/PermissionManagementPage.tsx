@@ -6,7 +6,6 @@ import type { ColumnsType } from 'antd/es/table';
 import {
   grantTablePermission,
   getMyTablePermissions,
-  revokePermissionById,
   batchRevokeModulePermissions,
 } from '../../api/permission';
 import type { DatasourcePermission, TablePermission, PermissionResponse } from '../../types/permissionTypes';

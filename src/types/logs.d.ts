@@ -51,5 +51,9 @@ declare global {
     success: boolean;
     totalCount: number; // 日志总数
     fieldDistributions: IFieldDistributions[];
+    distributionData: Array<{
+      timePoint: string;
+      count: number;
+    }>;
   }
 }

@@ -1,12 +1,9 @@
 import { useState, useMemo, useEffect, Suspense, lazy } from 'react';
-import { AutoComplete, Button, Space, Dropdown, Tag, Popover, Statistic } from 'antd';
-import type { MenuProps } from 'antd';
+import { AutoComplete, Button, Space, Tag, Popover, Statistic } from 'antd';
 import CountUp from 'react-countup';
-// import dayjs from 'dayjs';
-// import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 import SpinIndicator from '@/components/SpinIndicator';
 import styles from './SearchBar.module.less';
-import { LOG_FIELDS, LOG_TEMPLATES, QUICK_RANGES } from './utils.ts';
+import { LOG_FIELDS, QUICK_RANGES } from './utils.ts';
 
 const TimePicker = lazy(() => import('./TimePicker.tsx'));
 
@@ -142,41 +139,6 @@ const SearchBar = (props: IProps) => {
     setKeyword('');
     setSql('');
   };
-
-  // 查询模板菜单项 - 使用 useMemo 缓存
-  const templateMenuItems: MenuProps['items'] = useMemo(
-    () => [
-      {
-        key: 'templates',
-        type: 'group',
-        label: '常用查询模板',
-        // children: LOG_TEMPLATES.map((template, index) => ({
-        //   key: `template-${index}`,
-        //   label: (
-        //     <Tooltip title={template.description}>
-        //       <div onClick={() => applyQueryTemplate(template.query)}>{template.name}</div>
-        //     </Tooltip>
-        //   ),
-        // })),
-      },
-      {
-        type: 'divider',
-      },
-      // {
-      //   key: 'saved',
-      //   type: 'group',
-      //   label: '我的保存查询',
-      //   children:
-      //     savedQueries.length > 0
-      //       ? savedQueries.map((saved, index) => ({
-      //           key: `saved-${index}`,
-      //           label: <div onClick={() => applyQueryTemplate(saved.query)}>{saved.name}</div>,
-      //         }))
-      //       : [{ key: 'no-saved', label: '暂无保存的查询', disabled: true }],
-      // },
-    ],
-    [],
-  );
 
   // 左侧渲染内容
   const leftRender = useMemo(() => {

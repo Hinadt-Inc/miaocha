@@ -7,23 +7,10 @@ import {
   SyncOutlined,
   HistoryOutlined,
   InfoCircleOutlined,
-  LoadingOutlined,
   CodeOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
-import {
-  Button,
-  message,
-  Popconfirm,
-  Space,
-  Table,
-  Breadcrumb,
-  Tooltip,
-  Modal,
-  Progress,
-  Tag,
-  Descriptions,
-} from 'antd';
+import { Button, message, Popconfirm, Space, Table, Breadcrumb, Modal, Progress, Tag, Descriptions } from 'antd';
 import './LogstashManagementPage.less';
 import { Link } from 'react-router-dom';
 import { useEffect } from 'react';
@@ -39,7 +26,6 @@ import {
   refreshLogstashConfig,
   stopLogstashProcess,
   executeLogstashSQL,
-  updateLogstashProcess,
   updateLogstashConfig,
   getLogstashTaskStatus,
   getLogstashTaskSummaries,
@@ -48,7 +34,7 @@ import {
 import type { LogstashProcess, LogstashTaskSummary, MachineTask } from '../../types/logstashTypes';
 import LogstashEditModal from './components/LogstashEditModal';
 import LogstashMachineConfigModal from './components/LogstashMachineConfigModal';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 
 function LogstashManagementPage() {
   const [data, setData] = useState<LogstashProcess[]>([]);
@@ -506,9 +492,6 @@ function LogstashManagementPage() {
                           icon={<SettingOutlined />}
                           onClick={() => {
                             const process = data.find((p) => p.id === record.id);
-                            const machineStatus = process?.machineStatuses?.find(
-                              (m) => m.machineId === machine.machineId,
-                            );
                             setCurrentMachine({
                               processId: record.id,
                               machineId: machine.machineId,

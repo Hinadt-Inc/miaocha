@@ -22,26 +22,6 @@ const VirtualTable = (props: IProps) => {
   // 定义表格列
   const columns = useMemo(
     () => {
-      // 添加展开按钮列
-      const expandColumn = columnHelper.display({
-        id: 'expand',
-        header: '收起/展开',
-        cell: ({ row }) => (
-          <button
-            onClick={() => {
-              setExpandedRows((prev) => ({
-                ...prev,
-                [row.id]: !prev[row.id],
-              }));
-            }}
-            className={styles.expandButton}
-          >
-            {expandedRows[row.id] ? '▼' : '▶'}
-          </button>
-        ),
-        size: 30,
-      });
-
       // 始终显示log_time列作为第一列
       const logTimeColumn = columnHelper.accessor('log_time', {
         header: 'log_time', // 表头
@@ -157,6 +137,13 @@ const VirtualTable = (props: IProps) => {
                       position: 'absolute',
                       top: `${item.start}px`,
                       width: '100%',
+                    }}
+                    onClick={() => {
+                      const rowId = row.id;
+                      setExpandedRows((prev) => ({
+                        ...prev,
+                        [rowId]: !prev[rowId],
+                      }));
                     }}
                   >
                     {row.getVisibleCells().map((cell) => (

@@ -1,4 +1,4 @@
-import { Form, Input, Modal, Select, Spin, Table, Tag } from 'antd';
+import { Form, Input, Modal, Select, Spin } from 'antd';
 import { useEffect, useState } from 'react';
 import type { LogstashProcess } from '../../../types/logstashTypes';
 import { getAllDataSources } from '../../../api/datasource';
