@@ -1,4 +1,4 @@
-import { Button, Form, Input, message } from 'antd';
+import { Button, Form, Input } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -37,11 +37,7 @@ const LoginPage = () => {
           },
         }),
       );
-
-      message.success('登录成功！');
       navigate('/');
-    } catch (error) {
-      console.log(error);
     } finally {
       setLoading(false);
     }
@@ -65,11 +61,19 @@ const LoginPage = () => {
         <div className={styles.loginCard}>
           <div className={styles.cardHeader}>欢迎登录</div>
           <Form form={form} onFinish={onFinish} size="large" layout="vertical" className={styles.loginForm}>
-            <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
+            <Form.Item
+              name="username"
+              rules={[{ required: true, message: '请输入用户名' }]}
+              normalize={(value) => value.trim()}
+            >
               <Input prefix={<UserOutlined />} placeholder="用户名" allowClear maxLength={30} />
             </Form.Item>
 
-            <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
+            <Form.Item
+              name="password"
+              rules={[{ required: true, message: '请输入密码' }]}
+              normalize={(value) => value.trim()}
+            >
               <Input.Password prefix={<LockOutlined />} placeholder="密码" allowClear maxLength={30} />
             </Form.Item>
 
