@@ -6,13 +6,6 @@ import './ResultsViewer.less';
 
 const { Text } = Typography;
 
-// 列单元格自定义属性
-interface ColumnCellProps {
-  width?: number;
-  onResize: (width: number) => void;
-  columnKey?: string;
-}
-
 interface ResultsViewerProps {
   queryResults: QueryResult | null;
   loading: boolean;
@@ -107,8 +100,7 @@ const estimateColumnWidth = (col: string, rows: any[], maxWidth: number = 400): 
   // 根据列名类型调整最大宽度和初始值
   const lowerCol = col.toLowerCase();
   const isMessageColumn = lowerCol.includes('message');
-  const isPathColumn =
-    lowerCol.includes('path') || lowerCol.includes('url') || lowerCol.includes('file');
+  const isPathColumn = lowerCol.includes('path') || lowerCol.includes('url') || lowerCol.includes('file');
   const isTimestampColumn = lowerCol.includes('time') || lowerCol.includes('date');
   const isIdColumn = lowerCol === 'id' || lowerCol.endsWith('_id');
   const isStatusColumn = lowerCol.includes('status') || lowerCol.includes('state');
@@ -203,14 +195,8 @@ const estimateColumnWidth = (col: string, rows: any[], maxWidth: number = 400): 
  * 查询结果显示组件
  * 以表格形式展示 SQL 查询结果
  */
-const ResultsViewer: React.FC<ResultsViewerProps> = ({
-  queryResults,
-  loading,
-  formatTableCell,
-  downloadResults,
-}) => {
+const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, formatTableCell }) => {
   // 组件状态
-  const [tableWidth, setTableWidth] = useState<number>(0);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [draggingColumn, setDraggingColumn] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -252,8 +238,7 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({
     // 检查是否是特殊列
     const lowerKey = columnKey.toLowerCase();
     const isMessageColumn = lowerKey.includes('message');
-    const isPathColumn =
-      lowerKey.includes('path') || lowerKey.includes('url') || lowerKey.includes('file');
+    const isPathColumn = lowerKey.includes('path') || lowerKey.includes('url') || lowerKey.includes('file');
 
     // 重新计算该列的最佳宽度，对于特殊列使用更大的最大宽度
     let maxWidth = 500;
@@ -277,14 +262,7 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({
 
   // 错误状态
   if (queryResults.status === 'error') {
-    return (
-      <Alert
-        type="error"
-        message="查询执行错误"
-        description={queryResults.message ?? '未知错误'}
-        showIcon
-      />
-    );
+    return <Alert type="error" message="查询执行错误" description={queryResults.message ?? '未知错误'} showIcon />;
   }
 
   // 无数据返回
@@ -297,8 +275,7 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({
     // 检查是否为特殊类型的列
     const lowerCol = col.toLowerCase();
     const isMessageColumn = lowerCol.includes('message');
-    const isPathColumn =
-      lowerCol.includes('path') || lowerCol.includes('url') || lowerCol.includes('file');
+    const isPathColumn = lowerCol.includes('path') || lowerCol.includes('url') || lowerCol.includes('file');
     const isTimeColumn = lowerCol === 'log_time' || lowerCol.includes('timestamp');
     const shouldNotEllipsis = isMessageColumn || isPathColumn;
 
@@ -306,18 +283,13 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({
       title: col,
       dataIndex: col,
       key: col,
-      width:
-        columnWidths[col] ||
-        (isMessageColumn ? 400 : isPathColumn ? 300 : isTimeColumn ? 180 : 150), // 为特殊列提供更宽的默认宽度
+      width: columnWidths[col] || (isMessageColumn ? 400 : isPathColumn ? 300 : isTimeColumn ? 180 : 150), // 为特殊列提供更宽的默认宽度
       render: (value: any) => formatTableCell(value),
       // 对于特殊类型的列，禁用文本省略
       ellipsis: !shouldNotEllipsis,
-      sorter: (a: Record<string, unknown>, b: Record<string, unknown>) =>
-        compareValues(a[col], b[col]),
+      sorter: (a: Record<string, unknown>, b: Record<string, unknown>) => compareValues(a[col], b[col]),
       onHeaderCell: () => ({
-        width:
-          columnWidths[col] ||
-          (isMessageColumn ? 400 : isPathColumn ? 300 : isTimeColumn ? 180 : 150),
+        width: columnWidths[col] || (isMessageColumn ? 400 : isPathColumn ? 300 : isTimeColumn ? 180 : 150),
         onResize: (width: number) => {
           setColumnWidths((prev) => ({
             ...prev,
@@ -374,11 +346,7 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({
   return (
     <div className="results-viewer-container" ref={containerRef}>
       {executionInfo}
-      <ResizeObserver
-        onResize={({ width }) => {
-          setTableWidth(width);
-        }}
-      >
+      <ResizeObserver>
         <div className="table-wrapper">
           <Table
             dataSource={queryResults.rows.map((row, index) => ({ ...row, key: index }))}
@@ -398,30 +366,29 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({
                 cell: ResizableTitle,
               },
             }}
-            onHeaderRow={(column) => ({
+            onHeaderRow={(columns) => ({
               onMouseEnter: () => {
                 // 鼠标悬停在列头上时的效果
-                if (column.key) {
-                  document
-                    .querySelector(`th[data-column-key="${column.key}"]`)
-                    ?.classList.add('hover');
+                const columnKey = columns[0]?.key;
+                if (columnKey) {
+                  document.querySelector(`th[data-column-key="${columnKey}"]`)?.classList.add('hover');
                 }
               },
               onMouseLeave: () => {
                 // 鼠标离开列头时的效果
-                if (column.key) {
-                  document
-                    .querySelector(`th[data-column-key="${column.key}"]`)
-                    ?.classList.remove('hover');
+                const columnKey = columns[0]?.key;
+                if (columnKey) {
+                  document.querySelector(`th[data-column-key="${columnKey}"]`)?.classList.remove('hover');
                 }
               },
               onDoubleClick: () => {
                 // 双击时自动调整列宽
-                if (column.key) {
-                  handleDoubleClickHeader(column.key as string);
+                const columnKey = columns[0]?.key;
+                if (columnKey) {
+                  handleDoubleClickHeader(columnKey as string);
                 }
               },
-              'data-column-key': column.key,
+              'data-column-key': columns[0]?.key,
               title: '双击自动调整列宽',
             })}
           />

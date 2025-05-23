@@ -49,12 +49,7 @@ const SQLEditorImpl: React.FC = () => {
   // 这里使用 _monaco 作为前缀，表示此变量仅用于类型注解
 
   // 使用自定义hooks管理状态
-  const {
-    dataSources,
-    selectedSource,
-    setSelectedSource,
-    loading: loadingDataSources,
-  } = useDataSources();
+  const { dataSources, selectedSource, setSelectedSource, loading: loadingDataSources } = useDataSources();
 
   const { databaseSchema, loadingSchema, fetchDatabaseSchema } = useDatabaseSchema(selectedSource);
 
@@ -68,14 +63,7 @@ const SQLEditorImpl: React.FC = () => {
 
   const { settings: editorSettings, saveSettings } = useEditorSettings();
 
-  const {
-    history: queryHistory,
-    addHistory,
-    clearHistory,
-    clearAllHistory,
-    isHistoryOpen,
-    toggleHistory,
-  } = useQueryHistory(selectedSource);
+  const { history: queryHistory, addHistory, clearHistory, clearAllHistory } = useQueryHistory(selectedSource);
 
   // 本地UI状态
   const [activeTab, setActiveTab] = useState<string>('results');
@@ -135,15 +123,7 @@ const SQLEditorImpl: React.FC = () => {
           console.error('执行查询失败:', error);
         });
     }, 300),
-    [
-      executeQueryOriginal,
-      selectedSource,
-      sqlQuery,
-      setActiveTab,
-      setXField,
-      setYField,
-      addHistory,
-    ],
+    [executeQueryOriginal, selectedSource, sqlQuery, setActiveTab, setXField, setYField, addHistory],
   );
 
   // 初始化
@@ -251,9 +231,7 @@ const SQLEditorImpl: React.FC = () => {
       // 场景2: 在SELECT子句中 - 添加字段
       if (sqlContext.isInSelectClause) {
         const fieldList =
-          columns.length > 0
-            ? generateColumnList(columns, { multiline: false, addComments: false })
-            : '*';
+          columns.length > 0 ? generateColumnList(columns, { multiline: false, addComments: false }) : '*';
 
         // 获取当前选择位置前的文本，检查是否需要添加逗号
         const model = editor.getModel();
@@ -267,8 +245,7 @@ const SQLEditorImpl: React.FC = () => {
             endColumn: selection.startColumn,
           });
 
-          const needsComma =
-            !/,\s*$/.test(textBeforeCursor) && textBeforeCursor.trim() !== 'SELECT';
+          const needsComma = !/,\s*$/.test(textBeforeCursor) && textBeforeCursor.trim() !== 'SELECT';
           const prefix = needsComma ? ', ' : '';
 
           insertFormattedSQL(editor, `${prefix}${fieldList}`, { addComma: false });
@@ -341,10 +318,8 @@ const SQLEditorImpl: React.FC = () => {
           // 找到FROM子句后面的位置
           const text = model.getValue();
           const fromIndex = text.toUpperCase().indexOf('FROM');
-          const lines = text.substring(0, fromIndex).split('\n').length;
 
           // 在FROM子句后找到一个合适的位置
-          let joinPosition;
           const whereIndex = text.toUpperCase().indexOf('WHERE');
           const groupByIndex = text.toUpperCase().indexOf('GROUP BY');
           const orderByIndex = text.toUpperCase().indexOf('ORDER BY');
@@ -413,10 +388,7 @@ const SQLEditorImpl: React.FC = () => {
     monacoRef.current = monacoInstance;
 
     // 添加快捷键：Ctrl+Enter 执行查询
-    editor.addCommand(
-      monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.Enter,
-      executeQueryDebounced,
-    );
+    editor.addCommand(monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.Enter, executeQueryDebounced);
 
     // 不返回清理函数，因为Monaco编辑器自己会处理资源释放
   };
@@ -447,11 +419,7 @@ const SQLEditorImpl: React.FC = () => {
         Array.isArray(s.tables) &&
         s.tables.every(
           (table: unknown) =>
-            table &&
-            typeof table === 'object' &&
-            'tableName' in table &&
-            'tableComment' in table &&
-            'columns' in table,
+            table && typeof table === 'object' && 'tableName' in table && 'tableComment' in table && 'columns' in table,
         )
       );
     };
@@ -483,25 +451,17 @@ const SQLEditorImpl: React.FC = () => {
     }
 
     // 添加SQL关键字
-    [
-      'SELECT',
-      'FROM',
-      'WHERE',
-      'GROUP BY',
-      'ORDER BY',
-      'LIMIT',
-      'JOIN',
-      'LEFT JOIN',
-      'INNER JOIN',
-    ].forEach((keyword) => {
-      suggestions.push({
-        label: keyword,
-        kind: monaco.languages.CompletionItemKind.Keyword,
-        insertText: keyword,
-        detail: 'SQL关键字',
-        range,
-      });
-    });
+    ['SELECT', 'FROM', 'WHERE', 'GROUP BY', 'ORDER BY', 'LIMIT', 'JOIN', 'LEFT JOIN', 'INNER JOIN'].forEach(
+      (keyword) => {
+        suggestions.push({
+          label: keyword,
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: keyword,
+          detail: 'SQL关键字',
+          range,
+        });
+      },
+    );
 
     return suggestions;
   };
@@ -510,21 +470,13 @@ const SQLEditorImpl: React.FC = () => {
   useEffect(() => {
     if (monacoRef.current && databaseSchema) {
       // 移除旧的自动完成提供者
-      const completionDisposable = monacoRef.current.languages.registerCompletionItemProvider(
-        'sql',
-        {
-          provideCompletionItems: (model, position) => {
-            if (!monacoRef.current) return { suggestions: [] };
-            const suggestions = createCompletionSuggestions(
-              model,
-              position,
-              databaseSchema,
-              monacoRef.current,
-            );
-            return { suggestions };
-          },
+      const completionDisposable = monacoRef.current.languages.registerCompletionItemProvider('sql', {
+        provideCompletionItems: (model, position) => {
+          if (!monacoRef.current) return { suggestions: [] };
+          const suggestions = createCompletionSuggestions(model, position, databaseSchema, monacoRef.current);
+          return { suggestions };
         },
-      );
+      });
 
       // 组件卸载时清理
       return () => {
@@ -629,11 +581,7 @@ const SQLEditorImpl: React.FC = () => {
               </Card>
               <Card
                 title={
-                  <Tabs
-                    activeKey={activeTab}
-                    onChange={(key) => setActiveTab(key)}
-                    className="results-tabs"
-                  >
+                  <Tabs activeKey={activeTab} onChange={(key) => setActiveTab(key)} className="results-tabs">
                     <TabPane tab="查询结果" key="results" />
                     <TabPane
                       tab="可视化"

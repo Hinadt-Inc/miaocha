@@ -9,28 +9,28 @@ export type CSVRowData = Record<string, string | number | boolean | null | undef
  * @param editor Monaco编辑器实例
  * @param text 要插入的文本
  */
-export const insertTextToEditor = (
-  editor: monaco.editor.IStandaloneCodeEditor,
-  text: string
-): void => {
+export const insertTextToEditor = (editor: monaco.editor.IStandaloneCodeEditor, text: string): void => {
   const selection = editor.getSelection();
   const id = { major: 1, minor: 1 };
   const model = editor.getModel();
-  
+
   // 确保 range 是有效的 IRange 对象
-  const range = selection 
-    ?? (model ? {
-      startLineNumber: model.getLineCount(),
-      startColumn: model.getLineMaxColumn(model.getLineCount()),
-      endLineNumber: model.getLineCount(),
-      endColumn: model.getLineMaxColumn(model.getLineCount())
-    } : {
-      startLineNumber: 1,
-      startColumn: 1,
-      endLineNumber: 1,
-      endColumn: 1
-    });
-  
+  const range =
+    selection ??
+    (model
+      ? {
+          startLineNumber: model.getLineCount(),
+          startColumn: model.getLineMaxColumn(model.getLineCount()),
+          endLineNumber: model.getLineCount(),
+          endColumn: model.getLineMaxColumn(model.getLineCount()),
+        }
+      : {
+          startLineNumber: 1,
+          startColumn: 1,
+          endLineNumber: 1,
+          endColumn: 1,
+        });
+
   const op = { identifier: id, range, text, forceMoveMarkers: true };
   editor.executeEdits('insert-text', [op]);
   editor.focus();
@@ -50,31 +50,24 @@ export const insertFormattedSQL = (
     indentSize?: number; // 缩进大小
     addComma?: boolean; // 是否添加逗号
     addNewLine?: boolean; // 是否添加新行
-  }
+  },
 ): void => {
   // 处理默认选项
-  const { 
-    useTabs = false, 
-    indentSize = 4, 
-    addComma = false, 
-    addNewLine = false 
-  } = options ?? {};
-  
+  const { addComma = false, addNewLine = false } = options ?? {};
+
   // 准备缩进字符和文本
-  const indentChar = useTabs ? '\t' : ' ';
-  const indent = indentChar.repeat(indentSize);
   let formattedText = text;
-  
+
   // 如果需要添加逗号
   if (addComma) {
     formattedText = formattedText + ',';
   }
-  
+
   // 如果需要添加新行
   if (addNewLine) {
     formattedText = formattedText + '\n';
   }
-  
+
   // 使用基础方法插入
   insertTextToEditor(editor, formattedText);
 };
@@ -84,9 +77,10 @@ export const insertFormattedSQL = (
  * @param text 要复制的文本
  */
 export const copyToClipboard = (text: string) => {
-  navigator.clipboard.writeText(text)
+  navigator.clipboard
+    .writeText(text)
     .then(() => message.success('已复制到剪贴板'))
-    .catch(err => {
+    .catch((err) => {
       console.error('复制失败:', err);
       message.error('复制失败');
     });
@@ -98,11 +92,7 @@ export const copyToClipboard = (text: string) => {
  * @param fileName 文件名
  * @param type MIME类型
  */
-export const downloadResults = (
-  content: string,
-  fileName: string,
-  type = 'text/csv;charset=utf-8;'
-) => {
+export const downloadResults = (content: string, fileName: string, type = 'text/csv;charset=utf-8;') => {
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -119,37 +109,36 @@ export const downloadResults = (
  * @param rows 查询结果行数据
  * @param columns 查询结果列名
  */
-export const downloadAsCSV = (
-  rows: CSVRowData[],
-  columns: (keyof CSVRowData)[]
-): void => {
+export const downloadAsCSV = (rows: CSVRowData[], columns: (keyof CSVRowData)[]): void => {
   // 构造 CSV 内容
   const header = columns.join(',');
-  const csvRows = rows.map(row => {
-    return columns.map(col => {
-      const value = row[col];
-      if (value === null || value === undefined) return '';
-      if (typeof value === 'string') return `"${value.replace(/"/g, '""')}"`;
-      if (typeof value === 'object') return `"${JSON.stringify(value).replace(/"/g, '""')}"`;
-      return String(value);
-    }).join(',');
+  const csvRows = rows.map((row) => {
+    return columns
+      .map((col) => {
+        const value = row[col];
+        if (value === null || value === undefined) return '';
+        if (typeof value === 'string') return `"${value.replace(/"/g, '""')}"`;
+        if (typeof value === 'object') return `"${JSON.stringify(value).replace(/"/g, '""')}"`;
+        return String(value);
+      })
+      .join(',');
   });
-  
+
   const csvContent = [header, ...csvRows].join('\n');
-  
+
   // 创建 Blob 对象
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  
+
   // 创建下载链接
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
   link.setAttribute('download', `query_results_${dayjs().format('YYYYMMDD_HHmmss')}.csv`);
   document.body.appendChild(link);
-  
+
   // 触发下载
   link.click();
-  
+
   // 清理
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
@@ -164,11 +153,11 @@ export const validateSQL = (query: string): boolean => {
   if (!query.trim()) {
     return false;
   }
-  
+
   // 这里可以添加更复杂的SQL验证逻辑
   // 例如检查是否包含基本的SQL关键字：SELECT, FROM等
   const hasSqlKeywords = /\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\b/i.test(query);
-  
+
   return hasSqlKeywords;
 };
 
@@ -189,7 +178,7 @@ export const containsSQLKeyword = (text: string, keyword: string): boolean => {
  * @returns SQL上下文信息
  */
 export const getSQLContext = (
-  editor: monaco.editor.IStandaloneCodeEditor
+  editor: monaco.editor.IStandaloneCodeEditor,
 ): {
   isSelectQuery: boolean;
   hasFromClause: boolean;
@@ -208,40 +197,40 @@ export const getSQLContext = (
       isInSelectClause: false,
       isInFromClause: false,
       isInWhereClause: false,
-      cursorOffsetInSQL: 0
+      cursorOffsetInSQL: 0,
     };
   }
-  
+
   const text = model.getValue();
   const selection = editor.getSelection();
-  
+
   // 获取光标位置的偏移量
-  const cursorOffsetInSQL = selection ? model.getOffsetAt({
-    lineNumber: selection.startLineNumber,
-    column: selection.startColumn
-  }) : 0;
-  
+  const cursorOffsetInSQL = selection
+    ? model.getOffsetAt({
+        lineNumber: selection.startLineNumber,
+        column: selection.startColumn,
+      })
+    : 0;
+
   // 使用正则表达式检测SQL关键字
   const isSelectQuery = /\bSELECT\b/i.test(text);
   const hasFromClause = /\bFROM\b/i.test(text);
   const hasWhereClause = /\bWHERE\b/i.test(text);
-  
+
   // 获取关键字的位置
   const selectPos = text.toUpperCase().indexOf('SELECT');
   const fromPos = text.toUpperCase().indexOf('FROM');
   const wherePos = text.toUpperCase().indexOf('WHERE');
-  
+
   // 判断光标是否在特定子句中
-  const isInSelectClause = isSelectQuery && hasFromClause && 
-                          cursorOffsetInSQL > selectPos && 
-                          cursorOffsetInSQL < fromPos;
-  
-  const isInFromClause = hasFromClause && 
-                        cursorOffsetInSQL > fromPos && 
-                        (!hasWhereClause || cursorOffsetInSQL < wherePos);
-  
+  const isInSelectClause =
+    isSelectQuery && hasFromClause && cursorOffsetInSQL > selectPos && cursorOffsetInSQL < fromPos;
+
+  const isInFromClause =
+    hasFromClause && cursorOffsetInSQL > fromPos && (!hasWhereClause || cursorOffsetInSQL < wherePos);
+
   const isInWhereClause = hasWhereClause && cursorOffsetInSQL > wherePos;
-  
+
   return {
     isSelectQuery,
     hasFromClause,
@@ -249,7 +238,7 @@ export const getSQLContext = (
     isInSelectClause,
     isInFromClause,
     isInWhereClause,
-    cursorOffsetInSQL
+    cursorOffsetInSQL,
   };
 };
 
@@ -260,9 +249,9 @@ export const getSQLContext = (
  * @returns 格式化后的字段列表
  */
 export const generateColumnList = (
-  columns: { 
+  columns: {
     columnName: string;
-    dataType?: string; 
+    dataType?: string;
     columnComment?: string;
     isPrimaryKey?: boolean;
     isNullable?: boolean;
@@ -271,28 +260,24 @@ export const generateColumnList = (
     addComments?: boolean;
     indentSize?: number;
     multiline?: boolean;
-  }
+  },
 ): string => {
-  const { 
-    addComments = false, 
-    indentSize = 4,
-    multiline = true
-  } = options ?? {};
-  
+  const { addComments = false, indentSize = 4, multiline = true } = options ?? {};
+
   const indent = ' '.repeat(indentSize);
-  
+
   if (columns.length === 0) {
     return '*';
   }
-  
-  const formattedColumns = columns.map(col => {
+
+  const formattedColumns = columns.map((col) => {
     let field = col.columnName;
     if (addComments && col.columnComment) {
       field += ` /* ${col.columnComment} */`;
     }
     return multiline ? `${indent}${field}` : field;
   });
-  
+
   if (multiline) {
     return formattedColumns.join(',\n');
   }
@@ -305,11 +290,7 @@ export const generateColumnList = (
  * @param data 要保存的数据
  * @param maxCount 最大保存数量
  */
-export const saveToLocalStorage = <T,>(
-  key: string,
-  data: T[],
-  maxCount: number
-) => {
+export const saveToLocalStorage = <T>(key: string, data: T[], maxCount: number) => {
   try {
     const toSave = data.slice(0, maxCount);
     localStorage.setItem(key, JSON.stringify(toSave));

@@ -6,31 +6,11 @@ import {
   deleteDataSource,
   testDataSourceConnection,
 } from '../../api/datasource';
-import type {
-  DataSource,
-  CreateDataSourceParams,
-  TestConnectionParams,
-} from '../../types/datasourceTypes';
+import type { DataSource, CreateDataSourceParams, TestConnectionParams } from '../../types/datasourceTypes';
 import dayjs from 'dayjs';
-import {
-  ProTable,
-  ProFormText,
-  ProFormSelect,
-  ModalForm,
-  ProForm,
-  ProFormDigit,
-  ProFormTextArea,
-} from '@ant-design/pro-components';
+import { ProTable, ProFormText, ProFormSelect, ModalForm, ProFormTextArea } from '@ant-design/pro-components';
 import { Button, message, Popconfirm, Breadcrumb, Card, Input, Space } from 'antd';
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  LinkOutlined,
-  HomeOutlined,
-  SearchOutlined,
-} from '@ant-design/icons';
-import AuthCheck from '@/components/AuthCheck';
+import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, HomeOutlined } from '@ant-design/icons';
 import type { ProColumns, ActionType, RequestData, ParamsType } from '@ant-design/pro-components';
 import type { SortOrder } from 'antd/lib/table/interface';
 
@@ -42,7 +22,6 @@ const DataSourceManagementPage = () => {
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [currentDataSource, setCurrentDataSource] = useState<DataSourceItem | undefined>(undefined);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
-  const [allDataSources, setAllDataSources] = useState<DataSourceItem[]>([]);
   const [messageApi, contextHolder] = message.useMessage();
   const [pagination, setPagination] = useState({
     current: 1,
@@ -73,7 +52,7 @@ const DataSourceManagementPage = () => {
     getAllDataSources()
       .then((data) => {
         if (data) {
-          setAllDataSources(data);
+          // 数据直接通过API获取，不再需要本地状态
         }
       })
       .catch(() => {
@@ -143,10 +122,8 @@ const DataSourceManagementPage = () => {
   const handleDelete = async (id: string) => {
     try {
       await deleteDataSource(id);
-      // 更新本地缓存
-      setAllDataSources((prev) => prev.filter((item) => item.id !== id));
       messageApi.success('数据源删除成功');
-      // 刷新表格显示，保留分页设置
+      // 直接刷新表格数据
       actionRef.current?.reload();
     } catch {
       messageApi.error('删除数据源失败');
@@ -179,20 +156,12 @@ const DataSourceManagementPage = () => {
           id: currentDataSource.id,
         });
         if (updated) {
-          // 更新本地缓存
-          setAllDataSources((prev) =>
-            prev.map((item) =>
-              item.id === currentDataSource.id ? { ...item, ...formattedValues } : item,
-            ),
-          );
           messageApi.success('数据源更新成功');
         }
       } else {
         // 新增操作
         const newDataSource = await createDataSource(formattedValues);
         if (newDataSource) {
-          // 更新本地缓存
-          setAllDataSources((prev) => [...prev, newDataSource]);
           messageApi.success('数据源创建成功');
         }
       }
@@ -284,9 +253,7 @@ const DataSourceManagementPage = () => {
       title: '类型',
       dataIndex: 'type',
       width: '8%',
-      valueEnum: Object.fromEntries(
-        dataSourceTypeOptions.map((option) => [option.value, option.label]),
-      ),
+      valueEnum: Object.fromEntries(dataSourceTypeOptions.map((option) => [option.value, option.label])),
       render: (_, record) => {
         const typeOption = dataSourceTypeOptions.find((option) => option.value === record.type);
         return typeOption?.label ?? record.type;
@@ -386,13 +353,7 @@ const DataSourceManagementPage = () => {
               void handleDelete(record.id);
             }}
           >
-            <Button
-              type="link"
-              size="small"
-              danger
-              icon={<DeleteOutlined />}
-              style={{ padding: '0 4px' }}
-            >
+            <Button type="link" size="small" danger icon={<DeleteOutlined />} style={{ padding: '0 4px' }}>
               删除
             </Button>
           </Popconfirm>

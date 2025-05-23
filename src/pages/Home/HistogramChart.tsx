@@ -26,6 +26,7 @@ const HistogramChart = (props: IProps) => {
     return {
       values,
       labels,
+      originalData: data,
     };
   }, [data]);
 
@@ -120,31 +121,6 @@ const HistogramChart = (props: IProps) => {
           },
         },
       ],
-      // 数据区域缩放组件配置
-      // dataZoom: [
-      //   {
-      //     type: 'slider', // 滑动条型数据缩放组件
-      //     xAxisIndex: [0], // 控制第一个x轴
-      //     start: 0, // 数据窗口范围的起始百分比
-      //     end: 100, // 数据窗口范围的结束百分比
-      //     height: 16, // 组件高度
-      //     bottom: 10, // 组件离容器底部的距离
-      //     backgroundColor: '#f5f5f5', // 滑动条背景色
-      //     fillerColor: 'rgba(0, 56, 255, 0.1)', // 选中范围的填充颜色
-      //     handleStyle: {
-      //       color: '#0038ff', // 滑块手柄的颜色
-      //       borderColor: '#0038ff', // 滑块手柄的边框颜色
-      //     },
-      //     selectedDataBackground: {
-      //       lineStyle: {
-      //         color: '#0038ff', // 选中范围的线条颜色
-      //       },
-      //       areaStyle: {
-      //         color: '#0038ff', // 选中范围的填充颜色
-      //       },
-      //     },
-      //   },
-      // ],
     }),
     [data],
   );

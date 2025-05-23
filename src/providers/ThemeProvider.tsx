@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { ConfigProvider, theme as antdTheme } from 'antd';
 import { colorPrimary } from '@/utils/utils';
 
@@ -68,10 +68,7 @@ const themeConfig = {
 };
 
 // 主题提供者组件
-export const ThemeProvider: React.FC<ThemeProviderProps> = ({
-  children,
-  defaultMode = 'light',
-}) => {
+export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children, defaultMode = 'light' }) => {
   // 优先从本地存储中获取主题模式
   const [mode, setMode] = useState<ThemeMode>(() => {
     const savedMode = localStorage.getItem('theme-mode') as ThemeMode | null;
