@@ -76,3 +76,12 @@ export function batchRevokeModulePermissions(userId: string, modules: string[]):
 export const getMyModules = () => {
   return get('/api/permissions/modules/my') as Promise<IModulesResponse[]>;
 };
+
+/**
+ * 获取用户未授权的模块列表
+ * @param userId 用户ID
+ * @returns Promise<IModulesResponse[]>
+ */
+export function getUserUnauthorizedModules(userId: string): Promise<string[]> {
+  return get(`/api/permissions/modules/user/${userId}/unauthorized`) as Promise<string[]>;
+}

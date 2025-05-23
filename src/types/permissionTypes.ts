@@ -49,3 +49,8 @@ export interface TablePermissionOperation {
   datasourceId: string;
   tableName: string;
 }
+
+/**
+ * 模块响应类型 - 用于未授权模块列表
+ */
+export type IModulesResponse = string;
