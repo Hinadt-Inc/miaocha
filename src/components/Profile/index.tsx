@@ -18,8 +18,8 @@ import {
   App,
 } from 'antd';
 import type { MenuProps } from 'antd';
-import { UserOutlined, LogoutOutlined, SettingOutlined, ReloadOutlined } from '@ant-design/icons';
-import { fetchUserInfo, logoutUser } from '@/store/userSlice';
+import { UserOutlined, LogoutOutlined, ReloadOutlined } from '@ant-design/icons';
+import { fetchUserInfo, logout } from '@/store/userSlice';
 import type { AppDispatch } from '@/store/store';
 import styles from './index.module.less';
 
@@ -45,7 +45,7 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
       cancelText: '取消',
       onOk: async () => {
         try {
-          await dispatch(logoutUser());
+          await dispatch(logout());
           navigate('/login');
         } catch (error) {
           navigate('/login');
@@ -82,13 +82,8 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
         icon: <UserOutlined />,
         onClick: showModal,
       },
-      // {
-      //   key: '2',
-      //   label: '设置',
-      //   icon: <SettingOutlined />,
-      // },
       {
-        key: '3',
+        key: '2',
         danger: true,
         label: '退出登录',
         icon: <LogoutOutlined />,
@@ -132,9 +127,7 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
     }
 
     if (collapsed) {
-      return (
-        <Avatar src={user.avatar} icon={!user.avatar ? <UserOutlined /> : undefined} size="small" />
-      );
+      return <Avatar src={user.avatar} icon={!user.avatar ? <UserOutlined /> : undefined} size="small" />;
     }
 
     return (
@@ -163,10 +156,7 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
     if (user.loading) {
       return (
         <div className={styles.loading}>
-          <Spin
-            size="large"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          />
+          <Spin size="large" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
           <p className={styles.loadingText}>正在获取用户信息...</p>
         </div>
       );
