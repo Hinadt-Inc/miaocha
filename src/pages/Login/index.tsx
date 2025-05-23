@@ -23,6 +23,7 @@ const LoginPage = () => {
         email: values.username,
         password: values.password,
       });
+      if (!response) return;
 
       dispatch(
         login({

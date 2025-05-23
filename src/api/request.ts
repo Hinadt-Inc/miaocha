@@ -140,15 +140,14 @@ service.interceptors.response.use(
         default:
           errorMessage = errorMessage;
       }
-      window.dispatchEvent(
-        new CustomEvent('unhandledrejection', {
-          detail: {
-            reason: new Error(errorMessage),
-          },
-        }),
-      );
     }
-    return Promise.reject(new Error(errorMessage));
+    window.dispatchEvent(
+      new CustomEvent('unhandledrejection', {
+        detail: {
+          reason: new Error(errorMessage),
+        },
+      }),
+    );
   },
 );
 
