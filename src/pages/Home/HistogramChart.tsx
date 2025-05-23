@@ -1,26 +1,24 @@
 import { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { EChartsOption } from 'echarts';
+import { Empty } from 'antd';
 import { colorPrimary } from '@/utils/utils';
 
 interface IProps {
-  data: ISearchLogsResponse['distributionData'];
-  timeGrouping?: 'minute' | 'hour' | 'day' | 'month';
+  data: ILogHistogramData[]; // 直方图数据
+  searchParams: ILogSearchParams; // 搜索参数
 }
 
 const HistogramChart = (props: IProps) => {
-  const { data, timeGrouping = 'minute' } = props;
+  const { data, searchParams } = props;
+  const { timeGrouping, timeRange = '' } = searchParams;
 
   // 根据timeGrouping聚合数据
   const aggregatedData = useMemo(() => {
-    if (!data || data.length === 0) {
-      return { values: [], labels: [], originalData: [] };
-    }
-
     // 转换为数组
     const labels: string[] = [];
     const values: number[] = [];
-    data.forEach((item) => {
+    data?.forEach((item: any) => {
       labels.push(item.timePoint?.replace('T', ' '));
       values.push(item.count);
     });
@@ -52,17 +50,34 @@ const HistogramChart = (props: IProps) => {
         type: 'category', // 类目轴，适用于离散的类目数据
         data: aggregatedData.labels, // 类目数据
         axisLabel: {
+          fontSize: 10,
           formatter: (value: string) => {
-            // 标签格式化函数
+            // 根据时间范围和时间分组动态调整显示格式
+            // 当时间范围较大时（如上周、上月），显示更高粒度的格式
+            if (timeRange.includes('week') || timeRange.includes('month') || timeRange.includes('year')) {
+              switch (timeGrouping) {
+                case 'second':
+                case 'minute':
+                  return timeRange.includes('week') ? value.substring(5, 10) : value.substring(0, 10);
+                case 'hour':
+                  return value.substring(11, 13) + ':00';
+                case 'day':
+                  return value.substring(5, 10);
+                default:
+                  return value.substring(0, 10);
+              }
+            }
+
+            // 默认按时间分组显示
             switch (timeGrouping) {
+              case 'second':
+                return value.substring(11, 19);
               case 'minute':
-                return value.substring(11, 16); // 显示时分
+                return value.substring(11, 16);
               case 'hour':
-                return value.substring(11, 13) + ':00'; // 显示小时
+                return value.substring(11, 13) + ':00';
               case 'day':
-                return value.substring(5, 10); // 显示月日
-              case 'month':
-                return value.substring(5, 7) + '月'; // 显示月份
+                return value.substring(5, 10);
               default:
                 return value.substring(11, 16);
             }
@@ -72,6 +87,9 @@ const HistogramChart = (props: IProps) => {
       // Y轴配置
       yAxis: {
         type: 'value', // 数值轴，适用于连续数据
+        axisLabel: {
+          fontSize: 10,
+        },
         splitLine: {
           lineStyle: {
             type: 'dashed', // 虚线类型
@@ -89,10 +107,10 @@ const HistogramChart = (props: IProps) => {
           name: '日志数量', // 系列名称
           type: 'bar', // 图表类型：柱状图
           data: aggregatedData.values, // 数据数组
-          barWidth: '40%', // 柱条宽度，相对于类目宽度的百分比
+          barWidth: '20%', // 柱条宽度，相对于类目宽度的百分比
           itemStyle: {
             color: colorPrimary, // 柱状图填充颜色
-            borderRadius: [8, 8, 0, 0], // 柱状图圆角，[左上, 右上, 右下, 左下]
+            borderRadius: [4, 4, 0, 0], // 柱状图圆角，[左上, 右上, 右下, 左下]
           },
           emphasis: {
             itemStyle: {
@@ -109,10 +127,10 @@ const HistogramChart = (props: IProps) => {
 
   // 如果没有数据或显示标志为false，则不显示图表
   if (!data || data?.length === 0) {
-    return null;
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />;
   }
 
-  return <ReactECharts option={option} style={{ height: 180, width: '100%' }} />;
+  return <ReactECharts option={option} style={{ height: 150, width: '100%' }} />;
 };
 
 export default HistogramChart;

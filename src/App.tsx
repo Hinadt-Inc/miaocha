@@ -1,5 +1,5 @@
 // filepath: /Users/zhangyongjian/project/log-manage-web/src/App.tsx
-import { App as AntdApp } from 'antd';
+import { App as AntdApp, notification } from 'antd';
 import { ProLayout } from '@ant-design/pro-components';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import Profile from '@/components/Profile';
@@ -14,6 +14,46 @@ const App = () => {
   const location = useLocation();
   const userRole = useSelector((state: { user: IStoreUser }) => state.user.role);
   const [openKeys, setOpenKeys] = useState<string[]>([]);
+  const [notificationApi, contextHolder] = notification.useNotification();
+
+  const notificationConfig = {
+    message: '提示',
+    duration: 3,
+    showProgress: true,
+  };
+
+  const handleUnhandledRejection = (event: any) => {
+    event.preventDefault();
+    const description = event?.reason?.message || event?.detail?.reason?.message || '业务发生未知错误，请联系开发人员';
+    console.error('【全局1】======Unhandled promise rejection:', description);
+    notificationApi.error({
+      description,
+      ...notificationConfig,
+    });
+  };
+
+  // 未捕获的错误
+  const handleGlobalError = (event: ErrorEvent) => {
+    // 阻止默认错误处理(如控制台输出)
+    event.preventDefault();
+    const description = event.message || '发生未知错误，请联系开发人员';
+    console.error('【全局2】======Uncaught error:', description);
+    notificationApi.error({
+      description,
+      ...notificationConfig,
+    });
+  };
+
+  // 添加事件监听器
+  useEffect(() => {
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    window.addEventListener('error', handleGlobalError);
+
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      window.removeEventListener('error', handleGlobalError);
+    };
+  }, []);
 
   // 根据用户角色获取有权限的路由
   const authorizedRoutes = useMemo(() => {
@@ -87,6 +127,7 @@ const App = () => {
         render: () => <Profile collapsed={collapsed} />,
       }}
     >
+      {contextHolder}
       <Outlet />
     </ProLayout>
   );

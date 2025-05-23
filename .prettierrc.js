@@ -9,7 +9,6 @@ export default {
   tabWidth: 2,
   printWidth: 120,
   trailingComma: 'all',
-  singleQuote: true,
   bracketSameLine: false,
   jsxSingleQuote: false,
   quoteProps: 'as-needed',

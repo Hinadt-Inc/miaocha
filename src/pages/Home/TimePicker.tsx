@@ -6,20 +6,19 @@ import { QUICK_RANGES } from './utils';
 
 const Relative = lazy(() => import('./Relative'));
 
-const { TabPane } = Tabs;
 const { RangePicker } = DatePicker;
 
 interface IProps {
-  onSubmitTime: (params: ISubmitTime) => void; // 提交时间
+  onSubmit: (params: ILogTimeSubmitParams) => void; // 提交时间
 }
 
 const TimePicker = (props: IProps) => {
-  const { onSubmitTime } = props;
+  const { onSubmit } = props;
 
   // 选项卡值
   const [activeTab, setActiveTab] = useState('quick');
-  const [selectedTag, setSelectedTag] = useState<string>(); // 选中的标签
-  const [absoluteOption, setAbsoluteOption] = useState<ISubmitTime>(); // 绝对时间
+  const [selectedTag, setSelectedTag] = useState<string>('auto'); // 选中的标签
+  const [absoluteOption, setAbsoluteOption] = useState<ILogTimeSubmitParams>(); // 绝对时间
 
   // 切换标签
   const changeTag = (value: string) => {
@@ -27,13 +26,13 @@ const TimePicker = (props: IProps) => {
     const isExist = QUICK_RANGES[value];
     if (!isExist) return;
     const { from, to, format } = isExist;
-    const params: ISubmitTime = {
+    const params: ILogTimeSubmitParams = {
       value,
       range: [from().format(format[0]), to().format(format[1])],
       ...isExist,
     };
     setSelectedTag(value);
-    onSubmitTime(params);
+    onSubmit(params);
   };
 
   const quickRender = useMemo(() => {
@@ -62,33 +61,45 @@ const TimePicker = (props: IProps) => {
 
   return (
     <div className={styles.timePickerLayout}>
-      <Tabs activeKey={activeTab} onChange={setActiveTab}>
-        <TabPane tab="快速选择" key="quick">
-          {quickRender}
-        </TabPane>
-        <TabPane tab="相对时间" key="relative">
-          <Suspense fallback={<SpinIndicator />}>
-            <Relative onSubmitTime={onSubmitTime} />
-          </Suspense>
-        </TabPane>
-        <TabPane tab="绝对时间" key="absolute">
-          {useMemo(
-            () => (
-              <Space.Compact block>
-                <RangePicker showTime format="YYYY-MM-DD HH:mm:ss" onChange={onRangeChange} />
-                <Button
-                  type="primary"
-                  onClick={() => onSubmitTime(absoluteOption as any)}
-                  disabled={!absoluteOption?.value}
-                >
-                  确定
-                </Button>
-              </Space.Compact>
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={[
+          {
+            key: 'quick',
+            label: '快速选择',
+            children: quickRender,
+          },
+          {
+            key: 'relative',
+            label: '相对时间',
+            children: (
+              <Suspense fallback={<SpinIndicator />}>
+                <Relative onSubmit={onSubmit} />
+              </Suspense>
             ),
-            [absoluteOption],
-          )}
-        </TabPane>
-      </Tabs>
+          },
+          {
+            key: 'absolute',
+            label: '绝对时间',
+            children: useMemo(
+              () => (
+                <Space.Compact block>
+                  <RangePicker showTime format="YYYY-MM-DD HH:mm:ss" onChange={onRangeChange} />
+                  <Button
+                    type="primary"
+                    onClick={() => onSubmit(absoluteOption as any)}
+                    disabled={!absoluteOption?.value}
+                  >
+                    确定
+                  </Button>
+                </Space.Compact>
+              ),
+              [absoluteOption],
+            ),
+          },
+        ]}
+      />
     </div>
   );
 };

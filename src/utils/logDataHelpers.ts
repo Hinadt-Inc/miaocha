@@ -22,9 +22,7 @@ export const getFieldType = (fieldName: string): string => {
   return field?.type || 'keyword';
 };
 // 根据字段类型获取操作符选项
-export const getOperatorsByFieldType = (
-  fieldType?: string,
-): { label: string; value: FilterOperator }[] => {
+export const getOperatorsByFieldType = (fieldType?: string): { label: string; value: FilterOperator }[] => {
   const commonOperators: { label: string; value: FilterOperator }[] = [
     { label: '是', value: 'is' as const },
     { label: '不是', value: 'is_not' as const },
@@ -146,9 +144,7 @@ export const throttle = <F extends (...args: any[]) => any>(
 };
 
 // 缓存函数结果
-export const memoize = <F extends (...args: any[]) => any>(
-  func: F,
-): ((...args: Parameters<F>) => ReturnType<F>) => {
+export const memoize = <F extends (...args: any[]) => any>(func: F): ((...args: Parameters<F>) => ReturnType<F>) => {
   const cache = new Map<string, ReturnType<F>>();
 
   return (...args: Parameters<F>): ReturnType<F> => {

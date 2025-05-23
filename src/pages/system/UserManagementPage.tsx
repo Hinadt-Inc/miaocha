@@ -433,11 +433,7 @@ const UserManagementPage = () => {
           <Form form={form} layout="vertical">
             <Row gutter={16}>
               <Col span={12}>
-                <Form.Item
-                  name="nickname"
-                  label="昵称"
-                  rules={[{ required: true, message: '请输入昵称' }]}
-                >
+                <Form.Item name="nickname" label="昵称" rules={[{ required: true, message: '请输入昵称' }]}>
                   <Input placeholder="请输入昵称" />
                 </Form.Item>
               </Col>
@@ -457,11 +453,7 @@ const UserManagementPage = () => {
 
             <Row gutter={16}>
               <Col span={12}>
-                <Form.Item
-                  name="role"
-                  label="角色"
-                  rules={[{ required: true, message: '请选择角色' }]}
-                >
+                <Form.Item name="role" label="角色" rules={[{ required: true, message: '请选择角色' }]}>
                   <Select options={roleOptions} placeholder="请选择角色" />
                 </Form.Item>
               </Col>
@@ -493,9 +485,7 @@ const UserManagementPage = () => {
                     { min: 6, message: '密码长度不能少于6个字符' },
                   ]}
                 >
-                  <Input.Password
-                    placeholder={selectedRecord ? '留空则不修改密码' : '请输入密码'}
-                  />
+                  <Input.Password placeholder={selectedRecord ? '留空则不修改密码' : '请输入密码'} />
                 </Form.Item>
               </Col>
               <Col span={12}>
@@ -515,9 +505,7 @@ const UserManagementPage = () => {
                     }),
                   ]}
                 >
-                  <Input.Password
-                    placeholder={selectedRecord ? '留空则不修改密码' : '请确认密码'}
-                  />
+                  <Input.Password placeholder={selectedRecord ? '留空则不修改密码' : '请确认密码'} />
                 </Form.Item>
               </Col>
             </Row>

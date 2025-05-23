@@ -74,7 +74,7 @@ export function batchRevokeModulePermissions(userId: string, modules: string[]):
 
 // 获取我的模块权限
 export const getMyModules = () => {
-  return get('/api/permissions/modules/my') as Promise<IModulesResponse[]>;
+  return get('/api/permissions/modules/my') as Promise<IMyModulesResponse[]>;
 };
 
 /**
