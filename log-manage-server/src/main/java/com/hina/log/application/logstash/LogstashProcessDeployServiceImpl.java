@@ -33,6 +33,7 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
     private final LogstashCommandFactory commandFactory;
     private final LogstashProcessConfigService configService;
     private final LogstashProperties logstashProperties;
+    private final LogstashMachineConnectionValidator connectionValidator;
 
     public LogstashProcessDeployServiceImpl(
             LogstashProcessMapper logstashProcessMapper,
@@ -40,13 +41,15 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
             LogstashMachineStateManager machineStateManager,
             LogstashCommandFactory commandFactory,
             LogstashProcessConfigService configService,
-            LogstashProperties logstashProperties) {
+            LogstashProperties logstashProperties,
+            LogstashMachineConnectionValidator connectionValidator) {
         this.logstashProcessMapper = logstashProcessMapper;
         this.taskService = taskService;
         this.machineStateManager = machineStateManager;
         this.commandFactory = commandFactory;
         this.configService = configService;
         this.logstashProperties = logstashProperties;
+        this.connectionValidator = connectionValidator;
     }
 
     @Override
@@ -253,8 +256,10 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
 
         // 验证配置刷新条件
         if (machines.size() == 1) {
-            // 单机刷新
-            configService.validateConfigRefreshConditions(processId, machines.get(0).getId());
+            // 单机刷新：验证机器连接
+            Machine machine = machines.get(0);
+            connectionValidator.validateSingleMachineConnection(machine);
+            configService.validateConfigRefreshConditions(processId, machine.getId());
         } else {
             // 全局刷新
             configService.validateConfigRefreshConditions(processId, null);
@@ -302,6 +307,9 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
             return;
         }
 
+        // 验证机器连接
+        connectionValidator.validateSingleMachineConnection(machine);
+
         Long processId = process.getId();
 
         // 创建任务
@@ -340,6 +348,9 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
             logger.error("停止机器参数无效: processId={}, machine={}", processId, machine);
             return;
         }
+
+        // 验证机器连接
+        connectionValidator.validateSingleMachineConnection(machine);
 
         // 查询进程信息
         LogstashProcess process = logstashProcessMapper.selectById(processId);
@@ -383,6 +394,9 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
             logger.error("重启机器参数无效: processId={}, machine={}", processId, machine);
             return;
         }
+
+        // 验证机器连接
+        connectionValidator.validateSingleMachineConnection(machine);
 
         // 查询进程信息
         LogstashProcess process = logstashProcessMapper.selectById(processId);

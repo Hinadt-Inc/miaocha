@@ -23,6 +23,7 @@ import com.hina.log.domain.mapper.MachineMapper;
 import com.hina.log.application.service.LogstashProcessService;
 import com.hina.log.application.service.TableValidationService;
 import com.hina.log.application.service.sql.JdbcQueryExecutor;
+import com.hina.log.application.logstash.LogstashMachineConnectionValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -58,6 +59,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
     private final JdbcQueryExecutor jdbcQueryExecutor;
     private final TaskService taskService;
     private final LogstashConfigSyncService configSyncService;
+    private final LogstashMachineConnectionValidator connectionValidator;
 
     // 构造函数
     public LogstashProcessServiceImpl(
@@ -72,7 +74,8 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             TableValidationService tableValidationService,
             JdbcQueryExecutor jdbcQueryExecutor,
             TaskService taskService,
-            LogstashConfigSyncService configSyncService) {
+            LogstashConfigSyncService configSyncService,
+            LogstashMachineConnectionValidator connectionValidator) {
         this.logstashProcessMapper = logstashProcessMapper;
         this.logstashMachineMapper = logstashMachineMapper;
         this.machineMapper = machineMapper;
@@ -85,6 +88,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         this.jdbcQueryExecutor = jdbcQueryExecutor;
         this.taskService = taskService;
         this.configSyncService = configSyncService;
+        this.connectionValidator = connectionValidator;
     }
 
     // 公共方法 - 按照接口定义顺序排列
@@ -317,6 +321,9 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
     public LogstashProcessResponseDTO updateSingleMachineConfig(Long id, Long machineId, String configContent, String jvmOptions, String logstashYml) {
         // 验证进程和机器是否存在，以及它们之间的关系
         ValidatedEntities entities = getAndValidateObjects(id, machineId);
+
+        // 验证机器连接
+        connectionValidator.validateSingleMachineConnection(entities.machine);
 
         // 参数校验 - 至少有一个配置需要更新
         boolean hasUpdate = StringUtils.hasText(configContent) ||
