@@ -343,7 +343,16 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             }
         }
 
-        // 更新配置
+        // 先同步更新数据库中该机器的配置记录
+        configSyncService.updateConfigForSingleMachine(
+                id,
+                machineId,
+                configContent,
+                jvmOptions,
+                logstashYml
+        );
+
+        // 更新远程配置文件
         List<Machine> machines = new ArrayList<>();
         machines.add(entities.machine);
         logstashDeployService.updateMultipleConfigs(id, machines, configContent, jvmOptions, logstashYml);

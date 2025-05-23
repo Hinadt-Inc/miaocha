@@ -51,7 +51,7 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
             String configDir = processDir + "/config";
             try {
                 // 创建配置目录
-                String createDirCommand = String.format("mkdir -p %s/pipeline", configDir);
+                String createDirCommand = String.format("mkdir -p %s", configDir);
                 sshClient.executeCommand(machine, createDirCommand);
             } catch (Exception e) {
                 logger.error("创建配置目录时发生错误: {}", e.getMessage(), e);
@@ -61,8 +61,7 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
             // 1. 更新主配置文件（如果提供了内容）
             if (StringUtils.hasText(configContent)) {
                 try {
-                    String pipelineDir = configDir + "/pipeline";
-                    String configPath = pipelineDir + "/logstash.conf";
+                    String configPath = configDir + "/logstash-" + processId + ".conf";
                     
                     // 首先检查旧配置文件是否存在
                     String checkCommand = String.format("if [ -f \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi", configPath);
@@ -104,7 +103,7 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
                     success = false;
                 }
             }
-            
+
             // 2. 更新JVM配置文件（如果提供了内容）
             if (StringUtils.hasText(jvmOptions)) {
                 try {
@@ -150,8 +149,8 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
                     success = false;
                 }
             }
-            
-            // 3. 更新系统配置文件（如果提供了内容）
+
+            // 3. 更新Logstash系统配置文件（如果提供了内容）
             if (StringUtils.hasText(logstashYml)) {
                 try {
                     String ymlFile = configDir + "/logstash.yml";

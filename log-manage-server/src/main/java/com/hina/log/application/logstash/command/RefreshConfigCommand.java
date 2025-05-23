@@ -66,7 +66,7 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
                 String configDir = processDir + "/config";
                 
                 // 确保配置目录存在
-                String createDirCommand = String.format("mkdir -p %s/pipeline", configDir);
+                String createDirCommand = String.format("mkdir -p %s", configDir);
                 sshClient.executeCommand(machine, createDirCommand);
                 
                 // 1. 刷新主配置文件
@@ -105,8 +105,7 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
             }
         }
 
-        String pipelineDir = configDir + "/pipeline";
-        String configPath = pipelineDir + "/logstash.conf";
+        String configPath = configDir + "/logstash-" + processId + ".conf";
 
         // 首先检查旧配置文件是否存在
         String checkCommand = String.format("if [ -f \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi", configPath);

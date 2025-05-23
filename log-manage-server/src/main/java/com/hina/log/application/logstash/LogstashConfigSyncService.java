@@ -195,6 +195,58 @@ public class LogstashConfigSyncService {
     }
 
     /**
+     * 更新单台机器的配置
+     *
+     * @param processId     进程ID
+     * @param machineId     机器ID
+     * @param configContent 主配置内容，为null表示不更新
+     * @param jvmOptions    JVM配置内容，为null表示不更新
+     * @param logstashYml   Logstash系统配置内容，为null表示不更新
+     */
+    public void updateConfigForSingleMachine(Long processId, Long machineId, String configContent, String jvmOptions, String logstashYml) {
+        try {
+            // 获取指定机器的LogstashMachine记录
+            LogstashMachine machine = logstashMachineMapper.selectByLogstashProcessIdAndMachineId(processId, machineId);
+            
+            if (machine == null) {
+                logger.warn("找不到进程 [{}] 在机器 [{}] 上的记录，跳过数据库同步", processId, machineId);
+                return;
+            }
+
+            boolean updated = false;
+
+            // 更新主配置
+            if (configContent != null) {
+                machine.setConfigContent(configContent);
+                updated = true;
+            }
+
+            // 更新JVM配置
+            if (jvmOptions != null) {
+                machine.setJvmOptions(jvmOptions);
+                updated = true;
+            }
+
+            // 更新系统配置
+            if (logstashYml != null) {
+                machine.setLogstashYml(logstashYml);
+                updated = true;
+            }
+
+            // 如果有更新，保存到数据库
+            if (updated) {
+                machine.setUpdateTime(LocalDateTime.now());
+                logstashMachineMapper.update(machine);
+                logger.info("已更新机器 [{}] 上的进程 [{}] 配置", machineId, processId);
+            } else {
+                logger.debug("机器 [{}] 上的进程 [{}] 配置无需更新", machineId, processId);
+            }
+        } catch (Exception e) {
+            logger.error("更新机器 [{}] 配置时出错: {}", machineId, e.getMessage(), e);
+        }
+    }
+
+    /**
      * 更新所有LogstashMachine的配置
      *
      * @param processId     进程ID
