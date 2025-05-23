@@ -448,4 +448,12 @@ log-manage-server/src/main/java/com/hina/log/
 
 ## License
 
-[TODO: 添加项目许可证信息] 
+[TODO: 添加项目许可证信息]
+
+## 📞 技术支持
+
+- **文档**: [项目README](README.md)
+- **配置说明**: [日志配置文档](docs/LOGGING_CONFIGURATION.md)
+- **发布说明**: [1.0.0版本发布说明](docs/RELEASE_NOTES_v1.0.0.md)
+- **部署指南**: [部署检查清单](docs/DEPLOYMENT_CHECKLIST_v1.0.0.md)
+- **问题反馈**: 请通过项目仓库提交Issue 

@@ -1,6 +1,6 @@
 # Release Notes - Version 1.0.0
 
-**发布日期**: 2024年12月
+**发布日期**: 2025年5月23日
 
 ## 🎉 海纳 Doris日志管理系统 1.0.0 正式版
 
@@ -175,8 +175,9 @@ log-config:
 
 ## 📞 技术支持
 
-- **文档**: [项目README](README.md)
-- **配置说明**: [日志配置文档](docs/LOGGING_CONFIGURATION.md)
+- **文档**: [项目README](../README.md)
+- **配置说明**: [日志配置文档](LOGGING_CONFIGURATION.md)
+- **部署指南**: [部署检查清单](DEPLOYMENT_CHECKLIST_v1.0.0.md)
 - **问题反馈**: 请通过项目仓库提交Issue
 
 ## 🙏 致谢
@@ -186,5 +187,5 @@ log-config:
 ---
 
 **版本**: 1.0.0  
-**构建时间**: 2024-12-23  
+**构建时间**: 2025-05-23  
 **构建环境**: OpenJDK 17, Maven 3.9+ 
