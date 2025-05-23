@@ -1,14 +1,15 @@
 package com.hina.log.logstash.task;
 
-import com.hina.log.entity.LogstashMachine;
-import com.hina.log.entity.LogstashProcess;
-import com.hina.log.entity.Machine;
-import com.hina.log.exception.SshException;
-import com.hina.log.logstash.enums.LogstashMachineState;
-import com.hina.log.mapper.LogstashMachineMapper;
-import com.hina.log.mapper.LogstashProcessMapper;
-import com.hina.log.mapper.MachineMapper;
-import com.hina.log.ssh.SshClient;
+import com.hina.log.application.logstash.task.LogstashProcessMonitorTask;
+import com.hina.log.domain.entity.LogstashMachine;
+import com.hina.log.domain.entity.LogstashProcess;
+import com.hina.log.domain.entity.Machine;
+import com.hina.log.common.exception.SshException;
+import com.hina.log.application.logstash.enums.LogstashMachineState;
+import com.hina.log.domain.mapper.LogstashMachineMapper;
+import com.hina.log.domain.mapper.LogstashProcessMapper;
+import com.hina.log.domain.mapper.MachineMapper;
+import com.hina.log.common.ssh.SshClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

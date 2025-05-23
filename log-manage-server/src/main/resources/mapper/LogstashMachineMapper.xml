@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.hina.log.mapper.LogstashMachineMapper">
+<mapper namespace="com.hina.log.domain.mapper.LogstashMachineMapper">
     
     <!-- 插入 Logstash 机器记录 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
@@ -65,32 +65,32 @@
     </delete>
     
     <!-- 根据 Logstash 进程 ID 查询 -->
-    <select id="selectByLogstashProcessId" resultType="com.hina.log.entity.LogstashMachine">
+    <select id="selectByLogstashProcessId" resultType="com.hina.log.domain.entity.LogstashMachine">
         SELECT * FROM logstash_machine WHERE logstash_process_id=#{logstashProcessId}
     </select>
     
     <!-- 根据机器 ID 查询 -->
-    <select id="selectByMachineId" resultType="com.hina.log.entity.LogstashMachine">
+    <select id="selectByMachineId" resultType="com.hina.log.domain.entity.LogstashMachine">
         SELECT * FROM logstash_machine WHERE machine_id=#{machineId}
     </select>
     
     <!-- 根据 Logstash 进程 ID 和机器 ID 查询 -->
-    <select id="selectByLogstashProcessIdAndMachineId" resultType="com.hina.log.entity.LogstashMachine">
+    <select id="selectByLogstashProcessIdAndMachineId" resultType="com.hina.log.domain.entity.LogstashMachine">
         SELECT * FROM logstash_machine WHERE logstash_process_id=#{logstashProcessId} AND machine_id=#{machineId}
     </select>
     
     <!-- 查询所有带进程 PID 的记录 -->
-    <select id="selectAllWithProcessPid" resultType="com.hina.log.entity.LogstashMachine">
+    <select id="selectAllWithProcessPid" resultType="com.hina.log.domain.entity.LogstashMachine">
         SELECT * FROM logstash_machine WHERE process_pid IS NOT NULL
     </select>
     
     <!-- 根据状态查询 -->
-    <select id="selectByState" resultType="com.hina.log.entity.LogstashMachine">
+    <select id="selectByState" resultType="com.hina.log.domain.entity.LogstashMachine">
         SELECT * FROM logstash_machine WHERE state = #{state}
     </select>
     
     <!-- 根据 Logstash 进程 ID 和状态查询 -->
-    <select id="selectByLogstashProcessIdAndState" resultType="com.hina.log.entity.LogstashMachine">
+    <select id="selectByLogstashProcessIdAndState" resultType="com.hina.log.domain.entity.LogstashMachine">
         SELECT * FROM logstash_machine WHERE logstash_process_id = #{logstashProcessId} AND state = #{state}
     </select>
     

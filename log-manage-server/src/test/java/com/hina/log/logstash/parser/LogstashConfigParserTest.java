@@ -1,5 +1,6 @@
 package com.hina.log.logstash.parser;
 
+import com.hina.log.application.logstash.parser.LogstashConfigParser;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;

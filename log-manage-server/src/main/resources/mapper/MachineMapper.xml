@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.hina.log.mapper.MachineMapper">
+<mapper namespace="com.hina.log.domain.mapper.MachineMapper">
     
     <!-- 插入机器记录 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
@@ -20,17 +20,17 @@
     </delete>
     
     <!-- 根据ID查询机器 -->
-    <select id="selectById" resultType="com.hina.log.entity.Machine">
+    <select id="selectById" resultType="com.hina.log.domain.entity.Machine">
         SELECT * FROM machine WHERE id=#{id}
     </select>
     
     <!-- 根据名称查询机器 -->
-    <select id="selectByName" resultType="com.hina.log.entity.Machine">
+    <select id="selectByName" resultType="com.hina.log.domain.entity.Machine">
         SELECT * FROM machine WHERE name=#{name}
     </select>
     
     <!-- 根据ID列表查询机器 -->
-    <select id="selectByIds" resultType="com.hina.log.entity.Machine">
+    <select id="selectByIds" resultType="com.hina.log.domain.entity.Machine">
         SELECT * FROM machine WHERE id IN
         <foreach collection="ids" item="id" open="(" separator="," close=")">
             #{id}
@@ -38,7 +38,7 @@
     </select>
     
     <!-- 查询所有机器 -->
-    <select id="selectAll" resultType="com.hina.log.entity.Machine">
+    <select id="selectAll" resultType="com.hina.log.domain.entity.Machine">
         SELECT * FROM machine
     </select>
     

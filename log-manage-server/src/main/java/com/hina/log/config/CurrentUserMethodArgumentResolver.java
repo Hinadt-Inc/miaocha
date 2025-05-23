@@ -1,9 +1,8 @@
 package com.hina.log.config;
 
-import com.hina.log.annotation.CurrentUser;
-import com.hina.log.dto.user.UserDTO;
-import com.hina.log.entity.User;
-import com.hina.log.service.UserService;
+import com.hina.log.common.annotation.CurrentUser;
+import com.hina.log.domain.dto.user.UserDTO;
+import com.hina.log.application.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.MethodParameter;
 import org.springframework.security.core.Authentication;

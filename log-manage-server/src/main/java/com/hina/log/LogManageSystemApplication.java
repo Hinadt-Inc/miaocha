@@ -11,7 +11,7 @@ import org.mybatis.spring.annotation.MapperScan;
  * @author hina
  */
 @SpringBootApplication
-@MapperScan("com.hina.log.mapper")
+@MapperScan("com.hina.log.domain.mapper")
 @EnableScheduling
 public class LogManageSystemApplication {
     public static void main(String[] args) {

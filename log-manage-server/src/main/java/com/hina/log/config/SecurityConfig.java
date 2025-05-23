@@ -1,10 +1,10 @@
 package com.hina.log.config;
 
-import com.hina.log.security.CustomAccessDeniedHandler;
-import com.hina.log.security.CustomAuthenticationEntryPoint;
-import com.hina.log.security.JwtAuthenticationFilter;
-import com.hina.log.security.JwtUtils;
-import com.hina.log.service.UserService;
+import com.hina.log.application.security.CustomAccessDeniedHandler;
+import com.hina.log.application.security.CustomAuthenticationEntryPoint;
+import com.hina.log.application.security.JwtAuthenticationFilter;
+import com.hina.log.application.security.JwtUtils;
+import com.hina.log.application.service.UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;

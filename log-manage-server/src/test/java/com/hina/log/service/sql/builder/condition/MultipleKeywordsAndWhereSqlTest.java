@@ -1,6 +1,7 @@
 package com.hina.log.service.sql.builder.condition;
 
-import com.hina.log.dto.LogSearchDTO;
+import com.hina.log.application.service.sql.builder.condition.*;
+import com.hina.log.domain.dto.LogSearchDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

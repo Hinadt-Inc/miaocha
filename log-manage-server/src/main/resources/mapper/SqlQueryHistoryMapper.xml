@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.hina.log.mapper.SqlQueryHistoryMapper">
+<mapper namespace="com.hina.log.domain.mapper.SqlQueryHistoryMapper">
     
     <!-- 插入SQL查询历史 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
@@ -9,12 +9,12 @@
     </insert>
     
     <!-- 根据ID查询 -->
-    <select id="selectById" resultType="com.hina.log.entity.SqlQueryHistory">
+    <select id="selectById" resultType="com.hina.log.domain.entity.SqlQueryHistory">
         SELECT * FROM sql_query_history WHERE id=#{id}
     </select>
     
     <!-- 查询用户最近的查询记录 -->
-    <select id="selectRecentByUserId" resultType="com.hina.log.entity.SqlQueryHistory">
+    <select id="selectRecentByUserId" resultType="com.hina.log.domain.entity.SqlQueryHistory">
         SELECT * FROM sql_query_history WHERE user_id=#{userId} ORDER BY create_time DESC LIMIT #{limit}
     </select>
     
@@ -24,7 +24,7 @@
     </update>
     
     <!-- 分页查询SQL历史记录 -->
-    <select id="selectByPage" resultType="com.hina.log.entity.SqlQueryHistory">
+    <select id="selectByPage" resultType="com.hina.log.domain.entity.SqlQueryHistory">
         SELECT * FROM sql_query_history
         WHERE user_id=#{userId}
         <if test="datasourceId != null">
