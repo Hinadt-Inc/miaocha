@@ -152,7 +152,7 @@ const VirtualTable = (props: IProps) => {
         pagination={false}
         columns={columns}
         loading={{ spinning: loading, size: 'small' }}
-        scroll={{ x: 1300, y: containerHeight - headerHeight - 1 }}
+        scroll={{ x: data.length > 0 ? 1300 : 'max-content', y: containerHeight - headerHeight - 1 }}
         expandable={{
           columnWidth: 26,
           expandedRowRender: (record) => <ExpandedRow data={record} keywords={searchParams?.keywords || []} />,

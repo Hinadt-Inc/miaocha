@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Spin } from 'antd';
+import { Spin, Splitter } from 'antd';
 import HistogramChart from './HistogramChart';
 import styles from './Log.module.less';
 import VirtualTable from './VirtualTable';
@@ -35,7 +35,6 @@ const Log = (props: IProps) => {
       }
     } else if (rows.length > 0) {
       setAllRows((prevRows: any) => {
-        if (prevRows.length === rows.length) return prevRows;
         return [...prevRows, ...rows];
       });
     } else {
@@ -65,16 +64,20 @@ const Log = (props: IProps) => {
   );
 
   return (
-    <div className={styles.logContainer}>
-      <div className={styles.chart}>
-        <Spin size="small" spinning={histogramDataLoading}>
-          <HistogramChart data={histogramData} searchParams={searchParams} />
-        </Spin>
-      </div>
-      <div className={styles.table}>
-        <VirtualTable {...tableProps} />
-      </div>
-    </div>
+    <Splitter layout="vertical" className={styles.logContainer}>
+      <Splitter.Panel collapsible defaultSize={170} min={170} max={170}>
+        <div className={styles.chart}>
+          <Spin size="small" spinning={histogramDataLoading}>
+            <HistogramChart data={histogramData} searchParams={searchParams} />
+          </Spin>
+        </div>
+      </Splitter.Panel>
+      <Splitter.Panel>
+        <div className={styles.table}>
+          <VirtualTable {...tableProps} />
+        </div>
+      </Splitter.Panel>
+    </Splitter>
   );
 };
 
