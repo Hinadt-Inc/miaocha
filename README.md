@@ -19,6 +19,7 @@
 * **Logstash进程管理**: 远程部署、配置和监控Logstash实例，支持重新初始化失败的实例。
 * **机器管理**: 管理服务器连接，支持SSH认证。
 * **模块权限控制**: 精细化的模块级别权限管理。
+* **日志配置管理**: 配置和监控日志系统，支持多格式日志输出。
 
 ## 技术栈
 
@@ -32,6 +33,7 @@
 * **SSH**: Apache SSHD, JSch
 * **导出功能**: Apache POI
 * **加密**: Bouncy Castle
+* **日志系统**: Logback + Logstash JSON Encoder，支持多格式日志输出
 
 ### 前端技术
 * **框架**: React 18
@@ -240,6 +242,36 @@ mvn clean package
 * JWT认证配置
 * Logstash配置
 * SQL查询导出配置
+
+## 日志配置
+
+项目采用了灵活的多格式日志配置方案，支持根据环境自动切换日志输出策略：
+
+### 环境策略
+
+* **开发环境 (dev)**: 控制台彩色输出 + 普通格式文件 + JSON格式文件
+* **测试环境 (test)**: 控制台输出 + 普通格式文件 + JSON格式文件
+* **生产环境 (prod)**: 仅JSON格式文件输出
+
+### 日志文件类型
+
+1. **普通格式日志**: `log-manage-system.log`
+   - 适合开发调试和人工阅读
+   - 标准文本格式，包含时间、线程、级别、类名和消息
+
+2. **JSON格式日志**:
+   - `log-manage-system-json.log`: 包含INFO及以下级别
+   - `log-manage-system-json-error.log`: 仅包含ERROR级别
+   - 适合日志分析工具和监控系统集成
+
+### 日志轮转
+
+* 按日期和大小轮转 (单文件最大100MB)
+* 默认保留30天历史日志
+* 总大小限制1GB
+* 异步输出提高性能
+
+详细配置说明请参考：[日志配置文档](docs/LOGGING_CONFIGURATION.md)
 
 ## `log-manage-server` 详细介绍
 

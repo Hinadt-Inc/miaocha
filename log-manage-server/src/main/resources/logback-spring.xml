@@ -1,7 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <!-- 定义日志文件的存储地址 -->
-    <property name="LOG_HOME" value="${LOG_PATH:-./logs}" />
+    <springProperty scope="context" name="LOG_HOME" source="log-config.log-home" defaultValue="${LOG_PATH:-./logs}"/>
+    <springProperty scope="context" name="MAX-HISTORY" source="log-config.max-history" defaultValue="30"/>
+    <springProperty scope="context" name="TOTAL-SIZE-CAP" source="log-config.total-size-cap" defaultValue="1GB"/>
+    <springProperty scope="context" name="CLEAN-HISTORY-ON-START" source="log-config.clean-history-on-start" defaultValue="true"/>
+    <springProperty scope="context" name="MAX-FILE-SIZE" source="log-config.max-file-size" defaultValue="100MB"/>
+    <springProperty scope="context" name="QUEUE-SIZE" source="log-config.queue-size" defaultValue="1024"/>
+    <springProperty scope="context" name="DISCARDING-THRESHOLD" source="log-config.discarding-threshold" defaultValue="0"/>
+    
+    <property name="FILE_NAME" value="log-manage-system"/>
     
     <!-- 日志输出格式 -->
     <property name="CONSOLE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n" />
@@ -23,56 +31,146 @@
         </encoder>
     </appender>
     
-    <!-- 文件输出 -->
+    <!-- 普通格式文件输出 -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_HOME}/log-manage-system.log</file>
+        <file>${LOG_HOME}/${FILE_NAME}.log</file>
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>UTF-8</charset>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <!-- 日志文件名格式 -->
-            <fileNamePattern>${LOG_HOME}/archive/log-manage-system.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <fileNamePattern>${LOG_HOME}/archive/${FILE_NAME}.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
             <!-- 日志文件保留天数 -->
-            <maxHistory>30</maxHistory>
+            <maxHistory>${MAX-HISTORY}</maxHistory>
             <!-- 日志文件最大大小 -->
-            <maxFileSize>100MB</maxFileSize>
+            <maxFileSize>${MAX-FILE-SIZE}</maxFileSize>
             <!-- 日志文件总大小限制 -->
-            <totalSizeCap>1GB</totalSizeCap>
+            <totalSizeCap>${TOTAL-SIZE-CAP}</totalSizeCap>
+            <cleanHistoryOnStart>${CLEAN-HISTORY-ON-START}</cleanHistoryOnStart>
+        </rollingPolicy>
+    </appender>
+
+    <!-- JSON格式INFO日志文件输出 -->
+    <appender name="JSON_INFO_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>${LOG_HOME}/${FILE_NAME}-json.log</File>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>DENY</onMatch>
+            <onMismatch>ACCEPT</onMismatch>
+        </filter>
+        <encoder charset="UTF-8" class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <pattern>
+                    <omitEmptyFields>true</omitEmptyFields>
+                    <pattern>
+                        {
+                        "service": "log-manage-system",
+                        "time": "%d{yyyy-MM-dd HH:mm:ss.SSS}",
+                        "level": "%p",
+                        "logger": "%logger{39}",
+                        "line": "%L",
+                        "thread": "%t",
+                        "method": "%M",
+                        "msg": "%msg",
+                        "stacktrace": "%ex{2}"
+                        }
+                    </pattern>
+                </pattern>
+            </providers>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_HOME}/archive/${FILE_NAME}-json.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxHistory>${MAX-HISTORY}</maxHistory>
+            <totalSizeCap>${TOTAL-SIZE-CAP}</totalSizeCap>
+            <cleanHistoryOnStart>${CLEAN-HISTORY-ON-START}</cleanHistoryOnStart>
+            <maxFileSize>${MAX-FILE-SIZE}</maxFileSize>
+        </rollingPolicy>
+    </appender>
+
+    <!-- JSON格式ERROR日志文件输出 -->
+    <appender name="JSON_ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>${LOG_HOME}/${FILE_NAME}-json-error.log</File>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ERROR</level>
+        </filter>
+        <encoder charset="UTF-8" class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <pattern>
+                    <omitEmptyFields>true</omitEmptyFields>
+                    <pattern>
+                        {
+                        "service": "log-manage-system",
+                        "time": "%d{yyyy-MM-dd HH:mm:ss.SSS}",
+                        "level": "%p",
+                        "logger": "%logger{39}",
+                        "line": "%L",
+                        "thread": "%t",
+                        "method": "%M",
+                        "msg": "%msg",
+                        "stacktrace": "%ex"
+                        }
+                    </pattern>
+                </pattern>
+            </providers>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_HOME}/archive/${FILE_NAME}-json-error.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxHistory>${MAX-HISTORY}</maxHistory>
+            <totalSizeCap>${TOTAL-SIZE-CAP}</totalSizeCap>
+            <cleanHistoryOnStart>${CLEAN-HISTORY-ON-START}</cleanHistoryOnStart>
+            <maxFileSize>${MAX-FILE-SIZE}</maxFileSize>
         </rollingPolicy>
     </appender>
     
-    <!-- 异步输出 -->
+    <!-- 异步输出 - 普通格式 -->
     <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
-        <discardingThreshold>0</discardingThreshold>
-        <queueSize>512</queueSize>
+        <queueSize>${QUEUE-SIZE}</queueSize>
+        <discardingThreshold>${DISCARDING-THRESHOLD}</discardingThreshold>
         <appender-ref ref="FILE" />
     </appender>
 
-    <!-- 开发环境配置 -->
+    <!-- 异步输出 - JSON格式INFO -->
+    <appender name="ASYNC_JSON_INFO" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>${QUEUE-SIZE}</queueSize>
+        <discardingThreshold>${DISCARDING-THRESHOLD}</discardingThreshold>
+        <appender-ref ref="JSON_INFO_FILE"/>
+    </appender>
+
+    <!-- 异步输出 - JSON格式ERROR -->
+    <appender name="ASYNC_JSON_ERROR" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>${QUEUE-SIZE}</queueSize>
+        <discardingThreshold>${DISCARDING-THRESHOLD}</discardingThreshold>
+        <appender-ref ref="JSON_ERROR_FILE"/>
+    </appender>
+
+    <!-- 开发环境配置：控制台 + 普通格式文件 + JSON格式文件 -->
     <springProfile name="dev">
         <root level="INFO">
             <appender-ref ref="CONSOLE" />
             <appender-ref ref="ASYNC_FILE" />
+            <appender-ref ref="ASYNC_JSON_INFO" />
+            <appender-ref ref="ASYNC_JSON_ERROR" />
         </root>
         <!-- 应用特定日志级别 -->
         <logger name="com.hina.log" level="DEBUG" />
     </springProfile>
 
-
-    <!-- 测试环境配置 -->
+    <!-- 测试环境配置：控制台 + 普通格式文件 + JSON格式文件 -->
     <springProfile name="test">
         <root level="INFO">
             <appender-ref ref="CONSOLE" />
             <appender-ref ref="ASYNC_FILE" />
+            <appender-ref ref="ASYNC_JSON_INFO" />
+            <appender-ref ref="ASYNC_JSON_ERROR" />
         </root>
     </springProfile>
     
-    <!-- 生产环境配置 -->
+    <!-- 生产环境配置：只有JSON格式文件 -->
     <springProfile name="prod">
         <root level="INFO">
-            <appender-ref ref="CONSOLE" />
-            <appender-ref ref="ASYNC_FILE" />
+            <appender-ref ref="ASYNC_JSON_INFO" />
+            <appender-ref ref="ASYNC_JSON_ERROR" />
         </root>
         <!-- 应用特定日志级别 -->
         <logger name="com.hina.log" level="INFO" />
