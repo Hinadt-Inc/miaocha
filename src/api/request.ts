@@ -12,20 +12,13 @@ const service: AxiosInstance = axios.create({
 });
 
 // 请求拦截器
-service.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    // 添加token到请求头
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    window.dispatchEvent(new CustomEvent('unhandledrejection', { detail: { reason: error } }));
-    return Promise.reject(error);
-  },
-);
+service.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  const token = localStorage.getItem('accessToken');
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
+  return config;
+});
 
 // 是否正在刷新token
 let isRefreshing = false;
@@ -36,30 +29,31 @@ let retryQueue: Array<() => void> = [];
 service.interceptors.response.use(
   (response: AxiosResponse) => {
     const res = response.data;
-    // const { success, errorMessage } = res?.data || {};
-    // const isBizError = !success && errorMessage;
-    // const isCodeError = res.code !== '0000';
+    const { success, errorMessage } = res?.data || {}; // 后端接口返回结构调整
+    const isBizError = !success && errorMessage;
+    const isCodeError = res.code !== '0000';
+    const message = errorMessage || res.message || '操作失败';
     // 根据后端接口返回结构调整
-    if (res.code !== '0000') {
-      // 处理业务错误
-      // 全局提示信息
-      // 动态导入message组件以避免循环依赖
-      import('antd').then(({ message }) => {
-        const [messageApi] = message.useMessage();
-        messageApi.error(res.message || '操作失败');
-      });
-
-      return Promise.reject(new Error(res.message || 'Error'));
+    if (isBizError || isCodeError) {
+      window.dispatchEvent(
+        new CustomEvent('unhandledrejection', {
+          detail: {
+            reason: new Error(message),
+          },
+        }),
+      );
+      return Promise.reject(new Error(message));
     }
     return res.data;
   },
   async (error) => {
-    console.error('============service.interceptors.response.error:', error);
     const originalRequest = error.config;
     const res = error.response?.data || {};
+    const status = error.response?.status;
+    let errorMessage = error.response?.data?.message || error.message || '请求失败';
 
     // 如果是401错误且不是刷新token请求
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         // 如果正在刷新token，将请求加入队列
         return new Promise((resolve) => {
@@ -115,11 +109,46 @@ service.interceptors.response.use(
       } finally {
         isRefreshing = false;
       }
-    }
+    } else {
+      // 处理其他HTTP错误
 
-    // 处理其他HTTP错误
-    window.dispatchEvent(new CustomEvent('unhandledrejection', { detail: { reason: error } }));
-    return Promise.reject(error);
+      switch (status) {
+        case 400:
+          errorMessage = '请求参数错误';
+          break;
+        case 403:
+          errorMessage = '无权限访问该资源';
+          break;
+        case 404:
+          errorMessage = '请求的资源不存在';
+          break;
+        case 408:
+          errorMessage = '请求超时';
+          break;
+        case 500:
+          errorMessage = '服务器内部错误';
+          break;
+        case 502:
+          errorMessage = '网关错误';
+          break;
+        case 503:
+          errorMessage = '服务不可用';
+          break;
+        case 504:
+          errorMessage = '网关超时';
+          break;
+        default:
+          errorMessage = errorMessage;
+      }
+      window.dispatchEvent(
+        new CustomEvent('unhandledrejection', {
+          detail: {
+            reason: new Error(errorMessage),
+          },
+        }),
+      );
+    }
+    return Promise.reject(new Error(errorMessage));
   },
 );
 

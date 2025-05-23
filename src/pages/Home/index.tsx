@@ -22,7 +22,7 @@ const HomePage = () => {
     datasourceId: null,
     module: null,
     timeRange: 'last_15m',
-    timeGrouping: 'minute',
+    timeGrouping: 'auto',
   };
   // 日志检索请求参数
   const [searchParams, setSearchParams] = useState<ILogSearchParams>(defaultSearchParams);

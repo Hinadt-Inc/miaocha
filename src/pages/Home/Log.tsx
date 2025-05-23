@@ -13,7 +13,14 @@ interface IProps {
 }
 
 const Log = (props: IProps) => {
-  const { histogramData, histogramDataLoading, detailData, getDetailData, dynamicColumns = [], searchParams } = props;
+  const {
+    histogramData,
+    histogramDataLoading,
+    detailData,
+    getDetailData,
+    dynamicColumns = [],
+    searchParams,
+  } = props || {};
   const { rows = [], totalCount } = detailData || {};
   const [allRows, setAllRows] = useState<any[]>([]); // 用于存储所有历史数据的状态
 
@@ -27,7 +34,10 @@ const Log = (props: IProps) => {
         setAllRows([]);
       }
     } else if (rows.length > 0) {
-      setAllRows((prevRows: any) => [...prevRows, ...rows]);
+      setAllRows((prevRows: any) => {
+        if (prevRows.length === rows.length) return prevRows;
+        return [...prevRows, ...rows];
+      });
     } else {
       setAllRows([]);
     }
@@ -46,7 +56,7 @@ const Log = (props: IProps) => {
     () => ({
       data: allRows,
       searchParams,
-      loading: getDetailData.loading,
+      loading: getDetailData?.loading,
       onLoadMore: handleLoadMore,
       hasMore: totalCount ? allRows.length < totalCount : false,
       dynamicColumns,

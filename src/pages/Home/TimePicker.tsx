@@ -17,7 +17,7 @@ const TimePicker = (props: IProps) => {
 
   // 选项卡值
   const [activeTab, setActiveTab] = useState('quick');
-  const [selectedTag, setSelectedTag] = useState<string>('last_15m'); // 选中的标签
+  const [selectedTag, setSelectedTag] = useState<string>('auto'); // 选中的标签
   const [absoluteOption, setAbsoluteOption] = useState<ILogTimeSubmitParams>(); // 绝对时间
 
   // 切换标签

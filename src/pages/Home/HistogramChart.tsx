@@ -154,7 +154,7 @@ const HistogramChart = (props: IProps) => {
     return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />;
   }
 
-  return <ReactECharts option={option} style={{ height: 180, width: '100%' }} />;
+  return <ReactECharts option={option} style={{ height: 150, width: '100%' }} />;
 };
 
 export default HistogramChart;
