@@ -4,12 +4,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.hina.log</groupId>
+        <groupId>com.hina</groupId>
         <artifactId>log-manage-system</artifactId>
-        <version>1.0.0</version>
+        <version>1.0.1-SNAPSHOT</version>
     </parent>
 
     <artifactId>log-manage-assembly</artifactId>
+    <version>1.0.1-SNAPSHOT</version>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -20,13 +21,13 @@
     <dependencies>
         <!-- 依赖于服务器和UI模块 -->
         <dependency>
-            <groupId>com.hina.log</groupId>
+            <groupId>com.hina</groupId>
             <artifactId>log-manage-server</artifactId>
             <version>${project.version}</version>
         </dependency>
         <!-- 
         <dependency>
-            <groupId>com.hina.log</groupId>
+            <groupId>com.hina</groupId>
             <artifactId>log-manage-ui</artifactId>
             <version>${project.version}</version>
         </dependency>
