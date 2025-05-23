@@ -36,7 +36,7 @@ const Error = ({ children }: any) => {
 
   const handleUnhandledRejection = (event: any) => {
     event.preventDefault();
-    const description = event?.reason?.message || event?.detail?.reason?.message || '业务发生未知错误，请联系开发人员';
+    const description = event?.detail?.reason?.message || '业务发生未知错误，请联系开发人员';
     console.error('【全局1】======Unhandled promise rejection:', description);
     notificationApi.error({
       description,
@@ -48,7 +48,7 @@ const Error = ({ children }: any) => {
   const handleGlobalError = (event: ErrorEvent) => {
     // 阻止默认错误处理(如控制台输出)
     event.preventDefault();
-    const description = event.message || '发生未知错误，请联系开发人员';
+    const description = event?.message || '发生未知错误，请联系开发人员';
     console.error('【全局2】======Uncaught error:', description);
     notificationApi.error({
       description,
