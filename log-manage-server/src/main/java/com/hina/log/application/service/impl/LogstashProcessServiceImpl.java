@@ -795,4 +795,94 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             this.relation = relation;
         }
     }
+
+    @Override
+    @Transactional
+    public LogstashProcessResponseDTO reinitializeLogstashMachine(Long id, Long machineId) {
+        // 参数校验
+        if (id == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
+        }
+
+        // 验证进程是否存在
+        LogstashProcess process = getAndValidateProcess(id);
+
+        if (machineId != null) {
+            // 重新初始化指定机器
+            reinitializeSingleMachine(process, machineId);
+        } else {
+            // 重新初始化所有初始化失败的机器
+            reinitializeAllFailedMachines(process);
+        }
+
+        return getLogstashProcess(id);
+    }
+
+    /**
+     * 重新初始化单台机器
+     */
+    private void reinitializeSingleMachine(LogstashProcess process, Long machineId) {
+        // 验证机器是否存在
+        Machine machine = machineMapper.selectById(machineId);
+        if (machine == null) {
+            throw new BusinessException(ErrorCode.MACHINE_NOT_FOUND, "指定的机器不存在: ID=" + machineId);
+        }
+
+        // 获取机器关联关系
+        LogstashMachine logstashMachine = logstashMachineMapper.selectByLogstashProcessIdAndMachineId(
+                process.getId(), machineId);
+        if (logstashMachine == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, 
+                    "进程与机器没有关联关系，进程ID: " + process.getId() + ", 机器ID: " + machineId);
+        }
+
+        // 检查机器状态是否为初始化失败
+        if (!LogstashMachineState.INITIALIZE_FAILED.name().equals(logstashMachine.getState())) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, 
+                    String.format("机器[%s]当前状态为[%s]，只有初始化失败的机器才能重新初始化", 
+                            machineId, logstashMachine.getState()));
+        }
+
+        logger.info("开始重新初始化机器[{}]上的Logstash进程[{}]", machineId, process.getId());
+
+        // 执行重新初始化
+        logstashDeployService.initializeProcess(process, List.of(machine));
+    }
+
+    /**
+     * 重新初始化所有初始化失败的机器
+     */
+    private void reinitializeAllFailedMachines(LogstashProcess process) {
+        // 获取所有关联的机器关系
+        List<LogstashMachine> machineRelations = logstashMachineMapper.selectByLogstashProcessId(process.getId());
+        
+        // 筛选出初始化失败的机器
+        List<LogstashMachine> failedMachines = machineRelations.stream()
+                .filter(relation -> LogstashMachineState.INITIALIZE_FAILED.name().equals(relation.getState()))
+                .collect(Collectors.toList());
+
+        if (failedMachines.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "没有初始化失败的机器需要重新初始化");
+        }
+
+        // 获取机器详细信息
+        List<Machine> machinesToReinitialize = new ArrayList<>();
+        for (LogstashMachine failedMachine : failedMachines) {
+            Machine machine = machineMapper.selectById(failedMachine.getMachineId());
+            if (machine != null) {
+                machinesToReinitialize.add(machine);
+            } else {
+                logger.warn("机器[{}]不存在，跳过重新初始化", failedMachine.getMachineId());
+            }
+        }
+
+        if (machinesToReinitialize.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "没有有效的机器可以重新初始化");
+        }
+
+        logger.info("开始重新初始化{}台初始化失败的机器", machinesToReinitialize.size());
+
+        // 执行重新初始化
+        logstashDeployService.initializeProcess(process, machinesToReinitialize);
+    }
 }

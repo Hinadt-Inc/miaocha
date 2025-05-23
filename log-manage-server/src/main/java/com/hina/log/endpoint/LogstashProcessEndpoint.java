@@ -293,4 +293,34 @@ public class LogstashProcessEndpoint {
         
         return ApiResponse.success(logstashProcessService.executeDorisSql(id, sql));
     }
+
+    /**
+     * 重新初始化Logstash进程的所有初始化失败的机器
+     *
+     * @param id Logstash进程ID
+     * @return 重新初始化后的Logstash进程信息
+     */
+    @PostMapping("/{id}/reinitialize")
+    @Operation(summary = "重新初始化所有失败的机器", description = "重新初始化指定Logstash进程的所有初始化失败的机器。只有状态为'初始化失败'的机器才会被重新初始化。")
+    public ApiResponse<LogstashProcessResponseDTO> reinitializeAllFailedMachines(
+            @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id) {
+        
+        return ApiResponse.success(logstashProcessService.reinitializeLogstashMachine(id, null));
+    }
+
+    /**
+     * 重新初始化Logstash进程在指定机器上的实例
+     *
+     * @param id        Logstash进程ID
+     * @param machineId 机器ID
+     * @return 重新初始化后的Logstash进程信息
+     */
+    @PostMapping("/{id}/machines/{machineId}/reinitialize")
+    @Operation(summary = "重新初始化指定机器", description = "重新初始化指定Logstash进程在特定机器上的实例。只有当该机器状态为'初始化失败'时才能重新初始化。")
+    public ApiResponse<LogstashProcessResponseDTO> reinitializeMachine(
+            @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id,
+            @Parameter(description = "机器ID", required = true) @PathVariable("machineId") Long machineId) {
+        
+        return ApiResponse.success(logstashProcessService.reinitializeLogstashMachine(id, machineId));
+    }
 }

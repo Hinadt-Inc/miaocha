@@ -124,4 +124,14 @@ public interface LogstashProcessService {
      * @return 更新后的进程信息
      */
     LogstashProcessResponseDTO updateSingleMachineConfig(Long id, Long machineId, String configContent, String jvmOptions, String logstashYml);
+
+    /**
+     * 重新初始化Logstash机器
+     * 只有当机器状态为初始化失败时才允许重新初始化
+     * 
+     * @param id 进程ID
+     * @param machineId 机器ID（可选，如果为null则重新初始化所有初始化失败的机器）
+     * @return 重新初始化后的进程信息
+     */
+    LogstashProcessResponseDTO reinitializeLogstashMachine(Long id, Long machineId);
 }
