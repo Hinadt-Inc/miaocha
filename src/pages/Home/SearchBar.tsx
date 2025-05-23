@@ -66,7 +66,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
 
   // 显示关键字、sql、时间的标签
   const filterRender = useMemo(() => {
-    const { value, label, range = [] } = timeOption;
+    const { range = [] } = timeOption;
     return (
       <div className={styles.filter}>
         <Space wrap>
@@ -93,14 +93,8 @@ const SearchBar = forwardRef((props: IProps, ref) => {
             </Tag>
           ))}
 
-          {/* 时间 */}
-          {value && QUICK_RANGES[value] && (
-            <Tag color="blue" onClick={() => setOpenTimeRange(true)}>
-              {label}
-            </Tag>
-          )}
           {/* 时间范围 */}
-          {value && !QUICK_RANGES[value] && range?.length === 2 && (
+          {range.length === 2 && (
             <Tag color="blue" onClick={() => setOpenTimeRange(true)}>
               {range[0]} ~ {range[1]}
             </Tag>
@@ -110,30 +104,17 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     );
   }, [keywords, sqls, timeOption]);
 
-  // 处理时间参数
-  const getTimeParams = () => {
-    const { range = [], value = '' } = timeOption;
-    if (!value) return {};
-
-    if (QUICK_RANGES[value]) {
-      return { timeRange: value };
-    }
-    if (range?.length === 2) {
-      return { startTime: range[0], endTime: range[1] };
-    }
-    return {};
-  };
-
   // 当keywords或sqls或时间变化时触发搜索
   useEffect(() => {
     const params = {
       ...searchParams,
       ...(keywords.length > 0 && { keywords }),
       ...(sqls.length > 0 && { whereSqls: sqls }),
-      ...getTimeParams(),
+      startTime: timeOption?.range?.[0],
+      endTime: timeOption?.range?.[1],
       offset: 0,
     };
-
+    console.log('【打印日志】,params =======>', params);
     if (keywords.length === 0) {
       delete params.keywords;
     }
@@ -201,24 +182,22 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   // 右侧渲染内容-时间范围
   const timeRender = useMemo(() => {
     return (
-      <>
-        <Popover
-          arrow={true}
-          trigger="click"
-          open={openTimeRange}
-          onOpenChange={setOpenTimeRange}
-          placement="bottomRight"
-          content={
-            <Suspense fallback={<SpinIndicator />}>
-              <TimePicker onSubmit={submitTime} />
-            </Suspense>
-          }
-        >
-          <Button color="primary" variant="link" size="small" disabled={loading}>
-            {timeOption.label}
-          </Button>
-        </Popover>
-      </>
+      <Popover
+        arrow={true}
+        trigger="click"
+        open={openTimeRange}
+        onOpenChange={setOpenTimeRange}
+        placement="bottomRight"
+        content={
+          <Suspense fallback={<SpinIndicator />}>
+            <TimePicker onSubmit={submitTime} />
+          </Suspense>
+        }
+      >
+        <Button color="primary" variant="link" size="small" disabled={loading}>
+          {timeOption.label}
+        </Button>
+      </Popover>
     );
   }, [openTimeRange, timeOption, loading]);
 

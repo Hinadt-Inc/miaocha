@@ -5,6 +5,7 @@ import * as api from '@/api/logs';
 import SearchBar from './SearchBar';
 import Log from './Log';
 import Sider from './Sider';
+import { QUICK_RANGES, DATE_FORMAT } from './utils';
 import styles from './index.module.less';
 
 const HomePage = () => {
@@ -12,7 +13,6 @@ const HomePage = () => {
   const [detailData, setDetailData] = useState<ILogDetailsResponse | null>(null); // 日志数据
   const [logTableColumns, setLogTableColumns] = useState<ILogColumnsResponse[]>([]); // 日志字段列表
   const [histogramData, setHistogramData] = useState<ILogHistogramData[] | null>(null); // 日志时间分布列表
-
   const searchBarRef = useRef<HTMLDivElement>(null);
 
   // 默认的搜索参数
@@ -21,6 +21,8 @@ const HomePage = () => {
     pageSize: 20,
     datasourceId: null,
     module: null,
+    startTime: QUICK_RANGES.last_15m.from().format(DATE_FORMAT),
+    endTime: QUICK_RANGES.last_15m.to().format(DATE_FORMAT),
     timeRange: 'last_15m',
     timeGrouping: 'auto',
   };
