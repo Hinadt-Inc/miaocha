@@ -13,7 +13,7 @@
         <dependencySet>
             <outputDirectory>.</outputDirectory>
             <includes>
-                <include>com.hina.log:log-manage-server</include>
+                <include>com.hina:log-manage-server</include>
             </includes>
             <outputFileNameMapping>log-manage-server.jar</outputFileNameMapping>
             <useProjectArtifact>false</useProjectArtifact>
