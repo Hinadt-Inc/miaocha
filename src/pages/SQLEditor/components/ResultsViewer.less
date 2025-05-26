@@ -70,12 +70,19 @@
 
 // 可调整列宽样式
 .results-viewer-container {
-  width: 100%;
+    padding: 10px;
+    width: 100%;
+    height: 100%;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    background-color: #fff;
   
   .table-wrapper {
     width: 100%;
+    flex: 1;
     position: relative;
-    overflow: hidden;
+    min-height: 300px;
   }
   
   // 调整列宽的手柄样式
@@ -223,7 +230,6 @@
       &.path-column {
         max-width: none;
         background-color: #fcfcfc;
-        border-left: 3px solid #ffe7ba;
         
         .ant-typography {
           white-space: pre-wrap !important;
@@ -244,7 +250,6 @@
       &.time-column {
         text-align: center;
         background-color: #f9fcff;
-        border-left: 3px solid #d6e4ff;
         
         .ant-typography {
           font-family: monospace;

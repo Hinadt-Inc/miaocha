@@ -527,7 +527,7 @@ const SQLEditorImpl: React.FC = () => {
 
   return (
     <>
-      <Layout style={{ height: '100vh', padding: '10px', background: '#F6F8F9' }}>
+      <Layout style={{ height: '100vh', padding: '10px', background: '#F6F8F9 !important' }}>
         <Sider
           width={siderWidth}
           theme="light"
@@ -611,7 +611,7 @@ const SQLEditorImpl: React.FC = () => {
                     </Tabs>
                   }
                   className="results-card"
-                  style={{ marginTop: '10px' }}
+                  style={{ marginTop: '10px', height: 'calc(100% - 10px)', overflow: 'auto' }}
                   extra={
                     activeTab === 'results' && (
                       <Button

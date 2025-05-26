@@ -73,12 +73,7 @@ const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
     >
       <div className="history-list">
         {queryHistory.length > 0 ? (
-          <VirtualList
-            data={queryHistory}
-            height={fullscreen ? window.innerHeight - 120 : 500}
-            itemHeight={120}
-            itemKey="id"
-          >
+          <VirtualList data={queryHistory} itemHeight={120} itemKey="id">
             {(history) => (
               <div
                 key={history.id}

@@ -254,27 +254,18 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
   }
 
   return (
-    <div>
+    <div className="visualization-panel">
       <div className="chart-controls">
         <Form layout="inline">
           <Form.Item label="图表类型">
-            <Select
-              value={chartType}
-              onChange={(value) => setChartType(value)}
-              style={{ width: 120 }}
-            >
+            <Select value={chartType} onChange={(value) => setChartType(value)} style={{ width: 120 }}>
               <Option value="bar">柱状图</Option>
               <Option value="line">折线图</Option>
               <Option value="pie">饼图</Option>
             </Select>
           </Form.Item>
           <Form.Item label="X轴/名称">
-            <Select
-              value={xField}
-              onChange={setXField}
-              style={{ width: 120 }}
-              placeholder="选择字段"
-            >
+            <Select value={xField} onChange={setXField} style={{ width: 120 }} placeholder="选择字段">
               {queryResults.columns?.map((col) => (
                 <Option key={col} value={col}>
                   {col}
@@ -283,12 +274,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
             </Select>
           </Form.Item>
           <Form.Item label="Y轴/值">
-            <Select
-              value={yField}
-              onChange={setYField}
-              style={{ width: 120 }}
-              placeholder="选择字段"
-            >
+            <Select value={yField} onChange={setYField} style={{ width: 120 }} placeholder="选择字段">
               {queryResults.columns?.map((col) => (
                 <Option key={col} value={col}>
                   {col}
@@ -301,8 +287,8 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
       <div className="chart-container">
         <ReactECharts
           ref={chartRef}
+          style={{ height: 400, width: '100%' }}
           option={chartOption}
-          style={{ height: fullscreen ? window.innerHeight - 450 : 400 }}
           opts={{ renderer: 'canvas' }}
         />
       </div>
