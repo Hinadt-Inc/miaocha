@@ -4,7 +4,7 @@
 
     <!-- SQL查询历史表所有字段 -->
     <sql id="sqlQueryHistoryColumns">
-        id, user_id, datasource_id, table_name, sql_query, result_file_path, create_time, update_time
+        id, user_id, datasource_id, table_name, sql_query, result_file_path, create_time
     </sql>
 
     <!-- 插入SQL查询历史 -->
