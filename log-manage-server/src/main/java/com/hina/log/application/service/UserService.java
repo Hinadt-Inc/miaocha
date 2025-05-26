@@ -3,17 +3,14 @@ package com.hina.log.application.service;
 import com.hina.log.domain.dto.auth.LoginRequestDTO;
 import com.hina.log.domain.dto.auth.LoginResponseDTO;
 import com.hina.log.domain.dto.auth.RefreshTokenRequestDTO;
+import com.hina.log.domain.dto.user.UpdatePasswordDTO;
 import com.hina.log.domain.dto.user.UserCreateDTO;
 import com.hina.log.domain.dto.user.UserDTO;
 import com.hina.log.domain.dto.user.UserUpdateDTO;
-import com.hina.log.domain.dto.user.UpdatePasswordDTO;
 import com.hina.log.domain.entity.User;
-
 import java.util.List;
 
-/**
- * 用户服务接口
- */
+/** 用户服务接口 */
 public interface UserService {
 
     /**
@@ -81,7 +78,7 @@ public interface UserService {
     /**
      * 修改密码
      *
-     * @param id          用户ID
+     * @param id 用户ID
      * @param newPassword 新密码
      */
     void updatePassword(Long id, String newPassword);
@@ -89,14 +86,14 @@ public interface UserService {
     /**
      * 修改自己的密码
      *
-     * @param userId            当前用户ID
+     * @param userId 当前用户ID
      * @param updatePasswordDTO 密码更新DTO
      */
     void updateOwnPassword(Long userId, UpdatePasswordDTO updatePasswordDTO);
 
     /**
      * 获取用户实体（内部使用）
-     * 
+     *
      * @param id 用户ID
      * @return 用户实体
      */
@@ -104,7 +101,7 @@ public interface UserService {
 
     /**
      * 通过UID获取用户实体（内部使用）
-     * 
+     *
      * @param uid 用户UID
      * @return 用户实体
      */

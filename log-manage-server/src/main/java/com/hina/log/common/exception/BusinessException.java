@@ -2,9 +2,7 @@ package com.hina.log.common.exception;
 
 import lombok.Getter;
 
-/**
- * 业务异常
- */
+/** 业务异常 */
 @Getter
 public class BusinessException extends RuntimeException {
     private final ErrorCode errorCode;

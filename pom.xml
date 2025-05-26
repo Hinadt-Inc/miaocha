@@ -36,6 +36,11 @@
         <bouncycastle.version>1.77</bouncycastle.version>
         <poi.version>5.2.3</poi.version>
         <frontend.maven.plugin.version>1.14.0</frontend.maven.plugin.version>
+
+        <!-- Code Quality Plugin Versions -->
+        <spotless.maven.plugin.version>2.43.0</spotless.maven.plugin.version>
+        <checkstyle.maven.plugin.version>3.3.0</checkstyle.maven.plugin.version>
+        <google.java.format.version>1.19.2</google.java.format.version>
     </properties>
 
     <dependencyManagement>
@@ -48,7 +53,7 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-            
+
             <!-- JWT -->
             <dependency>
                 <groupId>io.jsonwebtoken</groupId>
@@ -67,7 +72,7 @@
                 <version>${jjwt.version}</version>
                 <scope>runtime</scope>
             </dependency>
-            
+
             <!-- Database -->
             <dependency>
                 <groupId>com.mysql</groupId>
@@ -79,14 +84,14 @@
                 <artifactId>mybatis-spring-boot-starter</artifactId>
                 <version>${mybatis.version}</version>
             </dependency>
-            
+
             <!-- Documentation -->
             <dependency>
                 <groupId>org.springdoc</groupId>
                 <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
                 <version>${springdoc.version}</version>
             </dependency>
-            
+
             <!-- Utilities -->
             <dependency>
                 <groupId>org.projectlombok</groupId>
@@ -99,7 +104,7 @@
                 <artifactId>jnanoid</artifactId>
                 <version>2.0.0</version>
             </dependency>
-            
+
             <!-- Apache POI for Excel export -->
             <dependency>
                 <groupId>org.apache.poi</groupId>
@@ -111,7 +116,7 @@
                 <artifactId>poi-ooxml</artifactId>
                 <version>${poi.version}</version>
             </dependency>
-            
+
             <!-- SSH连接组件 -->
             <dependency>
                 <groupId>org.apache.sshd</groupId>
@@ -123,7 +128,7 @@
                 <artifactId>sshd-sftp</artifactId>
                 <version>${sshd.version}</version>
             </dependency>
-            
+
             <!-- 加密组件 -->
             <dependency>
                 <groupId>org.bouncycastle</groupId>
@@ -140,7 +145,7 @@
                 <artifactId>bcutil-jdk18on</artifactId>
                 <version>${bouncycastle.version}</version>
             </dependency>
-            
+
             <!-- 测试依赖 -->
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
@@ -228,8 +233,122 @@
                     <artifactId>maven-assembly-plugin</artifactId>
                     <version>3.7.1</version>
                 </plugin>
+
+                <!-- Code Quality Plugins -->
+                <plugin>
+                    <groupId>com.diffplug.spotless</groupId>
+                    <artifactId>spotless-maven-plugin</artifactId>
+                    <version>${spotless.maven.plugin.version}</version>
+                    <configuration>
+                        <!-- Java code formatting -->
+                        <java>
+                            <includes>
+                                <include>src/main/java/**/*.java</include>
+                                <include>src/test/java/**/*.java</include>
+                            </includes>
+                            <!-- Use Google Java Format with AOSP style (4 spaces indentation) -->
+                            <googleJavaFormat>
+                                <version>${google.java.format.version}</version>
+                                <style>AOSP</style>
+                                <reflowLongStrings>true</reflowLongStrings>
+                            </googleJavaFormat>
+                            <!-- Import organization -->
+                            <importOrder />
+                            <!-- Remove unused imports -->
+                            <removeUnusedImports />
+                            <!-- Format annotations -->
+                            <formatAnnotations />
+                        </java>
+
+                        <!-- XML files formatting (including pom.xml) -->
+                        <formats>
+                            <format>
+                                <includes>
+                                    <include>*.xml</include>
+                                    <include>src/**/*.xml</include>
+                                </includes>
+                                <!-- Apply consistent indentation and end with newline -->
+                                <trimTrailingWhitespace/>
+                                <endWithNewline/>
+                                <indent>
+                                    <spaces>true</spaces>
+                                    <spacesPerTab>4</spacesPerTab>
+                                </indent>
+                            </format>
+                        </formats>
+
+                        <!-- POM files specific formatting -->
+                        <pom>
+                            <includes>
+                                <include>pom.xml</include>
+                                <include>*/pom.xml</include>
+                            </includes>
+                            <sortPom>
+                                <encoding>UTF-8</encoding>
+                                <nrOfIndentSpace>4</nrOfIndentSpace>
+                                <keepBlankLines>true</keepBlankLines>
+                                <indentBlankLines>false</indentBlankLines>
+                                <sortProperties>true</sortProperties>
+                                <sortDependencies>groupId,artifactId</sortDependencies>
+                                <sortPlugins>groupId,artifactId</sortPlugins>
+                            </sortPom>
+                        </pom>
+
+                        <!-- Markdown files formatting -->
+                        <markdown>
+                            <includes>
+                                <include>**/*.md</include>
+                            </includes>
+                            <flexmark />
+                        </markdown>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>spotless-apply</id>
+                            <goals>
+                                <goal>apply</goal>
+                            </goals>
+                            <phase>process-sources</phase>
+                        </execution>
+                        <execution>
+                            <id>spotless-check</id>
+                            <goals>
+                                <goal>check</goal>
+                            </goals>
+                            <phase>verify</phase>
+                        </execution>
+                    </executions>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-checkstyle-plugin</artifactId>
+                    <version>${checkstyle.maven.plugin.version}</version>
+                    <configuration>
+                        <configLocation>checkstyle.xml</configLocation>
+                        <consoleOutput>true</consoleOutput>
+                        <failsOnError>false</failsOnError>
+                        <failOnViolation>false</failOnViolation>
+                        <linkXRef>false</linkXRef>
+                        <excludes>**/target/**/*</excludes>
+                        <violationSeverity>warning</violationSeverity>
+                        <maxAllowedViolations>1000</maxAllowedViolations>
+                    </configuration>
+                </plugin>
             </plugins>
         </pluginManagement>
+
+        <plugins>
+            <!-- Apply code formatting and quality checks to all modules -->
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+            </plugin>
+        </plugins>
     </build>
 
     <!-- Maven环境配置 -->
@@ -261,6 +380,16 @@
             <properties>
                 <spring.profiles.active>prod</spring.profiles.active>
                 <environment>prod</environment>
+            </properties>
+        </profile>
+
+        <!-- 快速构建环境（跳过代码质量检查） -->
+        <profile>
+            <id>quick</id>
+            <properties>
+                <spotless.check.skip>true</spotless.check.skip>
+                <checkstyle.skip>true</checkstyle.skip>
+                <maven.test.skip>true</maven.test.skip>
             </properties>
         </profile>
     </profiles>

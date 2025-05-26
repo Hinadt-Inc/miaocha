@@ -1,24 +1,21 @@
 package com.hina.log.endpoint;
 
+import com.hina.log.application.service.UserService;
 import com.hina.log.common.annotation.CurrentUser;
 import com.hina.log.domain.dto.ApiResponse;
 import com.hina.log.domain.dto.user.UpdatePasswordDTO;
 import com.hina.log.domain.dto.user.UserCreateDTO;
 import com.hina.log.domain.dto.user.UserDTO;
 import com.hina.log.domain.dto.user.UserUpdateDTO;
-import com.hina.log.application.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
-/**
- * 用户管理控制器
- */
+/** 用户管理控制器 */
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
@@ -72,7 +69,8 @@ public class UserEndpoint {
     @PostMapping
     @Operation(summary = "创建用户", description = "创建一个新用户")
     public ApiResponse<UserDTO> createUser(
-            @Parameter(description = "用户创建信息", required = true) @Valid @RequestBody UserCreateDTO userCreateDTO) {
+            @Parameter(description = "用户创建信息", required = true) @Valid @RequestBody
+                    UserCreateDTO userCreateDTO) {
         return ApiResponse.success(userService.createUser(userCreateDTO));
     }
 
@@ -85,7 +83,8 @@ public class UserEndpoint {
     @PutMapping
     @Operation(summary = "更新用户", description = "根据用户ID更新用户信息")
     public ApiResponse<UserDTO> updateUser(
-            @Parameter(description = "用户更新信息", required = true) @Valid @RequestBody UserUpdateDTO userUpdateDTO) {
+            @Parameter(description = "用户更新信息", required = true) @Valid @RequestBody
+                    UserUpdateDTO userUpdateDTO) {
         return ApiResponse.success(userService.updateUser(userUpdateDTO));
     }
 
@@ -106,7 +105,7 @@ public class UserEndpoint {
     /**
      * 修改用户密码（管理员操作）
      *
-     * @param id          用户ID
+     * @param id 用户ID
      * @param newPassword 新密码
      * @return 结果
      */
@@ -122,7 +121,7 @@ public class UserEndpoint {
     /**
      * 修改自己的密码
      *
-     * @param currentUser       当前登录用户
+     * @param currentUser 当前登录用户
      * @param updatePasswordDTO 密码更新DTO
      * @return 结果
      */
@@ -130,7 +129,8 @@ public class UserEndpoint {
     @Operation(summary = "修改自己的密码", description = "用户修改自己的密码，需要验证旧密码")
     public ApiResponse<Void> updateOwnPassword(
             @CurrentUser UserDTO currentUser,
-            @Parameter(description = "密码更新信息", required = true) @Valid @RequestBody UpdatePasswordDTO updatePasswordDTO) {
+            @Parameter(description = "密码更新信息", required = true) @Valid @RequestBody
+                    UpdatePasswordDTO updatePasswordDTO) {
         userService.updateOwnPassword(currentUser.getId(), updatePasswordDTO);
         return ApiResponse.success();
     }

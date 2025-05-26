@@ -66,4 +66,31 @@ Thumbs.db
 application-dev.properties
 application-dev.yml
 application-local.properties
-application-local.yml 
+application-local.yml
+
+# Node.js and Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Frontend build outputs
+dist/
+build/
+*.tgz
+*.tar.gz
+
+# Editor directories and files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw? 

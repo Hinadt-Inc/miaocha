@@ -2,12 +2,9 @@ package com.hina.log.application.service;
 
 import com.hina.log.domain.dto.MachineCreateDTO;
 import com.hina.log.domain.dto.MachineDTO;
-
 import java.util.List;
 
-/**
- * 机器管理服务接口
- */
+/** 机器管理服务接口 */
 public interface MachineService {
 
     /**
@@ -21,7 +18,7 @@ public interface MachineService {
     /**
      * 更新机器
      *
-     * @param id  机器ID
+     * @param id 机器ID
      * @param dto 机器更新DTO
      * @return 更新后的机器信息
      */

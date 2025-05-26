@@ -1,13 +1,10 @@
 package com.hina.log.domain.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
 import lombok.Data;
 
-import java.util.List;
-
-/**
- * 日志字段分布查询结果DTO
- */
+/** 日志字段分布查询结果DTO */
 @Data
 @Schema(description = "日志字段分布查询结果对象")
 public class LogFieldDistributionResultDTO {

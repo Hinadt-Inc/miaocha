@@ -2,14 +2,10 @@ package com.hina.log.domain.dto.logstash;
 
 import com.hina.log.application.logstash.enums.LogstashMachineState;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.time.LocalDateTime;
 import lombok.Data;
 
-import java.time.LocalDateTime;
-
-/**
- * Logstash机器进程详情DTO
- * 用于返回单个LogstashMachine在特定机器上的完整详情信息
- */
+/** Logstash机器进程详情DTO 用于返回单个LogstashMachine在特定机器上的完整详情信息 */
 @Data
 @Schema(description = "Logstash机器进程详情信息")
 public class LogstashMachineDetailDTO {
@@ -79,4 +75,4 @@ public class LogstashMachineDetailDTO {
 
     @Schema(description = "Logstash进程更新时间")
     private LocalDateTime processUpdateTime;
-} 
+}

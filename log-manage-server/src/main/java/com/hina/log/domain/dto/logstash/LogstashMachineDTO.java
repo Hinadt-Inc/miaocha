@@ -1,13 +1,10 @@
 package com.hina.log.domain.dto.logstash;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.time.LocalDateTime;
 import lombok.Data;
 
-import java.time.LocalDateTime;
-
-/**
- * Logstash机器关联DTO
- */
+/** Logstash机器关联DTO */
 @Data
 @Schema(description = "Logstash机器关联信息对象")
 public class LogstashMachineDTO {

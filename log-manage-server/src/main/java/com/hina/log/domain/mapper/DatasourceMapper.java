@@ -1,13 +1,10 @@
 package com.hina.log.domain.mapper;
 
 import com.hina.log.domain.entity.Datasource;
+import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 
-import java.util.List;
-
-/**
- * 数据源Mapper接口
- */
+/** 数据源Mapper接口 */
 @Mapper
 public interface DatasourceMapper {
 
@@ -22,5 +19,4 @@ public interface DatasourceMapper {
     Datasource selectByName(String name);
 
     List<Datasource> selectAll();
-
 }

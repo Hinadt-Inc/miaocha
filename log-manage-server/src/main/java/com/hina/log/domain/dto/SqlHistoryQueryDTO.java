@@ -5,9 +5,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.Data;
 
-/**
- * SQL查询历史分页请求DTO
- */
+/** SQL查询历史分页请求DTO */
 @Data
 @Schema(description = "SQL查询历史分页请求对象")
 public class SqlHistoryQueryDTO {

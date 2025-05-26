@@ -1,10 +1,10 @@
 package com.hina.log.endpoint;
 
+import com.hina.log.application.service.UserService;
 import com.hina.log.domain.dto.ApiResponse;
 import com.hina.log.domain.dto.auth.LoginRequestDTO;
 import com.hina.log.domain.dto.auth.LoginResponseDTO;
 import com.hina.log.domain.dto.auth.RefreshTokenRequestDTO;
-import com.hina.log.application.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,9 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * 认证控制器
- */
+/** 认证控制器 */
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -35,7 +33,8 @@ public class AuthEndpoint {
     @PostMapping("/login")
     @Operation(summary = "用户登录", description = "使用邮箱和密码进行登录认证，返回JWT令牌")
     public ApiResponse<LoginResponseDTO> login(
-            @Parameter(description = "登录请求信息", required = true) @Valid @RequestBody LoginRequestDTO loginRequest) {
+            @Parameter(description = "登录请求信息", required = true) @Valid @RequestBody
+                    LoginRequestDTO loginRequest) {
         LoginResponseDTO response = userService.login(loginRequest);
         return ApiResponse.success(response);
     }
@@ -49,7 +48,8 @@ public class AuthEndpoint {
     @PostMapping("/refresh")
     @Operation(summary = "刷新令牌", description = "使用刷新令牌获取新的访问令牌和刷新令牌。每次刷新都会生成新的刷新令牌，旧的刷新令牌将不再有效。")
     public ApiResponse<LoginResponseDTO> refreshToken(
-            @Parameter(description = "刷新令牌请求信息", required = true) @Valid @RequestBody RefreshTokenRequestDTO refreshTokenRequest) {
+            @Parameter(description = "刷新令牌请求信息", required = true) @Valid @RequestBody
+                    RefreshTokenRequestDTO refreshTokenRequest) {
         LoginResponseDTO response = userService.refreshToken(refreshTokenRequest);
         return ApiResponse.success(response);
     }

@@ -1,31 +1,30 @@
 package com.hina.log.application.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hina.log.domain.dto.ApiResponse;
 import com.hina.log.common.exception.ErrorCode;
+import com.hina.log.domain.dto.ApiResponse;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-
-/**
- * 自定义认证入口点 - 处理未认证的请求返回JSON响应
- */
+/** 自定义认证入口点 - 处理未认证的请求返回JSON响应 */
 @Slf4j
 public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public void commence(HttpServletRequest request, HttpServletResponse response,
-                         AuthenticationException authException)
+    public void commence(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            AuthenticationException authException)
             throws IOException {
         log.warn("认证异常: {}", authException.getMessage());
 

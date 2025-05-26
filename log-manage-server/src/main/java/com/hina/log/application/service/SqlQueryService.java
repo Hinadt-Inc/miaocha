@@ -5,19 +5,16 @@ import com.hina.log.domain.dto.SqlHistoryQueryDTO;
 import com.hina.log.domain.dto.SqlHistoryResponseDTO;
 import com.hina.log.domain.dto.SqlQueryDTO;
 import com.hina.log.domain.dto.SqlQueryResultDTO;
-
 import org.springframework.core.io.Resource;
 
-/**
- * SQL查询服务接口
- */
+/** SQL查询服务接口 */
 public interface SqlQueryService {
 
     /**
      * 执行SQL查询
      *
      * @param userId 用户ID
-     * @param dto    查询请求DTO
+     * @param dto 查询请求DTO
      * @return 查询结果
      */
     SqlQueryResultDTO executeQuery(Long userId, SqlQueryDTO dto);
@@ -25,7 +22,7 @@ public interface SqlQueryService {
     /**
      * 获取指定数据源的表结构信息
      *
-     * @param userId       用户ID
+     * @param userId 用户ID
      * @param datasourceId 数据源ID
      * @return 表结构信息列表
      */
@@ -43,7 +40,7 @@ public interface SqlQueryService {
      * 分页查询SQL查询历史
      *
      * @param userId 用户ID
-     * @param dto    查询参数
+     * @param dto 查询参数
      * @return 分页查询结果
      */
     SqlHistoryResponseDTO getQueryHistory(Long userId, SqlHistoryQueryDTO dto);

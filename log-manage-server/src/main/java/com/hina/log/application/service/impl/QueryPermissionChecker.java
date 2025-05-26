@@ -1,13 +1,10 @@
 package com.hina.log.application.service.impl;
 
-import com.hina.log.domain.entity.User;
-import com.hina.log.domain.entity.enums.UserRole;
+import com.hina.log.application.service.ModulePermissionService;
 import com.hina.log.common.exception.BusinessException;
 import com.hina.log.common.exception.ErrorCode;
-import com.hina.log.application.service.ModulePermissionService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
-
+import com.hina.log.domain.entity.User;
+import com.hina.log.domain.entity.enums.UserRole;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -19,42 +16,46 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
-/**
- * 查询权限检查器
- */
+/** 查询权限检查器 */
 @Component
 @RequiredArgsConstructor
 public class QueryPermissionChecker {
 
-    private static final Pattern SELECT_PATTERN = Pattern.compile("^\\s*SELECT\\s+", Pattern.CASE_INSENSITIVE);
+    private static final Pattern SELECT_PATTERN =
+            Pattern.compile("^\\s*SELECT\\s+", Pattern.CASE_INSENSITIVE);
 
     // 修改表名提取正则表达式，处理多种SQL语法情况
-    private static final Pattern FROM_PATTERN = Pattern.compile(
-            "\\bFROM\\s+((\"[^\"]+\"|'[^']+'|`[^`]+`|\\[[^\\]]+\\]|[\\w\\d_\\.]+)\\s*(,\\s*(\"[^\"]+\"|'[^']+'|`[^`]+`|\\[[^\\]]+\\]|[\\w\\d_\\.]+))*)",
-            Pattern.CASE_INSENSITIVE);
+    private static final Pattern FROM_PATTERN =
+            Pattern.compile(
+                    "\\bFROM\\s+((\"[^\"]+\"|'[^']+'|`[^`]+`|\\[[^\\]]+\\]|[\\w\\d_\\.]+)\\s*(,\\s*(\"[^\"]+\"|'[^']+'|`[^`]+`|\\[[^\\]]+\\]|[\\w\\d_\\.]+))*)",
+                    Pattern.CASE_INSENSITIVE);
 
-    private static final Pattern JOIN_PATTERN = Pattern.compile(
-            "\\b(JOIN)\\s+(\"[^\"]+\"|'[^']+'|`[^`]+`|\\[[^\\]]+\\]|[\\w\\d_\\.]+)",
-            Pattern.CASE_INSENSITIVE);
+    private static final Pattern JOIN_PATTERN =
+            Pattern.compile(
+                    "\\b(JOIN)\\s+(\"[^\"]+\"|'[^']+'|`[^`]+`|\\[[^\\]]+\\]|[\\w\\d_\\.]+)",
+                    Pattern.CASE_INSENSITIVE);
 
-    private static final Pattern TABLE_NAME_PATTERN = Pattern.compile(
-            "(\"([^\"]+)\"|'([^']+)'|`([^`]+)`|\\[([^\\]]+)\\]|([\\w\\d_\\.]+))",
-            Pattern.CASE_INSENSITIVE);
+    private static final Pattern TABLE_NAME_PATTERN =
+            Pattern.compile(
+                    "(\"([^\"]+)\"|'([^']+)'|`([^`]+)`|\\[([^\\]]+)\\]|([\\w\\d_\\.]+))",
+                    Pattern.CASE_INSENSITIVE);
 
     private final ModulePermissionService modulePermissionService;
 
     /**
      * 检查用户是否有权限执行指定的查询
      *
-     * @param user         用户信息
+     * @param user 用户信息
      * @param datasourceId 数据源ID
-     * @param sql          SQL查询语句
+     * @param sql SQL查询语句
      */
     public void checkQueryPermission(User user, Long datasourceId, String sql) {
         // 超级管理员和管理员有所有权限
-        if (UserRole.SUPER_ADMIN.name().equals(user.getRole()) ||
-                UserRole.ADMIN.name().equals(user.getRole())) {
+        if (UserRole.SUPER_ADMIN.name().equals(user.getRole())
+                || UserRole.ADMIN.name().equals(user.getRole())) {
             return;
         }
 
@@ -75,21 +76,23 @@ public class QueryPermissionChecker {
      * 获取用户有权限访问的所有表
      *
      * @param userId 用户ID
-     * @param conn   数据库连接
+     * @param conn 数据库连接
      * @return 有权限的表列表
      */
     public List<String> getPermittedTables(Long userId, Connection conn) throws SQLException {
         List<String> permittedTables = new ArrayList<>();
 
         // 获取用户可访问的所有模块
-        List<String> permittedModules = modulePermissionService.getUserAccessibleModules(userId).stream()
-                .flatMap(structure -> structure.getModules().stream())
-                .map(moduleInfo -> moduleInfo.getModuleName())
-                .collect(Collectors.toList());
+        List<String> permittedModules =
+                modulePermissionService.getUserAccessibleModules(userId).stream()
+                        .flatMap(structure -> structure.getModules().stream())
+                        .map(moduleInfo -> moduleInfo.getModuleName())
+                        .collect(Collectors.toList());
 
         // 获取所有表
         DatabaseMetaData metaData = conn.getMetaData();
-        try (ResultSet rs = metaData.getTables(conn.getCatalog(), null, "%", new String[]{"TABLE"})) {
+        try (ResultSet rs =
+                metaData.getTables(conn.getCatalog(), null, "%", new String[] {"TABLE"})) {
             while (rs.next()) {
                 String tableName = rs.getString("TABLE_NAME");
                 // 如果表名与模块名称匹配，或者用户是管理员，则添加到有权限的表列表中
@@ -152,7 +155,7 @@ public class QueryPermissionChecker {
     /**
      * 从子句中提取表名
      *
-     * @param clause     子句
+     * @param clause 子句
      * @param tableNames 表名集合
      */
     private void extractTablesFromClause(String clause, Set<String> tableNames) {
@@ -167,7 +170,7 @@ public class QueryPermissionChecker {
     /**
      * 将表名添加到集合
      *
-     * @param tablePart  表名部分
+     * @param tablePart 表名部分
      * @param tableNames 表名集合
      */
     private void addTableName(String tablePart, Set<String> tableNames) {
@@ -175,14 +178,10 @@ public class QueryPermissionChecker {
         if (matcher.find()) {
             // 尝试获取各种引号包裹的表名
             String tableName = matcher.group(2); // 双引号
-            if (tableName == null)
-                tableName = matcher.group(3); // 单引号
-            if (tableName == null)
-                tableName = matcher.group(4); // 反引号
-            if (tableName == null)
-                tableName = matcher.group(5); // 方括号
-            if (tableName == null)
-                tableName = matcher.group(6); // 无引号
+            if (tableName == null) tableName = matcher.group(3); // 单引号
+            if (tableName == null) tableName = matcher.group(4); // 反引号
+            if (tableName == null) tableName = matcher.group(5); // 方括号
+            if (tableName == null) tableName = matcher.group(6); // 无引号
 
             if (tableName != null) {
                 // 处理模式名称和表名

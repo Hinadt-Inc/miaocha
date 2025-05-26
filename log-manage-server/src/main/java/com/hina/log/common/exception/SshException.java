@@ -1,8 +1,6 @@
 package com.hina.log.common.exception;
 
-/**
- * SSH操作异常
- */
+/** SSH操作异常 */
 public class SshException extends Exception {
 
     public SshException(String message) {

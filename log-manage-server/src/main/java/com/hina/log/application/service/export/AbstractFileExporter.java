@@ -1,22 +1,18 @@
 package com.hina.log.application.service.export;
 
-import com.hina.log.domain.dto.SqlQueryResultDTO;
 import com.hina.log.common.exception.BusinessException;
 import com.hina.log.common.exception.ErrorCode;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
-
+import com.hina.log.domain.dto.SqlQueryResultDTO;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 
-/**
- * 抽象文件导出器
- * 实现一些通用的导出逻辑
- */
+/** 抽象文件导出器 实现一些通用的导出逻辑 */
 public abstract class AbstractFileExporter implements FileExporter {
 
     private static final String EXPORT_ERROR_MSG = "导出失败: ";
@@ -45,19 +41,18 @@ public abstract class AbstractFileExporter implements FileExporter {
         return new ByteArrayResource(data);
     }
 
-    /**
-     * 验证查询结果是否有效
-     */
+    /** 验证查询结果是否有效 */
     protected void validateResult(SqlQueryResultDTO result) {
-        if (result == null || result.getRows() == null || result.getRows().isEmpty() ||
-                result.getColumns() == null || result.getColumns().isEmpty()) {
+        if (result == null
+                || result.getRows() == null
+                || result.getRows().isEmpty()
+                || result.getColumns() == null
+                || result.getColumns().isEmpty()) {
             throw new BusinessException(ErrorCode.EXPORT_FAILED, "没有数据可导出");
         }
     }
 
-    /**
-     * 确保目录存在
-     */
+    /** 确保目录存在 */
     protected void ensureDirectoryExists(String filePath) throws IOException {
         Path path = Paths.get(filePath);
         Path parentPath = path.getParent();
@@ -66,8 +61,6 @@ public abstract class AbstractFileExporter implements FileExporter {
         }
     }
 
-    /**
-     * 具体实现类需要提供的二进制导出方法
-     */
+    /** 具体实现类需要提供的二进制导出方法 */
     protected abstract byte[] doExportToBytes(List<Map<String, Object>> data, String[] headers);
 }

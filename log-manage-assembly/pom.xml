@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.hina</groupId>
@@ -25,7 +23,7 @@
             <artifactId>log-manage-server</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!-- 
+        <!--
         <dependency>
             <groupId>com.hina</groupId>
             <artifactId>log-manage-ui</artifactId>
@@ -37,8 +35,8 @@
     <build>
         <resources>
             <resource>
-                <directory>src/main/resources</directory>
                 <filtering>true</filtering>
+                <directory>src/main/resources</directory>
                 <includes>
                     <include>version.txt</include>
                     <include>banner.txt</include>
@@ -48,6 +46,29 @@
             </resource>
         </resources>
         <plugins>
+
+            <!-- Clean up duplicate configuration files -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>warn-about-duplicate-configs</id>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <phase>validate</phase>
+                        <configuration>
+                            <target>
+                                <echo>NOTICE: Configuration files should be maintained only in log-manage-server/src/main/resources.</echo>
+                                <echo>The assembly module will automatically use those configurations.</echo>
+                                <echo>See log-manage-assembly/src/main/resources/RESOURCES.md for details.</echo>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
@@ -60,14 +81,14 @@
                 <executions>
                     <execution>
                         <id>make-assembly</id>
-                        <phase>package</phase>
                         <goals>
                             <goal>single</goal>
                         </goals>
+                        <phase>package</phase>
                     </execution>
                 </executions>
             </plugin>
-            
+
             <!-- Add a comment to remind developers about resource management -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -76,10 +97,10 @@
                 <executions>
                     <execution>
                         <id>filter-resources</id>
-                        <phase>process-resources</phase>
                         <goals>
                             <goal>resources</goal>
                         </goals>
+                        <phase>process-resources</phase>
                         <configuration>
                             <nonFilteredFileExtensions>
                                 <nonFilteredFileExtension>ttf</nonFilteredFileExtension>
@@ -90,32 +111,9 @@
                     </execution>
                 </executions>
             </plugin>
-            
-            <!-- Clean up duplicate configuration files -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-antrun-plugin</artifactId>
-                <version>3.1.0</version>
-                <executions>
-                    <execution>
-                        <id>warn-about-duplicate-configs</id>
-                        <phase>validate</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <target>
-                                <echo>NOTICE: Configuration files should be maintained only in log-manage-server/src/main/resources.</echo>
-                                <echo>       The assembly module will automatically use those configurations.</echo>
-                                <echo>       See log-manage-assembly/src/main/resources/RESOURCES.md for details.</echo>
-                            </target>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
         </plugins>
     </build>
-    
+
     <!-- Add a profile for developers to clean unnecessary resource files -->
     <profiles>
         <profile>
@@ -129,15 +127,15 @@
                         <executions>
                             <execution>
                                 <id>clean-duplicate-resources</id>
-                                <phase>clean</phase>
                                 <goals>
                                     <goal>run</goal>
                                 </goals>
+                                <phase>clean</phase>
                                 <configuration>
                                     <target>
                                         <echo>Removing duplicate configuration files from assembly module...</echo>
                                         <delete>
-                                            <fileset dir="${project.basedir}/src/main/resources" includes="*.yml,*.xml,*.properties" excludes="version.txt,banner.txt,README.md"/>
+                                            <fileset dir="${project.basedir}/src/main/resources" excludes="version.txt,banner.txt,README.md" includes="*.yml,*.xml,*.properties"></fileset>
                                         </delete>
                                     </target>
                                 </configuration>

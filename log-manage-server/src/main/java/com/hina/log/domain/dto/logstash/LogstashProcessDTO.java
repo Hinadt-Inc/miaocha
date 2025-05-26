@@ -1,14 +1,11 @@
 package com.hina.log.domain.dto.logstash;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Data;
-
 import java.time.LocalDateTime;
 import java.util.List;
+import lombok.Data;
 
-/**
- * Logstash进程信息DTO
- */
+/** Logstash进程信息DTO */
 @Data
 @Schema(description = "Logstash进程信息对象")
 public class LogstashProcessDTO {

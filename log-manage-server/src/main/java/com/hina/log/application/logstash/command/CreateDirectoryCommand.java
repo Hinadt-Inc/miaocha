@@ -1,14 +1,11 @@
 package com.hina.log.application.logstash.command;
 
-import com.hina.log.domain.entity.Machine;
 import com.hina.log.common.exception.SshOperationException;
 import com.hina.log.common.ssh.SshClient;
-
+import com.hina.log.domain.entity.Machine;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * 创建目录命令
- */
+/** 创建目录命令 */
 public class CreateDirectoryCommand extends AbstractLogstashCommand {
 
     public CreateDirectoryCommand(SshClient sshClient, String deployDir, Long processId) {
@@ -26,7 +23,10 @@ public class CreateDirectoryCommand extends AbstractLogstashCommand {
             sshClient.executeCommand(machine, command);
 
             // 检查目录是否创建成功
-            String checkCommand = String.format("if [ -d \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi", processDir);
+            String checkCommand =
+                    String.format(
+                            "if [ -d \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi",
+                            processDir);
             String checkResult = sshClient.executeCommand(machine, checkCommand);
 
             boolean success = "exists".equals(checkResult.trim());
@@ -55,8 +55,10 @@ public class CreateDirectoryCommand extends AbstractLogstashCommand {
 
             // 使用不会因目录不存在而失败的命令
             // 使用 || 实现短路逻辑：如果第一个命令失败（目录不存在），则执行第二个命令返回"not_exists"
-            String checkCommand = String.format("if [ -d \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi",
-                    processDir);
+            String checkCommand =
+                    String.format(
+                            "if [ -d \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi",
+                            processDir);
             String checkResult = sshClient.executeCommand(machine, checkCommand);
 
             boolean exists = "exists".equals(checkResult.trim());

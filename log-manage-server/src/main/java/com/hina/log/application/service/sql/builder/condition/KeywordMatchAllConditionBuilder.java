@@ -5,10 +5,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-/**
- * 关键字MATCH_ALL条件构建器
- * 处理多个关键字AND关系的情况
- */
+/** 关键字MATCH_ALL条件构建器 处理多个关键字AND关系的情况 */
 @Component
 @Order(20) // 中等优先级
 public class KeywordMatchAllConditionBuilder implements SearchConditionBuilder {
@@ -21,7 +18,9 @@ public class KeywordMatchAllConditionBuilder implements SearchConditionBuilder {
                 if (StringUtils.isNotBlank(keyword)) {
                     String trimmedKeyword = keyword.trim();
                     // 处理简单的AND关系表达式，排除复杂表达式
-                    if (trimmedKeyword.contains(" && ") && !trimmedKeyword.contains("(") && !trimmedKeyword.contains(")")) {
+                    if (trimmedKeyword.contains(" && ")
+                            && !trimmedKeyword.contains("(")
+                            && !trimmedKeyword.contains(")")) {
                         return true;
                     }
                 }
@@ -46,7 +45,9 @@ public class KeywordMatchAllConditionBuilder implements SearchConditionBuilder {
                     String trimmedKeyword = keyword.trim();
 
                     // 处理简单的AND关系表达式，排除复杂表达式
-                    if (trimmedKeyword.contains(" && ") && !trimmedKeyword.contains("(") && !trimmedKeyword.contains(")")) {
+                    if (trimmedKeyword.contains(" && ")
+                            && !trimmedKeyword.contains("(")
+                            && !trimmedKeyword.contains(")")) {
                         // 处理AND关系的关键字
                         String[] keywordParts = trimmedKeyword.split(" && ");
                         StringBuilder matchAllClause = new StringBuilder();
@@ -64,7 +65,10 @@ public class KeywordMatchAllConditionBuilder implements SearchConditionBuilder {
                             if (!isFirstCondition) {
                                 condition.append(" AND ");
                             }
-                            condition.append("message MATCH_ALL '").append(matchAllClause).append("'");
+                            condition
+                                    .append("message MATCH_ALL '")
+                                    .append(matchAllClause)
+                                    .append("'");
                             isFirstCondition = false;
                         }
                     }

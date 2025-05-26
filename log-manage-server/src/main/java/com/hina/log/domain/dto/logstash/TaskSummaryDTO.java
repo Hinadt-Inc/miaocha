@@ -2,9 +2,7 @@ package com.hina.log.domain.dto.logstash;
 
 import java.time.LocalDateTime;
 
-/**
- * 任务摘要DTO，用于展示任务列表
- */
+/** 任务摘要DTO，用于展示任务列表 */
 public class TaskSummaryDTO {
 
     private String taskId;

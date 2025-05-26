@@ -1,29 +1,22 @@
 package com.hina.log.common.util;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Paths;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationStartedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
-/**
- * 应用版本工具类
- * 负责在应用启动时将版本信息写入version.txt文件，供脚本使用
- */
+/** 应用版本工具类 负责在应用启动时将版本信息写入version.txt文件，供脚本使用 */
 @Component
 public class ApplicationVersionUtils {
 
     @Value("${spring.application.version:1.0}")
     private String applicationVersion;
 
-    /**
-     * 应用启动时将版本信息写入文件
-     */
+    /** 应用启动时将版本信息写入文件 */
     @EventListener(ApplicationStartedEvent.class)
     public void writeVersionFile() {
         try {
@@ -41,9 +34,7 @@ public class ApplicationVersionUtils {
         }
     }
 
-    /**
-     * 获取应用版本
-     */
+    /** 获取应用版本 */
     public String getApplicationVersion() {
         return applicationVersion;
     }

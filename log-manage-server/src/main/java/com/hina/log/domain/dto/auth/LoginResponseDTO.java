@@ -6,9 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * 登录响应DTO
- */
+/** 登录响应DTO */
 @Data
 @Builder
 @NoArgsConstructor

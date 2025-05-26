@@ -1,19 +1,7 @@
 package com.hina.log.common.ssh;
 
-import com.hina.log.domain.entity.Machine;
 import com.hina.log.common.exception.SshException;
-import org.apache.sshd.client.channel.ClientChannel;
-import org.apache.sshd.client.channel.ClientChannelEvent;
-import org.apache.sshd.client.session.ClientSession;
-import org.apache.sshd.common.channel.Channel;
-import org.apache.sshd.sftp.client.SftpClient;
-import org.apache.sshd.sftp.client.SftpClientFactory;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
-
+import com.hina.log.domain.entity.Machine;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,11 +15,19 @@ import java.security.KeyPair;
 import java.security.Security;
 import java.util.EnumSet;
 import java.util.concurrent.TimeUnit;
+import org.apache.sshd.client.channel.ClientChannel;
+import org.apache.sshd.client.channel.ClientChannelEvent;
+import org.apache.sshd.client.session.ClientSession;
+import org.apache.sshd.common.channel.Channel;
+import org.apache.sshd.sftp.client.SftpClient;
+import org.apache.sshd.sftp.client.SftpClientFactory;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
-/**
- * SSH客户端，提供基础SSH操作
- * 使用Apache MINA SSHD库实现
- */
+/** SSH客户端，提供基础SSH操作 使用Apache MINA SSHD库实现 */
 @Component
 public class SshClient {
 
@@ -99,7 +95,7 @@ public class SshClient {
     /**
      * 执行SSH命令
      *
-     * @param config  SSH配置
+     * @param config SSH配置
      * @param command 要执行的命令
      * @return 命令执行结果
      * @throws SshException 如果执行失败
@@ -108,7 +104,8 @@ public class SshClient {
         logger.debug("执行SSH命令: {}", command);
 
         // 创建SSHD客户端
-        org.apache.sshd.client.SshClient sshd = org.apache.sshd.client.SshClient.setUpDefaultClient();
+        org.apache.sshd.client.SshClient sshd =
+                org.apache.sshd.client.SshClient.setUpDefaultClient();
         try {
             sshd.start();
 
@@ -151,12 +148,13 @@ public class SshClient {
     /**
      * 上传文件
      *
-     * @param machine    机器信息
-     * @param localPath  本地文件路径
+     * @param machine 机器信息
+     * @param localPath 本地文件路径
      * @param remotePath 远程文件路径
      * @throws SshException 如果上传失败
      */
-    public void uploadFile(Machine machine, String localPath, String remotePath) throws SshException {
+    public void uploadFile(Machine machine, String localPath, String remotePath)
+            throws SshException {
         try {
             SshConfig config = createConfig(machine);
             uploadFile(config, localPath, remotePath);
@@ -169,12 +167,13 @@ public class SshClient {
     /**
      * 上传文件
      *
-     * @param config     SSH配置
-     * @param localPath  本地文件路径
+     * @param config SSH配置
+     * @param localPath 本地文件路径
      * @param remotePath 远程文件路径
      * @throws SshException 如果上传失败
      */
-    public void uploadFile(SshConfig config, String localPath, String remotePath) throws SshException {
+    public void uploadFile(SshConfig config, String localPath, String remotePath)
+            throws SshException {
         logger.debug("上传文件: {} -> {}", localPath, remotePath);
         Path localFile = Paths.get(localPath);
 
@@ -183,7 +182,8 @@ public class SshClient {
         }
 
         // 创建SSHD客户端
-        org.apache.sshd.client.SshClient sshd = org.apache.sshd.client.SshClient.setUpDefaultClient();
+        org.apache.sshd.client.SshClient sshd =
+                org.apache.sshd.client.SshClient.setUpDefaultClient();
         try {
             sshd.start();
 
@@ -206,12 +206,13 @@ public class SshClient {
     /**
      * 下载文件
      *
-     * @param machine    机器信息
+     * @param machine 机器信息
      * @param remotePath 远程文件路径
-     * @param localPath  本地文件路径
+     * @param localPath 本地文件路径
      * @throws SshException 如果下载失败
      */
-    public void downloadFile(Machine machine, String remotePath, String localPath) throws SshException {
+    public void downloadFile(Machine machine, String remotePath, String localPath)
+            throws SshException {
         try {
             SshConfig config = createConfig(machine);
             downloadFile(config, remotePath, localPath);
@@ -224,17 +225,19 @@ public class SshClient {
     /**
      * 下载文件
      *
-     * @param config     SSH配置
+     * @param config SSH配置
      * @param remotePath 远程文件路径
-     * @param localPath  本地文件路径
+     * @param localPath 本地文件路径
      * @throws SshException 如果下载失败
      */
-    public void downloadFile(SshConfig config, String remotePath, String localPath) throws SshException {
+    public void downloadFile(SshConfig config, String remotePath, String localPath)
+            throws SshException {
         logger.debug("下载文件: {} -> {}", remotePath, localPath);
         Path localFile = Paths.get(localPath);
 
         // 创建SSHD客户端
-        org.apache.sshd.client.SshClient sshd = org.apache.sshd.client.SshClient.setUpDefaultClient();
+        org.apache.sshd.client.SshClient sshd =
+                org.apache.sshd.client.SshClient.setUpDefaultClient();
         try {
             sshd.start();
 
@@ -247,7 +250,8 @@ public class SshClient {
                 }
 
                 // 使用SFTP下载文件
-                try (SftpClient sftpClient = SftpClientFactory.instance().createSftpClient(session)) {
+                try (SftpClient sftpClient =
+                        SftpClientFactory.instance().createSftpClient(session)) {
                     try (InputStream inputStream = sftpClient.read(remotePath)) {
                         Files.copy(inputStream, localFile, StandardCopyOption.REPLACE_EXISTING);
                     }
@@ -260,18 +264,15 @@ public class SshClient {
         }
     }
 
-    /**
-     * 创建SSH会话并进行认证
-     */
-    private ClientSession createSession(org.apache.sshd.client.SshClient sshd, SshConfig config) throws SshException {
+    /** 创建SSH会话并进行认证 */
+    private ClientSession createSession(org.apache.sshd.client.SshClient sshd, SshConfig config)
+            throws SshException {
         try {
             // 连接到服务器
-            ClientSession session = sshd.connect(
-                            config.getUsername(),
-                            config.getHost(),
-                            config.getPort())
-                    .verify(config.getConnectTimeout(), TimeUnit.SECONDS)
-                    .getSession();
+            ClientSession session =
+                    sshd.connect(config.getUsername(), config.getHost(), config.getPort())
+                            .verify(config.getConnectTimeout(), TimeUnit.SECONDS)
+                            .getSession();
 
             // 设置认证方式
             if (StringUtils.hasText(config.getPrivateKey())) {
@@ -294,18 +295,22 @@ public class SshClient {
         }
     }
 
-    /**
-     * 上传单个文件
-     */
-    private void uploadSingleFile(ClientSession session, Path localFile, String remotePath) throws IOException {
+    /** 上传单个文件 */
+    private void uploadSingleFile(ClientSession session, Path localFile, String remotePath)
+            throws IOException {
         // 提取本地文件名并拼接
         String fileName = localFile.getFileName().toString();
-        String finalRemotePath = remotePath.endsWith("/") ? remotePath + fileName : remotePath + "/" + fileName;
+        String finalRemotePath =
+                remotePath.endsWith("/") ? remotePath + fileName : remotePath + "/" + fileName;
 
         // 使用SFTP上传文件
         try (SftpClient sftpClient = SftpClientFactory.instance().createSftpClient(session);
-             InputStream inputStream = Files.newInputStream(localFile);
-             OutputStream outputStream = sftpClient.write(finalRemotePath, SftpClient.OpenMode.Create, SftpClient.OpenMode.Write)) {
+                InputStream inputStream = Files.newInputStream(localFile);
+                OutputStream outputStream =
+                        sftpClient.write(
+                                finalRemotePath,
+                                SftpClient.OpenMode.Create,
+                                SftpClient.OpenMode.Write)) {
             byte[] buffer = new byte[8192];
             int len;
             while ((len = inputStream.read(buffer)) != -1) {
@@ -315,10 +320,9 @@ public class SshClient {
         }
     }
 
-    /**
-     * 递归上传目录
-     */
-    private void uploadDirectory(ClientSession session, Path localDir, String remoteDir) throws IOException {
+    /** 递归上传目录 */
+    private void uploadDirectory(ClientSession session, Path localDir, String remoteDir)
+            throws IOException {
         try (SftpClient sftpClient = SftpClientFactory.instance().createSftpClient(session)) {
             // 确保远程目录存在
             try {
@@ -329,20 +333,22 @@ public class SshClient {
             }
 
             // 递归上传目录内容
-            Files.list(localDir).forEach(path -> {
-                String filename = path.getFileName().toString();
-                String remoteFilePath = remoteDir + "/" + filename;
+            Files.list(localDir)
+                    .forEach(
+                            path -> {
+                                String filename = path.getFileName().toString();
+                                String remoteFilePath = remoteDir + "/" + filename;
 
-                try {
-                    if (Files.isDirectory(path)) {
-                        uploadDirectory(session, path, remoteFilePath);
-                    } else {
-                        uploadSingleFile(session, path, remoteFilePath);
-                    }
-                } catch (IOException e) {
-                    logger.error("上传文件失败: {}", path, e);
-                }
-            });
+                                try {
+                                    if (Files.isDirectory(path)) {
+                                        uploadDirectory(session, path, remoteFilePath);
+                                    } else {
+                                        uploadSingleFile(session, path, remoteFilePath);
+                                    }
+                                } catch (IOException e) {
+                                    logger.error("上传文件失败: {}", path, e);
+                                }
+                            });
         }
     }
 }

@@ -1,26 +1,23 @@
 package com.hina.log.common.ssh;
 
 import com.hina.log.common.exception.SshException;
+import java.io.IOException;
+import java.io.StringReader;
+import java.security.KeyPair;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.io.StringReader;
-import java.security.KeyPair;
-
-/**
- * SSH工具类，提供加载SSH私钥等工具方法
- */
+/** SSH工具类，提供加载SSH私钥等工具方法 */
 public class SshClientUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(SshClientUtil.class);
 
     /**
      * 从私钥字符串加载KeyPair
-     * 
+     *
      * @param privateKeyData 私钥内容
      * @return KeyPair对象
      * @throws SshException 如果私钥加载失败

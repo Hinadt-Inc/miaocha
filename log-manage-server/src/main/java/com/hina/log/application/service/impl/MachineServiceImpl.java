@@ -1,24 +1,21 @@
 package com.hina.log.application.service.impl;
 
+import com.hina.log.application.service.MachineService;
+import com.hina.log.common.exception.BusinessException;
+import com.hina.log.common.exception.ErrorCode;
+import com.hina.log.common.ssh.SshClient;
 import com.hina.log.domain.converter.MachineConverter;
 import com.hina.log.domain.dto.MachineCreateDTO;
 import com.hina.log.domain.dto.MachineDTO;
 import com.hina.log.domain.entity.Machine;
-import com.hina.log.common.exception.BusinessException;
-import com.hina.log.common.exception.ErrorCode;
 import com.hina.log.domain.mapper.MachineMapper;
-import com.hina.log.application.service.MachineService;
-import com.hina.log.common.ssh.SshClient;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
-/**
- * 机器管理服务实现类
- */
+/** 机器管理服务实现类 */
 @Service
 @RequiredArgsConstructor
 public class MachineServiceImpl implements MachineService {
@@ -91,9 +88,7 @@ public class MachineServiceImpl implements MachineService {
     @Override
     public List<MachineDTO> getAllMachines() {
         List<Machine> machines = machineMapper.selectAll();
-        return machines.stream()
-                .map(machineConverter::toDto)
-                .collect(Collectors.toList());
+        return machines.stream().map(machineConverter::toDto).collect(Collectors.toList());
     }
 
     @Override

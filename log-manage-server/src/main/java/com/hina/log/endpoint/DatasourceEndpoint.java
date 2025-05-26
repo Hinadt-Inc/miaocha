@@ -1,21 +1,18 @@
 package com.hina.log.endpoint;
 
+import com.hina.log.application.service.DatasourceService;
 import com.hina.log.domain.dto.ApiResponse;
 import com.hina.log.domain.dto.DatasourceCreateDTO;
 import com.hina.log.domain.dto.DatasourceDTO;
-import com.hina.log.application.service.DatasourceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
-/**
- * 数据源管理控制器
- */
+/** 数据源管理控制器 */
 @RestController
 @RequestMapping("/api/datasources")
 @Tag(name = "数据源管理", description = "提供数据源的增删改查和连接测试等功能")
@@ -33,14 +30,15 @@ public class DatasourceEndpoint {
     @PostMapping
     @Operation(summary = "创建数据源", description = "创建一个新的数据源连接")
     public ApiResponse<DatasourceDTO> createDatasource(
-            @Parameter(description = "数据源创建信息", required = true) @Valid @RequestBody DatasourceCreateDTO dto) {
+            @Parameter(description = "数据源创建信息", required = true) @Valid @RequestBody
+                    DatasourceCreateDTO dto) {
         return ApiResponse.success(datasourceService.createDatasource(dto));
     }
 
     /**
      * 更新数据源
      *
-     * @param id  数据源ID
+     * @param id 数据源ID
      * @param dto 数据源更新DTO
      * @return 更新后的数据源
      */
@@ -48,7 +46,8 @@ public class DatasourceEndpoint {
     @Operation(summary = "更新数据源", description = "根据ID更新已有数据源的配置信息")
     public ApiResponse<DatasourceDTO> updateDatasource(
             @Parameter(description = "数据源ID", required = true) @PathVariable("id") Long id,
-            @Parameter(description = "数据源更新信息", required = true) @Valid @RequestBody DatasourceCreateDTO dto) {
+            @Parameter(description = "数据源更新信息", required = true) @Valid @RequestBody
+                    DatasourceCreateDTO dto) {
         return ApiResponse.success(datasourceService.updateDatasource(id, dto));
     }
 
@@ -99,7 +98,8 @@ public class DatasourceEndpoint {
     @PostMapping("/test-connection")
     @Operation(summary = "测试数据源连接", description = "测试新的数据源连接是否可用，但不保存")
     public ApiResponse<Boolean> testConnection(
-            @Parameter(description = "数据源连接信息", required = true) @Valid @RequestBody DatasourceCreateDTO dto) {
+            @Parameter(description = "数据源连接信息", required = true) @Valid @RequestBody
+                    DatasourceCreateDTO dto) {
         return ApiResponse.success(datasourceService.testConnection(dto));
     }
 

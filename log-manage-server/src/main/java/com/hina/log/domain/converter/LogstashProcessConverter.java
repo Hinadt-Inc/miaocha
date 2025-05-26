@@ -1,37 +1,34 @@
 package com.hina.log.domain.converter;
 
+import com.hina.log.application.logstash.enums.LogstashMachineState;
 import com.hina.log.domain.dto.logstash.LogstashProcessCreateDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessResponseDTO;
 import com.hina.log.domain.entity.LogstashMachine;
 import com.hina.log.domain.entity.LogstashProcess;
 import com.hina.log.domain.entity.Machine;
-import com.hina.log.application.logstash.enums.LogstashMachineState;
 import com.hina.log.domain.mapper.LogstashMachineMapper;
 import com.hina.log.domain.mapper.MachineMapper;
-import org.springframework.stereotype.Component;
-
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.stereotype.Component;
 
-/**
- * Logstash进程实体与DTO转换器
- */
+/** Logstash进程实体与DTO转换器 */
 @Component
 public class LogstashProcessConverter implements Converter<LogstashProcess, LogstashProcessDTO> {
 
     private final LogstashMachineMapper logstashMachineMapper;
     private final MachineMapper machineMapper;
 
-    public LogstashProcessConverter(LogstashMachineMapper logstashMachineMapper, MachineMapper machineMapper) {
+    public LogstashProcessConverter(
+            LogstashMachineMapper logstashMachineMapper, MachineMapper machineMapper) {
         this.logstashMachineMapper = logstashMachineMapper;
         this.machineMapper = machineMapper;
     }
 
     /**
-     * 将LogstashProcess实体转换为LogstashProcessResponseDTO
-     * 包括机器状态信息
-     * 
+     * 将LogstashProcess实体转换为LogstashProcessResponseDTO 包括机器状态信息
+     *
      * @param process Logstash进程实体
      * @return 包含机器状态信息的响应DTO
      */
@@ -39,7 +36,7 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         if (process == null) {
             return null;
         }
-        
+
         LogstashProcessResponseDTO responseDTO = new LogstashProcessResponseDTO();
         responseDTO.setId(process.getId());
         responseDTO.setName(process.getName());
@@ -49,35 +46,36 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         responseDTO.setLogstashYml(process.getLogstashYml());
         responseDTO.setCreateTime(process.getCreateTime());
         responseDTO.setUpdateTime(process.getUpdateTime());
-        
+
         // 获取关联的机器状态
-        List<LogstashMachine> machineRelations = logstashMachineMapper.selectByLogstashProcessId(process.getId());
-        List<LogstashProcessResponseDTO.LogstashMachineStatusInfoDTO> machineStatuses = new ArrayList<>();
-        
+        List<LogstashMachine> machineRelations =
+                logstashMachineMapper.selectByLogstashProcessId(process.getId());
+        List<LogstashProcessResponseDTO.LogstashMachineStatusInfoDTO> machineStatuses =
+                new ArrayList<>();
+
         for (LogstashMachine relation : machineRelations) {
             Machine machine = machineMapper.selectById(relation.getMachineId());
             if (machine != null) {
-                LogstashProcessResponseDTO.LogstashMachineStatusInfoDTO statusInfo = new LogstashProcessResponseDTO.LogstashMachineStatusInfoDTO();
+                LogstashProcessResponseDTO.LogstashMachineStatusInfoDTO statusInfo =
+                        new LogstashProcessResponseDTO.LogstashMachineStatusInfoDTO();
                 statusInfo.setMachineId(machine.getId());
                 statusInfo.setMachineName(machine.getName());
                 statusInfo.setMachineIp(machine.getIp());
                 statusInfo.setState(LogstashMachineState.valueOf(relation.getState()));
                 statusInfo.setStateDescription(getStateDescription(relation));
-                
+
                 machineStatuses.add(statusInfo);
             }
         }
-        
+
         responseDTO.setMachineStatuses(machineStatuses);
         return responseDTO;
     }
-    
-    /**
-     * 获取状态描述信息
-     */
+
+    /** 获取状态描述信息 */
     private String getStateDescription(LogstashMachine machine) {
         LogstashMachineState state = LogstashMachineState.valueOf(machine.getState());
-        
+
         switch (state) {
             case INITIALIZING:
                 return "正在初始化";
@@ -100,9 +98,7 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         }
     }
 
-    /**
-     * 将DTO转换为实体
-     */
+    /** 将DTO转换为实体 */
     @Override
     public LogstashProcess toEntity(LogstashProcessDTO dto) {
         if (dto == null) {
@@ -123,9 +119,7 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         return entity;
     }
 
-    /**
-     * 将创建DTO转换为实体
-     */
+    /** 将创建DTO转换为实体 */
     public LogstashProcess toEntity(LogstashProcessCreateDTO dto) {
         if (dto == null) {
             return null;
@@ -144,9 +138,7 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         return entity;
     }
 
-    /**
-     * 将实体转换为DTO
-     */
+    /** 将实体转换为DTO */
     @Override
     public LogstashProcessDTO toDto(LogstashProcess entity) {
         if (entity == null) {
@@ -169,9 +161,7 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         return dto;
     }
 
-    /**
-     * 使用DTO更新实体
-     */
+    /** 使用DTO更新实体 */
     @Override
     public LogstashProcess updateEntity(LogstashProcess entity, LogstashProcessDTO dto) {
         if (entity == null || dto == null) {
@@ -190,9 +180,7 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         return entity;
     }
 
-    /**
-     * 使用创建DTO更新实体
-     */
+    /** 使用创建DTO更新实体 */
     public LogstashProcess updateEntity(LogstashProcess entity, LogstashProcessCreateDTO dto) {
         if (entity == null || dto == null) {
             return entity;

@@ -4,13 +4,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import java.util.List;
 import lombok.Data;
 
-import java.util.List;
-
-/**
- * 创建Logstash进程DTO
- */
+/** 创建Logstash进程DTO */
 @Data
 @Schema(description = "创建Logstash进程对象")
 public class LogstashProcessCreateDTO {
@@ -35,8 +32,7 @@ public class LogstashProcessCreateDTO {
     private String logstashYml;
 
     @Schema(description = "关联的数据源ID", example = "1")
-    @NotNull(message = "数据源ID不能为空")
-    private Long datasourceId;
+    @NotNull(message = "数据源ID不能为空") private Long datasourceId;
 
     @Schema(description = "Doris表名, 选择性手动指定, 不指定的话会从配置中解析", example = "log_table_test_env")
     private String tableName;

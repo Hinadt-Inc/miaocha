@@ -8,9 +8,9 @@
     <springProperty scope="context" name="MAX-FILE-SIZE" source="log-config.max-file-size" defaultValue="100MB"/>
     <springProperty scope="context" name="QUEUE-SIZE" source="log-config.queue-size" defaultValue="1024"/>
     <springProperty scope="context" name="DISCARDING-THRESHOLD" source="log-config.discarding-threshold" defaultValue="0"/>
-    
+
     <property name="FILE_NAME" value="log-manage-system"/>
-    
+
     <!-- 日志输出格式 -->
     <property name="CONSOLE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n" />
     <property name="FILE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n" />
@@ -19,7 +19,7 @@
     <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter" />
     <conversionRule conversionWord="wex" converterClass="org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter" />
     <conversionRule conversionWord="wEx" converterClass="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter" />
-    
+
     <!-- 彩色日志格式 -->
     <property name="CONSOLE_LOG_PATTERN_COLOR" value="%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr([%thread]){magenta} %clr(%-5level){green} %clr(%logger{36}){cyan} - %msg%n" />
 
@@ -30,7 +30,7 @@
             <charset>UTF-8</charset>
         </encoder>
     </appender>
-    
+
     <!-- 普通格式文件输出 -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_HOME}/${FILE_NAME}.log</file>
@@ -122,7 +122,7 @@
             <maxFileSize>${MAX-FILE-SIZE}</maxFileSize>
         </rollingPolicy>
     </appender>
-    
+
     <!-- 异步输出 - 普通格式 -->
     <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
         <queueSize>${QUEUE-SIZE}</queueSize>
@@ -165,7 +165,7 @@
             <appender-ref ref="ASYNC_JSON_ERROR" />
         </root>
     </springProfile>
-    
+
     <!-- 生产环境配置：只有JSON格式文件 -->
     <springProfile name="prod">
         <root level="INFO">
@@ -179,5 +179,5 @@
         <logger name="org.hibernate" level="WARN" />
         <logger name="org.apache" level="WARN" />
     </springProfile>
-    
-</configuration> 
+
+</configuration>

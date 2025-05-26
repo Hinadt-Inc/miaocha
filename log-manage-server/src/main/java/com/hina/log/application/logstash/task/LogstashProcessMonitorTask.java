@@ -1,30 +1,24 @@
 package com.hina.log.application.logstash.task;
 
+import com.hina.log.application.logstash.enums.LogstashMachineState;
+import com.hina.log.common.exception.SshException;
+import com.hina.log.common.ssh.SshClient;
 import com.hina.log.domain.entity.LogstashMachine;
 import com.hina.log.domain.entity.LogstashProcess;
 import com.hina.log.domain.entity.Machine;
-import com.hina.log.common.exception.SshException;
-import com.hina.log.application.logstash.enums.LogstashMachineState;
 import com.hina.log.domain.mapper.LogstashMachineMapper;
 import com.hina.log.domain.mapper.LogstashProcessMapper;
 import com.hina.log.domain.mapper.MachineMapper;
-import com.hina.log.common.ssh.SshClient;
-
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.List;
-
-/**
- * Logstash进程监控任务
- * 定期检查所有运行中的Logstash进程状态，发现异常停止的进程时更新状态
- * 只检查已运行至少5分钟的进程，以避免刚启动的进程被误判为异常
- */
+/** Logstash进程监控任务 定期检查所有运行中的Logstash进程状态，发现异常停止的进程时更新状态 只检查已运行至少5分钟的进程，以避免刚启动的进程被误判为异常 */
 @Component
 public class LogstashProcessMonitorTask {
     private static final Logger logger = LoggerFactory.getLogger(LogstashProcessMonitorTask.class);
@@ -48,17 +42,15 @@ public class LogstashProcessMonitorTask {
         this.sshClient = sshClient;
     }
 
-    /**
-     * 定时检查所有运行中的Logstash进程状态
-     * 每10分钟执行一次
-     */
+    /** 定时检查所有运行中的Logstash进程状态 每10分钟执行一次 */
     @Scheduled(fixedRateString = "${logstash.monitor.interval:600000}")
     public void monitorLogstashProcesses() {
         try {
             logger.info("开始定时检查Logstash进程状态...");
 
             // 获取所有有PID记录的Logstash进程关联
-            List<LogstashMachine> processesWithPid = logstashMachineMapper.selectAllWithProcessPid();
+            List<LogstashMachine> processesWithPid =
+                    logstashMachineMapper.selectAllWithProcessPid();
             if (processesWithPid.isEmpty()) {
                 logger.info("没有找到正在运行的Logstash进程，跳过检查");
                 return;
@@ -83,8 +75,11 @@ public class LogstashProcessMonitorTask {
 
             // 记录检查完成时间
             long duration = Duration.between(checkStartTime, LocalDateTime.now()).toMillis();
-            logger.info("Logstash进程状态检查完成，共检查{}个进程，跳过{}个新启动进程，耗时{}毫秒",
-                    checkedCount, skippedCount, duration);
+            logger.info(
+                    "Logstash进程状态检查完成，共检查{}个进程，跳过{}个新启动进程，耗时{}毫秒",
+                    checkedCount,
+                    skippedCount,
+                    duration);
         } catch (Exception e) {
             // 捕获所有异常，确保定时任务不会因为异常而停止
             logger.error("Logstash进程监控任务执行异常: {}", e.getMessage(), e);
@@ -92,9 +87,8 @@ public class LogstashProcessMonitorTask {
     }
 
     /**
-     * 判断是否应该检查该进程
-     * 只检查状态为RUNNING且已运行至少5分钟的进程
-     * 
+     * 判断是否应该检查该进程 只检查状态为RUNNING且已运行至少5分钟的进程
+     *
      * @param logstashMachine Logstash进程与机器的关联记录
      * @return 是否应该检查
      */
@@ -116,8 +110,11 @@ public class LogstashProcessMonitorTask {
 
         // 只检查运行中的机器
         if (!LogstashMachineState.RUNNING.name().equals(logstashMachine.getState())) {
-            logger.debug("Logstash进程[{}]在机器[{}]上状态为{}，不是运行中状态，跳过检查",
-                    processId, logstashMachine.getMachineId(), logstashMachine.getState());
+            logger.debug(
+                    "Logstash进程[{}]在机器[{}]上状态为{}，不是运行中状态，跳过检查",
+                    processId,
+                    logstashMachine.getMachineId(),
+                    logstashMachine.getState());
             return false;
         }
 
@@ -132,8 +129,11 @@ public class LogstashProcessMonitorTask {
         if (updateTime.isAfter(minRunTime)) {
             // 进程更新时间少于MIN_PROCESS_RUNTIME_MINUTES分钟，跳过检查
             long runningMinutes = Duration.between(updateTime, LocalDateTime.now()).toMinutes();
-            logger.debug("Logstash进程[{}]运行时间不足{}分钟(当前{}分钟)，跳过检查",
-                    processId, MIN_PROCESS_RUNTIME_MINUTES, runningMinutes);
+            logger.debug(
+                    "Logstash进程[{}]运行时间不足{}分钟(当前{}分钟)，跳过检查",
+                    processId,
+                    MIN_PROCESS_RUNTIME_MINUTES,
+                    runningMinutes);
             return false;
         }
 
@@ -142,7 +142,7 @@ public class LogstashProcessMonitorTask {
 
     /**
      * 检查单个Logstash进程的状态
-     * 
+     *
      * @param logstashMachine Logstash进程与机器的关联记录
      */
     private void checkProcessStatus(LogstashMachine logstashMachine) {
@@ -153,8 +153,7 @@ public class LogstashProcessMonitorTask {
         // 获取机器信息
         Machine machine = machineMapper.selectById(machineId);
         if (machine == null) {
-            logger.warn("找不到ID为{}的机器记录，无法检查Logstash进程[{}]状态",
-                    machineId, processId);
+            logger.warn("找不到ID为{}的机器记录，无法检查Logstash进程[{}]状态", machineId, processId);
             return;
         }
 
@@ -164,20 +163,23 @@ public class LogstashProcessMonitorTask {
             if (!processExists) {
                 handleDeadProcess(processId, machine, pid);
             } else {
-                logger.debug("Logstash进程[{}]在机器[{}]上正常运行中，PID={}",
-                        processId, machine.getIp(), pid);
+                logger.debug("Logstash进程[{}]在机器[{}]上正常运行中，PID={}", processId, machine.getIp(), pid);
             }
         } catch (Exception e) {
-            logger.error("检查Logstash进程[{}]在机器[{}]上的状态时发生错误: {}",
-                    processId, machine.getIp(), e.getMessage(), e);
+            logger.error(
+                    "检查Logstash进程[{}]在机器[{}]上的状态时发生错误: {}",
+                    processId,
+                    machine.getIp(),
+                    e.getMessage(),
+                    e);
         }
     }
 
     /**
      * 通过SSH检查进程是否存在
-     * 
+     *
      * @param machine 目标机器
-     * @param pid     进程PID
+     * @param pid 进程PID
      * @return 进程是否存在
      */
     private boolean checkProcessExistsBySsh(Machine machine, String pid) {
@@ -187,7 +189,8 @@ public class LogstashProcessMonitorTask {
             String result = sshClient.executeCommand(machine, command);
 
             // 如果结果包含"Process not found"，则进程不存在
-            boolean exists = !result.contains("Process not found") && StringUtils.hasText(result.trim());
+            boolean exists =
+                    !result.contains("Process not found") && StringUtils.hasText(result.trim());
             return exists;
         } catch (SshException e) {
             logger.error("SSH执行检查进程命令失败: {}", e.getMessage());
@@ -198,18 +201,19 @@ public class LogstashProcessMonitorTask {
 
     /**
      * 处理已经死亡的进程
-     * 
+     *
      * @param processId Logstash进程ID
-     * @param machine   目标机器
-     * @param pid       进程PID
+     * @param machine 目标机器
+     * @param pid 进程PID
      */
     private void handleDeadProcess(Long processId, Machine machine, String pid) {
-        logger.warn("检测到Logstash进程[{}]在机器[{}]上异常终止，PID={}",
-                processId, machine.getIp(), pid);
+        logger.warn("检测到Logstash进程[{}]在机器[{}]上异常终止，PID={}", processId, machine.getIp(), pid);
 
         try {
             // 更新机器上的进程状态为未启动
-            int updateResult = logstashMachineMapper.updateState(processId, machine.getId(), LogstashMachineState.NOT_STARTED.name());
+            int updateResult =
+                    logstashMachineMapper.updateState(
+                            processId, machine.getId(), LogstashMachineState.NOT_STARTED.name());
             if (updateResult > 0) {
                 logger.info("已将Logstash进程[{}]在机器[{}]上的状态更新为未启动", processId, machine.getId());
             } else {
@@ -217,12 +221,12 @@ public class LogstashProcessMonitorTask {
             }
 
             // 清空PID记录
-            int pidUpdateResult = logstashMachineMapper.updateProcessPid(processId, machine.getId(), null);
+            int pidUpdateResult =
+                    logstashMachineMapper.updateProcessPid(processId, machine.getId(), null);
             if (pidUpdateResult > 0) {
                 logger.info("已清除Logstash进程[{}]在机器[{}]上的PID记录", processId, machine.getIp());
             } else {
-                logger.warn("清除Logstash进程[{}]在机器[{}]上的PID记录失败，可能已被删除",
-                        processId, machine.getIp());
+                logger.warn("清除Logstash进程[{}]在机器[{}]上的PID记录失败，可能已被删除", processId, machine.getIp());
             }
         } catch (Exception e) {
             logger.error("处理死亡进程[{}]时发生错误: {}", processId, e.getMessage(), e);

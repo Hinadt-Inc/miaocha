@@ -1,34 +1,29 @@
 package com.hina.log.application.service.impl;
 
+import com.hina.log.application.service.DatasourceService;
+import com.hina.log.common.exception.BusinessException;
+import com.hina.log.common.exception.ErrorCode;
 import com.hina.log.domain.converter.DatasourceConverter;
 import com.hina.log.domain.dto.DatasourceCreateDTO;
 import com.hina.log.domain.dto.DatasourceDTO;
 import com.hina.log.domain.entity.Datasource;
 import com.hina.log.domain.entity.enums.DatasourceType;
-import com.hina.log.common.exception.BusinessException;
-import com.hina.log.common.exception.ErrorCode;
 import com.hina.log.domain.mapper.DatasourceMapper;
-import com.hina.log.application.service.DatasourceService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 数据源服务实现类
- */
+/** 数据源服务实现类 */
 @Service
 public class DatasourceServiceImpl implements DatasourceService {
 
-    @Autowired
-    private DatasourceMapper datasourceMapper;
+    @Autowired private DatasourceMapper datasourceMapper;
 
-    @Autowired
-    private DatasourceConverter datasourceConverter;
+    @Autowired private DatasourceConverter datasourceConverter;
 
     @Override
     @Transactional
@@ -115,16 +110,12 @@ public class DatasourceServiceImpl implements DatasourceService {
             }
 
             // 使用枚举构建JDBC URL（包含JDBC参数）
-            String url = datasourceType.buildJdbcUrl(
-                    dto.getIp(),
-                    dto.getPort(),
-                    dto.getDatabase(),
-                    dto.getJdbcParams());
+            String url =
+                    datasourceType.buildJdbcUrl(
+                            dto.getIp(), dto.getPort(), dto.getDatabase(), dto.getJdbcParams());
 
-            try (Connection conn = DriverManager.getConnection(
-                    url,
-                    dto.getUsername(),
-                    dto.getPassword())) {
+            try (Connection conn =
+                    DriverManager.getConnection(url, dto.getUsername(), dto.getPassword())) {
                 return true;
             }
         } catch (Exception e) {

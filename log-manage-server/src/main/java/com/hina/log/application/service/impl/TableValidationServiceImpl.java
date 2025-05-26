@@ -1,13 +1,18 @@
 package com.hina.log.application.service.impl;
 
-import com.hina.log.domain.entity.Datasource;
-import com.hina.log.domain.entity.enums.DatasourceType;
-import com.hina.log.common.exception.BusinessException;
-import com.hina.log.common.exception.ErrorCode;
-import com.hina.log.domain.mapper.DatasourceMapper;
 import com.hina.log.application.service.TableValidationService;
 import com.hina.log.application.service.database.DatabaseMetadataServiceFactory;
 import com.hina.log.application.service.sql.JdbcQueryExecutor;
+import com.hina.log.common.exception.BusinessException;
+import com.hina.log.common.exception.ErrorCode;
+import com.hina.log.domain.entity.Datasource;
+import com.hina.log.domain.entity.enums.DatasourceType;
+import com.hina.log.domain.mapper.DatasourceMapper;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -15,23 +20,12 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-/**
- * 表验证服务实现类
- * 用于验证数据源中表是否存在
- */
+/** 表验证服务实现类 用于验证数据源中表是否存在 */
 @Service
 public class TableValidationServiceImpl implements TableValidationService {
     private static final Logger logger = LoggerFactory.getLogger(TableValidationServiceImpl.class);
 
-    /**
-     * 数据库类型到JDBC驱动类的映射
-     */
+    /** 数据库类型到JDBC驱动类的映射 */
     private static final Map<DatasourceType, String> DRIVER_CLASS_MAP = new HashMap<>();
 
     static {
@@ -45,9 +39,10 @@ public class TableValidationServiceImpl implements TableValidationService {
     private final JdbcQueryExecutor jdbcQueryExecutor;
     private final DatabaseMetadataServiceFactory metadataServiceFactory;
 
-    public TableValidationServiceImpl(DatasourceMapper datasourceMapper,
-                                     JdbcQueryExecutor jdbcQueryExecutor,
-                                     DatabaseMetadataServiceFactory metadataServiceFactory) {
+    public TableValidationServiceImpl(
+            DatasourceMapper datasourceMapper,
+            JdbcQueryExecutor jdbcQueryExecutor,
+            DatabaseMetadataServiceFactory metadataServiceFactory) {
         this.datasourceMapper = datasourceMapper;
         this.jdbcQueryExecutor = jdbcQueryExecutor;
         this.metadataServiceFactory = metadataServiceFactory;
@@ -57,7 +52,7 @@ public class TableValidationServiceImpl implements TableValidationService {
      * 检查指定数据源中是否存在指定的表
      *
      * @param datasourceId 数据源ID
-     * @param tableName    表名
+     * @param tableName 表名
      * @return 表是否存在
      */
     @Override
@@ -83,9 +78,7 @@ public class TableValidationServiceImpl implements TableValidationService {
         }
     }
 
-    /**
-     * 验证参数
-     */
+    /** 验证参数 */
     private void validateParameters(Long datasourceId, String tableName) {
         if (datasourceId == null) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "数据源ID不能为空");
@@ -96,9 +89,7 @@ public class TableValidationServiceImpl implements TableValidationService {
         }
     }
 
-    /**
-     * 获取数据源
-     */
+    /** 获取数据源 */
     private Datasource getDatasource(Long datasourceId) {
         Datasource datasource = datasourceMapper.selectById(datasourceId);
         if (datasource == null) {
@@ -107,22 +98,19 @@ public class TableValidationServiceImpl implements TableValidationService {
         return datasource;
     }
 
-    /**
-     * 获取数据源类型
-     */
+    /** 获取数据源类型 */
     private DatasourceType getDatasourceType(Datasource datasource) {
         DatasourceType datasourceType = DatasourceType.fromType(datasource.getType());
         if (datasourceType == null) {
-            throw new BusinessException(ErrorCode.DATASOURCE_TYPE_NOT_SUPPORTED,
-                    "不支持的数据源类型: " + datasource.getType());
+            throw new BusinessException(
+                    ErrorCode.DATASOURCE_TYPE_NOT_SUPPORTED, "不支持的数据源类型: " + datasource.getType());
         }
         return datasourceType;
     }
 
-    /**
-     * 使用JdbcTemplate检查表是否存在
-     */
-    private boolean checkTableExistsWithJdbcTemplate(Datasource datasource, DatasourceType datasourceType, String tableName) {
+    /** 使用JdbcTemplate检查表是否存在 */
+    private boolean checkTableExistsWithJdbcTemplate(
+            Datasource datasource, DatasourceType datasourceType, String tableName) {
         // 创建临时数据源连接
         DriverManagerDataSource dataSource = createDataSource(datasource, datasourceType);
         JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
@@ -132,7 +120,9 @@ public class TableValidationServiceImpl implements TableValidationService {
 
         // MySQL和Doris使用相同的查询
         if (dbType.contains("mysql") || dbType.contains("doris")) {
-            String query = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ? AND table_name = ?";
+            String query =
+                    "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ? AND"
+                            + " table_name = ?";
             String dbName = datasource.getDatabase();
             return jdbcTemplate.queryForObject(query, Integer.class, dbName, tableName) > 0;
         } else {
@@ -147,10 +137,7 @@ public class TableValidationServiceImpl implements TableValidationService {
         }
     }
 
-    /**
-     * 使用DatabaseMetadataService检查表是否存在
-     * 备用方法，当前未使用
-     */
+    /** 使用DatabaseMetadataService检查表是否存在 备用方法，当前未使用 */
     private boolean checkTableExistsWithMetadataService(Datasource datasource, String tableName) {
         try (Connection connection = jdbcQueryExecutor.getConnection(datasource)) {
             // 获取对应的元数据服务
@@ -164,16 +151,16 @@ public class TableValidationServiceImpl implements TableValidationService {
         }
     }
 
-    /**
-     * 创建数据源
-     */
-    private DriverManagerDataSource createDataSource(Datasource datasource, DatasourceType datasourceType) {
+    /** 创建数据源 */
+    private DriverManagerDataSource createDataSource(
+            Datasource datasource, DatasourceType datasourceType) {
         // 构建 JDBC URL
-        String url = datasourceType.buildJdbcUrl(
-                datasource.getIp(),
-                datasource.getPort(),
-                datasource.getDatabase(),
-                datasource.getJdbcParams());
+        String url =
+                datasourceType.buildJdbcUrl(
+                        datasource.getIp(),
+                        datasource.getPort(),
+                        datasource.getDatabase(),
+                        datasource.getJdbcParams());
 
         // 创建临时数据源连接
         DriverManagerDataSource dataSource = new DriverManagerDataSource();
@@ -190,5 +177,4 @@ public class TableValidationServiceImpl implements TableValidationService {
 
         return dataSource;
     }
-
 }

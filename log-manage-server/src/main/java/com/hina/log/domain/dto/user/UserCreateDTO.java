@@ -6,9 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
-/**
- * 用户创建DTO
- */
+/** 用户创建DTO */
 @Data
 @Schema(description = "用户创建请求对象")
 public class UserCreateDTO {
@@ -27,7 +25,11 @@ public class UserCreateDTO {
     @Pattern(regexp = "^.{6,20}$", message = "密码长度必须在6-20位之间")
     private String password;
 
-    @Schema(description = "用户角色", example = "ADMIN", required = true, allowableValues = { "ADMIN", "USER" })
+    @Schema(
+            description = "用户角色",
+            example = "ADMIN",
+            required = true,
+            allowableValues = {"ADMIN", "USER"})
     @NotBlank(message = "角色不能为空")
     @Pattern(regexp = "^(ADMIN|USER)$", message = "角色必须是ADMIN或USER")
     private String role;

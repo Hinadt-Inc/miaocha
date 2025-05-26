@@ -1,20 +1,18 @@
 package com.hina.log.application.logstash.command;
 
-import com.hina.log.domain.entity.Machine;
 import com.hina.log.common.exception.SshOperationException;
 import com.hina.log.common.ssh.SshClient;
-
+import com.hina.log.domain.entity.Machine;
 import java.io.File;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * 解压Logstash安装包命令
- */
+/** 解压Logstash安装包命令 */
 public class ExtractPackageCommand extends AbstractLogstashCommand {
 
     private final String packagePath;
 
-    public ExtractPackageCommand(SshClient sshClient, String deployDir, String packagePath, Long processId) {
+    public ExtractPackageCommand(
+            SshClient sshClient, String deployDir, String packagePath, Long processId) {
         super(sshClient, deployDir, processId);
         this.packagePath = packagePath;
     }
@@ -31,13 +29,17 @@ public class ExtractPackageCommand extends AbstractLogstashCommand {
 
             // 解压安装包，使用--strip-components=1去除顶层目录
             logger.info("开始解压Logstash安装包: {}", remotePackagePath);
-            String extractCommand = String.format("cd %s && tar -xzf %s --strip-components=1",
-                    processDir, fileName);
+            String extractCommand =
+                    String.format(
+                            "cd %s && tar -xzf %s --strip-components=1", processDir, fileName);
             sshClient.executeCommand(machine, extractCommand);
 
             // 检查解压是否成功
-            String checkCommand = String.format("if [ -d \"%s/bin\" ] && [ -f \"%s/bin/logstash\" ]; then echo \"success\"; else echo \"failed\"; fi",
-                    processDir, processDir);
+            String checkCommand =
+                    String.format(
+                            "if [ -d \"%s/bin\" ] && [ -f \"%s/bin/logstash\" ]; then echo"
+                                    + " \"success\"; else echo \"failed\"; fi",
+                            processDir, processDir);
             String checkResult = sshClient.executeCommand(machine, checkCommand);
 
             boolean success = "success".equals(checkResult.trim());
@@ -55,7 +57,8 @@ public class ExtractPackageCommand extends AbstractLogstashCommand {
             future.complete(success);
         } catch (Exception e) {
             logger.error("解压Logstash安装包时发生错误: {}", e.getMessage(), e);
-            future.completeExceptionally(new SshOperationException("解压Logstash安装包失败: " + e.getMessage(), e));
+            future.completeExceptionally(
+                    new SshOperationException("解压Logstash安装包失败: " + e.getMessage(), e));
         }
 
         return future;

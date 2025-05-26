@@ -1,12 +1,10 @@
 package com.hina.log.domain.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Data;
 import java.time.LocalDateTime;
+import lombok.Data;
 
-/**
- * 数据源DTO，用于接口返回，不包含敏感信息
- */
+/** 数据源DTO，用于接口返回，不包含敏感信息 */
 @Data
 @Schema(description = "数据源响应对象")
 public class DatasourceDTO {

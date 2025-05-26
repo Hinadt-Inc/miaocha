@@ -34,6 +34,7 @@
 ## 🚀 部署步骤
 
 ### 1. 环境准备
+
 ```bash
 # 创建应用目录
 sudo mkdir -p /opt/log-manage-system
@@ -46,6 +47,7 @@ sudo chown -R appuser:appuser /var/log/log-manage-system
 ```
 
 ### 2. 部署应用
+
 ```bash
 # 解压发布包
 tar -xzf log-manage-assembly-1.0.0-distribution.tar.gz -C /opt/log-manage-system
@@ -55,6 +57,7 @@ cp application-prod.yml /etc/log-manage-system/
 ```
 
 ### 3. 数据库初始化
+
 ```bash
 # 连接数据库并创建数据库
 mysql -u root -p
@@ -65,6 +68,7 @@ FLUSH PRIVILEGES;
 ```
 
 ### 4. 启动应用
+
 ```bash
 # 生产环境启动
 cd /opt/log-manage-system
@@ -78,6 +82,7 @@ java -jar \
 ## 🔧 生产环境配置示例
 
 ### application-prod.yml
+
 ```yaml
 server:
   port: 8080
@@ -147,18 +152,17 @@ logging:
    - 检查Java版本和环境变量
    - 查看日志文件中的错误信息
    - 确认配置文件路径和内容
-
 2. **数据库连接失败**
    - 验证数据库服务状态
    - 检查连接字符串和认证信息
    - 确认网络连通性
-
 3. **权限问题**
    - 检查文件系统权限
    - 确认数据库用户权限
    - 验证应用运行用户权限
 
 ### 日志文件位置
+
 ```
 /var/log/log-manage-system/
 ├── log-manage-system-json.log         # INFO级别JSON日志
@@ -181,4 +185,4 @@ logging:
 
 ---
 
-**注意**: 此检查清单适用于 1.0.0 版本，后续版本请参考对应的部署文档。 
+**注意**: 此检查清单适用于 1.0.0 版本，后续版本请参考对应的部署文档。

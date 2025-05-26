@@ -28,7 +28,7 @@ public interface Converter<E, D> {
      * 更新实体
      *
      * @param entity 需要更新的实体
-     * @param dto    包含更新数据的DTO
+     * @param dto 包含更新数据的DTO
      * @return 更新后的实体
      */
     E updateEntity(E entity, D dto);

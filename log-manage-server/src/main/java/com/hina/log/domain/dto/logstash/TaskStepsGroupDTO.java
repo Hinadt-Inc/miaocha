@@ -3,9 +3,7 @@ package com.hina.log.domain.dto.logstash;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/**
- * 任务步骤分组DTO，用于展示按步骤分组的任务执行情况
- */
+/** 任务步骤分组DTO，用于展示按步骤分组的任务执行情况 */
 public class TaskStepsGroupDTO {
 
     private String taskId;
@@ -45,9 +43,7 @@ public class TaskStepsGroupDTO {
         this.steps = steps;
     }
 
-    /**
-     * 步骤组，包含步骤ID、名称和在各机器上的执行情况
-     */
+    /** 步骤组，包含步骤ID、名称和在各机器上的执行情况 */
     public static class StepGroup {
         private String stepId;
         private String stepName;
@@ -132,9 +128,7 @@ public class TaskStepsGroupDTO {
         }
     }
 
-    /**
-     * 机器步骤，表示特定步骤在特定机器上的执行情况
-     */
+    /** 机器步骤，表示特定步骤在特定机器上的执行情况 */
     public static class MachineStep {
         private Long machineId;
         private String machineName;

@@ -3,9 +3,7 @@ package com.hina.log.domain.entity.enums;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 
-/**
- * 数据源类型枚举
- */
+/** 数据源类型枚举 */
 @Getter
 @Schema(description = "数据源类型枚举")
 public enum DatasourceType {
@@ -29,9 +27,7 @@ public enum DatasourceType {
         this.urlTemplate = urlTemplate;
     }
 
-    /**
-     * 根据类型获取枚举
-     */
+    /** 根据类型获取枚举 */
     public static DatasourceType fromType(String type) {
         if (type == null) {
             return null;
@@ -45,19 +41,17 @@ public enum DatasourceType {
         return null;
     }
 
-    /**
-     * 构建基础JDBC URL（不包含额外参数）
-     */
+    /** 构建基础JDBC URL（不包含额外参数） */
     private String buildBaseJdbcUrl(String ip, int port, String database) {
         return String.format(urlTemplate, ip, port, database);
     }
 
     /**
      * 构建完整JDBC URL（包含额外参数）
-     * 
-     * @param ip         数据库IP
-     * @param port       数据库端口
-     * @param database   数据库名称
+     *
+     * @param ip 数据库IP
+     * @param port 数据库端口
+     * @param database 数据库名称
      * @param jdbcParams 额外的JDBC参数
      * @return 完整的JDBC URL
      */
@@ -76,9 +70,7 @@ public enum DatasourceType {
         }
     }
 
-    /**
-     * 构建JDBC URL（向后兼容的方法）
-     */
+    /** 构建JDBC URL（向后兼容的方法） */
     public String buildJdbcUrl(String ip, int port, String database) {
         return buildJdbcUrl(ip, port, database, null);
     }

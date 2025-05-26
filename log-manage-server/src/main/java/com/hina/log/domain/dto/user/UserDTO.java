@@ -1,13 +1,10 @@
 package com.hina.log.domain.dto.user;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.time.LocalDateTime;
 import lombok.Data;
 
-import java.time.LocalDateTime;
-
-/**
- * 用户信息DTO
- */
+/** 用户信息DTO */
 @Data
 @Schema(description = "用户信息对象")
 public class UserDTO {

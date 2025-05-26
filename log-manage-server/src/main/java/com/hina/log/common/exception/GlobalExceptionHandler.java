@@ -1,6 +1,8 @@
 package com.hina.log.common.exception;
 
 import com.hina.log.domain.dto.ApiResponse;
+import java.nio.charset.StandardCharsets;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -14,28 +16,19 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-import java.nio.charset.StandardCharsets;
-import java.util.stream.Collectors;
-
-/**
- * 全局异常处理
- */
+/** 全局异常处理 */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /**
-     * 创建带有UTF-8编码的ResponseEntity
-     */
+    /** 创建带有UTF-8编码的ResponseEntity */
     private <T> ResponseEntity<T> createResponseEntityWithUtf8(T body, HttpStatus status) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(new MediaType(MediaType.APPLICATION_JSON, StandardCharsets.UTF_8));
         return new ResponseEntity<>(body, headers, status);
     }
 
-    /**
-     * 业务异常处理
-     */
+    /** 业务异常处理 */
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
         log.error("业务异常: {}", e.getMessage());
@@ -43,50 +36,50 @@ public class GlobalExceptionHandler {
         return createResponseEntityWithUtf8(response, HttpStatus.BAD_REQUEST);
     }
 
-    /**
-     * 关键字语法异常处理
-     */
+    /** 关键字语法异常处理 */
     @ExceptionHandler(KeywordSyntaxException.class)
-    public ResponseEntity<ApiResponse<Void>> handleKeywordSyntaxException(KeywordSyntaxException e) {
+    public ResponseEntity<ApiResponse<Void>> handleKeywordSyntaxException(
+            KeywordSyntaxException e) {
         log.warn("关键字语法异常: {}, 表达式: {}", e.getMessage(), e.getExpression());
-        ApiResponse<Void> response = ApiResponse.error(ErrorCode.VALIDATION_ERROR.getCode(),
-                "关键字表达式语法错误: " + e.getMessage());
+        ApiResponse<Void> response =
+                ApiResponse.error(
+                        ErrorCode.VALIDATION_ERROR.getCode(), "关键字表达式语法错误: " + e.getMessage());
         return createResponseEntityWithUtf8(response, HttpStatus.BAD_REQUEST);
     }
 
-    /**
-     * 参数校验异常处理
-     */
+    /** 参数校验异常处理 */
     @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
     public ResponseEntity<ApiResponse<Void>> handleValidationException(Exception e) {
         String message;
         if (e instanceof MethodArgumentNotValidException) {
-            message = ((MethodArgumentNotValidException) e).getBindingResult().getFieldErrors().stream()
-                    .map(FieldError::getDefaultMessage)
-                    .collect(Collectors.joining(", "));
+            message =
+                    ((MethodArgumentNotValidException) e)
+                            .getBindingResult().getFieldErrors().stream()
+                                    .map(FieldError::getDefaultMessage)
+                                    .collect(Collectors.joining(", "));
         } else {
-            message = ((BindException) e).getBindingResult().getFieldErrors().stream()
-                    .map(FieldError::getDefaultMessage)
-                    .collect(Collectors.joining(", "));
+            message =
+                    ((BindException) e)
+                            .getBindingResult().getFieldErrors().stream()
+                                    .map(FieldError::getDefaultMessage)
+                                    .collect(Collectors.joining(", "));
         }
         log.error("参数校验异常: {}", message);
-        ApiResponse<Void> response = ApiResponse.error(ErrorCode.VALIDATION_ERROR.getCode(), message);
+        ApiResponse<Void> response =
+                ApiResponse.error(ErrorCode.VALIDATION_ERROR.getCode(), message);
         return createResponseEntityWithUtf8(response, HttpStatus.BAD_REQUEST);
     }
 
-    /**
-     * 权限不足异常处理
-     */
+    /** 权限不足异常处理 */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(AccessDeniedException e) {
         log.error("权限不足异常: {}", e.getMessage());
-        ApiResponse<Void> response = ApiResponse.error(ErrorCode.PERMISSION_DENIED.getCode(), "没有操作权限");
+        ApiResponse<Void> response =
+                ApiResponse.error(ErrorCode.PERMISSION_DENIED.getCode(), "没有操作权限");
         return createResponseEntityWithUtf8(response, HttpStatus.FORBIDDEN);
     }
 
-    /**
-     * 日志管理系统异常处理
-     */
+    /** 日志管理系统异常处理 */
     @ExceptionHandler(LogManageException.class)
     public ResponseEntity<ApiResponse<Void>> handleLogManageException(LogManageException e) {
         log.error("日志管理异常: ", e);
@@ -96,7 +89,8 @@ public class GlobalExceptionHandler {
         if (e instanceof SshOperationException) {
             response = ApiResponse.error(ErrorCode.SSH_OPERATION_FAILED.getCode(), e.getMessage());
         } else if (e instanceof LogstashException) {
-            response = ApiResponse.error(ErrorCode.LOGSTASH_DEPLOY_FAILED.getCode(), e.getMessage());
+            response =
+                    ApiResponse.error(ErrorCode.LOGSTASH_DEPLOY_FAILED.getCode(), e.getMessage());
         } else if (e instanceof TaskExecutionException) {
             response = ApiResponse.error(ErrorCode.TASK_EXECUTION_FAILED.getCode(), e.getMessage());
         } else {
@@ -106,34 +100,31 @@ public class GlobalExceptionHandler {
         return createResponseEntityWithUtf8(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    /**
-     * SSH异常处理
-     */
+    /** SSH异常处理 */
     @ExceptionHandler(SshException.class)
     public ResponseEntity<ApiResponse<Void>> handleSshException(SshException e) {
         log.error("SSH异常: ", e);
-        ApiResponse<Void> response = ApiResponse.error(ErrorCode.SSH_COMMAND_FAILED.getCode(), e.getMessage());
+        ApiResponse<Void> response =
+                ApiResponse.error(ErrorCode.SSH_COMMAND_FAILED.getCode(), e.getMessage());
         return createResponseEntityWithUtf8(response, HttpStatus.SERVICE_UNAVAILABLE);
     }
 
-    /**
-     * 资源未找到异常处理 (404)
-     */
+    /** 资源未找到异常处理 (404) */
     @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<ApiResponse<Void>> handleNoResourceFoundException(NoResourceFoundException e) {
+    public ResponseEntity<ApiResponse<Void>> handleNoResourceFoundException(
+            NoResourceFoundException e) {
         log.warn("资源未找到: {}", e.getMessage());
-        ApiResponse<Void> response = ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND.getCode(), 
-                "请求的资源不存在，请检查URL路径是否正确");
+        ApiResponse<Void> response =
+                ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND.getCode(), "请求的资源不存在，请检查URL路径是否正确");
         return createResponseEntityWithUtf8(response, HttpStatus.NOT_FOUND);
     }
 
-    /**
-     * 通用异常处理
-     */
+    /** 通用异常处理 */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
         log.error("系统异常: ", e);
-        ApiResponse<Void> response = ApiResponse.error(ErrorCode.INTERNAL_ERROR.getCode(), "系统异常，请联系管理员");
+        ApiResponse<Void> response =
+                ApiResponse.error(ErrorCode.INTERNAL_ERROR.getCode(), "系统异常，请联系管理员");
         return createResponseEntityWithUtf8(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

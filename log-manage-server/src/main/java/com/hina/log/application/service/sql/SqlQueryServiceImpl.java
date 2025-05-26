@@ -1,5 +1,13 @@
 package com.hina.log.application.service.sql;
 
+import com.hina.log.application.service.SqlQueryService;
+import com.hina.log.application.service.database.DatabaseMetadataService;
+import com.hina.log.application.service.database.DatabaseMetadataServiceFactory;
+import com.hina.log.application.service.export.FileExporter;
+import com.hina.log.application.service.export.FileExporterFactory;
+import com.hina.log.application.service.impl.QueryPermissionChecker;
+import com.hina.log.common.exception.BusinessException;
+import com.hina.log.common.exception.ErrorCode;
 import com.hina.log.domain.converter.SqlQueryHistoryConverter;
 import com.hina.log.domain.dto.SchemaInfoDTO;
 import com.hina.log.domain.dto.SqlHistoryQueryDTO;
@@ -10,28 +18,9 @@ import com.hina.log.domain.entity.Datasource;
 import com.hina.log.domain.entity.SqlQueryHistory;
 import com.hina.log.domain.entity.User;
 import com.hina.log.domain.entity.enums.UserRole;
-import com.hina.log.common.exception.BusinessException;
-import com.hina.log.common.exception.ErrorCode;
 import com.hina.log.domain.mapper.DatasourceMapper;
 import com.hina.log.domain.mapper.SqlQueryHistoryMapper;
 import com.hina.log.domain.mapper.UserMapper;
-import com.hina.log.application.service.SqlQueryService;
-import com.hina.log.application.service.database.DatabaseMetadataService;
-import com.hina.log.application.service.database.DatabaseMetadataServiceFactory;
-import com.hina.log.application.service.export.FileExporter;
-import com.hina.log.application.service.export.FileExporterFactory;
-import com.hina.log.application.service.impl.QueryPermissionChecker;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -49,57 +38,54 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-/**
- * SQL查询服务实现类
- */
+/** SQL查询服务实现类 */
 @Service
 public class SqlQueryServiceImpl implements SqlQueryService {
     private static final Logger logger = LoggerFactory.getLogger(SqlQueryServiceImpl.class);
 
-    @Autowired
-    private DatasourceMapper datasourceMapper;
+    @Autowired private DatasourceMapper datasourceMapper;
 
-    @Autowired
-    private UserMapper userMapper;
+    @Autowired private UserMapper userMapper;
 
-    @Autowired
-    private SqlQueryHistoryMapper sqlQueryHistoryMapper;
+    @Autowired private SqlQueryHistoryMapper sqlQueryHistoryMapper;
 
-    @Autowired
-    private JdbcQueryExecutor jdbcQueryExecutor;
+    @Autowired private JdbcQueryExecutor jdbcQueryExecutor;
 
-    @Autowired
-    private QueryPermissionChecker permissionChecker;
+    @Autowired private QueryPermissionChecker permissionChecker;
 
-    @Autowired
-    private FileExporterFactory exporterFactory;
+    @Autowired private FileExporterFactory exporterFactory;
 
-    @Autowired
-    private DatabaseMetadataServiceFactory metadataServiceFactory;
+    @Autowired private DatabaseMetadataServiceFactory metadataServiceFactory;
 
     @Autowired(required = false)
-    @Qualifier("logQueryExecutor")
-    private Executor sqlQueryExecutor;
+    @Qualifier("logQueryExecutor") private Executor sqlQueryExecutor;
 
     @Value("${sql.query.export.dir:/tmp/sql-exports}")
     private String exportDir;
 
-    private static final Pattern TABLE_NAME_PATTERN = Pattern.compile("\\bFROM\\s+[\"'`]?([\\w\\d_\\.]+)[\"'`]?",
-            Pattern.CASE_INSENSITIVE);
+    private static final Pattern TABLE_NAME_PATTERN =
+            Pattern.compile("\\bFROM\\s+[\"'`]?([\\w\\d_\\.]+)[\"'`]?", Pattern.CASE_INSENSITIVE);
 
-    private static final Pattern LIMIT_PATTERN = Pattern.compile("\\blimit\\s+\\d+(?:\\s*,\\s*\\d+)?\\s*$",
-            Pattern.CASE_INSENSITIVE);
+    private static final Pattern LIMIT_PATTERN =
+            Pattern.compile("\\blimit\\s+\\d+(?:\\s*,\\s*\\d+)?\\s*$", Pattern.CASE_INSENSITIVE);
 
     private static final int DEFAULT_QUERY_LIMIT = 1000;
     private static final int MAX_QUERY_LIMIT = 10000;
 
-    @Autowired
-    private SqlQueryHistoryConverter sqlQueryHistoryConverter;
+    @Autowired private SqlQueryHistoryConverter sqlQueryHistoryConverter;
 
-    /**
-     * 获取线程执行器，如果注入的执行器为空（如在测试环境中），则使用公共线程池
-     */
+    /** 获取线程执行器，如果注入的执行器为空（如在测试环境中），则使用公共线程池 */
     private Executor getExecutor() {
         return sqlQueryExecutor != null ? sqlQueryExecutor : ForkJoinPool.commonPool();
     }
@@ -136,22 +122,29 @@ public class SqlQueryServiceImpl implements SqlQueryService {
         try {
             // 使用CompletableFuture异步执行SQL查询
             // 在测试环境中，可能不会注入sqlQueryExecutor，所以使用getExecutor获取执行器
-            result = CompletableFuture
-                    .supplyAsync(() -> {
-                        logger.debug("开始执行SQL查询: {}", dto.getSql());
-                        return jdbcQueryExecutor.executeQuery(datasource, dto.getSql());
-                    }, getExecutor())
-                    .exceptionally(throwable -> {
-                        logger.error("SQL查询执行失败", throwable);
-                        if (throwable instanceof CompletionException && throwable.getCause() != null) {
-                            throwable = throwable.getCause();
-                        }
-                        if (throwable instanceof BusinessException) {
-                            throw (BusinessException) throwable;
-                        }
-                        throw new BusinessException(ErrorCode.INTERNAL_ERROR, "SQL执行失败: " + throwable.getMessage());
-                    })
-                    .join();
+            result =
+                    CompletableFuture.supplyAsync(
+                                    () -> {
+                                        logger.debug("开始执行SQL查询: {}", dto.getSql());
+                                        return jdbcQueryExecutor.executeQuery(
+                                                datasource, dto.getSql());
+                                    },
+                                    getExecutor())
+                            .exceptionally(
+                                    throwable -> {
+                                        logger.error("SQL查询执行失败", throwable);
+                                        if (throwable instanceof CompletionException
+                                                && throwable.getCause() != null) {
+                                            throwable = throwable.getCause();
+                                        }
+                                        if (throwable instanceof BusinessException) {
+                                            throw (BusinessException) throwable;
+                                        }
+                                        throw new BusinessException(
+                                                ErrorCode.INTERNAL_ERROR,
+                                                "SQL执行失败: " + throwable.getMessage());
+                                    })
+                            .join();
 
             long endTime = System.currentTimeMillis();
             result.setExecutionTimeMs(endTime - startTime);
@@ -162,7 +155,8 @@ public class SqlQueryServiceImpl implements SqlQueryService {
             if (cause instanceof BusinessException) {
                 throw (BusinessException) cause;
             }
-            throw new BusinessException(ErrorCode.INTERNAL_ERROR,
+            throw new BusinessException(
+                    ErrorCode.INTERNAL_ERROR,
                     "SQL执行失败: " + (cause != null ? cause.getMessage() : e.getMessage()));
         } catch (Exception e) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "SQL执行失败: " + e.getMessage());
@@ -191,9 +185,7 @@ public class SqlQueryServiceImpl implements SqlQueryService {
     }
 
     /**
-     * 检查并处理SQL语句，确保添加适当的LIMIT限制
-     * 1. 如果用户没有指定limit，添加默认的1000条限制
-     * 2. 如果用户指定了limit，检查是否超过10000条，超过则拒绝执行
+     * 检查并处理SQL语句，确保添加适当的LIMIT限制 1. 如果用户没有指定limit，添加默认的1000条限制 2. 如果用户指定了limit，检查是否超过10000条，超过则拒绝执行
      *
      * @param sql 原始SQL查询
      * @return 处理后的SQL查询
@@ -216,7 +208,8 @@ public class SqlQueryServiceImpl implements SqlQueryService {
 
             // 检查LIMIT是否超过最大允许值
             if (limitValue > MAX_QUERY_LIMIT) {
-                throw new BusinessException(ErrorCode.VALIDATION_ERROR,
+                throw new BusinessException(
+                        ErrorCode.VALIDATION_ERROR,
                         "查询结果数量限制不能超过" + MAX_QUERY_LIMIT + "条，请调整您的LIMIT语句");
             }
 
@@ -234,10 +227,7 @@ public class SqlQueryServiceImpl implements SqlQueryService {
     }
 
     /**
-     * 从LIMIT子句中提取限制值
-     * 处理如下几种情况:
-     * - LIMIT X
-     * - LIMIT X, Y (MySQL语法，返回偏移X后的Y条记录)
+     * 从LIMIT子句中提取限制值 处理如下几种情况: - LIMIT X - LIMIT X, Y (MySQL语法，返回偏移X后的Y条记录)
      *
      * @param limitClause LIMIT子句
      * @return 提取的限制值
@@ -257,10 +247,9 @@ public class SqlQueryServiceImpl implements SqlQueryService {
         }
     }
 
-    /**
-     * 执行导出结果的具体逻辑
-     */
-    private void doExportResult(SqlQueryResultDTO result, SqlQueryDTO dto, SqlQueryHistory history) {
+    /** 执行导出结果的具体逻辑 */
+    private void doExportResult(
+            SqlQueryResultDTO result, SqlQueryDTO dto, SqlQueryHistory history) {
         String exportFormat = dto.getExportFormat();
         if (StringUtils.isBlank(exportFormat)) {
             exportFormat = "xlsx"; // 默认为Excel格式
@@ -293,10 +282,9 @@ public class SqlQueryServiceImpl implements SqlQueryService {
         }
     }
 
-    /**
-     * 异步导出查询结果
-     */
-    private void exportResultAsync(SqlQueryResultDTO result, SqlQueryDTO dto, SqlQueryHistory history) {
+    /** 异步导出查询结果 */
+    private void exportResultAsync(
+            SqlQueryResultDTO result, SqlQueryDTO dto, SqlQueryHistory history) {
         String exportFormat = dto.getExportFormat();
         if (StringUtils.isBlank(exportFormat)) {
             exportFormat = "xlsx"; // 默认为Excel格式
@@ -307,30 +295,33 @@ public class SqlQueryServiceImpl implements SqlQueryService {
         final String filePath = buildExportFilePath(fileName);
 
         // 使用线程池异步执行导出操作
-        CompletableFuture.runAsync(() -> {
-            try {
-                logger.debug("开始导出SQL查询结果: {}", filePath);
-                // 获取对应格式的导出器
-                FileExporter exporter = exporterFactory.getExporter(finalExportFormat);
-                if (exporter == null) {
-                    throw new BusinessException(ErrorCode.EXPORT_FAILED, "不支持的导出格式: " + finalExportFormat);
-                }
+        CompletableFuture.runAsync(
+                () -> {
+                    try {
+                        logger.debug("开始导出SQL查询结果: {}", filePath);
+                        // 获取对应格式的导出器
+                        FileExporter exporter = exporterFactory.getExporter(finalExportFormat);
+                        if (exporter == null) {
+                            throw new BusinessException(
+                                    ErrorCode.EXPORT_FAILED, "不支持的导出格式: " + finalExportFormat);
+                        }
 
-                // 导出到文件
-                exporter.exportToFile(result, filePath);
+                        // 导出到文件
+                        exporter.exportToFile(result, filePath);
 
-                // 更新SQL查询历史中的结果文件路径
-                history.setResultFilePath(filePath);
-                sqlQueryHistoryMapper.update(history);
+                        // 更新SQL查询历史中的结果文件路径
+                        history.setResultFilePath(filePath);
+                        sqlQueryHistoryMapper.update(history);
 
-                // 设置下载链接
-                result.setDownloadUrl("/api/sql/result/" + history.getId());
-                logger.info("SQL查询结果导出完成: {}", filePath);
-            } catch (Exception e) {
-                logger.error("SQL查询结果导出失败", e);
-                // 导出失败但不影响主流程，只记录日志
-            }
-        }, getExecutor());
+                        // 设置下载链接
+                        result.setDownloadUrl("/api/sql/result/" + history.getId());
+                        logger.info("SQL查询结果导出完成: {}", filePath);
+                    } catch (Exception e) {
+                        logger.error("SQL查询结果导出失败", e);
+                        // 导出失败但不影响主流程，只记录日志
+                    }
+                },
+                getExecutor());
     }
 
     @Override
@@ -358,49 +349,54 @@ public class SqlQueryServiceImpl implements SqlQueryService {
             }
 
             // 生产环境，使用CompletableFuture异步获取Schema信息
-            return CompletableFuture
-                    .supplyAsync(() -> getSchemaInfoSync(user, userId, datasource, schemaInfo),
+            return CompletableFuture.supplyAsync(
+                            () -> getSchemaInfoSync(user, userId, datasource, schemaInfo),
                             getExecutor())
-                    .exceptionally(throwable -> {
-                        logger.error("获取Schema信息失败", throwable);
-                        if (throwable instanceof CompletionException && throwable.getCause() != null) {
-                            throwable = throwable.getCause();
-                        }
-                        if (throwable instanceof BusinessException) {
-                            throw (BusinessException) throwable;
-                        }
-                        throw new BusinessException(ErrorCode.INTERNAL_ERROR, "获取数据库结构失败: " + throwable.getMessage());
-                    })
+                    .exceptionally(
+                            throwable -> {
+                                logger.error("获取Schema信息失败", throwable);
+                                if (throwable instanceof CompletionException
+                                        && throwable.getCause() != null) {
+                                    throwable = throwable.getCause();
+                                }
+                                if (throwable instanceof BusinessException) {
+                                    throw (BusinessException) throwable;
+                                }
+                                throw new BusinessException(
+                                        ErrorCode.INTERNAL_ERROR,
+                                        "获取数据库结构失败: " + throwable.getMessage());
+                            })
                     .join();
         } catch (CompletionException e) {
             Throwable cause = e.getCause();
             if (cause instanceof BusinessException) {
                 throw (BusinessException) cause;
             }
-            throw new BusinessException(ErrorCode.INTERNAL_ERROR,
+            throw new BusinessException(
+                    ErrorCode.INTERNAL_ERROR,
                     "获取数据库结构失败: " + (cause != null ? cause.getMessage() : e.getMessage()));
         } catch (Exception e) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "获取数据库结构失败: " + e.getMessage());
         }
     }
 
-    /**
-     * 同步获取schema信息
-     */
-    private SchemaInfoDTO getSchemaInfoSync(User user, Long userId, Datasource datasource, SchemaInfoDTO schemaInfo) {
+    /** 同步获取schema信息 */
+    private SchemaInfoDTO getSchemaInfoSync(
+            User user, Long userId, Datasource datasource, SchemaInfoDTO schemaInfo) {
         try {
             // 获取JDBC连接
             Connection conn = jdbcQueryExecutor.getConnection(datasource);
 
             // 获取对应数据库类型的元数据服务
-            DatabaseMetadataService metadataService = metadataServiceFactory
-                    .getService(datasource.getType());
+            DatabaseMetadataService metadataService =
+                    metadataServiceFactory.getService(datasource.getType());
 
             List<SchemaInfoDTO.TableInfoDTO> tables = new ArrayList<>();
             List<String> permittedTables;
 
             // 如果是管理员，则可以查看所有表
-            if (user.getRole().equals(UserRole.ADMIN.name()) || user.getRole().equals(UserRole.SUPER_ADMIN.name())) {
+            if (user.getRole().equals(UserRole.ADMIN.name())
+                    || user.getRole().equals(UserRole.SUPER_ADMIN.name())) {
                 permittedTables = metadataService.getAllTables(conn);
             } else {
                 // 获取用户有权限的表
@@ -450,9 +446,7 @@ public class SqlQueryServiceImpl implements SqlQueryService {
         return new FileSystemResource(resultFile);
     }
 
-    /**
-     * 记录SQL历史
-     */
+    /** 记录SQL历史 */
     private SqlQueryHistory recordSqlHistory(Long userId, SqlQueryDTO dto) {
         SqlQueryHistory history = new SqlQueryHistory();
         history.setUserId(userId);
@@ -467,9 +461,7 @@ public class SqlQueryServiceImpl implements SqlQueryService {
         return history;
     }
 
-    /**
-     * 从SQL中提取表名
-     */
+    /** 从SQL中提取表名 */
     private String extractTableName(String sql) {
         Matcher matcher = TABLE_NAME_PATTERN.matcher(sql);
         if (matcher.find()) {
@@ -478,9 +470,7 @@ public class SqlQueryServiceImpl implements SqlQueryService {
         return null;
     }
 
-    /**
-     * 构建导出文件路径
-     */
+    /** 构建导出文件路径 */
     private String buildExportFilePath(String fileName) {
         try {
             // 确保目录存在
@@ -502,20 +492,19 @@ public class SqlQueryServiceImpl implements SqlQueryService {
         int limit = dto.getPageSize();
 
         // 查询总记录数
-        Long total = sqlQueryHistoryMapper.countTotal(
-                userId,
-                dto.getDatasourceId(),
-                dto.getTableName(),
-                dto.getQueryKeyword());
+        Long total =
+                sqlQueryHistoryMapper.countTotal(
+                        userId, dto.getDatasourceId(), dto.getTableName(), dto.getQueryKeyword());
 
         // 查询记录列表
-        List<SqlQueryHistory> historyList = sqlQueryHistoryMapper.selectByPage(
-                userId,
-                dto.getDatasourceId(),
-                dto.getTableName(),
-                dto.getQueryKeyword(),
-                offset,
-                limit);
+        List<SqlQueryHistory> historyList =
+                sqlQueryHistoryMapper.selectByPage(
+                        userId,
+                        dto.getDatasourceId(),
+                        dto.getTableName(),
+                        dto.getQueryKeyword(),
+                        offset,
+                        limit);
 
         // 构建响应对象
         SqlHistoryResponseDTO response = new SqlHistoryResponseDTO();
@@ -531,23 +520,21 @@ public class SqlQueryServiceImpl implements SqlQueryService {
         }
 
         // 收集所有用户ID
-        Set<Long> userIds = historyList.stream()
-                .map(SqlQueryHistory::getUserId)
-                .collect(Collectors.toSet());
+        Set<Long> userIds =
+                historyList.stream().map(SqlQueryHistory::getUserId).collect(Collectors.toSet());
 
         // 批量查询用户信息
         Map<Long, User> userMap = new HashMap<>();
         if (!userIds.isEmpty()) {
             List<User> users = userMapper.selectByIds(new ArrayList<>(userIds));
             if (users != null) {
-                userMap = users.stream()
-                        .collect(Collectors.toMap(User::getId, user -> user));
+                userMap = users.stream().collect(Collectors.toMap(User::getId, user -> user));
             }
         }
 
         // 使用转换器批量转换记录
-        List<SqlHistoryResponseDTO.SqlHistoryItemDTO> records = sqlQueryHistoryConverter.convertToDtoList(historyList,
-                userMap);
+        List<SqlHistoryResponseDTO.SqlHistoryItemDTO> records =
+                sqlQueryHistoryConverter.convertToDtoList(historyList, userMap);
 
         response.setRecords(records);
         return response;

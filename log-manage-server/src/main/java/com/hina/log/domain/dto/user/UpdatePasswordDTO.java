@@ -5,9 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
-/**
- * 用户修改自己密码DTO
- */
+/** 用户修改自己密码DTO */
 @Data
 @Schema(description = "用户修改自己密码请求对象")
 public class UpdatePasswordDTO {

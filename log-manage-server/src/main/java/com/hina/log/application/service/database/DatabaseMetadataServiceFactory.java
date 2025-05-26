@@ -2,17 +2,13 @@ package com.hina.log.application.service.database;
 
 import com.hina.log.common.exception.BusinessException;
 import com.hina.log.common.exception.ErrorCode;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
-/**
- * 数据库元数据服务工厂
- * 根据数据库类型获取对应的元数据服务
- */
+/** 数据库元数据服务工厂 根据数据库类型获取对应的元数据服务 */
 @Component
 public class DatabaseMetadataServiceFactory {
 
@@ -28,7 +24,7 @@ public class DatabaseMetadataServiceFactory {
 
     /**
      * 根据数据库类型获取对应的元数据服务
-     * 
+     *
      * @param dbType 数据库类型
      * @return 对应的元数据服务
      * @throws BusinessException 如果不支持该数据库类型
@@ -45,7 +41,8 @@ public class DatabaseMetadataServiceFactory {
 
         DatabaseMetadataService service = serviceMap.get(dbType.toLowerCase());
         if (service == null) {
-            throw new BusinessException(ErrorCode.DATASOURCE_TYPE_NOT_SUPPORTED, "不支持的数据库类型: " + dbType);
+            throw new BusinessException(
+                    ErrorCode.DATASOURCE_TYPE_NOT_SUPPORTED, "不支持的数据库类型: " + dbType);
         }
 
         return service;

@@ -1,12 +1,19 @@
 package com.hina.log.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+import com.hina.log.application.service.impl.DatasourceServiceImpl;
+import com.hina.log.common.exception.BusinessException;
+import com.hina.log.domain.converter.DatasourceConverter;
 import com.hina.log.domain.dto.DatasourceCreateDTO;
 import com.hina.log.domain.dto.DatasourceDTO;
 import com.hina.log.domain.entity.Datasource;
-import com.hina.log.common.exception.BusinessException;
 import com.hina.log.domain.mapper.DatasourceMapper;
-import com.hina.log.application.service.impl.DatasourceServiceImpl;
-import com.hina.log.domain.converter.DatasourceConverter;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,30 +24,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
-/**
- * 数据源服务单元测试
- */
+/** 数据源服务单元测试 */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class DatasourceServiceTest {
 
-    @Mock
-    private DatasourceMapper datasourceMapper;
+    @Mock private DatasourceMapper datasourceMapper;
 
-    @Mock
-    private DatasourceConverter datasourceConverter;
+    @Mock private DatasourceConverter datasourceConverter;
 
-    @Spy
-    @InjectMocks
-    private DatasourceServiceImpl datasourceService;
+    @Spy @InjectMocks private DatasourceServiceImpl datasourceService;
 
     private DatasourceCreateDTO createDTO;
     private Datasource existingDatasource;
@@ -83,8 +76,10 @@ class DatasourceServiceTest {
 
         // 设置转换器行为
         when(datasourceConverter.toDto(any(Datasource.class))).thenReturn(datasourceDTO);
-        when(datasourceConverter.toEntity(any(DatasourceCreateDTO.class))).thenReturn(existingDatasource);
-        when(datasourceConverter.updateEntity(any(Datasource.class), any(DatasourceCreateDTO.class)))
+        when(datasourceConverter.toEntity(any(DatasourceCreateDTO.class)))
+                .thenReturn(existingDatasource);
+        when(datasourceConverter.updateEntity(
+                        any(Datasource.class), any(DatasourceCreateDTO.class)))
                 .thenReturn(existingDatasource);
     }
 
@@ -113,9 +108,11 @@ class DatasourceServiceTest {
         // 模拟连接测试失败
         doReturn(false).when(datasourceService).testConnection(any(DatasourceCreateDTO.class));
 
-        assertThrows(BusinessException.class, () -> {
-            datasourceService.createDatasource(createDTO);
-        });
+        assertThrows(
+                BusinessException.class,
+                () -> {
+                    datasourceService.createDatasource(createDTO);
+                });
 
         verify(datasourceMapper, times(1)).selectByName(anyString());
         verify(datasourceService, times(1)).testConnection(any(DatasourceCreateDTO.class));
@@ -127,9 +124,11 @@ class DatasourceServiceTest {
         // 模拟数据源已存在
         when(datasourceMapper.selectByName(anyString())).thenReturn(existingDatasource);
 
-        assertThrows(BusinessException.class, () -> {
-            datasourceService.createDatasource(createDTO);
-        });
+        assertThrows(
+                BusinessException.class,
+                () -> {
+                    datasourceService.createDatasource(createDTO);
+                });
 
         verify(datasourceMapper, times(1)).selectByName(anyString());
         verify(datasourceService, never()).testConnection(any(DatasourceCreateDTO.class));
@@ -166,9 +165,11 @@ class DatasourceServiceTest {
         // 模拟连接测试失败
         doReturn(false).when(datasourceService).testConnection(any(DatasourceCreateDTO.class));
 
-        assertThrows(BusinessException.class, () -> {
-            datasourceService.updateDatasource(1L, createDTO);
-        });
+        assertThrows(
+                BusinessException.class,
+                () -> {
+                    datasourceService.updateDatasource(1L, createDTO);
+                });
 
         verify(datasourceMapper, times(1)).selectById(anyLong());
         verify(datasourceMapper, times(1)).selectByName(anyString());
@@ -181,9 +182,11 @@ class DatasourceServiceTest {
         // 模拟数据源不存在
         when(datasourceMapper.selectById(anyLong())).thenReturn(null);
 
-        assertThrows(BusinessException.class, () -> {
-            datasourceService.updateDatasource(1L, createDTO);
-        });
+        assertThrows(
+                BusinessException.class,
+                () -> {
+                    datasourceService.updateDatasource(1L, createDTO);
+                });
 
         verify(datasourceMapper, times(1)).selectById(anyLong());
         verify(datasourceMapper, never()).selectByName(anyString());
@@ -198,9 +201,10 @@ class DatasourceServiceTest {
         // 模拟删除成功
         when(datasourceMapper.deleteById(anyLong())).thenReturn(1);
 
-        assertDoesNotThrow(() -> {
-            datasourceService.deleteDatasource(1L);
-        });
+        assertDoesNotThrow(
+                () -> {
+                    datasourceService.deleteDatasource(1L);
+                });
 
         verify(datasourceMapper, times(1)).selectById(anyLong());
         verify(datasourceMapper, times(1)).deleteById(anyLong());
@@ -211,9 +215,11 @@ class DatasourceServiceTest {
         // 模拟数据源不存在
         when(datasourceMapper.selectById(anyLong())).thenReturn(null);
 
-        assertThrows(BusinessException.class, () -> {
-            datasourceService.deleteDatasource(1L);
-        });
+        assertThrows(
+                BusinessException.class,
+                () -> {
+                    datasourceService.deleteDatasource(1L);
+                });
 
         verify(datasourceMapper, times(1)).selectById(anyLong());
         verify(datasourceMapper, never()).deleteById(anyLong());
@@ -236,9 +242,11 @@ class DatasourceServiceTest {
         // 模拟数据源不存在
         when(datasourceMapper.selectById(anyLong())).thenReturn(null);
 
-        assertThrows(BusinessException.class, () -> {
-            datasourceService.getDatasource(1L);
-        });
+        assertThrows(
+                BusinessException.class,
+                () -> {
+                    datasourceService.getDatasource(1L);
+                });
 
         verify(datasourceMapper, times(1)).selectById(anyLong());
     }
@@ -287,9 +295,11 @@ class DatasourceServiceTest {
         // 模拟数据源不存在
         when(datasourceMapper.selectById(anyLong())).thenReturn(null);
 
-        assertThrows(BusinessException.class, () -> {
-            datasourceService.testExistingConnection(1L);
-        });
+        assertThrows(
+                BusinessException.class,
+                () -> {
+                    datasourceService.testExistingConnection(1L);
+                });
 
         verify(datasourceMapper, times(1)).selectById(anyLong());
         verify(datasourceService, never()).testConnection(any(DatasourceCreateDTO.class));

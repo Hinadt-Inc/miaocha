@@ -5,9 +5,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
-/**
- * 登录请求DTO
- */
+/** 登录请求DTO */
 @Data
 @Schema(description = "登录请求对象")
 public class LoginRequestDTO {

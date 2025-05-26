@@ -2,10 +2,9 @@ package com.hina.log.domain.dto.logstash;
 
 import com.hina.log.application.logstash.enums.LogstashMachineState;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Data;
-
 import java.time.LocalDateTime;
 import java.util.List;
+import lombok.Data;
 
 @Data
 @Schema(description = "Logstash进程响应DTO")
@@ -62,4 +61,4 @@ public class LogstashProcessResponseDTO {
         @Schema(description = "Logstash在该机器上的状态描述")
         private String stateDescription;
     }
-} 
+}

@@ -1,21 +1,16 @@
 package com.hina.log.common.util;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Supplier;
-
-/**
- * CompletableFuture工具类
- * 提供处理异步操作的通用方法
- */
+/** CompletableFuture工具类 提供处理异步操作的通用方法 */
 public class FutureUtils {
     private static final Logger logger = LoggerFactory.getLogger(FutureUtils.class);
 
     /**
-     * 将异步操作包装为同步Runnable
-     * 适用于需要在TaskService.executeAsync中执行返回CompletableFuture的方法
+     * 将异步操作包装为同步Runnable 适用于需要在TaskService.executeAsync中执行返回CompletableFuture的方法
      *
      * @param futureSupplier 返回CompletableFuture的操作
      * @param entityName 实体名称，用于日志
@@ -28,29 +23,38 @@ public class FutureUtils {
             String entityName,
             String operationName,
             Object entityId) {
-        
+
         return () -> {
             try {
-                boolean success = futureSupplier.get()
-                        .exceptionally(ex -> {
-                            logger.error("{} [{}] {} 异常: {}", 
-                                    entityName, entityId, operationName, ex.getMessage(), ex);
-                            throw new RuntimeException(operationName + "失败: " + ex.getMessage(), ex);
-                        })
-                        .join(); // 等待Future完成
-                
-                logger.info("{} [{}] {}{}", 
-                        entityName, entityId, operationName, success ? "成功" : "失败");
-                
+                boolean success =
+                        futureSupplier
+                                .get()
+                                .exceptionally(
+                                        ex -> {
+                                            logger.error(
+                                                    "{} [{}] {} 异常: {}",
+                                                    entityName,
+                                                    entityId,
+                                                    operationName,
+                                                    ex.getMessage(),
+                                                    ex);
+                                            throw new RuntimeException(
+                                                    operationName + "失败: " + ex.getMessage(), ex);
+                                        })
+                                .join(); // 等待Future完成
+
+                logger.info(
+                        "{} [{}] {}{}", entityName, entityId, operationName, success ? "成功" : "失败");
+
                 if (!success) {
-                    throw new RuntimeException(String.format("%s [%s] %s失败", 
-                            entityName, entityId, operationName));
+                    throw new RuntimeException(
+                            String.format("%s [%s] %s失败", entityName, entityId, operationName));
                 }
             } catch (Exception e) {
-                logger.error("{} [{}] {}失败: {}", 
-                        entityName, entityId, operationName, e.getMessage(), e);
+                logger.error(
+                        "{} [{}] {}失败: {}", entityName, entityId, operationName, e.getMessage(), e);
                 throw e; // 重新抛出异常，让外层executeAsync捕获
             }
         };
     }
-} 
+}

@@ -2,13 +2,9 @@ package com.hina.log.application.service;
 
 import com.hina.log.domain.dto.permission.UserModulePermissionDTO;
 import com.hina.log.domain.dto.permission.UserPermissionModuleStructureDTO;
-
 import java.util.List;
 
-/**
- * 模块权限服务接口
- * 用于处理基于模块的权限管理
- */
+/** 模块权限服务接口 用于处理基于模块的权限管理 */
 public interface ModulePermissionService {
 
     /**
@@ -63,7 +59,7 @@ public interface ModulePermissionService {
     /**
      * 批量授予用户对多个模块的访问权限
      *
-     * @param userId  用户ID
+     * @param userId 用户ID
      * @param modules 模块名称列表
      * @return 创建的权限DTO列表
      */
@@ -72,7 +68,7 @@ public interface ModulePermissionService {
     /**
      * 批量撤销用户对多个模块的访问权限
      *
-     * @param userId  用户ID
+     * @param userId 用户ID
      * @param modules 模块名称列表
      */
     void batchRevokeModulePermissions(Long userId, List<String> modules);

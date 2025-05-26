@@ -7,7 +7,7 @@
         <format>tar.gz</format>
     </formats>
     <includeBaseDirectory>true</includeBaseDirectory>
-    
+
     <dependencySets>
         <!-- Main server JAR -->
         <dependencySet>
@@ -18,7 +18,7 @@
             <outputFileNameMapping>log-manage-server.jar</outputFileNameMapping>
             <useProjectArtifact>false</useProjectArtifact>
         </dependencySet>
-        
+
         <!-- Server Dependencies -->
         <dependencySet>
             <outputDirectory>lib</outputDirectory>
@@ -31,7 +31,7 @@
             <useProjectArtifact>false</useProjectArtifact>
         </dependencySet>
     </dependencySets>
-    
+
     <fileSets>
         <!-- Version file -->
         <fileSet>
@@ -42,7 +42,7 @@
             </includes>
             <filtered>true</filtered>
         </fileSet>
-        
+
         <!-- Configuration Files -->
         <fileSet>
             <directory>src/main/resources</directory>
@@ -57,7 +57,7 @@
                 <exclude>*.xml</exclude>
             </excludes>
         </fileSet>
-        
+
         <!-- Copy configuration from server module -->
         <fileSet>
             <directory>../log-manage-server/src/main/resources</directory>
@@ -68,7 +68,7 @@
                 <include>**/*.xml</include>
             </includes>
         </fileSet>
-        
+
         <!-- UI Files - Copy from frontend build -->
         <fileSet>
             <directory>../log-manage-ui/src/main/frontend/dist</directory>
@@ -77,7 +77,7 @@
                 <include>**/*</include>
             </includes>
         </fileSet>
-        
+
         <!-- Scripts -->
         <fileSet>
             <directory>src/main/scripts</directory>
@@ -90,4 +90,4 @@
             <fileMode>0755</fileMode>
         </fileSet>
     </fileSets>
-</assembly> 
+</assembly>

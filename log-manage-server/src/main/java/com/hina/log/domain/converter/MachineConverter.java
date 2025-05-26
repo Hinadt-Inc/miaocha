@@ -5,15 +5,11 @@ import com.hina.log.domain.dto.MachineDTO;
 import com.hina.log.domain.entity.Machine;
 import org.springframework.stereotype.Component;
 
-/**
- * 机器实体与DTO转换器
- */
+/** 机器实体与DTO转换器 */
 @Component
 public class MachineConverter implements Converter<Machine, MachineDTO> {
 
-    /**
-     * 将DTO转换为实体
-     */
+    /** 将DTO转换为实体 */
     @Override
     public Machine toEntity(MachineDTO dto) {
         if (dto == null) {
@@ -32,9 +28,7 @@ public class MachineConverter implements Converter<Machine, MachineDTO> {
         return entity;
     }
 
-    /**
-     * 将创建DTO转换为实体
-     */
+    /** 将创建DTO转换为实体 */
     public Machine toEntity(MachineCreateDTO dto) {
         if (dto == null) {
             return null;
@@ -51,9 +45,7 @@ public class MachineConverter implements Converter<Machine, MachineDTO> {
         return entity;
     }
 
-    /**
-     * 将实体转换为DTO
-     */
+    /** 将实体转换为DTO */
     @Override
     public MachineDTO toDto(Machine entity) {
         if (entity == null) {
@@ -72,9 +64,7 @@ public class MachineConverter implements Converter<Machine, MachineDTO> {
         return dto;
     }
 
-    /**
-     * 使用DTO更新实体
-     */
+    /** 使用DTO更新实体 */
     @Override
     public Machine updateEntity(Machine entity, MachineDTO dto) {
         if (entity == null || dto == null) {
@@ -89,9 +79,7 @@ public class MachineConverter implements Converter<Machine, MachineDTO> {
         return entity;
     }
 
-    /**
-     * 使用创建DTO更新实体
-     */
+    /** 使用创建DTO更新实体 */
     public Machine updateEntity(Machine entity, MachineCreateDTO dto) {
         if (entity == null || dto == null) {
             return entity;

@@ -1,13 +1,10 @@
 package com.hina.log.domain.entity;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.time.LocalDateTime;
 import lombok.Data;
 
-import java.time.LocalDateTime;
-
-/**
- * 机器元信息实体类
- */
+/** 机器元信息实体类 */
 @Data
 @Schema(description = "机器元信息实体")
 public class Machine {

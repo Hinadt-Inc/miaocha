@@ -1,23 +1,37 @@
 package com.hina.log.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
+import com.hina.log.application.service.database.DatabaseMetadataService;
+import com.hina.log.application.service.database.DatabaseMetadataServiceFactory;
+import com.hina.log.application.service.export.FileExporter;
+import com.hina.log.application.service.export.FileExporterFactory;
+import com.hina.log.application.service.impl.QueryPermissionChecker;
+import com.hina.log.application.service.sql.JdbcQueryExecutor;
+import com.hina.log.application.service.sql.SqlQueryServiceImpl;
+import com.hina.log.common.exception.BusinessException;
+import com.hina.log.common.exception.ErrorCode;
 import com.hina.log.domain.dto.SqlQueryDTO;
 import com.hina.log.domain.dto.SqlQueryResultDTO;
 import com.hina.log.domain.entity.Datasource;
 import com.hina.log.domain.entity.SqlQueryHistory;
 import com.hina.log.domain.entity.User;
 import com.hina.log.domain.entity.enums.UserRole;
-import com.hina.log.common.exception.BusinessException;
-import com.hina.log.common.exception.ErrorCode;
 import com.hina.log.domain.mapper.DatasourceMapper;
 import com.hina.log.domain.mapper.SqlQueryHistoryMapper;
 import com.hina.log.domain.mapper.UserMapper;
-import com.hina.log.application.service.database.DatabaseMetadataService;
-import com.hina.log.application.service.database.DatabaseMetadataServiceFactory;
-import com.hina.log.application.service.export.FileExporter;
-import com.hina.log.application.service.export.FileExporterFactory;
-import com.hina.log.application.service.sql.JdbcQueryExecutor;
-import com.hina.log.application.service.impl.QueryPermissionChecker;
-import com.hina.log.application.service.sql.SqlQueryServiceImpl;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,54 +44,29 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 public class SqlQueryServiceTest {
 
-    @Mock
-    private DatasourceMapper datasourceMapper;
+    @Mock private DatasourceMapper datasourceMapper;
 
-    @Mock
-    private UserMapper userMapper;
+    @Mock private UserMapper userMapper;
 
-    @Mock
-    private SqlQueryHistoryMapper sqlQueryHistoryMapper;
+    @Mock private SqlQueryHistoryMapper sqlQueryHistoryMapper;
 
-    @Mock
-    private JdbcQueryExecutor jdbcQueryExecutor;
+    @Mock private JdbcQueryExecutor jdbcQueryExecutor;
 
-    @Mock
-    private FileExporterFactory exporterFactory;
+    @Mock private FileExporterFactory exporterFactory;
 
-    @Mock
-    private DatabaseMetadataServiceFactory metadataServiceFactory;
+    @Mock private DatabaseMetadataServiceFactory metadataServiceFactory;
 
-    @Mock
-    private FileExporter fileExporter;
+    @Mock private FileExporter fileExporter;
 
-    @Mock
-    private DatabaseMetadataService metadataService;
+    @Mock private DatabaseMetadataService metadataService;
 
-    @Mock
-    private QueryPermissionChecker permissionChecker;
+    @Mock private QueryPermissionChecker permissionChecker;
 
-    @InjectMocks
-    private SqlQueryServiceImpl sqlQueryService;
+    @InjectMocks private SqlQueryServiceImpl sqlQueryService;
 
     private User testUser;
     private Datasource testDatasource;
@@ -130,10 +119,15 @@ public class SqlQueryServiceTest {
         testResultDTO.setExecutionTimeMs(100L);
 
         // 设置默认行为
-        lenient().doNothing().when(permissionChecker).checkQueryPermission(any(User.class), anyLong(), anyString());
+        lenient()
+                .doNothing()
+                .when(permissionChecker)
+                .checkQueryPermission(any(User.class), anyLong(), anyString());
         lenient().when(datasourceMapper.selectById(anyLong())).thenReturn(testDatasource);
         lenient().when(userMapper.selectById(anyLong())).thenReturn(testUser);
-        lenient().when(jdbcQueryExecutor.executeQuery(any(), anyString())).thenReturn(testResultDTO);
+        lenient()
+                .when(jdbcQueryExecutor.executeQuery(any(), anyString()))
+                .thenReturn(testResultDTO);
         lenient().when(sqlQueryHistoryMapper.insert(any())).thenReturn(1);
     }
 
@@ -153,7 +147,9 @@ public class SqlQueryServiceTest {
         verify(userMapper).selectById(testUser.getId());
         verify(jdbcQueryExecutor).executeQuery(testDatasource, testQueryDTO.getSql());
         verify(sqlQueryHistoryMapper).insert(any(SqlQueryHistory.class));
-        verify(permissionChecker).checkQueryPermission(testUser, testQueryDTO.getDatasourceId(), testQueryDTO.getSql());
+        verify(permissionChecker)
+                .checkQueryPermission(
+                        testUser, testQueryDTO.getDatasourceId(), testQueryDTO.getSql());
     }
 
     @Test
@@ -178,7 +174,9 @@ public class SqlQueryServiceTest {
         verify(exporterFactory).getExporter("xlsx");
         verify(fileExporter).exportToFile(any(), anyString());
         verify(sqlQueryHistoryMapper).insert(any(SqlQueryHistory.class));
-        verify(permissionChecker).checkQueryPermission(testUser, testQueryDTO.getDatasourceId(), testQueryDTO.getSql());
+        verify(permissionChecker)
+                .checkQueryPermission(
+                        testUser, testQueryDTO.getDatasourceId(), testQueryDTO.getSql());
     }
 
     @Test
@@ -188,9 +186,12 @@ public class SqlQueryServiceTest {
         when(datasourceMapper.selectById(anyLong())).thenReturn(null);
 
         // 执行测试并验证异常
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
-            sqlQueryService.executeQuery(testUser.getId(), testQueryDTO);
-        });
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            sqlQueryService.executeQuery(testUser.getId(), testQueryDTO);
+                        });
 
         assertEquals(ErrorCode.DATASOURCE_NOT_FOUND, exception.getErrorCode());
         verify(datasourceMapper).selectById(testQueryDTO.getDatasourceId());
@@ -209,9 +210,12 @@ public class SqlQueryServiceTest {
         when(userMapper.selectById(anyLong())).thenReturn(null);
 
         // 执行测试并验证异常
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
-            sqlQueryService.executeQuery(999L, testQueryDTO);
-        });
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            sqlQueryService.executeQuery(999L, testQueryDTO);
+                        });
 
         assertEquals(ErrorCode.USER_NOT_FOUND, exception.getErrorCode());
         // 需要验证datasourceMapper被调用，因为在实现中先检查数据源再检查用户
@@ -228,18 +232,23 @@ public class SqlQueryServiceTest {
 
         // 模拟权限检查器抛出异常
         doThrow(new BusinessException(ErrorCode.VALIDATION_ERROR, "SQL语句不能为空"))
-                .when(permissionChecker).checkQueryPermission(any(), anyLong(), eq(""));
+                .when(permissionChecker)
+                .checkQueryPermission(any(), anyLong(), eq(""));
 
         // 执行测试并验证异常
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
-            sqlQueryService.executeQuery(testUser.getId(), testQueryDTO);
-        });
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            sqlQueryService.executeQuery(testUser.getId(), testQueryDTO);
+                        });
 
         assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
         assertEquals("SQL语句不能为空", exception.getMessage());
         verify(userMapper).selectById(testUser.getId());
         verify(datasourceMapper).selectById(testQueryDTO.getDatasourceId());
-        verify(permissionChecker).checkQueryPermission(testUser, testQueryDTO.getDatasourceId(), "");
+        verify(permissionChecker)
+                .checkQueryPermission(testUser, testQueryDTO.getDatasourceId(), "");
         verify(jdbcQueryExecutor, never()).executeQuery(any(), anyString());
     }
 
@@ -252,9 +261,12 @@ public class SqlQueryServiceTest {
         doThrow(new IOException("导出失败")).when(fileExporter).exportToFile(any(), anyString());
 
         // 执行测试并验证异常
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
-            sqlQueryService.executeQuery(testUser.getId(), testQueryDTO);
-        });
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            sqlQueryService.executeQuery(testUser.getId(), testQueryDTO);
+                        });
 
         assertEquals(ErrorCode.EXPORT_FAILED, exception.getErrorCode());
         assertTrue(exception.getMessage().contains("导出失败"));
@@ -263,7 +275,9 @@ public class SqlQueryServiceTest {
         verify(jdbcQueryExecutor).executeQuery(testDatasource, testQueryDTO.getSql());
         verify(exporterFactory).getExporter("xlsx");
         verify(fileExporter).exportToFile(any(), anyString());
-        verify(permissionChecker).checkQueryPermission(testUser, testQueryDTO.getDatasourceId(), testQueryDTO.getSql());
+        verify(permissionChecker)
+                .checkQueryPermission(
+                        testUser, testQueryDTO.getDatasourceId(), testQueryDTO.getSql());
     }
 
     @Test
@@ -297,9 +311,12 @@ public class SqlQueryServiceTest {
         when(sqlQueryHistoryMapper.selectById(anyLong())).thenReturn(null);
 
         // 执行测试并验证异常
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
-            sqlQueryService.getQueryResult(999L);
-        });
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            sqlQueryService.getQueryResult(999L);
+                        });
 
         assertEquals(ErrorCode.INTERNAL_ERROR, exception.getErrorCode());
         assertEquals("查询记录不存在", exception.getMessage());
@@ -317,9 +334,12 @@ public class SqlQueryServiceTest {
         when(sqlQueryHistoryMapper.selectById(anyLong())).thenReturn(history);
 
         // 执行测试并验证异常
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
-            sqlQueryService.getQueryResult(1L);
-        });
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            sqlQueryService.getQueryResult(1L);
+                        });
 
         assertEquals(ErrorCode.EXPORT_FAILED, exception.getErrorCode());
         assertEquals("查询结果文件不存在", exception.getMessage());

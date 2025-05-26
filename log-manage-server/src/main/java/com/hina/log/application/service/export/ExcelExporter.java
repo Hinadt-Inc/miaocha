@@ -1,18 +1,15 @@
 package com.hina.log.application.service.export;
 
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.stereotype.Component;
-
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.stereotype.Component;
 
-/**
- * Excel文件导出器
- */
+/** Excel文件导出器 */
 @Component
 public class ExcelExporter extends AbstractFileExporter {
 
@@ -20,7 +17,8 @@ public class ExcelExporter extends AbstractFileExporter {
     private static final int DEFAULT_COLUMN_WIDTH = 5000;
 
     @Override
-    public void exportToFile(List<Map<String, Object>> data, String[] headers, String filePath) throws IOException {
+    public void exportToFile(List<Map<String, Object>> data, String[] headers, String filePath)
+            throws IOException {
         try (Workbook workbook = new XSSFWorkbook()) {
             createWorkbookContent(workbook, data, headers);
 
@@ -51,10 +49,9 @@ public class ExcelExporter extends AbstractFileExporter {
         return "xlsx";
     }
 
-    /**
-     * 创建工作簿内容
-     */
-    private void createWorkbookContent(Workbook workbook, List<Map<String, Object>> data, String[] headers) {
+    /** 创建工作簿内容 */
+    private void createWorkbookContent(
+            Workbook workbook, List<Map<String, Object>> data, String[] headers) {
         Sheet sheet = workbook.createSheet(SHEET_NAME);
 
         // 创建表头样式
@@ -87,9 +84,7 @@ public class ExcelExporter extends AbstractFileExporter {
         }
     }
 
-    /**
-     * 设置单元格值，根据数据类型自动匹配
-     */
+    /** 设置单元格值，根据数据类型自动匹配 */
     private void setCellValue(Cell cell, Object value) {
         if (value == null) {
             return;
@@ -112,9 +107,7 @@ public class ExcelExporter extends AbstractFileExporter {
         }
     }
 
-    /**
-     * 创建表头样式
-     */
+    /** 创建表头样式 */
     private CellStyle createHeaderStyle(Workbook workbook) {
         CellStyle style = workbook.createCellStyle();
         style.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());

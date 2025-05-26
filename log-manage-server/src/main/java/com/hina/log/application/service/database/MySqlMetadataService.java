@@ -1,25 +1,24 @@
 package com.hina.log.application.service.database;
 
 import com.hina.log.domain.dto.SchemaInfoDTO;
-import org.springframework.stereotype.Component;
-
 import java.sql.*;
 import java.util.*;
+import org.springframework.stereotype.Component;
 
-/**
- * MySQL/MariaDB数据库元数据服务实现
- */
+/** MySQL/MariaDB数据库元数据服务实现 */
 @Component
 public class MySqlMetadataService implements DatabaseMetadataService {
 
-    private static final String GET_TABLE_COMMENT_SQL = "SELECT table_comment FROM information_schema.tables WHERE table_name = ?";
+    private static final String GET_TABLE_COMMENT_SQL =
+            "SELECT table_comment FROM information_schema.tables WHERE table_name = ?";
 
     @Override
     public List<String> getAllTables(Connection connection) throws SQLException {
         List<String> tables = new ArrayList<>();
         DatabaseMetaData metaData = connection.getMetaData();
 
-        try (ResultSet rs = metaData.getTables(connection.getCatalog(), null, "%", new String[] { "TABLE" })) {
+        try (ResultSet rs =
+                metaData.getTables(connection.getCatalog(), null, "%", new String[] {"TABLE"})) {
             while (rs.next()) {
                 tables.add(rs.getString("TABLE_NAME"));
             }

@@ -5,10 +5,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-/**
- * 关键字MATCH_ANY条件构建器
- * 处理单个关键字和多个关键字OR关系的情况
- */
+/** 关键字MATCH_ANY条件构建器 处理单个关键字和多个关键字OR关系的情况 */
 @Component
 @Order(20) // 中等优先级
 public class KeywordMatchAnyConditionBuilder implements SearchConditionBuilder {
@@ -21,7 +18,9 @@ public class KeywordMatchAnyConditionBuilder implements SearchConditionBuilder {
                 if (StringUtils.isNotBlank(keyword)) {
                     String trimmedKeyword = keyword.trim();
                     // 排除复杂表达式和AND关系的表达式
-                    if (!trimmedKeyword.contains(" && ") && !trimmedKeyword.contains("(") && !trimmedKeyword.contains(")")) {
+                    if (!trimmedKeyword.contains(" && ")
+                            && !trimmedKeyword.contains("(")
+                            && !trimmedKeyword.contains(")")) {
                         return true;
                     }
                 }
@@ -46,7 +45,9 @@ public class KeywordMatchAnyConditionBuilder implements SearchConditionBuilder {
                     String trimmedKeyword = keyword.trim();
 
                     // 排除复杂表达式和AND关系的表达式
-                    if (!trimmedKeyword.contains(" && ") && !trimmedKeyword.contains("(") && !trimmedKeyword.contains(")")) {
+                    if (!trimmedKeyword.contains(" && ")
+                            && !trimmedKeyword.contains("(")
+                            && !trimmedKeyword.contains(")")) {
                         StringBuilder keywordCondition = new StringBuilder();
 
                         if (trimmedKeyword.contains(" || ")) {
@@ -54,7 +55,8 @@ public class KeywordMatchAnyConditionBuilder implements SearchConditionBuilder {
                             String[] keywordParts = trimmedKeyword.split(" \\|\\| ");
                             StringBuilder matchAnyClause = new StringBuilder();
                             for (int i = 0; i < keywordParts.length; i++) {
-                                String key = keywordParts[i].trim().replaceAll("^'|'$", ""); // 去除可能的引号
+                                String key =
+                                        keywordParts[i].trim().replaceAll("^'|'$", ""); // 去除可能的引号
                                 if (StringUtils.isNotBlank(key)) {
                                     if (i > 0) {
                                         matchAnyClause.append(" ");
@@ -63,13 +65,19 @@ public class KeywordMatchAnyConditionBuilder implements SearchConditionBuilder {
                                 }
                             }
                             if (matchAnyClause.length() > 0) {
-                                keywordCondition.append("message MATCH_ANY '").append(matchAnyClause).append("'");
+                                keywordCondition
+                                        .append("message MATCH_ANY '")
+                                        .append(matchAnyClause)
+                                        .append("'");
                             }
                         } else {
                             // 处理单个关键字
                             String key = trimmedKeyword.replaceAll("^'|'$", ""); // 去除可能的引号
                             if (StringUtils.isNotBlank(key)) {
-                                keywordCondition.append("message MATCH_ANY '").append(key).append("'");
+                                keywordCondition
+                                        .append("message MATCH_ANY '")
+                                        .append(key)
+                                        .append("'");
                             }
                         }
 

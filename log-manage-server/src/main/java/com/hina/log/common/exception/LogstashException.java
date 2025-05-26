@@ -1,8 +1,6 @@
 package com.hina.log.common.exception;
 
-/**
- * Logstash相关操作异常
- */
+/** Logstash相关操作异常 */
 public class LogstashException extends LogManageException {
 
     public LogstashException(String message) {

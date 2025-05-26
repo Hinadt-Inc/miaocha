@@ -5,9 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-/**
- * 数据源创建DTO，用于接收创建请求
- */
+/** 数据源创建DTO，用于接收创建请求 */
 @Data
 @Schema(description = "数据源创建/更新请求对象")
 public class DatasourceCreateDTO {
@@ -27,8 +25,7 @@ public class DatasourceCreateDTO {
     private String ip;
 
     @Schema(description = "数据源端口", example = "9030", required = true)
-    @NotNull(message = "数据源端口不能为空")
-    private Integer port;
+    @NotNull(message = "数据源端口不能为空") private Integer port;
 
     @Schema(description = "数据源用户名", example = "admin", required = true)
     @NotBlank(message = "数据源用户名不能为空")

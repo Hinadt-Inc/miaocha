@@ -1,5 +1,8 @@
 package com.hina.log.logstash;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import com.hina.log.application.logstash.LogstashMachineConnectionValidator;
 import com.hina.log.application.service.MachineService;
 import com.hina.log.common.exception.BusinessException;
@@ -12,17 +15,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 public class LogstashMachineConnectionValidatorTest {
 
-    @Mock
-    private MachineService machineService;
+    @Mock private MachineService machineService;
 
-    @InjectMocks
-    private LogstashMachineConnectionValidator connectionValidator;
+    @InjectMocks private LogstashMachineConnectionValidator connectionValidator;
 
     private Machine testMachine;
 
@@ -52,8 +50,10 @@ public class LogstashMachineConnectionValidatorTest {
         when(machineService.testConnection(1L)).thenReturn(false);
 
         // Should throw BusinessException
-        BusinessException exception = assertThrows(BusinessException.class,
-                () -> connectionValidator.validateSingleMachineConnection(testMachine));
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> connectionValidator.validateSingleMachineConnection(testMachine));
 
         assertEquals(ErrorCode.MACHINE_CONNECTION_FAILED, exception.getErrorCode());
         assertTrue(exception.getMessage().contains("无法连接到机器"));
@@ -68,8 +68,10 @@ public class LogstashMachineConnectionValidatorTest {
         when(machineService.testConnection(1L)).thenThrow(new RuntimeException("Network error"));
 
         // Should throw BusinessException
-        BusinessException exception = assertThrows(BusinessException.class,
-                () -> connectionValidator.validateSingleMachineConnection(testMachine));
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> connectionValidator.validateSingleMachineConnection(testMachine));
 
         assertEquals(ErrorCode.MACHINE_CONNECTION_FAILED, exception.getErrorCode());
         assertTrue(exception.getMessage().contains("验证机器"));
@@ -81,8 +83,10 @@ public class LogstashMachineConnectionValidatorTest {
     @Test
     void testValidateSingleMachineConnection_NullMachine() {
         // Should throw BusinessException for null machine
-        BusinessException exception = assertThrows(BusinessException.class,
-                () -> connectionValidator.validateSingleMachineConnection(null));
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> connectionValidator.validateSingleMachineConnection(null));
 
         assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
         assertEquals("机器信息不能为空", exception.getMessage());
@@ -107,8 +111,10 @@ public class LogstashMachineConnectionValidatorTest {
         when(machineService.testConnection(1L)).thenReturn(false);
 
         // Should throw BusinessException
-        BusinessException exception = assertThrows(BusinessException.class,
-                () -> connectionValidator.validateMachineConnectionById(1L));
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> connectionValidator.validateMachineConnectionById(1L));
 
         assertEquals(ErrorCode.MACHINE_CONNECTION_FAILED, exception.getErrorCode());
         assertTrue(exception.getMessage().contains("无法连接到机器"));
@@ -119,12 +125,14 @@ public class LogstashMachineConnectionValidatorTest {
     @Test
     void testValidateMachineConnectionById_NullId() {
         // Should throw BusinessException for null ID
-        BusinessException exception = assertThrows(BusinessException.class,
-                () -> connectionValidator.validateMachineConnectionById(null));
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> connectionValidator.validateMachineConnectionById(null));
 
         assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
         assertEquals("机器ID不能为空", exception.getMessage());
 
         verify(machineService, never()).testConnection(anyLong());
     }
-} 
+}

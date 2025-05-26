@@ -1,12 +1,10 @@
 package com.hina.log.domain.entity;
 
-import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.Date;
+import lombok.Data;
 
-/**
- * SQL查询历史实体类
- */
+/** SQL查询历史实体类 */
 @Data
 public class SqlQueryHistory {
     private Long id;

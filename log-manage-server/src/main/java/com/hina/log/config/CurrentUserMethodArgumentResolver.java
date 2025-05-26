@@ -1,8 +1,8 @@
 package com.hina.log.config;
 
+import com.hina.log.application.service.UserService;
 import com.hina.log.common.annotation.CurrentUser;
 import com.hina.log.domain.dto.user.UserDTO;
-import com.hina.log.application.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.MethodParameter;
 import org.springframework.security.core.Authentication;
@@ -13,9 +13,7 @@ import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
-/**
- * 当前用户方法参数解析器
- */
+/** 当前用户方法参数解析器 */
 @Component
 @RequiredArgsConstructor
 public class CurrentUserMethodArgumentResolver implements HandlerMethodArgumentResolver {
@@ -29,8 +27,11 @@ public class CurrentUserMethodArgumentResolver implements HandlerMethodArgumentR
     }
 
     @Override
-    public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
-            NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
+    public Object resolveArgument(
+            MethodParameter parameter,
+            ModelAndViewContainer mavContainer,
+            NativeWebRequest webRequest,
+            WebDataBinderFactory binderFactory) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.isAuthenticated()) {
             String uid = (String) authentication.getPrincipal();

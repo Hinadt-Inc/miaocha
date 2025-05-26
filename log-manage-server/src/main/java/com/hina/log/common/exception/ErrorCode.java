@@ -2,9 +2,7 @@ package com.hina.log.common.exception;
 
 import lombok.Getter;
 
-/**
- * 错误码枚举
- */
+/** 错误码枚举 */
 @Getter
 public enum ErrorCode {
     // 通用错误码

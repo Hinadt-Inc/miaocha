@@ -5,9 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-/**
- * 创建机器信息DTO
- */
+/** 创建机器信息DTO */
 @Data
 @Schema(description = "创建机器信息对象")
 public class MachineCreateDTO {
@@ -20,8 +18,7 @@ public class MachineCreateDTO {
     private String ip;
 
     @Schema(description = "机器端口", example = "22")
-    @NotNull(message = "机器端口不能为空")
-    private Integer port;
+    @NotNull(message = "机器端口不能为空") private Integer port;
 
     @Schema(description = "机器用户名", example = "root")
     @NotBlank(message = "机器用户名不能为空")

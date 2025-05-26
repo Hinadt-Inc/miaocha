@@ -2,17 +2,13 @@ package com.hina.log.application.service.export;
 
 import com.hina.log.common.exception.BusinessException;
 import com.hina.log.common.exception.ErrorCode;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
-/**
- * 文件导出器工厂
- * 根据文件扩展名获取对应的导出器
- */
+/** 文件导出器工厂 根据文件扩展名获取对应的导出器 */
 @Component
 public class FileExporterFactory {
 
@@ -28,7 +24,7 @@ public class FileExporterFactory {
 
     /**
      * 根据文件类型获取对应的导出器
-     * 
+     *
      * @param fileType 文件类型扩展名，不含点，如"csv"、"xlsx"
      * @return 对应的文件导出器
      * @throws BusinessException 如果不支持该文件类型
@@ -48,7 +44,7 @@ public class FileExporterFactory {
 
     /**
      * 从文件路径中提取文件类型并获取对应的导出器
-     * 
+     *
      * @param filePath 文件路径
      * @return 对应的文件导出器
      * @throws BusinessException 如果不支持该文件类型

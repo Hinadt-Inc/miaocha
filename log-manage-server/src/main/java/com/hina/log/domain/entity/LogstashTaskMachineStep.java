@@ -1,13 +1,10 @@
 package com.hina.log.domain.entity;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.time.LocalDateTime;
 import lombok.Data;
 
-import java.time.LocalDateTime;
-
-/**
- * Logstash任务在机器上的执行步骤实体类
- */
+/** Logstash任务在机器上的执行步骤实体类 */
 @Data
 @Schema(description = "Logstash任务在机器上的执行步骤实体")
 public class LogstashTaskMachineStep {

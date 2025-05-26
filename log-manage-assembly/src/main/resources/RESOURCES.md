@@ -21,7 +21,9 @@
 
 - 如需修改配置，请只修改 `log-manage-server/src/main/resources` 中的文件
 - 如果发现 `log-manage-assembly/src/main/resources` 中有重复的配置文件，可运行以下命令清理：
+
   ```
   mvn clean -Pclean-resources
   ```
-- 配置更改后，确保应用正常启动并运行测试以验证更改 
+- 配置更改后，确保应用正常启动并运行测试以验证更改
+

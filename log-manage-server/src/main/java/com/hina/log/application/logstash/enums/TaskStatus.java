@@ -2,9 +2,7 @@ package com.hina.log.application.logstash.enums;
 
 import lombok.Getter;
 
-/**
- * 任务状态枚举
- */
+/** 任务状态枚举 */
 @Getter
 public enum TaskStatus {
     PENDING("待执行"),

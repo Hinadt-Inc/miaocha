@@ -1,15 +1,21 @@
 package com.hina.log.logstash.task;
 
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+import com.hina.log.application.logstash.enums.LogstashMachineState;
 import com.hina.log.application.logstash.task.LogstashProcessMonitorTask;
+import com.hina.log.common.exception.SshException;
+import com.hina.log.common.ssh.SshClient;
 import com.hina.log.domain.entity.LogstashMachine;
 import com.hina.log.domain.entity.LogstashProcess;
 import com.hina.log.domain.entity.Machine;
-import com.hina.log.common.exception.SshException;
-import com.hina.log.application.logstash.enums.LogstashMachineState;
 import com.hina.log.domain.mapper.LogstashMachineMapper;
 import com.hina.log.domain.mapper.LogstashProcessMapper;
 import com.hina.log.domain.mapper.MachineMapper;
-import com.hina.log.common.ssh.SshClient;
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,30 +23,18 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 public class LogstashProcessMonitorTaskTest {
 
-    @Mock
-    private LogstashMachineMapper logstashMachineMapper;
+    @Mock private LogstashMachineMapper logstashMachineMapper;
 
-    @Mock
-    private LogstashProcessMapper logstashProcessMapper;
+    @Mock private LogstashProcessMapper logstashProcessMapper;
 
-    @Mock
-    private MachineMapper machineMapper;
+    @Mock private MachineMapper machineMapper;
 
-    @Mock
-    private SshClient sshClient;
+    @Mock private SshClient sshClient;
 
-    @InjectMocks
-    private LogstashProcessMonitorTask monitorTask;
+    @InjectMocks private LogstashProcessMonitorTask monitorTask;
 
     private LogstashMachine logstashMachine;
     private LogstashProcess logstashProcess;
@@ -116,7 +110,8 @@ public class LogstashProcessMonitorTaskTest {
         when(logstashMachineMapper.updateProcessPid(anyLong(), anyLong(), isNull())).thenReturn(1);
 
         // 模拟进程已死亡
-        when(sshClient.executeCommand(any(Machine.class), anyString())).thenReturn("Process not found");
+        when(sshClient.executeCommand(any(Machine.class), anyString()))
+                .thenReturn("Process not found");
 
         // 执行监控任务
         monitorTask.monitorLogstashProcesses();
@@ -128,7 +123,8 @@ public class LogstashProcessMonitorTaskTest {
         verify(sshClient).executeCommand(eq(machine), contains("ps -p 12345"));
 
         // 确认状态被更新
-        verify(logstashMachineMapper).updateState(eq(100L), eq(200L), eq(LogstashMachineState.NOT_STARTED.name()));
+        verify(logstashMachineMapper)
+                .updateState(eq(100L), eq(200L), eq(LogstashMachineState.NOT_STARTED.name()));
         verify(logstashMachineMapper).updateProcessPid(eq(100L), eq(200L), isNull());
     }
 

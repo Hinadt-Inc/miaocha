@@ -1,15 +1,12 @@
 package com.hina.log.application.service.sql.builder.condition.parser;
 
-import org.apache.commons.lang3.StringUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.apache.commons.lang3.StringUtils;
 
-/**
- * 关键字表达式解析器
- * 用于解析复杂的关键字表达式，支持最多两层嵌套
- */
+/** 关键字表达式解析器 用于解析复杂的关键字表达式，支持最多两层嵌套 */
 public class KeywordExpressionParser {
 
     // 表达式操作符
@@ -63,10 +60,8 @@ public class KeywordExpressionParser {
         // 检查括号是否匹配
         int openParenCount = 0;
         for (char c : expression.toCharArray()) {
-            if (c == '(')
-                openParenCount++;
-            else if (c == ')')
-                openParenCount--;
+            if (c == '(') openParenCount++;
+            else if (c == ')') openParenCount--;
 
             // 如果右括号数量大于左括号，不平衡
             if (openParenCount < 0) {
@@ -85,16 +80,18 @@ public class KeywordExpressionParser {
         }
 
         // 检查运算符使用
-        if (expression.startsWith(AND_OPERATOR) || expression.startsWith(OR_OPERATOR) ||
-                expression.endsWith(AND_OPERATOR) || expression.endsWith(OR_OPERATOR)) {
+        if (expression.startsWith(AND_OPERATOR)
+                || expression.startsWith(OR_OPERATOR)
+                || expression.endsWith(AND_OPERATOR)
+                || expression.endsWith(OR_OPERATOR)) {
             return ValidationResult.invalid(INVALID_OPERATOR_USAGE + ": 表达式不能以运算符开始或结束");
         }
 
         // 检查连续运算符
-        if (expression.contains(AND_OPERATOR + AND_OPERATOR) ||
-                expression.contains(OR_OPERATOR + OR_OPERATOR) ||
-                expression.contains(AND_OPERATOR + OR_OPERATOR) ||
-                expression.contains(OR_OPERATOR + AND_OPERATOR)) {
+        if (expression.contains(AND_OPERATOR + AND_OPERATOR)
+                || expression.contains(OR_OPERATOR + OR_OPERATOR)
+                || expression.contains(AND_OPERATOR + OR_OPERATOR)
+                || expression.contains(OR_OPERATOR + AND_OPERATOR)) {
             return ValidationResult.invalid(INVALID_OPERATOR_USAGE + ": 不能有连续的运算符");
         }
 
@@ -116,9 +113,7 @@ public class KeywordExpressionParser {
         return ValidationResult.valid();
     }
 
-    /**
-     * 获取表达式的最大嵌套层级
-     */
+    /** 获取表达式的最大嵌套层级 */
     private static int getMaxNestingLevel(String expression) {
         int maxLevel = 0;
         int currentLevel = 0;
@@ -164,9 +159,7 @@ public class KeywordExpressionParser {
         }
     }
 
-    /**
-     * 解析表达式
-     */
+    /** 解析表达式 */
     private static String parseExpression(String expression) {
         expression = normalizeExpression(expression);
         expression = replaceParenthesesWithParsedExpressions(expression);
@@ -193,10 +186,7 @@ public class KeywordExpressionParser {
         return parseSingleTerm(expression);
     }
 
-    /**
-     * 规范化表达式中的空格
-     * 确保运算符周围有空格，但保留引号内的空格不变
-     */
+    /** 规范化表达式中的空格 确保运算符周围有空格，但保留引号内的空格不变 */
     private static String normalizeExpression(String expression) {
         // 替换引号内的内容为占位符
         List<String> quotedStrings = new ArrayList<>();
@@ -211,10 +201,12 @@ public class KeywordExpressionParser {
         String tempExpression = tempBuffer.toString();
 
         // 规范化运算符周围的空格
-        tempExpression = tempExpression.replace("(", " ( ")
-                .replace(")", " ) ")
-                .replace("&&", " && ")
-                .replace("||", " || ");
+        tempExpression =
+                tempExpression
+                        .replace("(", " ( ")
+                        .replace(")", " ) ")
+                        .replace("&&", " && ")
+                        .replace("||", " || ");
 
         // 去除多余的空格
         tempExpression = tempExpression.replaceAll("\\s+", " ").trim();
@@ -227,9 +219,7 @@ public class KeywordExpressionParser {
         return tempExpression;
     }
 
-    /**
-     * 替换所有括号表达式为其解析结果
-     */
+    /** 替换所有括号表达式为其解析结果 */
     private static String replaceParenthesesWithParsedExpressions(String expression) {
         Matcher matcher = PARENTHESIS_PATTERN.matcher(expression);
         StringBuffer result = new StringBuffer();
@@ -244,9 +234,7 @@ public class KeywordExpressionParser {
         return result.toString();
     }
 
-    /**
-     * 查找顶层操作符的索引
-     */
+    /** 查找顶层操作符的索引 */
     private static int findTopLevelOperatorIndex(String expression, String operator) {
         int parenCount = 0;
         for (int i = 0; i < expression.length(); i++) {
@@ -262,9 +250,7 @@ public class KeywordExpressionParser {
         return -1;
     }
 
-    /**
-     * 解析单个项
-     */
+    /** 解析单个项 */
     private static String parseSingleTerm(String term) {
         term = term.trim();
         if (term.startsWith("(") && term.endsWith(")")) {
@@ -279,9 +265,7 @@ public class KeywordExpressionParser {
         return "message MATCH_ANY '" + keyword + "'";
     }
 
-    /**
-     * 提取关键字（去除引号）
-     */
+    /** 提取关键字（去除引号） */
     private static String extractKeyword(String term) {
         // 使用正则表达式提取引号中的内容
         Matcher matcher = QUOTED_PATTERN.matcher(term);
@@ -293,9 +277,7 @@ public class KeywordExpressionParser {
         return term.trim();
     }
 
-    /**
-     * 从表达式中提取关键字
-     */
+    /** 从表达式中提取关键字 */
     private static String extractKeywordsFromExpressions(String... expressions) {
         List<String> keywords = new ArrayList<>();
         for (String expr : expressions) {
@@ -319,9 +301,7 @@ public class KeywordExpressionParser {
         return String.join(" ", keywords);
     }
 
-    /**
-     * 表达式验证结果类
-     */
+    /** 表达式验证结果类 */
     public static class ValidationResult {
         private final boolean valid;
         private final String errorMessage;
@@ -348,9 +328,7 @@ public class KeywordExpressionParser {
         }
     }
 
-    /**
-     * 解析结果类
-     */
+    /** 解析结果类 */
     public static class ParseResult {
         private final boolean success;
         private final String result;

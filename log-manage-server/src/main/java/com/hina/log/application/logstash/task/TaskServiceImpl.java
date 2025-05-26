@@ -1,5 +1,8 @@
 package com.hina.log.application.logstash.task;
 
+import com.hina.log.application.logstash.enums.StepStatus;
+import com.hina.log.application.logstash.enums.TaskOperationType;
+import com.hina.log.application.logstash.enums.TaskStatus;
 import com.hina.log.domain.converter.TaskDetailConverter;
 import com.hina.log.domain.converter.TaskMachineStepConverter;
 import com.hina.log.domain.dto.logstash.TaskDetailDTO;
@@ -7,26 +10,20 @@ import com.hina.log.domain.dto.logstash.TaskStepsGroupDTO;
 import com.hina.log.domain.entity.LogstashTask;
 import com.hina.log.domain.entity.LogstashTaskMachineStep;
 import com.hina.log.domain.entity.Machine;
-import com.hina.log.application.logstash.enums.StepStatus;
-import com.hina.log.application.logstash.enums.TaskOperationType;
-import com.hina.log.application.logstash.enums.TaskStatus;
 import com.hina.log.domain.mapper.LogstashTaskMachineStepMapper;
 import com.hina.log.domain.mapper.LogstashTaskMapper;
 import com.hina.log.domain.mapper.MachineMapper;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.concurrent.Executor;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.concurrent.Executor;
-import java.util.stream.Collectors;
-
-/**
- * 任务服务实现类
- */
+/** 任务服务实现类 */
 @Service
 public class TaskServiceImpl implements TaskService {
     private static final Logger logger = LoggerFactory.getLogger(TaskServiceImpl.class);
@@ -55,8 +52,12 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional
-    public String createGlobalTask(Long processId, String name, String description,
-                                   TaskOperationType operationType, List<String> stepIds) {
+    public String createGlobalTask(
+            Long processId,
+            String name,
+            String description,
+            TaskOperationType operationType,
+            List<String> stepIds) {
         logger.info("创建全局任务, 进程ID: {}", processId);
 
         // 创建任务
@@ -76,8 +77,13 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional
-    public String createMachineTask(Long processId, Long machineId, String name, String description,
-                                    TaskOperationType operationType, List<String> stepIds) {
+    public String createMachineTask(
+            Long processId,
+            Long machineId,
+            String name,
+            String description,
+            TaskOperationType operationType,
+            List<String> stepIds) {
         logger.info("创建机器任务, 进程ID: {}, 机器ID: {}", processId, machineId);
 
         // 获取机器信息
@@ -119,9 +125,13 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional
-    public Map<Long, String> createMachineTasks(Long processId, String name, String description,
-                                                TaskOperationType operationType, List<Machine> machines,
-                                                List<String> stepIds) {
+    public Map<Long, String> createMachineTasks(
+            Long processId,
+            String name,
+            String description,
+            TaskOperationType operationType,
+            List<Machine> machines,
+            List<String> stepIds) {
         logger.info("批量创建机器任务, 进程ID: {}, 机器数量: {}", processId, machines.size());
 
         Map<Long, String> machineTaskMap = new HashMap<>();
@@ -129,7 +139,14 @@ public class TaskServiceImpl implements TaskService {
         // 为每台机器创建单独的任务
         for (Machine machine : machines) {
             String taskName = name + " - " + machine.getName();
-            String taskId = createMachineTask(processId, machine.getId(), taskName, description, operationType, stepIds);
+            String taskId =
+                    createMachineTask(
+                            processId,
+                            machine.getId(),
+                            taskName,
+                            description,
+                            operationType,
+                            stepIds);
             machineTaskMap.put(machine.getId(), taskId);
         }
 
@@ -152,12 +169,13 @@ public class TaskServiceImpl implements TaskService {
         List<LogstashTaskMachineStep> steps = stepMapper.findByTaskId(taskId);
 
         // 按机器分组步骤
-        Map<Long, List<LogstashTaskMachineStep>> machineStepsMap = steps.stream()
-                .collect(Collectors.groupingBy(LogstashTaskMachineStep::getMachineId));
+        Map<Long, List<LogstashTaskMachineStep>> machineStepsMap =
+                steps.stream()
+                        .collect(Collectors.groupingBy(LogstashTaskMachineStep::getMachineId));
 
         // 使用转换器将基于机器ID的步骤转换为基于机器名称的步骤
-        Map<String, List<TaskDetailDTO.MachineStepDTO>> nameBasedStepMap = taskMachineStepConverter
-                .convertToNameBasedMap(machineStepsMap);
+        Map<String, List<TaskDetailDTO.MachineStepDTO>> nameBasedStepMap =
+                taskMachineStepConverter.convertToNameBasedMap(machineStepsMap);
 
         dto.setMachineSteps(nameBasedStepMap);
 
@@ -171,13 +189,10 @@ public class TaskServiceImpl implements TaskService {
         return Optional.of(dto);
     }
 
-
     @Override
     public List<String> getAllProcessTaskIds(Long processId) {
         List<LogstashTask> tasks = taskMapper.findByProcessId(processId);
-        return tasks.stream()
-                .map(LogstashTask::getId)
-                .collect(Collectors.toList());
+        return tasks.stream().map(LogstashTask::getId).collect(Collectors.toList());
     }
 
     @Override
@@ -194,7 +209,9 @@ public class TaskServiceImpl implements TaskService {
             taskMapper.updateStartTime(taskId, LocalDateTime.now());
         }
 
-        if ((status == TaskStatus.COMPLETED || status == TaskStatus.FAILED || status == TaskStatus.CANCELLED)
+        if ((status == TaskStatus.COMPLETED
+                        || status == TaskStatus.FAILED
+                        || status == TaskStatus.CANCELLED)
                 && task.getEndTime() == null) {
             taskMapper.updateEndTime(taskId, LocalDateTime.now());
         }
@@ -209,14 +226,17 @@ public class TaskServiceImpl implements TaskService {
             stepMapper.updateStartTime(taskId, machineId, stepId, LocalDateTime.now());
         }
 
-        if (status == StepStatus.COMPLETED || status == StepStatus.FAILED || status == StepStatus.SKIPPED) {
+        if (status == StepStatus.COMPLETED
+                || status == StepStatus.FAILED
+                || status == StepStatus.SKIPPED) {
             stepMapper.updateEndTime(taskId, machineId, stepId, LocalDateTime.now());
         }
     }
 
     @Override
     @Transactional
-    public void updateStepStatus(String taskId, Long machineId, String stepId, StepStatus status, String errorMessage) {
+    public void updateStepStatus(
+            String taskId, Long machineId, String stepId, StepStatus status, String errorMessage) {
         // 更新状态
         stepMapper.updateStatus(taskId, machineId, stepId, status.name());
 
@@ -225,7 +245,9 @@ public class TaskServiceImpl implements TaskService {
             stepMapper.updateStartTime(taskId, machineId, stepId, LocalDateTime.now());
         }
 
-        if (status == StepStatus.COMPLETED || status == StepStatus.FAILED || status == StepStatus.SKIPPED) {
+        if (status == StepStatus.COMPLETED
+                || status == StepStatus.FAILED
+                || status == StepStatus.SKIPPED) {
             stepMapper.updateEndTime(taskId, machineId, stepId, LocalDateTime.now());
         }
 
@@ -237,63 +259,74 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public void executeAsync(String taskId, Runnable action, Runnable callback) {
-        taskExecutor.execute(() -> {
-            try {
-                // 更新任务状态为执行中
-                updateTaskStatus(taskId, TaskStatus.RUNNING);
-
-                // 执行任务
-                action.run();
-
-                // 检查任务状态 - 如果执行过程中任务被标记为失败，不要将其更新为已完成
-                Optional<LogstashTask> taskAfterExecution = taskMapper.findById(taskId);
-                if (taskAfterExecution.isPresent() && !TaskStatus.FAILED.name().equals(taskAfterExecution.get().getStatus())) {
-                    // 只有当任务未被标记为失败时才更新为已完成
-                    updateTaskStatus(taskId, TaskStatus.COMPLETED);
-                }
-            } catch (Exception e) {
-                // 更新任务状态为失败
-                logger.error("任务执行失败: {}", e.getMessage(), e);
-                LogstashTask task = taskMapper.findById(taskId).orElse(null);
-                if (task != null) {
-                    String errorMessage = e.getMessage();
-                    if (errorMessage == null || errorMessage.isEmpty()) {
-                        errorMessage = "未知错误";
-                    }
-                    taskMapper.updateErrorMessage(taskId, errorMessage);
-                }
-                updateTaskStatus(taskId, TaskStatus.FAILED);
-            } finally {
-                if (callback != null) {
+        taskExecutor.execute(
+                () -> {
                     try {
-                        callback.run();
-                    } catch (Exception e) {
-                        logger.error("任务回调执行失败: {}", e.getMessage(), e);
-                    }
-                }
-            }
-        });
-    }
+                        // 更新任务状态为执行中
+                        updateTaskStatus(taskId, TaskStatus.RUNNING);
 
+                        // 执行任务
+                        action.run();
+
+                        // 检查任务状态 - 如果执行过程中任务被标记为失败，不要将其更新为已完成
+                        Optional<LogstashTask> taskAfterExecution = taskMapper.findById(taskId);
+                        if (taskAfterExecution.isPresent()
+                                && !TaskStatus.FAILED
+                                        .name()
+                                        .equals(taskAfterExecution.get().getStatus())) {
+                            // 只有当任务未被标记为失败时才更新为已完成
+                            updateTaskStatus(taskId, TaskStatus.COMPLETED);
+                        }
+                    } catch (Exception e) {
+                        // 更新任务状态为失败
+                        logger.error("任务执行失败: {}", e.getMessage(), e);
+                        LogstashTask task = taskMapper.findById(taskId).orElse(null);
+                        if (task != null) {
+                            String errorMessage = e.getMessage();
+                            if (errorMessage == null || errorMessage.isEmpty()) {
+                                errorMessage = "未知错误";
+                            }
+                            taskMapper.updateErrorMessage(taskId, errorMessage);
+                        }
+                        updateTaskStatus(taskId, TaskStatus.FAILED);
+                    } finally {
+                        if (callback != null) {
+                            try {
+                                callback.run();
+                            } catch (Exception e) {
+                                logger.error("任务回调执行失败: {}", e.getMessage(), e);
+                            }
+                        }
+                    }
+                });
+    }
 
     @Override
     public Map<String, Map<String, Integer>> getTaskMachineStepStatusStats(String taskId) {
         List<LogstashTaskMachineStep> steps = stepMapper.findByTaskId(taskId);
 
         // 先按机器ID分组获取状态统计
-        Map<Long, Map<String, Integer>> idBasedStats = steps.stream()
-                .collect(Collectors.groupingBy(
-                        LogstashTaskMachineStep::getMachineId,
-                        Collectors.groupingBy(
-                                LogstashTaskMachineStep::getStatus,
-                                Collectors.counting())))
-                .entrySet().stream()
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        e -> e.getValue().entrySet().stream()
-                                .collect(Collectors.toMap(
+        Map<Long, Map<String, Integer>> idBasedStats =
+                steps.stream()
+                        .collect(
+                                Collectors.groupingBy(
+                                        LogstashTaskMachineStep::getMachineId,
+                                        Collectors.groupingBy(
+                                                LogstashTaskMachineStep::getStatus,
+                                                Collectors.counting())))
+                        .entrySet()
+                        .stream()
+                        .collect(
+                                Collectors.toMap(
                                         Map.Entry::getKey,
-                                        v -> v.getValue().intValue()))));
+                                        e ->
+                                                e.getValue().entrySet().stream()
+                                                        .collect(
+                                                                Collectors.toMap(
+                                                                        Map.Entry::getKey,
+                                                                        v ->
+                                                                                v.getValue()
+                                                                                        .intValue()))));
 
         // 获取所有涉及的机器ID
         Set<Long> machineIds = idBasedStats.keySet();
@@ -304,8 +337,8 @@ public class TaskServiceImpl implements TaskService {
             machines = machineMapper.selectByIds(new ArrayList<>(machineIds));
         }
 
-        Map<Long, Machine> machineMap = machines.stream()
-                .collect(Collectors.toMap(Machine::getId, machine -> machine));
+        Map<Long, Machine> machineMap =
+                machines.stream().collect(Collectors.toMap(Machine::getId, machine -> machine));
 
         // 转换为基于名称的映射
         Map<String, Map<String, Integer>> nameBasedStats = new HashMap<>();
@@ -323,9 +356,7 @@ public class TaskServiceImpl implements TaskService {
         return nameBasedStats;
     }
 
-    /**
-     * 获取机器的键值（优先使用名称，如果不存在则使用ID字符串）
-     */
+    /** 获取机器的键值（优先使用名称，如果不存在则使用ID字符串） */
     private String getMachineKey(Map<Long, Machine> machineMap, Long machineId) {
         Machine machine = machineMap.get(machineId);
         if (machine != null && machine.getName() != null && !machine.getName().isEmpty()) {
@@ -351,7 +382,6 @@ public class TaskServiceImpl implements TaskService {
 
         return counts;
     }
-
 
     @Override
     @Transactional
@@ -394,19 +424,20 @@ public class TaskServiceImpl implements TaskService {
         result.setTaskStatus(task.getStatus());
 
         // 按步骤ID分组
-        Map<String, List<LogstashTaskMachineStep>> stepGroups = allSteps.stream()
-                .collect(Collectors.groupingBy(LogstashTaskMachineStep::getStepId));
+        Map<String, List<LogstashTaskMachineStep>> stepGroups =
+                allSteps.stream()
+                        .collect(Collectors.groupingBy(LogstashTaskMachineStep::getStepId));
 
         // 获取所有机器信息
-        Set<Long> machineIds = allSteps.stream()
-                .map(LogstashTaskMachineStep::getMachineId)
-                .collect(Collectors.toSet());
+        Set<Long> machineIds =
+                allSteps.stream()
+                        .map(LogstashTaskMachineStep::getMachineId)
+                        .collect(Collectors.toSet());
 
         Map<Long, Machine> machineMap = new HashMap<>();
         if (!machineIds.isEmpty()) {
             List<Machine> machines = machineMapper.selectByIds(new ArrayList<>(machineIds));
-            machineMap = machines.stream()
-                    .collect(Collectors.toMap(Machine::getId, m -> m));
+            machineMap = machines.stream().collect(Collectors.toMap(Machine::getId, m -> m));
         }
 
         // 构建步骤组列表
@@ -475,44 +506,43 @@ public class TaskServiceImpl implements TaskService {
             }
 
             // 按状态排序机器步骤
-            machineSteps.sort(Comparator.comparing(ms -> {
-                String status = ms.getStatus();
-                if (StepStatus.RUNNING.name().equals(status))
-                    return 1;
-                if (StepStatus.FAILED.name().equals(status))
-                    return 2;
-                if (StepStatus.COMPLETED.name().equals(status))
-                    return 3;
-                if (StepStatus.SKIPPED.name().equals(status))
-                    return 4;
-                return 5; // PENDING 或其他状态
-            }));
+            machineSteps.sort(
+                    Comparator.comparing(
+                            ms -> {
+                                String status = ms.getStatus();
+                                if (StepStatus.RUNNING.name().equals(status)) return 1;
+                                if (StepStatus.FAILED.name().equals(status)) return 2;
+                                if (StepStatus.COMPLETED.name().equals(status)) return 3;
+                                if (StepStatus.SKIPPED.name().equals(status)) return 4;
+                                return 5; // PENDING 或其他状态
+                            }));
 
             stepGroup.setMachineSteps(machineSteps);
             stepGroupList.add(stepGroup);
         }
 
         // 按步骤完成情况排序
-        stepGroupList.sort((a, b) -> {
-            // 优先展示正在运行的步骤
-            if (a.getRunningCount() > 0 && b.getRunningCount() == 0) {
-                return -1;
-            }
-            if (a.getRunningCount() == 0 && b.getRunningCount() > 0) {
-                return 1;
-            }
+        stepGroupList.sort(
+                (a, b) -> {
+                    // 优先展示正在运行的步骤
+                    if (a.getRunningCount() > 0 && b.getRunningCount() == 0) {
+                        return -1;
+                    }
+                    if (a.getRunningCount() == 0 && b.getRunningCount() > 0) {
+                        return 1;
+                    }
 
-            // 然后是失败的步骤
-            if (a.getFailedCount() > 0 && b.getFailedCount() == 0) {
-                return -1;
-            }
-            if (a.getFailedCount() == 0 && b.getFailedCount() > 0) {
-                return 1;
-            }
+                    // 然后是失败的步骤
+                    if (a.getFailedCount() > 0 && b.getFailedCount() == 0) {
+                        return -1;
+                    }
+                    if (a.getFailedCount() == 0 && b.getFailedCount() > 0) {
+                        return 1;
+                    }
 
-            // 最后按步骤ID排序（可能是按照执行顺序命名的）
-            return a.getStepId().compareTo(b.getStepId());
-        });
+                    // 最后按步骤ID排序（可能是按照执行顺序命名的）
+                    return a.getStepId().compareTo(b.getStepId());
+                });
 
         result.setSteps(stepGroupList);
         return result;
@@ -521,7 +551,8 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public Optional<TaskDetailDTO> getLatestMachineTaskDetail(Long processId, Long machineId) {
         // 获取指定进程的最新任务，并且该任务包含指定机器的步骤
-        Optional<LogstashTask> taskOpt = taskMapper.findLatestByProcessIdAndMachineId(processId, machineId);
+        Optional<LogstashTask> taskOpt =
+                taskMapper.findLatestByProcessIdAndMachineId(processId, machineId);
         if (!taskOpt.isPresent()) {
             return Optional.empty();
         }
@@ -531,15 +562,16 @@ public class TaskServiceImpl implements TaskService {
         TaskDetailDTO dto = taskDetailConverter.convertToTaskDetail(task);
 
         // 只获取指定机器的步骤信息
-        List<LogstashTaskMachineStep> steps = stepMapper.findByTaskIdAndMachineId(task.getId(), machineId);
+        List<LogstashTaskMachineStep> steps =
+                stepMapper.findByTaskIdAndMachineId(task.getId(), machineId);
 
         // 按机器分组步骤
         Map<Long, List<LogstashTaskMachineStep>> machineStepsMap = new HashMap<>();
         machineStepsMap.put(machineId, steps);
 
         // 使用转换器将基于机器ID的步骤转换为基于机器名称的步骤
-        Map<String, List<TaskDetailDTO.MachineStepDTO>> nameBasedStepMap = taskMachineStepConverter
-                .convertToNameBasedMap(machineStepsMap);
+        Map<String, List<TaskDetailDTO.MachineStepDTO>> nameBasedStepMap =
+                taskMachineStepConverter.convertToNameBasedMap(machineStepsMap);
 
         dto.setMachineSteps(nameBasedStepMap);
 

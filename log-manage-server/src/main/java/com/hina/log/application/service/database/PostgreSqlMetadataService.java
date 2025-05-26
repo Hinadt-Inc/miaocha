@@ -1,25 +1,25 @@
 package com.hina.log.application.service.database;
 
 import com.hina.log.domain.dto.SchemaInfoDTO;
-import org.springframework.stereotype.Component;
-
 import java.sql.*;
 import java.util.*;
+import org.springframework.stereotype.Component;
 
-/**
- * PostgreSQL数据库元数据服务实现
- */
+/** PostgreSQL数据库元数据服务实现 */
 @Component
 public class PostgreSqlMetadataService implements DatabaseMetadataService {
 
-    private static final String GET_TABLE_COMMENT_SQL = "SELECT obj_description(to_regclass(?)::oid) as table_comment";
+    private static final String GET_TABLE_COMMENT_SQL =
+            "SELECT obj_description(to_regclass(?)::oid) as table_comment";
 
     @Override
     public List<String> getAllTables(Connection connection) throws SQLException {
         List<String> tables = new ArrayList<>();
         DatabaseMetaData metaData = connection.getMetaData();
 
-        try (ResultSet rs = metaData.getTables(connection.getCatalog(), "public", "%", new String[] { "TABLE" })) {
+        try (ResultSet rs =
+                metaData.getTables(
+                        connection.getCatalog(), "public", "%", new String[] {"TABLE"})) {
             while (rs.next()) {
                 tables.add(rs.getString("TABLE_NAME"));
             }
@@ -60,7 +60,8 @@ public class PostgreSqlMetadataService implements DatabaseMetadataService {
         }
 
         // 获取列信息 - 在PostgreSQL中，列注释需要特殊处理
-        try (ResultSet rs = metaData.getColumns(connection.getCatalog(), "public", tableName, "%")) {
+        try (ResultSet rs =
+                metaData.getColumns(connection.getCatalog(), "public", tableName, "%")) {
             while (rs.next()) {
                 SchemaInfoDTO.ColumnInfoDTO column = new SchemaInfoDTO.ColumnInfoDTO();
                 String columnName = rs.getString("COLUMN_NAME");
@@ -79,14 +80,13 @@ public class PostgreSqlMetadataService implements DatabaseMetadataService {
         return columns;
     }
 
-    /**
-     * 获取PostgreSQL列注释
-     */
+    /** 获取PostgreSQL列注释 */
     private String getColumnComment(Connection connection, String tableName, String columnName) {
-        String sql = "SELECT col_description(a.attrelid, a.attnum) " +
-                "FROM pg_catalog.pg_attribute a " +
-                "WHERE a.attrelid = to_regclass(?)::oid " +
-                "AND a.attname = ?";
+        String sql =
+                "SELECT col_description(a.attrelid, a.attnum) "
+                        + "FROM pg_catalog.pg_attribute a "
+                        + "WHERE a.attrelid = to_regclass(?)::oid "
+                        + "AND a.attname = ?";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, tableName);

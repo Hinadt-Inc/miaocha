@@ -2,10 +2,7 @@ package com.hina.log.application.logstash.enums;
 
 import lombok.Getter;
 
-/**
- * Logstash机器状态枚举
- * 表示Logstash进程在特定机器上的状态
- */
+/** Logstash机器状态枚举 表示Logstash进程在特定机器上的状态 */
 @Getter
 public enum LogstashMachineState {
     INITIALIZING("初始化中"), // 创建过程中的初始状态

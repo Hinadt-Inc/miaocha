@@ -1,27 +1,21 @@
 package com.hina.log.config;
 
+import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadPoolExecutor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-import java.util.concurrent.Executor;
-import java.util.concurrent.ThreadPoolExecutor;
-
 /**
- * 线程池统一配置类
- * 包含所有应用使用的线程池配置：
- * 1. logstashTaskExecutor - 用于异步执行Logstash相关任务
- * 2. logQueryExecutor - 用于并行执行日志查询和分析
+ * 线程池统一配置类 包含所有应用使用的线程池配置： 1. logstashTaskExecutor - 用于异步执行Logstash相关任务 2. logQueryExecutor -
+ * 用于并行执行日志查询和分析
  */
 @Configuration
 @EnableAsync
 public class ThreadPoolConfig {
 
-    /**
-     * Logstash任务执行器
-     * 用于异步执行部署、启动、停止Logstash等长时间运行的任务
-     */
+    /** Logstash任务执行器 用于异步执行部署、启动、停止Logstash等长时间运行的任务 */
     @Bean(name = "logstashTaskExecutor")
     public Executor logstashTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
@@ -42,10 +36,7 @@ public class ThreadPoolConfig {
         return executor;
     }
 
-    /**
-     * 日志查询线程池
-     * 用于并行执行日志分析和检索SQL查询
-     */
+    /** 日志查询线程池 用于并行执行日志分析和检索SQL查询 */
     @Bean("logQueryExecutor")
     public Executor logQueryExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
@@ -67,6 +58,4 @@ public class ThreadPoolConfig {
         executor.initialize();
         return executor;
     }
-
-
 }

@@ -1,12 +1,10 @@
 package com.hina.log.domain.entity;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Data;
 import java.time.LocalDateTime;
+import lombok.Data;
 
-/**
- * 数据源实体类
- */
+/** 数据源实体类 */
 @Data
 @Schema(description = "数据源实体")
 public class Datasource {

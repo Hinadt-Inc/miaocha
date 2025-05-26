@@ -1,14 +1,11 @@
 package com.hina.log.domain.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Data;
-
 import java.util.List;
 import java.util.Map;
+import lombok.Data;
 
-/**
- * SQL查询结果DTO
- */
+/** SQL查询结果DTO */
 @Data
 @Schema(description = "SQL查询结果对象")
 public class SqlQueryResultDTO {

@@ -5,9 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * 统一API响应对象
- */
+/** 统一API响应对象 */
 @Getter
 @Setter
 @Schema(description = "API统一响应格式")
@@ -31,7 +29,7 @@ public class ApiResponse<T> {
      * 成功结果
      *
      * @param data 数据
-     * @param <T>  数据类型
+     * @param <T> 数据类型
      * @return 结果
      */
     public static <T> ApiResponse<T> success(T data) {
@@ -50,9 +48,9 @@ public class ApiResponse<T> {
     /**
      * 失败结果
      *
-     * @param code    错误码
+     * @param code 错误码
      * @param message 错误信息
-     * @param <T>     数据类型
+     * @param <T> 数据类型
      * @return 结果
      */
     public static <T> ApiResponse<T> error(String code, String message) {
@@ -63,7 +61,7 @@ public class ApiResponse<T> {
      * 失败结果
      *
      * @param errorCode 错误码
-     * @param <T>       数据类型
+     * @param <T> 数据类型
      * @return 结果
      */
     public static <T> ApiResponse<T> error(ErrorCode errorCode) {
@@ -73,9 +71,9 @@ public class ApiResponse<T> {
     /**
      * 失败结果
      *
-     * @param errorCode   错误码
+     * @param errorCode 错误码
      * @param errorDetail 错误详情
-     * @param <T>         数据类型
+     * @param <T> 数据类型
      * @return 结果
      */
     public static <T> ApiResponse<T> error(ErrorCode errorCode, String errorDetail) {

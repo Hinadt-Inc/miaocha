@@ -24,6 +24,7 @@
 ## 技术栈
 
 ### 后端技术
+
 * **语言与框架**: Java 17, Spring Boot, Spring Security
 * **API文档**: SpringDoc/OpenAPI 3.0
 * **ORM**: MyBatis
@@ -36,6 +37,7 @@
 * **日志系统**: Logback + Logstash JSON Encoder，支持多格式日志输出
 
 ### 前端技术
+
 * **框架**: React 18
 * **UI组件库**: Ant Design 5
 * **HTTP客户端**: Axios
@@ -52,17 +54,14 @@
    * 分页查询结果展示
    * 自定义字段排序
    * 支持SQL条件表达式
-
 2. **时间分布分析**
    * 根据指定时间间隔统计日志数量分布
    * 生成时间柱状图数据
    * 支持按分钟、小时、天等粒度聚合
-
 3. **字段分布统计**
    * 分析指定字段的TOP N值分布
    * 支持同时分析多个字段的分布情况
    * 利用Doris TOPN函数高效计算
-
 4. **表结构信息查询**
    * 获取日志表字段详细信息
    * 支持显示字段名称、数据类型、字段描述等
@@ -111,19 +110,16 @@ Logstash进程在系统中有以下8种状态：
    * 初始状态: `INITIALIZING`
    * 成功: `INITIALIZING` → `NOT_STARTED`
    * 失败: `INITIALIZING` → `INITIALIZE_FAILED`
-
 2. **启动流程**:
    * 初始状态: `NOT_STARTED`
    * 启动中: `NOT_STARTED` → `STARTING`
    * 成功: `STARTING` → `RUNNING`
    * 失败: `STARTING` → `START_FAILED`
-
 3. **停止流程**:
    * 初始状态: `RUNNING`
    * 停止中: `RUNNING` → `STOPPING`
    * 成功: `STOPPING` → `NOT_STARTED`
    * 失败: `STOPPING` → `STOP_FAILED`
-
 4. **恢复流程**:
    * 从失败状态重试: `START_FAILED` → `STARTING` 或 `INITIALIZE_FAILED` → `INITIALIZING`
 
@@ -156,19 +152,16 @@ Logstash进程在系统中有以下8种状态：
    * 初始化配置环境
    * 上传和管理配置文件
    * **支持重新初始化失败的机器实例**
-
 2. **配置管理**
    * 支持管理主配置文件
    * 支持自定义JVM选项
    * 支持修改logstash.yml配置
    * 配置同步和版本控制
-
 3. **进程控制**
    * 启动Logstash进程
    * 停止Logstash进程
    * 监控进程状态
    * 自动恢复失败进程
-
 4. **多机器部署**
    * 支持在多台机器上部署同一进程
    * 独立管理每台机器上的进程状态
@@ -179,6 +172,7 @@ Logstash进程在系统中有以下8种状态：
 当Logstash机器实例初始化失败时，系统提供了重新初始化功能：
 
 #### 功能特性
+
 * **状态检查**: 严格限制只有 `INITIALIZE_FAILED` 状态的机器才能重新初始化
 * **两种操作模式**:
   - 单机器重新初始化：针对特定失败的机器进行重新初始化
@@ -187,6 +181,7 @@ Logstash进程在系统中有以下8种状态：
 * **事务保证**: 确保操作的原子性和数据一致性
 
 #### API接口
+
 * `POST /api/logstash/processes/{id}/reinitialize`: 重新初始化所有失败的机器
 * `POST /api/logstash/processes/{id}/machines/{machineId}/reinitialize`: 重新初始化指定机器
 
@@ -210,16 +205,19 @@ Logstash进程在系统中有以下8种状态：
 ## 项目构建与运行
 
 ### 构建项目
+
 ```bash
 mvn clean package
 ```
 
 ### 使用Docker构建和启动
+
 ```bash
 ./build-start-docker.sh
 ```
 
 ### 清理Docker镜像
+
 ```bash
 ./clean-docker-images.sh
 ```
@@ -227,6 +225,7 @@ mvn clean package
 ## 环境信息
 
 ### 测试环境
+
 * **后端API地址**: `http://10.254.133.210:32088/`
 
 ## 配置信息
@@ -258,7 +257,6 @@ mvn clean package
 1. **普通格式日志**: `log-manage-system.log`
    - 适合开发调试和人工阅读
    - 标准文本格式，包含时间、线程、级别、类名和消息
-
 2. **JSON格式日志**:
    - `log-manage-system-json.log`: 包含INFO及以下级别
    - `log-manage-system-json-error.log`: 仅包含ERROR级别
@@ -306,6 +304,7 @@ log-manage-server/src/main/java/com/hina/log/
 ### 分层架构说明
 
 #### 1. **Endpoint层** (Interface Layer)
+
 负责接收来自客户端的HTTP请求，进行参数校验和格式转换。
 
 **主要组件:**
@@ -319,17 +318,18 @@ log-manage-server/src/main/java/com/hina/log/
 * `UserEndpoint`: 用户管理接口
 
 #### 2. **Application层** (Application Layer)
+
 包含应用服务和业务流程编排逻辑。
 
 **主要组件:**
 * **`service/`**: 核心应用服务
-  - `DatasourceService`: 数据源管理服务
-  - `LogSearchService`: 日志搜索服务
-  - `LogstashProcessService`: Logstash进程管理服务
-  - `MachineService`: 机器管理服务
-  - `ModulePermissionService`: 模块权限管理服务
-  - `SqlQueryService`: SQL查询服务
-  - `UserService`: 用户管理服务
+- `DatasourceService`: 数据源管理服务
+- `LogSearchService`: 日志搜索服务
+- `LogstashProcessService`: Logstash进程管理服务
+- `MachineService`: 机器管理服务
+- `ModulePermissionService`: 模块权限管理服务
+- `SqlQueryService`: SQL查询服务
+- `UserService`: 用户管理服务
 
 * **`logstash/`**: Logstash专门的应用服务
   - `LogstashProcessDeployService`: Logstash部署服务
@@ -337,54 +337,52 @@ log-manage-server/src/main/java/com/hina/log/
   - `state/`: 状态管理相关类
   - `command/`: 命令模式实现
   - `task/`: 任务管理
-
 * **`security/`**: 安全相关配置
 * **`filter/`**: HTTP请求过滤器
 
 #### 3. **Domain层** (Domain Layer)
+
 包含核心业务实体和业务逻辑。
 
 **主要组件:**
 * **`entity/`**: 领域实体
-  - `Datasource`: 数据源配置信息
-  - `LogstashMachine`: Logstash机器配置
-  - `LogstashProcess`: Logstash进程信息
-  - `Machine`: 服务器机器信息
-  - `User`: 用户信息
-  - `UserModulePermission`: 用户模块权限配置
+- `Datasource`: 数据源配置信息
+- `LogstashMachine`: Logstash机器配置
+- `LogstashProcess`: Logstash进程信息
+- `Machine`: 服务器机器信息
+- `User`: 用户信息
+- `UserModulePermission`: 用户模块权限配置
 
 * **`dto/`**: 数据传输对象
   - 用于不同层之间的数据传输
   - 包含请求和响应的数据结构
-
 * **`mapper/`**: 数据访问接口
   - MyBatis映射器接口
   - 负责与数据库交互
-
 * **`converter/`**: 对象转换器
   - 负责DTO与Entity之间的转换
   - 确保各层之间的解耦
 
 #### 4. **Common层** (Infrastructure Layer)
+
 提供基础设施和通用功能支持。
 
 **主要组件:**
 * **`util/`**: 工具类
-  - 通用的辅助方法和工具类
-  - 例如：日期处理、字符串操作、加密解密等
+- 通用的辅助方法和工具类
+- 例如：日期处理、字符串操作、加密解密等
 
 * **`exception/`**: 异常处理
   - 自定义异常类
   - 全局异常处理器
-
 * **`ssh/`**: SSH工具
   - SSH连接和命令执行
   - 远程文件操作
-
 * **`annotation/`**: 自定义注解
   - 用于AOP、权限控制等
 
 #### 5. **Config层**
+
 应用配置管理。
 
 **主要组件:**
@@ -427,11 +425,42 @@ log-manage-server/src/main/java/com/hina/log/
 
 ## 如何开发和调试
 
+### 环境准备
+
 1. 克隆项目代码库
 2. 配置MySQL数据库
 3. 修改 `application-dev.yml` 中的数据库连接信息
+
+### 代码格式化与质量控制
+
+本项目使用现代化的自动代码格式化工具确保代码风格一致性。
+
+#### 快速开始
+
+```bash
+# 安装Git pre-commit hooks（推荐）
+./scripts/install-git-hooks.sh
+
+# 手动格式化代码
+./scripts/format-code.sh
+
+# 快速构建（跳过代码质量检查）
+mvn clean install -Pquick
+```
+
+#### 工具栈
+
+- **Spotless Maven Plugin**: 自动代码格式化（Google Java Format标准）
+- **Checkstyle**: 静态代码分析（实用模式）
+- **EditorConfig**: 确保IDE编码风格一致性
+
+详细配置和使用说明请参考：[代码格式化指南](docs/CODE_STYLE.md)
+
+### 开发服务启动
+
 4. 启动后端服务: `mvn spring-boot:run -Dspring-boot.run.profiles=dev`
 5. 启动前端开发服务器:
+
    ```bash
    cd log-manage-ui/src/main/frontend
    npm install
@@ -456,4 +485,5 @@ log-manage-server/src/main/java/com/hina/log/
 - **配置说明**: [日志配置文档](docs/LOGGING_CONFIGURATION.md)
 - **发布说明**: [1.0.0版本发布说明](docs/RELEASE_NOTES_v1.0.0.md)
 - **部署指南**: [部署检查清单](docs/DEPLOYMENT_CHECKLIST_v1.0.0.md)
-- **问题反馈**: 请通过项目仓库提交Issue 
+- **问题反馈**: 请通过项目仓库提交Issue
+

@@ -1,21 +1,18 @@
 package com.hina.log.endpoint;
 
+import com.hina.log.application.service.MachineService;
 import com.hina.log.domain.dto.ApiResponse;
 import com.hina.log.domain.dto.MachineCreateDTO;
 import com.hina.log.domain.dto.MachineDTO;
-import com.hina.log.application.service.MachineService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
-/**
- * 机器管理控制器
- */
+/** 机器管理控制器 */
 @RestController
 @RequestMapping("/api/machines")
 @Tag(name = "机器管理", description = "提供机器元信息的增删改查和连接测试等功能")
@@ -33,14 +30,15 @@ public class MachineEndpoint {
     @PostMapping
     @Operation(summary = "创建机器", description = "创建一个新的机器连接")
     public ApiResponse<MachineDTO> createMachine(
-            @Parameter(description = "机器创建信息", required = true) @Valid @RequestBody MachineCreateDTO dto) {
+            @Parameter(description = "机器创建信息", required = true) @Valid @RequestBody
+                    MachineCreateDTO dto) {
         return ApiResponse.success(machineService.createMachine(dto));
     }
 
     /**
      * 更新机器
      *
-     * @param id  机器ID
+     * @param id 机器ID
      * @param dto 机器更新DTO
      * @return 更新后的机器
      */
@@ -48,7 +46,8 @@ public class MachineEndpoint {
     @Operation(summary = "更新机器", description = "根据ID更新已有机器的配置信息")
     public ApiResponse<MachineDTO> updateMachine(
             @Parameter(description = "机器ID", required = true) @PathVariable("id") Long id,
-            @Parameter(description = "机器更新信息", required = true) @Valid @RequestBody MachineCreateDTO dto) {
+            @Parameter(description = "机器更新信息", required = true) @Valid @RequestBody
+                    MachineCreateDTO dto) {
         return ApiResponse.success(machineService.updateMachine(id, dto));
     }
 

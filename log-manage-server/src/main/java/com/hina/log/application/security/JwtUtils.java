@@ -5,19 +5,16 @@ import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
-import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import javax.crypto.SecretKey;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
-/**
- * JWT 工具类
- */
+/** JWT 工具类 */
 @Slf4j
 @Component
 public class JwtUtils {
@@ -65,11 +62,12 @@ public class JwtUtils {
      */
     public String generateTokenFromRefreshToken(String refreshToken) throws ExpiredJwtException {
         try {
-            Claims claims = Jwts.parser()
-                    .verifyWith(getSigningKey())
-                    .build()
-                    .parseSignedClaims(refreshToken)
-                    .getPayload();
+            Claims claims =
+                    Jwts.parser()
+                            .verifyWith(getSigningKey())
+                            .build()
+                            .parseSignedClaims(refreshToken)
+                            .getPayload();
 
             // 验证是否为刷新token
             if (!"refresh".equals(claims.get("type"))) {
@@ -96,11 +94,12 @@ public class JwtUtils {
      */
     public long getExpirationFromToken(String token) {
         try {
-            Claims claims = Jwts.parser()
-                    .verifyWith(getSigningKey())
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload();
+            Claims claims =
+                    Jwts.parser()
+                            .verifyWith(getSigningKey())
+                            .build()
+                            .parseSignedClaims(token)
+                            .getPayload();
             return claims.getExpiration().getTime();
         } catch (Exception e) {
             log.error("Error while getting expiration from token: {}", e.getMessage());
@@ -116,11 +115,12 @@ public class JwtUtils {
      */
     public boolean isTokenNearExpiration(String token) {
         try {
-            Claims claims = Jwts.parser()
-                    .verifyWith(getSigningKey())
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload();
+            Claims claims =
+                    Jwts.parser()
+                            .verifyWith(getSigningKey())
+                            .build()
+                            .parseSignedClaims(token)
+                            .getPayload();
 
             Date expiration = claims.getExpiration();
             Date now = new Date();
@@ -138,8 +138,8 @@ public class JwtUtils {
     /**
      * 构建token
      *
-     * @param subject      token主题
-     * @param claims       token声明
+     * @param subject token主题
+     * @param claims token声明
      * @param expirationMs 过期时间（毫秒）
      * @return JWT token
      */
@@ -147,11 +147,12 @@ public class JwtUtils {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expirationMs);
 
-        JwtBuilder jwtBuilder = Jwts.builder()
-                .subject(subject)
-                .issuedAt(now)
-                .expiration(expiryDate)
-                .signWith(getSigningKey());
+        JwtBuilder jwtBuilder =
+                Jwts.builder()
+                        .subject(subject)
+                        .issuedAt(now)
+                        .expiration(expiryDate)
+                        .signWith(getSigningKey());
 
         // 添加claims
         claims.forEach(jwtBuilder::claim);

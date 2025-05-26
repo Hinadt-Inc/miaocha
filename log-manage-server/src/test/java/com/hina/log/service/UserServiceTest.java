@@ -1,5 +1,14 @@
 package com.hina.log.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+import com.hina.log.application.security.JwtUtils;
+import com.hina.log.application.service.impl.UserServiceImpl;
+import com.hina.log.common.exception.BusinessException;
+import com.hina.log.common.exception.ErrorCode;
+import com.hina.log.domain.converter.UserConverter;
 import com.hina.log.domain.dto.auth.LoginRequestDTO;
 import com.hina.log.domain.dto.auth.LoginResponseDTO;
 import com.hina.log.domain.dto.user.UpdatePasswordDTO;
@@ -8,12 +17,9 @@ import com.hina.log.domain.dto.user.UserDTO;
 import com.hina.log.domain.dto.user.UserUpdateDTO;
 import com.hina.log.domain.entity.User;
 import com.hina.log.domain.entity.enums.UserRole;
-import com.hina.log.common.exception.BusinessException;
-import com.hina.log.common.exception.ErrorCode;
 import com.hina.log.domain.mapper.UserMapper;
-import com.hina.log.application.security.JwtUtils;
-import com.hina.log.application.service.impl.UserServiceImpl;
-import com.hina.log.domain.converter.UserConverter;
+import java.util.Arrays;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,34 +30,20 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.Arrays;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
-/**
- * 用户服务单元测试
- */
+/** 用户服务单元测试 */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 public class UserServiceTest {
 
-    @Mock
-    private UserMapper userMapper;
+    @Mock private UserMapper userMapper;
 
-    @Mock
-    private PasswordEncoder passwordEncoder;
+    @Mock private PasswordEncoder passwordEncoder;
 
-    @Mock
-    private JwtUtils jwtUtils;
+    @Mock private JwtUtils jwtUtils;
 
-    @Mock
-    private UserConverter userConverter;
+    @Mock private UserConverter userConverter;
 
-    @InjectMocks
-    private UserServiceImpl userService;
+    @InjectMocks private UserServiceImpl userService;
 
     private User testUser;
     private UserCreateDTO createDTO;
@@ -106,17 +98,19 @@ public class UserServiceTest {
         when(jwtUtils.generateToken(anyString())).thenReturn("test_token");
 
         // 设置转换器行为 - more granular toDto implementation
-        when(userConverter.toDto(any(User.class))).thenAnswer(invocation -> {
-            User entity = invocation.getArgument(0);
-            UserDTO dto = new UserDTO();
-            dto.setId(entity.getId());
-            dto.setUid(entity.getUid());
-            dto.setNickname(entity.getNickname());
-            dto.setEmail(entity.getEmail());
-            dto.setRole(entity.getRole());
-            dto.setStatus(entity.getStatus());
-            return dto;
-        });
+        when(userConverter.toDto(any(User.class)))
+                .thenAnswer(
+                        invocation -> {
+                            User entity = invocation.getArgument(0);
+                            UserDTO dto = new UserDTO();
+                            dto.setId(entity.getId());
+                            dto.setUid(entity.getUid());
+                            dto.setNickname(entity.getNickname());
+                            dto.setEmail(entity.getEmail());
+                            dto.setRole(entity.getRole());
+                            dto.setStatus(entity.getStatus());
+                            return dto;
+                        });
 
         // Mock entity conversion from createDTO
         User newUser = new User();
@@ -135,15 +129,17 @@ public class UserServiceTest {
         when(userConverter.toEntity(any(UserUpdateDTO.class))).thenReturn(updatedUser);
 
         // Mock update entity
-        when(userConverter.updateEntity(any(User.class), any(UserUpdateDTO.class))).thenAnswer(invocation -> {
-            User entity = invocation.getArgument(0);
-            UserUpdateDTO dto = invocation.getArgument(1);
-            entity.setNickname(dto.getNickname());
-            entity.setEmail(dto.getEmail());
-            entity.setRole(dto.getRole());
-            entity.setStatus(dto.getStatus());
-            return entity;
-        });
+        when(userConverter.updateEntity(any(User.class), any(UserUpdateDTO.class)))
+                .thenAnswer(
+                        invocation -> {
+                            User entity = invocation.getArgument(0);
+                            UserUpdateDTO dto = invocation.getArgument(1);
+                            entity.setNickname(dto.getNickname());
+                            entity.setEmail(dto.getEmail());
+                            entity.setRole(dto.getRole());
+                            entity.setStatus(dto.getStatus());
+                            return entity;
+                        });
     }
 
     @Test
@@ -170,9 +166,12 @@ public class UserServiceTest {
         when(passwordEncoder.matches(anyString(), anyString())).thenReturn(false);
 
         // 执行测试并验证异常
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
-            userService.login(loginRequestDTO);
-        });
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            userService.login(loginRequestDTO);
+                        });
 
         assertEquals(ErrorCode.USER_PASSWORD_ERROR, exception.getErrorCode());
         verify(userMapper).selectByEmail(loginRequestDTO.getEmail());
@@ -186,9 +185,12 @@ public class UserServiceTest {
         when(userMapper.selectByEmail(anyString())).thenReturn(null);
 
         // 执行测试并验证异常
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
-            userService.login(loginRequestDTO);
-        });
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            userService.login(loginRequestDTO);
+                        });
 
         assertEquals(ErrorCode.USER_PASSWORD_ERROR, exception.getErrorCode());
         verify(userMapper).selectByEmail(loginRequestDTO.getEmail());
@@ -217,9 +219,12 @@ public class UserServiceTest {
         when(userMapper.selectById(999L)).thenReturn(null);
 
         // 执行测试并验证异常
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
-            userService.getUserById(999L);
-        });
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            userService.getUserById(999L);
+                        });
 
         assertEquals(ErrorCode.USER_NOT_FOUND, exception.getErrorCode());
         verify(userMapper).selectById(999L);
@@ -246,9 +251,12 @@ public class UserServiceTest {
         when(userMapper.selectByUid("invalid_uid")).thenReturn(null);
 
         // 执行测试并验证异常
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
-            userService.getUserByUid("invalid_uid");
-        });
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            userService.getUserByUid("invalid_uid");
+                        });
 
         assertEquals(ErrorCode.USER_NOT_FOUND, exception.getErrorCode());
         verify(userMapper).selectByUid("invalid_uid");
@@ -300,9 +308,12 @@ public class UserServiceTest {
         when(userMapper.selectByEmail("new@example.com")).thenReturn(testUser);
 
         // 执行测试并验证异常
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
-            userService.createUser(createDTO);
-        });
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            userService.createUser(createDTO);
+                        });
 
         assertEquals(ErrorCode.USER_NAME_EXISTS, exception.getErrorCode());
         verify(userMapper).selectByEmail(createDTO.getEmail());
@@ -315,9 +326,12 @@ public class UserServiceTest {
         createDTO.setRole("INVALID_ROLE");
 
         // 执行测试并验证异常
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
-            userService.createUser(createDTO);
-        });
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            userService.createUser(createDTO);
+                        });
 
         assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
         verify(userMapper).selectByEmail(createDTO.getEmail());
@@ -353,9 +367,12 @@ public class UserServiceTest {
         updateDTO.setId(999L);
 
         // 执行测试并验证异常
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
-            userService.updateUser(updateDTO);
-        });
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            userService.updateUser(updateDTO);
+                        });
 
         assertEquals(ErrorCode.USER_NOT_FOUND, exception.getErrorCode());
         verify(userMapper).selectById(updateDTO.getId());
@@ -368,9 +385,12 @@ public class UserServiceTest {
         testUser.setRole(UserRole.SUPER_ADMIN.name());
 
         // 执行测试并验证异常
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
-            userService.updateUser(updateDTO);
-        });
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            userService.updateUser(updateDTO);
+                        });
 
         assertEquals(ErrorCode.PERMISSION_DENIED, exception.getErrorCode());
         verify(userMapper).selectById(updateDTO.getId());
@@ -386,9 +406,12 @@ public class UserServiceTest {
         when(userMapper.selectByEmail("update@example.com")).thenReturn(anotherUser);
 
         // 执行测试并验证异常
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
-            userService.updateUser(updateDTO);
-        });
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            userService.updateUser(updateDTO);
+                        });
 
         assertEquals(ErrorCode.USER_NAME_EXISTS, exception.getErrorCode());
         verify(userMapper).selectById(updateDTO.getId());
@@ -402,9 +425,10 @@ public class UserServiceTest {
         when(userMapper.deleteById(1L)).thenReturn(1);
 
         // 执行测试
-        assertDoesNotThrow(() -> {
-            userService.deleteUser(1L);
-        });
+        assertDoesNotThrow(
+                () -> {
+                    userService.deleteUser(1L);
+                });
 
         // 验证调用
         verify(userMapper).selectById(1L);
@@ -417,9 +441,12 @@ public class UserServiceTest {
         when(userMapper.selectById(999L)).thenReturn(null);
 
         // 执行测试并验证异常
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
-            userService.deleteUser(999L);
-        });
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            userService.deleteUser(999L);
+                        });
 
         assertEquals(ErrorCode.USER_NOT_FOUND, exception.getErrorCode());
         verify(userMapper).selectById(999L);
@@ -432,9 +459,12 @@ public class UserServiceTest {
         testUser.setRole(UserRole.SUPER_ADMIN.name());
 
         // 执行测试并验证异常
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
-            userService.deleteUser(1L);
-        });
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            userService.deleteUser(1L);
+                        });
 
         assertEquals(ErrorCode.PERMISSION_DENIED, exception.getErrorCode());
         verify(userMapper).selectById(1L);
@@ -447,9 +477,10 @@ public class UserServiceTest {
         when(userMapper.updatePassword(eq(1L), anyString())).thenReturn(1);
 
         // 执行测试
-        assertDoesNotThrow(() -> {
-            userService.updatePassword(1L, "new_password");
-        });
+        assertDoesNotThrow(
+                () -> {
+                    userService.updatePassword(1L, "new_password");
+                });
 
         // 验证调用
         verify(userMapper).selectById(1L);
@@ -463,9 +494,12 @@ public class UserServiceTest {
         when(userMapper.selectById(999L)).thenReturn(null);
 
         // 执行测试并验证异常
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
-            userService.updatePassword(999L, "new_password");
-        });
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            userService.updatePassword(999L, "new_password");
+                        });
 
         assertEquals(ErrorCode.USER_NOT_FOUND, exception.getErrorCode());
         verify(userMapper).selectById(999L);
@@ -479,9 +513,10 @@ public class UserServiceTest {
         when(userMapper.updatePassword(eq(1L), anyString())).thenReturn(1);
 
         // 执行测试
-        assertDoesNotThrow(() -> {
-            userService.updateOwnPassword(1L, updatePasswordDTO);
-        });
+        assertDoesNotThrow(
+                () -> {
+                    userService.updateOwnPassword(1L, updatePasswordDTO);
+                });
 
         // 验证调用
         verify(userMapper).selectById(1L);
@@ -496,9 +531,12 @@ public class UserServiceTest {
         when(userMapper.selectById(999L)).thenReturn(null);
 
         // 执行测试并验证异常
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
-            userService.updateOwnPassword(999L, updatePasswordDTO);
-        });
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            userService.updateOwnPassword(999L, updatePasswordDTO);
+                        });
 
         assertEquals(ErrorCode.USER_NOT_FOUND, exception.getErrorCode());
         verify(userMapper).selectById(999L);
@@ -512,9 +550,12 @@ public class UserServiceTest {
         when(passwordEncoder.matches("old_password", "encoded_password")).thenReturn(false);
 
         // 执行测试并验证异常
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
-            userService.updateOwnPassword(1L, updatePasswordDTO);
-        });
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            userService.updateOwnPassword(1L, updatePasswordDTO);
+                        });
 
         assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
         verify(userMapper).selectById(1L);
@@ -528,9 +569,12 @@ public class UserServiceTest {
         updatePasswordDTO.setNewPassword("old_password");
 
         // 执行测试并验证异常
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
-            userService.updateOwnPassword(1L, updatePasswordDTO);
-        });
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            userService.updateOwnPassword(1L, updatePasswordDTO);
+                        });
 
         assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
         verify(userMapper).selectById(1L);

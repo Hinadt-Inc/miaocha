@@ -1,11 +1,13 @@
 package com.hina.log.application.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hina.log.domain.dto.ApiResponse;
 import com.hina.log.common.exception.ErrorCode;
+import com.hina.log.domain.dto.ApiResponse;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -14,19 +16,16 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.access.AccessDeniedHandler;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-
-/**
- * 自定义访问拒绝处理器 - 处理权限不足的请求返回JSON响应
- */
+/** 自定义访问拒绝处理器 - 处理权限不足的请求返回JSON响应 */
 @Slf4j
 public class CustomAccessDeniedHandler implements AccessDeniedHandler {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public void handle(HttpServletRequest request, HttpServletResponse response,
+    public void handle(
+            HttpServletRequest request,
+            HttpServletResponse response,
             AccessDeniedException accessDeniedException)
             throws IOException, ServletException {
         log.error("权限拒绝: {}", accessDeniedException.getMessage());

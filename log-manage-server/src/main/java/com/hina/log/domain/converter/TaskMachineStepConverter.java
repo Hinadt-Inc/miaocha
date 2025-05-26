@@ -1,31 +1,25 @@
 package com.hina.log.domain.converter;
 
 import com.hina.log.domain.dto.logstash.TaskDetailDTO.MachineStepDTO;
-import com.hina.log.domain.entity.Machine;
 import com.hina.log.domain.entity.LogstashTaskMachineStep;
+import com.hina.log.domain.entity.Machine;
 import com.hina.log.domain.mapper.MachineMapper;
+import java.util.*;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
-import java.util.stream.Collectors;
-
-/**
- * 任务机器步骤转换器
- * 负责将基于机器ID的数据转换为基于机器名称的数据
- */
+/** 任务机器步骤转换器 负责将基于机器ID的数据转换为基于机器名称的数据 */
 @Component
 public class TaskMachineStepConverter {
 
-    @Autowired
-    private TaskDetailConverter taskDetailConverter;
+    @Autowired private TaskDetailConverter taskDetailConverter;
 
-    @Autowired
-    private MachineMapper machineMapper;
+    @Autowired private MachineMapper machineMapper;
 
     /**
      * 转换机器步骤映射（使用机器名称作为键）
-     * 
+     *
      * @param machineStepsMap 基于机器ID的步骤映射
      * @return 基于机器名称的步骤映射
      */
@@ -40,8 +34,8 @@ public class TaskMachineStepConverter {
 
         // 批量查询机器信息
         List<Machine> machines = machineMapper.selectByIds(new ArrayList<>(machineIds));
-        Map<Long, Machine> machineMap = machines.stream()
-                .collect(Collectors.toMap(Machine::getId, machine -> machine));
+        Map<Long, Machine> machineMap =
+                machines.stream().collect(Collectors.toMap(Machine::getId, machine -> machine));
 
         // 转换为基于名称的映射
         Map<String, List<MachineStepDTO>> nameBasedMap = new HashMap<>();
@@ -54,9 +48,10 @@ public class TaskMachineStepConverter {
             String machineKey = getMachineKey(machineMap, machineId);
 
             // 转换步骤列表
-            List<MachineStepDTO> stepDtos = steps.stream()
-                    .map(taskDetailConverter::convertToStepDTO)
-                    .collect(Collectors.toList());
+            List<MachineStepDTO> stepDtos =
+                    steps.stream()
+                            .map(taskDetailConverter::convertToStepDTO)
+                            .collect(Collectors.toList());
 
             nameBasedMap.put(machineKey, stepDtos);
         }
@@ -66,7 +61,7 @@ public class TaskMachineStepConverter {
 
     /**
      * 转换已经转换为DTO的步骤映射（使用机器名称作为键）
-     * 
+     *
      * @param machineStepDtoMap 基于机器ID的DTO步骤映射
      * @return 基于机器名称的DTO步骤映射
      */
@@ -81,8 +76,8 @@ public class TaskMachineStepConverter {
 
         // 批量查询机器信息
         List<Machine> machines = machineMapper.selectByIds(new ArrayList<>(machineIds));
-        Map<Long, Machine> machineMap = machines.stream()
-                .collect(Collectors.toMap(Machine::getId, machine -> machine));
+        Map<Long, Machine> machineMap =
+                machines.stream().collect(Collectors.toMap(Machine::getId, machine -> machine));
 
         // 转换为基于名称的映射
         Map<String, List<MachineStepDTO>> nameBasedMap = new HashMap<>();
@@ -100,9 +95,7 @@ public class TaskMachineStepConverter {
         return nameBasedMap;
     }
 
-    /**
-     * 获取机器的键值（优先使用名称，如果不存在则使用ID字符串）
-     */
+    /** 获取机器的键值（优先使用名称，如果不存在则使用ID字符串） */
     private String getMachineKey(Map<Long, Machine> machineMap, Long machineId) {
         Machine machine = machineMap.get(machineId);
         if (machine != null && machine.getName() != null && !machine.getName().isEmpty()) {

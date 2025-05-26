@@ -1,13 +1,13 @@
 package com.hina.log;
 
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.mybatis.spring.annotation.MapperScan;
 
 /**
  * 日志管理系统主应用类
- * 
+ *
  * @author hina
  */
 @SpringBootApplication

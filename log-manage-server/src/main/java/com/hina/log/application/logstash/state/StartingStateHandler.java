@@ -5,9 +5,7 @@ import com.hina.log.application.logstash.enums.LogstashMachineState;
 import com.hina.log.application.logstash.task.TaskService;
 import org.springframework.stereotype.Component;
 
-/**
- * 启动中状态处理器
- */
+/** 启动中状态处理器 */
 @Component
 public class StartingStateHandler extends AbstractLogstashMachineStateHandler {
 

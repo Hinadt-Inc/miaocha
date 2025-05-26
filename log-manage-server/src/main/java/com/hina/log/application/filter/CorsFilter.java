@@ -3,15 +3,12 @@ package com.hina.log.application.filter;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
-
-/**
- * CORS过滤器 - 允许来自任何域的请求
- */
+/** CORS过滤器 - 允许来自任何域的请求 */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class CorsFilter implements Filter {
@@ -40,10 +37,8 @@ public class CorsFilter implements Filter {
     }
 
     @Override
-    public void init(FilterConfig filterConfig) {
-    }
+    public void init(FilterConfig filterConfig) {}
 
     @Override
-    public void destroy() {
-    }
+    public void destroy() {}
 }

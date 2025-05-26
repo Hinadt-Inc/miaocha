@@ -1,15 +1,10 @@
 package com.hina.log.domain.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
 import lombok.Data;
 
-import java.util.List;
-import java.util.Map;
-
-/**
- * 字段数据分布DTO
- * 用于表示日志字段的数据分布统计信息
- */
+/** 字段数据分布DTO 用于表示日志字段的数据分布统计信息 */
 @Data
 @Schema(description = "字段数据分布统计对象")
 public class FieldDistributionDTO {
@@ -32,9 +27,7 @@ public class FieldDistributionDTO {
     @Schema(description = "该字段的唯一值数量")
     private Integer uniqueValueCount;
 
-    /**
-     * 字段值分布数据
-     */
+    /** 字段值分布数据 */
     @Data
     @Schema(description = "字段值分布数据")
     public static class ValueDistribution {

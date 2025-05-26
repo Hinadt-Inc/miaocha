@@ -4,9 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
-/**
- * Logstash配置更新DTO
- */
+/** Logstash配置更新DTO */
 @Data
 @Schema(description = "Logstash配置更新DTO")
 public class LogstashConfigUpdateDTO {

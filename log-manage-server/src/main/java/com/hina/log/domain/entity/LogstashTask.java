@@ -1,13 +1,10 @@
 package com.hina.log.domain.entity;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.time.LocalDateTime;
 import lombok.Data;
 
-import java.time.LocalDateTime;
-
-/**
- * Logstash部署任务实体类
- */
+/** Logstash部署任务实体类 */
 @Data
 @Schema(description = "Logstash部署任务实体")
 public class LogstashTask {

@@ -3,23 +3,21 @@ package com.hina.log.domain.converter;
 import com.hina.log.domain.dto.SqlHistoryResponseDTO.SqlHistoryItemDTO;
 import com.hina.log.domain.entity.SqlQueryHistory;
 import com.hina.log.domain.entity.User;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.stereotype.Component;
-
 import java.io.File;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.stereotype.Component;
 
-/**
- * SQL查询历史转换器
- */
+/** SQL查询历史转换器 */
 @Component
 public class SqlQueryHistoryConverter implements Converter<SqlQueryHistory, SqlHistoryItemDTO> {
 
-    private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter DATETIME_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Override
     public SqlQueryHistory toEntity(SqlHistoryItemDTO dto) {
@@ -42,7 +40,7 @@ public class SqlQueryHistoryConverter implements Converter<SqlQueryHistory, SqlH
      * 将SqlQueryHistory实体转换为DTO，并设置用户邮箱
      *
      * @param entity SQL查询历史记录
-     * @param user   用户信息，可以为null
+     * @param user 用户信息，可以为null
      * @return DTO对象
      */
     public SqlHistoryItemDTO convertToDto(SqlQueryHistory entity, User user) {
@@ -63,8 +61,9 @@ public class SqlQueryHistoryConverter implements Converter<SqlQueryHistory, SqlH
         }
 
         // 判断是否有结果文件
-        boolean hasResultFile = StringUtils.isNotBlank(entity.getResultFilePath()) &&
-                new File(entity.getResultFilePath()).exists();
+        boolean hasResultFile =
+                StringUtils.isNotBlank(entity.getResultFilePath())
+                        && new File(entity.getResultFilePath()).exists();
         dto.setHasResultFile(hasResultFile);
 
         if (hasResultFile) {
@@ -83,16 +82,21 @@ public class SqlQueryHistoryConverter implements Converter<SqlQueryHistory, SqlH
      * 批量转换历史记录
      *
      * @param historyList 历史记录列表
-     * @param userMap     用户映射 (ID -> User)
+     * @param userMap 用户映射 (ID -> User)
      * @return DTO列表
      */
-    public List<SqlHistoryItemDTO> convertToDtoList(List<SqlQueryHistory> historyList, Map<Long, User> userMap) {
+    public List<SqlHistoryItemDTO> convertToDtoList(
+            List<SqlQueryHistory> historyList, Map<Long, User> userMap) {
         if (historyList == null || historyList.isEmpty()) {
             return Collections.emptyList();
         }
 
         return historyList.stream()
-                .map(history -> convertToDto(history, userMap != null ? userMap.get(history.getUserId()) : null))
+                .map(
+                        history ->
+                                convertToDto(
+                                        history,
+                                        userMap != null ? userMap.get(history.getUserId()) : null))
                 .collect(Collectors.toList());
     }
 

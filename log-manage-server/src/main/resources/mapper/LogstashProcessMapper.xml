@@ -1,76 +1,76 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.hina.log.domain.mapper.LogstashProcessMapper">
-    
+
     <!-- Logstash进程表所有字段 -->
     <sql id="logstashProcessColumns">
         id, name, module, config_content, doris_sql, jvm_options, logstash_yml, datasource_id, table_name, create_time, update_time
     </sql>
-    
+
     <!-- Logstash进程表所有字段（带lp别名） -->
     <sql id="logstashProcessColumnsWithAlias">
         lp.id, lp.name, lp.module, lp.config_content, lp.doris_sql, lp.jvm_options, lp.logstash_yml, lp.datasource_id, lp.table_name, lp.create_time, lp.update_time
     </sql>
-    
+
     <!-- 插入 Logstash 进程记录 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO logstash_process (name, module, config_content, doris_sql, jvm_options, logstash_yml, datasource_id, table_name, create_time, update_time)
         VALUES (#{name}, #{module}, #{configContent}, #{dorisSql}, #{jvmOptions}, #{logstashYml}, #{datasourceId}, #{tableName}, NOW(), NOW())
     </insert>
-    
+
     <!-- 更新进程记录 -->
     <update id="update">
         UPDATE logstash_process SET name=#{name}, module=#{module},
         config_content=#{configContent}, doris_sql=#{dorisSql}, jvm_options=#{jvmOptions}, logstash_yml=#{logstashYml},
         datasource_id=#{datasourceId}, table_name=#{tableName}, update_time=NOW() WHERE id=#{id}
     </update>
-    
+
     <!-- 仅更新配置信息 -->
     <update id="updateConfigOnly">
         UPDATE logstash_process SET config_content=#{configContent}, jvm_options=#{jvmOptions},
         logstash_yml=#{logstashYml}, update_time=NOW() WHERE id=#{id}
     </update>
-    
+
     <!-- 根据ID删除 -->
     <delete id="deleteById">
         DELETE FROM logstash_process WHERE id=#{id}
     </delete>
-    
+
     <!-- 根据ID查询 -->
     <select id="selectById" resultType="com.hina.log.domain.entity.LogstashProcess">
         SELECT <include refid="logstashProcessColumns"/> FROM logstash_process WHERE id=#{id}
     </select>
-    
+
     <!-- 根据名称查询 -->
     <select id="selectByName" resultType="com.hina.log.domain.entity.LogstashProcess">
         SELECT <include refid="logstashProcessColumns"/> FROM logstash_process WHERE name=#{name}
     </select>
-    
+
     <!-- 根据模块查询 -->
     <select id="selectByModule" resultType="com.hina.log.domain.entity.LogstashProcess">
         SELECT <include refid="logstashProcessColumns"/> FROM logstash_process WHERE module=#{module}
     </select>
-    
+
     <!-- 根据模块查询表名 -->
     <select id="selectTableNameByModule" resultType="java.lang.String">
         SELECT table_name FROM logstash_process WHERE module=#{module}
     </select>
-    
+
     <!-- 根据模块统计 -->
     <select id="countByModule" resultType="int">
         SELECT COUNT(id) FROM logstash_process WHERE module=#{module}
     </select>
-    
+
     <!-- 查询所有 -->
     <select id="selectAll" resultType="com.hina.log.domain.entity.LogstashProcess">
         SELECT <include refid="logstashProcessColumns"/> FROM logstash_process
     </select>
-    
+
     <!-- 根据机器ID查询 -->
     <select id="selectByMachineId" resultType="com.hina.log.domain.entity.LogstashProcess">
         SELECT <include refid="logstashProcessColumnsWithAlias"/> FROM logstash_process lp
         JOIN logstash_machine lm ON lp.id = lm.logstash_process_id
         WHERE lm.machine_id = #{machineId}
     </select>
-    
-</mapper> 
+
+</mapper>

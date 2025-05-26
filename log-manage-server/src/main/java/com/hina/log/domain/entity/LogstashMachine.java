@@ -1,13 +1,10 @@
 package com.hina.log.domain.entity;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.time.LocalDateTime;
 import lombok.Data;
 
-import java.time.LocalDateTime;
-
-/**
- * Logstash和机器的关联实体类
- */
+/** Logstash和机器的关联实体类 */
 @Data
 @Schema(description = "Logstash和机器的关联实体")
 public class LogstashMachine {

@@ -1,74 +1,55 @@
 package com.hina.log.application.service.impl;
 
-import com.hina.log.domain.dto.*;
-import com.hina.log.domain.entity.Datasource;
-import com.hina.log.domain.entity.User;
-import com.hina.log.common.exception.BusinessException;
-import com.hina.log.common.exception.ErrorCode;
-import com.hina.log.common.exception.KeywordSyntaxException;
-import com.hina.log.domain.mapper.DatasourceMapper;
-import com.hina.log.domain.mapper.UserMapper;
 import com.hina.log.application.service.LogSearchService;
 import com.hina.log.application.service.ModuleTableMappingService;
 import com.hina.log.application.service.database.DatabaseMetadataService;
 import com.hina.log.application.service.database.DatabaseMetadataServiceFactory;
 import com.hina.log.application.service.sql.JdbcQueryExecutor;
 import com.hina.log.application.service.sql.builder.LogSqlBuilder;
-
 import com.hina.log.application.service.sql.processor.ResultProcessor;
 import com.hina.log.application.service.sql.processor.TimeRangeProcessor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
+import com.hina.log.common.exception.BusinessException;
+import com.hina.log.common.exception.ErrorCode;
+import com.hina.log.common.exception.KeywordSyntaxException;
+import com.hina.log.domain.dto.*;
+import com.hina.log.domain.entity.Datasource;
+import com.hina.log.domain.entity.User;
+import com.hina.log.domain.mapper.DatasourceMapper;
+import com.hina.log.domain.mapper.UserMapper;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 日志检索服务实现类
- */
+/** 日志检索服务实现类 */
 @Service
 public class LogSearchServiceImpl implements LogSearchService {
     private static final Logger logger = LoggerFactory.getLogger(LogSearchServiceImpl.class);
 
-    @Autowired
-    private DatasourceMapper datasourceMapper;
+    @Autowired private DatasourceMapper datasourceMapper;
 
-    @Autowired
-    private UserMapper userMapper;
+    @Autowired private UserMapper userMapper;
 
-    @Autowired
-    private JdbcQueryExecutor jdbcQueryExecutor;
+    @Autowired private JdbcQueryExecutor jdbcQueryExecutor;
 
-    @Autowired
-    private TimeRangeProcessor timeRangeProcessor;
+    @Autowired private TimeRangeProcessor timeRangeProcessor;
 
-    @Autowired
-    private LogSqlBuilder logSqlBuilder;
+    @Autowired private LogSqlBuilder logSqlBuilder;
 
-    @Autowired
-    private ResultProcessor resultProcessor;
+    @Autowired private ResultProcessor resultProcessor;
 
+    @Autowired private DatabaseMetadataServiceFactory metadataServiceFactory;
 
+    @Autowired private ModuleTableMappingService moduleTableMappingService;
 
-    @Autowired
-    private DatabaseMetadataServiceFactory metadataServiceFactory;
-
-    @Autowired
-    private ModuleTableMappingService moduleTableMappingService;
-
-
-
-
-    /**
-     * 仅执行日志明细查询
-     */
+    /** 仅执行日志明细查询 */
     @Override
     @Transactional
     public LogDetailResultDTO searchDetails(Long userId, LogSearchDTO dto) {
@@ -90,9 +71,7 @@ public class LogSearchServiceImpl implements LogSearchService {
         }
     }
 
-    /**
-     * 仅执行日志时间分布查询（柱状图数据）
-     */
+    /** 仅执行日志时间分布查询（柱状图数据） */
     @Override
     @Transactional
     public LogHistogramResultDTO searchHistogram(Long userId, LogSearchDTO dto) {
@@ -117,10 +96,7 @@ public class LogSearchServiceImpl implements LogSearchService {
         }
     }
 
-    /**
-     * 执行字段TOP5分布查询，使用Doris TOPN函数
-     * 使用LogSearchDTO中的fields字段指定需要查询分布的字段列表
-     */
+    /** 执行字段TOP5分布查询，使用Doris TOPN函数 使用LogSearchDTO中的fields字段指定需要查询分布的字段列表 */
     @Override
     @Transactional
     public LogFieldDistributionResultDTO searchFieldDistributions(Long userId, LogSearchDTO dto) {
@@ -147,9 +123,7 @@ public class LogSearchServiceImpl implements LogSearchService {
         }
     }
 
-    /**
-     * 执行明细查询
-     */
+    /** 执行明细查询 */
     private LogDetailResultDTO executeDetailSearch(Datasource datasource, LogSearchDTO dto) {
         long startTime = System.currentTimeMillis();
         LogDetailResultDTO result = new LogDetailResultDTO();
@@ -164,16 +138,22 @@ public class LogSearchServiceImpl implements LogSearchService {
             logger.debug("详细日志SQL: {}", detailSql);
 
             // 执行详细查询并获取原始结果
-            Map<String, Object> detailQueryResult = jdbcQueryExecutor.executeRawQuery(conn, detailSql);
+            Map<String, Object> detailQueryResult =
+                    jdbcQueryExecutor.executeRawQuery(conn, detailSql);
 
             // 处理详细查询结果
             resultProcessor.processDetailResult(detailQueryResult, result);
 
             // 执行总数查询
             StringBuilder countSql = new StringBuilder();
-            countSql.append("SELECT COUNT(1) as total FROM ").append(tableName)
-                    .append(" WHERE log_time >= '").append(dto.getStartTime()).append("'")
-                    .append(" AND log_time <= '").append(dto.getEndTime()).append("'");
+            countSql.append("SELECT COUNT(1) as total FROM ")
+                    .append(tableName)
+                    .append(" WHERE log_time >= '")
+                    .append(dto.getStartTime())
+                    .append("'")
+                    .append(" AND log_time <= '")
+                    .append(dto.getEndTime())
+                    .append("'");
 
             // 在where条件部分添加搜索条件
             String searchConditions = logSqlBuilder.buildSearchConditionsOnly(dto);
@@ -184,7 +164,8 @@ public class LogSearchServiceImpl implements LogSearchService {
             logger.debug("总数SQL: {}", countSql);
 
             // 执行总数查询并获取原始结果
-            Map<String, Object> countQueryResult = jdbcQueryExecutor.executeRawQuery(conn, countSql.toString());
+            Map<String, Object> countQueryResult =
+                    jdbcQueryExecutor.executeRawQuery(conn, countSql.toString());
 
             // 处理总数查询结果
             int totalCount = resultProcessor.processTotalCountResult(countQueryResult);
@@ -201,10 +182,9 @@ public class LogSearchServiceImpl implements LogSearchService {
         return result;
     }
 
-    /**
-     * 执行时间分布查询
-     */
-    private LogHistogramResultDTO executeHistogramSearch(Datasource datasource, LogSearchDTO dto, String timeUnit) {
+    /** 执行时间分布查询 */
+    private LogHistogramResultDTO executeHistogramSearch(
+            Datasource datasource, LogSearchDTO dto, String timeUnit) {
         long startTime = System.currentTimeMillis();
         LogHistogramResultDTO result = new LogHistogramResultDTO();
         result.setSuccess(true);
@@ -218,7 +198,8 @@ public class LogSearchServiceImpl implements LogSearchService {
             logger.debug("分布统计SQL: {}", distributionSql);
 
             // 执行分布查询并获取原始结果
-            Map<String, Object> distributionQueryResult = jdbcQueryExecutor.executeRawQuery(conn, distributionSql);
+            Map<String, Object> distributionQueryResult =
+                    jdbcQueryExecutor.executeRawQuery(conn, distributionSql);
 
             // 处理分布查询结果
             resultProcessor.processDistributionResult(distributionQueryResult, result);
@@ -234,10 +215,9 @@ public class LogSearchServiceImpl implements LogSearchService {
         return result;
     }
 
-    /**
-     * 执行字段分布查询，使用Doris TOPN函数
-     */
-    private LogFieldDistributionResultDTO executeFieldDistributionSearch(Datasource datasource, LogSearchDTO dto) {
+    /** 执行字段分布查询，使用Doris TOPN函数 */
+    private LogFieldDistributionResultDTO executeFieldDistributionSearch(
+            Datasource datasource, LogSearchDTO dto) {
         long startTime = System.currentTimeMillis();
         LogFieldDistributionResultDTO result = new LogFieldDistributionResultDTO();
         result.setSuccess(true);
@@ -247,14 +227,18 @@ public class LogSearchServiceImpl implements LogSearchService {
 
         try (Connection conn = jdbcQueryExecutor.getConnection(datasource)) {
             // 执行字段分布查询
-            String fieldDistributionSql = logSqlBuilder.buildFieldDistributionSql(dto, tableName, dto.getFields(), 5); // 默认TOP 5
+            String fieldDistributionSql =
+                    logSqlBuilder.buildFieldDistributionSql(
+                            dto, tableName, dto.getFields(), 5); // 默认TOP 5
             logger.debug("字段分布SQL: {}", fieldDistributionSql);
 
             // 执行字段分布查询并获取原始结果
-            Map<String, Object> fieldDistributionResult = jdbcQueryExecutor.executeRawQuery(conn, fieldDistributionSql);
+            Map<String, Object> fieldDistributionResult =
+                    jdbcQueryExecutor.executeRawQuery(conn, fieldDistributionSql);
 
             // 处理字段分布查询结果
-            List<FieldDistributionDTO> fieldDistributions = processTopnResult(fieldDistributionResult, dto.getFields());
+            List<FieldDistributionDTO> fieldDistributions =
+                    processTopnResult(fieldDistributionResult, dto.getFields());
             result.setFieldDistributions(fieldDistributions);
 
         } catch (SQLException e) {
@@ -268,10 +252,9 @@ public class LogSearchServiceImpl implements LogSearchService {
         return result;
     }
 
-    /**
-     * 处理TOPN查询结果，转换为FieldDistributionDTO列表
-     */
-    private List<FieldDistributionDTO> processTopnResult(Map<String, Object> queryResult, List<String> fields) {
+    /** 处理TOPN查询结果，转换为FieldDistributionDTO列表 */
+    private List<FieldDistributionDTO> processTopnResult(
+            Map<String, Object> queryResult, List<String> fields) {
         List<FieldDistributionDTO> result = new ArrayList<>();
         List<Map<String, Object>> rows = (List<Map<String, Object>>) queryResult.get("rows");
 
@@ -287,13 +270,15 @@ public class LogSearchServiceImpl implements LogSearchService {
 
                     // 解析JSON格式的TOPN结果，格式如：{"value1":count1,"value2":count2,...}
                     // 这里简化处理，实际应该使用JSON解析库
-                    List<FieldDistributionDTO.ValueDistribution> valueDistributions = parseTopnJson(jsonValue);
+                    List<FieldDistributionDTO.ValueDistribution> valueDistributions =
+                            parseTopnJson(jsonValue);
                     dto.setValueDistributions(valueDistributions);
 
                     // 计算总数（所有值的计数之和）
-                    int totalCount = valueDistributions.stream()
-                            .mapToInt(FieldDistributionDTO.ValueDistribution::getCount)
-                            .sum();
+                    int totalCount =
+                            valueDistributions.stream()
+                                    .mapToInt(FieldDistributionDTO.ValueDistribution::getCount)
+                                    .sum();
 
                     dto.setTotalCount(totalCount);
                     dto.setNonNullCount(totalCount); // 简化处理，实际应该计算非空值数量
@@ -308,10 +293,7 @@ public class LogSearchServiceImpl implements LogSearchService {
         return result;
     }
 
-    /**
-     * 解析TOPN函数返回的JSON字符串
-     * 格式如：{"value1":count1,"value2":count2,...}
-     */
+    /** 解析TOPN函数返回的JSON字符串 格式如：{"value1":count1,"value2":count2,...} */
     private List<FieldDistributionDTO.ValueDistribution> parseTopnJson(String jsonValue) {
         List<FieldDistributionDTO.ValueDistribution> result = new ArrayList<>();
 
@@ -346,7 +328,8 @@ public class LogSearchServiceImpl implements LogSearchService {
 
                 int count = Integer.parseInt(keyValue[1].trim());
 
-                FieldDistributionDTO.ValueDistribution vd = new FieldDistributionDTO.ValueDistribution();
+                FieldDistributionDTO.ValueDistribution vd =
+                        new FieldDistributionDTO.ValueDistribution();
                 vd.setValue(key);
                 vd.setCount(count);
 
@@ -361,9 +344,7 @@ public class LogSearchServiceImpl implements LogSearchService {
         return result;
     }
 
-    /**
-     * 创建日志明细查询错误结果
-     */
+    /** 创建日志明细查询错误结果 */
     private LogDetailResultDTO createDetailErrorResult(String errorMessage) {
         LogDetailResultDTO errorResult = new LogDetailResultDTO();
         errorResult.setSuccess(false);
@@ -373,9 +354,7 @@ public class LogSearchServiceImpl implements LogSearchService {
         return errorResult;
     }
 
-    /**
-     * 创建时间分布查询错误结果
-     */
+    /** 创建时间分布查询错误结果 */
     private LogHistogramResultDTO createHistogramErrorResult(String errorMessage) {
         LogHistogramResultDTO errorResult = new LogHistogramResultDTO();
         errorResult.setSuccess(false);
@@ -384,9 +363,7 @@ public class LogSearchServiceImpl implements LogSearchService {
         return errorResult;
     }
 
-    /**
-     * 创建字段分布查询错误结果
-     */
+    /** 创建字段分布查询错误结果 */
     private LogFieldDistributionResultDTO createFieldDistributionErrorResult(String errorMessage) {
         LogFieldDistributionResultDTO errorResult = new LogFieldDistributionResultDTO();
         errorResult.setSuccess(false);
@@ -395,9 +372,7 @@ public class LogSearchServiceImpl implements LogSearchService {
         return errorResult;
     }
 
-    /**
-     * 验证并获取数据源
-     */
+    /** 验证并获取数据源 */
     private Datasource validateAndGetDatasource(Long datasourceId) {
         Datasource datasource = datasourceMapper.selectById(datasourceId);
         if (datasource == null) {
@@ -406,9 +381,7 @@ public class LogSearchServiceImpl implements LogSearchService {
         return datasource;
     }
 
-    /**
-     * 验证用户
-     */
+    /** 验证用户 */
     private void validateUser(Long userId) {
         User user = userMapper.selectById(userId);
         if (user == null) {
@@ -417,7 +390,8 @@ public class LogSearchServiceImpl implements LogSearchService {
     }
 
     @Override
-    public List<SchemaInfoDTO.ColumnInfoDTO> getTableColumns(Long userId, Long datasourceId, String module) {
+    public List<SchemaInfoDTO.ColumnInfoDTO> getTableColumns(
+            Long userId, Long datasourceId, String module) {
         // 获取数据源
         Datasource datasource = validateAndGetDatasource(datasourceId);
 
@@ -429,7 +403,8 @@ public class LogSearchServiceImpl implements LogSearchService {
 
         try (Connection conn = jdbcQueryExecutor.getConnection(datasource)) {
             // 获取对应数据库类型的元数据服务
-            DatabaseMetadataService metadataService = metadataServiceFactory.getService(datasource.getType());
+            DatabaseMetadataService metadataService =
+                    metadataServiceFactory.getService(datasource.getType());
 
             // 获取表的完整字段信息
             return metadataService.getColumnInfo(conn, tableName);

@@ -3,13 +3,10 @@ package com.hina.log.domain.converter;
 import com.hina.log.domain.dto.logstash.TaskDetailDTO;
 import com.hina.log.domain.entity.LogstashTask;
 import com.hina.log.domain.entity.LogstashTaskMachineStep;
+import java.time.Duration;
 import org.springframework.stereotype.Component;
 
-import java.time.Duration;
-
-/**
- * 任务详情实体与DTO转换器
- */
+/** 任务详情实体与DTO转换器 */
 @Component
 public class TaskDetailConverter {
 

@@ -6,15 +6,11 @@ import com.hina.log.domain.dto.user.UserUpdateDTO;
 import com.hina.log.domain.entity.User;
 import org.springframework.stereotype.Component;
 
-/**
- * 用户实体与DTO转换器
- */
+/** 用户实体与DTO转换器 */
 @Component
 public class UserConverter implements Converter<User, UserDTO> {
 
-    /**
-     * 将DTO转换为实体
-     */
+    /** 将DTO转换为实体 */
     @Override
     public User toEntity(UserDTO dto) {
         if (dto == null) {
@@ -34,9 +30,7 @@ public class UserConverter implements Converter<User, UserDTO> {
         return entity;
     }
 
-    /**
-     * 将创建DTO转换为实体
-     */
+    /** 将创建DTO转换为实体 */
     public User toEntity(UserCreateDTO dto) {
         if (dto == null) {
             return null;
@@ -51,9 +45,7 @@ public class UserConverter implements Converter<User, UserDTO> {
         return entity;
     }
 
-    /**
-     * 将更新DTO转换为实体
-     */
+    /** 将更新DTO转换为实体 */
     public User toEntity(UserUpdateDTO dto) {
         if (dto == null) {
             return null;
@@ -69,9 +61,7 @@ public class UserConverter implements Converter<User, UserDTO> {
         return entity;
     }
 
-    /**
-     * 将实体转换为DTO
-     */
+    /** 将实体转换为DTO */
     @Override
     public UserDTO toDto(User entity) {
         if (entity == null) {
@@ -91,9 +81,7 @@ public class UserConverter implements Converter<User, UserDTO> {
         return dto;
     }
 
-    /**
-     * 使用DTO更新实体
-     */
+    /** 使用DTO更新实体 */
     @Override
     public User updateEntity(User entity, UserDTO dto) {
         if (entity == null || dto == null) {
@@ -108,9 +96,7 @@ public class UserConverter implements Converter<User, UserDTO> {
         return entity;
     }
 
-    /**
-     * 使用创建DTO更新实体
-     */
+    /** 使用创建DTO更新实体 */
     public User updateEntity(User entity, UserCreateDTO dto) {
         if (entity == null || dto == null) {
             return entity;
@@ -123,9 +109,7 @@ public class UserConverter implements Converter<User, UserDTO> {
         return entity;
     }
 
-    /**
-     * 使用更新DTO更新实体
-     */
+    /** 使用更新DTO更新实体 */
     public User updateEntity(User entity, UserUpdateDTO dto) {
         if (entity == null || dto == null) {
             return entity;

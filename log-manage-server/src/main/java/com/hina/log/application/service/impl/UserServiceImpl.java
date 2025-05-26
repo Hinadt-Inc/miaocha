@@ -1,6 +1,10 @@
 package com.hina.log.application.service.impl;
 
 import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
+import com.hina.log.application.security.JwtUtils;
+import com.hina.log.application.service.UserService;
+import com.hina.log.common.exception.BusinessException;
+import com.hina.log.common.exception.ErrorCode;
 import com.hina.log.domain.converter.UserConverter;
 import com.hina.log.domain.dto.auth.LoginRequestDTO;
 import com.hina.log.domain.dto.auth.LoginResponseDTO;
@@ -11,24 +15,17 @@ import com.hina.log.domain.dto.user.UserDTO;
 import com.hina.log.domain.dto.user.UserUpdateDTO;
 import com.hina.log.domain.entity.User;
 import com.hina.log.domain.entity.enums.UserRole;
-import com.hina.log.common.exception.BusinessException;
-import com.hina.log.common.exception.ErrorCode;
 import com.hina.log.domain.mapper.UserMapper;
-import com.hina.log.application.security.JwtUtils;
-import com.hina.log.application.service.UserService;
 import io.jsonwebtoken.ExpiredJwtException;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
-/**
- * 用户服务实现类
- */
+/** 用户服务实现类 */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -142,9 +139,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<UserDTO> getAllUsers() {
         List<User> users = userMapper.selectAll();
-        return users.stream()
-                .map(userConverter::toDto)
-                .collect(Collectors.toList());
+        return users.stream().map(userConverter::toDto).collect(Collectors.toList());
     }
 
     @Override
@@ -232,7 +227,8 @@ public class UserServiceImpl implements UserService {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "新密码不能与旧密码相同");
         }
 
-        userMapper.updatePassword(userId, passwordEncoder.encode(updatePasswordDTO.getNewPassword()));
+        userMapper.updatePassword(
+                userId, passwordEncoder.encode(updatePasswordDTO.getNewPassword()));
     }
 
     /**

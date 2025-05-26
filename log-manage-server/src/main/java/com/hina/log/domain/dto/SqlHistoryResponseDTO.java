@@ -1,13 +1,10 @@
 package com.hina.log.domain.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
 import lombok.Data;
 
-import java.util.List;
-
-/**
- * SQL查询历史分页响应DTO
- */
+/** SQL查询历史分页响应DTO */
 @Data
 @Schema(description = "SQL查询历史分页响应对象")
 public class SqlHistoryResponseDTO {
@@ -27,9 +24,7 @@ public class SqlHistoryResponseDTO {
     @Schema(description = "查询历史记录列表")
     private List<SqlHistoryItemDTO> records;
 
-    /**
-     * SQL查询历史记录项
-     */
+    /** SQL查询历史记录项 */
     @Data
     @Schema(description = "SQL查询历史记录项")
     public static class SqlHistoryItemDTO {

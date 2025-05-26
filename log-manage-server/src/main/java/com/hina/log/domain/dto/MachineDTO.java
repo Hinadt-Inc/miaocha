@@ -3,13 +3,10 @@ package com.hina.log.domain.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import java.time.LocalDateTime;
 import lombok.Data;
 
-import java.time.LocalDateTime;
-
-/**
- * 机器信息DTO
- */
+/** 机器信息DTO */
 @Data
 @Schema(description = "机器信息对象")
 public class MachineDTO {
@@ -25,8 +22,7 @@ public class MachineDTO {
     private String ip;
 
     @Schema(description = "机器端口", example = "22")
-    @NotNull(message = "机器端口不能为空")
-    private Integer port;
+    @NotNull(message = "机器端口不能为空") private Integer port;
 
     @Schema(description = "机器用户名", example = "root")
     @NotBlank(message = "机器用户名不能为空")

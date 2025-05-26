@@ -1,13 +1,10 @@
 package com.hina.log.domain.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
 import lombok.Data;
 
-import java.util.List;
-
-/**
- * 数据库结构信息DTO
- */
+/** 数据库结构信息DTO */
 @Data
 @Schema(description = "数据库结构信息对象")
 public class SchemaInfoDTO {
@@ -17,9 +14,7 @@ public class SchemaInfoDTO {
     @Schema(description = "表列表")
     private List<TableInfoDTO> tables;
 
-    /**
-     * 表信息DTO
-     */
+    /** 表信息DTO */
     @Data
     @Schema(description = "表信息对象")
     public static class TableInfoDTO {
@@ -33,9 +28,7 @@ public class SchemaInfoDTO {
         private List<ColumnInfoDTO> columns;
     }
 
-    /**
-     * 字段信息DTO
-     */
+    /** 字段信息DTO */
     @Data
     @Schema(description = "字段信息对象")
     public static class ColumnInfoDTO {

@@ -1,15 +1,11 @@
 package com.hina.log.application.service.sql.builder.condition;
 
 import com.hina.log.domain.dto.LogSearchDTO;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-
-/**
- * 搜索条件管理器
- * 负责组合各种搜索条件
- */
+/** 搜索条件管理器 负责组合各种搜索条件 */
 @Component
 public class SearchConditionManager {
 
@@ -22,7 +18,7 @@ public class SearchConditionManager {
 
     /**
      * 构建所有适用的搜索条件
-     * 
+     *
      * @param dto 日志搜索DTO
      * @return 完整的WHERE条件子句（不包含WHERE关键字）
      */

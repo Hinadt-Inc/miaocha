@@ -1,19 +1,17 @@
 package com.hina.log.application.logstash.command;
 
-import com.hina.log.domain.entity.Machine;
 import com.hina.log.common.exception.SshOperationException;
 import com.hina.log.common.ssh.SshClient;
-
+import com.hina.log.domain.entity.Machine;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * 创建Logstash配置文件命令
- */
+/** 创建Logstash配置文件命令 */
 public class CreateConfigCommand extends AbstractLogstashCommand {
 
     private final String configContent;
 
-    public CreateConfigCommand(SshClient sshClient, String deployDir, Long processId, String configContent) {
+    public CreateConfigCommand(
+            SshClient sshClient, String deployDir, Long processId, String configContent) {
         super(sshClient, deployDir, processId);
         this.configContent = configContent;
     }
@@ -32,12 +30,14 @@ public class CreateConfigCommand extends AbstractLogstashCommand {
             sshClient.executeCommand(machine, createDirCommand);
 
             // 创建临时文件
-            String tempFile = String.format("/tmp/logstash-config-%d-%d.conf",
-                    processId, System.currentTimeMillis());
+            String tempFile =
+                    String.format(
+                            "/tmp/logstash-config-%d-%d.conf",
+                            processId, System.currentTimeMillis());
 
             // 将配置写入临时文件，使用heredoc避免特殊字符问题
-            String createConfigCommand = String.format("cat > %s << 'EOF'\n%s\nEOF",
-                    tempFile, configContent);
+            String createConfigCommand =
+                    String.format("cat > %s << 'EOF'\n%s\nEOF", tempFile, configContent);
             sshClient.executeCommand(machine, createConfigCommand);
 
             // 移动到最终位置
@@ -45,7 +45,10 @@ public class CreateConfigCommand extends AbstractLogstashCommand {
             sshClient.executeCommand(machine, moveCommand);
 
             // 检查配置文件是否创建成功
-            String checkCommand = String.format("if [ -f \"%s\" ]; then echo \"success\"; else echo \"failed\"; fi", configPath);
+            String checkCommand =
+                    String.format(
+                            "if [ -f \"%s\" ]; then echo \"success\"; else echo \"failed\"; fi",
+                            configPath);
             String checkResult = sshClient.executeCommand(machine, checkCommand);
 
             boolean success = "success".equals(checkResult.trim());
@@ -58,7 +61,8 @@ public class CreateConfigCommand extends AbstractLogstashCommand {
             future.complete(success);
         } catch (Exception e) {
             logger.error("创建Logstash配置文件时发生错误: {}", e.getMessage(), e);
-            future.completeExceptionally(new SshOperationException("创建Logstash配置文件失败: " + e.getMessage(), e));
+            future.completeExceptionally(
+                    new SshOperationException("创建Logstash配置文件失败: " + e.getMessage(), e));
         }
 
         return future;

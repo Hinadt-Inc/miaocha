@@ -1,27 +1,24 @@
 package com.hina.log.application.service.sql.processor;
 
 import com.hina.log.domain.dto.LogSearchDTO;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.stereotype.Component;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.stereotype.Component;
 
-/**
- * 时间范围处理器
- */
+/** 时间范围处理器 */
 @Component
 public class TimeRangeProcessor {
-    private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter DATETIME_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    /**
-     * 处理时间范围
-     */
+    /** 处理时间范围 */
     public void processTimeRange(LogSearchDTO dto) {
-        if (StringUtils.isNotBlank(dto.getStartTime()) && StringUtils.isNotBlank(dto.getEndTime())) {
+        if (StringUtils.isNotBlank(dto.getStartTime())
+                && StringUtils.isNotBlank(dto.getEndTime())) {
             return;
         }
 
@@ -47,9 +44,7 @@ public class TimeRangeProcessor {
         dto.setEndTime(endTime.format(DATETIME_FORMATTER));
     }
 
-    /**
-     * 确定时间分组单位
-     */
+    /** 确定时间分组单位 */
     public String determineTimeUnit(LogSearchDTO dto) {
         if (!"auto".equals(dto.getTimeGrouping())) {
             return dto.getTimeGrouping();
@@ -65,7 +60,7 @@ public class TimeRangeProcessor {
                 return "second";
             } else if (seconds <= 3600) { // 1小时内
                 return "minute";
-            } else if (seconds <= 86400 * 2 ) { // 2天内
+            } else if (seconds <= 86400 * 2) { // 2天内
                 return "hour";
             } else {
                 return "day";
@@ -75,9 +70,7 @@ public class TimeRangeProcessor {
         }
     }
 
-    /**
-     * 预定义时间范围枚举
-     */
+    /** 预定义时间范围枚举 */
     private enum TimeRange {
         LAST_5M("last_5m", (now) -> now.minus(5, ChronoUnit.MINUTES)),
         LAST_15M("last_15m", (now) -> now.minus(15, ChronoUnit.MINUTES)),
@@ -86,7 +79,9 @@ public class TimeRangeProcessor {
         LAST_8H("last_8h", (now) -> now.minus(8, ChronoUnit.HOURS)),
         LAST_24H("last_24h", (now) -> now.minus(24, ChronoUnit.HOURS)),
         TODAY("today", (now) -> LocalDateTime.of(LocalDate.now(), LocalTime.MIN)),
-        YESTERDAY("yesterday", (now) -> LocalDateTime.of(LocalDate.now().minusDays(1), LocalTime.MIN)),
+        YESTERDAY(
+                "yesterday",
+                (now) -> LocalDateTime.of(LocalDate.now().minusDays(1), LocalTime.MIN)),
         LAST_WEEK("last_week", (now) -> now.minus(7, ChronoUnit.DAYS));
 
         private final String value;

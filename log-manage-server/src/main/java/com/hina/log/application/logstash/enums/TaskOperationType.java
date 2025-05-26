@@ -2,9 +2,7 @@ package com.hina.log.application.logstash.enums;
 
 import lombok.Getter;
 
-/**
- * 任务操作类型枚举
- */
+/** 任务操作类型枚举 */
 @Getter
 public enum TaskOperationType {
     INITIALIZE("初始化"),

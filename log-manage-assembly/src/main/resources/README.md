@@ -62,6 +62,7 @@ spring:
 2. 启动应用
 
 **Linux/Mac**:
+
 ```bash
 # 默认使用开发环境 (dev)
 ./bin/start.sh
@@ -77,6 +78,7 @@ spring:
 ```
 
 **Windows**:
+
 ```
 # 默认使用开发环境 (dev)
 bin\start.bat
@@ -94,6 +96,7 @@ bin\start.bat --help
 3. 停止应用
 
 **Linux/Mac**:
+
 ```bash
 ./bin/stop.sh
 
@@ -102,6 +105,7 @@ bin\start.bat --help
 ```
 
 **Windows**:
+
 ```
 bin\stop.bat
 
@@ -112,11 +116,13 @@ bin\stop.bat --force
 4. 检查应用状态
 
 **Linux/Mac**:
+
 ```bash
 ./bin/status.sh
 ```
 
 **Windows**:
+
 ```
 bin\status.bat
 ```
@@ -124,11 +130,13 @@ bin\status.bat
 5. 重启应用
 
 **Linux/Mac**:
+
 ```bash
 ./bin/restart.sh [选项]
 ```
 
 **Windows**:
+
 ```
 bin\restart.bat [选项]
 ```
@@ -141,7 +149,6 @@ bin\restart.bat [选项]
   - 更详细的日志输出
   - 更多的调试信息
   - 更小的内存消耗
-
 - **prod**: 生产环境
   - 优化的日志级别
   - 更大的内存分配
@@ -197,4 +204,4 @@ bin\restart.bat [选项]
 
 ## 联系支持
 
-如有问题，请联系: support@hina.com 
+如有问题，请联系: support@hina.com

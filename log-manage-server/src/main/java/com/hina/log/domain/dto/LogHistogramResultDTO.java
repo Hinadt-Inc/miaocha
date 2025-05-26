@@ -1,13 +1,10 @@
 package com.hina.log.domain.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
 import lombok.Data;
 
-import java.util.List;
-
-/**
- * 日志时间分布查询结果DTO
- */
+/** 日志时间分布查询结果DTO */
 @Data
 @Schema(description = "日志时间分布查询结果对象")
 public class LogHistogramResultDTO {
@@ -23,9 +20,7 @@ public class LogHistogramResultDTO {
     @Schema(description = "日志时间分布数据，用于生成时间分布图")
     private List<LogDistributionData> distributionData;
 
-    /**
-     * 日志时间分布数据
-     */
+    /** 日志时间分布数据 */
     @Data
     @Schema(description = "日志时间分布数据")
     public static class LogDistributionData {
