@@ -17,7 +17,6 @@ interface IProps {
 const SearchBar = forwardRef((props: IProps, ref) => {
   const searchBarRef = useRef<HTMLDivElement>(null);
   const { searchParams, totalCount = 0, loading, onSubmit } = props;
-  console.log('searchParams', searchParams);
   const [keyword, setKeyword] = useState<string>(''); // 关键词
   const [keywords, setKeywords] = useState<string[]>([]); // 关键词列表
   const [keywordHistory, setKeywordHistory] = useState<string[]>(() => {
@@ -42,7 +41,9 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   const getDefaultTimeOption = () => {
     const { timeRange } = searchParams as any;
     const isQucik = QUICK_RANGES[timeRange];
+    console.log('【打印日志】,1111 =======>', 1111);
     if (!isQucik) return {};
+    console.log('【打印日志】,2222 =======>', 2222);
     const { from, to, format } = isQucik;
     return {
       value: timeRange,
@@ -53,7 +54,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   const [timeOption, setTimeOption] = useState<ILogTimeSubmitParams>(getDefaultTimeOption); // 时间选项
   const [openTimeRange, setOpenTimeRange] = useState<boolean>(false); // 显隐浮层
   const [openTimeGroup, setOpenTimeGroup] = useState<boolean>(false); // 显隐浮层-时间分组
-  console.log('【打印日志】,timeOption =======>', timeOption);
   // 处理搜索输入变化
   const changeKeyword = (value: string) => {
     setKeyword(value || '');
@@ -64,8 +64,66 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     setSql(value || '');
   };
 
+  useEffect(() => {
+    console.log('searchParams', searchParams);
+    const { timeRange, startTime = '', endTime = '' } = searchParams;
+    if (!timeRange) {
+      // 设置绝对时间，格式为
+      //   {
+      //     "label": "2025-05-06 00:07:00 ~ 2025-05-23 05:04:26",
+      //     "value": "2025-05-06 00:07:00 ~ 2025-05-23 05:04:26",
+      //     "range": [
+      //         "2025-05-06 00:07:00",
+      //         "2025-05-23 05:04:26"
+      //     ]
+      // }
+      const data: ILogTimeSubmitParams = {
+        label: `${startTime} ~ ${endTime}`,
+        value: `${startTime} ~ ${endTime}`,
+        range: [startTime, endTime],
+      };
+      // setTimeOption(data);
+    }
+  }, [searchParams]);
+
   // 显示关键字、sql、时间的标签
   const filterRender = useMemo(() => {
+    console.log('【打印日志】,timeOption =======>', timeOption);
+
+    // 快速选择
+    //   {
+    //     "value": "last_24h",
+    //     "range": [
+    //         "2025-05-26 14:50:32",
+    //         "2025-05-27 14:50:32"
+    //     ],
+    //     "label": "最近24小时",
+    //     "format": [
+    //         "YYYY-MM-DD HH:mm:ss",
+    //         "YYYY-MM-DD HH:mm:ss"
+    //     ]
+    // }
+
+    // 相对时间
+    //   {
+    //     "range": [
+    //         "2025-05-26 14:50:16",
+    //         "2025-05-27 14:50:16"
+    //     ],
+    //     "label": "1天前 ~ 现在",
+    //     "value": "1天前 ~ 现在"
+    // }
+
+    // 绝对时间
+    //   {
+    //     "label": "2025-05-06 00:07:00 ~ 2025-05-23 05:04:26",
+    //     "value": "2025-05-06 00:07:00 ~ 2025-05-23 05:04:26",
+    //     "range": [
+    //         "2025-05-06 00:07:00",
+    //         "2025-05-23 05:04:26"
+    //     ]
+    // }
+
     const { range = [] } = timeOption;
     return (
       <div className={styles.filter}>
@@ -124,7 +182,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   }, [keywords, sqls, timeOption]);
 
   // 处理关键词搜索
-  const handleParams = () => {
+  const handleSubmit = () => {
     // 保存搜索历史
     const keywordTrim = String(keyword || '')?.trim();
     if (keywordTrim) {
@@ -298,7 +356,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
         <div className={styles.item}>{keywordRender}</div>
         <div className={styles.item}>{sqlRender}</div>
         <div className={styles.item}>
-          <Button size="small" type="primary" onClick={handleParams} loading={loading}>
+          <Button size="small" type="primary" onClick={handleSubmit} loading={loading}>
             搜索
           </Button>
         </div>

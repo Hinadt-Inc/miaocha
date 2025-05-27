@@ -5,7 +5,6 @@ import { Empty, message } from 'antd';
 import dayjs from 'dayjs';
 import { colorPrimary, isOverOneDay } from '@/utils/utils';
 import { getTimeRangeCategory, DATE_FORMAT } from './utils';
-import { off } from 'process';
 
 interface IProps {
   data: ILogHistogramData[]; // 直方图数据
@@ -100,7 +99,7 @@ const HistogramChart = (props: IProps) => {
       // 直角坐标系网格配置
       grid: {
         top: '5%', // 距离容器上边距
-        right: '5%', // 距离容器右边距
+        right: '4.5%', // 距离容器右边距
         bottom: '14%', // 距离容器下边距，为时间轴留出空间
         left: '2%', // 距离容器左边距
         containLabel: true, // 是否包含坐标轴的标签
@@ -192,20 +191,32 @@ const HistogramChart = (props: IProps) => {
   const handleChartClick = (params: any) => {
     if (params.componentType === 'series') {
       const { name } = params;
-      console.log('【打印日志】,name =======>', name);
-      const timeConfig = getTimeRangeCategory([startTime, endTime]).value as ITimeIntervalConfig;
+      const data = getTimeRangeCategory([startTime, endTime]);
+      console.log('【打印日志】,data =======>', data);
+      const timeConfig = data.value as ITimeIntervalConfig;
       const intervalConfig = timeConfig[timeGrouping as keyof ITimeIntervalConfig] as IIntervalConfig;
       if (!intervalConfig) {
         messageApi.warning('已达最小粒度，请切换时间分组');
         return;
       }
       const { interval, unit } = intervalConfig;
+
+      // 绝对时间
+      //   {
+      //     "label": "2025-05-06 00:07:00 ~ 2025-05-23 05:04:26",
+      //     "value": "2025-05-06 00:07:00 ~ 2025-05-23 05:04:26",
+      //     "range": [
+      //         "2025-05-06 00:07:00",
+      //         "2025-05-23 05:04:26"
+      //     ]
+      // }
       const newParams = {
         ...searchParams,
         startTime: dayjs(name).format(DATE_FORMAT),
         endTime: dayjs(name).add(interval, unit).format(DATE_FORMAT),
         offset: 0,
       };
+      delete newParams.timeRange;
       onSearch(newParams);
     }
   };
@@ -215,9 +226,9 @@ const HistogramChart = (props: IProps) => {
       {contextHolder}
       <ReactECharts
         option={option}
-        // onEvents={{
-        //   click: handleChartClick,
-        // }}
+        onEvents={{
+          click: handleChartClick,
+        }}
         style={{ height: 160, width: '100%' }}
       />
     </>
