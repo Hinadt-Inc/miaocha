@@ -20,16 +20,18 @@ spring:
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
-    
+
   # 生产环境禁用SQL日志
   jpa:
     show-sql: false
-  
+
   # 设置JSON日期格式
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: GMT+8
-
+  flyway:
+    enabled: false
+    
 # JWT生产环境配置 - 更长的过期时间
 jwt:
   # 生产环境从环境变量获取密钥
@@ -43,6 +45,8 @@ sql:
     csv:
       export:
         dir: /data/sql-exports
+
+
 
 # 关闭Swagger
 springdoc:
