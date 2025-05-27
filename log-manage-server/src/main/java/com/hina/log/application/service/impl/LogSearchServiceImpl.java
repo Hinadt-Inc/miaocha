@@ -1,5 +1,7 @@
 package com.hina.log.application.service.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hina.log.application.service.LogSearchService;
 import com.hina.log.application.service.ModuleTableMappingService;
 import com.hina.log.application.service.database.DatabaseMetadataService;
@@ -48,6 +50,8 @@ public class LogSearchServiceImpl implements LogSearchService {
     @Autowired private DatabaseMetadataServiceFactory metadataServiceFactory;
 
     @Autowired private ModuleTableMappingService moduleTableMappingService;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /** 仅执行日志明细查询 */
     @Override
@@ -307,36 +311,18 @@ public class LogSearchServiceImpl implements LogSearchService {
             return result;
         }
 
-        // 移除首尾的花括号
-        String content = jsonValue.trim();
-        if (content.startsWith("{") && content.endsWith("}")) {
-            content = content.substring(1, content.length() - 1);
-        }
+        try {
+            // 使用Jackson解析JSON
+            Map<String, Integer> jsonMap =
+                    objectMapper.readValue(jsonValue, new TypeReference<Map<String, Integer>>() {});
 
-        // 分割键值对
-        String[] pairs = content.split(",");
-        int totalCount = 0;
+            // 计算总数
+            int totalCount = jsonMap.values().stream().mapToInt(Integer::intValue).sum();
 
-        // 先计算总数
-        for (String pair : pairs) {
-            String[] keyValue = pair.split(":");
-            if (keyValue.length == 2) {
-                int count = Integer.parseInt(keyValue[1].trim());
-                totalCount += count;
-            }
-        }
-
-        // 解析每个键值对
-        for (String pair : pairs) {
-            String[] keyValue = pair.split(":");
-            if (keyValue.length == 2) {
-                String key = keyValue[0].trim();
-                // 移除键的引号
-                if (key.startsWith("\"") && key.endsWith("\"")) {
-                    key = key.substring(1, key.length() - 1);
-                }
-
-                int count = Integer.parseInt(keyValue[1].trim());
+            // 解析每个键值对
+            for (Map.Entry<String, Integer> entry : jsonMap.entrySet()) {
+                String key = entry.getKey();
+                int count = entry.getValue();
 
                 FieldDistributionDTO.ValueDistribution vd =
                         new FieldDistributionDTO.ValueDistribution();
@@ -344,11 +330,15 @@ public class LogSearchServiceImpl implements LogSearchService {
                 vd.setCount(count);
 
                 // 计算百分比，保留2位小数
-                double percentage = (double) count / totalCount * 100;
+                double percentage = totalCount > 0 ? (double) count / totalCount * 100 : 0.0;
                 vd.setPercentage(Math.round(percentage * 100) / 100.0);
 
                 result.add(vd);
             }
+
+        } catch (Exception e) {
+            logger.error("解析TOPN JSON失败: {}", jsonValue, e);
+            // 返回空结果而不是抛出异常，保证系统稳定性
         }
 
         return result;
