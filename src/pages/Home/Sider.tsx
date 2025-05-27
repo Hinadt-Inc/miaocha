@@ -50,14 +50,13 @@ const Sider: React.FC<IProps> = (props) => {
   const queryDistribution = useRequest(api.fetchDistributions, {
     manual: true,
     onSuccess: (res, params: ILogSearchParams[]) => {
-      const fieldName = params[0]?.fields?.[0];
-      if (!fieldName) {
-        return;
-      }
-      setDistributions({
-        ...distributions,
-        [fieldName]: { ...(res?.fieldDistributions?.[0] || {}) },
-      } as any);
+      const { fieldDistributions = [] } = res;
+      const target: any = {};
+      fieldDistributions.forEach((item) => {
+        const { fieldName } = item;
+        target[fieldName] = item;
+      });
+      setDistributions(target);
     },
     onError: () => {
       setDistributions({});
