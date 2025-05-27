@@ -1,19 +1,23 @@
 import { useMemo, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { EChartsOption } from 'echarts';
-import { Empty } from 'antd';
+import { Empty, message } from 'antd';
+import dayjs from 'dayjs';
 import { colorPrimary, isOverOneDay } from '@/utils/utils';
+import { getTimeRangeCategory, DATE_FORMAT } from './utils';
+import { off } from 'process';
 
 interface IProps {
   data: ILogHistogramData[]; // 直方图数据
   searchParams: ILogSearchParams; // 搜索参数
+  onSearch: (params: ILogSearchParams) => void; // 搜索回调函数
 }
 
 const HistogramChart = (props: IProps) => {
-  const { data, searchParams } = props;
+  const { data, searchParams, onSearch } = props;
   const [dataZoom, setDataZoom] = useState<number[]>([0, 100]);
-
-  const { timeGrouping, startTime = '', endTime = '' } = searchParams;
+  const [messageApi, contextHolder] = message.useMessage();
+  const { timeGrouping = 'auto', startTime = '', endTime = '' } = searchParams;
 
   // 根据timeGrouping聚合数据
   const aggregatedData = useMemo(() => {
@@ -184,7 +188,40 @@ const HistogramChart = (props: IProps) => {
     return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />;
   }
 
-  return <ReactECharts option={option} style={{ height: 160, width: '100%' }} />;
+  // 处理图表点击事件
+  const handleChartClick = (params: any) => {
+    if (params.componentType === 'series') {
+      const { name } = params;
+      console.log('【打印日志】,name =======>', name);
+      const timeConfig = getTimeRangeCategory([startTime, endTime]).value as ITimeIntervalConfig;
+      const intervalConfig = timeConfig[timeGrouping as keyof ITimeIntervalConfig] as IIntervalConfig;
+      if (!intervalConfig) {
+        messageApi.warning('已达最小粒度，请切换时间分组');
+        return;
+      }
+      const { interval, unit } = intervalConfig;
+      const newParams = {
+        ...searchParams,
+        startTime: dayjs(name).format(DATE_FORMAT),
+        endTime: dayjs(name).add(interval, unit).format(DATE_FORMAT),
+        offset: 0,
+      };
+      onSearch(newParams);
+    }
+  };
+
+  return (
+    <>
+      {contextHolder}
+      <ReactECharts
+        option={option}
+        // onEvents={{
+        //   click: handleChartClick,
+        // }}
+        style={{ height: 160, width: '100%' }}
+      />
+    </>
+  );
 };
 
 export default HistogramChart;

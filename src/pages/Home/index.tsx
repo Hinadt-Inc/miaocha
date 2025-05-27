@@ -123,8 +123,17 @@ const HomePage = () => {
       getDetailData,
       searchParams,
       dynamicColumns: logTableColumns,
+      onSearch: setSearchParams,
     }),
-    [histogramData, getHistogramData.loading, detailData, getDetailData, logTableColumns, searchParams],
+    [
+      histogramData,
+      getHistogramData.loading,
+      detailData,
+      getDetailData,
+      logTableColumns,
+      searchParams,
+      setSearchParams,
+    ],
   );
 
   // 搜索栏组件props

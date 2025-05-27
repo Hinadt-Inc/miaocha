@@ -16,8 +16,8 @@ interface IProps {
 
 const SearchBar = forwardRef((props: IProps, ref) => {
   const searchBarRef = useRef<HTMLDivElement>(null);
-
   const { searchParams, totalCount = 0, loading, onSubmit } = props;
+  console.log('searchParams', searchParams);
   const [keyword, setKeyword] = useState<string>(''); // 关键词
   const [keywords, setKeywords] = useState<string[]>([]); // 关键词列表
   const [keywordHistory, setKeywordHistory] = useState<string[]>(() => {
@@ -53,7 +53,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   const [timeOption, setTimeOption] = useState<ILogTimeSubmitParams>(getDefaultTimeOption); // 时间选项
   const [openTimeRange, setOpenTimeRange] = useState<boolean>(false); // 显隐浮层
   const [openTimeGroup, setOpenTimeGroup] = useState<boolean>(false); // 显隐浮层-时间分组
-
+  console.log('【打印日志】,timeOption =======>', timeOption);
   // 处理搜索输入变化
   const changeKeyword = (value: string) => {
     setKeyword(value || '');
@@ -114,7 +114,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       endTime: timeOption?.range?.[1],
       offset: 0,
     };
-    console.log('【打印日志】,params =======>', params);
     if (keywords.length === 0) {
       delete params.keywords;
     }

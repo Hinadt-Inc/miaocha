@@ -42,4 +42,30 @@ declare global {
     uniqueValueCount: number; // 唯一值数量
     valueDistributions: IValueDistributions[];
   }
+
+  // 时间间隔
+  interface IIntervalConfig {
+    interval: number;
+    unit: 'second' | 'minute' | 'hour' | 'day';
+  }
+
+  interface ITimeIntervalConfig {
+    auto: IIntervalConfig;
+    second: IIntervalConfig;
+    minute: IIntervalConfig;
+    hour?: IIntervalConfig;
+    day?: IIntervalConfig;
+  }
+
+  interface ITimeInterval {
+    last_5m: ITimeIntervalConfig;
+    last_15m: ITimeIntervalConfig;
+    last_30m: ITimeIntervalConfig;
+    last_1h: ITimeIntervalConfig;
+    last_8h: ITimeIntervalConfig;
+    last_24h: ITimeIntervalConfig;
+    today: ITimeIntervalConfig;
+    yesterday: ITimeIntervalConfig;
+    last_week: ITimeIntervalConfig;
+  }
 }

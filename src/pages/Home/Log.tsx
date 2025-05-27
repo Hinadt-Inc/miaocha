@@ -10,6 +10,7 @@ interface IProps {
   detailData: ILogDetailsResponse; // 日志数据;
   searchParams: ILogSearchParams; // 搜索参数
   dynamicColumns?: ILogColumnsResponse[]; // 添加动态列配置
+  onSearch: (params: ILogSearchParams) => void; // 搜索回调函数
 }
 
 const Log = (props: IProps) => {
@@ -20,6 +21,7 @@ const Log = (props: IProps) => {
     getDetailData,
     dynamicColumns = [],
     searchParams,
+    onSearch,
   } = props || {};
   const { rows = [], totalCount } = detailData || {};
   const [allRows, setAllRows] = useState<any[]>([]); // 用于存储所有历史数据的状态
@@ -68,7 +70,7 @@ const Log = (props: IProps) => {
       <Splitter.Panel collapsible defaultSize={170} min={170} max={170}>
         <div className={styles.chart}>
           <Spin size="small" spinning={histogramDataLoading}>
-            <HistogramChart data={histogramData} searchParams={searchParams} />
+            <HistogramChart data={histogramData} searchParams={searchParams} onSearch={onSearch} />
           </Spin>
         </div>
       </Splitter.Panel>
