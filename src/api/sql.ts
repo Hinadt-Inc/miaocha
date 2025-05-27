@@ -16,6 +16,7 @@ export interface ExecuteSQLResult {
   rows?: Record<string, unknown>[];
   total?: number;
   executionTimeMs?: number;
+  downloadUrl?: string;
 }
 
 export interface SchemaResult {
@@ -97,9 +98,9 @@ export async function queryHistory(params: {
  * @param queryId 查询ID
  * @returns 文件下载流
  */
-export async function downloadResult(queryId: string): Promise<Blob> {
+export async function downloadSqlResult(url: string): Promise<Blob> {
   return request<Blob>({
-    url: `/api/sql/result/${queryId}`,
+    url,
     responseType: 'blob',
   });
 }

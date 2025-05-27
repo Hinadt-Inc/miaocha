@@ -23,8 +23,6 @@ export const useQueryExecution = (selectedSource: string) => {
       const response = await executeSQL({
         datasourceId: selectedSource,
         sql: sqlQuery,
-        exportResult: true,
-        exportFormat: 'xlsx',
       });
 
       // 转换rows类型以匹配QueryResult

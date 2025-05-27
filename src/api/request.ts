@@ -28,6 +28,11 @@ let retryQueue: Array<() => void> = [];
 // 响应拦截器
 service.interceptors.response.use(
   (response: AxiosResponse) => {
+    // 如果是blob类型，直接返回原始响应
+    if (response.config.responseType === 'blob') {
+      return response;
+    }
+
     const res = response.data;
     const { success, errorMessage } = res?.data || {}; // 后端接口返回结构调整
     const isBizError = !success && errorMessage;
