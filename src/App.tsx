@@ -1,95 +1,22 @@
 // filepath: /Users/zhangyongjian/project/log-manage-web/src/App.tsx
-import { App as AntdApp, notification } from 'antd';
+import { App as AntdApp } from 'antd';
 import { ProLayout } from '@ant-design/pro-components';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import Profile from '@/components/Profile';
-import { useState, useMemo, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import useErrorHandler from './hooks/useErrorHandler';
+import useRoutePermission from './hooks/useRoutePermission';
+import useMenuState from './hooks/useMenuState';
 
-import { colorPrimary } from '@/utils/utils';
-import { getAuthorizedRoutes } from './routes';
-import { useSelector } from 'react-redux';
+import useThemeColor from './hooks/useThemeColor';
 
 const App = () => {
   const [collapsed, setCollapsed] = useState(true);
   const location = useLocation();
-  const userRole = useSelector((state: { user: IStoreUser }) => state.user.role);
-  const [openKeys, setOpenKeys] = useState<string[]>([]);
-  const [notificationApi, contextHolder] = notification.useNotification();
-
-  const notificationConfig = {
-    message: '提示',
-    duration: 3,
-    showProgress: true,
-  };
-
-  const handleUnhandledRejection = (event: any) => {
-    event.preventDefault();
-    const description = event?.reason?.message || event?.detail?.reason?.message || '业务发生未知错误，请联系开发人员';
-    console.error('【全局1】======Unhandled promise rejection:', description);
-    notificationApi.error({
-      description,
-      ...notificationConfig,
-    });
-  };
-
-  // 未捕获的错误
-  const handleGlobalError = (event: ErrorEvent) => {
-    // 阻止默认错误处理(如控制台输出)
-    event.preventDefault();
-    const description = event.message || '发生未知错误，请联系开发人员';
-    console.error('【全局2】======Uncaught error:', description);
-    notificationApi.error({
-      description,
-      ...notificationConfig,
-    });
-  };
-
-  // 添加事件监听器
-  useEffect(() => {
-    window.addEventListener('unhandledrejection', handleUnhandledRejection);
-    window.addEventListener('error', handleGlobalError);
-
-    return () => {
-      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
-      window.removeEventListener('error', handleGlobalError);
-    };
-  }, []);
-
-  // 根据用户角色获取有权限的路由
-  const authorizedRoutes = useMemo(() => {
-    return getAuthorizedRoutes(userRole);
-  }, [userRole]);
-  useEffect(() => {
-    document.documentElement.style.setProperty('--primary-color', colorPrimary);
-  }, []);
-
-  // 计算当前选中的菜单项
-  const selectedKeys = useMemo(() => {
-    // 获取当前路径并规范化
-    let pathname = location.pathname;
-    if (pathname === '' || pathname === '/') {
-      // 确保根路径一定会高亮
-      return ['/'];
-    }
-
-    // 返回当前路径作为选中的菜单项
-    return [pathname];
-  }, [location.pathname]);
-
-  // 初始化打开的菜单项
-  useEffect(() => {
-    // 如果是系统管理的子路径，自动展开系统管理菜单
-    if (location.pathname.startsWith('/system/')) {
-      setOpenKeys(['/system']);
-    }
-  }, [location.pathname]);
-
-  // 处理菜单展开/收起
-  const handleOpenChange = (keys: string[] | boolean) => {
-    if (Array.isArray(keys)) {
-      setOpenKeys(keys);
-    }
-  };
+  const { contextHolder } = useErrorHandler();
+  const { authorizedRoutes } = useRoutePermission();
+  const { openKeys, selectedKeys, handleOpenChange } = useMenuState(location);
+  const colorPrimary = useThemeColor();
 
   return (
     <ProLayout
