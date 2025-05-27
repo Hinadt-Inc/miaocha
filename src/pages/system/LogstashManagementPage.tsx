@@ -9,6 +9,7 @@ import {
   InfoCircleOutlined,
   CodeOutlined,
   SettingOutlined,
+  HomeOutlined,
 } from '@ant-design/icons';
 import { Button, message, Popconfirm, Space, Table, Breadcrumb, Modal, Progress, Tag, Descriptions } from 'antd';
 import './LogstashManagementPage.less';
@@ -442,7 +443,9 @@ function LogstashManagementPage() {
       <div className="header">
         <Breadcrumb>
           <Breadcrumb.Item>
-            <Link to="/">首页</Link>
+            <Link to="/">
+              <HomeOutlined />
+            </Link>
           </Breadcrumb.Item>
           <Breadcrumb.Item>Logstash管理</Breadcrumb.Item>
         </Breadcrumb>

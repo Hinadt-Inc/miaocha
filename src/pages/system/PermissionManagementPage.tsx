@@ -385,7 +385,7 @@ const PermissionManagementPage = () => {
         {GrantModal}
         <Breadcrumb>
           <Breadcrumb.Item>
-            <Link to="/home">
+            <Link to="/">
               <HomeOutlined />
             </Link>
           </Breadcrumb.Item>

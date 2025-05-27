@@ -25,6 +25,7 @@ import {
   DeleteOutlined,
   UserOutlined,
   ReloadOutlined,
+  HomeOutlined,
 } from '@ant-design/icons';
 import type { AxiosRequestConfig } from 'axios';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
@@ -337,9 +338,7 @@ const UserManagementPage = () => {
       ],
       filteredValue: filteredInfo.status ?? null,
       onFilter: (value, record) => record.status === value,
-      render: (status: number) => (
-        <Tag color={status === 1 ? 'green' : 'red'}>{status === 1 ? '启用' : '禁用'}</Tag>
-      ),
+      render: (status: number) => <Tag color={status === 1 ? 'green' : 'red'}>{status === 1 ? '启用' : '禁用'}</Tag>,
     },
     {
       title: '创建时间',
@@ -386,7 +385,9 @@ const UserManagementPage = () => {
         <div className="user-management-page-header">
           <Breadcrumb>
             <Breadcrumb.Item>
-              <Link to="/">首页</Link>
+              <Link to="/">
+                <HomeOutlined />
+              </Link>
             </Breadcrumb.Item>
             <Breadcrumb.Item>用户管理</Breadcrumb.Item>
           </Breadcrumb>
