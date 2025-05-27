@@ -270,8 +270,12 @@ public class LogSearchServiceImpl implements LogSearchService {
 
                     // 解析JSON格式的TOPN结果，格式如：{"value1":count1,"value2":count2,...}
                     // 这里简化处理，实际应该使用JSON解析库
-                    List<FieldDistributionDTO.ValueDistribution> valueDistributions =
-                            parseTopnJson(jsonValue);
+                    List<FieldDistributionDTO.ValueDistribution> valueDistributions;
+                    if (jsonValue != null) {
+                        valueDistributions = parseTopnJson(jsonValue);
+                    } else {
+                        valueDistributions = new ArrayList<>();
+                    }
                     dto.setValueDistributions(valueDistributions);
 
                     // 计算总数（所有值的计数之和）
@@ -296,6 +300,11 @@ public class LogSearchServiceImpl implements LogSearchService {
     /** 解析TOPN函数返回的JSON字符串 格式如：{"value1":count1,"value2":count2,...} */
     private List<FieldDistributionDTO.ValueDistribution> parseTopnJson(String jsonValue) {
         List<FieldDistributionDTO.ValueDistribution> result = new ArrayList<>();
+
+        // 检查输入是否为null或空
+        if (jsonValue == null || jsonValue.trim().isEmpty()) {
+            return result;
+        }
 
         // 移除首尾的花括号
         String content = jsonValue.trim();
