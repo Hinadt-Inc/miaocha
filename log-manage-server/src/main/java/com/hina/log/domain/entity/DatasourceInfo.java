@@ -7,7 +7,7 @@ import lombok.Data;
 /** 数据源实体类 */
 @Data
 @Schema(description = "数据源实体")
-public class Datasource {
+public class DatasourceInfo {
     @Schema(description = "数据源ID", example = "1")
     private Long id;
 

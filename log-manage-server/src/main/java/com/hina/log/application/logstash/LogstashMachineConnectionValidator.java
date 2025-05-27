@@ -3,7 +3,7 @@ package com.hina.log.application.logstash;
 import com.hina.log.application.service.MachineService;
 import com.hina.log.common.exception.BusinessException;
 import com.hina.log.common.exception.ErrorCode;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -24,16 +24,16 @@ public class LogstashMachineConnectionValidator {
     /**
      * 验证单台机器的连接 如果连接失败，抛出业务异常，不进入任务队列和状态机流程
      *
-     * @param machine 要验证的机器
+     * @param machineInfo 要验证的机器
      * @throws BusinessException 如果机器连接失败
      */
-    public void validateSingleMachineConnection(Machine machine) {
-        if (machine == null) {
+    public void validateSingleMachineConnection(MachineInfo machineInfo) {
+        if (machineInfo == null) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "机器信息不能为空");
         }
 
-        Long machineId = machine.getId();
-        logger.debug("开始验证机器 [{}] ({}) 的连接", machineId, machine.getIp());
+        Long machineId = machineInfo.getId();
+        logger.debug("开始验证机器 [{}] ({}) 的连接", machineId, machineInfo.getIp());
 
         try {
             boolean connected = machineService.testConnection(machineId);
@@ -41,12 +41,12 @@ public class LogstashMachineConnectionValidator {
                 String errorMessage =
                         String.format(
                                 "无法连接到机器 [%s] (%s:%d)，请检查机器状态和网络连接",
-                                machine.getName(), machine.getIp(), machine.getPort());
+                                machineInfo.getName(), machineInfo.getIp(), machineInfo.getPort());
                 logger.error(errorMessage);
                 throw new BusinessException(ErrorCode.MACHINE_CONNECTION_FAILED, errorMessage);
             }
 
-            logger.debug("机器 [{}] ({}) 连接验证成功", machineId, machine.getIp());
+            logger.debug("机器 [{}] ({}) 连接验证成功", machineId, machineInfo.getIp());
 
         } catch (BusinessException e) {
             // 重新抛出业务异常
@@ -55,7 +55,10 @@ public class LogstashMachineConnectionValidator {
             String errorMessage =
                     String.format(
                             "验证机器 [%s] (%s:%d) 连接时发生异常: %s",
-                            machine.getName(), machine.getIp(), machine.getPort(), e.getMessage());
+                            machineInfo.getName(),
+                            machineInfo.getIp(),
+                            machineInfo.getPort(),
+                            e.getMessage());
             logger.error(errorMessage, e);
             throw new BusinessException(ErrorCode.MACHINE_CONNECTION_FAILED, errorMessage);
         }

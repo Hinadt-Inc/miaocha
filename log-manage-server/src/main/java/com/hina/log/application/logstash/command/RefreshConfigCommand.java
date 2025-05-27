@@ -6,7 +6,7 @@ import com.hina.log.common.exception.SshOperationException;
 import com.hina.log.common.ssh.SshClient;
 import com.hina.log.domain.entity.LogstashMachine;
 import com.hina.log.domain.entity.LogstashProcess;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import com.hina.log.domain.mapper.LogstashMachineMapper;
 import com.hina.log.domain.mapper.LogstashProcessMapper;
 import java.util.concurrent.CompletableFuture;
@@ -69,7 +69,7 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
     }
 
     @Override
-    protected CompletableFuture<Boolean> doExecute(Machine machine) {
+    protected CompletableFuture<Boolean> doExecute(MachineInfo machineInfo) {
         return CompletableFuture.supplyAsync(
                 () -> {
                     try {
@@ -79,16 +79,16 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
 
                         // 确保配置目录存在
                         String createDirCommand = String.format("mkdir -p %s", configDir);
-                        sshClient.executeCommand(machine, createDirCommand);
+                        sshClient.executeCommand(machineInfo, createDirCommand);
 
                         // 1. 刷新主配置文件
-                        success = refreshMainConfig(machine, configDir) && success;
+                        success = refreshMainConfig(machineInfo, configDir) && success;
 
                         // 2. 刷新JVM配置（如果需要）
-                        success = refreshJvmOptions(machine, configDir) && success;
+                        success = refreshJvmOptions(machineInfo, configDir) && success;
 
                         // 3. 刷新系统配置（如果需要）
-                        success = refreshLogstashYml(machine, configDir) && success;
+                        success = refreshLogstashYml(machineInfo, configDir) && success;
 
                         return success;
                     } catch (Exception e) {
@@ -99,7 +99,7 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
     }
 
     /** 刷新主配置文件 */
-    private boolean refreshMainConfig(Machine machine, String configDir) throws Exception {
+    private boolean refreshMainConfig(MachineInfo machineInfo, String configDir) throws Exception {
         // 获取配置内容，优先使用传入内容，否则从数据库获取
         String actualConfigContent = configContent;
         if (!StringUtils.hasText(actualConfigContent)) {
@@ -122,13 +122,13 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
                 String.format(
                         "if [ -f \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi",
                         configPath);
-        String checkResult = sshClient.executeCommand(machine, checkCommand);
+        String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
 
         if ("exists".equals(checkResult.trim())) {
             // 备份旧配置
             String backupFile = String.format("%s.bak.%d", configPath, System.currentTimeMillis());
             String backupCommand = String.format("cp %s %s", configPath, backupFile);
-            sshClient.executeCommand(machine, backupCommand);
+            sshClient.executeCommand(machineInfo, backupCommand);
             logger.info("已备份旧主配置文件: {}", backupFile);
         }
 
@@ -140,18 +140,18 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
         // 将配置写入临时文件，使用heredoc避免特殊字符问题
         String createConfigCommand =
                 String.format("cat > %s << 'EOF'\n%s\nEOF", tempFile, actualConfigContent);
-        sshClient.executeCommand(machine, createConfigCommand);
+        sshClient.executeCommand(machineInfo, createConfigCommand);
 
         // 移动到最终位置
         String moveCommand = String.format("mv %s %s", tempFile, configPath);
-        sshClient.executeCommand(machine, moveCommand);
+        sshClient.executeCommand(machineInfo, moveCommand);
 
         // 检查配置文件是否刷新成功
         String verifyCommand =
                 String.format(
                         "if [ -f \"%s\" ]; then echo \"success\"; else echo \"failed\"; fi",
                         configPath);
-        String verifyResult = sshClient.executeCommand(machine, verifyCommand);
+        String verifyResult = sshClient.executeCommand(machineInfo, verifyCommand);
 
         boolean success = "success".equals(verifyResult.trim());
         if (success) {
@@ -164,13 +164,13 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
     }
 
     /** 刷新JVM配置文件 */
-    private boolean refreshJvmOptions(Machine machine, String configDir) throws Exception {
+    private boolean refreshJvmOptions(MachineInfo machineInfo, String configDir) throws Exception {
         // 获取JVM选项，优先使用传入内容，否则从数据库获取
         String actualJvmOptions = jvmOptions;
         if (!StringUtils.hasText(actualJvmOptions) && logstashMachineMapper != null) {
             LogstashMachine logstashMachine =
                     logstashMachineMapper.selectByLogstashProcessIdAndMachineId(
-                            processId, machine.getId());
+                            processId, machineInfo.getId());
             if (logstashMachine != null) {
                 actualJvmOptions = logstashMachine.getJvmOptions();
             }
@@ -188,13 +188,13 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
                 String.format(
                         "if [ -f \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi",
                         jvmFile);
-        String checkResult = sshClient.executeCommand(machine, checkCommand);
+        String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
 
         if ("exists".equals(checkResult.trim())) {
             // 备份旧配置
             String backupFile = String.format("%s.bak.%d", jvmFile, System.currentTimeMillis());
             String backupCommand = String.format("cp %s %s", jvmFile, backupFile);
-            sshClient.executeCommand(machine, backupCommand);
+            sshClient.executeCommand(machineInfo, backupCommand);
             logger.info("已备份旧JVM配置文件: {}", backupFile);
         }
 
@@ -206,18 +206,18 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
         // 将配置写入临时文件，使用heredoc避免特殊字符问题
         String createConfigCommand =
                 String.format("cat > %s << 'EOF'\n%s\nEOF", tempFile, actualJvmOptions);
-        sshClient.executeCommand(machine, createConfigCommand);
+        sshClient.executeCommand(machineInfo, createConfigCommand);
 
         // 移动到最终位置
         String moveCommand = String.format("mv %s %s", tempFile, jvmFile);
-        sshClient.executeCommand(machine, moveCommand);
+        sshClient.executeCommand(machineInfo, moveCommand);
 
         // 检查配置文件是否刷新成功
         String verifyCommand =
                 String.format(
                         "if [ -f \"%s\" ]; then echo \"success\"; else echo \"failed\"; fi",
                         jvmFile);
-        String verifyResult = sshClient.executeCommand(machine, verifyCommand);
+        String verifyResult = sshClient.executeCommand(machineInfo, verifyCommand);
 
         boolean success = "success".equals(verifyResult.trim());
         if (success) {
@@ -230,13 +230,13 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
     }
 
     /** 刷新系统配置文件 */
-    private boolean refreshLogstashYml(Machine machine, String configDir) throws Exception {
+    private boolean refreshLogstashYml(MachineInfo machineInfo, String configDir) throws Exception {
         // 获取系统配置，优先使用传入内容，否则从数据库获取
         String actualLogstashYml = logstashYml;
         if (!StringUtils.hasText(actualLogstashYml) && logstashMachineMapper != null) {
             LogstashMachine logstashMachine =
                     logstashMachineMapper.selectByLogstashProcessIdAndMachineId(
-                            processId, machine.getId());
+                            processId, machineInfo.getId());
             if (logstashMachine != null) {
                 actualLogstashYml = logstashMachine.getLogstashYml();
             }
@@ -254,13 +254,13 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
                 String.format(
                         "if [ -f \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi",
                         ymlFile);
-        String checkResult = sshClient.executeCommand(machine, checkCommand);
+        String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
 
         if ("exists".equals(checkResult.trim())) {
             // 备份旧配置
             String backupFile = String.format("%s.bak.%d", ymlFile, System.currentTimeMillis());
             String backupCommand = String.format("cp %s %s", ymlFile, backupFile);
-            sshClient.executeCommand(machine, backupCommand);
+            sshClient.executeCommand(machineInfo, backupCommand);
             logger.info("已备份旧系统配置文件: {}", backupFile);
         }
 
@@ -271,18 +271,18 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
         // 将配置写入临时文件，使用heredoc避免特殊字符问题
         String createConfigCommand =
                 String.format("cat > %s << 'EOF'\n%s\nEOF", tempFile, actualLogstashYml);
-        sshClient.executeCommand(machine, createConfigCommand);
+        sshClient.executeCommand(machineInfo, createConfigCommand);
 
         // 移动到最终位置
         String moveCommand = String.format("mv %s %s", tempFile, ymlFile);
-        sshClient.executeCommand(machine, moveCommand);
+        sshClient.executeCommand(machineInfo, moveCommand);
 
         // 检查配置文件是否刷新成功
         String verifyCommand =
                 String.format(
                         "if [ -f \"%s\" ]; then echo \"success\"; else echo \"failed\"; fi",
                         ymlFile);
-        String verifyResult = sshClient.executeCommand(machine, verifyCommand);
+        String verifyResult = sshClient.executeCommand(machineInfo, verifyCommand);
 
         boolean success = "success".equals(verifyResult.trim());
         if (success) {

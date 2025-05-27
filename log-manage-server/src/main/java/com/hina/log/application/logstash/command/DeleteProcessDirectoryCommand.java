@@ -2,7 +2,7 @@ package com.hina.log.application.logstash.command;
 
 import com.hina.log.common.exception.SshOperationException;
 import com.hina.log.common.ssh.SshClient;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -32,7 +32,7 @@ public class DeleteProcessDirectoryCommand extends AbstractLogstashCommand {
     }
 
     @Override
-    protected CompletableFuture<Boolean> doExecute(Machine machine) {
+    protected CompletableFuture<Boolean> doExecute(MachineInfo machineInfo) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         try {
@@ -43,13 +43,13 @@ public class DeleteProcessDirectoryCommand extends AbstractLogstashCommand {
                     String.format(
                             "if [ -d \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi",
                             processDir);
-            String checkResult = sshClient.executeCommand(machine, checkCommand);
+            String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
 
             if ("exists".equals(checkResult.trim())) {
                 // 删除目录
                 logger.info("删除Logstash进程目录: {}", processDir);
                 String deleteCommand = String.format("rm -rf %s", processDir);
-                sshClient.executeCommand(machine, deleteCommand);
+                sshClient.executeCommand(machineInfo, deleteCommand);
 
                 // 验证目录是否已删除
                 String verifyCommand =
@@ -57,7 +57,7 @@ public class DeleteProcessDirectoryCommand extends AbstractLogstashCommand {
                                 "if [ ! -d \"%s\" ]; then echo \"deleted\"; else echo"
                                         + " \"still_exists\"; fi",
                                 processDir);
-                String verifyResult = sshClient.executeCommand(machine, verifyCommand);
+                String verifyResult = sshClient.executeCommand(machineInfo, verifyCommand);
 
                 boolean success = "deleted".equals(verifyResult.trim());
                 if (success) {

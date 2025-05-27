@@ -7,7 +7,7 @@ import com.hina.log.common.ssh.SshClient;
 import com.hina.log.domain.converter.MachineConverter;
 import com.hina.log.domain.dto.MachineCreateDTO;
 import com.hina.log.domain.dto.MachineDTO;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import com.hina.log.domain.mapper.MachineMapper;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,33 +33,33 @@ public class MachineServiceImpl implements MachineService {
         }
 
         // 创建机器记录
-        Machine machine = machineConverter.toEntity(dto);
-        machineMapper.insert(machine);
+        MachineInfo machineInfo = machineConverter.toEntity(dto);
+        machineMapper.insert(machineInfo);
 
-        return machineConverter.toDto(machine);
+        return machineConverter.toDto(machineInfo);
     }
 
     @Override
     @Transactional
     public MachineDTO updateMachine(Long id, MachineCreateDTO dto) {
         // 检查机器是否存在
-        Machine machine = machineMapper.selectById(id);
-        if (machine == null) {
+        MachineInfo machineInfo = machineMapper.selectById(id);
+        if (machineInfo == null) {
             throw new BusinessException(ErrorCode.MACHINE_NOT_FOUND);
         }
 
         // 检查机器名称是否已被其他机器使用
-        Machine existingMachine = machineMapper.selectByName(dto.getName());
-        if (existingMachine != null && !existingMachine.getId().equals(id)) {
+        MachineInfo existingMachineInfo = machineMapper.selectByName(dto.getName());
+        if (existingMachineInfo != null && !existingMachineInfo.getId().equals(id)) {
             throw new BusinessException(ErrorCode.MACHINE_NAME_EXISTS);
         }
 
         // 更新机器记录
-        machine = machineConverter.updateEntity(machine, dto);
-        machine.setId(id);
-        machineMapper.update(machine);
+        machineInfo = machineConverter.updateEntity(machineInfo, dto);
+        machineInfo.setId(id);
+        machineMapper.update(machineInfo);
 
-        return machineConverter.toDto(machine);
+        return machineConverter.toDto(machineInfo);
     }
 
     @Override
@@ -77,29 +77,29 @@ public class MachineServiceImpl implements MachineService {
     @Override
     public MachineDTO getMachine(Long id) {
         // 检查机器是否存在
-        Machine machine = machineMapper.selectById(id);
-        if (machine == null) {
+        MachineInfo machineInfo = machineMapper.selectById(id);
+        if (machineInfo == null) {
             throw new BusinessException(ErrorCode.MACHINE_NOT_FOUND);
         }
 
-        return machineConverter.toDto(machine);
+        return machineConverter.toDto(machineInfo);
     }
 
     @Override
     public List<MachineDTO> getAllMachines() {
-        List<Machine> machines = machineMapper.selectAll();
-        return machines.stream().map(machineConverter::toDto).collect(Collectors.toList());
+        List<MachineInfo> machineInfos = machineMapper.selectAll();
+        return machineInfos.stream().map(machineConverter::toDto).collect(Collectors.toList());
     }
 
     @Override
     public boolean testConnection(Long id) {
         // 检查机器是否存在
-        Machine machine = machineMapper.selectById(id);
-        if (machine == null) {
+        MachineInfo machineInfo = machineMapper.selectById(id);
+        if (machineInfo == null) {
             throw new BusinessException(ErrorCode.MACHINE_NOT_FOUND);
         }
 
         // 测试连接
-        return sshClient.testConnection(machine);
+        return sshClient.testConnection(machineInfo);
     }
 }

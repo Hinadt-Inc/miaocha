@@ -77,6 +77,7 @@
 ### 数据模型
 
 日志搜索功能支持以下主要数据模型：
+
 * `LogSearchDTO`: 封装日志搜索请求参数
 * `LogDetailResultDTO`: 包含日志明细查询结果
 * `LogHistogramResultDTO`: 包含时间分布统计结果
@@ -183,7 +184,7 @@ Logstash进程在系统中有以下8种状态：
 #### API接口
 
 * `POST /api/logstash/processes/{id}/reinitialize`: 重新初始化所有失败的机器
-* `POST /api/logstash/processes/{id}/machines/{machineId}/reinitialize`: 重新初始化指定机器
+* `POST /api/logstash/processes/{id}/machineInfos/{machineId}/reinitialize`: 重新初始化指定机器
 
 ### API接口
 
@@ -193,10 +194,10 @@ Logstash进程在系统中有以下8种状态：
 * `/api/logstash/processes/{id}/config`: 管理进程配置
 * `/api/logstash/processes/{id}/start`: 全局启动进程
 * `/api/logstash/processes/{id}/stop`: 全局停止进程
-* `/api/logstash/processes/{id}/machines/{machineId}/start`: 启动特定机器上的进程
-* `/api/logstash/processes/{id}/machines/{machineId}/stop`: 停止特定机器上的进程
+* `/api/logstash/processes/{id}/machineInfos/{machineId}/start`: 启动特定机器上的进程
+* `/api/logstash/processes/{id}/machineInfos/{machineId}/stop`: 停止特定机器上的进程
 * `/api/logstash/processes/{id}/reinitialize`: 重新初始化所有失败的机器
-* `/api/logstash/processes/{id}/machines/{machineId}/reinitialize`: 重新初始化特定机器
+* `/api/logstash/processes/{id}/machineInfos/{machineId}/reinitialize`: 重新初始化特定机器
 
 ## API接口文档
 
@@ -231,12 +232,14 @@ mvn clean package
 ## 配置信息
 
 系统支持多环境配置，包括:
+
 * `application.yml`: 基础配置
 * `application-dev.yml`: 开发环境配置
 * `application-test.yml`: 测试环境配置
 * `application-prod.yml`: 生产环境配置
 
 主要配置项包括:
+
 * 数据库连接信息
 * JWT认证配置
 * Logstash配置
@@ -308,6 +311,7 @@ log-manage-server/src/main/java/com/hina/log/
 负责接收来自客户端的HTTP请求，进行参数校验和格式转换。
 
 **主要组件:**
+
 * `AuthEndpoint`: 用户认证相关接口
 * `DatasourceEndpoint`: 数据源管理接口
 * `LogSearchEndpoint`: 日志搜索接口
@@ -322,16 +326,25 @@ log-manage-server/src/main/java/com/hina/log/
 包含应用服务和业务流程编排逻辑。
 
 **主要组件:**
+
 * **`service/`**: 核心应用服务
+
 - `DatasourceService`: 数据源管理服务
+
 - `LogSearchService`: 日志搜索服务
+
 - `LogstashProcessService`: Logstash进程管理服务
+
 - `MachineService`: 机器管理服务
+
 - `ModulePermissionService`: 模块权限管理服务
+
 - `SqlQueryService`: SQL查询服务
+
 - `UserService`: 用户管理服务
 
 * **`logstash/`**: Logstash专门的应用服务
+
   - `LogstashProcessDeployService`: Logstash部署服务
   - `LogstashConfigSyncService`: 配置同步服务
   - `state/`: 状态管理相关类
@@ -345,15 +358,23 @@ log-manage-server/src/main/java/com/hina/log/
 包含核心业务实体和业务逻辑。
 
 **主要组件:**
+
 * **`entity/`**: 领域实体
+
 - `Datasource`: 数据源配置信息
+
 - `LogstashMachine`: Logstash机器配置
+
 - `LogstashProcess`: Logstash进程信息
+
 - `Machine`: 服务器机器信息
+
 - `User`: 用户信息
+
 - `UserModulePermission`: 用户模块权限配置
 
 * **`dto/`**: 数据传输对象
+
   - 用于不同层之间的数据传输
   - 包含请求和响应的数据结构
 * **`mapper/`**: 数据访问接口
@@ -368,11 +389,15 @@ log-manage-server/src/main/java/com/hina/log/
 提供基础设施和通用功能支持。
 
 **主要组件:**
+
 * **`util/`**: 工具类
+
 - 通用的辅助方法和工具类
+
 - 例如：日期处理、字符串操作、加密解密等
 
 * **`exception/`**: 异常处理
+
   - 自定义异常类
   - 全局异常处理器
 * **`ssh/`**: SSH工具
@@ -386,6 +411,7 @@ log-manage-server/src/main/java/com/hina/log/
 应用配置管理。
 
 **主要组件:**
+
 * 数据库配置
 * 安全配置
 * MyBatis配置

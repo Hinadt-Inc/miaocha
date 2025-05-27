@@ -6,7 +6,7 @@ import com.hina.log.common.exception.ErrorCode;
 import com.hina.log.domain.dto.permission.UserModulePermissionDTO;
 import com.hina.log.domain.dto.permission.UserPermissionModuleStructureDTO;
 import com.hina.log.domain.dto.permission.UserPermissionModuleStructureDTO.ModuleInfoDTO;
-import com.hina.log.domain.entity.Datasource;
+import com.hina.log.domain.entity.DatasourceInfo;
 import com.hina.log.domain.entity.LogstashProcess;
 import com.hina.log.domain.entity.User;
 import com.hina.log.domain.entity.UserModulePermission;
@@ -83,8 +83,8 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
         Long datasourceId = getDatasourceIdByModule(module);
 
         // 检查数据源是否存在
-        Datasource datasource = datasourceMapper.selectById(datasourceId);
-        if (datasource == null) {
+        DatasourceInfo datasourceInfo = datasourceMapper.selectById(datasourceId);
+        if (datasourceInfo == null) {
             throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
         }
 
@@ -127,8 +127,8 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
         Long datasourceId = getDatasourceIdByModule(module);
 
         // 检查数据源是否存在
-        Datasource datasource = datasourceMapper.selectById(datasourceId);
-        if (datasource == null) {
+        DatasourceInfo datasourceInfo = datasourceMapper.selectById(datasourceId);
+        if (datasourceInfo == null) {
             throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
         }
 
@@ -160,8 +160,8 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
         }
 
         // 获取所有数据源
-        List<Datasource> allDatasources = datasourceMapper.selectAll();
-        if (allDatasources.isEmpty()) {
+        List<DatasourceInfo> allDatasourceInfos = datasourceMapper.selectAll();
+        if (allDatasourceInfos.isEmpty()) {
             return new ArrayList<>();
         }
 
@@ -169,8 +169,8 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
         List<LogstashProcess> allModules = logstashProcessMapper.selectAll();
 
         // 数据源ID -> 数据源对象的映射
-        Map<Long, Datasource> datasourceMap = new HashMap<>();
-        allDatasources.forEach(ds -> datasourceMap.put(ds.getId(), ds));
+        Map<Long, DatasourceInfo> datasourceMap = new HashMap<>();
+        allDatasourceInfos.forEach(ds -> datasourceMap.put(ds.getId(), ds));
 
         // 结果容器
         Map<Long, UserPermissionModuleStructureDTO> resultMap = new HashMap<>();
@@ -182,7 +182,7 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
 
         if (isAdmin) {
             // 管理员拥有所有数据源的权限
-            for (Datasource ds : allDatasources) {
+            for (DatasourceInfo ds : allDatasourceInfos) {
                 UserPermissionModuleStructureDTO structureDTO =
                         new UserPermissionModuleStructureDTO();
                 structureDTO.setDatasourceId(ds.getId());
@@ -214,7 +214,7 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
                     allPermissions.stream()
                             .collect(Collectors.groupingBy(UserModulePermission::getDatasourceId));
 
-            for (Datasource ds : allDatasources) {
+            for (DatasourceInfo ds : allDatasourceInfos) {
                 Long datasourceId = ds.getId();
                 List<UserModulePermission> permissions =
                         permissionsByDatasource.getOrDefault(datasourceId, new ArrayList<>());
@@ -282,8 +282,8 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
                 Long datasourceId = getDatasourceIdByModule(module);
 
                 // 检查数据源是否存在
-                Datasource datasource = datasourceMapper.selectById(datasourceId);
-                if (datasource == null) {
+                DatasourceInfo datasourceInfo = datasourceMapper.selectById(datasourceId);
+                if (datasourceInfo == null) {
                     log.warn("数据源不存在: {}", datasourceId);
                     continue;
                 }

@@ -2,7 +2,7 @@ package com.hina.log.application.logstash.command;
 
 import com.hina.log.common.exception.SshOperationException;
 import com.hina.log.common.ssh.SshClient;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import java.util.concurrent.CompletableFuture;
 
 /** 启动Logstash进程命令 */
@@ -13,7 +13,7 @@ public class StartProcessCommand extends AbstractLogstashCommand {
     }
 
     @Override
-    protected CompletableFuture<Boolean> doExecute(Machine machine) {
+    protected CompletableFuture<Boolean> doExecute(MachineInfo machineInfo) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         try {
@@ -25,11 +25,11 @@ public class StartProcessCommand extends AbstractLogstashCommand {
 
             // 创建日志目录
             String createLogDirCommand = String.format("mkdir -p %s", logDir);
-            sshClient.executeCommand(machine, createLogDirCommand);
+            sshClient.executeCommand(machineInfo, createLogDirCommand);
 
             // 删除可能存在的旧PID文件
             String removePidCommand = String.format("rm -f %s", pidFile);
-            sshClient.executeCommand(machine, removePidCommand);
+            sshClient.executeCommand(machineInfo, removePidCommand);
 
             // 创建启动脚本
             String scriptPath = processDir + "/start-logstash.sh";
@@ -48,16 +48,16 @@ public class StartProcessCommand extends AbstractLogstashCommand {
                             "/tmp/start-logstash-%d-%d.sh", processId, System.currentTimeMillis());
             String createScriptCommand =
                     String.format("cat > %s << 'EOF'\n%s\nEOF", tempScript, scriptContent);
-            sshClient.executeCommand(machine, createScriptCommand);
+            sshClient.executeCommand(machineInfo, createScriptCommand);
 
             // 移动脚本到目标位置并设置可执行权限
             String moveScriptCommand =
                     String.format("mv %s %s && chmod +x %s", tempScript, scriptPath, scriptPath);
-            sshClient.executeCommand(machine, moveScriptCommand);
+            sshClient.executeCommand(machineInfo, moveScriptCommand);
 
             // 执行启动脚本
             logger.info("开始启动Logstash进程");
-            sshClient.executeCommand(machine, scriptPath);
+            sshClient.executeCommand(machineInfo, scriptPath);
 
             // 等待几秒钟，确保进程有时间启动
             Thread.sleep(3000);
@@ -68,7 +68,7 @@ public class StartProcessCommand extends AbstractLogstashCommand {
                     String.format(
                             "if [ -f \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi",
                             pidFile);
-            String checkPidResult = sshClient.executeCommand(machine, checkPidCommand);
+            String checkPidResult = sshClient.executeCommand(machineInfo, checkPidCommand);
 
             boolean pidFileExists = "exists".equals(checkPidResult.trim());
             if (!pidFileExists) {
@@ -79,7 +79,7 @@ public class StartProcessCommand extends AbstractLogstashCommand {
 
             // 读取PID - 仅确认PID文件非空，不验证进程是否真正运行
             String readPidCommand = String.format("cat %s", pidFile);
-            String pid = sshClient.executeCommand(machine, readPidCommand).trim();
+            String pid = sshClient.executeCommand(machineInfo, readPidCommand).trim();
 
             if (pid.isEmpty()) {
                 logger.warn("PID文件为空，Logstash进程可能启动失败");

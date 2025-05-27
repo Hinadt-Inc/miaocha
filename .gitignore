@@ -20,7 +20,7 @@ logs/
 *.tar.gz
 *.rar
 
-# virtual machine crash logs
+# virtual machineInfo crash logs
 hs_err_pid*
 replay_pid*
 
@@ -93,4 +93,4 @@ build/
 *.ntvs*
 *.njsproj
 *.sln
-*.sw? 
+*.sw?

@@ -2,7 +2,7 @@ package com.hina.log.application.logstash.command;
 
 import com.hina.log.common.exception.SshOperationException;
 import com.hina.log.common.ssh.SshClient;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import java.util.concurrent.CompletableFuture;
 import org.springframework.util.StringUtils;
 
@@ -38,7 +38,7 @@ public class ModifySystemConfigCommand extends AbstractLogstashCommand {
     }
 
     @Override
-    protected CompletableFuture<Boolean> doExecute(Machine machine) {
+    protected CompletableFuture<Boolean> doExecute(MachineInfo machineInfo) {
         return CompletableFuture.supplyAsync(
                 () -> {
                     try {
@@ -47,11 +47,11 @@ public class ModifySystemConfigCommand extends AbstractLogstashCommand {
                         String configDir = processDir + "/config";
 
                         // 1. 修改系统配置文件 (logstash.yml)
-                        success = modifyLogstashYml(machine, configDir) && success;
+                        success = modifyLogstashYml(machineInfo, configDir) && success;
 
                         // 2. 修改JVM选项 (jvm.options)，如果提供了内容
                         if (StringUtils.hasText(jvmOptions)) {
-                            success = modifyJvmOptions(machine, configDir) && success;
+                            success = modifyJvmOptions(machineInfo, configDir) && success;
                         }
 
                         return success;
@@ -63,7 +63,7 @@ public class ModifySystemConfigCommand extends AbstractLogstashCommand {
     }
 
     /** 修改Logstash系统配置文件 */
-    private boolean modifyLogstashYml(Machine machine, String configDir) throws Exception {
+    private boolean modifyLogstashYml(MachineInfo machineInfo, String configDir) throws Exception {
         String configPath = configDir + "/logstash.yml";
 
         // 如果提供了完整的系统配置文件内容，则使用该内容
@@ -73,14 +73,14 @@ public class ModifySystemConfigCommand extends AbstractLogstashCommand {
                     String.format(
                             "if [ -f \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi",
                             configPath);
-            String checkResult = sshClient.executeCommand(machine, checkCommand);
+            String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
 
             if ("exists".equals(checkResult.trim())) {
                 // 备份现有配置
                 String backupFile =
                         String.format("%s.bak.%d", configPath, System.currentTimeMillis());
                 String backupCommand = String.format("cp %s %s", configPath, backupFile);
-                sshClient.executeCommand(machine, backupCommand);
+                sshClient.executeCommand(machineInfo, backupCommand);
                 logger.info("已备份现有系统配置文件: {}", backupFile);
             }
 
@@ -92,11 +92,11 @@ public class ModifySystemConfigCommand extends AbstractLogstashCommand {
             // 将新配置写入临时文件，使用heredoc避免特殊字符问题
             String createConfigCommand =
                     String.format("cat > %s << 'EOF'\n%s\nEOF", tempFile, logstashYml);
-            sshClient.executeCommand(machine, createConfigCommand);
+            sshClient.executeCommand(machineInfo, createConfigCommand);
 
             // 移动到最终位置
             String moveCommand = String.format("mv %s %s", tempFile, configPath);
-            sshClient.executeCommand(machine, moveCommand);
+            sshClient.executeCommand(machineInfo, moveCommand);
 
             // 验证配置是否写入成功
             String verifyCommand =
@@ -104,7 +104,7 @@ public class ModifySystemConfigCommand extends AbstractLogstashCommand {
                             "if [ -f \"%s\" ] && [ -s \"%s\" ]; then echo \"success\"; else echo"
                                     + " \"failed\"; fi",
                             configPath, configPath);
-            String verifyResult = sshClient.executeCommand(machine, verifyCommand);
+            String verifyResult = sshClient.executeCommand(machineInfo, verifyCommand);
 
             boolean success = "success".equals(verifyResult.trim());
             if (success) {
@@ -121,24 +121,24 @@ public class ModifySystemConfigCommand extends AbstractLogstashCommand {
                     String.format(
                             "if [ -f \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi",
                             configPath);
-            String checkResult = sshClient.executeCommand(machine, checkCommand);
+            String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
 
             if ("exists".equals(checkResult.trim())) {
                 // 添加配置
                 String appendCommand =
                         String.format("echo '\nallow_superuser: true' >> %s", configPath);
-                sshClient.executeCommand(machine, appendCommand);
+                sshClient.executeCommand(machineInfo, appendCommand);
             } else {
                 // 文件不存在，创建新文件
                 String createCommand =
                         String.format("echo 'allow_superuser: true' > %s", configPath);
-                sshClient.executeCommand(machine, createCommand);
+                sshClient.executeCommand(machineInfo, createCommand);
             }
 
             // 验证配置是否添加成功
             String validateCommand =
                     String.format("grep \"allow_superuser: true\" %s | wc -l", configPath);
-            String validateResult = sshClient.executeCommand(machine, validateCommand);
+            String validateResult = sshClient.executeCommand(machineInfo, validateCommand);
 
             boolean success = !"0".equals(validateResult.trim());
             if (success) {
@@ -152,7 +152,7 @@ public class ModifySystemConfigCommand extends AbstractLogstashCommand {
     }
 
     /** 修改Logstash JVM选项 */
-    private boolean modifyJvmOptions(Machine machine, String configDir) throws Exception {
+    private boolean modifyJvmOptions(MachineInfo machineInfo, String configDir) throws Exception {
         String jvmFile = configDir + "/jvm.options";
 
         // 检查JVM配置文件是否存在
@@ -160,13 +160,13 @@ public class ModifySystemConfigCommand extends AbstractLogstashCommand {
                 String.format(
                         "if [ -f \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi",
                         jvmFile);
-        String checkResult = sshClient.executeCommand(machine, checkCommand);
+        String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
 
         if ("exists".equals(checkResult.trim())) {
             // 备份现有配置
             String backupFile = String.format("%s.bak.%d", jvmFile, System.currentTimeMillis());
             String backupCommand = String.format("cp %s %s", jvmFile, backupFile);
-            sshClient.executeCommand(machine, backupCommand);
+            sshClient.executeCommand(machineInfo, backupCommand);
             logger.info("已备份现有JVM配置文件: {}", backupFile);
         }
 
@@ -178,11 +178,11 @@ public class ModifySystemConfigCommand extends AbstractLogstashCommand {
         // 将JVM选项写入临时文件，使用heredoc避免特殊字符问题
         String createConfigCommand =
                 String.format("cat > %s << 'EOF'\n%s\nEOF", tempFile, jvmOptions);
-        sshClient.executeCommand(machine, createConfigCommand);
+        sshClient.executeCommand(machineInfo, createConfigCommand);
 
         // 移动到最终位置
         String moveCommand = String.format("mv %s %s", tempFile, jvmFile);
-        sshClient.executeCommand(machine, moveCommand);
+        sshClient.executeCommand(machineInfo, moveCommand);
 
         // 验证配置是否写入成功
         String verifyCommand =
@@ -190,7 +190,7 @@ public class ModifySystemConfigCommand extends AbstractLogstashCommand {
                         "if [ -f \"%s\" ] && [ -s \"%s\" ]; then echo \"success\"; else echo"
                                 + " \"failed\"; fi",
                         jvmFile, jvmFile);
-        String verifyResult = sshClient.executeCommand(machine, verifyCommand);
+        String verifyResult = sshClient.executeCommand(machineInfo, verifyCommand);
 
         boolean success = "success".equals(verifyResult.trim());
         if (success) {

@@ -7,7 +7,7 @@ import lombok.Data;
 /** 机器元信息实体类 */
 @Data
 @Schema(description = "机器元信息实体")
-public class Machine {
+public class MachineInfo {
     @Schema(description = "机器ID", example = "1")
     private Long id;
 

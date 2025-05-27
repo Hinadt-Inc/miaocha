@@ -7,7 +7,7 @@ import com.hina.log.application.logstash.enums.LogstashMachineStep;
 import com.hina.log.application.logstash.enums.StepStatus;
 import com.hina.log.application.logstash.task.TaskService;
 import com.hina.log.domain.entity.LogstashProcess;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import java.util.concurrent.CompletableFuture;
 import org.springframework.stereotype.Component;
 
@@ -26,9 +26,9 @@ public class RunningStateHandler extends AbstractLogstashMachineStateHandler {
 
     @Override
     public CompletableFuture<Boolean> handleStop(
-            LogstashProcess process, Machine machine, String taskId) {
+            LogstashProcess process, MachineInfo machineInfo, String taskId) {
         Long processId = process.getId();
-        Long machineId = machine.getId();
+        Long machineId = machineInfo.getId();
 
         logger.info("停止机器 [{}] 上的Logstash进程 [{}]", machineId, processId);
 
@@ -37,7 +37,7 @@ public class RunningStateHandler extends AbstractLogstashMachineStateHandler {
         LogstashCommand stopCommand = commandFactory.stopProcessCommand(processId);
 
         return stopCommand
-                .execute(machine)
+                .execute(machineInfo)
                 .thenApply(
                         success -> {
                             StepStatus status = success ? StepStatus.COMPLETED : StepStatus.FAILED;

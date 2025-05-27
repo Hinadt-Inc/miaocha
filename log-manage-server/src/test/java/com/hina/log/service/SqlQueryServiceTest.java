@@ -18,7 +18,7 @@ import com.hina.log.common.exception.BusinessException;
 import com.hina.log.common.exception.ErrorCode;
 import com.hina.log.domain.dto.SqlQueryDTO;
 import com.hina.log.domain.dto.SqlQueryResultDTO;
-import com.hina.log.domain.entity.Datasource;
+import com.hina.log.domain.entity.DatasourceInfo;
 import com.hina.log.domain.entity.SqlQueryHistory;
 import com.hina.log.domain.entity.User;
 import com.hina.log.domain.entity.enums.UserRole;
@@ -69,7 +69,7 @@ public class SqlQueryServiceTest {
     @InjectMocks private SqlQueryServiceImpl sqlQueryService;
 
     private User testUser;
-    private Datasource testDatasource;
+    private DatasourceInfo testDatasourceInfo;
     private SqlQueryDTO testQueryDTO;
     private SqlQueryResultDTO testResultDTO;
     private String testExportDir;
@@ -91,15 +91,15 @@ public class SqlQueryServiceTest {
         testUser.setUpdateTime(LocalDateTime.now());
 
         // 创建测试数据源
-        testDatasource = new Datasource();
-        testDatasource.setId(1L);
-        testDatasource.setName("测试数据源");
-        testDatasource.setType("MYSQL");
-        testDatasource.setIp("localhost");
-        testDatasource.setPort(3306);
-        testDatasource.setUsername("test");
-        testDatasource.setPassword("test");
-        testDatasource.setDatabase("test_db");
+        testDatasourceInfo = new DatasourceInfo();
+        testDatasourceInfo.setId(1L);
+        testDatasourceInfo.setName("测试数据源");
+        testDatasourceInfo.setType("MYSQL");
+        testDatasourceInfo.setIp("localhost");
+        testDatasourceInfo.setPort(3306);
+        testDatasourceInfo.setUsername("test");
+        testDatasourceInfo.setPassword("test");
+        testDatasourceInfo.setDatabase("test_db");
 
         // 创建测试查询DTO
         testQueryDTO = new SqlQueryDTO();
@@ -123,7 +123,7 @@ public class SqlQueryServiceTest {
                 .doNothing()
                 .when(permissionChecker)
                 .checkQueryPermission(any(User.class), anyLong(), anyString());
-        lenient().when(datasourceMapper.selectById(anyLong())).thenReturn(testDatasource);
+        lenient().when(datasourceMapper.selectById(anyLong())).thenReturn(testDatasourceInfo);
         lenient().when(userMapper.selectById(anyLong())).thenReturn(testUser);
         lenient()
                 .when(jdbcQueryExecutor.executeQuery(any(), anyString()))
@@ -145,7 +145,7 @@ public class SqlQueryServiceTest {
         // 验证调用
         verify(datasourceMapper).selectById(testQueryDTO.getDatasourceId());
         verify(userMapper).selectById(testUser.getId());
-        verify(jdbcQueryExecutor).executeQuery(testDatasource, testQueryDTO.getSql());
+        verify(jdbcQueryExecutor).executeQuery(testDatasourceInfo, testQueryDTO.getSql());
         verify(sqlQueryHistoryMapper).insert(any(SqlQueryHistory.class));
         verify(permissionChecker)
                 .checkQueryPermission(
@@ -170,7 +170,7 @@ public class SqlQueryServiceTest {
         // 验证调用
         verify(datasourceMapper).selectById(testQueryDTO.getDatasourceId());
         verify(userMapper).selectById(testUser.getId());
-        verify(jdbcQueryExecutor).executeQuery(testDatasource, testQueryDTO.getSql());
+        verify(jdbcQueryExecutor).executeQuery(testDatasourceInfo, testQueryDTO.getSql());
         verify(exporterFactory).getExporter("xlsx");
         verify(fileExporter).exportToFile(any(), anyString());
         verify(sqlQueryHistoryMapper).insert(any(SqlQueryHistory.class));
@@ -206,7 +206,7 @@ public class SqlQueryServiceTest {
         // 首先重置datasourceMapper来清除默认的行为
         reset(datasourceMapper);
         // 然后重新配置以确保先返回一个数据源，然后用户查询才会返回null
-        when(datasourceMapper.selectById(anyLong())).thenReturn(testDatasource);
+        when(datasourceMapper.selectById(anyLong())).thenReturn(testDatasourceInfo);
         when(userMapper.selectById(anyLong())).thenReturn(null);
 
         // 执行测试并验证异常
@@ -272,7 +272,7 @@ public class SqlQueryServiceTest {
         assertTrue(exception.getMessage().contains("导出失败"));
         verify(datasourceMapper).selectById(testQueryDTO.getDatasourceId());
         verify(userMapper).selectById(testUser.getId());
-        verify(jdbcQueryExecutor).executeQuery(testDatasource, testQueryDTO.getSql());
+        verify(jdbcQueryExecutor).executeQuery(testDatasourceInfo, testQueryDTO.getSql());
         verify(exporterFactory).getExporter("xlsx");
         verify(fileExporter).exportToFile(any(), anyString());
         verify(permissionChecker)

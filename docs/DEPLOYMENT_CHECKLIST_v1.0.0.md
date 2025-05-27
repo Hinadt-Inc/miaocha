@@ -90,7 +90,7 @@ server:
 spring:
   profiles:
     active: prod
-  datasource:
+  datasourceInfo:
     url: jdbc:mysql://localhost:3306/log_manage_system?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
     username: logmanage
     password: ${DB_PASSWORD:your_secure_password}

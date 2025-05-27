@@ -2,7 +2,7 @@ package com.hina.log.application.logstash.command;
 
 import com.hina.log.common.exception.SshOperationException;
 import com.hina.log.common.ssh.SshClient;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.concurrent.CompletableFuture;
@@ -19,7 +19,7 @@ public class UploadPackageCommand extends AbstractLogstashCommand {
     }
 
     @Override
-    protected CompletableFuture<Boolean> doExecute(Machine machine) {
+    protected CompletableFuture<Boolean> doExecute(MachineInfo machineInfo) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         try {
@@ -32,14 +32,14 @@ public class UploadPackageCommand extends AbstractLogstashCommand {
 
             // 上传文件
             logger.info("开始上传Logstash安装包到: {}", targetPath);
-            sshClient.uploadFile(machine, packagePath, processDir);
+            sshClient.uploadFile(machineInfo, packagePath, processDir);
 
             // 检查文件是否上传成功
             String checkCommand =
                     String.format(
                             "if [ -f \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi",
                             targetPath);
-            String checkResult = sshClient.executeCommand(machine, checkCommand);
+            String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
 
             boolean success = "exists".equals(checkResult.trim());
             if (success) {

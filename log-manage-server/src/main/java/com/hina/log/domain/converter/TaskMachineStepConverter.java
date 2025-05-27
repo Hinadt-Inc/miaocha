@@ -2,7 +2,7 @@ package com.hina.log.domain.converter;
 
 import com.hina.log.domain.dto.logstash.TaskDetailDTO.MachineStepDTO;
 import com.hina.log.domain.entity.LogstashTaskMachineStep;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import com.hina.log.domain.mapper.MachineMapper;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -33,9 +33,10 @@ public class TaskMachineStepConverter {
         Set<Long> machineIds = machineStepsMap.keySet();
 
         // 批量查询机器信息
-        List<Machine> machines = machineMapper.selectByIds(new ArrayList<>(machineIds));
-        Map<Long, Machine> machineMap =
-                machines.stream().collect(Collectors.toMap(Machine::getId, machine -> machine));
+        List<MachineInfo> machineInfos = machineMapper.selectByIds(new ArrayList<>(machineIds));
+        Map<Long, MachineInfo> machineMap =
+                machineInfos.stream()
+                        .collect(Collectors.toMap(MachineInfo::getId, machine -> machine));
 
         // 转换为基于名称的映射
         Map<String, List<MachineStepDTO>> nameBasedMap = new HashMap<>();
@@ -75,9 +76,10 @@ public class TaskMachineStepConverter {
         Set<Long> machineIds = machineStepDtoMap.keySet();
 
         // 批量查询机器信息
-        List<Machine> machines = machineMapper.selectByIds(new ArrayList<>(machineIds));
-        Map<Long, Machine> machineMap =
-                machines.stream().collect(Collectors.toMap(Machine::getId, machine -> machine));
+        List<MachineInfo> machineInfos = machineMapper.selectByIds(new ArrayList<>(machineIds));
+        Map<Long, MachineInfo> machineMap =
+                machineInfos.stream()
+                        .collect(Collectors.toMap(MachineInfo::getId, machine -> machine));
 
         // 转换为基于名称的映射
         Map<String, List<MachineStepDTO>> nameBasedMap = new HashMap<>();
@@ -96,10 +98,12 @@ public class TaskMachineStepConverter {
     }
 
     /** 获取机器的键值（优先使用名称，如果不存在则使用ID字符串） */
-    private String getMachineKey(Map<Long, Machine> machineMap, Long machineId) {
-        Machine machine = machineMap.get(machineId);
-        if (machine != null && machine.getName() != null && !machine.getName().isEmpty()) {
-            return machine.getName();
+    private String getMachineKey(Map<Long, MachineInfo> machineMap, Long machineId) {
+        MachineInfo machineInfo = machineMap.get(machineId);
+        if (machineInfo != null
+                && machineInfo.getName() != null
+                && !machineInfo.getName().isEmpty()) {
+            return machineInfo.getName();
         }
         // 如果找不到机器或名称为空，则使用ID作为键
         return "Machine-" + machineId;

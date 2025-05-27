@@ -9,7 +9,7 @@ import com.hina.log.domain.dto.logstash.TaskDetailDTO;
 import com.hina.log.domain.dto.logstash.TaskStepsGroupDTO;
 import com.hina.log.domain.entity.LogstashTask;
 import com.hina.log.domain.entity.LogstashTaskMachineStep;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import com.hina.log.domain.mapper.LogstashTaskMachineStepMapper;
 import com.hina.log.domain.mapper.LogstashTaskMapper;
 import com.hina.log.domain.mapper.MachineMapper;
@@ -87,8 +87,8 @@ public class TaskServiceImpl implements TaskService {
         logger.info("创建机器任务, 进程ID: {}, 机器ID: {}", processId, machineId);
 
         // 获取机器信息
-        Machine machine = machineMapper.selectById(machineId);
-        if (machine == null) {
+        MachineInfo machineInfo = machineMapper.selectById(machineId);
+        if (machineInfo == null) {
             logger.error("创建任务失败: 找不到机器ID: {}", machineId);
             return null;
         }
@@ -130,24 +130,24 @@ public class TaskServiceImpl implements TaskService {
             String name,
             String description,
             TaskOperationType operationType,
-            List<Machine> machines,
+            List<MachineInfo> machineInfos,
             List<String> stepIds) {
-        logger.info("批量创建机器任务, 进程ID: {}, 机器数量: {}", processId, machines.size());
+        logger.info("批量创建机器任务, 进程ID: {}, 机器数量: {}", processId, machineInfos.size());
 
         Map<Long, String> machineTaskMap = new HashMap<>();
 
         // 为每台机器创建单独的任务
-        for (Machine machine : machines) {
-            String taskName = name + " - " + machine.getName();
+        for (MachineInfo machineInfo : machineInfos) {
+            String taskName = name + " - " + machineInfo.getName();
             String taskId =
                     createMachineTask(
                             processId,
-                            machine.getId(),
+                            machineInfo.getId(),
                             taskName,
                             description,
                             operationType,
                             stepIds);
-            machineTaskMap.put(machine.getId(), taskId);
+            machineTaskMap.put(machineInfo.getId(), taskId);
         }
 
         logger.info("已完成批量创建机器任务, 进程ID: {}, 创建任务数: {}", processId, machineTaskMap.size());
@@ -332,13 +332,14 @@ public class TaskServiceImpl implements TaskService {
         Set<Long> machineIds = idBasedStats.keySet();
 
         // 批量查询机器信息
-        List<Machine> machines = new ArrayList<>();
+        List<MachineInfo> machineInfos = new ArrayList<>();
         if (!machineIds.isEmpty()) {
-            machines = machineMapper.selectByIds(new ArrayList<>(machineIds));
+            machineInfos = machineMapper.selectByIds(new ArrayList<>(machineIds));
         }
 
-        Map<Long, Machine> machineMap =
-                machines.stream().collect(Collectors.toMap(Machine::getId, machine -> machine));
+        Map<Long, MachineInfo> machineMap =
+                machineInfos.stream()
+                        .collect(Collectors.toMap(MachineInfo::getId, machine -> machine));
 
         // 转换为基于名称的映射
         Map<String, Map<String, Integer>> nameBasedStats = new HashMap<>();
@@ -357,10 +358,12 @@ public class TaskServiceImpl implements TaskService {
     }
 
     /** 获取机器的键值（优先使用名称，如果不存在则使用ID字符串） */
-    private String getMachineKey(Map<Long, Machine> machineMap, Long machineId) {
-        Machine machine = machineMap.get(machineId);
-        if (machine != null && machine.getName() != null && !machine.getName().isEmpty()) {
-            return machine.getName();
+    private String getMachineKey(Map<Long, MachineInfo> machineMap, Long machineId) {
+        MachineInfo machineInfo = machineMap.get(machineId);
+        if (machineInfo != null
+                && machineInfo.getName() != null
+                && !machineInfo.getName().isEmpty()) {
+            return machineInfo.getName();
         }
         // 如果找不到机器或名称为空，则使用ID作为键
         return "Machine-" + machineId;
@@ -434,10 +437,11 @@ public class TaskServiceImpl implements TaskService {
                         .map(LogstashTaskMachineStep::getMachineId)
                         .collect(Collectors.toSet());
 
-        Map<Long, Machine> machineMap = new HashMap<>();
+        Map<Long, MachineInfo> machineMap = new HashMap<>();
         if (!machineIds.isEmpty()) {
-            List<Machine> machines = machineMapper.selectByIds(new ArrayList<>(machineIds));
-            machineMap = machines.stream().collect(Collectors.toMap(Machine::getId, m -> m));
+            List<MachineInfo> machineInfos = machineMapper.selectByIds(new ArrayList<>(machineIds));
+            machineMap =
+                    machineInfos.stream().collect(Collectors.toMap(MachineInfo::getId, m -> m));
         }
 
         // 构建步骤组列表
@@ -488,10 +492,10 @@ public class TaskServiceImpl implements TaskService {
                 machineStep.setMachineId(step.getMachineId());
 
                 // 设置机器信息
-                Machine machine = machineMap.get(step.getMachineId());
-                if (machine != null) {
-                    machineStep.setMachineName(machine.getName());
-                    machineStep.setMachineIp(machine.getIp());
+                MachineInfo machineInfo = machineMap.get(step.getMachineId());
+                if (machineInfo != null) {
+                    machineStep.setMachineName(machineInfo.getName());
+                    machineStep.setMachineIp(machineInfo.getIp());
                 } else {
                     machineStep.setMachineName("未知机器");
                     machineStep.setMachineIp("未知IP");

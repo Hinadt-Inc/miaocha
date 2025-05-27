@@ -2,21 +2,21 @@ package com.hina.log.domain.converter;
 
 import com.hina.log.domain.dto.DatasourceCreateDTO;
 import com.hina.log.domain.dto.DatasourceDTO;
-import com.hina.log.domain.entity.Datasource;
+import com.hina.log.domain.entity.DatasourceInfo;
 import org.springframework.stereotype.Component;
 
 /** 数据源实体与DTO转换器 */
 @Component
-public class DatasourceConverter implements Converter<Datasource, DatasourceDTO> {
+public class DatasourceConverter implements Converter<DatasourceInfo, DatasourceDTO> {
 
     /** 将DTO转换为实体 */
     @Override
-    public Datasource toEntity(DatasourceDTO dto) {
+    public DatasourceInfo toEntity(DatasourceDTO dto) {
         if (dto == null) {
             return null;
         }
 
-        Datasource entity = new Datasource();
+        DatasourceInfo entity = new DatasourceInfo();
         entity.setId(dto.getId());
         entity.setName(dto.getName());
         entity.setType(dto.getType());
@@ -31,12 +31,12 @@ public class DatasourceConverter implements Converter<Datasource, DatasourceDTO>
     }
 
     /** 将创建DTO转换为实体 */
-    public Datasource toEntity(DatasourceCreateDTO dto) {
+    public DatasourceInfo toEntity(DatasourceCreateDTO dto) {
         if (dto == null) {
             return null;
         }
 
-        Datasource entity = new Datasource();
+        DatasourceInfo entity = new DatasourceInfo();
         entity.setName(dto.getName());
         entity.setType(dto.getType());
         entity.setIp(dto.getIp());
@@ -51,7 +51,7 @@ public class DatasourceConverter implements Converter<Datasource, DatasourceDTO>
 
     /** 将实体转换为DTO */
     @Override
-    public DatasourceDTO toDto(Datasource entity) {
+    public DatasourceDTO toDto(DatasourceInfo entity) {
         if (entity == null) {
             return null;
         }
@@ -72,7 +72,7 @@ public class DatasourceConverter implements Converter<Datasource, DatasourceDTO>
 
     /** 使用DTO更新实体 */
     @Override
-    public Datasource updateEntity(Datasource entity, DatasourceDTO dto) {
+    public DatasourceInfo updateEntity(DatasourceInfo entity, DatasourceDTO dto) {
         if (entity == null || dto == null) {
             return entity;
         }
@@ -88,7 +88,7 @@ public class DatasourceConverter implements Converter<Datasource, DatasourceDTO>
     }
 
     /** 使用创建DTO更新实体 */
-    public Datasource updateEntity(Datasource entity, DatasourceCreateDTO dto) {
+    public DatasourceInfo updateEntity(DatasourceInfo entity, DatasourceCreateDTO dto) {
         if (entity == null || dto == null) {
             return entity;
         }

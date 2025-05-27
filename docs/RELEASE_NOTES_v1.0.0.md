@@ -146,7 +146,7 @@ java -jar -Dspring.profiles.active=prod log-manage-server-1.0.0-exec.jar
 spring:
   profiles:
     active: prod
-  datasource:
+  datasourceInfo:
     url: jdbc:mysql://localhost:3306/log_manage_system
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:your_password}
@@ -164,11 +164,11 @@ log-config:
 
 - **认证管理**: `/api/auth/**`
 - **用户管理**: `/api/users/**`
-- **数据源管理**: `/api/datasources/**`
+- **数据源管理**: `/api/datasourceInfos/**`
 - **日志搜索**: `/api/logs/**`
 - **SQL编辑器**: `/api/sql-editor/**`
 - **Logstash管理**: `/api/logstash/processes/**`
-- **机器管理**: `/api/machines/**`
+- **机器管理**: `/api/machineInfos/**`
 
 **Swagger文档**: `http://your-server:port/swagger-ui/index.html`
 

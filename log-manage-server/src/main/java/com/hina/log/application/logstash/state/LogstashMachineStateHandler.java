@@ -3,7 +3,7 @@ package com.hina.log.application.logstash.state;
 import com.hina.log.application.logstash.enums.LogstashMachineState;
 import com.hina.log.application.logstash.task.TaskService;
 import com.hina.log.domain.entity.LogstashProcess;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import java.util.concurrent.CompletableFuture;
 
 /** Logstash机器状态处理器接口 使用状态模式处理不同状态下的行为 */
@@ -20,32 +20,34 @@ public interface LogstashMachineStateHandler {
      * 处理初始化操作
      *
      * @param process Logstash进程
-     * @param machine 目标机器
+     * @param machineInfo 目标机器
      * @param taskId 任务ID，可以为null
      * @return 异步操作结果
      */
     CompletableFuture<Boolean> handleInitialize(
-            LogstashProcess process, Machine machine, String taskId);
+            LogstashProcess process, MachineInfo machineInfo, String taskId);
 
     /**
      * 处理启动操作
      *
      * @param process Logstash进程
-     * @param machine 目标机器
+     * @param machineInfo 目标机器
      * @param taskId 任务ID，可以为null
      * @return 异步操作结果
      */
-    CompletableFuture<Boolean> handleStart(LogstashProcess process, Machine machine, String taskId);
+    CompletableFuture<Boolean> handleStart(
+            LogstashProcess process, MachineInfo machineInfo, String taskId);
 
     /**
      * 处理停止操作
      *
      * @param process Logstash进程
-     * @param machine 目标机器
+     * @param machineInfo 目标机器
      * @param taskId 任务ID，可以为null
      * @return 异步操作结果
      */
-    CompletableFuture<Boolean> handleStop(LogstashProcess process, Machine machine, String taskId);
+    CompletableFuture<Boolean> handleStop(
+            LogstashProcess process, MachineInfo machineInfo, String taskId);
 
     /**
      * 处理更新配置操作
@@ -54,7 +56,7 @@ public interface LogstashMachineStateHandler {
      * @param configContent 主配置内容，null表示不更新
      * @param jvmOptions JVM选项内容，null表示不更新
      * @param logstashYml logstash.yml配置内容，null表示不更新
-     * @param machine 目标机器
+     * @param machineInfo 目标机器
      * @param taskId 任务ID，可以为null
      * @return 异步操作结果
      */
@@ -63,19 +65,19 @@ public interface LogstashMachineStateHandler {
             String configContent,
             String jvmOptions,
             String logstashYml,
-            Machine machine,
+            MachineInfo machineInfo,
             String taskId);
 
     /**
      * 处理刷新配置操作
      *
      * @param process Logstash进程
-     * @param machine 目标机器
+     * @param machineInfo 目标机器
      * @param taskId 任务ID，可以为null
      * @return 异步操作结果
      */
     CompletableFuture<Boolean> handleRefreshConfig(
-            LogstashProcess process, Machine machine, String taskId);
+            LogstashProcess process, MachineInfo machineInfo, String taskId);
 
     /**
      * 判断当前状态是否可以执行初始化操作

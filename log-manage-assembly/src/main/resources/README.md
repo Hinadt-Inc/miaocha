@@ -53,7 +53,7 @@
 
 ```yaml
 spring:
-  datasource:
+  datasourceInfo:
     url: jdbc:mysql://localhost:3306/log_manage_system?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
     username: your_username
     password: your_password

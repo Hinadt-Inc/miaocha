@@ -2,7 +2,7 @@ package com.hina.log.application.logstash.command;
 
 import com.hina.log.common.exception.SshOperationException;
 import com.hina.log.common.ssh.SshClient;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import java.io.File;
 import java.util.concurrent.CompletableFuture;
 
@@ -18,7 +18,7 @@ public class ExtractPackageCommand extends AbstractLogstashCommand {
     }
 
     @Override
-    protected CompletableFuture<Boolean> doExecute(Machine machine) {
+    protected CompletableFuture<Boolean> doExecute(MachineInfo machineInfo) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         try {
@@ -32,7 +32,7 @@ public class ExtractPackageCommand extends AbstractLogstashCommand {
             String extractCommand =
                     String.format(
                             "cd %s && tar -xzf %s --strip-components=1", processDir, fileName);
-            sshClient.executeCommand(machine, extractCommand);
+            sshClient.executeCommand(machineInfo, extractCommand);
 
             // 检查解压是否成功
             String checkCommand =
@@ -40,7 +40,7 @@ public class ExtractPackageCommand extends AbstractLogstashCommand {
                             "if [ -d \"%s/bin\" ] && [ -f \"%s/bin/logstash\" ]; then echo"
                                     + " \"success\"; else echo \"failed\"; fi",
                             processDir, processDir);
-            String checkResult = sshClient.executeCommand(machine, checkCommand);
+            String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
 
             boolean success = "success".equals(checkResult.trim());
             if (success) {
@@ -48,7 +48,7 @@ public class ExtractPackageCommand extends AbstractLogstashCommand {
 
                 // 可选：删除安装包节省空间
                 String removePackageCommand = String.format("rm -f %s", remotePackagePath);
-                sshClient.executeCommand(machine, removePackageCommand);
+                sshClient.executeCommand(machineInfo, removePackageCommand);
                 logger.info("已删除安装包: {}", remotePackagePath);
             } else {
                 logger.error("解压Logstash安装包失败");

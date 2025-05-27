@@ -7,7 +7,7 @@ import com.hina.log.application.logstash.enums.LogstashMachineStep;
 import com.hina.log.application.logstash.enums.StepStatus;
 import com.hina.log.application.logstash.task.TaskService;
 import com.hina.log.domain.entity.LogstashProcess;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import java.util.concurrent.CompletableFuture;
 import org.springframework.stereotype.Component;
 
@@ -27,9 +27,9 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
 
     @Override
     public CompletableFuture<Boolean> handleInitialize(
-            LogstashProcess process, Machine machine, String taskId) {
+            LogstashProcess process, MachineInfo machineInfo, String taskId) {
         Long processId = process.getId();
-        Long machineId = machine.getId();
+        Long machineId = machineInfo.getId();
 
         logger.info("重新初始化机器 [{}] 上的Logstash进程 [{}]", machineId, processId);
 
@@ -49,7 +49,7 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
                                     commandFactory.deleteProcessDirectoryCommand(processId);
 
                             return deleteCommand
-                                    .execute(machine)
+                                    .execute(machineInfo)
                                     .exceptionally(
                                             ex -> {
                                                 // 即使删除失败也继续执行（可能目录不存在）
@@ -74,7 +74,7 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
                                     commandFactory.createDirectoryCommand(processId);
 
                             return createDirCommand
-                                    .execute(machine)
+                                    .execute(machineInfo)
                                     .thenApply(
                                             createDirSuccess -> {
                                                 StepStatus status =
@@ -134,7 +134,7 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
                                     commandFactory.uploadPackageCommand(processId);
 
                             return uploadCommand
-                                    .execute(machine)
+                                    .execute(machineInfo)
                                     .thenApply(
                                             uploadSuccess -> {
                                                 StepStatus status =
@@ -192,7 +192,7 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
                                     commandFactory.extractPackageCommand(processId);
 
                             return extractCommand
-                                    .execute(machine)
+                                    .execute(machineInfo)
                                     .thenApply(
                                             extractSuccess -> {
                                                 StepStatus status =
@@ -250,7 +250,7 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
                                     commandFactory.createConfigCommand(process);
 
                             return configCommand
-                                    .execute(machine)
+                                    .execute(machineInfo)
                                     .thenApply(
                                             configSuccess -> {
                                                 StepStatus status =
@@ -313,7 +313,7 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
                                             processId, jvmOptions, logstashYml);
 
                             return modifyConfigCommand
-                                    .execute(machine)
+                                    .execute(machineInfo)
                                     .thenApply(
                                             modifyConfigSuccess -> {
                                                 StepStatus status =

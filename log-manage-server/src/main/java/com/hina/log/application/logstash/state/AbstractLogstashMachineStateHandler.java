@@ -4,7 +4,7 @@ import com.hina.log.application.logstash.command.LogstashCommandFactory;
 import com.hina.log.application.logstash.enums.LogstashMachineState;
 import com.hina.log.application.logstash.task.TaskService;
 import com.hina.log.domain.entity.LogstashProcess;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,21 +23,21 @@ public abstract class AbstractLogstashMachineStateHandler implements LogstashMac
 
     @Override
     public CompletableFuture<Boolean> handleInitialize(
-            LogstashProcess process, Machine machine, String taskId) {
+            LogstashProcess process, MachineInfo machineInfo, String taskId) {
         logger.warn("状态 [{}] 不支持初始化操作", getState().name());
         return CompletableFuture.completedFuture(false);
     }
 
     @Override
     public CompletableFuture<Boolean> handleStart(
-            LogstashProcess process, Machine machine, String taskId) {
+            LogstashProcess process, MachineInfo machineInfo, String taskId) {
         logger.warn("状态 [{}] 不支持启动操作", getState().name());
         return CompletableFuture.completedFuture(false);
     }
 
     @Override
     public CompletableFuture<Boolean> handleStop(
-            LogstashProcess process, Machine machine, String taskId) {
+            LogstashProcess process, MachineInfo machineInfo, String taskId) {
         logger.warn("状态 [{}] 不支持停止操作", getState().name());
         return CompletableFuture.completedFuture(false);
     }
@@ -48,7 +48,7 @@ public abstract class AbstractLogstashMachineStateHandler implements LogstashMac
             String configContent,
             String jvmOptions,
             String logstashYml,
-            Machine machine,
+            MachineInfo machineInfo,
             String taskId) {
         logger.warn("状态 [{}] 不支持更新配置操作", getState().name());
         return CompletableFuture.completedFuture(false);
@@ -56,7 +56,7 @@ public abstract class AbstractLogstashMachineStateHandler implements LogstashMac
 
     @Override
     public CompletableFuture<Boolean> handleRefreshConfig(
-            LogstashProcess process, Machine machine, String taskId) {
+            LogstashProcess process, MachineInfo machineInfo, String taskId) {
         // 默认实现直接返回成功
         return CompletableFuture.completedFuture(true);
     }

@@ -5,7 +5,7 @@ import com.hina.log.application.service.database.DatabaseMetadataServiceFactory;
 import com.hina.log.application.service.sql.JdbcQueryExecutor;
 import com.hina.log.common.exception.BusinessException;
 import com.hina.log.common.exception.ErrorCode;
-import com.hina.log.domain.entity.Datasource;
+import com.hina.log.domain.entity.DatasourceInfo;
 import com.hina.log.domain.entity.enums.DatasourceType;
 import com.hina.log.domain.mapper.DatasourceMapper;
 import java.sql.Connection;
@@ -61,14 +61,14 @@ public class TableValidationServiceImpl implements TableValidationService {
         validateParameters(datasourceId, tableName);
 
         // 获取数据源信息
-        Datasource datasource = getDatasource(datasourceId);
+        DatasourceInfo datasourceInfo = getDatasource(datasourceId);
 
         try {
             // 获取数据源类型
-            DatasourceType datasourceType = getDatasourceType(datasource);
+            DatasourceType datasourceType = getDatasourceType(datasourceInfo);
 
             // 方法1: 使用JdbcTemplate查询
-            return checkTableExistsWithJdbcTemplate(datasource, datasourceType, tableName);
+            return checkTableExistsWithJdbcTemplate(datasourceInfo, datasourceType, tableName);
 
             // 方法2: 使用DatabaseMetadataService (备用方案)
             // return checkTableExistsWithMetadataService(datasource, tableName);
@@ -90,40 +90,41 @@ public class TableValidationServiceImpl implements TableValidationService {
     }
 
     /** 获取数据源 */
-    private Datasource getDatasource(Long datasourceId) {
-        Datasource datasource = datasourceMapper.selectById(datasourceId);
-        if (datasource == null) {
+    private DatasourceInfo getDatasource(Long datasourceId) {
+        DatasourceInfo datasourceInfo = datasourceMapper.selectById(datasourceId);
+        if (datasourceInfo == null) {
             throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND, "指定的数据源不存在");
         }
-        return datasource;
+        return datasourceInfo;
     }
 
     /** 获取数据源类型 */
-    private DatasourceType getDatasourceType(Datasource datasource) {
-        DatasourceType datasourceType = DatasourceType.fromType(datasource.getType());
+    private DatasourceType getDatasourceType(DatasourceInfo datasourceInfo) {
+        DatasourceType datasourceType = DatasourceType.fromType(datasourceInfo.getType());
         if (datasourceType == null) {
             throw new BusinessException(
-                    ErrorCode.DATASOURCE_TYPE_NOT_SUPPORTED, "不支持的数据源类型: " + datasource.getType());
+                    ErrorCode.DATASOURCE_TYPE_NOT_SUPPORTED,
+                    "不支持的数据源类型: " + datasourceInfo.getType());
         }
         return datasourceType;
     }
 
     /** 使用JdbcTemplate检查表是否存在 */
     private boolean checkTableExistsWithJdbcTemplate(
-            Datasource datasource, DatasourceType datasourceType, String tableName) {
+            DatasourceInfo datasourceInfo, DatasourceType datasourceType, String tableName) {
         // 创建临时数据源连接
-        DriverManagerDataSource dataSource = createDataSource(datasource, datasourceType);
+        DriverManagerDataSource dataSource = createDataSource(datasourceInfo, datasourceType);
         JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
 
         // 根据数据库类型选择不同的查询语句
-        String dbType = datasource.getType().toLowerCase();
+        String dbType = datasourceInfo.getType().toLowerCase();
 
         // MySQL和Doris使用相同的查询
         if (dbType.contains("mysql") || dbType.contains("doris")) {
             String query =
                     "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ? AND"
                             + " table_name = ?";
-            String dbName = datasource.getDatabase();
+            String dbName = datasourceInfo.getDatabase();
             return jdbcTemplate.queryForObject(query, Integer.class, dbName, tableName) > 0;
         } else {
             // 通用查询，尝试直接查询表
@@ -138,10 +139,11 @@ public class TableValidationServiceImpl implements TableValidationService {
     }
 
     /** 使用DatabaseMetadataService检查表是否存在 备用方法，当前未使用 */
-    private boolean checkTableExistsWithMetadataService(Datasource datasource, String tableName) {
-        try (Connection connection = jdbcQueryExecutor.getConnection(datasource)) {
+    private boolean checkTableExistsWithMetadataService(
+            DatasourceInfo datasourceInfo, String tableName) {
+        try (Connection connection = jdbcQueryExecutor.getConnection(datasourceInfo)) {
             // 获取对应的元数据服务
-            var metadataService = metadataServiceFactory.getService(datasource.getType());
+            var metadataService = metadataServiceFactory.getService(datasourceInfo.getType());
             // 获取所有表并检查是否包含目标表
             List<String> tables = metadataService.getAllTables(connection);
             return tables.contains(tableName);
@@ -153,14 +155,14 @@ public class TableValidationServiceImpl implements TableValidationService {
 
     /** 创建数据源 */
     private DriverManagerDataSource createDataSource(
-            Datasource datasource, DatasourceType datasourceType) {
+            DatasourceInfo datasourceInfo, DatasourceType datasourceType) {
         // 构建 JDBC URL
         String url =
                 datasourceType.buildJdbcUrl(
-                        datasource.getIp(),
-                        datasource.getPort(),
-                        datasource.getDatabase(),
-                        datasource.getJdbcParams());
+                        datasourceInfo.getIp(),
+                        datasourceInfo.getPort(),
+                        datasourceInfo.getDatabase(),
+                        datasourceInfo.getJdbcParams());
 
         // 创建临时数据源连接
         DriverManagerDataSource dataSource = new DriverManagerDataSource();
@@ -172,8 +174,8 @@ public class TableValidationServiceImpl implements TableValidationService {
         }
 
         dataSource.setUrl(url);
-        dataSource.setUsername(datasource.getUsername());
-        dataSource.setPassword(datasource.getPassword());
+        dataSource.setUsername(datasourceInfo.getUsername());
+        dataSource.setPassword(datasourceInfo.getPassword());
 
         return dataSource;
     }

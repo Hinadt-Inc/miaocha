@@ -9,7 +9,7 @@ import com.hina.log.application.logstash.task.TaskService;
 import com.hina.log.common.util.FutureUtils;
 import com.hina.log.config.LogstashProperties;
 import com.hina.log.domain.entity.LogstashProcess;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import com.hina.log.domain.mapper.LogstashProcessMapper;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -51,12 +51,12 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
     }
 
     @Override
-    public void initializeProcess(LogstashProcess process, List<Machine> machines) {
-        if (process == null || machines == null || machines.isEmpty()) {
+    public void initializeProcess(LogstashProcess process, List<MachineInfo> machineInfos) {
+        if (process == null || machineInfos == null || machineInfos.isEmpty()) {
             logger.error(
                     "初始化进程参数无效: process={}, machines是否为空={}",
                     process,
-                    machines == null || machines.isEmpty());
+                    machineInfos == null || machineInfos.isEmpty());
             return;
         }
 
@@ -86,37 +86,37 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
                         taskName,
                         taskDescription,
                         TaskOperationType.INITIALIZE,
-                        machines,
+                        machineInfos,
                         stepIds);
 
         // 为每台机器并行执行任务
-        for (Machine machine : machines) {
-            final Machine currentMachine = machine;
+        for (MachineInfo machineInfo : machineInfos) {
+            final MachineInfo currentMachineInfo = machineInfo;
             // 初始化机器状态
-            machineStateManager.initializeMachineState(processId, machine.getId());
+            machineStateManager.initializeMachineState(processId, machineInfo.getId());
 
             // 执行初始化操作
-            String taskId = machineTaskMap.get(machine.getId());
+            String taskId = machineTaskMap.get(machineInfo.getId());
             taskService.executeAsync(
                     taskId,
                     FutureUtils.toSyncRunnable(
                             () ->
                                     machineStateManager.initializeMachine(
-                                            process, currentMachine, taskId),
+                                            process, currentMachineInfo, taskId),
                             "机器",
                             "初始化Logstash进程环境",
-                            currentMachine.getId()),
+                            currentMachineInfo.getId()),
                     null);
         }
     }
 
     @Override
-    public void startProcess(LogstashProcess process, List<Machine> machines) {
-        if (process == null || machines == null || machines.isEmpty()) {
+    public void startProcess(LogstashProcess process, List<MachineInfo> machineInfos) {
+        if (process == null || machineInfos == null || machineInfos.isEmpty()) {
             logger.error(
                     "启动进程参数无效: process={}, machines是否为空={}",
                     process,
-                    machines == null || machines.isEmpty());
+                    machineInfos == null || machineInfos.isEmpty());
             return;
         }
 
@@ -138,33 +138,35 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
                         taskName,
                         taskDescription,
                         TaskOperationType.START,
-                        machines,
+                        machineInfos,
                         stepIds);
 
         // 为每台机器并行执行任务
-        for (Machine machine : machines) {
-            final Machine currentMachine = machine;
-            String taskId = machineTaskMap.get(machine.getId());
+        for (MachineInfo machineInfo : machineInfos) {
+            final MachineInfo currentMachineInfo = machineInfo;
+            String taskId = machineTaskMap.get(machineInfo.getId());
 
             // 执行启动操作
             taskService.executeAsync(
                     taskId,
                     FutureUtils.toSyncRunnable(
-                            () -> machineStateManager.startMachine(process, currentMachine, taskId),
+                            () ->
+                                    machineStateManager.startMachine(
+                                            process, currentMachineInfo, taskId),
                             "机器",
                             "启动Logstash进程",
-                            currentMachine.getId()),
+                            currentMachineInfo.getId()),
                     null);
         }
     }
 
     @Override
-    public void stopProcess(Long processId, List<Machine> machines) {
-        if (processId == null || machines == null || machines.isEmpty()) {
+    public void stopProcess(Long processId, List<MachineInfo> machineInfos) {
+        if (processId == null || machineInfos == null || machineInfos.isEmpty()) {
             logger.error(
                     "停止进程参数无效: processId={}, machines是否为空={}",
                     processId,
-                    machines == null || machines.isEmpty());
+                    machineInfos == null || machineInfos.isEmpty());
             return;
         }
 
@@ -188,42 +190,44 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
                         taskName,
                         taskDescription,
                         TaskOperationType.STOP,
-                        machines,
+                        machineInfos,
                         stepIds);
 
         // 为每台机器并行执行任务
-        for (Machine machine : machines) {
-            final Machine currentMachine = machine;
-            String taskId = machineTaskMap.get(machine.getId());
+        for (MachineInfo machineInfo : machineInfos) {
+            final MachineInfo currentMachineInfo = machineInfo;
+            String taskId = machineTaskMap.get(machineInfo.getId());
 
             // 执行停止操作
             taskService.executeAsync(
                     taskId,
                     FutureUtils.toSyncRunnable(
-                            () -> machineStateManager.stopMachine(process, currentMachine, taskId),
+                            () ->
+                                    machineStateManager.stopMachine(
+                                            process, currentMachineInfo, taskId),
                             "机器",
                             "停止Logstash进程",
-                            currentMachine.getId()),
+                            currentMachineInfo.getId()),
                     null);
         }
     }
 
     @Override
     public CompletableFuture<Boolean> deleteProcessDirectory(
-            Long processId, List<Machine> machines) {
-        if (processId == null || machines == null || machines.isEmpty()) {
+            Long processId, List<MachineInfo> machineInfos) {
+        if (processId == null || machineInfos == null || machineInfos.isEmpty()) {
             logger.warn("无法删除进程目录: 进程ID或机器列表为空");
             return CompletableFuture.completedFuture(false);
         }
 
-        logger.info("开始删除Logstash进程目录，进程ID: {}, 机器数量: {}", processId, machines.size());
+        logger.info("开始删除Logstash进程目录，进程ID: {}, 机器数量: {}", processId, machineInfos.size());
 
         // 创建删除进程目录的命令
         LogstashCommand deleteCommand = commandFactory.deleteProcessDirectoryCommand(processId);
 
         // 收集所有机器上的删除操作的Future
         List<CompletableFuture<Boolean>> futures =
-                machines.stream().map(deleteCommand::execute).toList();
+                machineInfos.stream().map(deleteCommand::execute).toList();
 
         // 等待所有机器上的操作完成
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
@@ -251,12 +255,12 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
     }
 
     @Override
-    public void refreshConfig(Long processId, List<Machine> machines) {
-        if (processId == null || machines == null || machines.isEmpty()) {
+    public void refreshConfig(Long processId, List<MachineInfo> machineInfos) {
+        if (processId == null || machineInfos == null || machineInfos.isEmpty()) {
             logger.error(
                     "刷新配置参数无效: processId={}, machines是否为空={}",
                     processId,
-                    machines == null || machines.isEmpty());
+                    machineInfos == null || machineInfos.isEmpty());
             return;
         }
 
@@ -268,11 +272,11 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
         }
 
         // 验证配置刷新条件
-        if (machines.size() == 1) {
+        if (machineInfos.size() == 1) {
             // 单机刷新：验证机器连接
-            Machine machine = machines.get(0);
-            connectionValidator.validateSingleMachineConnection(machine);
-            configService.validateConfigRefreshConditions(processId, machine.getId());
+            MachineInfo machineInfo = machineInfos.get(0);
+            connectionValidator.validateSingleMachineConnection(machineInfo);
+            configService.validateConfigRefreshConditions(processId, machineInfo.getId());
         } else {
             // 全局刷新
             configService.validateConfigRefreshConditions(processId, null);
@@ -292,13 +296,13 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
                         taskName,
                         taskDescription,
                         TaskOperationType.REFRESH_CONFIG,
-                        machines,
+                        machineInfos,
                         stepIds);
 
         // 为每台机器并行执行任务
-        for (Machine machine : machines) {
-            final Machine currentMachine = machine;
-            String taskId = machineTaskMap.get(machine.getId());
+        for (MachineInfo machineInfo : machineInfos) {
+            final MachineInfo currentMachineInfo = machineInfo;
+            String taskId = machineTaskMap.get(machineInfo.getId());
 
             // 执行配置刷新操作
             taskService.executeAsync(
@@ -306,28 +310,29 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
                     FutureUtils.toSyncRunnable(
                             () ->
                                     machineStateManager.refreshMachineConfig(
-                                            process, currentMachine, taskId),
+                                            process, currentMachineInfo, taskId),
                             "机器",
                             "刷新Logstash配置",
-                            currentMachine.getId()),
+                            currentMachineInfo.getId()),
                     null);
         }
     }
 
     @Override
-    public void startMachine(LogstashProcess process, Machine machine) {
-        if (process == null || machine == null) {
-            logger.error("启动机器参数无效: process={}, machine={}", process, machine);
+    public void startMachine(LogstashProcess process, MachineInfo machineInfo) {
+        if (process == null || machineInfo == null) {
+            logger.error("启动机器参数无效: process={}, machine={}", process, machineInfo);
             return;
         }
 
         // 验证机器连接
-        connectionValidator.validateSingleMachineConnection(machine);
+        connectionValidator.validateSingleMachineConnection(machineInfo);
 
         Long processId = process.getId();
 
         // 创建任务
-        String taskName = "启动Logstash进程[" + process.getName() + "]在机器[" + machine.getName() + "]上";
+        String taskName =
+                "启动Logstash进程[" + process.getName() + "]在机器[" + machineInfo.getName() + "]上";
         String taskDescription = "启动单台机器上的Logstash进程";
 
         List<String> stepIds =
@@ -339,7 +344,7 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
         String taskId =
                 taskService.createMachineTask(
                         processId,
-                        machine.getId(),
+                        machineInfo.getId(),
                         taskName,
                         taskDescription,
                         TaskOperationType.START,
@@ -349,22 +354,22 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
         taskService.executeAsync(
                 taskId,
                 FutureUtils.toSyncRunnable(
-                        () -> machineStateManager.startMachine(process, machine, taskId),
+                        () -> machineStateManager.startMachine(process, machineInfo, taskId),
                         "机器",
                         "启动Logstash进程",
-                        machine.getId()),
+                        machineInfo.getId()),
                 null);
     }
 
     @Override
-    public void stopMachine(Long processId, Machine machine) {
-        if (processId == null || machine == null) {
-            logger.error("停止机器参数无效: processId={}, machine={}", processId, machine);
+    public void stopMachine(Long processId, MachineInfo machineInfo) {
+        if (processId == null || machineInfo == null) {
+            logger.error("停止机器参数无效: processId={}, machine={}", processId, machineInfo);
             return;
         }
 
         // 验证机器连接
-        connectionValidator.validateSingleMachineConnection(machine);
+        connectionValidator.validateSingleMachineConnection(machineInfo);
 
         // 查询进程信息
         LogstashProcess process = logstashProcessMapper.selectById(processId);
@@ -374,7 +379,8 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
         }
 
         // 创建任务
-        String taskName = "停止Logstash进程[" + process.getName() + "]在机器[" + machine.getName() + "]上";
+        String taskName =
+                "停止Logstash进程[" + process.getName() + "]在机器[" + machineInfo.getName() + "]上";
         String taskDescription = "停止单台机器上的Logstash进程";
 
         List<String> stepIds = Collections.singletonList(LogstashMachineStep.STOP_PROCESS.getId());
@@ -383,7 +389,7 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
         String taskId =
                 taskService.createMachineTask(
                         processId,
-                        machine.getId(),
+                        machineInfo.getId(),
                         taskName,
                         taskDescription,
                         TaskOperationType.STOP,
@@ -393,22 +399,22 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
         taskService.executeAsync(
                 taskId,
                 FutureUtils.toSyncRunnable(
-                        () -> machineStateManager.stopMachine(process, machine, taskId),
+                        () -> machineStateManager.stopMachine(process, machineInfo, taskId),
                         "机器",
                         "停止Logstash进程",
-                        machine.getId()),
+                        machineInfo.getId()),
                 null);
     }
 
     @Override
-    public void restartMachine(Long processId, Machine machine) {
-        if (processId == null || machine == null) {
-            logger.error("重启机器参数无效: processId={}, machine={}", processId, machine);
+    public void restartMachine(Long processId, MachineInfo machineInfo) {
+        if (processId == null || machineInfo == null) {
+            logger.error("重启机器参数无效: processId={}, machine={}", processId, machineInfo);
             return;
         }
 
         // 验证机器连接
-        connectionValidator.validateSingleMachineConnection(machine);
+        connectionValidator.validateSingleMachineConnection(machineInfo);
 
         // 查询进程信息
         LogstashProcess process = logstashProcessMapper.selectById(processId);
@@ -418,7 +424,8 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
         }
 
         // 创建任务
-        String taskName = "重启Logstash进程[" + process.getName() + "]在机器[" + machine.getName() + "]上";
+        String taskName =
+                "重启Logstash进程[" + process.getName() + "]在机器[" + machineInfo.getName() + "]上";
         String taskDescription = "重启单台机器上的Logstash进程";
 
         List<String> stepIds =
@@ -431,7 +438,7 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
         String taskId =
                 taskService.createMachineTask(
                         processId,
-                        machine.getId(),
+                        machineInfo.getId(),
                         taskName,
                         taskDescription,
                         TaskOperationType.RESTART,
@@ -444,42 +451,43 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
                         () -> {
                             // 先停止进程，然后在成功时启动进程
                             return machineStateManager
-                                    .stopMachine(process, machine, taskId)
+                                    .stopMachine(process, machineInfo, taskId)
                                     .thenCompose(
                                             stopSuccess -> {
                                                 if (!stopSuccess) {
                                                     logger.warn(
                                                             "机器 [{}] 上的Logstash进程停止失败，跳过启动步骤",
-                                                            machine.getId());
+                                                            machineInfo.getId());
                                                     return CompletableFuture.completedFuture(false);
                                                 }
 
                                                 // 停止成功后启动进程
                                                 logger.info(
                                                         "机器 [{}] 上的Logstash进程停止成功，准备启动",
-                                                        machine.getId());
+                                                        machineInfo.getId());
                                                 return machineStateManager.startMachine(
-                                                        process, machine, taskId);
+                                                        process, machineInfo, taskId);
                                             });
                         },
                         "机器",
                         "重启Logstash进程",
-                        machine.getId()),
+                        machineInfo.getId()),
                 null);
     }
 
     @Override
     public void updateMultipleConfigs(
             Long processId,
-            List<Machine> machines,
+            List<MachineInfo> machineInfos,
             String configContent,
             String jvmOptions,
             String logstashYml) {
-        logger.info("开始更新进程 [{}] 的多种配置到 {} 台机器", processId, machines.size());
+        logger.info("开始更新进程 [{}] 的多种配置到 {} 台机器", processId, machineInfos.size());
 
         // 检查输入参数
-        if (processId == null || machines.isEmpty()) {
-            logger.error("更新配置参数无效: processId={}, machines是否为空={}", processId, machines.isEmpty());
+        if (processId == null || machineInfos.isEmpty()) {
+            logger.error(
+                    "更新配置参数无效: processId={}, machines是否为空={}", processId, machineInfos.isEmpty());
             return;
         }
 
@@ -492,8 +500,8 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
         }
 
         // 检查所有机器的状态，确保没有正在运行的实例
-        for (Machine machine : machines) {
-            configService.validateConfigUpdateConditions(processId, machine.getId());
+        for (MachineInfo machineInfo : machineInfos) {
+            configService.validateConfigUpdateConditions(processId, machineInfo.getId());
         }
 
         // 创建任务记录
@@ -519,13 +527,13 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
                         taskName,
                         taskDescription,
                         TaskOperationType.UPDATE_CONFIG,
-                        machines,
+                        machineInfos,
                         stepIds);
 
         // 为每台机器并行执行任务
-        for (Machine machine : machines) {
-            final Machine currentMachine = machine;
-            String taskId = machineTaskMap.get(machine.getId());
+        for (MachineInfo machineInfo : machineInfos) {
+            final MachineInfo currentMachineInfo = machineInfo;
+            String taskId = machineTaskMap.get(machineInfo.getId());
 
             // 执行更新配置操作
             taskService.executeAsync(
@@ -534,14 +542,14 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
                             () ->
                                     machineStateManager.updateMachineConfig(
                                             processId,
-                                            currentMachine,
+                                            currentMachineInfo,
                                             configContent,
                                             jvmOptions,
                                             logstashYml,
                                             taskId),
                             "机器",
                             "更新Logstash配置",
-                            currentMachine.getId()),
+                            currentMachineInfo.getId()),
                     null);
         }
     }

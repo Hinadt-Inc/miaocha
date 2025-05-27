@@ -5,7 +5,7 @@ import com.hina.log.application.logstash.enums.TaskOperationType;
 import com.hina.log.application.logstash.enums.TaskStatus;
 import com.hina.log.domain.dto.logstash.TaskDetailDTO;
 import com.hina.log.domain.dto.logstash.TaskStepsGroupDTO;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -56,7 +56,7 @@ public interface TaskService {
      * @param name 任务名称
      * @param description 任务描述
      * @param operationType 操作类型
-     * @param machines 关联机器列表
+     * @param machineInfos 关联机器列表
      * @param stepIds 步骤ID列表
      * @return 机器ID到任务ID的映射
      */
@@ -65,7 +65,7 @@ public interface TaskService {
             String name,
             String description,
             TaskOperationType operationType,
-            List<Machine> machines,
+            List<MachineInfo> machineInfos,
             List<String> stepIds);
 
     /**

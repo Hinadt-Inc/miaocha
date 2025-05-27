@@ -6,7 +6,7 @@ import com.hina.log.common.exception.BusinessException;
 import com.hina.log.common.exception.ErrorCode;
 import com.hina.log.domain.entity.LogstashMachine;
 import com.hina.log.domain.entity.LogstashProcess;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import com.hina.log.domain.mapper.LogstashMachineMapper;
 import com.hina.log.domain.mapper.LogstashProcessMapper;
 import java.util.HashMap;
@@ -56,12 +56,13 @@ public class LogstashMachineStateManager {
      * 获取机器上下文 创建一个新的上下文对象，封装机器状态转换和操作
      *
      * @param process Logstash进程
-     * @param machine 目标机器
+     * @param machineInfo 目标机器
      * @return 机器上下文对象
      */
-    public LogstashMachineContext getMachineContext(LogstashProcess process, Machine machine) {
+    public LogstashMachineContext getMachineContext(
+            LogstashProcess process, MachineInfo machineInfo) {
         Long processId = process.getId();
-        Long machineId = machine.getId();
+        Long machineId = machineInfo.getId();
 
         // 获取机器状态
         LogstashMachine logstashMachine =
@@ -74,7 +75,7 @@ public class LogstashMachineStateManager {
                 LogstashMachineState.valueOf(logstashMachine.getState());
         LogstashMachineStateHandler currentHandler = getStateHandler(currentState);
 
-        return new LogstashMachineContext(process, machine, currentState, currentHandler, this);
+        return new LogstashMachineContext(process, machineInfo, currentState, currentHandler, this);
     }
 
     /**
@@ -136,13 +137,13 @@ public class LogstashMachineStateManager {
      * 初始化特定机器上的进程环境
      *
      * @param process 进程
-     * @param machine 机器
+     * @param machineInfo 机器
      * @param taskId 任务ID
      * @return 异步操作结果
      */
     public CompletableFuture<Boolean> initializeMachine(
-            LogstashProcess process, Machine machine, String taskId) {
-        LogstashMachineContext context = getMachineContext(process, machine);
+            LogstashProcess process, MachineInfo machineInfo, String taskId) {
+        LogstashMachineContext context = getMachineContext(process, machineInfo);
         return context.initialize(taskId);
     }
 
@@ -150,13 +151,13 @@ public class LogstashMachineStateManager {
      * 启动特定机器上的进程
      *
      * @param process 进程
-     * @param machine 机器
+     * @param machineInfo 机器
      * @param taskId 任务ID
      * @return 异步操作结果
      */
     public CompletableFuture<Boolean> startMachine(
-            LogstashProcess process, Machine machine, String taskId) {
-        LogstashMachineContext context = getMachineContext(process, machine);
+            LogstashProcess process, MachineInfo machineInfo, String taskId) {
+        LogstashMachineContext context = getMachineContext(process, machineInfo);
         return context.start(taskId);
     }
 
@@ -164,13 +165,13 @@ public class LogstashMachineStateManager {
      * 停止特定机器上的进程
      *
      * @param process 进程
-     * @param machine 机器
+     * @param machineInfo 机器
      * @param taskId 任务ID
      * @return 异步操作结果
      */
     public CompletableFuture<Boolean> stopMachine(
-            LogstashProcess process, Machine machine, String taskId) {
-        LogstashMachineContext context = getMachineContext(process, machine);
+            LogstashProcess process, MachineInfo machineInfo, String taskId) {
+        LogstashMachineContext context = getMachineContext(process, machineInfo);
         return context.stop(taskId);
     }
 
@@ -178,7 +179,7 @@ public class LogstashMachineStateManager {
      * 更新特定机器上的多种配置
      *
      * @param processId 进程ID
-     * @param machine 机器
+     * @param machineInfo 机器
      * @param configContent 主配置内容
      * @param jvmOptions JVM选项
      * @param logstashYml logstash.yml配置
@@ -187,7 +188,7 @@ public class LogstashMachineStateManager {
      */
     public CompletableFuture<Boolean> updateMachineConfig(
             Long processId,
-            Machine machine,
+            MachineInfo machineInfo,
             String configContent,
             String jvmOptions,
             String logstashYml,
@@ -197,7 +198,7 @@ public class LogstashMachineStateManager {
             logger.error("找不到指定的Logstash进程: {}", processId);
             return CompletableFuture.completedFuture(false);
         }
-        LogstashMachineContext context = getMachineContext(process, machine);
+        LogstashMachineContext context = getMachineContext(process, machineInfo);
         // 执行更新操作
         return context.updateConfig(configContent, jvmOptions, logstashYml, taskId);
     }
@@ -206,13 +207,13 @@ public class LogstashMachineStateManager {
      * 刷新特定机器上的配置
      *
      * @param process 进程
-     * @param machine 机器
+     * @param machineInfo 机器
      * @param taskId 任务ID
      * @return 异步操作结果
      */
     public CompletableFuture<Boolean> refreshMachineConfig(
-            LogstashProcess process, Machine machine, String taskId) {
-        LogstashMachineContext context = getMachineContext(process, machine);
+            LogstashProcess process, MachineInfo machineInfo, String taskId) {
+        LogstashMachineContext context = getMachineContext(process, machineInfo);
         return context.refreshConfig(taskId);
     }
 
@@ -239,7 +240,7 @@ public class LogstashMachineStateManager {
          *
          * @return 机器信息
          */
-        @Getter private final Machine machine;
+        @Getter private final MachineInfo machineInfo;
 
         /**
          * -- GETTER -- 获取当前状态
@@ -259,12 +260,12 @@ public class LogstashMachineStateManager {
 
         public LogstashMachineContext(
                 LogstashProcess process,
-                Machine machine,
+                MachineInfo machineInfo,
                 LogstashMachineState initialState,
                 LogstashMachineStateHandler initialHandler,
                 LogstashMachineStateManager stateManager) {
             this.process = process;
-            this.machine = machine;
+            this.machineInfo = machineInfo;
             this.currentState = initialState;
             this.currentHandler = initialHandler;
             this.stateManager = stateManager;
@@ -289,16 +290,16 @@ public class LogstashMachineStateManager {
 
             // 标记进入初始化中状态（仅DB更新）
             stateManager.updateMachineState(
-                    process.getId(), machine.getId(), LogstashMachineState.INITIALIZING);
+                    process.getId(), machineInfo.getId(), LogstashMachineState.INITIALIZING);
             logger.info(
                     "机器 [{}] 上的进程 [{}] 开始初始化操作，状态从 [{}] 临时标记为 [INITIALIZING]",
-                    machine.getId(),
+                    machineInfo.getId(),
                     process.getId(),
                     initialState.name());
 
             // 执行初始化操作，使用初始状态的处理器
             return handlerBeforeOperation
-                    .handleInitialize(process, machine, taskId)
+                    .handleInitialize(process, machineInfo, taskId)
                     .thenApply(
                             success -> {
                                 // 根据操作结果更新状态
@@ -309,10 +310,10 @@ public class LogstashMachineStateManager {
                                                 success);
                                 // 直接更新数据库状态，不更新上下文（简化）
                                 stateManager.updateMachineState(
-                                        process.getId(), machine.getId(), nextState);
+                                        process.getId(), machineInfo.getId(), nextState);
                                 logger.info(
                                         "机器 [{}] 上的进程 [{}] 初始化操作完成，最终状态设置为 [{}]",
-                                        machine.getId(),
+                                        machineInfo.getId(),
                                         process.getId(),
                                         nextState.name());
                                 return success;
@@ -323,11 +324,11 @@ public class LogstashMachineStateManager {
                                 logger.error("初始化过程中发生异常: {}", e.getMessage(), e);
                                 stateManager.updateMachineState(
                                         process.getId(),
-                                        machine.getId(),
+                                        machineInfo.getId(),
                                         LogstashMachineState.INITIALIZE_FAILED);
                                 logger.info(
                                         "机器 [{}] 上的进程 [{}] 初始化操作异常，最终状态设置为 [INITIALIZE_FAILED]",
-                                        machine.getId(),
+                                        machineInfo.getId(),
                                         process.getId());
                                 // 继续传播异常以便外部任务系统能正确处理
                                 throw new CompletionException(e);
@@ -353,16 +354,16 @@ public class LogstashMachineStateManager {
 
             // 标记进入启动中状态（仅DB更新）
             stateManager.updateMachineState(
-                    process.getId(), machine.getId(), LogstashMachineState.STARTING);
+                    process.getId(), machineInfo.getId(), LogstashMachineState.STARTING);
             logger.info(
                     "机器 [{}] 上的进程 [{}] 开始启动操作，状态从 [{}] 临时标记为 [STARTING]",
-                    machine.getId(),
+                    machineInfo.getId(),
                     process.getId(),
                     initialState.name());
 
             // 执行启动操作，使用初始状态的处理器
             return handlerBeforeOperation
-                    .handleStart(process, machine, taskId)
+                    .handleStart(process, machineInfo, taskId)
                     .thenApply(
                             success -> {
                                 // 根据操作结果更新状态
@@ -372,10 +373,10 @@ public class LogstashMachineStateManager {
                                                 success);
                                 // 直接更新数据库状态，不更新上下文（简化）
                                 stateManager.updateMachineState(
-                                        process.getId(), machine.getId(), nextState);
+                                        process.getId(), machineInfo.getId(), nextState);
                                 logger.info(
                                         "机器 [{}] 上的进程 [{}] 启动操作完成，最终状态设置为 [{}]",
-                                        machine.getId(),
+                                        machineInfo.getId(),
                                         process.getId(),
                                         nextState.name());
                                 return success;
@@ -386,11 +387,11 @@ public class LogstashMachineStateManager {
                                 logger.error("启动过程中发生异常: {}", e.getMessage(), e);
                                 stateManager.updateMachineState(
                                         process.getId(),
-                                        machine.getId(),
+                                        machineInfo.getId(),
                                         LogstashMachineState.START_FAILED);
                                 logger.info(
                                         "机器 [{}] 上的进程 [{}] 启动操作异常，最终状态设置为 [START_FAILED]",
-                                        machine.getId(),
+                                        machineInfo.getId(),
                                         process.getId());
                                 // 继续传播异常以便外部任务系统能正确处理
                                 throw new CompletionException(e);
@@ -416,16 +417,16 @@ public class LogstashMachineStateManager {
 
             // 标记进入停止中状态（仅DB更新）
             stateManager.updateMachineState(
-                    process.getId(), machine.getId(), LogstashMachineState.STOPPING);
+                    process.getId(), machineInfo.getId(), LogstashMachineState.STOPPING);
             logger.info(
                     "机器 [{}] 上的进程 [{}] 开始停止操作，状态从 [{}] 临时标记为 [STOPPING]",
-                    machine.getId(),
+                    machineInfo.getId(),
                     process.getId(),
                     initialState.name());
 
             // 执行停止操作，使用初始状态的处理器
             return handlerBeforeOperation
-                    .handleStop(process, machine, taskId)
+                    .handleStop(process, machineInfo, taskId)
                     .thenApply(
                             success -> {
                                 // 根据操作结果更新状态
@@ -435,10 +436,10 @@ public class LogstashMachineStateManager {
                                                 success);
                                 // 直接更新数据库状态，不更新上下文（简化）
                                 stateManager.updateMachineState(
-                                        process.getId(), machine.getId(), nextState);
+                                        process.getId(), machineInfo.getId(), nextState);
                                 logger.info(
                                         "机器 [{}] 上的进程 [{}] 停止操作完成，最终状态设置为 [{}]",
-                                        machine.getId(),
+                                        machineInfo.getId(),
                                         process.getId(),
                                         nextState.name());
                                 return success;
@@ -449,11 +450,11 @@ public class LogstashMachineStateManager {
                                 logger.error("停止过程中发生异常: {}", e.getMessage(), e);
                                 stateManager.updateMachineState(
                                         process.getId(),
-                                        machine.getId(),
+                                        machineInfo.getId(),
                                         LogstashMachineState.STOP_FAILED);
                                 logger.info(
                                         "机器 [{}] 上的进程 [{}] 停止操作异常，最终状态设置为 [STOP_FAILED]",
-                                        machine.getId(),
+                                        machineInfo.getId(),
                                         process.getId());
                                 // 继续传播异常以便外部任务系统能正确处理
                                 throw new CompletionException(e);
@@ -480,7 +481,7 @@ public class LogstashMachineStateManager {
             // 执行更新配置操作，委托给当前状态处理器
             return currentHandler
                     .handleUpdateConfig(
-                            process, configContent, jvmOptions, logstashYml, machine, taskId)
+                            process, configContent, jvmOptions, logstashYml, machineInfo, taskId)
                     .thenApply(
                             success -> {
                                 // 根据操作结果更新状态
@@ -491,7 +492,7 @@ public class LogstashMachineStateManager {
                                                 success);
                                 if (nextState != currentState) {
                                     stateManager.updateMachineState(
-                                            process.getId(), machine.getId(), nextState);
+                                            process.getId(), machineInfo.getId(), nextState);
                                 }
 
                                 return success;
@@ -520,7 +521,7 @@ public class LogstashMachineStateManager {
 
             // 执行刷新配置操作
             return currentHandler
-                    .handleRefreshConfig(process, machine, taskId)
+                    .handleRefreshConfig(process, machineInfo, taskId)
                     .thenApply(
                             success -> {
                                 // 根据操作结果更新状态
@@ -530,7 +531,7 @@ public class LogstashMachineStateManager {
                                                         .REFRESH_CONFIG,
                                                 success);
                                 stateManager.updateMachineState(
-                                        process.getId(), machine.getId(), nextState);
+                                        process.getId(), machineInfo.getId(), nextState);
                                 return success;
                             })
                     .exceptionally(

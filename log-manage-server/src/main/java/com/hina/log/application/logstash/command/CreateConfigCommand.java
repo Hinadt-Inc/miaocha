@@ -2,7 +2,7 @@ package com.hina.log.application.logstash.command;
 
 import com.hina.log.common.exception.SshOperationException;
 import com.hina.log.common.ssh.SshClient;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import java.util.concurrent.CompletableFuture;
 
 /** 创建Logstash配置文件命令 */
@@ -17,7 +17,7 @@ public class CreateConfigCommand extends AbstractLogstashCommand {
     }
 
     @Override
-    protected CompletableFuture<Boolean> doExecute(Machine machine) {
+    protected CompletableFuture<Boolean> doExecute(MachineInfo machineInfo) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         try {
@@ -27,7 +27,7 @@ public class CreateConfigCommand extends AbstractLogstashCommand {
 
             // 确保配置目录存在
             String createDirCommand = String.format("mkdir -p %s", configDir);
-            sshClient.executeCommand(machine, createDirCommand);
+            sshClient.executeCommand(machineInfo, createDirCommand);
 
             // 创建临时文件
             String tempFile =
@@ -38,18 +38,18 @@ public class CreateConfigCommand extends AbstractLogstashCommand {
             // 将配置写入临时文件，使用heredoc避免特殊字符问题
             String createConfigCommand =
                     String.format("cat > %s << 'EOF'\n%s\nEOF", tempFile, configContent);
-            sshClient.executeCommand(machine, createConfigCommand);
+            sshClient.executeCommand(machineInfo, createConfigCommand);
 
             // 移动到最终位置
             String moveCommand = String.format("mv %s %s", tempFile, configPath);
-            sshClient.executeCommand(machine, moveCommand);
+            sshClient.executeCommand(machineInfo, moveCommand);
 
             // 检查配置文件是否创建成功
             String checkCommand =
                     String.format(
                             "if [ -f \"%s\" ]; then echo \"success\"; else echo \"failed\"; fi",
                             configPath);
-            String checkResult = sshClient.executeCommand(machine, checkCommand);
+            String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
 
             boolean success = "success".equals(checkResult.trim());
             if (success) {

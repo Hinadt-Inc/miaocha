@@ -6,7 +6,7 @@ import com.hina.log.domain.dto.logstash.LogstashProcessDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessResponseDTO;
 import com.hina.log.domain.entity.LogstashMachine;
 import com.hina.log.domain.entity.LogstashProcess;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import com.hina.log.domain.mapper.LogstashMachineMapper;
 import com.hina.log.domain.mapper.MachineMapper;
 import java.util.ArrayList;
@@ -54,13 +54,13 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
                 new ArrayList<>();
 
         for (LogstashMachine relation : machineRelations) {
-            Machine machine = machineMapper.selectById(relation.getMachineId());
-            if (machine != null) {
+            MachineInfo machineInfo = machineMapper.selectById(relation.getMachineId());
+            if (machineInfo != null) {
                 LogstashProcessResponseDTO.LogstashMachineStatusInfoDTO statusInfo =
                         new LogstashProcessResponseDTO.LogstashMachineStatusInfoDTO();
-                statusInfo.setMachineId(machine.getId());
-                statusInfo.setMachineName(machine.getName());
-                statusInfo.setMachineIp(machine.getIp());
+                statusInfo.setMachineId(machineInfo.getId());
+                statusInfo.setMachineName(machineInfo.getName());
+                statusInfo.setMachineIp(machineInfo.getIp());
                 statusInfo.setState(LogstashMachineState.valueOf(relation.getState()));
                 statusInfo.setStateDescription(getStateDescription(relation));
 

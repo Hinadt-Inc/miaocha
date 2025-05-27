@@ -5,7 +5,7 @@ import com.hina.log.domain.dto.logstash.LogstashMachineDTO;
 import com.hina.log.domain.dto.logstash.LogstashMachineDetailDTO;
 import com.hina.log.domain.entity.LogstashMachine;
 import com.hina.log.domain.entity.LogstashProcess;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import com.hina.log.domain.mapper.MachineMapper;
 import java.time.LocalDateTime;
 import org.springframework.stereotype.Component;
@@ -98,10 +98,10 @@ public class LogstashMachineConverter implements Converter<LogstashMachine, Logs
 
         // 获取机器信息
         try {
-            Machine machine = machineMapper.selectById(entity.getMachineId());
-            if (machine != null) {
-                dto.setMachineName(machine.getName());
-                dto.setMachineIp(machine.getIp());
+            MachineInfo machineInfo = machineMapper.selectById(entity.getMachineId());
+            if (machineInfo != null) {
+                dto.setMachineName(machineInfo.getName());
+                dto.setMachineIp(machineInfo.getIp());
             }
         } catch (Exception e) {
             dto.setMachineName("未知机器");
@@ -132,16 +132,16 @@ public class LogstashMachineConverter implements Converter<LogstashMachine, Logs
      *
      * @param logstashMachine LogstashMachine实体
      * @param process LogstashProcess实体
-     * @param machine Machine实体
+     * @param machineInfo Machine实体
      * @param deployPath 部署路径
      * @return LogstashMachineDetailDTO
      */
     public LogstashMachineDetailDTO toDetailDTO(
             LogstashMachine logstashMachine,
             LogstashProcess process,
-            Machine machine,
+            MachineInfo machineInfo,
             String deployPath) {
-        if (logstashMachine == null || process == null || machine == null) {
+        if (logstashMachine == null || process == null || machineInfo == null) {
             return null;
         }
 
@@ -150,7 +150,7 @@ public class LogstashMachineConverter implements Converter<LogstashMachine, Logs
         // 设置关联信息
         detailDTO.setId(logstashMachine.getId());
         detailDTO.setLogstashProcessId(process.getId());
-        detailDTO.setMachineId(machine.getId());
+        detailDTO.setMachineId(machineInfo.getId());
 
         // 设置进程信息
         detailDTO.setLogstashProcessName(process.getName());
@@ -161,10 +161,10 @@ public class LogstashMachineConverter implements Converter<LogstashMachine, Logs
         detailDTO.setProcessUpdateTime(process.getUpdateTime());
 
         // 设置机器信息
-        detailDTO.setMachineName(machine.getName());
-        detailDTO.setMachineIp(machine.getIp());
-        detailDTO.setMachinePort(machine.getPort());
-        detailDTO.setMachineUsername(machine.getUsername());
+        detailDTO.setMachineName(machineInfo.getName());
+        detailDTO.setMachineIp(machineInfo.getIp());
+        detailDTO.setMachinePort(machineInfo.getPort());
+        detailDTO.setMachineUsername(machineInfo.getUsername());
 
         // 设置进程状态和配置信息
         detailDTO.setProcessPid(logstashMachine.getProcessPid());

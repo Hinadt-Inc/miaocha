@@ -1,7 +1,7 @@
 package com.hina.log.application.logstash.command;
 
 import com.hina.log.common.ssh.SshClient;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import java.util.concurrent.CompletableFuture;
 import org.springframework.util.StringUtils;
 
@@ -42,7 +42,7 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
     }
 
     @Override
-    protected CompletableFuture<Boolean> doExecute(Machine machine) {
+    protected CompletableFuture<Boolean> doExecute(MachineInfo machineInfo) {
         return CompletableFuture.supplyAsync(
                 () -> {
                     boolean success = true;
@@ -53,7 +53,7 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
                     try {
                         // 创建配置目录
                         String createDirCommand = String.format("mkdir -p %s", configDir);
-                        sshClient.executeCommand(machine, createDirCommand);
+                        sshClient.executeCommand(machineInfo, createDirCommand);
                     } catch (Exception e) {
                         logger.error("创建配置目录时发生错误: {}", e.getMessage(), e);
                         return false;
@@ -70,7 +70,8 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
                                             "if [ -f \"%s\" ]; then echo \"exists\"; else echo"
                                                     + " \"not_exists\"; fi",
                                             configPath);
-                            String checkResult = sshClient.executeCommand(machine, checkCommand);
+                            String checkResult =
+                                    sshClient.executeCommand(machineInfo, checkCommand);
 
                             if ("exists".equals(checkResult.trim())) {
                                 // 备份旧配置
@@ -80,7 +81,7 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
                                                 configPath, System.currentTimeMillis());
                                 String backupCommand =
                                         String.format("cp %s %s", configPath, backupFile);
-                                sshClient.executeCommand(machine, backupCommand);
+                                sshClient.executeCommand(machineInfo, backupCommand);
                                 logger.info("已备份旧配置文件: {}", backupFile);
                             }
 
@@ -94,11 +95,11 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
                             String createConfigCommand =
                                     String.format(
                                             "cat > %s << 'EOF'\n%s\nEOF", tempFile, configContent);
-                            sshClient.executeCommand(machine, createConfigCommand);
+                            sshClient.executeCommand(machineInfo, createConfigCommand);
 
                             // 移动到最终位置
                             String moveCommand = String.format("mv %s %s", tempFile, configPath);
-                            sshClient.executeCommand(machine, moveCommand);
+                            sshClient.executeCommand(machineInfo, moveCommand);
 
                             // 检查配置文件是否更新成功
                             String verifyCommand =
@@ -106,7 +107,8 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
                                             "if [ -f \"%s\" ]; then echo \"success\"; else echo"
                                                     + " \"failed\"; fi",
                                             configPath);
-                            String verifyResult = sshClient.executeCommand(machine, verifyCommand);
+                            String verifyResult =
+                                    sshClient.executeCommand(machineInfo, verifyCommand);
 
                             if ("success".equals(verifyResult.trim())) {
                                 logger.info("成功更新Logstash主配置文件: {}", configPath);
@@ -131,7 +133,8 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
                                             "if [ -f \"%s\" ]; then echo \"exists\"; else echo"
                                                     + " \"not_exists\"; fi",
                                             jvmFile);
-                            String checkResult = sshClient.executeCommand(machine, checkCommand);
+                            String checkResult =
+                                    sshClient.executeCommand(machineInfo, checkCommand);
 
                             if ("exists".equals(checkResult.trim())) {
                                 // 备份旧配置
@@ -140,7 +143,7 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
                                                 "%s.bak.%d", jvmFile, System.currentTimeMillis());
                                 String backupCommand =
                                         String.format("cp %s %s", jvmFile, backupFile);
-                                sshClient.executeCommand(machine, backupCommand);
+                                sshClient.executeCommand(machineInfo, backupCommand);
                                 logger.info("已备份旧JVM配置文件: {}", backupFile);
                             }
 
@@ -154,11 +157,11 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
                             String createConfigCommand =
                                     String.format(
                                             "cat > %s << 'EOF'\n%s\nEOF", tempFile, jvmOptions);
-                            sshClient.executeCommand(machine, createConfigCommand);
+                            sshClient.executeCommand(machineInfo, createConfigCommand);
 
                             // 移动到最终位置
                             String moveCommand = String.format("mv %s %s", tempFile, jvmFile);
-                            sshClient.executeCommand(machine, moveCommand);
+                            sshClient.executeCommand(machineInfo, moveCommand);
 
                             // 检查配置文件是否更新成功
                             String verifyCommand =
@@ -166,7 +169,8 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
                                             "if [ -f \"%s\" ]; then echo \"success\"; else echo"
                                                     + " \"failed\"; fi",
                                             jvmFile);
-                            String verifyResult = sshClient.executeCommand(machine, verifyCommand);
+                            String verifyResult =
+                                    sshClient.executeCommand(machineInfo, verifyCommand);
 
                             if ("success".equals(verifyResult.trim())) {
                                 logger.info("成功更新Logstash JVM配置文件: {}", jvmFile);
@@ -191,7 +195,8 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
                                             "if [ -f \"%s\" ]; then echo \"exists\"; else echo"
                                                     + " \"not_exists\"; fi",
                                             ymlFile);
-                            String checkResult = sshClient.executeCommand(machine, checkCommand);
+                            String checkResult =
+                                    sshClient.executeCommand(machineInfo, checkCommand);
 
                             if ("exists".equals(checkResult.trim())) {
                                 // 备份旧配置
@@ -200,7 +205,7 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
                                                 "%s.bak.%d", ymlFile, System.currentTimeMillis());
                                 String backupCommand =
                                         String.format("cp %s %s", ymlFile, backupFile);
-                                sshClient.executeCommand(machine, backupCommand);
+                                sshClient.executeCommand(machineInfo, backupCommand);
                                 logger.info("已备份旧系统配置文件: {}", backupFile);
                             }
 
@@ -214,11 +219,11 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
                             String createConfigCommand =
                                     String.format(
                                             "cat > %s << 'EOF'\n%s\nEOF", tempFile, logstashYml);
-                            sshClient.executeCommand(machine, createConfigCommand);
+                            sshClient.executeCommand(machineInfo, createConfigCommand);
 
                             // 移动到最终位置
                             String moveCommand = String.format("mv %s %s", tempFile, ymlFile);
-                            sshClient.executeCommand(machine, moveCommand);
+                            sshClient.executeCommand(machineInfo, moveCommand);
 
                             // 检查配置文件是否更新成功
                             String verifyCommand =
@@ -226,7 +231,8 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
                                             "if [ -f \"%s\" ]; then echo \"success\"; else echo"
                                                     + " \"failed\"; fi",
                                             ymlFile);
-                            String verifyResult = sshClient.executeCommand(machine, verifyCommand);
+                            String verifyResult =
+                                    sshClient.executeCommand(machineInfo, verifyCommand);
 
                             if ("success".equals(verifyResult.trim())) {
                                 logger.info("成功更新Logstash系统配置文件: {}", ymlFile);

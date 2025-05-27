@@ -2,7 +2,7 @@ package com.hina.log.application.logstash.command;
 
 import com.hina.log.common.exception.SshOperationException;
 import com.hina.log.common.ssh.SshClient;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import com.hina.log.domain.mapper.LogstashMachineMapper;
 import java.util.concurrent.CompletableFuture;
 
@@ -21,7 +21,7 @@ public class VerifyProcessCommand extends AbstractLogstashCommand {
     }
 
     @Override
-    protected CompletableFuture<Boolean> doExecute(Machine machine) {
+    protected CompletableFuture<Boolean> doExecute(MachineInfo machineInfo) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         try {
@@ -30,7 +30,7 @@ public class VerifyProcessCommand extends AbstractLogstashCommand {
             String logFile = processDir + "/logs/logstash-" + processId + ".log";
 
             // 尝试多次验证，最多尝试5次，每次间隔3秒
-            verifyProcessWithRetry(machine, processDir, pidFile, logFile, 5, future);
+            verifyProcessWithRetry(machineInfo, processDir, pidFile, logFile, 5, future);
         } catch (Exception e) {
             logger.error("验证Logstash进程时发生错误: {}", e.getMessage(), e);
             future.completeExceptionally(
@@ -42,7 +42,7 @@ public class VerifyProcessCommand extends AbstractLogstashCommand {
 
     /** 多次尝试验证进程 */
     private void verifyProcessWithRetry(
-            Machine machine,
+            MachineInfo machineInfo,
             String processDir,
             String pidFile,
             String logFile,
@@ -60,7 +60,7 @@ public class VerifyProcessCommand extends AbstractLogstashCommand {
                     String.format(
                             "if [ -f \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi",
                             pidFile);
-            String checkPidResult = sshClient.executeCommand(machine, checkPidCommand);
+            String checkPidResult = sshClient.executeCommand(machineInfo, checkPidCommand);
 
             boolean pidFileExists = "exists".equals(checkPidResult.trim());
             if (!pidFileExists) {
@@ -75,7 +75,7 @@ public class VerifyProcessCommand extends AbstractLogstashCommand {
                                 try {
                                     Thread.sleep(3000);
                                     verifyProcessWithRetry(
-                                            machine,
+                                            machineInfo,
                                             processDir,
                                             pidFile,
                                             logFile,
@@ -95,7 +95,7 @@ public class VerifyProcessCommand extends AbstractLogstashCommand {
 
             // 读取PID
             String readPidCommand = String.format("cat %s", pidFile);
-            String pid = sshClient.executeCommand(machine, readPidCommand).trim();
+            String pid = sshClient.executeCommand(machineInfo, readPidCommand).trim();
 
             if (pid.isEmpty()) {
                 logger.warn("PID文件为空，验证失败");
@@ -108,7 +108,7 @@ public class VerifyProcessCommand extends AbstractLogstashCommand {
                                 try {
                                     Thread.sleep(3000);
                                     verifyProcessWithRetry(
-                                            machine,
+                                            machineInfo,
                                             processDir,
                                             pidFile,
                                             logFile,
@@ -131,7 +131,7 @@ public class VerifyProcessCommand extends AbstractLogstashCommand {
             String checkProcessCommand =
                     String.format("ps -p %s -o comm= | grep -c java || echo 0", pid);
             String checkProcessResult =
-                    sshClient.executeCommand(machine, checkProcessCommand).trim();
+                    sshClient.executeCommand(machineInfo, checkProcessCommand).trim();
 
             boolean isJavaProcess = !"0".equals(checkProcessResult.trim());
             if (!isJavaProcess) {
@@ -141,7 +141,8 @@ public class VerifyProcessCommand extends AbstractLogstashCommand {
                                 "if ps -p %s > /dev/null; then echo \"running\"; else echo"
                                         + " \"not_running\"; fi",
                                 pid);
-                String simpleCheckResult = sshClient.executeCommand(machine, simpleCheckCommand);
+                String simpleCheckResult =
+                        sshClient.executeCommand(machineInfo, simpleCheckCommand);
 
                 boolean isRunning = "running".equals(simpleCheckResult.trim());
                 if (!isRunning) {
@@ -155,7 +156,7 @@ public class VerifyProcessCommand extends AbstractLogstashCommand {
                                     try {
                                         Thread.sleep(3000);
                                         verifyProcessWithRetry(
-                                                machine,
+                                                machineInfo,
                                                 processDir,
                                                 pidFile,
                                                 logFile,
@@ -183,7 +184,7 @@ public class VerifyProcessCommand extends AbstractLogstashCommand {
                             "if grep -q \"Successfully started Logstash\" %s; then echo"
                                     + " \"success\"; else echo \"\"; fi",
                             logFile);
-            String logCheckResult = sshClient.executeCommand(machine, logCheckCommand);
+            String logCheckResult = sshClient.executeCommand(machineInfo, logCheckCommand);
 
             boolean logSuccess = "success".equals(logCheckResult.trim());
             if (logSuccess) {
@@ -193,13 +194,14 @@ public class VerifyProcessCommand extends AbstractLogstashCommand {
                 try {
                     // 更新LogstashMachine表中的process_pid
                     int rows =
-                            logstashMachineMapper.updateProcessPid(processId, machine.getId(), pid);
+                            logstashMachineMapper.updateProcessPid(
+                                    processId, machineInfo.getId(), pid);
                     if (rows > 0) {
                         logger.info(
                                 "成功更新Logstash进程PID: {}，关联进程ID: {}，机器ID: {}",
                                 pid,
                                 processId,
-                                machine.getId());
+                                machineInfo.getId());
                     } else {
                         logger.warn("未能更新Logstash进程PID，可能找不到对应的LogstashMachine记录");
                     }
@@ -220,7 +222,7 @@ public class VerifyProcessCommand extends AbstractLogstashCommand {
                                 try {
                                     Thread.sleep(3000);
                                     verifyProcessWithRetry(
-                                            machine,
+                                            machineInfo,
                                             processDir,
                                             pidFile,
                                             logFile,
@@ -241,13 +243,13 @@ public class VerifyProcessCommand extends AbstractLogstashCommand {
                         // 更新LogstashMachine表中的process_pid
                         int rows =
                                 logstashMachineMapper.updateProcessPid(
-                                        processId, machine.getId(), pid);
+                                        processId, machineInfo.getId(), pid);
                         if (rows > 0) {
                             logger.info(
                                     "成功更新Logstash进程PID: {}，关联进程ID: {}，机器ID: {}",
                                     pid,
                                     processId,
-                                    machine.getId());
+                                    machineInfo.getId());
                         } else {
                             logger.warn("未能更新Logstash进程PID，可能找不到对应的LogstashMachine记录");
                         }
@@ -268,7 +270,7 @@ public class VerifyProcessCommand extends AbstractLogstashCommand {
                             try {
                                 Thread.sleep(3000);
                                 verifyProcessWithRetry(
-                                        machine,
+                                        machineInfo,
                                         processDir,
                                         pidFile,
                                         logFile,

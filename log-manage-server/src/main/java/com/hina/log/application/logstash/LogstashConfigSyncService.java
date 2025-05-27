@@ -4,7 +4,7 @@ import com.hina.log.application.logstash.enums.LogstashMachineState;
 import com.hina.log.common.ssh.SshClient;
 import com.hina.log.domain.entity.LogstashMachine;
 import com.hina.log.domain.entity.LogstashProcess;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import com.hina.log.domain.mapper.LogstashMachineMapper;
 import com.hina.log.domain.mapper.LogstashProcessMapper;
 import com.hina.log.domain.mapper.MachineMapper;
@@ -118,9 +118,10 @@ public class LogstashConfigSyncService {
 
                         // 选择第一台成功的机器
                         LogstashMachine targetMachine = successfulMachines.get(0);
-                        Machine machine = machineMapper.selectById(targetMachine.getMachineId());
+                        MachineInfo machineInfo =
+                                machineMapper.selectById(targetMachine.getMachineId());
 
-                        if (machine == null) {
+                        if (machineInfo == null) {
                             logger.warn("找不到机器 [{}]，无法同步配置文件", targetMachine.getMachineId());
                             return;
                         }
@@ -144,7 +145,8 @@ public class LogstashConfigSyncService {
                         if (needJvmOptions) {
                             try {
                                 String jvmOptionsFile = configDir + "/jvm.options";
-                                String jvmOptions = syncRemoteFileContent(machine, jvmOptionsFile);
+                                String jvmOptions =
+                                        syncRemoteFileContent(machineInfo, jvmOptionsFile);
 
                                 if (StringUtils.hasText(jvmOptions)) {
                                     currentProcess.setJvmOptions(jvmOptions);
@@ -165,7 +167,7 @@ public class LogstashConfigSyncService {
                             try {
                                 String logstashYmlFile = configDir + "/logstash.yml";
                                 String logstashYml =
-                                        syncRemoteFileContent(machine, logstashYmlFile);
+                                        syncRemoteFileContent(machineInfo, logstashYmlFile);
 
                                 if (StringUtils.hasText(logstashYml)) {
                                     currentProcess.setLogstashYml(logstashYml);
@@ -194,16 +196,17 @@ public class LogstashConfigSyncService {
     /**
      * 同步远程文件内容
      *
-     * @param machine 目标机器
+     * @param machineInfo 目标机器
      * @param remoteFilePath 远程文件路径
      * @return 文件内容
      */
-    private String syncRemoteFileContent(Machine machine, String remoteFilePath) throws Exception {
+    private String syncRemoteFileContent(MachineInfo machineInfo, String remoteFilePath)
+            throws Exception {
         // 首先检查文件是否存在
         String checkCmd =
                 String.format(
                         "[ -f %s ] && echo \"exists\" || echo \"not_exists\"", remoteFilePath);
-        String checkResult = sshClient.executeCommand(machine, checkCmd);
+        String checkResult = sshClient.executeCommand(machineInfo, checkCmd);
 
         if (!"exists".equals(checkResult.trim())) {
             logger.warn("远程文件 [{}] 不存在，无法同步", remoteFilePath);
@@ -212,7 +215,7 @@ public class LogstashConfigSyncService {
 
         // 读取文件内容
         String catCmd = String.format("cat %s", remoteFilePath);
-        return sshClient.executeCommand(machine, catCmd);
+        return sshClient.executeCommand(machineInfo, catCmd);
     }
 
     /**

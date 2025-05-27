@@ -2,21 +2,21 @@ package com.hina.log.domain.converter;
 
 import com.hina.log.domain.dto.MachineCreateDTO;
 import com.hina.log.domain.dto.MachineDTO;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import org.springframework.stereotype.Component;
 
 /** 机器实体与DTO转换器 */
 @Component
-public class MachineConverter implements Converter<Machine, MachineDTO> {
+public class MachineConverter implements Converter<MachineInfo, MachineDTO> {
 
     /** 将DTO转换为实体 */
     @Override
-    public Machine toEntity(MachineDTO dto) {
+    public MachineInfo toEntity(MachineDTO dto) {
         if (dto == null) {
             return null;
         }
 
-        Machine entity = new Machine();
+        MachineInfo entity = new MachineInfo();
         entity.setId(dto.getId());
         entity.setName(dto.getName());
         entity.setIp(dto.getIp());
@@ -29,12 +29,12 @@ public class MachineConverter implements Converter<Machine, MachineDTO> {
     }
 
     /** 将创建DTO转换为实体 */
-    public Machine toEntity(MachineCreateDTO dto) {
+    public MachineInfo toEntity(MachineCreateDTO dto) {
         if (dto == null) {
             return null;
         }
 
-        Machine entity = new Machine();
+        MachineInfo entity = new MachineInfo();
         entity.setName(dto.getName());
         entity.setIp(dto.getIp());
         entity.setPort(dto.getPort());
@@ -47,7 +47,7 @@ public class MachineConverter implements Converter<Machine, MachineDTO> {
 
     /** 将实体转换为DTO */
     @Override
-    public MachineDTO toDto(Machine entity) {
+    public MachineDTO toDto(MachineInfo entity) {
         if (entity == null) {
             return null;
         }
@@ -66,7 +66,7 @@ public class MachineConverter implements Converter<Machine, MachineDTO> {
 
     /** 使用DTO更新实体 */
     @Override
-    public Machine updateEntity(Machine entity, MachineDTO dto) {
+    public MachineInfo updateEntity(MachineInfo entity, MachineDTO dto) {
         if (entity == null || dto == null) {
             return entity;
         }
@@ -80,7 +80,7 @@ public class MachineConverter implements Converter<Machine, MachineDTO> {
     }
 
     /** 使用创建DTO更新实体 */
-    public Machine updateEntity(Machine entity, MachineCreateDTO dto) {
+    public MachineInfo updateEntity(MachineInfo entity, MachineCreateDTO dto) {
         if (entity == null || dto == null) {
             return entity;
         }

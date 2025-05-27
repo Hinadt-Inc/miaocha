@@ -17,10 +17,10 @@ import com.hina.log.domain.dto.logstash.LogstashMachineDetailDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessConfigUpdateRequestDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessCreateDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessResponseDTO;
-import com.hina.log.domain.entity.Datasource;
+import com.hina.log.domain.entity.DatasourceInfo;
 import com.hina.log.domain.entity.LogstashMachine;
 import com.hina.log.domain.entity.LogstashProcess;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import com.hina.log.domain.mapper.DatasourceMapper;
 import com.hina.log.domain.mapper.LogstashMachineMapper;
 import com.hina.log.domain.mapper.LogstashProcessMapper;
@@ -167,10 +167,10 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         }
 
         // 获取进程对应的机器
-        List<Machine> machines = getMachinesForProcess(process.getId());
+        List<MachineInfo> machineInfos = getMachinesForProcess(process.getId());
 
         // 执行进程环境初始化
-        logstashDeployService.initializeProcess(process, machines);
+        logstashDeployService.initializeProcess(process, machineInfos);
 
         // 检查jvmOptions和logstashYml是否为空，如果为空则异步同步配置文件
         boolean needSyncJvmOptions = !StringUtils.hasText(dto.getJvmOptions());
@@ -191,8 +191,8 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         LogstashProcess process = getAndValidateProcess(id);
 
         // 获取进程对应的机器
-        List<Machine> machines = getMachinesForProcess(id);
-        if (machines.isEmpty()) {
+        List<MachineInfo> machineInfos = getMachinesForProcess(id);
+        if (machineInfos.isEmpty()) {
             logger.warn("进程没有关联的机器，进程ID: {}", id);
         } else {
             // 检查进程是否正在运行，运行中的进程不能删除
@@ -212,7 +212,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             }
 
             // 删除进程物理目录 - 直接调用，不依赖状态管理
-            deleteProcessDirectories(id, machines);
+            deleteProcessDirectories(id, machineInfos);
         }
 
         // 删除与进程相关的所有任务和步骤
@@ -250,7 +250,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         validateProcessConfig(process);
 
         // 获取进程关联的可启动机器
-        List<Machine> machinesToStart = getStartableMachines(id);
+        List<MachineInfo> machinesToStart = getStartableMachines(id);
         if (machinesToStart.isEmpty()) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "没有处于可启动状态的机器实例");
         }
@@ -266,8 +266,8 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
     public LogstashProcessResponseDTO startMachineProcess(Long id, Long machineId) {
         // 获取进程和机器信息
         LogstashProcess process = getAndValidateProcess(id);
-        Machine machine = machineMapper.selectById(machineId);
-        if (machine == null) {
+        MachineInfo machineInfo = machineMapper.selectById(machineId);
+        if (machineInfo == null) {
             throw new BusinessException(ErrorCode.MACHINE_NOT_FOUND);
         }
 
@@ -275,7 +275,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         validateProcessConfig(process);
 
         // 启动单台机器上的进程
-        logstashDeployService.startMachine(process, machine);
+        logstashDeployService.startMachine(process, machineInfo);
 
         return getLogstashProcess(id);
     }
@@ -295,7 +295,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         }
 
         // 获取进程关联的可停止机器
-        List<Machine> machinesToStop = getStoppableMachines(id);
+        List<MachineInfo> machinesToStop = getStoppableMachines(id);
         if (machinesToStop.isEmpty()) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "没有处于可停止状态的机器实例");
         }
@@ -315,13 +315,13 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         }
 
         // 获取机器信息
-        Machine machine = machineMapper.selectById(machineId);
-        if (machine == null) {
+        MachineInfo machineInfo = machineMapper.selectById(machineId);
+        if (machineInfo == null) {
             throw new BusinessException(ErrorCode.MACHINE_NOT_FOUND);
         }
 
         // 停止单台机器上的进程
-        logstashDeployService.stopMachine(id, machine);
+        logstashDeployService.stopMachine(id, machineInfo);
 
         return getLogstashProcess(id);
     }
@@ -334,7 +334,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         ValidatedEntities entities = getAndValidateObjects(id, machineId);
 
         // 验证机器连接
-        connectionValidator.validateSingleMachineConnection(entities.machine);
+        connectionValidator.validateSingleMachineConnection(entities.machineInfo);
 
         // 参数校验 - 至少有一个配置需要更新
         boolean hasUpdate =
@@ -361,10 +361,10 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                 id, machineId, configContent, jvmOptions, logstashYml);
 
         // 更新远程配置文件
-        List<Machine> machines = new ArrayList<>();
-        machines.add(entities.machine);
+        List<MachineInfo> machineInfos = new ArrayList<>();
+        machineInfos.add(entities.machineInfo);
         logstashDeployService.updateMultipleConfigs(
-                id, machines, configContent, jvmOptions, logstashYml);
+                id, machineInfos, configContent, jvmOptions, logstashYml);
 
         return getLogstashProcess(id);
     }
@@ -406,9 +406,9 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
 
         // 使用LogstashProcessDeployService更新配置
         // 获取所有关联机器，如果指定了machineIds则只更新这些机器
-        List<Machine> targetMachines;
+        List<MachineInfo> targetMachineInfos;
         if (dto.getMachineIds() != null && !dto.getMachineIds().isEmpty()) {
-            targetMachines = machineMapper.selectByIds(dto.getMachineIds());
+            targetMachineInfos = machineMapper.selectByIds(dto.getMachineIds());
         } else {
             // 获取所有关联机器
             List<LogstashMachine> logstashMachines =
@@ -417,13 +417,13 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                     logstashMachines.stream()
                             .map(LogstashMachine::getMachineId)
                             .collect(Collectors.toList());
-            targetMachines = machineMapper.selectByIds(machineIds);
+            targetMachineInfos = machineMapper.selectByIds(machineIds);
         }
 
-        if (!targetMachines.isEmpty()) {
+        if (!targetMachineInfos.isEmpty()) {
             // 异步更新所有目标机器的配置
             logstashDeployService.updateMultipleConfigs(
-                    id, targetMachines, configContent, jvmOptions, logstashYml);
+                    id, targetMachineInfos, configContent, jvmOptions, logstashYml);
         }
 
         return logstashProcessConverter.toResponseDTO(logstashProcessMapper.selectById(id));
@@ -444,18 +444,18 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
 
         // 获取要刷新配置的机器列表
         List<Long> machineIds = dto != null ? dto.getMachineIds() : null;
-        List<Machine> machinesToRefresh;
+        List<MachineInfo> machinesToRefreshes;
 
         if (machineIds != null && !machineIds.isEmpty()) {
             // 刷新指定机器的配置
-            machinesToRefresh = getTargetMachinesForConfig(id, machineIds);
+            machinesToRefreshes = getTargetMachinesForConfig(id, machineIds);
         } else {
             // 刷新所有机器的配置
-            machinesToRefresh = getMachinesForProcess(id);
+            machinesToRefreshes = getMachinesForProcess(id);
         }
 
         // 刷新配置
-        logstashDeployService.refreshConfig(id, machinesToRefresh);
+        logstashDeployService.refreshConfig(id, machinesToRefreshes);
 
         return getLogstashProcess(id);
     }
@@ -503,15 +503,15 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         }
 
         // 获取数据源
-        Datasource datasource = datasourceMapper.selectById(process.getDatasourceId());
-        if (datasource == null) {
+        DatasourceInfo datasourceInfo = datasourceMapper.selectById(process.getDatasourceId());
+        if (datasourceInfo == null) {
             throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND, "找不到关联的数据源");
         }
 
         try {
             // 执行SQL
             logger.info("执行Doris SQL: {}", sql);
-            jdbcQueryExecutor.executeQuery(datasource, sql);
+            jdbcQueryExecutor.executeQuery(datasourceInfo, sql);
 
             // 更新进程的dorisSql字段
             process.setDorisSql(sql);
@@ -553,8 +553,8 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         }
 
         // 检查机器是否存在
-        Machine machine = machineMapper.selectById(machineId);
-        if (machine == null) {
+        MachineInfo machineInfo = machineMapper.selectById(machineId);
+        if (machineInfo == null) {
             throw new BusinessException(ErrorCode.MACHINE_NOT_FOUND);
         }
 
@@ -565,14 +565,14 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "指定的机器未与该进程关联");
         }
 
-        return new ValidatedEntities(process, machine, relation);
+        return new ValidatedEntities(process, machineInfo, relation);
     }
 
     /** 删除进程物理目录 */
-    private void deleteProcessDirectories(Long processId, List<Machine> machines) {
+    private void deleteProcessDirectories(Long processId, List<MachineInfo> machineInfos) {
         try {
             CompletableFuture<Boolean> deleteFuture =
-                    logstashDeployService.deleteProcessDirectory(processId, machines);
+                    logstashDeployService.deleteProcessDirectory(processId, machineInfos);
             boolean success = deleteFuture.get(); // 等待删除完成
             if (!success) {
                 logger.warn("删除进程物理目录出现部分失败，但会继续删除数据库记录，进程ID: {}", processId);
@@ -645,10 +645,10 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
      * @param processId 进程ID
      * @return 可启动的机器列表
      */
-    private List<Machine> getStartableMachines(Long processId) {
+    private List<MachineInfo> getStartableMachines(Long processId) {
         // 获取进程对应的所有机器
-        List<Machine> machines = getMachinesForProcess(processId);
-        if (machines.isEmpty()) {
+        List<MachineInfo> machineInfos = getMachinesForProcess(processId);
+        if (machineInfos.isEmpty()) {
             throw new BusinessException(ErrorCode.MACHINE_NOT_FOUND, "进程未关联任何机器");
         }
 
@@ -657,14 +657,14 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                 logstashMachineMapper.selectByLogstashProcessId(processId);
 
         // 过滤出可以启动的机器
-        List<Machine> machinesToStart = new ArrayList<>();
+        List<MachineInfo> machinesToStart = new ArrayList<>();
         for (LogstashMachine relation : machineRelations) {
             // 只有 NOT_STARTED 或 START_FAILED 状态的机器可以启动
             if (LogstashMachineState.NOT_STARTED.name().equals(relation.getState())
                     || LogstashMachineState.START_FAILED.name().equals(relation.getState())) {
 
-                Optional<Machine> machine =
-                        machines.stream()
+                Optional<MachineInfo> machine =
+                        machineInfos.stream()
                                 .filter(m -> m.getId().equals(relation.getMachineId()))
                                 .findFirst();
 
@@ -681,10 +681,10 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
      * @param processId 进程ID
      * @return 可停止的机器列表
      */
-    private List<Machine> getStoppableMachines(Long processId) {
+    private List<MachineInfo> getStoppableMachines(Long processId) {
         // 获取进程对应的所有机器
-        List<Machine> machines = getMachinesForProcess(processId);
-        if (machines.isEmpty()) {
+        List<MachineInfo> machineInfos = getMachinesForProcess(processId);
+        if (machineInfos.isEmpty()) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程未关联任何机器");
         }
 
@@ -693,14 +693,14 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                 logstashMachineMapper.selectByLogstashProcessId(processId);
 
         // 过滤出可以停止的机器
-        List<Machine> machinesToStop = new ArrayList<>();
+        List<MachineInfo> machinesToStop = new ArrayList<>();
         for (LogstashMachine relation : machineRelations) {
             // 只有 RUNNING 或 STOP_FAILED 状态的机器可以停止
             if (LogstashMachineState.RUNNING.name().equals(relation.getState())
                     || LogstashMachineState.STOP_FAILED.name().equals(relation.getState())) {
 
-                Optional<Machine> machine =
-                        machines.stream()
+                Optional<MachineInfo> machine =
+                        machineInfos.stream()
                                 .filter(m -> m.getId().equals(relation.getMachineId()))
                                 .findFirst();
 
@@ -712,17 +712,17 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
     }
 
     /** 获取进程对应的所有机器 */
-    private List<Machine> getMachinesForProcess(Long processId) {
+    private List<MachineInfo> getMachinesForProcess(Long processId) {
         List<LogstashMachine> relations =
                 logstashMachineMapper.selectByLogstashProcessId(processId);
-        List<Machine> machines = new ArrayList<>();
+        List<MachineInfo> machineInfos = new ArrayList<>();
         for (LogstashMachine relation : relations) {
-            Machine machine = machineMapper.selectById(relation.getMachineId());
-            if (machine != null) {
-                machines.add(machine);
+            MachineInfo machineInfo = machineMapper.selectById(relation.getMachineId());
+            if (machineInfo != null) {
+                machineInfos.add(machineInfo);
             }
         }
-        return machines;
+        return machineInfos;
     }
 
     /** 验证配置更新DTO */
@@ -743,11 +743,11 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
     }
 
     /** 获取要更新配置的目标机器列表 */
-    private List<Machine> getTargetMachinesForConfig(Long processId, List<Long> machineIds) {
-        List<Machine> targetMachines;
+    private List<MachineInfo> getTargetMachinesForConfig(Long processId, List<Long> machineIds) {
+        List<MachineInfo> targetMachineInfos;
         if (machineIds != null && !machineIds.isEmpty()) {
             // 针对指定机器更新配置
-            targetMachines = new ArrayList<>();
+            targetMachineInfos = new ArrayList<>();
             for (Long machineId : machineIds) {
                 // 验证指定的机器是否与该进程关联
                 LogstashMachine relation =
@@ -758,24 +758,24 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                             ErrorCode.VALIDATION_ERROR, "指定的机器未与该进程关联: 机器ID=" + machineId);
                 }
 
-                Machine machine = machineMapper.selectById(machineId);
-                if (machine == null) {
+                MachineInfo machineInfo = machineMapper.selectById(machineId);
+                if (machineInfo == null) {
                     throw new BusinessException(
                             ErrorCode.MACHINE_NOT_FOUND, "指定的机器不存在: ID=" + machineId);
                 }
 
-                targetMachines.add(machine);
+                targetMachineInfos.add(machineInfo);
             }
         } else {
             // 全局更新，获取所有关联的机器
-            targetMachines = getMachinesForProcess(processId);
+            targetMachineInfos = getMachinesForProcess(processId);
         }
 
-        if (targetMachines.isEmpty()) {
+        if (targetMachineInfos.isEmpty()) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "没有找到要更新配置的目标机器");
         }
 
-        return targetMachines;
+        return targetMachineInfos;
     }
 
     /**
@@ -810,12 +810,13 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
     /** 用于存储验证后的实体对象 */
     private static class ValidatedEntities {
         final LogstashProcess process;
-        final Machine machine;
+        final MachineInfo machineInfo;
         final LogstashMachine relation;
 
-        ValidatedEntities(LogstashProcess process, Machine machine, LogstashMachine relation) {
+        ValidatedEntities(
+                LogstashProcess process, MachineInfo machineInfo, LogstashMachine relation) {
             this.process = process;
-            this.machine = machine;
+            this.machineInfo = machineInfo;
             this.relation = relation;
         }
     }
@@ -845,8 +846,8 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
     /** 重新初始化单台机器 */
     private void reinitializeSingleMachine(LogstashProcess process, Long machineId) {
         // 验证机器是否存在
-        Machine machine = machineMapper.selectById(machineId);
-        if (machine == null) {
+        MachineInfo machineInfo = machineMapper.selectById(machineId);
+        if (machineInfo == null) {
             throw new BusinessException(ErrorCode.MACHINE_NOT_FOUND, "指定的机器不存在: ID=" + machineId);
         }
 
@@ -872,7 +873,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         logger.info("开始重新初始化机器[{}]上的Logstash进程[{}]", machineId, process.getId());
 
         // 执行重新初始化
-        logstashDeployService.initializeProcess(process, List.of(machine));
+        logstashDeployService.initializeProcess(process, List.of(machineInfo));
     }
 
     /** 重新初始化所有初始化失败的机器 */
@@ -896,11 +897,11 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         }
 
         // 获取机器详细信息
-        List<Machine> machinesToReinitialize = new ArrayList<>();
+        List<MachineInfo> machinesToReinitialize = new ArrayList<>();
         for (LogstashMachine failedMachine : failedMachines) {
-            Machine machine = machineMapper.selectById(failedMachine.getMachineId());
-            if (machine != null) {
-                machinesToReinitialize.add(machine);
+            MachineInfo machineInfo = machineMapper.selectById(failedMachine.getMachineId());
+            if (machineInfo != null) {
+                machinesToReinitialize.add(machineInfo);
             } else {
                 logger.warn("机器[{}]不存在，跳过重新初始化", failedMachine.getMachineId());
             }
@@ -929,7 +930,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         // 获取并验证进程、机器和关联关系
         ValidatedEntities validated = getAndValidateObjects(id, machineId);
         LogstashProcess process = validated.process;
-        Machine machine = validated.machine;
+        MachineInfo machineInfo = validated.machineInfo;
         LogstashMachine logstashMachine = validated.relation;
 
         // 获取部署路径
@@ -937,6 +938,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                 logstashDeployService.getDeployBaseDir() + "/logstash-" + process.getId();
 
         // 使用转换器构建详细信息DTO
-        return logstashMachineConverter.toDetailDTO(logstashMachine, process, machine, deployPath);
+        return logstashMachineConverter.toDetailDTO(
+                logstashMachine, process, machineInfo, deployPath);
     }
 }

@@ -9,7 +9,7 @@ import com.hina.log.common.exception.BusinessException;
 import com.hina.log.domain.converter.DatasourceConverter;
 import com.hina.log.domain.dto.DatasourceCreateDTO;
 import com.hina.log.domain.dto.DatasourceDTO;
-import com.hina.log.domain.entity.Datasource;
+import com.hina.log.domain.entity.DatasourceInfo;
 import com.hina.log.domain.mapper.DatasourceMapper;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -27,7 +27,7 @@ import org.mockito.quality.Strictness;
 /** 数据源服务单元测试 */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class DatasourceServiceTest {
+class DatasourceInfoServiceTest {
 
     @Mock private DatasourceMapper datasourceMapper;
 
@@ -36,7 +36,7 @@ class DatasourceServiceTest {
     @Spy @InjectMocks private DatasourceServiceImpl datasourceService;
 
     private DatasourceCreateDTO createDTO;
-    private Datasource existingDatasource;
+    private DatasourceInfo existingDatasourceInfo;
     private DatasourceDTO datasourceDTO;
 
     @BeforeEach
@@ -52,35 +52,35 @@ class DatasourceServiceTest {
         createDTO.setDatabase("test_db");
         createDTO.setJdbcParams("useSSL=false&serverTimezone=UTC");
 
-        existingDatasource = new Datasource();
-        existingDatasource.setId(1L);
-        existingDatasource.setName("Test Datasource");
-        existingDatasource.setType("MySQL");
-        existingDatasource.setIp("localhost");
-        existingDatasource.setPort(3306);
-        existingDatasource.setUsername("root");
-        existingDatasource.setPassword("password");
-        existingDatasource.setDatabase("test_db");
-        existingDatasource.setJdbcParams("useSSL=false&serverTimezone=UTC");
-        existingDatasource.setCreateTime(LocalDateTime.now());
-        existingDatasource.setUpdateTime(LocalDateTime.now());
+        existingDatasourceInfo = new DatasourceInfo();
+        existingDatasourceInfo.setId(1L);
+        existingDatasourceInfo.setName("Test Datasource");
+        existingDatasourceInfo.setType("MySQL");
+        existingDatasourceInfo.setIp("localhost");
+        existingDatasourceInfo.setPort(3306);
+        existingDatasourceInfo.setUsername("root");
+        existingDatasourceInfo.setPassword("password");
+        existingDatasourceInfo.setDatabase("test_db");
+        existingDatasourceInfo.setJdbcParams("useSSL=false&serverTimezone=UTC");
+        existingDatasourceInfo.setCreateTime(LocalDateTime.now());
+        existingDatasourceInfo.setUpdateTime(LocalDateTime.now());
 
         datasourceDTO = new DatasourceDTO();
-        datasourceDTO.setId(existingDatasource.getId());
-        datasourceDTO.setName(existingDatasource.getName());
-        datasourceDTO.setType(existingDatasource.getType());
-        datasourceDTO.setIp(existingDatasource.getIp());
-        datasourceDTO.setPort(existingDatasource.getPort());
-        datasourceDTO.setDatabase(existingDatasource.getDatabase());
-        datasourceDTO.setJdbcParams(existingDatasource.getJdbcParams());
+        datasourceDTO.setId(existingDatasourceInfo.getId());
+        datasourceDTO.setName(existingDatasourceInfo.getName());
+        datasourceDTO.setType(existingDatasourceInfo.getType());
+        datasourceDTO.setIp(existingDatasourceInfo.getIp());
+        datasourceDTO.setPort(existingDatasourceInfo.getPort());
+        datasourceDTO.setDatabase(existingDatasourceInfo.getDatabase());
+        datasourceDTO.setJdbcParams(existingDatasourceInfo.getJdbcParams());
 
         // 设置转换器行为
-        when(datasourceConverter.toDto(any(Datasource.class))).thenReturn(datasourceDTO);
+        when(datasourceConverter.toDto(any(DatasourceInfo.class))).thenReturn(datasourceDTO);
         when(datasourceConverter.toEntity(any(DatasourceCreateDTO.class)))
-                .thenReturn(existingDatasource);
+                .thenReturn(existingDatasourceInfo);
         when(datasourceConverter.updateEntity(
-                        any(Datasource.class), any(DatasourceCreateDTO.class)))
-                .thenReturn(existingDatasource);
+                        any(DatasourceInfo.class), any(DatasourceCreateDTO.class)))
+                .thenReturn(existingDatasourceInfo);
     }
 
     @Test
@@ -88,7 +88,7 @@ class DatasourceServiceTest {
         // 模拟数据源不存在
         when(datasourceMapper.selectByName(anyString())).thenReturn(null);
         // 模拟插入成功
-        when(datasourceMapper.insert(any(Datasource.class))).thenReturn(1);
+        when(datasourceMapper.insert(any(DatasourceInfo.class))).thenReturn(1);
         // 模拟连接测试成功
         doReturn(true).when(datasourceService).testConnection(any(DatasourceCreateDTO.class));
 
@@ -97,7 +97,7 @@ class DatasourceServiceTest {
         assertNotNull(result);
         assertEquals(createDTO.getName(), result.getName());
         verify(datasourceMapper, times(1)).selectByName(anyString());
-        verify(datasourceMapper, times(1)).insert(any(Datasource.class));
+        verify(datasourceMapper, times(1)).insert(any(DatasourceInfo.class));
         verify(datasourceService, times(1)).testConnection(any(DatasourceCreateDTO.class));
     }
 
@@ -116,13 +116,13 @@ class DatasourceServiceTest {
 
         verify(datasourceMapper, times(1)).selectByName(anyString());
         verify(datasourceService, times(1)).testConnection(any(DatasourceCreateDTO.class));
-        verify(datasourceMapper, never()).insert(any(Datasource.class));
+        verify(datasourceMapper, never()).insert(any(DatasourceInfo.class));
     }
 
     @Test
     void testCreateDatasource_NameExists() {
         // 模拟数据源已存在
-        when(datasourceMapper.selectByName(anyString())).thenReturn(existingDatasource);
+        when(datasourceMapper.selectByName(anyString())).thenReturn(existingDatasourceInfo);
 
         assertThrows(
                 BusinessException.class,
@@ -132,19 +132,19 @@ class DatasourceServiceTest {
 
         verify(datasourceMapper, times(1)).selectByName(anyString());
         verify(datasourceService, never()).testConnection(any(DatasourceCreateDTO.class));
-        verify(datasourceMapper, never()).insert(any(Datasource.class));
+        verify(datasourceMapper, never()).insert(any(DatasourceInfo.class));
     }
 
     @Test
     void testUpdateDatasource_Success() {
         // 模拟数据源存在
-        when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasource);
+        when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasourceInfo);
         // 模拟名称不重复
         when(datasourceMapper.selectByName(anyString())).thenReturn(null);
         // 模拟连接测试成功
         doReturn(true).when(datasourceService).testConnection(any(DatasourceCreateDTO.class));
         // 模拟更新成功
-        when(datasourceMapper.update(any(Datasource.class))).thenReturn(1);
+        when(datasourceMapper.update(any(DatasourceInfo.class))).thenReturn(1);
 
         DatasourceDTO result = datasourceService.updateDatasource(1L, createDTO);
 
@@ -153,13 +153,13 @@ class DatasourceServiceTest {
         verify(datasourceMapper, times(1)).selectById(anyLong());
         verify(datasourceMapper, times(1)).selectByName(anyString());
         verify(datasourceService, times(1)).testConnection(any(DatasourceCreateDTO.class));
-        verify(datasourceMapper, times(1)).update(any(Datasource.class));
+        verify(datasourceMapper, times(1)).update(any(DatasourceInfo.class));
     }
 
     @Test
     void testUpdateDatasource_ConnectionFailed() {
         // 模拟数据源存在
-        when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasource);
+        when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasourceInfo);
         // 模拟名称不重复
         when(datasourceMapper.selectByName(anyString())).thenReturn(null);
         // 模拟连接测试失败
@@ -174,7 +174,7 @@ class DatasourceServiceTest {
         verify(datasourceMapper, times(1)).selectById(anyLong());
         verify(datasourceMapper, times(1)).selectByName(anyString());
         verify(datasourceService, times(1)).testConnection(any(DatasourceCreateDTO.class));
-        verify(datasourceMapper, never()).update(any(Datasource.class));
+        verify(datasourceMapper, never()).update(any(DatasourceInfo.class));
     }
 
     @Test
@@ -191,13 +191,13 @@ class DatasourceServiceTest {
         verify(datasourceMapper, times(1)).selectById(anyLong());
         verify(datasourceMapper, never()).selectByName(anyString());
         verify(datasourceService, never()).testConnection(any(DatasourceCreateDTO.class));
-        verify(datasourceMapper, never()).update(any(Datasource.class));
+        verify(datasourceMapper, never()).update(any(DatasourceInfo.class));
     }
 
     @Test
     void testDeleteDatasource_Success() {
         // 模拟数据源存在
-        when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasource);
+        when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasourceInfo);
         // 模拟删除成功
         when(datasourceMapper.deleteById(anyLong())).thenReturn(1);
 
@@ -228,12 +228,12 @@ class DatasourceServiceTest {
     @Test
     void testGetDatasource_Success() {
         // 模拟数据源存在
-        when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasource);
+        when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasourceInfo);
 
         DatasourceDTO result = datasourceService.getDatasource(1L);
 
         assertNotNull(result);
-        assertEquals(existingDatasource.getName(), result.getName());
+        assertEquals(existingDatasourceInfo.getName(), result.getName());
         verify(datasourceMapper, times(1)).selectById(anyLong());
     }
 
@@ -254,14 +254,14 @@ class DatasourceServiceTest {
     @Test
     void testGetAllDatasources() {
         // 模拟返回数据源列表
-        List<Datasource> datasources = Arrays.asList(existingDatasource);
-        when(datasourceMapper.selectAll()).thenReturn(datasources);
+        List<DatasourceInfo> datasourceInfos = Arrays.asList(existingDatasourceInfo);
+        when(datasourceMapper.selectAll()).thenReturn(datasourceInfos);
 
         List<DatasourceDTO> result = datasourceService.getAllDatasources();
 
         assertNotNull(result);
         assertEquals(1, result.size());
-        assertEquals(existingDatasource.getName(), result.get(0).getName());
+        assertEquals(existingDatasourceInfo.getName(), result.get(0).getName());
         verify(datasourceMapper, times(1)).selectAll();
     }
 
@@ -279,7 +279,7 @@ class DatasourceServiceTest {
     @Test
     void testTestExistingConnection_Success() {
         // 模拟数据源存在
-        when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasource);
+        when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasourceInfo);
         // 模拟连接测试成功
         doReturn(true).when(datasourceService).testConnection(any(DatasourceCreateDTO.class));
 

@@ -9,7 +9,7 @@ import com.hina.log.common.exception.SshException;
 import com.hina.log.common.ssh.SshClient;
 import com.hina.log.domain.entity.LogstashMachine;
 import com.hina.log.domain.entity.LogstashProcess;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import com.hina.log.domain.mapper.LogstashMachineMapper;
 import com.hina.log.domain.mapper.LogstashProcessMapper;
 import com.hina.log.domain.mapper.MachineMapper;
@@ -38,7 +38,7 @@ public class LogstashProcessMonitorTaskTest {
 
     private LogstashMachine logstashMachine;
     private LogstashProcess logstashProcess;
-    private Machine machine;
+    private MachineInfo machineInfo;
 
     @BeforeEach
     void setUp() {
@@ -55,12 +55,12 @@ public class LogstashProcessMonitorTaskTest {
         logstashProcess.setName("test-logstash");
         logstashProcess.setUpdateTime(LocalDateTime.now().minusMinutes(10)); // 已运行10分钟
 
-        machine = new Machine();
-        machine.setId(200L);
-        machine.setIp("192.168.1.100");
-        machine.setPort(22);
-        machine.setUsername("user");
-        machine.setPassword("password");
+        machineInfo = new MachineInfo();
+        machineInfo.setId(200L);
+        machineInfo.setIp("192.168.1.100");
+        machineInfo.setPort(22);
+        machineInfo.setUsername("user");
+        machineInfo.setPassword("password");
     }
 
     @Test
@@ -81,10 +81,10 @@ public class LogstashProcessMonitorTaskTest {
         // 模拟有运行中的进程
         when(logstashMachineMapper.selectAllWithProcessPid()).thenReturn(List.of(logstashMachine));
         when(logstashProcessMapper.selectById(anyLong())).thenReturn(logstashProcess);
-        when(machineMapper.selectById(anyLong())).thenReturn(machine);
+        when(machineMapper.selectById(anyLong())).thenReturn(machineInfo);
 
         // 模拟进程仍在运行
-        when(sshClient.executeCommand(any(Machine.class), anyString())).thenReturn("12345");
+        when(sshClient.executeCommand(any(MachineInfo.class), anyString())).thenReturn("12345");
 
         // 执行监控任务
         monitorTask.monitorLogstashProcesses();
@@ -93,7 +93,7 @@ public class LogstashProcessMonitorTaskTest {
         verify(logstashMachineMapper).selectAllWithProcessPid();
         verify(logstashProcessMapper).selectById(eq(100L));
         verify(machineMapper).selectById(eq(200L));
-        verify(sshClient).executeCommand(eq(machine), contains("ps -p 12345"));
+        verify(sshClient).executeCommand(eq(machineInfo), contains("ps -p 12345"));
 
         // 确认状态没有被更新
         verify(logstashMachineMapper, never()).updateState(anyLong(), anyLong(), anyString());
@@ -105,12 +105,12 @@ public class LogstashProcessMonitorTaskTest {
         // 模拟有运行中的进程
         when(logstashMachineMapper.selectAllWithProcessPid()).thenReturn(List.of(logstashMachine));
         when(logstashProcessMapper.selectById(anyLong())).thenReturn(logstashProcess);
-        when(machineMapper.selectById(anyLong())).thenReturn(machine);
+        when(machineMapper.selectById(anyLong())).thenReturn(machineInfo);
         when(logstashMachineMapper.updateState(anyLong(), anyLong(), anyString())).thenReturn(1);
         when(logstashMachineMapper.updateProcessPid(anyLong(), anyLong(), isNull())).thenReturn(1);
 
         // 模拟进程已死亡
-        when(sshClient.executeCommand(any(Machine.class), anyString()))
+        when(sshClient.executeCommand(any(MachineInfo.class), anyString()))
                 .thenReturn("Process not found");
 
         // 执行监控任务
@@ -120,7 +120,7 @@ public class LogstashProcessMonitorTaskTest {
         verify(logstashMachineMapper).selectAllWithProcessPid();
         verify(logstashProcessMapper).selectById(eq(100L));
         verify(machineMapper).selectById(eq(200L));
-        verify(sshClient).executeCommand(eq(machine), contains("ps -p 12345"));
+        verify(sshClient).executeCommand(eq(machineInfo), contains("ps -p 12345"));
 
         // 确认状态被更新
         verify(logstashMachineMapper)
@@ -133,10 +133,10 @@ public class LogstashProcessMonitorTaskTest {
         // 模拟有运行中的进程
         when(logstashMachineMapper.selectAllWithProcessPid()).thenReturn(List.of(logstashMachine));
         when(logstashProcessMapper.selectById(anyLong())).thenReturn(logstashProcess);
-        when(machineMapper.selectById(anyLong())).thenReturn(machine);
+        when(machineMapper.selectById(anyLong())).thenReturn(machineInfo);
 
         // 模拟SSH连接错误
-        when(sshClient.executeCommand(any(Machine.class), anyString()))
+        when(sshClient.executeCommand(any(MachineInfo.class), anyString()))
                 .thenThrow(new SshException("Connection failed"));
 
         // 执行监控任务
@@ -146,7 +146,7 @@ public class LogstashProcessMonitorTaskTest {
         verify(logstashMachineMapper).selectAllWithProcessPid();
         verify(logstashProcessMapper).selectById(eq(100L));
         verify(machineMapper).selectById(eq(200L));
-        verify(sshClient).executeCommand(eq(machine), contains("ps -p 12345"));
+        verify(sshClient).executeCommand(eq(machineInfo), contains("ps -p 12345"));
 
         // 确认状态没有被更新 (安全起见，SSH错误时不更改状态)
         verify(logstashMachineMapper, never()).updateState(anyLong(), anyLong(), anyString());

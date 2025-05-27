@@ -7,7 +7,7 @@ import com.hina.log.application.logstash.enums.LogstashMachineStep;
 import com.hina.log.application.logstash.enums.StepStatus;
 import com.hina.log.application.logstash.task.TaskService;
 import com.hina.log.domain.entity.LogstashProcess;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,9 +30,9 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
 
     @Override
     public CompletableFuture<Boolean> handleStart(
-            LogstashProcess process, Machine machine, String taskId) {
+            LogstashProcess process, MachineInfo machineInfo, String taskId) {
         Long processId = process.getId();
-        Long machineId = machine.getId();
+        Long machineId = machineInfo.getId();
 
         logger.info("启动机器 [{}] 上的Logstash进程 [{}]", machineId, processId);
 
@@ -53,7 +53,7 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
                                     commandFactory.startProcessCommand(processId);
 
                             return startCommand
-                                    .execute(machine)
+                                    .execute(machineInfo)
                                     .thenApply(
                                             startSuccess -> {
                                                 StepStatus status =
@@ -110,7 +110,7 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
                                     commandFactory.verifyProcessCommand(processId);
 
                             return verifyCommand
-                                    .execute(machine)
+                                    .execute(machineInfo)
                                     .thenApply(
                                             verifySuccess -> {
                                                 StepStatus status =
@@ -164,10 +164,10 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
             String configContent,
             String jvmOptions,
             String logstashYml,
-            Machine machine,
+            MachineInfo machineInfo,
             String taskId) {
         Long processId = process.getId();
-        Long machineId = machine.getId();
+        Long machineId = machineInfo.getId();
 
         logger.info("更新机器 [{}] 上的Logstash进程 [{}] 配置", machineId, processId);
 
@@ -201,7 +201,7 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
 
         // 执行更新命令
         return updateCommand
-                .execute(machine)
+                .execute(machineInfo)
                 .thenApply(
                         success -> {
                             // 更新所有相关步骤的状态
@@ -281,9 +281,9 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
 
     @Override
     public CompletableFuture<Boolean> handleRefreshConfig(
-            LogstashProcess process, Machine machine, String taskId) {
+            LogstashProcess process, MachineInfo machineInfo, String taskId) {
         Long processId = process.getId();
-        Long machineId = machine.getId();
+        Long machineId = machineInfo.getId();
 
         logger.info("刷新机器 [{}] 上的Logstash进程 [{}] 配置", machineId, processId);
 
@@ -296,7 +296,7 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
                 commandFactory.refreshConfigCommand(processId, null, null, null);
 
         return refreshConfigCommand
-                .execute(machine)
+                .execute(machineInfo)
                 .thenApply(
                         success -> {
                             StepStatus status = success ? StepStatus.COMPLETED : StepStatus.FAILED;

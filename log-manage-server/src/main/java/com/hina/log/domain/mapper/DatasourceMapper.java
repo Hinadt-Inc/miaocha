@@ -1,6 +1,6 @@
 package com.hina.log.domain.mapper;
 
-import com.hina.log.domain.entity.Datasource;
+import com.hina.log.domain.entity.DatasourceInfo;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 
@@ -8,15 +8,15 @@ import org.apache.ibatis.annotations.Mapper;
 @Mapper
 public interface DatasourceMapper {
 
-    int insert(Datasource datasource);
+    int insert(DatasourceInfo datasourceInfo);
 
-    int update(Datasource datasource);
+    int update(DatasourceInfo datasourceInfo);
 
     int deleteById(Long id);
 
-    Datasource selectById(Long id);
+    DatasourceInfo selectById(Long id);
 
-    Datasource selectByName(String name);
+    DatasourceInfo selectByName(String name);
 
-    List<Datasource> selectAll();
+    List<DatasourceInfo> selectAll();
 }

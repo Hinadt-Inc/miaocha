@@ -12,7 +12,7 @@ import com.hina.log.common.exception.BusinessException;
 import com.hina.log.common.exception.ErrorCode;
 import com.hina.log.common.exception.KeywordSyntaxException;
 import com.hina.log.domain.dto.*;
-import com.hina.log.domain.entity.Datasource;
+import com.hina.log.domain.entity.DatasourceInfo;
 import com.hina.log.domain.entity.User;
 import com.hina.log.domain.mapper.DatasourceMapper;
 import com.hina.log.domain.mapper.UserMapper;
@@ -54,7 +54,7 @@ public class LogSearchServiceImpl implements LogSearchService {
     @Transactional
     public LogDetailResultDTO searchDetails(Long userId, LogSearchDTO dto) {
         // 获取数据源和用户信息
-        Datasource datasource = validateAndGetDatasource(dto.getDatasourceId());
+        DatasourceInfo datasourceInfo = validateAndGetDatasource(dto.getDatasourceId());
         validateUser(userId);
 
         // 处理时间范围
@@ -62,7 +62,7 @@ public class LogSearchServiceImpl implements LogSearchService {
             timeRangeProcessor.processTimeRange(dto);
 
             // 执行明细查询
-            return executeDetailSearch(datasource, dto);
+            return executeDetailSearch(datasourceInfo, dto);
         } catch (KeywordSyntaxException e) {
             return createDetailErrorResult("关键字表达式语法错误: " + e.getMessage());
         } catch (Exception e) {
@@ -76,7 +76,7 @@ public class LogSearchServiceImpl implements LogSearchService {
     @Transactional
     public LogHistogramResultDTO searchHistogram(Long userId, LogSearchDTO dto) {
         // 获取数据源和用户信息
-        Datasource datasource = validateAndGetDatasource(dto.getDatasourceId());
+        DatasourceInfo datasourceInfo = validateAndGetDatasource(dto.getDatasourceId());
         validateUser(userId);
 
         // 处理时间范围
@@ -87,7 +87,7 @@ public class LogSearchServiceImpl implements LogSearchService {
             String timeUnit = timeRangeProcessor.determineTimeUnit(dto);
 
             // 执行时间分布查询
-            return executeHistogramSearch(datasource, dto, timeUnit);
+            return executeHistogramSearch(datasourceInfo, dto, timeUnit);
         } catch (KeywordSyntaxException e) {
             return createHistogramErrorResult("关键字表达式语法错误: " + e.getMessage());
         } catch (Exception e) {
@@ -101,7 +101,7 @@ public class LogSearchServiceImpl implements LogSearchService {
     @Transactional
     public LogFieldDistributionResultDTO searchFieldDistributions(Long userId, LogSearchDTO dto) {
         // 获取数据源和用户信息
-        Datasource datasource = validateAndGetDatasource(dto.getDatasourceId());
+        DatasourceInfo datasourceInfo = validateAndGetDatasource(dto.getDatasourceId());
         validateUser(userId);
 
         // 处理时间范围
@@ -114,7 +114,7 @@ public class LogSearchServiceImpl implements LogSearchService {
             }
 
             // 执行字段分布查询
-            return executeFieldDistributionSearch(datasource, dto);
+            return executeFieldDistributionSearch(datasourceInfo, dto);
         } catch (KeywordSyntaxException e) {
             return createFieldDistributionErrorResult("关键字表达式语法错误: " + e.getMessage());
         } catch (Exception e) {
@@ -124,7 +124,8 @@ public class LogSearchServiceImpl implements LogSearchService {
     }
 
     /** 执行明细查询 */
-    private LogDetailResultDTO executeDetailSearch(Datasource datasource, LogSearchDTO dto) {
+    private LogDetailResultDTO executeDetailSearch(
+            DatasourceInfo datasourceInfo, LogSearchDTO dto) {
         long startTime = System.currentTimeMillis();
         LogDetailResultDTO result = new LogDetailResultDTO();
         result.setSuccess(true);
@@ -132,7 +133,7 @@ public class LogSearchServiceImpl implements LogSearchService {
         // 获取模块对应的表名
         String tableName = moduleTableMappingService.getTableNameByModule(dto.getModule());
 
-        try (Connection conn = jdbcQueryExecutor.getConnection(datasource)) {
+        try (Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo)) {
             // 执行详细日志查询
             String detailSql = logSqlBuilder.buildDetailSql(dto, tableName);
             logger.debug("详细日志SQL: {}", detailSql);
@@ -184,7 +185,7 @@ public class LogSearchServiceImpl implements LogSearchService {
 
     /** 执行时间分布查询 */
     private LogHistogramResultDTO executeHistogramSearch(
-            Datasource datasource, LogSearchDTO dto, String timeUnit) {
+            DatasourceInfo datasourceInfo, LogSearchDTO dto, String timeUnit) {
         long startTime = System.currentTimeMillis();
         LogHistogramResultDTO result = new LogHistogramResultDTO();
         result.setSuccess(true);
@@ -192,7 +193,7 @@ public class LogSearchServiceImpl implements LogSearchService {
         // 获取模块对应的表名
         String tableName = moduleTableMappingService.getTableNameByModule(dto.getModule());
 
-        try (Connection conn = jdbcQueryExecutor.getConnection(datasource)) {
+        try (Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo)) {
             // 执行分布统计查询
             String distributionSql = logSqlBuilder.buildDistributionSql(dto, tableName, timeUnit);
             logger.debug("分布统计SQL: {}", distributionSql);
@@ -217,7 +218,7 @@ public class LogSearchServiceImpl implements LogSearchService {
 
     /** 执行字段分布查询，使用Doris TOPN函数 */
     private LogFieldDistributionResultDTO executeFieldDistributionSearch(
-            Datasource datasource, LogSearchDTO dto) {
+            DatasourceInfo datasourceInfo, LogSearchDTO dto) {
         long startTime = System.currentTimeMillis();
         LogFieldDistributionResultDTO result = new LogFieldDistributionResultDTO();
         result.setSuccess(true);
@@ -225,7 +226,7 @@ public class LogSearchServiceImpl implements LogSearchService {
         // 获取模块对应的表名
         String tableName = moduleTableMappingService.getTableNameByModule(dto.getModule());
 
-        try (Connection conn = jdbcQueryExecutor.getConnection(datasource)) {
+        try (Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo)) {
             // 执行字段分布查询
             String fieldDistributionSql =
                     logSqlBuilder.buildFieldDistributionSql(
@@ -382,12 +383,12 @@ public class LogSearchServiceImpl implements LogSearchService {
     }
 
     /** 验证并获取数据源 */
-    private Datasource validateAndGetDatasource(Long datasourceId) {
-        Datasource datasource = datasourceMapper.selectById(datasourceId);
-        if (datasource == null) {
+    private DatasourceInfo validateAndGetDatasource(Long datasourceId) {
+        DatasourceInfo datasourceInfo = datasourceMapper.selectById(datasourceId);
+        if (datasourceInfo == null) {
             throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
         }
-        return datasource;
+        return datasourceInfo;
     }
 
     /** 验证用户 */
@@ -402,7 +403,7 @@ public class LogSearchServiceImpl implements LogSearchService {
     public List<SchemaInfoDTO.ColumnInfoDTO> getTableColumns(
             Long userId, Long datasourceId, String module) {
         // 获取数据源
-        Datasource datasource = validateAndGetDatasource(datasourceId);
+        DatasourceInfo datasourceInfo = validateAndGetDatasource(datasourceId);
 
         // 验证用户
         validateUser(userId);
@@ -410,10 +411,10 @@ public class LogSearchServiceImpl implements LogSearchService {
         // 获取模块对应的表名
         String tableName = moduleTableMappingService.getTableNameByModule(module);
 
-        try (Connection conn = jdbcQueryExecutor.getConnection(datasource)) {
+        try (Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo)) {
             // 获取对应数据库类型的元数据服务
             DatabaseMetadataService metadataService =
-                    metadataServiceFactory.getService(datasource.getType());
+                    metadataServiceFactory.getService(datasourceInfo.getType());
 
             // 获取表的完整字段信息
             return metadataService.getColumnInfo(conn, tableName);

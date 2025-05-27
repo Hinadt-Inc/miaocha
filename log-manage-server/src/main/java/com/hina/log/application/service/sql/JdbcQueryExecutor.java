@@ -3,7 +3,7 @@ package com.hina.log.application.service.sql;
 import com.hina.log.common.exception.BusinessException;
 import com.hina.log.common.exception.ErrorCode;
 import com.hina.log.domain.dto.SqlQueryResultDTO;
-import com.hina.log.domain.entity.Datasource;
+import com.hina.log.domain.entity.DatasourceInfo;
 import com.hina.log.domain.entity.enums.DatasourceType;
 import java.sql.*;
 import java.util.*;
@@ -12,10 +12,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class JdbcQueryExecutor {
 
-    public SqlQueryResultDTO executeQuery(Datasource datasource, String sql) {
+    public SqlQueryResultDTO executeQuery(DatasourceInfo datasourceInfo, String sql) {
         SqlQueryResultDTO result = new SqlQueryResultDTO();
 
-        try (Connection conn = getConnection(datasource)) {
+        try (Connection conn = getConnection(datasourceInfo)) {
             Statement stmt = conn.createStatement();
             boolean isResultSet = stmt.execute(sql);
 
@@ -74,20 +74,21 @@ public class JdbcQueryExecutor {
         return result;
     }
 
-    public Connection getConnection(Datasource datasource) throws SQLException {
-        DatasourceType datasourceType = DatasourceType.fromType(datasource.getType());
+    public Connection getConnection(DatasourceInfo datasourceInfo) throws SQLException {
+        DatasourceType datasourceType = DatasourceType.fromType(datasourceInfo.getType());
         if (datasourceType == null) {
             throw new BusinessException(ErrorCode.DATASOURCE_TYPE_NOT_SUPPORTED);
         }
 
         String url =
                 datasourceType.buildJdbcUrl(
-                        datasource.getIp(),
-                        datasource.getPort(),
-                        datasource.getDatabase(),
-                        datasource.getJdbcParams());
+                        datasourceInfo.getIp(),
+                        datasourceInfo.getPort(),
+                        datasourceInfo.getDatabase(),
+                        datasourceInfo.getJdbcParams());
 
-        return DriverManager.getConnection(url, datasource.getUsername(), datasource.getPassword());
+        return DriverManager.getConnection(
+                url, datasourceInfo.getUsername(), datasourceInfo.getPassword());
     }
 
     private void processResultSet(ResultSet rs, SqlQueryResultDTO result) throws SQLException {

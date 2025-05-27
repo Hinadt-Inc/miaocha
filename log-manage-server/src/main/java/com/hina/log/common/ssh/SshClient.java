@@ -1,7 +1,7 @@
 package com.hina.log.common.ssh;
 
 import com.hina.log.common.exception.SshException;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -44,32 +44,32 @@ public class SshClient {
     /**
      * 从Machine实体创建SSH配置
      *
-     * @param machine 机器信息
+     * @param machineInfo 机器信息
      * @return SSH配置
      */
-    public static SshConfig createConfig(Machine machine) {
+    public static SshConfig createConfig(MachineInfo machineInfo) {
         return SshConfig.builder()
-                .host(machine.getIp())
-                .port(machine.getPort())
-                .username(machine.getUsername())
-                .password(machine.getPassword())
-                .privateKey(machine.getSshKey())
+                .host(machineInfo.getIp())
+                .port(machineInfo.getPort())
+                .username(machineInfo.getUsername())
+                .password(machineInfo.getPassword())
+                .privateKey(machineInfo.getSshKey())
                 .build();
     }
 
     /**
      * 测试SSH连接
      *
-     * @param machine 机器信息
+     * @param machineInfo 机器信息
      * @return 是否连接成功
      */
-    public boolean testConnection(Machine machine) {
+    public boolean testConnection(MachineInfo machineInfo) {
         try {
-            SshConfig config = createConfig(machine);
+            SshConfig config = createConfig(machineInfo);
             executeCommand(config, "echo 'Connection test successful'");
             return true;
         } catch (Exception e) {
-            logger.error("测试SSH连接到 {} 失败: {}", machine.getIp(), e.getMessage());
+            logger.error("测试SSH连接到 {} 失败: {}", machineInfo.getIp(), e.getMessage());
             return false;
         }
     }
@@ -77,17 +77,17 @@ public class SshClient {
     /**
      * 执行SSH命令
      *
-     * @param machine 机器信息
+     * @param machineInfo 机器信息
      * @param command 要执行的命令
      * @return 命令执行结果
      * @throws SshException 如果执行失败
      */
-    public String executeCommand(Machine machine, String command) throws SshException {
+    public String executeCommand(MachineInfo machineInfo, String command) throws SshException {
         try {
-            SshConfig config = createConfig(machine);
+            SshConfig config = createConfig(machineInfo);
             return executeCommand(config, command);
         } catch (Exception e) {
-            logger.error("在 {} 上执行命令失败: {}", machine.getIp(), e.getMessage());
+            logger.error("在 {} 上执行命令失败: {}", machineInfo.getIp(), e.getMessage());
             throw new SshException("命令执行失败: " + e.getMessage(), e);
         }
     }
@@ -148,18 +148,18 @@ public class SshClient {
     /**
      * 上传文件
      *
-     * @param machine 机器信息
+     * @param machineInfo 机器信息
      * @param localPath 本地文件路径
      * @param remotePath 远程文件路径
      * @throws SshException 如果上传失败
      */
-    public void uploadFile(Machine machine, String localPath, String remotePath)
+    public void uploadFile(MachineInfo machineInfo, String localPath, String remotePath)
             throws SshException {
         try {
-            SshConfig config = createConfig(machine);
+            SshConfig config = createConfig(machineInfo);
             uploadFile(config, localPath, remotePath);
         } catch (Exception e) {
-            logger.error("上传文件到 {} 失败: {}", machine.getIp(), e.getMessage());
+            logger.error("上传文件到 {} 失败: {}", machineInfo.getIp(), e.getMessage());
             throw new SshException("文件上传失败: " + e.getMessage(), e);
         }
     }
@@ -206,18 +206,18 @@ public class SshClient {
     /**
      * 下载文件
      *
-     * @param machine 机器信息
+     * @param machineInfo 机器信息
      * @param remotePath 远程文件路径
      * @param localPath 本地文件路径
      * @throws SshException 如果下载失败
      */
-    public void downloadFile(Machine machine, String remotePath, String localPath)
+    public void downloadFile(MachineInfo machineInfo, String remotePath, String localPath)
             throws SshException {
         try {
-            SshConfig config = createConfig(machine);
+            SshConfig config = createConfig(machineInfo);
             downloadFile(config, remotePath, localPath);
         } catch (Exception e) {
-            logger.error("从 {} 下载文件失败: {}", machine.getIp(), e.getMessage());
+            logger.error("从 {} 下载文件失败: {}", machineInfo.getIp(), e.getMessage());
             throw new SshException("文件下载失败: " + e.getMessage(), e);
         }
     }

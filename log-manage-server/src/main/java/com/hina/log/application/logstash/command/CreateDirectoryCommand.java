@@ -2,7 +2,7 @@ package com.hina.log.application.logstash.command;
 
 import com.hina.log.common.exception.SshOperationException;
 import com.hina.log.common.ssh.SshClient;
-import com.hina.log.domain.entity.Machine;
+import com.hina.log.domain.entity.MachineInfo;
 import java.util.concurrent.CompletableFuture;
 
 /** 创建目录命令 */
@@ -13,21 +13,21 @@ public class CreateDirectoryCommand extends AbstractLogstashCommand {
     }
 
     @Override
-    protected CompletableFuture<Boolean> doExecute(Machine machine) {
+    protected CompletableFuture<Boolean> doExecute(MachineInfo machineInfo) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         try {
             // 创建进程目录
             String processDir = getProcessDirectory();
             String command = String.format("mkdir -p %s", processDir);
-            sshClient.executeCommand(machine, command);
+            sshClient.executeCommand(machineInfo, command);
 
             // 检查目录是否创建成功
             String checkCommand =
                     String.format(
                             "if [ -d \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi",
                             processDir);
-            String checkResult = sshClient.executeCommand(machine, checkCommand);
+            String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
 
             boolean success = "exists".equals(checkResult.trim());
             if (success) {
@@ -46,7 +46,7 @@ public class CreateDirectoryCommand extends AbstractLogstashCommand {
     }
 
     @Override
-    protected CompletableFuture<Boolean> checkAlreadyExecuted(Machine machine) {
+    protected CompletableFuture<Boolean> checkAlreadyExecuted(MachineInfo machineInfo) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         try {
@@ -59,7 +59,7 @@ public class CreateDirectoryCommand extends AbstractLogstashCommand {
                     String.format(
                             "if [ -d \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi",
                             processDir);
-            String checkResult = sshClient.executeCommand(machine, checkCommand);
+            String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
 
             boolean exists = "exists".equals(checkResult.trim());
             logger.info("检查目录 [{}] 存在性: {}", processDir, exists ? "已存在" : "不存在");

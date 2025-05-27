@@ -14,7 +14,7 @@ import com.hina.log.domain.dto.SqlHistoryQueryDTO;
 import com.hina.log.domain.dto.SqlHistoryResponseDTO;
 import com.hina.log.domain.dto.SqlQueryDTO;
 import com.hina.log.domain.dto.SqlQueryResultDTO;
-import com.hina.log.domain.entity.Datasource;
+import com.hina.log.domain.entity.DatasourceInfo;
 import com.hina.log.domain.entity.SqlQueryHistory;
 import com.hina.log.domain.entity.User;
 import com.hina.log.domain.entity.enums.UserRole;
@@ -94,8 +94,8 @@ public class SqlQueryServiceImpl implements SqlQueryService {
     @Transactional
     public SqlQueryResultDTO executeQuery(Long userId, SqlQueryDTO dto) {
         // 获取数据源
-        Datasource datasource = datasourceMapper.selectById(dto.getDatasourceId());
-        if (datasource == null) {
+        DatasourceInfo datasourceInfo = datasourceMapper.selectById(dto.getDatasourceId());
+        if (datasourceInfo == null) {
             throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
         }
 
@@ -127,7 +127,7 @@ public class SqlQueryServiceImpl implements SqlQueryService {
                                     () -> {
                                         logger.debug("开始执行SQL查询: {}", dto.getSql());
                                         return jdbcQueryExecutor.executeQuery(
-                                                datasource, dto.getSql());
+                                                datasourceInfo, dto.getSql());
                                     },
                                     getExecutor())
                             .exceptionally(
@@ -327,8 +327,8 @@ public class SqlQueryServiceImpl implements SqlQueryService {
     @Override
     public SchemaInfoDTO getSchemaInfo(Long userId, Long datasourceId) {
         // 获取数据源
-        Datasource datasource = datasourceMapper.selectById(datasourceId);
-        if (datasource == null) {
+        DatasourceInfo datasourceInfo = datasourceMapper.selectById(datasourceId);
+        if (datasourceInfo == null) {
             throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
         }
 
@@ -339,18 +339,18 @@ public class SqlQueryServiceImpl implements SqlQueryService {
         }
 
         SchemaInfoDTO schemaInfo = new SchemaInfoDTO();
-        schemaInfo.setDatabaseName(datasource.getDatabase());
+        schemaInfo.setDatabaseName(datasourceInfo.getDatabase());
 
         try {
             // 为了单元测试的兼容性，检查是否在测试环境中
             if (sqlQueryExecutor == null) {
                 // 测试环境，同步执行
-                return getSchemaInfoSync(user, userId, datasource, schemaInfo);
+                return getSchemaInfoSync(user, userId, datasourceInfo, schemaInfo);
             }
 
             // 生产环境，使用CompletableFuture异步获取Schema信息
             return CompletableFuture.supplyAsync(
-                            () -> getSchemaInfoSync(user, userId, datasource, schemaInfo),
+                            () -> getSchemaInfoSync(user, userId, datasourceInfo, schemaInfo),
                             getExecutor())
                     .exceptionally(
                             throwable -> {
@@ -382,14 +382,14 @@ public class SqlQueryServiceImpl implements SqlQueryService {
 
     /** 同步获取schema信息 */
     private SchemaInfoDTO getSchemaInfoSync(
-            User user, Long userId, Datasource datasource, SchemaInfoDTO schemaInfo) {
+            User user, Long userId, DatasourceInfo datasourceInfo, SchemaInfoDTO schemaInfo) {
         try {
             // 获取JDBC连接
-            Connection conn = jdbcQueryExecutor.getConnection(datasource);
+            Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo);
 
             // 获取对应数据库类型的元数据服务
             DatabaseMetadataService metadataService =
-                    metadataServiceFactory.getService(datasource.getType());
+                    metadataServiceFactory.getService(datasourceInfo.getType());
 
             List<SchemaInfoDTO.TableInfoDTO> tables = new ArrayList<>();
             List<String> permittedTables;
