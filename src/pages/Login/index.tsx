@@ -1,6 +1,7 @@
 import { Button, Form, Input, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useState } from 'react';
+import useErrorHandler from '@/hooks/useErrorHandler';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { login } from '@/store/userSlice';
@@ -15,7 +16,11 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
 
+  const { contextHolder } = useErrorHandler();
+
   const onFinish = async (values: { username: string; password: string }) => {
+    if (loading) return; // 防止重复提交
+
     setLoading(true);
 
     try {
@@ -40,8 +45,12 @@ const LoginPage = () => {
 
       message.success('登录成功！');
       navigate('/');
-    } catch (error) {
-      console.log(error);
+    } catch (error: any) {
+      if (!error._handled) {
+        message.error(error?.message || '登录失败');
+        error._handled = true; // 标记错误已处理
+      }
+      throw error; // 仍然抛出以便其他错误处理器捕获
     } finally {
       setLoading(false);
     }
@@ -82,6 +91,7 @@ const LoginPage = () => {
         </div>
       </div>
 
+      {contextHolder}
       <div className={styles.footer}>
         Copyright © {new Date().getFullYear()} 秒查 All Rights Reserved. 海纳数科 版权所有
       </div>
