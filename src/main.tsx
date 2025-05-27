@@ -30,7 +30,6 @@ const Error = ({ children }: any) => {
   const [notificationApi, contextHolder] = notification.useNotification();
   const notificationConfig = {
     message: '提示',
-    duration: 3,
     showProgress: true,
   };
 
