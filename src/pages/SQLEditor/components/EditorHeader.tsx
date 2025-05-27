@@ -65,16 +65,12 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
               执行
             </Button>
           </Tooltip>
-          <Tooltip title="查询历史">
-            <Button icon={<HistoryOutlined />} onClick={toggleHistory} aria-label="查看查询历史">
-              历史
-            </Button>
-          </Tooltip>
-          <Tooltip title="编辑器设置">
-            <Button icon={<SettingOutlined />} onClick={toggleSettings} aria-label="编辑器设置">
-              设置
-            </Button>
-          </Tooltip>
+          <Button icon={<HistoryOutlined />} onClick={toggleHistory} aria-label="查看查询历史">
+            历史
+          </Button>
+          <Button icon={<SettingOutlined />} onClick={toggleSettings} aria-label="编辑器设置">
+            设置
+          </Button>
         </Space>
       </div>
     </div>

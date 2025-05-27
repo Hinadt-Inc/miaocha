@@ -14,7 +14,7 @@ interface ResultsViewerProps {
 }
 
 // 常量
-const TABLE_HEIGHT = '30vh'; // 表格高度
+const TABLE_HEIGHT = '100%'; // 表格高度
 const PAGE_SIZE_OPTIONS = ['10', '20', '50', '100'];
 const MIN_COLUMN_WIDTH = 100; // 最小列宽  // 可调整宽度的表头组件
 interface ResizableTitleProps extends React.HTMLAttributes<HTMLElement> {
@@ -257,8 +257,22 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
     }));
   };
   // 加载中或无结果的早期返回
-  if (loading) return <Spin tip="执行查询中..." />;
-  if (!queryResults) return <Empty description="请执行查询以查看结果" />;
+  if (loading)
+    return (
+      <div className="results-viewer-container">
+        <div className="table-wrapper" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <Spin tip="执行查询中..." size="large" />
+        </div>
+      </div>
+    );
+  if (!queryResults)
+    return (
+      <div className="results-viewer-container">
+        <div className="table-wrapper" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <Empty description="请执行查询以查看结果" />
+        </div>
+      </div>
+    );
 
   // 错误状态
   if (queryResults.status === 'error') {
@@ -267,7 +281,13 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
 
   // 无数据返回
   if (!queryResults.rows?.length) {
-    return <Empty description="查询没有返回数据" />;
+    return (
+      <div className="results-viewer-container">
+        <div className="table-wrapper" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <Empty description="查询没有返回数据" />
+        </div>
+      </div>
+    );
   }
 
   // 构建表格列
@@ -317,7 +337,6 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
       {queryResults.executionTimeMs && (
         <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
           查询执行时间: {queryResults.executionTimeMs}ms | 返回行数: {queryResults.rows.length}
-          {queryResults.affectedRows !== undefined && ` | 影响行数: ${queryResults.affectedRows}`}
         </Text>
       )}
       <div className="toolbar">

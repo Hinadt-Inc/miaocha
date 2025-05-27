@@ -4,7 +4,7 @@ import { useQueryExecution } from './hooks/useQueryExecution';
 import { useEditorSettings } from './hooks/useEditorSettings';
 import { useQueryHistory } from './hooks/useQueryHistory';
 import { useDatabaseSchema } from './hooks/useDatabaseSchema';
-import { Alert, Button, Card, Layout, message, Space, Tabs, Tooltip } from 'antd';
+import { Alert, Button, Card, Layout, message, Space, Tabs, Tooltip, Splitter } from 'antd';
 import { CopyOutlined } from '@ant-design/icons';
 import { OnMount } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
@@ -63,7 +63,7 @@ const SQLEditorImpl: React.FC = () => {
 
   const { settings: editorSettings, saveSettings } = useEditorSettings();
 
-  const { history: queryHistory, addHistory, clearHistory, clearAllHistory } = useQueryHistory(selectedSource);
+  const { history: queryHistory, pagination, handlePaginationChange } = useQueryHistory(selectedSource);
 
   // 本地UI状态
   const [activeTab, setActiveTab] = useState<string>('results');
@@ -73,10 +73,27 @@ const SQLEditorImpl: React.FC = () => {
   const [fullscreen, setFullscreen] = useState<boolean>(false);
   const [historyDrawerVisible, setHistoryDrawerVisible] = useState(false);
   const [settingsDrawerVisible, setSettingsDrawerVisible] = useState(false);
+  const [editorHeight, setEditorHeight] = useState<number>(0); // 动态计算高度
 
-  // 添加编辑器高度和收起状态
-  const [editorHeight, setEditorHeight] = useState(300);
-  const [editorCollapsed, setEditorCollapsed] = useState(false);
+  // 计算并设置编辑器高度
+  useEffect(() => {
+    const calculateHeight = () => {
+      const windowHeight = window.innerHeight;
+      const parentPadding = 110; // 父元素Layout的padding
+      const newHeight = Math.floor(windowHeight / 2) - parentPadding;
+      setEditorHeight(newHeight);
+    };
+
+    // 初始计算
+    calculateHeight();
+
+    // 监听窗口大小变化
+    window.addEventListener('resize', calculateHeight);
+
+    return () => {
+      window.removeEventListener('resize', calculateHeight);
+    };
+  }, []);
 
   // 添加侧边栏收起状态
   const [siderCollapsed, setSiderCollapsed] = useState(false);
@@ -105,9 +122,7 @@ const SQLEditorImpl: React.FC = () => {
       setActiveTab('results');
       executeQueryOriginal()
         .then((results: QueryResult) => {
-          // 添加到查询历史记录
-          addHistory(sqlQuery, 'success');
-
+          // 后端会自动记录成功查询历史
           if (results?.rows?.length && results?.columns) {
             setXField(results.columns[0]);
             const numericColumn = results.columns.find((col: string) => {
@@ -118,12 +133,11 @@ const SQLEditorImpl: React.FC = () => {
           }
         })
         .catch((error: Error) => {
-          // 添加失败的查询到历史记录
-          addHistory(sqlQuery, 'error', error.message);
           console.error('执行查询失败:', error);
+          message.error(`执行查询失败: ${error.message}`);
         });
     }, 300),
-    [executeQueryOriginal, selectedSource, sqlQuery, setActiveTab, setXField, setYField, addHistory],
+    [executeQueryOriginal, selectedSource, sqlQuery, setActiveTab, setXField, setYField],
   );
 
   // 初始化
@@ -490,24 +504,19 @@ const SQLEditorImpl: React.FC = () => {
     setChartType(type as ChartType);
   };
 
-  // 处理编辑器高度改变
-  const handleEditorHeightChange = (height: number) => {
-    setEditorHeight(height);
-  };
-
-  // 处理编辑器收起状态改变
-  const handleEditorCollapsedChange = (collapsed: boolean) => {
-    setEditorCollapsed(collapsed);
-  };
-
   // 添加侧边栏折叠切换函数
   const toggleSider = useCallback(() => {
     setSiderCollapsed((prev) => !prev);
   }, []);
 
+  // 处理Splitter拖动事件
+  const handleSplitterDrag = useCallback((sizes: number[]) => {
+    setEditorHeight(sizes[0] - 102); // 更新编辑器高度
+  }, []);
+
   return (
     <>
-      <Layout style={{ height: '100vh' }}>
+      <Layout style={{ height: '100vh', padding: '10px', background: '#F6F8F9 !important' }}>
         <Sider
           width={siderWidth}
           theme="light"
@@ -531,110 +540,111 @@ const SQLEditorImpl: React.FC = () => {
             toggleSider={toggleSider}
           />
         </Sider>
-
         <Layout className="layout-inner">
           <Content className="content-container">
-            <div className="editor-results-container">
-              <Card
-                hoverable={false}
-                title={
-                  <div className="editor-header-container">
-                    <Space>
-                      <span>SQL 查询</span>
-                      <Tooltip title="复制 SQL">
-                        <Button
-                          type="text"
-                          size="small"
-                          icon={<CopyOutlined />}
-                          onClick={() => copyToClipboard(sqlQuery)}
-                          disabled={!sqlQuery.trim()}
-                          aria-label="复制SQL语句"
-                        />
-                      </Tooltip>
-                    </Space>
-                    <EditorHeader
-                      dataSources={dataSources}
-                      selectedSource={selectedSource}
-                      setSelectedSource={setSelectedSource}
-                      loadingSchema={loadingSchema}
-                      loadingDataSources={loadingDataSources}
-                      loadingResults={loadingResults}
-                      executeQuery={executeQueryDebounced}
-                      toggleHistory={() => setHistoryDrawerVisible(true)}
-                      toggleSettings={() => setSettingsDrawerVisible(true)}
-                      sqlQuery={sqlQuery}
-                    />
-                  </div>
-                }
-                className="editor-card"
-              >
-                <QueryEditor
-                  sqlQuery={sqlQuery}
-                  onChange={(value) => setSqlQuery(value ?? '')}
-                  onEditorMount={handleEditorDidMount}
-                  editorSettings={editorSettings}
-                  height={editorHeight}
-                  collapsed={editorCollapsed}
-                  onCollapsedChange={handleEditorCollapsedChange}
-                  onHeightChange={handleEditorHeightChange}
-                />
-              </Card>
-              <Card
-                title={
-                  <Tabs activeKey={activeTab} onChange={(key) => setActiveTab(key)} className="results-tabs">
-                    <TabPane tab="查询结果" key="results" />
-                    <TabPane
-                      tab="可视化"
-                      key="visualization"
-                      disabled={!queryResults?.rows?.length || queryResults?.status === 'error'}
-                    />
-                  </Tabs>
-                }
-                className="results-card"
-                extra={
-                  activeTab === 'results' && (
-                    <Button
-                      type="primary"
-                      onClick={handleDownloadResults}
-                      disabled={!queryResults?.rows?.length}
-                      aria-label="下载查询结果"
-                    >
-                      下载CSV
-                    </Button>
-                  )
-                }
-              >
-                {queryResults?.status === 'error' && (
-                  <Alert
-                    message="查询失败"
-                    description={queryResults.message}
-                    type="error"
-                    showIcon
-                    style={{ marginBottom: 16 }}
+            <Splitter layout="vertical" onResize={handleSplitterDrag}>
+              <Splitter.Panel>
+                <Card
+                  hoverable={false}
+                  title={
+                    <div className="editor-header-container">
+                      <Space>
+                        <span>SQL 查询</span>
+                        <Tooltip title="复制 SQL">
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<CopyOutlined />}
+                            onClick={() => copyToClipboard(sqlQuery)}
+                            disabled={!sqlQuery.trim()}
+                            aria-label="复制SQL语句"
+                          />
+                        </Tooltip>
+                      </Space>
+                      <EditorHeader
+                        dataSources={dataSources}
+                        selectedSource={selectedSource}
+                        setSelectedSource={setSelectedSource}
+                        loadingSchema={loadingSchema}
+                        loadingDataSources={loadingDataSources}
+                        loadingResults={loadingResults}
+                        executeQuery={executeQueryDebounced}
+                        toggleHistory={() => setHistoryDrawerVisible(true)}
+                        toggleSettings={() => setSettingsDrawerVisible(true)}
+                        sqlQuery={sqlQuery}
+                      />
+                    </div>
+                  }
+                  className="editor-card"
+                >
+                  <QueryEditor
+                    sqlQuery={sqlQuery}
+                    onChange={(value) => setSqlQuery(value ?? '')}
+                    onEditorMount={handleEditorDidMount}
+                    editorSettings={editorSettings}
+                    height={editorHeight}
                   />
-                )}
+                </Card>
+              </Splitter.Panel>
+              <Splitter.Panel>
+                <Card
+                  title={
+                    <Tabs activeKey={activeTab} onChange={(key) => setActiveTab(key)} className="results-tabs">
+                      <TabPane tab="查询结果" key="results" />
+                      <TabPane
+                        tab="可视化"
+                        key="visualization"
+                        disabled={!queryResults?.rows?.length || queryResults?.status === 'error'}
+                      />
+                    </Tabs>
+                  }
+                  className="results-card"
+                  style={{ marginTop: '10px', height: 'calc(100% - 10px)', overflow: 'auto' }}
+                  extra={
+                    activeTab === 'results' && (
+                      <Button
+                        type="primary"
+                        onClick={handleDownloadResults}
+                        disabled={!queryResults?.rows?.length}
+                        aria-label="下载查询结果"
+                      >
+                        下载CSV
+                      </Button>
+                    )
+                  }
+                >
+                  {queryResults?.status === 'error' && (
+                    <Alert
+                      message="查询失败"
+                      description={queryResults.message}
+                      type="error"
+                      showIcon
+                      style={{ marginBottom: 16 }}
+                    />
+                  )}
 
-                {activeTab === 'results' ? (
-                  <ResultsViewer
-                    queryResults={queryResults}
-                    loading={loadingResults}
-                    downloadResults={handleDownloadResults}
-                    formatTableCell={(value) => formatTableCell(value)}
-                  />
-                ) : (
-                  <VisualizationPanel
-                    queryResults={queryResults}
-                    chartType={chartType}
-                    setChartType={handleSetChartType}
-                    xField={xField}
-                    setXField={setXField}
-                    yField={yField}
-                    setYField={setYField}
-                    fullscreen={fullscreen}
-                  />
-                )}
-              </Card>
-            </div>
+                  {activeTab === 'results' ? (
+                    <ResultsViewer
+                      queryResults={queryResults}
+                      loading={loadingResults}
+                      downloadResults={handleDownloadResults}
+                      formatTableCell={(value) => formatTableCell(value)}
+                    />
+                  ) : (
+                    <VisualizationPanel
+                      queryResults={queryResults}
+                      chartType={chartType}
+                      setChartType={handleSetChartType}
+                      xField={xField}
+                      setXField={setXField}
+                      yField={yField}
+                      setYField={setYField}
+                      fullscreen={fullscreen}
+                    />
+                  )}
+                </Card>
+              </Splitter.Panel>
+            </Splitter>
           </Content>
         </Layout>
       </Layout>
@@ -645,9 +655,8 @@ const SQLEditorImpl: React.FC = () => {
         queryHistory={queryHistory}
         loadFromHistory={loadFromHistory}
         copyToClipboard={copyToClipboard}
-        clearHistory={clearHistory}
-        clearAllHistory={clearAllHistory}
-        fullscreen={fullscreen}
+        pagination={pagination}
+        onPaginationChange={handlePaginationChange}
       />
 
       <SettingsDrawer

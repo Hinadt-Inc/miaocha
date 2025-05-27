@@ -68,12 +68,16 @@
     height: 100%;
     display: flex;
     flex-direction: column;
+    min-height: 0; /* 修复flex容器中子元素溢出问题 */
   }
+  .ant-card-body {
+      padding: 10px
+    }
 }
 
 /* 主布局样式 - 匹配HomePage */
 .layout-content {
-  background: #f0f2f5;
+  background: #F6F8F9 !important;
   height: 100%;
   min-height: calc(100vh - 180px);
   
@@ -85,7 +89,7 @@
 /* 侧边栏容器样式 - 匹配HomePage */
 .sider-container {
   background: #fff;
-  margin-right: 16px;
+  margin-right: 10px;
   border-radius: 4px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   overflow: hidden;
@@ -96,24 +100,36 @@
     height: 100%;
   }
 }
+.ant-layout {
+    background-color: #F6F8F9 !important;
+  }
 
-/* 内部布局样式 - 匹配HomePage */
-.layout-inner {
-  background: #f0f2f5;
-  height: 100%;
-}
 
 /* 内容容器样式 - 匹配HomePage */
 .content-container {
-  background: #fff;
   padding: 0;
   position: relative;
   flex: 1;
   border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
   height: 100vh;
+  .results-card {
+    padding-top: 10px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    
+    .ant-card-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      padding: 0;
+    }
+  }
 }
 
 /* 结果容器 */
@@ -121,12 +137,10 @@
   flex: 1;
   overflow: auto;
   padding: 0;
-  
 }
 
 /* 查询编辑器卡片 */
 .query-editor-card {
-  margin-bottom: 16px;
   .ant-card-head {
     min-height: auto;
     padding: 0 12px;
@@ -135,10 +149,12 @@
       padding: 8px 0;
     }
   }
-  
+}
+
+/* 编辑器卡片 */
+.editor-card {
   .ant-card-body {
-    padding: 0;
-    height: auto;
+    padding: 10px;
   }
 }
 
@@ -158,20 +174,6 @@
   .view-controls {
     display: flex;
     align-items: center;
-  }
-}
-
-/* 按钮动画加强 - 匹配HomePage */
-.ant-btn {
-  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
-  
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
-  }
-  
-  &:active {
-    transform: translateY(0);
   }
 }
 
@@ -312,7 +314,6 @@
     justify-content: center;
     background: #fafafa;
     border-radius: 4px;
-    padding: 16px;
   }
 }
 
@@ -362,7 +363,6 @@
     max-width: 100% !important;
     flex: 0 0 auto !important;
     margin-right: 0;
-    margin-bottom: 16px;
     height: 100%;
   }
   

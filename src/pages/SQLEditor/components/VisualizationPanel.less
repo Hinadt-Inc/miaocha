@@ -3,11 +3,10 @@
   padding: 24px;
   background-color: #fff;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(104, 89, 89, 0.06);
   
   .chart-controls {
-    margin-bottom: 24px;
-    padding: 16px;
+    padding-bottom: 16px;
     background-color: #fafafa;
     border-radius: 6px;
     
@@ -22,15 +21,16 @@
         
         .ant-select {
           min-width: 160px;
+          height: calc(100% - 2px);
         }
       }
     }
   }
-  
-  .chart-container {
+  .visualization-panel {
+    padding: 10px;
+    .chart-container {
     position: relative;
     min-height: 400px;
-    padding: 16px;
     border-radius: 6px;
     background: #fff;
     
@@ -46,12 +46,15 @@
       height: calc(100vh - 180px);
     }
   }
+  }
+  
 }
 
 // 图表样式优化
 :global {
   .echarts-tooltip {
     background: rgba(255, 255, 255, 0.95) !important;
+    -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
     border: none !important;
     border-radius: 4px;

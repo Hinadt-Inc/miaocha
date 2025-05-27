@@ -367,6 +367,7 @@ const DataSourceManagementPage = () => {
       {contextHolder}
       <Card>
         <ProTable<DataSourceItem>
+          loading={loading.table || loading.submit || loading.test}
           className="table-container"
           bordered
           size="small"
