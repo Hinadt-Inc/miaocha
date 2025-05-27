@@ -51,6 +51,47 @@ export async function getSchema(datasourceId: string): Promise<SchemaResult> {
   return get<SchemaResult>(`/api/sql/schema/${datasourceId}`);
 }
 
+export interface QueryHistoryItem {
+  id: number;
+  userId: number;
+  userEmail: string;
+  datasourceId: number;
+  tableName: string;
+  sqlQuery: string;
+  hasResultFile: boolean;
+  downloadUrl: string;
+  createTime: string;
+}
+
+export interface QueryHistoryResult {
+  pageNum: number;
+  pageSize: number;
+  total: number;
+  pages: number;
+  records: QueryHistoryItem[];
+}
+
+/**
+ * 查询SQL执行历史
+ * @param params 查询参数
+ * @returns 历史记录列表
+ */
+export async function queryHistory(params: {
+  pageNum: number;
+  pageSize: number;
+  datasourceId?: number;
+  tableName?: string;
+  queryKeyword?: string;
+}): Promise<QueryHistoryResult> {
+  const query = new URLSearchParams();
+  query.append('pageNum', params.pageNum.toString());
+  query.append('pageSize', params.pageSize.toString());
+  if (params.datasourceId) query.append('datasourceId', params.datasourceId.toString());
+  if (params.tableName) query.append('tableName', params.tableName);
+  if (params.queryKeyword) query.append('queryKeyword', params.queryKeyword);
+  return get<QueryHistoryResult>(`/api/sql/history?${query.toString()}`);
+}
+
 /**
  * 下载查询结果
  * @param queryId 查询ID
@@ -59,6 +100,6 @@ export async function getSchema(datasourceId: string): Promise<SchemaResult> {
 export async function downloadResult(queryId: string): Promise<Blob> {
   return request<Blob>({
     url: `/api/sql/result/${queryId}`,
-    responseType: 'blob'
+    responseType: 'blob',
   });
 }

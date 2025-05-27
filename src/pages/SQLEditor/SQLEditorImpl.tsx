@@ -63,7 +63,17 @@ const SQLEditorImpl: React.FC = () => {
 
   const { settings: editorSettings, saveSettings } = useEditorSettings();
 
-  const { history: queryHistory, addHistory, clearHistory, clearAllHistory } = useQueryHistory(selectedSource);
+  const {
+    history: queryHistory,
+    loading: loadingHistory,
+    pagination,
+    filters,
+    loadHistory,
+    handlePaginationChange,
+    handleFilterChange,
+    clearHistory,
+    clearAllHistory,
+  } = useQueryHistory(selectedSource);
 
   // 本地UI状态
   const [activeTab, setActiveTab] = useState<string>('results');
@@ -125,9 +135,7 @@ const SQLEditorImpl: React.FC = () => {
       setActiveTab('results');
       executeQueryOriginal()
         .then((results: QueryResult) => {
-          // 添加到查询历史记录
-          addHistory(sqlQuery, 'success');
-
+          // 后端会自动记录成功查询历史
           if (results?.rows?.length && results?.columns) {
             setXField(results.columns[0]);
             const numericColumn = results.columns.find((col: string) => {
@@ -138,12 +146,11 @@ const SQLEditorImpl: React.FC = () => {
           }
         })
         .catch((error: Error) => {
-          // 添加失败的查询到历史记录
-          addHistory(sqlQuery, 'error', error.message);
           console.error('执行查询失败:', error);
+          message.error(`执行查询失败: ${error.message}`);
         });
     }, 300),
-    [executeQueryOriginal, selectedSource, sqlQuery, setActiveTab, setXField, setYField, addHistory],
+    [executeQueryOriginal, selectedSource, sqlQuery, setActiveTab, setXField, setYField],
   );
 
   // 初始化
@@ -669,7 +676,8 @@ const SQLEditorImpl: React.FC = () => {
         copyToClipboard={copyToClipboard}
         clearHistory={clearHistory}
         clearAllHistory={clearAllHistory}
-        fullscreen={fullscreen}
+        pagination={pagination}
+        onPaginationChange={handlePaginationChange}
       />
 
       <SettingsDrawer
