@@ -450,6 +450,15 @@ function LogstashManagementPage() {
           <Breadcrumb.Item>Logstash管理</Breadcrumb.Item>
         </Breadcrumb>
         <div className="actions">
+          <Button
+            type="default"
+            icon={<SyncOutlined />}
+            onClick={fetchData}
+            loading={loading}
+            style={{ marginRight: 8 }}
+          >
+            刷新
+          </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
             新增Logstash进程
           </Button>
