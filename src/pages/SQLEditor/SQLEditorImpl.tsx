@@ -63,17 +63,7 @@ const SQLEditorImpl: React.FC = () => {
 
   const { settings: editorSettings, saveSettings } = useEditorSettings();
 
-  const {
-    history: queryHistory,
-    loading: loadingHistory,
-    pagination,
-    filters,
-    loadHistory,
-    handlePaginationChange,
-    handleFilterChange,
-    clearHistory,
-    clearAllHistory,
-  } = useQueryHistory(selectedSource);
+  const { history: queryHistory, pagination, handlePaginationChange } = useQueryHistory(selectedSource);
 
   // 本地UI状态
   const [activeTab, setActiveTab] = useState<string>('results');
@@ -104,9 +94,6 @@ const SQLEditorImpl: React.FC = () => {
       window.removeEventListener('resize', calculateHeight);
     };
   }, []);
-
-  // 添加编辑器收起状态
-  const [editorCollapsed, setEditorCollapsed] = useState(false);
 
   // 添加侧边栏收起状态
   const [siderCollapsed, setSiderCollapsed] = useState(false);
@@ -517,11 +504,6 @@ const SQLEditorImpl: React.FC = () => {
     setChartType(type as ChartType);
   };
 
-  // 处理编辑器收起状态改变
-  const handleEditorCollapsedChange = (collapsed: boolean) => {
-    setEditorCollapsed(collapsed);
-  };
-
   // 添加侧边栏折叠切换函数
   const toggleSider = useCallback(() => {
     setSiderCollapsed((prev) => !prev);
@@ -600,7 +582,6 @@ const SQLEditorImpl: React.FC = () => {
                     onChange={(value) => setSqlQuery(value ?? '')}
                     onEditorMount={handleEditorDidMount}
                     editorSettings={editorSettings}
-                    collapsed={editorCollapsed}
                     height={editorHeight}
                   />
                 </Card>
@@ -674,8 +655,6 @@ const SQLEditorImpl: React.FC = () => {
         queryHistory={queryHistory}
         loadFromHistory={loadFromHistory}
         copyToClipboard={copyToClipboard}
-        clearHistory={clearHistory}
-        clearAllHistory={clearAllHistory}
         pagination={pagination}
         onPaginationChange={handlePaginationChange}
       />

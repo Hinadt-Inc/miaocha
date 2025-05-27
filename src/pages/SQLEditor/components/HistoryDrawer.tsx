@@ -1,5 +1,5 @@
-import { Drawer, Space, Tag, Empty, Badge, Button, Typography, Alert, Popconfirm, Pagination } from 'antd';
-import { ClockCircleOutlined, CopyOutlined, HistoryOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Drawer, Space, Tag, Empty, Badge, Button, Typography, Pagination } from 'antd';
+import { ClockCircleOutlined, CopyOutlined, HistoryOutlined } from '@ant-design/icons';
 import VirtualList from 'rc-virtual-list';
 import type { QueryHistoryItem } from '@/api/sql';
 import './HistoryDrawer.less';
@@ -12,8 +12,6 @@ interface HistoryDrawerProps {
   queryHistory: QueryHistoryItem[];
   loadFromHistory: (historySql: string) => void;
   copyToClipboard: (text: string) => void;
-  clearHistory: () => void;
-  clearAllHistory?: () => void;
   pagination?: {
     pageNum: number;
     pageSize: number;
@@ -28,8 +26,6 @@ const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
   queryHistory,
   loadFromHistory,
   copyToClipboard,
-  clearHistory,
-  clearAllHistory,
   pagination,
   onPaginationChange,
 }) => {
@@ -40,37 +36,6 @@ const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
           <HistoryOutlined />
           <span>查询历史</span>
           <Tag color="blue">{pagination?.total || 0} 条记录</Tag>
-          <Space>
-            <Popconfirm
-              title="确定要清除当前数据源的历史记录吗？"
-              okText="确定"
-              cancelText="取消"
-              onConfirm={(e) => {
-                e?.stopPropagation();
-                clearHistory();
-              }}
-            >
-              <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={(e) => e.stopPropagation()}>
-                清除当前历史
-              </Button>
-            </Popconfirm>
-
-            {clearAllHistory && (
-              <Popconfirm
-                title="确定要清除所有数据源的历史记录吗？此操作不可恢复！"
-                okText="确定"
-                cancelText="取消"
-                onConfirm={(e) => {
-                  e?.stopPropagation();
-                  clearAllHistory();
-                }}
-              >
-                <Button type="text" danger size="small" onClick={(e) => e.stopPropagation()}>
-                  清除所有历史
-                </Button>
-              </Popconfirm>
-            )}
-          </Space>
         </Space>
       }
       width={800}
