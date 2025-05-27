@@ -165,14 +165,8 @@ public class SqlQueryServiceImpl implements SqlQueryService {
         // 如果需要导出结果
         if (dto.getExportResult() && result.getRows() != null && !result.getRows().isEmpty()) {
             try {
-                // 在测试中同步执行导出，在生产中异步执行
-                if (sqlQueryExecutor == null) {
-                    // 同步执行导出 (测试环境)
-                    doExportResult(result, dto, history);
-                } else {
-                    // 异步执行导出 (生产环境)
-                    exportResultAsync(result, dto, history);
-                }
+                // 统一同步执行导出
+                doExportResult(result, dto, history);
             } catch (Exception e) {
                 if (e instanceof BusinessException) {
                     throw (BusinessException) e;
@@ -282,48 +276,6 @@ public class SqlQueryServiceImpl implements SqlQueryService {
         }
     }
 
-    /** 异步导出查询结果 */
-    private void exportResultAsync(
-            SqlQueryResultDTO result, SqlQueryDTO dto, SqlQueryHistory history) {
-        String exportFormat = dto.getExportFormat();
-        if (StringUtils.isBlank(exportFormat)) {
-            exportFormat = "xlsx"; // 默认为Excel格式
-        }
-
-        final String finalExportFormat = exportFormat;
-        final String fileName = history.getId() + "." + exportFormat;
-        final String filePath = buildExportFilePath(fileName);
-
-        // 使用线程池异步执行导出操作
-        CompletableFuture.runAsync(
-                () -> {
-                    try {
-                        logger.debug("开始导出SQL查询结果: {}", filePath);
-                        // 获取对应格式的导出器
-                        FileExporter exporter = exporterFactory.getExporter(finalExportFormat);
-                        if (exporter == null) {
-                            throw new BusinessException(
-                                    ErrorCode.EXPORT_FAILED, "不支持的导出格式: " + finalExportFormat);
-                        }
-
-                        // 导出到文件
-                        exporter.exportToFile(result, filePath);
-
-                        // 更新SQL查询历史中的结果文件路径
-                        history.setResultFilePath(filePath);
-                        sqlQueryHistoryMapper.update(history);
-
-                        // 设置下载链接
-                        result.setDownloadUrl("/api/sql/result/" + history.getId());
-                        logger.info("SQL查询结果导出完成: {}", filePath);
-                    } catch (Exception e) {
-                        logger.error("SQL查询结果导出失败", e);
-                        // 导出失败但不影响主流程，只记录日志
-                    }
-                },
-                getExecutor());
-    }
-
     @Override
     public SchemaInfoDTO getSchemaInfo(Long userId, Long datasourceId) {
         // 获取数据源
@@ -342,40 +294,12 @@ public class SqlQueryServiceImpl implements SqlQueryService {
         schemaInfo.setDatabaseName(datasourceInfo.getDatabase());
 
         try {
-            // 为了单元测试的兼容性，检查是否在测试环境中
-            if (sqlQueryExecutor == null) {
-                // 测试环境，同步执行
-                return getSchemaInfoSync(user, userId, datasourceInfo, schemaInfo);
-            }
-
-            // 生产环境，使用CompletableFuture异步获取Schema信息
-            return CompletableFuture.supplyAsync(
-                            () -> getSchemaInfoSync(user, userId, datasourceInfo, schemaInfo),
-                            getExecutor())
-                    .exceptionally(
-                            throwable -> {
-                                logger.error("获取Schema信息失败", throwable);
-                                if (throwable instanceof CompletionException
-                                        && throwable.getCause() != null) {
-                                    throwable = throwable.getCause();
-                                }
-                                if (throwable instanceof BusinessException) {
-                                    throw (BusinessException) throwable;
-                                }
-                                throw new BusinessException(
-                                        ErrorCode.INTERNAL_ERROR,
-                                        "获取数据库结构失败: " + throwable.getMessage());
-                            })
-                    .join();
-        } catch (CompletionException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof BusinessException) {
-                throw (BusinessException) cause;
-            }
-            throw new BusinessException(
-                    ErrorCode.INTERNAL_ERROR,
-                    "获取数据库结构失败: " + (cause != null ? cause.getMessage() : e.getMessage()));
+            // 统一同步执行
+            return getSchemaInfoSync(user, userId, datasourceInfo, schemaInfo);
         } catch (Exception e) {
+            if (e instanceof BusinessException) {
+                throw (BusinessException) e;
+            }
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "获取数据库结构失败: " + e.getMessage());
         }
     }
