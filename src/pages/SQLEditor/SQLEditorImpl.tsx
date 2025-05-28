@@ -176,7 +176,12 @@ const SQLEditorImpl: React.FC = () => {
     }
 
     try {
-      downloadAsCSV(queryResults.rows, queryResults.columns);
+      if (!selectedSource || !sqlQuery) {
+        message.warning('缺少必要参数');
+        return;
+      }
+
+      downloadAsCSV(selectedSource, sqlQuery, 'csv');
       message.success('下载已开始');
     } catch (error) {
       console.error('下载失败:', error);

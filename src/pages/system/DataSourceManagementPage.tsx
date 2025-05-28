@@ -13,6 +13,7 @@ import { Button, message, Popconfirm, Breadcrumb, Card, Input, Space } from 'ant
 import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, HomeOutlined } from '@ant-design/icons';
 import type { ProColumns, ActionType, RequestData, ParamsType } from '@ant-design/pro-components';
 import type { SortOrder } from 'antd/lib/table/interface';
+import { Link } from 'react-router-dom';
 
 type DataSourceItem = DataSource;
 
@@ -375,8 +376,10 @@ const DataSourceManagementPage = () => {
           options={false}
           headerTitle={
             <Breadcrumb>
-              <Breadcrumb.Item href="/">
-                <HomeOutlined />
+              <Breadcrumb.Item>
+                <Link to="/">
+                  <HomeOutlined />
+                </Link>
               </Breadcrumb.Item>
               <Breadcrumb.Item>数据源管理</Breadcrumb.Item>
             </Breadcrumb>

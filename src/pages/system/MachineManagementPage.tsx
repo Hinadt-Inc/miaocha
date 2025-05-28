@@ -4,7 +4,7 @@ import type { Machine, CreateMachineParams } from '../../types/machineTypes';
 import { SimpleTable } from '../../components/common/SimpleTable';
 import type { TableColumnsType } from 'antd';
 import { Breadcrumb, Button, Form, Input, InputNumber, Modal, message } from 'antd';
-import { EditOutlined, DeleteOutlined, ThunderboltOutlined, PlusOutlined } from '@ant-design/icons';
+import { EditOutlined, DeleteOutlined, ThunderboltOutlined, PlusOutlined, HomeOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import dayjs from 'dayjs';
 import './MachineManagementPage.less';
@@ -164,7 +164,7 @@ const MachineManagementPage = () => {
               {
                 title: (
                   <Link to="/">
-                    <span>首页</span>
+                    <HomeOutlined />
                   </Link>
                 ),
               },

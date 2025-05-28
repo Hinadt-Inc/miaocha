@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Collapse, Cascader, Spin } from 'antd';
 import { useRequest } from 'ahooks';
 import * as api from '@/api/logs';

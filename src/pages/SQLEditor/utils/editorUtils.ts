@@ -1,6 +1,7 @@
 import { message } from 'antd';
 import * as monaco from 'monaco-editor';
 import dayjs from 'dayjs';
+import { executeSQL, downloadSqlResult } from '@/api/sql';
 
 export type CSVRowData = Record<string, string | number | boolean | null | undefined | object>;
 
@@ -88,13 +89,25 @@ export const copyToClipboard = (text: string) => {
 
 /**
  * 下载查询结果
- * @param content 要下载的内容
+ * @param content 要下载的内容(字符串或Blob对象)
  * @param fileName 文件名
- * @param type MIME类型
+ * @param type MIME类型(仅当content为字符串时使用)
  */
-export const downloadResults = (content: string, fileName: string, type = 'text/csv;charset=utf-8;') => {
-  const blob = new Blob([content], { type });
+export const downloadResults = async (
+  content: string | ArrayBuffer | Blob,
+  fileName: string,
+  type = 'text/csv;charset=utf-8;',
+) => {
+  let blob: Blob;
+  if (content instanceof Blob) {
+    blob = content;
+  } else if (content instanceof ArrayBuffer) {
+    blob = new Blob([content], { type });
+  } else {
+    blob = new Blob([content], { type });
+  }
   const url = URL.createObjectURL(blob);
+
   const link = document.createElement('a');
   link.href = url;
   link.download = fileName;
@@ -109,39 +122,48 @@ export const downloadResults = (content: string, fileName: string, type = 'text/
  * @param rows 查询结果行数据
  * @param columns 查询结果列名
  */
-export const downloadAsCSV = (rows: CSVRowData[], columns: (keyof CSVRowData)[]): void => {
-  // 构造 CSV 内容
-  const header = columns.join(',');
-  const csvRows = rows.map((row) => {
-    return columns
-      .map((col) => {
-        const value = row[col];
-        if (value === null || value === undefined) return '';
-        if (typeof value === 'string') return `"${value.replace(/"/g, '""')}"`;
-        if (typeof value === 'object') return `"${JSON.stringify(value).replace(/"/g, '""')}"`;
-        return String(value);
-      })
-      .join(',');
-  });
+export const downloadAsCSV = async (
+  datasourceId: string,
+  sqlQuery: string,
+  exportFormat: 'csv' | 'xlsx' = 'csv',
+  exportResult = true,
+): Promise<void> => {
+  try {
+    const response = await executeSQL({
+      datasourceId,
+      sql: sqlQuery,
+      exportFormat,
+      exportResult,
+    });
 
-  const csvContent = [header, ...csvRows].join('\n');
-
-  // 创建 Blob 对象
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-
-  // 创建下载链接
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.setAttribute('download', `query_results_${dayjs().format('YYYYMMDD_HHmmss')}.csv`);
-  document.body.appendChild(link);
-
-  // 触发下载
-  link.click();
-
-  // 清理
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+    if (response.downloadUrl) {
+      const res = await downloadSqlResult(response.downloadUrl);
+      const result = res.data;
+      console.log('下载结果:', result, result instanceof Blob);
+      if (exportFormat === 'csv') {
+        const arrayBuffer = result instanceof Blob ? await result.arrayBuffer() : result;
+        const csvContent = new TextDecoder().decode(arrayBuffer);
+        await downloadResults(csvContent, `query_result_${dayjs().format('YYYYMMDD_HHmmss')}.csv`);
+      } else if (exportFormat === 'xlsx') {
+        const fileName = `query_result_${dayjs().format('YYYYMMDD_HHmmss')}.xlsx`;
+        if (result instanceof Blob) {
+          // 直接使用返回的Blob，不要再次封装
+          await downloadResults(result, fileName, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        } else {
+          // 如果不是Blob，是ArrayBuffer，则需要创建新的Blob
+          await downloadResults(
+            new Blob([result]),
+            fileName,
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          );
+        }
+      }
+    }
+  } catch (error) {
+    console.error('导出失败:', error);
+    message.error('导出失败');
+    throw error;
+  }
 };
 
 /**

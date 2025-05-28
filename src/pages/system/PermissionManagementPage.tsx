@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, Table, Button, Space, Input, Select, Breadcrumb, Modal } from 'antd';
 import { App } from 'antd';
 import { getUsers } from '../../api/user';
@@ -385,7 +385,7 @@ const PermissionManagementPage = () => {
         {GrantModal}
         <Breadcrumb>
           <Breadcrumb.Item>
-            <Link to="/home">
+            <Link to="/">
               <HomeOutlined />
             </Link>
           </Breadcrumb.Item>
