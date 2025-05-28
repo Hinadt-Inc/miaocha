@@ -12,6 +12,37 @@
       overflow: hidden;
     }
   }
+  .resizeHandle {
+    position: absolute;
+    top: 0;
+    right: -2px;
+    width: 4px;
+    height: 100%;
+    cursor: col-resize;
+    background-color: transparent;
+    transition: all 0.3s;
+    z-index: 1;
+
+    &:hover {
+      background-color: rgba(24, 144, 255, 0.1);
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 1px;
+      height: 20px;
+      background-color: #e8e8e8;
+      transform: translate(-50%, -50%);
+      transition: background-color 0.3s;
+    }
+
+    &:hover::after {
+      background-color: #1890ff;
+    }
+  }
   .source {
     display: inline-block;
     margin: 0;
