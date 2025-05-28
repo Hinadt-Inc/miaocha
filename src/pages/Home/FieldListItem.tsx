@@ -133,10 +133,20 @@ const FieldListItem: React.FC<IProps> = ({ isSelected, column, columnIndex, fiel
                           </Typography.Paragraph>
                         </div>
                         <div className={styles.right}>
-                          <Button color="primary" variant="link" onClick={() => query('=', column, sub)}>
+                          <Button
+                            disabled={searchParams?.whereSqls?.includes(`${column.columnName} = '${sub.value}'`)}
+                            color="primary"
+                            variant="link"
+                            onClick={() => query('=', column, sub)}
+                          >
                             <i className="iconfont icon-fangda"></i>
                           </Button>
-                          <Button color="primary" variant="link" onClick={() => query('!=', column, sub)}>
+                          <Button
+                            disabled={searchParams?.whereSqls?.includes(`${column.columnName} != '${sub.value}'`)}
+                            color="primary"
+                            variant="link"
+                            onClick={() => query('!=', column, sub)}
+                          >
                             <i className="iconfont icon-suoxiao1"></i>
                           </Button>
                         </div>
