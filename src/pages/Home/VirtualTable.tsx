@@ -13,74 +13,136 @@ interface IProps {
   dynamicColumns?: ILogColumnsResponse[]; // 动态列配置
 }
 
+const ResizableTitle = (props: any) => {
+  const { onResize, width, ...restProps } = props;
+
+  if (!width) {
+    return <th {...restProps} />;
+  }
+
+  return (
+    <th {...restProps} style={{ width, position: 'relative' }}>
+      {restProps.children}
+      <div
+        className={styles.resizeHandle}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const startX = e.pageX;
+          const startWidth = width;
+
+          const handleMouseMove = (e: MouseEvent) => {
+            const newWidth = startWidth + (e.pageX - startX);
+            if (newWidth >= 50 && newWidth <= 500) {
+              onResize(newWidth);
+            }
+          };
+
+          const handleMouseUp = () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+          };
+
+          document.addEventListener('mousemove', handleMouseMove);
+          document.addEventListener('mouseup', handleMouseUp);
+        }}
+      />
+    </th>
+  );
+};
+
 const VirtualTable = (props: IProps) => {
   const { data, loading = false, onLoadMore, hasMore = false, dynamicColumns, searchParams } = props;
-  const containerRef = useRef<HTMLDivElement>(null); // 滚动容器的ref
-  const tblRef: Parameters<typeof Table>[0]['ref'] = useRef(null); // 表格的ref
-  const [containerHeight, setContainerHeight] = useState<number>(0); // 容器高度
-  const [headerHeight, setHeaderHeight] = useState<number>(0); // 表头高度
-  const getColumns = useMemo(() => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const tblRef: Parameters<typeof Table>[0]['ref'] = useRef(null);
+  const [containerHeight, setContainerHeight] = useState<number>(0);
+  const [headerHeight, setHeaderHeight] = useState<number>(0);
+  const [columns, setColumns] = useState<any[]>([]);
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+
+  const handleResize = (index: number) => (width: number) => {
+    const column = columns[index];
+    if (!column?.dataIndex) return;
+
+    setColumnWidths((prev) => ({
+      ...prev,
+      [column.dataIndex]: width,
+    }));
+  };
+
+  const getBaseColumns = useMemo(() => {
     const otherColumns = dynamicColumns?.filter((item) => item.selected && item.columnName !== 'log_time');
     const _columns: any[] = [];
     if (otherColumns && otherColumns.length > 0) {
       otherColumns.forEach((item: ILogColumnsResponse) => {
-        const { columnName } = item;
+        const { columnName = '' } = item;
         _columns.push({
           title: columnName,
           dataIndex: columnName,
-          width: undefined,
+          width: columnWidths[columnName] ?? 150,
           render: (text: string) => highlightText(text, searchParams?.keywords || []),
         });
       });
     }
-    return _columns;
-  }, [dynamicColumns, searchParams.keywords]);
 
-  const columns = [
-    {
-      title: 'log_time',
-      dataIndex: 'log_time',
-      width: 190,
-      sorter: (a: any, b: any) => {
-        const dateA = new Date(a.log_time).getTime();
-        const dateB = new Date(b.log_time).getTime();
-        return dateA - dateB;
+    return [
+      {
+        title: 'log_time',
+        dataIndex: 'log_time',
+        width: columnWidths['log_time'] ?? 190,
+        sorter: (a: any, b: any) => {
+          const dateA = new Date(a.log_time).getTime();
+          const dateB = new Date(b.log_time).getTime();
+          return dateA - dateB;
+        },
+        render: (text: string) => text?.replace('T', ' '),
       },
-      render: (text: string) => text?.replace('T', ' '),
-    },
-    {
-      title: '_source',
-      dataIndex: '_source',
-      width: undefined,
-      ellipsis: false,
-      hidden: getColumns.length > 0,
-      render: (_: any, record: ILogColumnsResponse) => {
-        const { keywords = [] } = searchParams;
-        const highlight = (text: string) => highlightText(text, keywords);
-        return (
-          <dl className={styles.source}>
-            {Object.entries(record).map(([key, value]) => (
-              <Fragment key={key}>
-                <dt>{key}</dt>
-                <dd>{highlight(value)}</dd>
-              </Fragment>
-            ))}
-          </dl>
-        );
+      {
+        title: '_source',
+        dataIndex: '_source',
+        width: columnWidths['_source'] ?? 300,
+        ellipsis: false,
+        hidden: _columns.length > 0,
+        render: (_: any, record: ILogColumnsResponse) => {
+          const { keywords = [] } = searchParams;
+          const highlight = (text: string) => highlightText(text, keywords);
+          return (
+            <dl className={styles.source}>
+              {Object.entries(record).map(([key, value]) => (
+                <Fragment key={key}>
+                  <dt>{key}</dt>
+                  <dd>{highlight(value)}</dd>
+                </Fragment>
+              ))}
+            </dl>
+          );
+        },
       },
-    },
-    ...getColumns.map((column) => ({
-      ...column,
-      sorter: (a: any, b: any) => {
-        const valueA = a[column.dataIndex];
-        const valueB = b[column.dataIndex];
-        if (typeof valueA === 'string' && typeof valueB === 'string') {
-          return valueA.localeCompare(valueB);
-        }
-        return (valueA || '').toString().localeCompare((valueB || '').toString());
-      },
-    })),
-  ];
+      ..._columns.map((column) => ({
+        ...column,
+        sorter: (a: any, b: any) => {
+          const valueA = a[column.dataIndex];
+          const valueB = b[column.dataIndex];
+          if (typeof valueA === 'string' && typeof valueB === 'string') {
+            return valueA.localeCompare(valueB);
+          }
+          return (valueA || '').toString().localeCompare((valueB || '').toString());
+        },
+      })),
+    ];
+  }, [dynamicColumns, searchParams.keywords, columnWidths]);
+
+  useEffect(() => {
+    const resizableColumns = getBaseColumns.map((col, index) => ({
+      ...col,
+      onHeaderCell: (column: any) => ({
+        width: column.width,
+        onResize: handleResize(index),
+      }),
+    }));
+
+    setColumns(resizableColumns);
+  }, [getBaseColumns]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -156,6 +218,11 @@ const VirtualTable = (props: IProps) => {
         expandable={{
           columnWidth: 26,
           expandedRowRender: (record) => <ExpandedRow data={record} keywords={searchParams?.keywords || []} />,
+        }}
+        components={{
+          header: {
+            cell: ResizableTitle,
+          },
         }}
       />
     </div>
