@@ -123,8 +123,6 @@ export const downloadResults = async (
  * @param columns 查询结果列名
  */
 export const downloadAsCSV = async (
-  rows: CSVRowData[],
-  columns: (keyof CSVRowData)[],
   datasourceId: string,
   sqlQuery: string,
   exportFormat: 'csv' | 'xlsx' = 'csv',
@@ -139,19 +137,26 @@ export const downloadAsCSV = async (
     });
 
     if (response.downloadUrl) {
-      const result = await downloadSqlResult(response.downloadUrl);
+      const res = await downloadSqlResult(response.downloadUrl);
+      const result = res.data;
+      console.log('下载结果:', result, result instanceof Blob);
       if (exportFormat === 'csv') {
         const arrayBuffer = result instanceof Blob ? await result.arrayBuffer() : result;
         const csvContent = new TextDecoder().decode(arrayBuffer);
         await downloadResults(csvContent, `query_result_${dayjs().format('YYYYMMDD_HHmmss')}.csv`);
       } else if (exportFormat === 'xlsx') {
         const fileName = `query_result_${dayjs().format('YYYYMMDD_HHmmss')}.xlsx`;
-        const arrayBuffer = result instanceof Blob ? await result.arrayBuffer() : result;
-        await downloadResults(
-          new Blob([arrayBuffer]),
-          fileName,
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        );
+        if (result instanceof Blob) {
+          // 直接使用返回的Blob，不要再次封装
+          await downloadResults(result, fileName, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        } else {
+          // 如果不是Blob，是ArrayBuffer，则需要创建新的Blob
+          await downloadResults(
+            new Blob([result]),
+            fileName,
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          );
+        }
       }
     }
   } catch (error) {

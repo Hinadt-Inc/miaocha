@@ -181,7 +181,7 @@ const SQLEditorImpl: React.FC = () => {
         return;
       }
 
-      downloadAsCSV(queryResults.rows, queryResults.columns, selectedSource, sqlQuery, 'xlsx');
+      downloadAsCSV(selectedSource, sqlQuery, 'csv');
       message.success('下载已开始');
     } catch (error) {
       console.error('下载失败:', error);

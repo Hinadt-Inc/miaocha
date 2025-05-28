@@ -3,7 +3,7 @@ import { App as AntdApp } from 'antd';
 import { ProLayout } from '@ant-design/pro-components';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import Profile from '@/components/Profile';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import useErrorHandler from './hooks/useErrorHandler';
 import useRoutePermission from './hooks/useRoutePermission';
 import useMenuState from './hooks/useMenuState';

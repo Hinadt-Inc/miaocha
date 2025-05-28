@@ -98,8 +98,8 @@ export async function queryHistory(params: {
  * @param queryId 查询ID
  * @returns 文件下载流
  */
-export async function downloadSqlResult(url: string): Promise<Blob> {
-  return request<Blob>({
+export async function downloadSqlResult(url: string): Promise<{ data: Blob }> {
+  return request<{ data: Blob }>({
     url,
     responseType: 'blob',
   });

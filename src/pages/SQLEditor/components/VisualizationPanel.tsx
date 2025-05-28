@@ -25,7 +25,6 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
   setXField,
   yField,
   setYField,
-  fullscreen,
 }) => {
   const chartRef = useRef<any>(null);
 
