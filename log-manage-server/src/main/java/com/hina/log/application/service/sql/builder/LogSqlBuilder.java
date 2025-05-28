@@ -32,7 +32,7 @@ public class LogSqlBuilder {
                 .append(" WHERE log_time >= '")
                 .append(dto.getStartTime())
                 .append("'")
-                .append(" AND log_time <= '")
+                .append(" AND log_time < '")
                 .append(dto.getEndTime())
                 .append("'");
 
@@ -61,7 +61,7 @@ public class LogSqlBuilder {
                 .append(" WHERE log_time >= '")
                 .append(dto.getStartTime())
                 .append("'")
-                .append(" AND log_time <= '")
+                .append(" AND log_time < '")
                 .append(dto.getEndTime())
                 .append("'");
 
@@ -102,7 +102,7 @@ public class LogSqlBuilder {
                 .append(" WHERE log_time >= '")
                 .append(dto.getStartTime())
                 .append("'")
-                .append(" AND log_time <= '")
+                .append(" AND log_time < '")
                 .append(dto.getEndTime())
                 .append("'");
 
