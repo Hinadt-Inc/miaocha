@@ -1,8 +1,7 @@
-import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { EChartsOption } from 'echarts';
 import { Empty, message } from 'antd';
-import { debounce } from 'lodash';
 import dayjs from 'dayjs';
 import { colorPrimary, isOverOneDay } from '@/utils/utils';
 import { getTimeRangeCategory, DATE_FORMAT } from './utils';
