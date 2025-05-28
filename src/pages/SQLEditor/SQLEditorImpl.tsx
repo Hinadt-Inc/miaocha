@@ -521,7 +521,7 @@ const SQLEditorImpl: React.FC = () => {
 
   return (
     <>
-      <Layout style={{ height: '100vh', padding: '10px', background: '#F6F8F9 !important' }}>
+      <Layout style={{ height: '100vh', padding: '10px' }}>
         <Sider
           width={siderWidth}
           theme="light"
