@@ -117,10 +117,29 @@ const SQLEditorImpl: React.FC = () => {
         return;
       }
 
-      if (!validateSQL(sqlQuery)) return;
+      // 强制使用选中文本或全部内容
+      let queryToExecute = sqlQuery;
+      if (editorRef.current) {
+        const selection = editorRef.current.getSelection();
+        const model = editorRef.current.getModel();
+        if (model) {
+          queryToExecute = selection && !selection.isEmpty() ? model.getValueInRange(selection) : model.getValue();
+        }
+      }
+
+      // 验证SQL并确保是完整语句
+      if (!validateSQL(queryToExecute)) return;
+      if (queryToExecute.trim().endsWith(';') === false) {
+        queryToExecute = queryToExecute + ';';
+      }
 
       setActiveTab('results');
-      executeQueryOriginal()
+      executeQueryOriginal({
+        datasourceId: selectedSource,
+        sql: queryToExecute,
+        selectedText: queryToExecute,
+        editor: editorRef.current,
+      })
         .then((results: QueryResult) => {
           // 后端会自动记录成功查询历史
           if (results?.rows?.length && results?.columns) {
