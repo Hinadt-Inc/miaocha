@@ -75,8 +75,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   };
   // 显示关键字、sql、时间的标签
   const filterRender = useMemo(() => {
-    console.log('【打印日志】,timeOption =======>', timeOption);
-
     // 快速选择
     //   {
     //     "value": "last_24h",
