@@ -20,6 +20,9 @@ public class LogHistogramResultDTO {
     @Schema(description = "日志时间分布数据，用于生成时间分布图")
     private List<LogDistributionData> distributionData;
 
+    @Schema(description = "时间点分组单位timeUnit", example = "second,minute,hour,day")
+    private String timeUnit;
+
     /** 日志时间分布数据 */
     @Data
     @Schema(description = "日志时间分布数据")

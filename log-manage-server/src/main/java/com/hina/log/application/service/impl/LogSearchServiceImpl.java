@@ -216,6 +216,7 @@ public class LogSearchServiceImpl implements LogSearchService {
 
         long endTime = System.currentTimeMillis();
         result.setExecutionTimeMs(endTime - startTime);
+        result.setTimeUnit(timeUnit);
 
         return result;
     }
