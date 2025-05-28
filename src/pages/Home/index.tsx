@@ -114,6 +114,25 @@ const HomePage = () => {
     onChangeSql: (sql: string) => (searchBarRef?.current as any)?.renderSql?.(sql),
   };
 
+  const onSearchFromLog = (params: ILogSearchParams) => {
+    // 绝对时间
+    //   {
+    //     "label": "2025-05-06 00:07:00 ~ 2025-05-23 05:04:26",
+    //     "value": "2025-05-06 00:07:00 ~ 2025-05-23 05:04:26",
+    //     "range": [
+    //         "2025-05-06 00:07:00",
+    //         "2025-05-23 05:04:26"
+    //     ]
+    // }
+    const { startTime, endTime } = params;
+    const timeOption = {
+      label: `${startTime} ~ ${endTime}`,
+      value: `${startTime} ~ ${endTime}`,
+      range: [startTime, endTime],
+    };
+    (searchBarRef?.current as any)?.setTimeOption(timeOption);
+  };
+
   // 优化log组件的props
   const logProps: any = useMemo(
     () => ({
@@ -123,17 +142,9 @@ const HomePage = () => {
       getDetailData,
       searchParams,
       dynamicColumns: logTableColumns,
-      onSearch: setSearchParams,
+      onSearch: onSearchFromLog,
     }),
-    [
-      histogramData,
-      getHistogramData.loading,
-      detailData,
-      getDetailData,
-      logTableColumns,
-      searchParams,
-      setSearchParams,
-    ],
+    [histogramData, getHistogramData.loading, detailData, getDetailData, logTableColumns, searchParams],
   );
 
   // 搜索栏组件props
@@ -142,7 +153,7 @@ const HomePage = () => {
       searchParams,
       totalCount: detailData?.totalCount,
       loading: getDetailData?.loading || getHistogramData.loading,
-      onSubmit: setSearchParams,
+      onSearch: setSearchParams,
     }),
     [searchParams, detailData?.totalCount, getDetailData?.loading, getHistogramData.loading, setSearchParams],
   );
