@@ -57,7 +57,6 @@ const TimePicker = (props: IProps) => {
       setAbsoluteOption({} as any);
     }
   };
-  console.log('【打印日志】,activeTab =======>', activeTab);
   return (
     <div className={styles.timePickerLayout}>
       <Tabs

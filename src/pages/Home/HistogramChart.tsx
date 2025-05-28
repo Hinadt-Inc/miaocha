@@ -7,13 +7,14 @@ import { colorPrimary, isOverOneDay } from '@/utils/utils';
 import { getTimeRangeCategory, DATE_FORMAT } from './utils';
 
 interface IProps {
-  data: ILogHistogramData[]; // 直方图数据
+  data: ILogHistogramData; // 直方图数据
   searchParams: ILogSearchParams; // 搜索参数
   onSearch: (params: ILogSearchParams) => void; // 搜索回调函数
 }
 
 const HistogramChart = (props: IProps) => {
   const { data, searchParams, onSearch } = props;
+  const { distributionData, timeUnit } = data || {};
   const [dataZoom, setDataZoom] = useState<number[]>([0, 100]);
   const [messageApi, contextHolder] = message.useMessage();
   const { timeGrouping = 'auto', startTime = '', endTime = '' } = searchParams;
@@ -24,7 +25,7 @@ const HistogramChart = (props: IProps) => {
     // 转换为数组
     const labels: string[] = [];
     const values: number[] = [];
-    data?.forEach((item: any) => {
+    distributionData?.forEach((item: any) => {
       labels.push(item.timePoint?.replace('T', ' '));
       values.push(item.count);
     });
@@ -33,7 +34,7 @@ const HistogramChart = (props: IProps) => {
       values,
       labels,
     };
-  }, [data]);
+  }, [distributionData]);
 
   // 构建图表选项
   const option = useMemo<EChartsOption>(
@@ -198,32 +199,26 @@ const HistogramChart = (props: IProps) => {
         },
       ],
     }),
-    [data, dataZoom],
+    [distributionData, dataZoom],
   );
 
   // 如果没有数据或显示标志为false，则不显示图表
-  if (!data || data?.length === 0) {
+  if (!distributionData || distributionData?.length === 0) {
     return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />;
   }
 
   // 处理图表点击事件
   const handleChartClick = (params: any) => {
-    if (params.componentType === 'series') {
+    console.log('【打印日志】,params =======>', params);
+    console.log('【打印日志】,timeUnit =======>', timeUnit);
+    if (params.componentType === 'series' && timeUnit) {
       const { name } = params;
-      const data = getTimeRangeCategory([startTime, endTime]);
-      console.log('【打印日志】,data =======>', data);
-      const timeConfig = data.value as ITimeIntervalConfig;
-      const intervalConfig = timeConfig[timeGrouping as keyof ITimeIntervalConfig] as IIntervalConfig;
-      if (!intervalConfig) {
-        messageApi.warning('已达最小粒度，请切换时间分组');
-        return;
-      }
-      const { interval, unit } = intervalConfig;
-
       const newParams = {
         ...searchParams,
         startTime: dayjs(name).format(DATE_FORMAT),
-        endTime: dayjs(name).add(interval, unit).format(DATE_FORMAT),
+        endTime: dayjs(name)
+          .add(1, timeUnit as any)
+          .format(DATE_FORMAT),
         offset: 0,
       };
       delete newParams.timeRange;
@@ -239,7 +234,7 @@ const HistogramChart = (props: IProps) => {
         onEvents={{
           click: handleChartClick,
           brushEnd: (params: { areas: Array<{ coordRange: [number, number] }> }) => {
-            if (params.areas && params.areas.length > 0) {
+            if (params.areas && params.areas.length > 0 && timeUnit) {
               const [start, end] = params.areas[0].coordRange;
               const startTime = aggregatedData.labels[start];
               const endTime = aggregatedData.labels[end];
@@ -247,7 +242,9 @@ const HistogramChart = (props: IProps) => {
               const newParams = {
                 ...searchParams,
                 startTime: dayjs(startTime).format(DATE_FORMAT),
-                endTime: dayjs(endTime).format(DATE_FORMAT),
+                endTime: dayjs(endTime)
+                  .add(1, timeUnit as any)
+                  .format(DATE_FORMAT),
                 offset: 0,
               };
               delete newParams.timeRange;

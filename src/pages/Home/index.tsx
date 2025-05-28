@@ -12,7 +12,7 @@ const HomePage = () => {
   const [moduleOptions, setModuleOptions] = useState<IStatus[]>([]); // 模块名称列表，用于字段选择等组件
   const [detailData, setDetailData] = useState<ILogDetailsResponse | null>(null); // 日志数据
   const [logTableColumns, setLogTableColumns] = useState<ILogColumnsResponse[]>([]); // 日志字段列表
-  const [histogramData, setHistogramData] = useState<ILogHistogramData[] | null>(null); // 日志时间分布列表
+  const [histogramData, setHistogramData] = useState<ILogHistogramData | null>(null); // 日志时间分布列表
   const searchBarRef = useRef<HTMLDivElement>(null);
 
   // 默认的搜索参数
@@ -83,7 +83,7 @@ const HomePage = () => {
   const getHistogramData = useRequest(api.fetchLogHistogram, {
     manual: true,
     onSuccess: (res) => {
-      setHistogramData(res?.distributionData || []);
+      setHistogramData(res);
     },
     onError: () => {
       setHistogramData(null);

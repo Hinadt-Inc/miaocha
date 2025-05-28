@@ -108,9 +108,14 @@ declare global {
     totalCount: number; // 日志总数
   }
 
-  interface ILogHistogramData {
+  interface ILogHistogram {
     timePoint: string; // 时间
     count: number; // 数量
+  }
+
+  interface ILogHistogramData {
+    distributionData: ILogHistogram[];
+    timeUnit: string; // 时间单位
   }
 
   interface ILogHistogramResponse {
