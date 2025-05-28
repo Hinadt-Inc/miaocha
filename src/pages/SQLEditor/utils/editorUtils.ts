@@ -320,3 +320,115 @@ export const saveToLocalStorage = <T>(key: string, data: T[], maxCount: number) 
     console.error('保存到本地存储失败:', error);
   }
 };
+
+/**
+ * 检查是否为完整的SQL语句
+ * @param sql SQL语句
+ * @returns 是否是完整语句
+ */
+export const isCompleteSQLStatement = (sql: string): boolean => {
+  const trimmed = sql.trim();
+  // 简单检查：以分号结尾或包含完整SELECT/FROM结构
+  return (
+    trimmed.endsWith(';') ||
+    (/SELECT\s+.+\s+FROM\s+.+/i.test(trimmed) && !/SELECT\s+.+\s+FROM\s+.+\s+WHERE\s*$/i.test(trimmed))
+  );
+};
+
+/**
+ * 从编辑器中提取选中的SQL语句
+ * @param editor Monaco编辑器实例
+ * @returns 选中的SQL语句或当前光标所在语句
+ */
+export const getSelectedSQL = (editor: monaco.editor.IStandaloneCodeEditor): string => {
+  const model = editor.getModel();
+  if (!model) return '';
+
+  // 获取选中文本
+  const selection = editor.getSelection();
+  if (selection && !selection.isEmpty()) {
+    return model.getValueInRange(selection);
+  }
+
+  // 如果没有选中文本，获取当前光标所在语句
+  const position = editor.getPosition();
+  if (!position) return '';
+
+  const text = model.getValue();
+  const cursorOffset = model.getOffsetAt(position);
+
+  // 查找语句开始位置(前一个分号或开头)
+  let startPos = 0;
+  for (let i = cursorOffset - 1; i >= 0; i--) {
+    if (text[i] === ';') {
+      startPos = i + 1;
+      break;
+    }
+  }
+
+  // 查找语句结束位置(后一个分号或结尾)
+  let endPos = text.length;
+  for (let i = cursorOffset; i < text.length; i++) {
+    if (text[i] === ';') {
+      endPos = i;
+      break;
+    }
+  }
+
+  return text.substring(startPos, endPos).trim();
+};
+
+/**
+ * 从编辑器中提取选中的SQL语句或光标所在语句，支持多条SQL语句中提取单条
+ * @param editor Monaco编辑器实例
+ * @returns 选中的SQL语句或当前光标所在完整语句
+ */
+export const getSelectedSQLStatement = (editor: monaco.editor.IStandaloneCodeEditor): string => {
+  const model = editor.getModel();
+  if (!model) return '';
+
+  // 获取选中文本
+  const selection = editor.getSelection();
+  if (selection && !selection.isEmpty()) {
+    const selectedText = model.getValueInRange(selection);
+
+    // 如果选中文本包含完整SQL语句(有分号或完整SELECT/FROM结构)，则直接返回
+    if (isCompleteSQLStatement(selectedText)) {
+      return selectedText;
+    }
+
+    // 否则在选中文本中查找完整语句
+    const text = model.getValue();
+    const startOffset = model.getOffsetAt({
+      lineNumber: selection.startLineNumber,
+      column: selection.startColumn,
+    });
+    const endOffset = model.getOffsetAt({
+      lineNumber: selection.endLineNumber,
+      column: selection.endColumn,
+    });
+
+    // 向前查找语句开始(前一个分号或开头)
+    let startPos = 0;
+    for (let i = startOffset - 1; i >= 0; i--) {
+      if (text[i] === ';') {
+        startPos = i + 1;
+        break;
+      }
+    }
+
+    // 向后查找语句结束(后一个分号或结尾)
+    let endPos = text.length;
+    for (let i = endOffset; i < text.length; i++) {
+      if (text[i] === ';') {
+        endPos = i;
+        break;
+      }
+    }
+
+    return text.substring(startPos, endPos).trim();
+  }
+
+  // 如果没有选中文本，使用原有逻辑获取当前光标所在语句
+  return getSelectedSQL(editor);
+};

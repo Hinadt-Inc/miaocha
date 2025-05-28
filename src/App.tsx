@@ -1,4 +1,3 @@
-// filepath: /Users/zhangyongjian/project/log-manage-web/src/App.tsx
 import { App as AntdApp } from 'antd';
 import { ProLayout } from '@ant-design/pro-components';
 import { Link, Outlet, useLocation } from 'react-router-dom';
