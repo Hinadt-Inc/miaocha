@@ -9,14 +9,13 @@ const Relative = lazy(() => import('./Relative'));
 const { RangePicker } = DatePicker;
 
 interface IProps {
+  activeTab: string; // 选中的选项卡
+  setActiveTab: any; // 设置选中的选项卡
   onSubmit: (params: ILogTimeSubmitParams) => void; // 提交时间
 }
 
 const TimePicker = (props: IProps) => {
-  const { onSubmit } = props;
-
-  // 选项卡值
-  const [activeTab, setActiveTab] = useState('quick');
+  const { activeTab, setActiveTab, onSubmit } = props;
   const [selectedTag, setSelectedTag] = useState<string>('last_15m'); // 选中的标签
   const [absoluteOption, setAbsoluteOption] = useState<ILogTimeSubmitParams>(); // 绝对时间
 
@@ -58,7 +57,7 @@ const TimePicker = (props: IProps) => {
       setAbsoluteOption({} as any);
     }
   };
-
+  console.log('【打印日志】,activeTab =======>', activeTab);
   return (
     <div className={styles.timePickerLayout}>
       <Tabs

@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { EChartsOption } from 'echarts';
 import { Empty, message } from 'antd';
+import { debounce } from 'lodash';
 import dayjs from 'dayjs';
 import { colorPrimary, isOverOneDay } from '@/utils/utils';
 import { getTimeRangeCategory, DATE_FORMAT } from './utils';
@@ -17,6 +18,7 @@ const HistogramChart = (props: IProps) => {
   const [dataZoom, setDataZoom] = useState<number[]>([0, 100]);
   const [messageApi, contextHolder] = message.useMessage();
   const { timeGrouping = 'auto', startTime = '', endTime = '' } = searchParams;
+  const chartRef = useRef<any>(null);
 
   // 根据timeGrouping聚合数据
   const aggregatedData = useMemo(() => {
@@ -37,74 +39,92 @@ const HistogramChart = (props: IProps) => {
   // 构建图表选项
   const option = useMemo<EChartsOption>(
     () => ({
-      dataZoom: [
-        {
-          type: 'inside', // 鼠标在坐标系范围内滚轮滚动
-          startValue: dataZoom[0],
-          endValue: dataZoom[100],
-        },
-        {
-          type: 'slider',
-          startValue: dataZoom[0],
-          endValue: dataZoom[100],
-          height: 14, // 组件高度
-          bottom: 7, // 组件离容器底部的距离
-          backgroundColor: '#f5f5f5', // 滑动条背景色
-          fillerColor: 'rgba(0, 56, 255, 0.1)', // 选中范围的填充颜色
-          handleStyle: {
-            color: colorPrimary, // 滑块手柄的颜色
-            borderColor: colorPrimary, // 滑块手柄的边框颜色
-          },
-          selectedDataBackground: {
-            lineStyle: {
-              color: colorPrimary, // 选中范围的线条颜色
-            },
-            areaStyle: {
-              color: colorPrimary, // 选中范围的填充颜色
-            },
-          },
-          // 修改滑动条背景文字（如果启用）
-          textStyle: {
-            fontSize: 9, // 某些版本可能不支持，需检查 ECharts 版本
-          },
-          labelFormatter: function (value) {
-            const timeStr = data[value].timePoint.replace('T', ' ');
-            // 将日期和时间用换行符分隔
-            return timeStr.replace(/\s/, '\n');
-          },
-        },
-      ],
+      // dataZoom: [
+      //   {
+      //     type: 'inside', // 鼠标在坐标系范围内滚轮滚动
+      //     startValue: dataZoom[0],
+      //     endValue: dataZoom[100],
+      //   },
+      //   {
+      //     type: 'slider',
+      //     startValue: dataZoom[0],
+      //     endValue: dataZoom[100],
+      //     height: 14, // 组件高度
+      //     bottom: 7, // 组件离容器底部的距离
+      //     backgroundColor: '#f5f5f5', // 滑动条背景色
+      //     fillerColor: 'rgba(0, 56, 255, 0.1)', // 选中范围的填充颜色
+      //     handleStyle: {
+      //       color: colorPrimary, // 滑块手柄的颜色
+      //       borderColor: colorPrimary, // 滑块手柄的边框颜色
+      //     },
+      //     selectedDataBackground: {
+      //       lineStyle: {
+      //         color: colorPrimary, // 选中范围的线条颜色
+      //       },
+      //       areaStyle: {
+      //         color: colorPrimary, // 选中范围的填充颜色
+      //       },
+      //     },
+      //     // 修改滑动条背景文字（如果启用）
+      //     textStyle: {
+      //       fontSize: 9, // 某些版本可能不支持，需检查 ECharts 版本
+      //     },
+      //     labelFormatter: function (value) {
+      //       const timeStr = data[value].timePoint.replace('T', ' ');
+      //       // 将日期和时间用换行符分隔
+      //       return timeStr.replace(/\s/, '\n');
+      //     },
+      //   },
+      // ],
       animation: false, // 禁用动画提升性能
       toolbox: {
         feature: {
-          dataZoom: {
-            yAxisIndex: false,
+          brush: {
+            type: ['lineX'],
+            title: {
+              lineX: '横向选择',
+            },
           },
           saveAsImage: {
             pixelRatio: 2,
           },
         },
+        right: 10,
+        top: 10,
+      },
+      brush: {
+        xAxisIndex: 0,
+        brushLink: 'all',
+        outOfBrush: {
+          colorAlpha: 0.1,
+        },
+        throttleType: 'debounce',
+        throttleDelay: 300,
+        removeOnClick: true,
+        z: 100,
+        brushMode: 'single',
+        transformable: false,
+        brushType: 'lineX',
       },
       // 提示框组件配置
       tooltip: {
         trigger: 'axis', // 触发类型，axis表示坐标轴触发
-        axisPointer: {
-          type: 'shadow',
-          shadowStyle: {
-            color: colorPrimary, // 可选：设置边框颜色
-            opacity: 0.2, // 可选：设置边框透明度
-          },
-        },
+        // axisPointer: {
+        //   type: 'shadow',
+        //   shadowStyle: {
+        //     color: colorPrimary, // 可选：设置边框颜色
+        //     opacity: 0.2, // 可选：设置边框透明度
+        //   },
+        // },
       },
       // 直角坐标系网格配置
       grid: {
         top: '5%', // 距离容器上边距
-        right: '4.5%', // 距离容器右边距
-        bottom: '14%', // 距离容器下边距，为时间轴留出空间
+        right: '2%', // 距离容器右边距
+        bottom: '0%', // 距离容器下边距，为时间轴留出空间
         left: '2%', // 距离容器左边距
         containLabel: true, // 是否包含坐标轴的标签
       },
-
       // X轴配置
       xAxis: {
         type: 'category', // 类目轴，适用于离散的类目数据
@@ -201,15 +221,6 @@ const HistogramChart = (props: IProps) => {
       }
       const { interval, unit } = intervalConfig;
 
-      // 绝对时间
-      //   {
-      //     "label": "2025-05-06 00:07:00 ~ 2025-05-23 05:04:26",
-      //     "value": "2025-05-06 00:07:00 ~ 2025-05-23 05:04:26",
-      //     "range": [
-      //         "2025-05-06 00:07:00",
-      //         "2025-05-23 05:04:26"
-      //     ]
-      // }
       const newParams = {
         ...searchParams,
         startTime: dayjs(name).format(DATE_FORMAT),
@@ -228,6 +239,64 @@ const HistogramChart = (props: IProps) => {
         option={option}
         onEvents={{
           click: handleChartClick,
+          brushEnd: (params: { areas: Array<{ coordRange: [number, number] }> }) => {
+            if (params.areas && params.areas.length > 0) {
+              const [start, end] = params.areas[0].coordRange;
+              const startTime = aggregatedData.labels[start];
+              const endTime = aggregatedData.labels[end];
+
+              const newParams = {
+                ...searchParams,
+                startTime: dayjs(startTime).format(DATE_FORMAT),
+                endTime: dayjs(endTime).format(DATE_FORMAT),
+                offset: 0,
+              };
+              delete newParams.timeRange;
+              onSearch(newParams);
+            }
+          },
+          mousemove: (params: { componentType: string }) => {
+            if (!chartRef.current) return;
+
+            if (params.componentType === 'series') {
+              // 鼠标在柱子上，禁用 brush，启用点击
+              chartRef.current.dispatchAction({
+                type: 'takeGlobalCursor',
+                key: 'default',
+                cursor: 'pointer',
+              });
+            }
+          },
+          mouseout: () => {
+            if (!chartRef.current) return;
+
+            // 鼠标离开任何区域时，恢复横向选择模式
+            chartRef.current.dispatchAction({
+              type: 'takeGlobalCursor',
+              key: 'brush',
+              brushOption: {
+                brushType: 'lineX',
+                brushMode: 'single',
+              },
+            });
+          },
+        }}
+        onChartReady={(chart) => {
+          chartRef.current = chart;
+          // 设置全局鼠标样式为横向选择
+          chart.dispatchAction({
+            type: 'takeGlobalCursor',
+            key: 'brush',
+            brushOption: {
+              brushType: 'lineX',
+              brushMode: 'single',
+            },
+          });
+          // 启用 brush 组件
+          chart.dispatchAction({
+            type: 'brush',
+            areas: [],
+          });
         }}
         style={{ height: 160, width: '100%' }}
       />

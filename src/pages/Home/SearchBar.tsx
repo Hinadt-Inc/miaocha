@@ -11,12 +11,14 @@ interface IProps {
   searchParams: ILogSearchParams; // 搜索参数
   totalCount?: number; // 记录总数
   loading?: boolean; // 是否加载中
-  onSubmit: (params: ILogSearchParams) => void; // 搜索回调函数
+  onSearch: (params: ILogSearchParams) => void; // 搜索回调函数
 }
 
 const SearchBar = forwardRef((props: IProps, ref) => {
   const searchBarRef = useRef<HTMLDivElement>(null);
-  const { searchParams, totalCount = 0, loading, onSubmit } = props;
+  const { searchParams, totalCount = 0, loading, onSearch } = props;
+
+  const [activeTab, setActiveTab] = useState('quick'); // 选项卡值
   const [keyword, setKeyword] = useState<string>(''); // 关键词
   const [keywords, setKeywords] = useState<string[]>([]); // 关键词列表
   const [keywordHistory, setKeywordHistory] = useState<string[]>(() => {
@@ -30,20 +32,21 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // 暴露给父组件的方法
   useImperativeHandle(ref, () => ({
     // 渲染sql
     renderSql: (sql: string) => {
       setSqls((prev) => [...prev, sql]);
     },
+    // 渲染时间
+    setTimeOption,
   }));
 
   // 获取默认时间选项配置
   const getDefaultTimeOption = () => {
     const { timeRange } = searchParams as any;
     const isQucik = QUICK_RANGES[timeRange];
-    console.log('【打印日志】,1111 =======>', 1111);
     if (!isQucik) return {};
-    console.log('【打印日志】,2222 =======>', 2222);
     const { from, to, format } = isQucik;
     return {
       value: timeRange,
@@ -54,6 +57,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   const [timeOption, setTimeOption] = useState<ILogTimeSubmitParams>(getDefaultTimeOption); // 时间选项
   const [openTimeRange, setOpenTimeRange] = useState<boolean>(false); // 显隐浮层
   const [openTimeGroup, setOpenTimeGroup] = useState<boolean>(false); // 显隐浮层-时间分组
+
   // 处理搜索输入变化
   const changeKeyword = (value: string) => {
     setKeyword(value || '');
@@ -64,28 +68,11 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     setSql(value || '');
   };
 
-  useEffect(() => {
-    console.log('searchParams', searchParams);
-    const { timeRange, startTime = '', endTime = '' } = searchParams;
-    if (!timeRange) {
-      // 设置绝对时间，格式为
-      //   {
-      //     "label": "2025-05-06 00:07:00 ~ 2025-05-23 05:04:26",
-      //     "value": "2025-05-06 00:07:00 ~ 2025-05-23 05:04:26",
-      //     "range": [
-      //         "2025-05-06 00:07:00",
-      //         "2025-05-23 05:04:26"
-      //     ]
-      // }
-      const data: ILogTimeSubmitParams = {
-        label: `${startTime} ~ ${endTime}`,
-        value: `${startTime} ~ ${endTime}`,
-        range: [startTime, endTime],
-      };
-      // setTimeOption(data);
-    }
-  }, [searchParams]);
+  const handleTimeFromTag = () => {
+    // () => setOpenTimeRange(true)
 
+    setOpenTimeRange(true);
+  };
   // 显示关键字、sql、时间的标签
   const filterRender = useMemo(() => {
     console.log('【打印日志】,timeOption =======>', timeOption);
@@ -153,7 +140,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
 
           {/* 时间范围 */}
           {range.length === 2 && (
-            <Tag color="blue" onClick={() => setOpenTimeRange(true)}>
+            <Tag color="blue" onClick={handleTimeFromTag}>
               {range[0]} ~ {range[1]}
             </Tag>
           )}
@@ -178,7 +165,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     if (sqls.length === 0) {
       delete params.whereSqls;
     }
-    onSubmit(params as ILogSearchParams);
+    onSearch(params as ILogSearchParams);
   }, [keywords, sqls, timeOption]);
 
   // 处理关键词搜索
@@ -212,7 +199,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     setSql('');
 
     if (!keywordTrim && !sql) {
-      onSubmit({ ...searchParams, offset: 0 } as any);
+      onSearch({ ...searchParams, offset: 0 } as any);
     }
   };
 
@@ -247,7 +234,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
         placement="bottomRight"
         content={
           <Suspense fallback={<SpinIndicator />}>
-            <TimePicker onSubmit={submitTime} />
+            <TimePicker activeTab={activeTab} setActiveTab={setActiveTab} onSubmit={submitTime} />
           </Suspense>
         }
       >
@@ -256,7 +243,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
         </Button>
       </Popover>
     );
-  }, [openTimeRange, timeOption, loading]);
+  }, [openTimeRange, timeOption, loading, activeTab]);
 
   // 渲染关键词搜索输入框，包含历史搜索记录自动补全功能
   const keywordRender = useMemo(() => {
@@ -308,7 +295,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   }, [sql, sqlHistory]);
 
   const changeTimeGroup = (text: string) => {
-    onSubmit({
+    onSearch({
       ...searchParams,
       timeGrouping: text,
       offset: 0,
