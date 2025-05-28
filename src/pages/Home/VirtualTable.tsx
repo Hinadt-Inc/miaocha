@@ -89,7 +89,8 @@ const VirtualTable = (props: IProps) => {
       {
         title: 'log_time',
         dataIndex: 'log_time',
-        width: columnWidths['log_time'] ?? 190,
+        width: 190,
+        resizable: false,
         sorter: (a: any, b: any) => {
           const dateA = new Date(a.log_time).getTime();
           const dateB = new Date(b.log_time).getTime();
@@ -100,7 +101,7 @@ const VirtualTable = (props: IProps) => {
       {
         title: '_source',
         dataIndex: '_source',
-        width: columnWidths['_source'] ?? 300,
+        width: undefined,
         ellipsis: false,
         hidden: _columns.length > 0,
         render: (_: any, record: ILogColumnsResponse) => {
