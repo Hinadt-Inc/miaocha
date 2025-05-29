@@ -34,17 +34,26 @@ export const useQueryExecution = (
         throw new Error('未选择数据源');
       }
 
-      let queryToExecute = sqlQuery;
+      let queryToExecute = options?.sql || sqlQuery;
       if (options?.selectedText && options.editor) {
         // 使用编辑器工具提取选中的完整SQL语句
-        queryToExecute = getSelectedSQLStatement(options.editor);
+        const selectedSQL = getSelectedSQLStatement(options.editor);
+        if (selectedSQL.trim()) {
+          queryToExecute = selectedSQL;
+        }
       } else if (options?.selectedText) {
         // 如果没有编辑器实例，使用原始逻辑
         queryToExecute = options.selectedText;
       }
 
       if (!queryToExecute.trim()) {
-        message.warning('请输入SQL查询语句');
+        console.error('SQL查询验证失败 - 详细信息:', {
+          sqlQuery,
+          options,
+          selectedSource,
+          timestamp: new Date().toISOString(),
+        });
+        message.warning('请输入有效的SQL查询语句');
         throw new Error('SQL查询语句为空');
       }
 

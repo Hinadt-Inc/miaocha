@@ -106,55 +106,83 @@ const SQLEditorImpl: React.FC = () => {
       message.warning('请输入SQL查询语句');
       return false;
     }
+
+    // 允许执行部分SQL语句
     return true;
   };
 
   // 使用防抖的查询执行
   const executeQueryDebounced = useCallback(
     debounce(() => {
-      if (!selectedSource) {
-        message.warning('请先选择数据源');
-        return;
-      }
-
-      // 强制使用选中文本或全部内容
-      let queryToExecute = sqlQuery;
-      if (editorRef.current) {
-        const selection = editorRef.current.getSelection();
-        const model = editorRef.current.getModel();
-        if (model) {
-          queryToExecute = selection && !selection.isEmpty() ? model.getValueInRange(selection) : model.getValue();
+      try {
+        if (!selectedSource) {
+          message.warning('请先选择数据源');
+          return;
         }
-      }
 
-      // 验证SQL并确保是完整语句
-      if (!validateSQL(queryToExecute)) return;
-      if (queryToExecute.trim().endsWith(';') === false) {
-        queryToExecute = queryToExecute + ';';
-      }
-
-      setActiveTab('results');
-      executeQueryOriginal({
-        datasourceId: selectedSource,
-        sql: queryToExecute,
-        selectedText: queryToExecute,
-        editor: editorRef.current,
-      })
-        .then((results: QueryResult) => {
-          // 后端会自动记录成功查询历史
-          if (results?.rows?.length && results?.columns) {
-            setXField(results.columns[0]);
-            const numericColumn = results.columns.find((col: string) => {
-              const sampleValue = results.rows?.[0][col];
-              return typeof sampleValue === 'number';
-            });
-            setYField(numericColumn ?? results.columns[1] ?? results.columns[0]);
+        // 优先使用选中文本，没有选中则使用全部内容
+        let queryToExecute = '';
+        if (editorRef.current) {
+          const selection = editorRef.current.getSelection();
+          const model = editorRef.current.getModel();
+          if (model) {
+            queryToExecute = selection && !selection.isEmpty() ? model.getValueInRange(selection) : model.getValue();
           }
-        })
-        .catch((error: Error) => {
-          console.error('执行查询失败:', error);
-          message.error(`执行查询失败: ${error.message}`);
+        }
+
+        // 验证SQL非空
+        if (!validateSQL(queryToExecute)) return;
+
+        // 自动添加分号(如果不存在)但保留原始查询格式
+        if (queryToExecute.trim() && !queryToExecute.trim().endsWith(';')) {
+          queryToExecute = queryToExecute + ';';
+        }
+
+        console.log('准备执行SQL:', {
+          datasourceId: selectedSource,
+          sql: queryToExecute,
+          selectedText: queryToExecute,
         });
+
+        setActiveTab('results');
+        console.log('执行SQL参数:', {
+          datasourceId: selectedSource,
+          sql: queryToExecute,
+          selectedText: queryToExecute,
+        });
+
+        executeQueryOriginal({
+          datasourceId: selectedSource,
+          sql: queryToExecute,
+          selectedText: queryToExecute,
+          editor: editorRef.current,
+        })
+          .then((results: QueryResult) => {
+            console.log('查询结果:', results);
+            // 后端会自动记录成功查询历史
+            if (results?.rows?.length && results?.columns) {
+              setXField(results.columns[0]);
+              const numericColumn = results.columns.find((col: string) => {
+                const sampleValue = results.rows?.[0][col];
+                return typeof sampleValue === 'number';
+              });
+              setYField(numericColumn ?? results.columns[1] ?? results.columns[0]);
+            }
+          })
+          .catch((error: Error) => {
+            console.error('执行查询失败 - 完整错误信息:', {
+              error: error,
+              stack: error.stack,
+              selectedSource,
+              query: queryToExecute,
+              timestamp: new Date().toISOString(),
+            });
+            message.error(`执行查询失败: ${error.message}`);
+          });
+      } catch (error) {
+        console.error('执行查询过程中发生未捕获的异常:', error);
+        message.error('执行查询时发生未知错误');
+      }
     }, 300),
     [executeQueryOriginal, selectedSource, sqlQuery, setActiveTab, setXField, setYField],
   );
