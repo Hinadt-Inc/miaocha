@@ -36,7 +36,7 @@ public class DeleteProcessDirectoryCommand extends AbstractLogstashCommand {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         try {
-            String processDir = getProcessDirectory();
+            String processDir = getProcessDirectory(machineInfo);
 
             // 检查目录是否存在
             String checkCommand =

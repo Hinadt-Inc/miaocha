@@ -46,207 +46,210 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
         return CompletableFuture.supplyAsync(
                 () -> {
                     boolean success = true;
-                    String processDir = getProcessDirectory();
-
-                    // 确保配置目录存在
-                    String configDir = processDir + "/config";
                     try {
-                        // 创建配置目录
+                        String processDir = getProcessDirectory(machineInfo);
+                        String configDir = processDir + "/config";
+                        String configFile = configDir + "/logstash-" + processId + ".conf";
+
+                        // 确保配置目录存在
                         String createDirCommand = String.format("mkdir -p %s", configDir);
                         sshClient.executeCommand(machineInfo, createDirCommand);
+
+                        // 1. 更新主配置文件（如果提供了内容）
+                        if (StringUtils.hasText(configContent)) {
+                            try {
+                                // 首先检查旧配置文件是否存在
+                                String checkCommand =
+                                        String.format(
+                                                "if [ -f \"%s\" ]; then echo \"exists\"; else echo"
+                                                        + " \"not_exists\"; fi",
+                                                configFile);
+                                String checkResult =
+                                        sshClient.executeCommand(machineInfo, checkCommand);
+
+                                if ("exists".equals(checkResult.trim())) {
+                                    // 备份旧配置
+                                    String backupFile =
+                                            String.format(
+                                                    "%s.bak.%d",
+                                                    configFile, System.currentTimeMillis());
+                                    String backupCommand =
+                                            String.format("cp %s %s", configFile, backupFile);
+                                    sshClient.executeCommand(machineInfo, backupCommand);
+                                    logger.info("已备份旧配置文件: {}", backupFile);
+                                }
+
+                                // 创建临时文件
+                                String tempFile =
+                                        String.format(
+                                                "/tmp/logstash-config-%d-%d.conf",
+                                                processId, System.currentTimeMillis());
+
+                                // 将新配置写入临时文件，使用heredoc避免特殊字符问题
+                                String createConfigCommand =
+                                        String.format(
+                                                "cat > %s << 'EOF'\n%s\nEOF",
+                                                tempFile, configContent);
+                                sshClient.executeCommand(machineInfo, createConfigCommand);
+
+                                // 移动到最终位置
+                                String moveCommand =
+                                        String.format("mv %s %s", tempFile, configFile);
+                                sshClient.executeCommand(machineInfo, moveCommand);
+
+                                // 检查配置文件是否更新成功
+                                String verifyCommand =
+                                        String.format(
+                                                "if [ -f \"%s\" ]; then echo \"success\"; else echo"
+                                                        + " \"failed\"; fi",
+                                                configFile);
+                                String verifyResult =
+                                        sshClient.executeCommand(machineInfo, verifyCommand);
+
+                                if ("success".equals(verifyResult.trim())) {
+                                    logger.info("成功更新Logstash主配置文件: {}", configFile);
+                                } else {
+                                    logger.error("更新Logstash主配置文件失败: {}", configFile);
+                                    success = false;
+                                }
+                            } catch (Exception e) {
+                                logger.error("更新Logstash主配置文件时发生错误: {}", e.getMessage(), e);
+                                success = false;
+                            }
+                        }
+
+                        // 2. 更新JVM配置文件（如果提供了内容）
+                        if (StringUtils.hasText(jvmOptions)) {
+                            try {
+                                String jvmFile = configDir + "/jvm.options";
+
+                                // 首先检查旧配置文件是否存在
+                                String checkCommand =
+                                        String.format(
+                                                "if [ -f \"%s\" ]; then echo \"exists\"; else echo"
+                                                        + " \"not_exists\"; fi",
+                                                jvmFile);
+                                String checkResult =
+                                        sshClient.executeCommand(machineInfo, checkCommand);
+
+                                if ("exists".equals(checkResult.trim())) {
+                                    // 备份旧配置
+                                    String backupFile =
+                                            String.format(
+                                                    "%s.bak.%d",
+                                                    jvmFile, System.currentTimeMillis());
+                                    String backupCommand =
+                                            String.format("cp %s %s", jvmFile, backupFile);
+                                    sshClient.executeCommand(machineInfo, backupCommand);
+                                    logger.info("已备份旧JVM配置文件: {}", backupFile);
+                                }
+
+                                // 创建临时文件
+                                String tempFile =
+                                        String.format(
+                                                "/tmp/logstash-jvm-%d-%d.options",
+                                                processId, System.currentTimeMillis());
+
+                                // 将新配置写入临时文件，使用heredoc避免特殊字符问题
+                                String createConfigCommand =
+                                        String.format(
+                                                "cat > %s << 'EOF'\n%s\nEOF", tempFile, jvmOptions);
+                                sshClient.executeCommand(machineInfo, createConfigCommand);
+
+                                // 移动到最终位置
+                                String moveCommand = String.format("mv %s %s", tempFile, jvmFile);
+                                sshClient.executeCommand(machineInfo, moveCommand);
+
+                                // 检查配置文件是否更新成功
+                                String verifyCommand =
+                                        String.format(
+                                                "if [ -f \"%s\" ]; then echo \"success\"; else echo"
+                                                        + " \"failed\"; fi",
+                                                jvmFile);
+                                String verifyResult =
+                                        sshClient.executeCommand(machineInfo, verifyCommand);
+
+                                if ("success".equals(verifyResult.trim())) {
+                                    logger.info("成功更新Logstash JVM配置文件: {}", jvmFile);
+                                } else {
+                                    logger.error("更新Logstash JVM配置文件失败: {}", jvmFile);
+                                    success = false;
+                                }
+                            } catch (Exception e) {
+                                logger.error("更新Logstash JVM配置文件时发生错误: {}", e.getMessage(), e);
+                                success = false;
+                            }
+                        }
+
+                        // 3. 更新Logstash系统配置文件（如果提供了内容）
+                        if (StringUtils.hasText(logstashYml)) {
+                            try {
+                                String ymlFile = configDir + "/logstash.yml";
+
+                                // 首先检查旧配置文件是否存在
+                                String checkCommand =
+                                        String.format(
+                                                "if [ -f \"%s\" ]; then echo \"exists\"; else echo"
+                                                        + " \"not_exists\"; fi",
+                                                ymlFile);
+                                String checkResult =
+                                        sshClient.executeCommand(machineInfo, checkCommand);
+
+                                if ("exists".equals(checkResult.trim())) {
+                                    // 备份旧配置
+                                    String backupFile =
+                                            String.format(
+                                                    "%s.bak.%d",
+                                                    ymlFile, System.currentTimeMillis());
+                                    String backupCommand =
+                                            String.format("cp %s %s", ymlFile, backupFile);
+                                    sshClient.executeCommand(machineInfo, backupCommand);
+                                    logger.info("已备份旧系统配置文件: {}", backupFile);
+                                }
+
+                                // 创建临时文件
+                                String tempFile =
+                                        String.format(
+                                                "/tmp/logstash-yml-%d-%d.yml",
+                                                processId, System.currentTimeMillis());
+
+                                // 将新配置写入临时文件，使用heredoc避免特殊字符问题
+                                String createConfigCommand =
+                                        String.format(
+                                                "cat > %s << 'EOF'\n%s\nEOF",
+                                                tempFile, logstashYml);
+                                sshClient.executeCommand(machineInfo, createConfigCommand);
+
+                                // 移动到最终位置
+                                String moveCommand = String.format("mv %s %s", tempFile, ymlFile);
+                                sshClient.executeCommand(machineInfo, moveCommand);
+
+                                // 检查配置文件是否更新成功
+                                String verifyCommand =
+                                        String.format(
+                                                "if [ -f \"%s\" ]; then echo \"success\"; else echo"
+                                                        + " \"failed\"; fi",
+                                                ymlFile);
+                                String verifyResult =
+                                        sshClient.executeCommand(machineInfo, verifyCommand);
+
+                                if ("success".equals(verifyResult.trim())) {
+                                    logger.info("成功更新Logstash系统配置文件: {}", ymlFile);
+                                } else {
+                                    logger.error("更新Logstash系统配置文件失败: {}", ymlFile);
+                                    success = false;
+                                }
+                            } catch (Exception e) {
+                                logger.error("更新Logstash系统配置文件时发生错误: {}", e.getMessage(), e);
+                                success = false;
+                            }
+                        }
+
+                        return success;
                     } catch (Exception e) {
-                        logger.error("创建配置目录时发生错误: {}", e.getMessage(), e);
+                        logger.error("更新Logstash配置文件时发生错误: {}", e.getMessage(), e);
                         return false;
                     }
-
-                    // 1. 更新主配置文件（如果提供了内容）
-                    if (StringUtils.hasText(configContent)) {
-                        try {
-                            String configPath = configDir + "/logstash-" + processId + ".conf";
-
-                            // 首先检查旧配置文件是否存在
-                            String checkCommand =
-                                    String.format(
-                                            "if [ -f \"%s\" ]; then echo \"exists\"; else echo"
-                                                    + " \"not_exists\"; fi",
-                                            configPath);
-                            String checkResult =
-                                    sshClient.executeCommand(machineInfo, checkCommand);
-
-                            if ("exists".equals(checkResult.trim())) {
-                                // 备份旧配置
-                                String backupFile =
-                                        String.format(
-                                                "%s.bak.%d",
-                                                configPath, System.currentTimeMillis());
-                                String backupCommand =
-                                        String.format("cp %s %s", configPath, backupFile);
-                                sshClient.executeCommand(machineInfo, backupCommand);
-                                logger.info("已备份旧配置文件: {}", backupFile);
-                            }
-
-                            // 创建临时文件
-                            String tempFile =
-                                    String.format(
-                                            "/tmp/logstash-config-%d-%d.conf",
-                                            processId, System.currentTimeMillis());
-
-                            // 将新配置写入临时文件，使用heredoc避免特殊字符问题
-                            String createConfigCommand =
-                                    String.format(
-                                            "cat > %s << 'EOF'\n%s\nEOF", tempFile, configContent);
-                            sshClient.executeCommand(machineInfo, createConfigCommand);
-
-                            // 移动到最终位置
-                            String moveCommand = String.format("mv %s %s", tempFile, configPath);
-                            sshClient.executeCommand(machineInfo, moveCommand);
-
-                            // 检查配置文件是否更新成功
-                            String verifyCommand =
-                                    String.format(
-                                            "if [ -f \"%s\" ]; then echo \"success\"; else echo"
-                                                    + " \"failed\"; fi",
-                                            configPath);
-                            String verifyResult =
-                                    sshClient.executeCommand(machineInfo, verifyCommand);
-
-                            if ("success".equals(verifyResult.trim())) {
-                                logger.info("成功更新Logstash主配置文件: {}", configPath);
-                            } else {
-                                logger.error("更新Logstash主配置文件失败: {}", configPath);
-                                success = false;
-                            }
-                        } catch (Exception e) {
-                            logger.error("更新Logstash主配置文件时发生错误: {}", e.getMessage(), e);
-                            success = false;
-                        }
-                    }
-
-                    // 2. 更新JVM配置文件（如果提供了内容）
-                    if (StringUtils.hasText(jvmOptions)) {
-                        try {
-                            String jvmFile = configDir + "/jvm.options";
-
-                            // 首先检查旧配置文件是否存在
-                            String checkCommand =
-                                    String.format(
-                                            "if [ -f \"%s\" ]; then echo \"exists\"; else echo"
-                                                    + " \"not_exists\"; fi",
-                                            jvmFile);
-                            String checkResult =
-                                    sshClient.executeCommand(machineInfo, checkCommand);
-
-                            if ("exists".equals(checkResult.trim())) {
-                                // 备份旧配置
-                                String backupFile =
-                                        String.format(
-                                                "%s.bak.%d", jvmFile, System.currentTimeMillis());
-                                String backupCommand =
-                                        String.format("cp %s %s", jvmFile, backupFile);
-                                sshClient.executeCommand(machineInfo, backupCommand);
-                                logger.info("已备份旧JVM配置文件: {}", backupFile);
-                            }
-
-                            // 创建临时文件
-                            String tempFile =
-                                    String.format(
-                                            "/tmp/logstash-jvm-%d-%d.options",
-                                            processId, System.currentTimeMillis());
-
-                            // 将新配置写入临时文件，使用heredoc避免特殊字符问题
-                            String createConfigCommand =
-                                    String.format(
-                                            "cat > %s << 'EOF'\n%s\nEOF", tempFile, jvmOptions);
-                            sshClient.executeCommand(machineInfo, createConfigCommand);
-
-                            // 移动到最终位置
-                            String moveCommand = String.format("mv %s %s", tempFile, jvmFile);
-                            sshClient.executeCommand(machineInfo, moveCommand);
-
-                            // 检查配置文件是否更新成功
-                            String verifyCommand =
-                                    String.format(
-                                            "if [ -f \"%s\" ]; then echo \"success\"; else echo"
-                                                    + " \"failed\"; fi",
-                                            jvmFile);
-                            String verifyResult =
-                                    sshClient.executeCommand(machineInfo, verifyCommand);
-
-                            if ("success".equals(verifyResult.trim())) {
-                                logger.info("成功更新Logstash JVM配置文件: {}", jvmFile);
-                            } else {
-                                logger.error("更新Logstash JVM配置文件失败: {}", jvmFile);
-                                success = false;
-                            }
-                        } catch (Exception e) {
-                            logger.error("更新Logstash JVM配置文件时发生错误: {}", e.getMessage(), e);
-                            success = false;
-                        }
-                    }
-
-                    // 3. 更新Logstash系统配置文件（如果提供了内容）
-                    if (StringUtils.hasText(logstashYml)) {
-                        try {
-                            String ymlFile = configDir + "/logstash.yml";
-
-                            // 首先检查旧配置文件是否存在
-                            String checkCommand =
-                                    String.format(
-                                            "if [ -f \"%s\" ]; then echo \"exists\"; else echo"
-                                                    + " \"not_exists\"; fi",
-                                            ymlFile);
-                            String checkResult =
-                                    sshClient.executeCommand(machineInfo, checkCommand);
-
-                            if ("exists".equals(checkResult.trim())) {
-                                // 备份旧配置
-                                String backupFile =
-                                        String.format(
-                                                "%s.bak.%d", ymlFile, System.currentTimeMillis());
-                                String backupCommand =
-                                        String.format("cp %s %s", ymlFile, backupFile);
-                                sshClient.executeCommand(machineInfo, backupCommand);
-                                logger.info("已备份旧系统配置文件: {}", backupFile);
-                            }
-
-                            // 创建临时文件
-                            String tempFile =
-                                    String.format(
-                                            "/tmp/logstash-yml-%d-%d.yml",
-                                            processId, System.currentTimeMillis());
-
-                            // 将新配置写入临时文件，使用heredoc避免特殊字符问题
-                            String createConfigCommand =
-                                    String.format(
-                                            "cat > %s << 'EOF'\n%s\nEOF", tempFile, logstashYml);
-                            sshClient.executeCommand(machineInfo, createConfigCommand);
-
-                            // 移动到最终位置
-                            String moveCommand = String.format("mv %s %s", tempFile, ymlFile);
-                            sshClient.executeCommand(machineInfo, moveCommand);
-
-                            // 检查配置文件是否更新成功
-                            String verifyCommand =
-                                    String.format(
-                                            "if [ -f \"%s\" ]; then echo \"success\"; else echo"
-                                                    + " \"failed\"; fi",
-                                            ymlFile);
-                            String verifyResult =
-                                    sshClient.executeCommand(machineInfo, verifyCommand);
-
-                            if ("success".equals(verifyResult.trim())) {
-                                logger.info("成功更新Logstash系统配置文件: {}", ymlFile);
-                            } else {
-                                logger.error("更新Logstash系统配置文件失败: {}", ymlFile);
-                                success = false;
-                            }
-                        } catch (Exception e) {
-                            logger.error("更新Logstash系统配置文件时发生错误: {}", e.getMessage(), e);
-                            success = false;
-                        }
-                    }
-
-                    return success;
                 });
     }
 

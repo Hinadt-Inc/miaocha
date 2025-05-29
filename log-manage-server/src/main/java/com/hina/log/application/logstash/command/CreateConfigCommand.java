@@ -21,7 +21,7 @@ public class CreateConfigCommand extends AbstractLogstashCommand {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         try {
-            String processDir = getProcessDirectory();
+            String processDir = getProcessDirectory(machineInfo);
             String configDir = processDir + "/config";
             String configPath = configDir + "/logstash-" + processId + ".conf";
 

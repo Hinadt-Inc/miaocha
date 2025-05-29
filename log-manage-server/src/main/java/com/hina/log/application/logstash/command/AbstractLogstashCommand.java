@@ -19,6 +19,23 @@ public abstract class AbstractLogstashCommand implements LogstashCommand {
         this.processId = processId;
     }
 
+    /**
+     * 规范化部署目录路径 如果deployDir不是绝对路径（不以/开头），则将其转换为用户家目录下的路径
+     *
+     * @param machineInfo 机器信息，用于获取用户名
+     * @return 规范化后的绝对路径
+     */
+    protected String normalizeDeployDir(MachineInfo machineInfo) {
+        if (deployDir.startsWith("/")) {
+            // 已经是绝对路径，直接返回
+            return deployDir;
+        } else {
+            // 相对路径，转换为用户家目录下的路径
+            String username = machineInfo.getUsername();
+            return String.format("/home/%s/%s", username, deployDir);
+        }
+    }
+
     /** 执行命令 */
     @Override
     public CompletableFuture<Boolean> execute(MachineInfo machineInfo) {
@@ -80,8 +97,9 @@ public abstract class AbstractLogstashCommand implements LogstashCommand {
     /** 实际执行命令 */
     protected abstract CompletableFuture<Boolean> doExecute(MachineInfo machineInfo);
 
-    /** 获取Logstash进程目录 */
-    protected String getProcessDirectory() {
-        return String.format("%s/logstash-%d", deployDir, processId);
+    /** 获取Logstash进程目录 使用规范化后的部署目录路径 */
+    protected String getProcessDirectory(MachineInfo machineInfo) {
+        String normalizedDeployDir = normalizeDeployDir(machineInfo);
+        return String.format("%s/logstash-%d", normalizedDeployDir, processId);
     }
 }

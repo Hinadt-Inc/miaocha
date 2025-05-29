@@ -43,7 +43,7 @@ public class ModifySystemConfigCommand extends AbstractLogstashCommand {
                 () -> {
                     try {
                         boolean success = true;
-                        String processDir = getProcessDirectory();
+                        String processDir = getProcessDirectory(machineInfo);
                         String configDir = processDir + "/config";
 
                         // 1. 修改系统配置文件 (logstash.yml)

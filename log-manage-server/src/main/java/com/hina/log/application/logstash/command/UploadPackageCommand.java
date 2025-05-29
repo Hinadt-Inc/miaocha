@@ -23,10 +23,7 @@ public class UploadPackageCommand extends AbstractLogstashCommand {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         try {
-            // 创建目标目录
-            String processDir = getProcessDirectory();
-
-            // 获取文件名
+            String processDir = getProcessDirectory(machineInfo);
             String fileName = new File(packagePath).getName();
             String targetPath = Paths.get(processDir, fileName).toString();
 

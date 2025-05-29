@@ -17,7 +17,7 @@ public class StartProcessCommand extends AbstractLogstashCommand {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         try {
-            String processDir = getProcessDirectory();
+            String processDir = getProcessDirectory(machineInfo);
             String logDir = processDir + "/logs";
             String pidFile = logDir + "/logstash-" + processId + ".pid";
             String logFile = logDir + "/logstash-" + processId + ".log";

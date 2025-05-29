@@ -17,7 +17,7 @@ public class StopProcessCommand extends AbstractLogstashCommand {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         try {
-            String processDir = getProcessDirectory();
+            String processDir = getProcessDirectory(machineInfo);
             String pidFile = processDir + "/logs/logstash-" + processId + ".pid";
 
             // 检查PID文件是否存在 - 使用不会出错的命令

@@ -22,8 +22,10 @@ public class ExtractPackageCommand extends AbstractLogstashCommand {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         try {
+            String processDir = getProcessDirectory(machineInfo);
+            String packageFile = processDir + "/" + packagePath;
+
             // 获取进程目录和安装包文件名
-            String processDir = getProcessDirectory();
             String fileName = new File(packagePath).getName();
             String remotePackagePath = processDir + "/" + fileName;
 
