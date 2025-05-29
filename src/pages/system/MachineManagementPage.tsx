@@ -7,7 +7,7 @@ import { Breadcrumb, Button, Form, Input, InputNumber, Modal, message } from 'an
 import { EditOutlined, DeleteOutlined, ThunderboltOutlined, PlusOutlined, HomeOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import dayjs from 'dayjs';
-import './MachineManagementPage.less';
+import styles from './MachineManagementPage.module.less';
 
 const MachineManagementPage = () => {
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -114,7 +114,7 @@ const MachineManagementPage = () => {
       title: '操作',
       key: 'action',
       render: (_, record) => (
-        <div className="actions">
+        <div className={styles.actions}>
           <Button
             type="link"
             size="small"
@@ -157,8 +157,8 @@ const MachineManagementPage = () => {
   return (
     <>
       {contextHolder}
-      <div className="machine-management-page">
-        <div className="header">
+      <div className={styles.container}>
+        <div className={styles.header}>
           <Breadcrumb
             items={[
               {
@@ -171,14 +171,14 @@ const MachineManagementPage = () => {
               { title: '机器管理' },
             ]}
           />
-          <div className="actions">
+          <div className={styles.actions}>
             <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateModalVisible(true)}>
               新增机器
             </Button>
           </div>
         </div>
 
-        <div className="table-container">
+        <div className={styles.tableContainer}>
           <SimpleTable dataSource={machines} columns={columns} loading={loading} size="small" rowKey="id" />
         </div>
 
