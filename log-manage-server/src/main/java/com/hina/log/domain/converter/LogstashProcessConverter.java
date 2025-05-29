@@ -42,6 +42,7 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         responseDTO.setName(process.getName());
         responseDTO.setModule(process.getModule());
         responseDTO.setConfigContent(process.getConfigContent());
+        responseDTO.setDorisSql(process.getDorisSql());
         responseDTO.setJvmOptions(process.getJvmOptions());
         responseDTO.setLogstashYml(process.getLogstashYml());
         responseDTO.setCreateTime(process.getCreateTime());

@@ -27,7 +27,7 @@
 
     <!-- 仅更新配置信息 -->
     <update id="updateConfigOnly">
-        UPDATE logstash_process 
+        UPDATE logstash_process
         <set>
             <if test="configContent != null">
                 config_content=#{configContent},

@@ -25,6 +25,9 @@ public class LogstashProcessResponseDTO {
     @Schema(description = "Logstash配置文件内容")
     private String configContent;
 
+    @Schema(description = "与Logstash配置对应的Doris日志表SQL")
+    private String dorisSql;
+
     @Schema(description = "JVM配置文件内容")
     private String jvmOptions;
 
