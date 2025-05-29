@@ -32,7 +32,7 @@ import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import dayjs from 'dayjs';
 import { Link } from 'react-router-dom';
-import './UserManagementPage.less';
+import styles from './UserManagementPage.module.less';
 
 interface UserData extends User {
   key: string;
@@ -380,9 +380,9 @@ const UserManagementPage = () => {
   ];
 
   return (
-    <div className="user-management-page">
+    <div className={styles.userManagementPage}>
       <Card>
-        <div className="user-management-page-header">
+        <div className={styles.header}>
           <Breadcrumb>
             <Breadcrumb.Item>
               <Link to="/">
@@ -409,7 +409,7 @@ const UserManagementPage = () => {
           </Space>
         </div>
 
-        <div className="table-container">
+        <div className={styles.antTable}>
           <Table
             columns={columns}
             dataSource={data}

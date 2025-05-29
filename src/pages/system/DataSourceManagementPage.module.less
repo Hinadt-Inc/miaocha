@@ -1,0 +1,93 @@
+.container {
+  background:#ffffff;
+  border-radius: 8px;
+
+  @media screen and (max-width: 768px) {
+    padding: 12px;
+  }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.actions {
+  > * {
+    margin-left: 16px;
+  }
+}
+
+.tableToolbar {
+  margin-bottom: 16px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+
+  @media screen and (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.tableContainer {
+  margin-top: 16px;
+  padding: 16px;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  overflow: auto;
+
+  @media screen and (max-width: 768px) {
+    padding: 8px;
+  }
+}
+
+.antTable {
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  
+  .ant-table-thead > tr > th {
+    background-color:rgba(0, 0, 0, 0.04);
+    font-weight: 500;
+    border-bottom: 1px solid #f0f0f0 !important;
+    white-space: nowrap;
+  }
+  
+  .ant-table-tbody > tr > td {
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .ant-table-cell-fix-right,
+  .ant-table-cell-fix-left {
+    z-index: 2;
+  }
+}
+
+.antPagination {
+  margin: 16px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+
+  @media screen and (max-width: 576px) {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+.antFormItem {
+  margin-bottom: 16px;
+}

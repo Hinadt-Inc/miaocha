@@ -1,3 +1,4 @@
+import styles from './DataSourceManagementPage.module.less';
 import { useRef, useState, useEffect } from 'react';
 import {
   getAllDataSources,
@@ -364,12 +365,12 @@ const DataSourceManagementPage = () => {
   ];
 
   return (
-    <div className="data-source-management-page">
+    <div className={styles.container}>
       {contextHolder}
       <Card>
         <ProTable<DataSourceItem>
           loading={loading.table || loading.submit || loading.test}
-          className="table-container"
+          className={styles.tableContainer}
           bordered
           size="small"
           search={false}
@@ -409,7 +410,7 @@ const DataSourceManagementPage = () => {
                 }}
               />
             </Space>,
-            <div className="table-toolbar" key="toolbar">
+            <div className={styles.tableToolbar} key="toolbar">
               <Button key="button" icon={<PlusOutlined />} type="primary" onClick={openCreateModal}>
                 新增数据源
               </Button>
