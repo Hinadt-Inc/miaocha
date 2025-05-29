@@ -12,7 +12,7 @@ import {
   HomeOutlined,
 } from '@ant-design/icons';
 import { Button, message, Popconfirm, Space, Table, Breadcrumb, Modal, Progress, Tag, Descriptions } from 'antd';
-import './LogstashManagementPage.less';
+import styles from './LogstashManagementPage.module.less';
 import { Link } from 'react-router-dom';
 import { useEffect } from 'react';
 import {
@@ -438,9 +438,9 @@ function LogstashManagementPage() {
   ];
 
   return (
-    <div className="logstash-management-page">
+    <div className={styles.container}>
       {contextHolder}
-      <div className="header">
+      <div className={styles.header}>
         <Breadcrumb>
           <Breadcrumb.Item>
             <Link to="/">
@@ -449,7 +449,7 @@ function LogstashManagementPage() {
           </Breadcrumb.Item>
           <Breadcrumb.Item>Logstash管理</Breadcrumb.Item>
         </Breadcrumb>
-        <div className="actions">
+        <div className={styles.tableToolbar}>
           <Button
             type="default"
             icon={<SyncOutlined />}
@@ -465,7 +465,7 @@ function LogstashManagementPage() {
         </div>
       </div>
 
-      <div className="table-container">
+      <div>
         <Table
           columns={columns}
           dataSource={data}
