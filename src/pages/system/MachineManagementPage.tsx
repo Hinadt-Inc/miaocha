@@ -3,7 +3,7 @@ import { getMachines, createMachine, deleteMachine, updateMachine, testMachineCo
 import type { Machine, CreateMachineParams } from '../../types/machineTypes';
 import { SimpleTable } from '../../components/common/SimpleTable';
 import type { TableColumnsType } from 'antd';
-import { Breadcrumb, Button, Form, Input, InputNumber, Modal, message } from 'antd';
+import { Breadcrumb, Button, Form, Input, InputNumber, Modal, message, Card } from 'antd';
 import { EditOutlined, DeleteOutlined, ThunderboltOutlined, PlusOutlined, HomeOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -157,7 +157,7 @@ const MachineManagementPage = () => {
   return (
     <>
       {contextHolder}
-      <div className={styles.container}>
+      <Card className={styles.container}>
         <div className={styles.header}>
           <Breadcrumb
             items={[
@@ -250,7 +250,7 @@ const MachineManagementPage = () => {
         >
           <p>确定要删除这台机器吗？</p>
         </Modal>
-      </div>
+      </Card>
     </>
   );
 };

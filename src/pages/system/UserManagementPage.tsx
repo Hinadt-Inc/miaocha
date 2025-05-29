@@ -380,140 +380,138 @@ const UserManagementPage = () => {
   ];
 
   return (
-    <div className={styles.userManagementPage}>
-      <Card>
-        <div className={styles.header}>
-          <Breadcrumb>
-            <Breadcrumb.Item>
-              <Link to="/">
-                <HomeOutlined />
-              </Link>
-            </Breadcrumb.Item>
-            <Breadcrumb.Item>用户管理</Breadcrumb.Item>
-          </Breadcrumb>
-          <Space style={{ marginBottom: 16 }}>
-            <Input
-              placeholder="搜索昵称/邮箱/用户名"
-              value={searchText}
-              onChange={(e) => handleSearch(e.target.value)}
-              style={{ width: 240 }}
-              prefix={<SearchOutlined />}
-              allowClear
-            />
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => handleAddEdit()}>
-              添加用户
-            </Button>
-            <Button icon={<ReloadOutlined />} onClick={handleReload} loading={loading}>
-              刷新
-            </Button>
-          </Space>
-        </div>
-
-        <div className={styles.antTable}>
-          <Table
-            columns={columns}
-            dataSource={data}
-            rowKey="key"
-            pagination={pagination}
-            loading={loading}
-            scroll={{ x: 1300 }}
-            onChange={handleTableChange}
-            size="small"
-            bordered
+    <Card>
+      <div className={styles.header}>
+        <Breadcrumb>
+          <Breadcrumb.Item>
+            <Link to="/">
+              <HomeOutlined />
+            </Link>
+          </Breadcrumb.Item>
+          <Breadcrumb.Item>用户管理</Breadcrumb.Item>
+        </Breadcrumb>
+        <Space>
+          <Input
+            placeholder="搜索昵称/邮箱/用户名"
+            value={searchText}
+            onChange={(e) => handleSearch(e.target.value)}
+            style={{ width: 240 }}
+            prefix={<SearchOutlined />}
+            allowClear
           />
-        </div>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => handleAddEdit()}>
+            添加用户
+          </Button>
+          <Button icon={<ReloadOutlined />} onClick={handleReload} loading={loading}>
+            刷新
+          </Button>
+        </Space>
+      </div>
 
-        <Modal
-          title={selectedRecord ? '编辑用户' : '添加用户'}
-          open={isModalVisible}
-          onOk={handleSubmit}
-          onCancel={() => setIsModalVisible(false)}
-          width={600}
-          maskClosable={false}
-        >
-          <Form form={form} layout="vertical">
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item name="nickname" label="昵称" rules={[{ required: true, message: '请输入昵称' }]}>
-                  <Input placeholder="请输入昵称" />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="email"
-                  label="邮箱"
-                  rules={[
-                    { required: true, message: '请输入邮箱' },
-                    { type: 'email', message: '请输入有效的邮箱地址' },
-                  ]}
-                >
-                  <Input placeholder="请输入邮箱" />
-                </Form.Item>
-              </Col>
-            </Row>
+      <div className={styles.antTable}>
+        <Table
+          columns={columns}
+          dataSource={data}
+          rowKey="key"
+          pagination={pagination}
+          loading={loading}
+          scroll={{ x: 1300 }}
+          onChange={handleTableChange}
+          size="small"
+          bordered
+        />
+      </div>
 
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item name="role" label="角色" rules={[{ required: true, message: '请选择角色' }]}>
-                  <Select options={roleOptions} placeholder="请选择角色" />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="status"
-                  label="状态"
-                  initialValue={1}
-                  rules={[{ required: true, message: '请选择状态' }]}
-                >
-                  <Select
-                    options={[
-                      { value: 1, label: '启用' },
-                      { value: 0, label: '禁用' },
-                    ]}
-                    placeholder="请选择状态"
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
+      <Modal
+        title={selectedRecord ? '编辑用户' : '添加用户'}
+        open={isModalVisible}
+        onOk={handleSubmit}
+        onCancel={() => setIsModalVisible(false)}
+        width={600}
+        maskClosable={false}
+      >
+        <Form form={form} layout="vertical">
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="nickname" label="昵称" rules={[{ required: true, message: '请输入昵称' }]}>
+                <Input placeholder="请输入昵称" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="email"
+                label="邮箱"
+                rules={[
+                  { required: true, message: '请输入邮箱' },
+                  { type: 'email', message: '请输入有效的邮箱地址' },
+                ]}
+              >
+                <Input placeholder="请输入邮箱" />
+              </Form.Item>
+            </Col>
+          </Row>
 
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  name="password"
-                  label="密码"
-                  rules={[
-                    { required: !selectedRecord, message: '请输入密码' },
-                    { min: 6, message: '密码长度不能少于6个字符' },
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="role" label="角色" rules={[{ required: true, message: '请选择角色' }]}>
+                <Select options={roleOptions} placeholder="请选择角色" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="status"
+                label="状态"
+                initialValue={1}
+                rules={[{ required: true, message: '请选择状态' }]}
+              >
+                <Select
+                  options={[
+                    { value: 1, label: '启用' },
+                    { value: 0, label: '禁用' },
                   ]}
-                >
-                  <Input.Password placeholder={selectedRecord ? '留空则不修改密码' : '请输入密码'} />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="confirmPassword"
-                  label="确认密码"
-                  dependencies={['password']}
-                  rules={[
-                    { required: !selectedRecord, message: '请确认密码' },
-                    ({ getFieldValue }) => ({
-                      validator(_, value) {
-                        if (!value || getFieldValue('password') === value) {
-                          return Promise.resolve();
-                        }
-                        return Promise.reject(new Error('两次输入的密码不一致'));
-                      },
-                    }),
-                  ]}
-                >
-                  <Input.Password placeholder={selectedRecord ? '留空则不修改密码' : '请确认密码'} />
-                </Form.Item>
-              </Col>
-            </Row>
-          </Form>
-        </Modal>
-      </Card>
-    </div>
+                  placeholder="请选择状态"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="password"
+                label="密码"
+                rules={[
+                  { required: !selectedRecord, message: '请输入密码' },
+                  { min: 6, message: '密码长度不能少于6个字符' },
+                ]}
+              >
+                <Input.Password placeholder={selectedRecord ? '留空则不修改密码' : '请输入密码'} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="confirmPassword"
+                label="确认密码"
+                dependencies={['password']}
+                rules={[
+                  { required: !selectedRecord, message: '请确认密码' },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      if (!value || getFieldValue('password') === value) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(new Error('两次输入的密码不一致'));
+                    },
+                  }),
+                ]}
+              >
+                <Input.Password placeholder={selectedRecord ? '留空则不修改密码' : '请确认密码'} />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
+      </Modal>
+    </Card>
   );
 };
 
