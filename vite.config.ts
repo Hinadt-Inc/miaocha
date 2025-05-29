@@ -1,5 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { viteStaticCopy } from 'vite-plugin-static-copy';
+import type { PluginOption } from 'vite';
 import { resolve } from 'path';
 import dynamicImport from 'vite-plugin-dynamic-import';
 
@@ -18,11 +20,7 @@ export default defineConfig({
     }),
   ],
   optimizeDeps: {
-    include: [
-      'monaco-editor',
-      'monaco-editor/esm/vs/basic-languages/sql/sql',
-      'monaco-sql-languages',
-    ],
+    include: ['monaco-editor', 'monaco-editor/esm/vs/basic-languages/sql/sql', 'monaco-sql-languages'],
     exclude: [
       // 这些worker文件需要作为Web Worker加载，不应该被优化
       'monaco-editor/esm/vs/editor/editor.worker',
@@ -33,7 +31,17 @@ export default defineConfig({
     ],
   },
   worker: {
-    format: 'es', // 使用ES模块格式的worker
+    format: 'es',
+    plugins: () => [
+      viteStaticCopy({
+        targets: [
+          {
+            src: 'node_modules/monaco-editor/esm/vs/**/*.worker.js',
+            dest: 'monaco-workers',
+          },
+        ],
+      }),
+    ],
   },
   resolve: {
     alias: {
