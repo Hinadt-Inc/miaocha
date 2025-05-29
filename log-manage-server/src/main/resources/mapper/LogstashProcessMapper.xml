@@ -27,8 +27,20 @@
 
     <!-- 仅更新配置信息 -->
     <update id="updateConfigOnly">
-        UPDATE logstash_process SET config_content=#{configContent}, jvm_options=#{jvmOptions},
-        logstash_yml=#{logstashYml}, update_time=NOW() WHERE id=#{id}
+        UPDATE logstash_process 
+        <set>
+            <if test="configContent != null">
+                config_content=#{configContent},
+            </if>
+            <if test="jvmOptions != null">
+                jvm_options=#{jvmOptions},
+            </if>
+            <if test="logstashYml != null">
+                logstash_yml=#{logstashYml},
+            </if>
+            update_time=NOW()
+        </set>
+        WHERE id=#{id}
     </update>
 
     <!-- 根据ID删除 -->
