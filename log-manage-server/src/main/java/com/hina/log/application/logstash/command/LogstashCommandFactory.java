@@ -59,12 +59,6 @@ public class LogstashCommandFactory {
                 process.getConfigContent());
     }
 
-    /** 创建更新配置文件命令 */
-    public LogstashCommand updateConfigCommand(Long processId, String configContent) {
-        return new UpdateConfigCommand(
-                sshClient, logstashProperties.getDeployDir(), processId, configContent);
-    }
-
     /** 创建更新多种配置文件命令 可同时更新主配置文件、JVM配置和系统配置 */
     public LogstashCommand updateConfigCommand(
             Long processId, String configContent, String jvmOptions, String logstashYml) {
@@ -75,26 +69,6 @@ public class LogstashCommandFactory {
                 configContent,
                 jvmOptions,
                 logstashYml);
-    }
-
-    /** 创建刷新配置文件命令 */
-    public LogstashCommand refreshConfigCommand(Long processId) {
-        return new RefreshConfigCommand(
-                sshClient,
-                logstashProperties.getDeployDir(),
-                processId,
-                logstashProcessMapper,
-                null);
-    }
-
-    /** 创建刷新配置文件命令（带配置内容） */
-    public LogstashCommand refreshConfigCommand(Long processId, String configContent) {
-        return new RefreshConfigCommand(
-                sshClient,
-                logstashProperties.getDeployDir(),
-                processId,
-                logstashProcessMapper,
-                configContent);
     }
 
     /** 创建刷新多种配置文件命令 可同时刷新主配置文件、JVM配置和系统配置 */
@@ -109,12 +83,6 @@ public class LogstashCommandFactory {
                 configContent,
                 jvmOptions,
                 logstashYml);
-    }
-
-    /** 创建修改系统配置命令 */
-    public LogstashCommand modifySystemConfigCommand(Long processId) {
-        return new ModifySystemConfigCommand(
-                sshClient, logstashProperties.getDeployDir(), processId);
     }
 
     /** 创建修改系统配置命令（增强版：支持JVM选项和系统配置） */
