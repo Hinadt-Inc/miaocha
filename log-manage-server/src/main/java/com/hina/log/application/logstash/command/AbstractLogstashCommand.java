@@ -43,16 +43,15 @@ public abstract class AbstractLogstashCommand implements LogstashCommand {
                                 .whenComplete(
                                         (success, e) -> {
                                             if (e != null) {
-                                                // 记录错误但不吞异常，让它传播给调用者
-                                                logger.error(
+                                                // 只记录debug级别日志，详细错误由外层处理
+                                                logger.debug(
                                                         "在机器 [{}] 上执行 [{}] 失败: {}",
                                                         machineInfo.getIp(),
                                                         getDescription(),
-                                                        e.getMessage(),
-                                                        e);
+                                                        e.getMessage());
                                             } else if (!success) {
-                                                // 执行成功但返回false的情况也需要记录
-                                                logger.error(
+                                                // 执行成功但返回false的情况
+                                                logger.debug(
                                                         "在机器 [{}] 上执行 [{}] 返回失败状态",
                                                         machineInfo.getIp(),
                                                         getDescription());
@@ -60,13 +59,12 @@ public abstract class AbstractLogstashCommand implements LogstashCommand {
                                         });
                     });
         } catch (Exception e) {
-            // 捕获初始化或检查阶段的异常，将其包装为CompletableFuture异常并传播
-            logger.error(
+            // 捕获初始化或检查阶段的异常，只记录debug级别日志
+            logger.debug(
                     "在机器 [{}] 上执行 [{}] 过程中发生异常: {}",
                     machineInfo.getIp(),
                     getDescription(),
-                    e.getMessage(),
-                    e);
+                    e.getMessage());
             CompletableFuture<Boolean> future = new CompletableFuture<>();
             future.completeExceptionally(e);
             return future;

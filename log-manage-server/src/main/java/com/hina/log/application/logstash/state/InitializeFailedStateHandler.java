@@ -99,22 +99,20 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
                                             })
                                     .exceptionally(
                                             ex -> {
-                                                String errorMessage = ex.getMessage();
-                                                // 异常已在命令层记录，这里只更新任务状态
+                                                // 更新任务状态为失败，不记录详细日志（由外层处理）
                                                 taskService.updateStepStatus(
                                                         taskId,
                                                         machineId,
                                                         LogstashMachineStep.CREATE_REMOTE_DIR
                                                                 .getId(),
                                                         StepStatus.FAILED,
-                                                        errorMessage);
+                                                        ex.getMessage());
 
                                                 // 重新抛出异常，确保异常传递到外层
                                                 if (ex instanceof RuntimeException) {
                                                     throw (RuntimeException) ex;
                                                 } else {
-                                                    throw new RuntimeException(
-                                                            "创建远程目录时发生异常: " + errorMessage, ex);
+                                                    throw new RuntimeException(ex.getMessage(), ex);
                                                 }
                                             });
                         });
@@ -158,21 +156,19 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
                                             })
                                     .exceptionally(
                                             ex -> {
-                                                String errorMessage = ex.getMessage();
-                                                // 异常已在命令层记录，这里只更新任务状态
+                                                // 更新任务状态为失败，不记录详细日志（由外层处理）
                                                 taskService.updateStepStatus(
                                                         taskId,
                                                         machineId,
                                                         LogstashMachineStep.UPLOAD_PACKAGE.getId(),
                                                         StepStatus.FAILED,
-                                                        errorMessage);
+                                                        ex.getMessage());
 
                                                 // 重新抛出异常，确保异常传递到外层
                                                 if (ex instanceof RuntimeException) {
                                                     throw (RuntimeException) ex;
                                                 } else {
-                                                    throw new RuntimeException(
-                                                            "上传安装包时发生异常: " + errorMessage, ex);
+                                                    throw new RuntimeException(ex.getMessage(), ex);
                                                 }
                                             });
                         });
@@ -216,21 +212,19 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
                                             })
                                     .exceptionally(
                                             ex -> {
-                                                String errorMessage = ex.getMessage();
-                                                // 异常已在命令层记录，这里只更新任务状态
+                                                // 更新任务状态为失败，不记录详细日志（由外层处理）
                                                 taskService.updateStepStatus(
                                                         taskId,
                                                         machineId,
                                                         LogstashMachineStep.EXTRACT_PACKAGE.getId(),
                                                         StepStatus.FAILED,
-                                                        errorMessage);
+                                                        ex.getMessage());
 
                                                 // 重新抛出异常，确保异常传递到外层
                                                 if (ex instanceof RuntimeException) {
                                                     throw (RuntimeException) ex;
                                                 } else {
-                                                    throw new RuntimeException(
-                                                            "解压安装包时发生异常: " + errorMessage, ex);
+                                                    throw new RuntimeException(ex.getMessage(), ex);
                                                 }
                                             });
                         });
@@ -274,21 +268,19 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
                                             })
                                     .exceptionally(
                                             ex -> {
-                                                String errorMessage = ex.getMessage();
-                                                // 异常已在命令层记录，这里只更新任务状态
+                                                // 更新任务状态为失败，不记录详细日志（由外层处理）
                                                 taskService.updateStepStatus(
                                                         taskId,
                                                         machineId,
                                                         LogstashMachineStep.CREATE_CONFIG.getId(),
                                                         StepStatus.FAILED,
-                                                        errorMessage);
+                                                        ex.getMessage());
 
                                                 // 重新抛出异常，确保异常传递到外层
                                                 if (ex instanceof RuntimeException) {
                                                     throw (RuntimeException) ex;
                                                 } else {
-                                                    throw new RuntimeException(
-                                                            "创建配置文件时发生异常: " + errorMessage, ex);
+                                                    throw new RuntimeException(ex.getMessage(), ex);
                                                 }
                                             });
                         });

@@ -272,7 +272,7 @@ public class LogstashMachineStateManager {
         }
 
         /**
-         * 初始化机器上的进程环境
+         * 初始化机器上的进程
          *
          * @param taskId 任务ID
          * @return 异步操作结果
@@ -320,17 +320,7 @@ public class LogstashMachineStateManager {
                             })
                     .exceptionally(
                             e -> {
-                                // 发生异常时直接更新状态为失败
-                                logger.error("初始化过程中发生异常: {}", e.getMessage(), e);
-                                stateManager.updateMachineState(
-                                        process.getId(),
-                                        machineInfo.getId(),
-                                        LogstashMachineState.INITIALIZE_FAILED);
-                                logger.info(
-                                        "机器 [{}] 上的进程 [{}] 初始化操作异常，最终状态设置为 [INITIALIZE_FAILED]",
-                                        machineInfo.getId(),
-                                        process.getId());
-                                // 继续传播异常以便外部任务系统能正确处理
+                                // 继续传播异常以便外部任务系统能正确处理，不记录详细日志（由外层处理）
                                 throw new CompletionException(e);
                             });
         }
@@ -383,17 +373,7 @@ public class LogstashMachineStateManager {
                             })
                     .exceptionally(
                             e -> {
-                                // 发生异常时直接更新状态为失败
-                                logger.error("启动过程中发生异常: {}", e.getMessage(), e);
-                                stateManager.updateMachineState(
-                                        process.getId(),
-                                        machineInfo.getId(),
-                                        LogstashMachineState.START_FAILED);
-                                logger.info(
-                                        "机器 [{}] 上的进程 [{}] 启动操作异常，最终状态设置为 [START_FAILED]",
-                                        machineInfo.getId(),
-                                        process.getId());
-                                // 继续传播异常以便外部任务系统能正确处理
+                                // 继续传播异常以便外部任务系统能正确处理，不记录详细日志（由外层处理）
                                 throw new CompletionException(e);
                             });
         }
@@ -446,17 +426,7 @@ public class LogstashMachineStateManager {
                             })
                     .exceptionally(
                             e -> {
-                                // 发生异常时直接更新状态为失败
-                                logger.error("停止过程中发生异常: {}", e.getMessage(), e);
-                                stateManager.updateMachineState(
-                                        process.getId(),
-                                        machineInfo.getId(),
-                                        LogstashMachineState.STOP_FAILED);
-                                logger.info(
-                                        "机器 [{}] 上的进程 [{}] 停止操作异常，最终状态设置为 [STOP_FAILED]",
-                                        machineInfo.getId(),
-                                        process.getId());
-                                // 继续传播异常以便外部任务系统能正确处理
+                                // 继续传播异常以便外部任务系统能正确处理，不记录详细日志（由外层处理）
                                 throw new CompletionException(e);
                             });
         }
@@ -499,9 +469,7 @@ public class LogstashMachineStateManager {
                             })
                     .exceptionally(
                             e -> {
-                                // 记录异常但保持当前状态
-                                logger.error("更新配置过程中发生异常: {}", e.getMessage(), e);
-                                // 继续传播异常以便外部任务系统能正确处理
+                                // 继续传播异常以便外部任务系统能正确处理，不记录详细日志（由外层处理）
                                 throw new CompletionException(e);
                             });
         }
@@ -536,9 +504,7 @@ public class LogstashMachineStateManager {
                             })
                     .exceptionally(
                             e -> {
-                                // 记录异常但保持当前状态
-                                logger.error("刷新配置过程中发生异常: {}", e.getMessage(), e);
-                                // 继续传播异常以便外部任务系统能正确处理
+                                // 继续传播异常以便外部任务系统能正确处理，不记录详细日志（由外层处理）
                                 throw new CompletionException(e);
                             });
         }

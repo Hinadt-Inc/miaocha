@@ -79,21 +79,19 @@ public class StartFailedStateHandler extends AbstractLogstashMachineStateHandler
                                             })
                                     .exceptionally(
                                             ex -> {
-                                                String errorMessage = ex.getMessage();
-                                                // 异常已在命令层记录，这里只更新任务状态
+                                                // 更新任务状态为失败，不记录详细日志（由外层处理）
                                                 taskService.updateStepStatus(
                                                         taskId,
                                                         machineId,
                                                         LogstashMachineStep.START_PROCESS.getId(),
                                                         StepStatus.FAILED,
-                                                        errorMessage);
+                                                        ex.getMessage());
 
                                                 // 重新抛出异常，确保异常传递到外层
                                                 if (ex instanceof RuntimeException) {
                                                     throw (RuntimeException) ex;
                                                 } else {
-                                                    throw new RuntimeException(
-                                                            "启动进程时发生异常: " + errorMessage, ex);
+                                                    throw new RuntimeException(ex.getMessage(), ex);
                                                 }
                                             });
                         });
@@ -139,21 +137,19 @@ public class StartFailedStateHandler extends AbstractLogstashMachineStateHandler
                                             })
                                     .exceptionally(
                                             ex -> {
-                                                String errorMessage = ex.getMessage();
-                                                // 异常已在命令层记录，这里只更新任务状态
+                                                // 更新任务状态为失败，不记录详细日志（由外层处理）
                                                 taskService.updateStepStatus(
                                                         taskId,
                                                         machineId,
                                                         LogstashMachineStep.VERIFY_PROCESS.getId(),
                                                         StepStatus.FAILED,
-                                                        errorMessage);
+                                                        ex.getMessage());
 
                                                 // 重新抛出异常，确保异常传递到外层
                                                 if (ex instanceof RuntimeException) {
                                                     throw (RuntimeException) ex;
                                                 } else {
-                                                    throw new RuntimeException(
-                                                            "验证进程时发生异常: " + errorMessage, ex);
+                                                    throw new RuntimeException(ex.getMessage(), ex);
                                                 }
                                             });
                         });

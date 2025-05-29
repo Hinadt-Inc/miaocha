@@ -26,22 +26,7 @@ public class FutureUtils {
 
         return () -> {
             try {
-                boolean success =
-                        futureSupplier
-                                .get()
-                                .exceptionally(
-                                        ex -> {
-                                            logger.error(
-                                                    "{} [{}] {} 异常: {}",
-                                                    entityName,
-                                                    entityId,
-                                                    operationName,
-                                                    ex.getMessage(),
-                                                    ex);
-                                            throw new RuntimeException(
-                                                    operationName + "失败: " + ex.getMessage(), ex);
-                                        })
-                                .join(); // 等待Future完成
+                boolean success = futureSupplier.get().join(); // 等待Future完成，异常会自动传播
 
                 logger.info(
                         "{} [{}] {}{}", entityName, entityId, operationName, success ? "成功" : "失败");
@@ -51,6 +36,7 @@ public class FutureUtils {
                             String.format("%s [%s] %s失败", entityName, entityId, operationName));
                 }
             } catch (Exception e) {
+                // 只在这里记录一次详细的错误日志，包含完整的异常链信息
                 logger.error(
                         "{} [{}] {}失败: {}", entityName, entityId, operationName, e.getMessage(), e);
                 throw e; // 重新抛出异常，让外层executeAsync捕获
