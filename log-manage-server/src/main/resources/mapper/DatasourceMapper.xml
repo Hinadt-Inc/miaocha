@@ -26,7 +26,7 @@
             port=#{port},
             username=#{username},
             password=#{password},
-            database=#{database},
+            `database`=#{database},
             jdbc_params=#{jdbcParams},
             update_time=NOW()
         WHERE id = #{id}
