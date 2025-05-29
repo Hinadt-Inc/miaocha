@@ -62,27 +62,6 @@ export const useQueryExecution = (
         message.warning('选中的SQL语句不完整');
         throw new Error('选中的SQL语句不完整');
       }
-
-      function parseSelectedSQL(selectedText: string): string {
-        // 1. 移除注释
-        const withoutComments = selectedText.replace(/--.*$|#.*$|\/\*[\s\S]*?\*\//gm, '');
-
-        // 2. 检查是否是完整语句
-        if (
-          /^(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE|EXEC)\b/i.test(withoutComments) &&
-          /;[\s]*$/.test(withoutComments)
-        ) {
-          return withoutComments.trim();
-        }
-
-        // 3. 提取第一个完整语句
-        const statements = withoutComments
-          .split(';')
-          .map((s) => s.trim())
-          .filter((s) => s.length > 0);
-
-        return statements[0] || withoutComments.trim();
-      }
       setLoading(true);
       try {
         const response = await executeSQL({
@@ -127,48 +106,6 @@ export const useQueryExecution = (
     },
     [selectedSource, sqlQuery],
   );
-
-  const executeQueryInternal = async (query: string): Promise<QueryResult> => {
-    setLoading(true);
-    try {
-      const response = await executeSQL({
-        datasourceId: selectedSource,
-        sql: query,
-      });
-
-      const convertedResponse: QueryResult = {
-        ...response,
-        rows: response.rows?.map((row) => {
-          const convertedRow: Record<string, string | number | boolean | null | undefined | object> = {};
-          for (const key in row) {
-            const value = row[key];
-            if (
-              typeof value === 'string' ||
-              typeof value === 'number' ||
-              typeof value === 'boolean' ||
-              value === null ||
-              value === undefined ||
-              (typeof value === 'object' && !Array.isArray(value))
-            ) {
-              convertedRow[key] = value;
-            } else {
-              convertedRow[key] = JSON.stringify(value);
-            }
-          }
-          return convertedRow;
-        }),
-      };
-
-      setQueryResults(convertedResponse);
-      return convertedResponse;
-    } catch (error) {
-      console.error('执行查询失败:', error);
-      message.error('执行查询失败');
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return {
     queryResults,
