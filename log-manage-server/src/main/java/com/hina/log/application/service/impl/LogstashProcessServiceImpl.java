@@ -17,6 +17,7 @@ import com.hina.log.domain.dto.logstash.LogstashMachineDetailDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessConfigUpdateRequestDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessCreateDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessResponseDTO;
+import com.hina.log.domain.dto.logstash.LogstashProcessUpdateDTO;
 import com.hina.log.domain.entity.DatasourceInfo;
 import com.hina.log.domain.entity.LogstashMachine;
 import com.hina.log.domain.entity.LogstashProcess;
@@ -525,6 +526,37 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             throw new BusinessException(
                     ErrorCode.INTERNAL_ERROR, "执行Doris SQL失败: " + e.getMessage());
         }
+    }
+
+    @Override
+    @Transactional
+    public LogstashProcessResponseDTO updateLogstashProcessMetadata(
+            Long id, LogstashProcessUpdateDTO dto) {
+        // 验证进程是否存在
+        LogstashProcess existingProcess = getAndValidateProcess(id);
+
+        // 如果module发生变化，验证新module的唯一性
+        if (!existingProcess.getModule().equals(dto.getModule())) {
+            LogstashProcess processWithSameModule =
+                    logstashProcessMapper.selectByModule(dto.getModule());
+            if (processWithSameModule != null && !processWithSameModule.getId().equals(id)) {
+                throw new BusinessException(
+                        ErrorCode.VALIDATION_ERROR,
+                        String.format("模块名称 '%s' 已被其他进程使用，请选择其他名称", dto.getModule()));
+            }
+        }
+
+        // 更新元信息
+        int updateResult =
+                logstashProcessMapper.updateMetadataOnly(id, dto.getName(), dto.getModule());
+        if (updateResult == 0) {
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "更新进程信息失败");
+        }
+
+        logger.info(
+                "成功更新Logstash进程[{}]的元信息: name={}, module={}", id, dto.getName(), dto.getModule());
+
+        return getLogstashProcess(id);
     }
 
     // 私有方法

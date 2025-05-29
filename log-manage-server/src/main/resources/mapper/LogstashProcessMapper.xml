@@ -25,6 +25,11 @@
         datasource_id=#{datasourceId}, table_name=#{tableName}, update_time=NOW() WHERE id=#{id}
     </update>
 
+    <!-- 仅更新元信息 -->
+    <update id="updateMetadataOnly">
+        UPDATE logstash_process SET name=#{name}, module=#{module}, update_time=NOW() WHERE id=#{id}
+    </update>
+
     <!-- 仅更新配置信息 -->
     <update id="updateConfigOnly">
         UPDATE logstash_process

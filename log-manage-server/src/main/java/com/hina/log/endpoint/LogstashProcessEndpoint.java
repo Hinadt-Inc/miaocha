@@ -8,6 +8,7 @@ import com.hina.log.domain.dto.logstash.LogstashMachineDetailDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessConfigUpdateRequestDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessCreateDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessResponseDTO;
+import com.hina.log.domain.dto.logstash.LogstashProcessUpdateDTO;
 import com.hina.log.domain.dto.logstash.TaskDetailDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -376,5 +377,24 @@ public class LogstashProcessEndpoint {
                     Long machineId) {
 
         return ApiResponse.success(logstashProcessService.getLogstashMachineDetail(id, machineId));
+    }
+
+    /**
+     * 更新Logstash进程元信息
+     *
+     * @param id Logstash进程数据库ID
+     * @param dto 元信息更新请求DTO
+     * @return 更新后的Logstash进程
+     */
+    @PutMapping("/{id}/metadata")
+    @Operation(
+            summary = "更新Logstash进程元信息",
+            description = "更新Logstash进程的基本元信息，包括进程名称和模块名称。模块名称需要保证唯一性。")
+    public ApiResponse<LogstashProcessResponseDTO> updateLogstashProcessMetadata(
+            @Parameter(description = "Logstash进程数据库ID", required = true) @PathVariable("id")
+                    Long id,
+            @Parameter(description = "元信息更新请求", required = true) @Valid @RequestBody
+                    LogstashProcessUpdateDTO dto) {
+        return ApiResponse.success(logstashProcessService.updateLogstashProcessMetadata(id, dto));
     }
 }

@@ -4,6 +4,7 @@ import com.hina.log.domain.dto.logstash.LogstashMachineDetailDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessConfigUpdateRequestDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessCreateDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessResponseDTO;
+import com.hina.log.domain.dto.logstash.LogstashProcessUpdateDTO;
 import java.util.List;
 
 /** Logstash进程管理服务接口 */
@@ -16,6 +17,15 @@ public interface LogstashProcessService {
      * @return 创建的Logstash进程信息
      */
     LogstashProcessResponseDTO createLogstashProcess(LogstashProcessCreateDTO dto);
+
+    /**
+     * 更新Logstash进程元信息 只能更新name和module字段，module需要校验唯一性
+     *
+     * @param id Logstash进程ID
+     * @param dto 更新请求DTO
+     * @return 更新后的Logstash进程信息
+     */
+    LogstashProcessResponseDTO updateLogstashProcessMetadata(Long id, LogstashProcessUpdateDTO dto);
 
     /**
      * 更新Logstash配置 支持同时更新主配置、JVM配置、系统配置中的任意组合 可以针对全部机器或指定机器

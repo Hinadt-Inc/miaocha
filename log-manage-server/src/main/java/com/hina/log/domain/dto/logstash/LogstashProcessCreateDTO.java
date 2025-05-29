@@ -15,9 +15,6 @@ public class LogstashProcessCreateDTO {
     @NotBlank(message = "进程名称不能为空")
     private String name;
 
-    @Schema(description = "Logstash进程的描述", example = "Processes web server logs")
-    private String description;
-
     @Schema(description = "模块名称", example = "nginx")
     @NotBlank(message = "模块名称不能为空")
     private String module;

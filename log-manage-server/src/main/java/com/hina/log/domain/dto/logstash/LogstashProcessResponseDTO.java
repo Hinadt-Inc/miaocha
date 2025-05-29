@@ -19,9 +19,6 @@ public class LogstashProcessResponseDTO {
     @Schema(description = "Logstash进程模块")
     private String module;
 
-    @Schema(description = "Logstash进程描述")
-    private String description;
-
     @Schema(description = "Logstash配置文件内容")
     private String configContent;
 
