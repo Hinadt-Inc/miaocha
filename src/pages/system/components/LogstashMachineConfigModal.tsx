@@ -1,4 +1,10 @@
-import { Form, Input, Modal, message, Switch, Space } from 'antd';
+import { Form, Input, Modal, message, Switch, Space, Button, Tooltip } from 'antd';
+import {
+  LOGSTASH_CONFIG_TEMPLATE,
+  JVM_CONFIG_TEMPLATE,
+  LOGSTASH_BASE_CONFIG_TEMPLATE,
+} from '../../../utils/logstashTemplates';
+import { CopyOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { getLogstashMachineDetail, updateLogstashMachineConfig } from '../../../api/logstash';
 
@@ -48,11 +54,6 @@ export default function LogstashMachineConfigModal({
     try {
       setConfirmLoading(true);
 
-      if (!enableEdit) {
-        messageApi.warning('请开启编辑模式后再提交修改');
-        return;
-      }
-
       const currentValues = form.getFieldsValue();
       const hasChanges = (Object.keys(currentValues) as Array<keyof typeof initialConfig>).some(
         (key) => currentValues[key] !== initialConfig?.[key],
@@ -64,7 +65,16 @@ export default function LogstashMachineConfigModal({
       }
 
       const values = await form.validateFields();
-      await updateLogstashMachineConfig(processId, machineId, values);
+      let data = {
+        configContent: values.configContent,
+      };
+      if (enableEdit) {
+        data = {
+          ...data,
+          ...values,
+        };
+      }
+      await updateLogstashMachineConfig(processId, machineId, data);
       messageApi.success('机器配置更新成功');
       onCancel();
     } finally {
@@ -88,7 +98,28 @@ export default function LogstashMachineConfigModal({
     >
       {contextHolder}
       <Form form={form} layout="vertical" initialValues={initialConfig}>
-        <Form.Item name="configContent" label="配置内容">
+        <Form.Item
+          name="configContent"
+          label={
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>配置内容</span>
+              <Tooltip title="复制配置内容模板">
+                <Button
+                  size="small"
+                  icon={<CopyOutlined />}
+                  onClick={() => {
+                    const template = `${LOGSTASH_CONFIG_TEMPLATE}`;
+                    navigator.clipboard
+                      .writeText(template)
+                      .then(() => messageApi.success('配置已复制到剪贴板'))
+                      .catch(() => messageApi.error('复制失败'));
+                  }}
+                  title="复制配置模板"
+                />
+              </Tooltip>
+            </div>
+          }
+        >
           <Input.TextArea
             rows={6}
             style={{ width: '100%' }}
@@ -96,7 +127,27 @@ export default function LogstashMachineConfigModal({
           />
         </Form.Item>
 
-        <Form.Item name="jvmOptions" label="JVM参数">
+        <Form.Item
+          name="jvmOptions"
+          label={
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>JVM参数</span>
+              <Tooltip title="复制JVM参数模板">
+                <Button
+                  size="small"
+                  icon={<CopyOutlined />}
+                  onClick={() => {
+                    navigator.clipboard
+                      .writeText(JVM_CONFIG_TEMPLATE)
+                      .then(() => messageApi.success('JVM参数已复制到剪贴板'))
+                      .catch(() => messageApi.error('复制失败'));
+                  }}
+                  title="复制JVM参数模板"
+                />
+              </Tooltip>
+            </div>
+          }
+        >
           <Input.TextArea
             rows={4}
             style={{ width: '100%' }}
