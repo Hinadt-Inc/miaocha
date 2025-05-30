@@ -376,25 +376,28 @@ const DataSourceManagementPage = () => {
           search={false}
           options={false}
           headerTitle={
-            <Breadcrumb>
-              <Breadcrumb.Item>
-                <Link to="/">
-                  <HomeOutlined />
-                </Link>
-              </Breadcrumb.Item>
-              <Breadcrumb.Item>数据源管理</Breadcrumb.Item>
-            </Breadcrumb>
+            <Breadcrumb
+              items={[
+                {
+                  title: (
+                    <Link to="/">
+                      <HomeOutlined />
+                    </Link>
+                  ),
+                },
+                { title: '数据源管理' },
+              ]}
+            ></Breadcrumb>
           }
           actionRef={actionRef}
           rowKey="id"
           scroll={{ x: 'max-content' }}
           cardProps={{ bodyStyle: { padding: '0px' } }}
           toolBarRender={() => [
-            <Space key="search" style={{ width: '100%' }}>
+            <Space key="search">
               <Input.Search
                 placeholder="搜索数据源名称/主机/数据库/描述"
                 allowClear
-                style={{ width: '100%', minWidth: 200, maxWidth: 300 }}
                 onChange={(e) => {
                   // 当输入变化时立即搜索，提供更即时的反馈
                   setSearchKeyword(e.target.value);
@@ -439,7 +442,6 @@ const DataSourceManagementPage = () => {
             destroyOnClose: true,
             maskClosable: false,
             centered: true,
-            bodyStyle: { padding: '24px 24px 8px' },
           }}
           layout="horizontal"
           labelCol={{ span: 6 }}

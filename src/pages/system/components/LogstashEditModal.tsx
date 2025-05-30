@@ -54,7 +54,14 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
     try {
       setConfirmLoading(true);
       const values = await form.validateFields();
-      await onOk(values);
+      const submitValues = initialValues
+        ? {
+            id: initialValues.id,
+            name: values.name,
+            module: values.module,
+          }
+        : values;
+      await onOk(submitValues);
     } catch (error) {
       console.error('表单验证失败:', error);
     } finally {
@@ -85,7 +92,7 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <Form.Item name="datasourceId" label="数据源" rules={[{ required: true, message: '请选择数据源' }]}>
-                  <Select loading={loading}>
+                  <Select loading={loading} disabled={!!initialValues}>
                     {datasources.map((ds) => (
                       <Select.Option key={ds.id} value={ds.id}>
                         {ds.name}
@@ -94,11 +101,11 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
                   </Select>
                 </Form.Item>
                 <Form.Item name="tableName" label="表名" rules={[{ required: false, message: '请输入表名' }]}>
-                  <Input placeholder="请输入表名，例如：order_logs" />
+                  <Input placeholder="请输入表名，例如：order_logs" disabled={!!initialValues} />
                 </Form.Item>
               </div>
               <Form.Item name="machineIds" label="部署机器" rules={[{ required: true, message: '请选择部署机器' }]}>
-                <Select mode="multiple" loading={loading}>
+                <Select mode="multiple" loading={loading} disabled={!!initialValues}>
                   {machines.map((m) => (
                     <Select.Option key={m.id} value={m.id}>
                       {m.name} ({m.ip})
@@ -107,13 +114,14 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
                 </Select>
               </Form.Item>
               <Form.Item name="description" label="描述">
-                <Input.TextArea rows={2} placeholder="请输入Logstash进程描述信息" />
+                <Input.TextArea rows={2} placeholder="请输入Logstash进程描述信息" disabled={!!initialValues} />
               </Form.Item>
             </div>
           </div>
 
           <Form.Item name="configContent" label="配置内容" rules={[{ required: true, message: '请输入配置内容' }]}>
             <Input.TextArea
+              disabled={!!initialValues}
               rows={6}
               style={{ width: '100%' }}
               placeholder="请输入Logstash配置文件内容，例如：input { beats { port => 5044 } }"
@@ -122,6 +130,7 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
 
           <Form.Item name="jvmOptions" label="JVM参数">
             <Input.TextArea
+              disabled={!!initialValues}
               rows={4}
               style={{ width: '100%' }}
               placeholder="请输入JVM参数，例如：-Xms1g -Xmx1g -XX:+HeapDumpOnOutOfMemoryError"
@@ -130,6 +139,7 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
 
           <Form.Item name="logstashYml" label="Logstash配置">
             <Input.TextArea
+              disabled={!!initialValues}
               rows={4}
               style={{ width: '100%' }}
               placeholder="请输入logstash.yml配置内容，例如：http.host: 0.0.0.0"

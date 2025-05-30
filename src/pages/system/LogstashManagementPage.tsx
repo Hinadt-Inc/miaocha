@@ -358,7 +358,12 @@ function LogstashManagementPage() {
       key: 'action',
       render: (_: unknown, record: LogstashProcess) => (
         <Space size="small">
-          <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
+          <Button
+            type="link"
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(record)}
+            disabled={['RUNNING', 'STARTING', 'STOPPING'].includes(record.state)}
+          >
             编辑
           </Button>
           <Button
@@ -393,7 +398,7 @@ function LogstashManagementPage() {
               setSqlModalVisible(true);
               setCurrentProcess(record);
             }}
-            disabled={record.state !== 'NOT_STARTED'}
+            disabled={!!record.dorisSQL}
           >
             SQL
           </Button>
@@ -891,12 +896,11 @@ function LogstashManagementPage() {
           >
             <div style={{ marginBottom: 16 }}>
               <p>请输入要执行的Doris SQL语句（主要用于创建表）：</p>
-              <p style={{ color: 'red' }}>注意：只有在状态为NOT_STARTED时才能执行SQL</p>
             </div>
             <textarea
               value={sql}
               onChange={(e) => setSql(e.target.value)}
-              style={{ width: '100%', height: '200px', padding: '8px' }}
+              style={{ width: '100%', height: '200px' }}
               placeholder="例如：CREATE TABLE log_table_test_env (...) ENGINE=OLAP ..."
             />
           </Modal>

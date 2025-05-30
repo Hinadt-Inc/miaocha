@@ -382,14 +382,18 @@ const UserManagementPage = () => {
   return (
     <Card>
       <div className={styles.header}>
-        <Breadcrumb>
-          <Breadcrumb.Item>
-            <Link to="/">
-              <HomeOutlined />
-            </Link>
-          </Breadcrumb.Item>
-          <Breadcrumb.Item>用户管理</Breadcrumb.Item>
-        </Breadcrumb>
+        <Breadcrumb
+          items={[
+            {
+              title: (
+                <Link to="/">
+                  <HomeOutlined />
+                </Link>
+              ),
+            },
+            { title: '用户管理', key: 'system/user' },
+          ]}
+        ></Breadcrumb>
         <Space>
           <Input
             placeholder="搜索昵称/邮箱/用户名"
