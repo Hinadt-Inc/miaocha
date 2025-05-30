@@ -117,6 +117,7 @@ const VirtualTable = (props: IProps) => {
   const [headerHeight, setHeaderHeight] = useState<number>(0);
   const [columns, setColumns] = useState<any[]>([]);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  const [scrollX, setScrollX] = useState(1300);
 
   const handleResize = (index: number) => (width: number) => {
     const column = columns[index];
@@ -262,6 +263,18 @@ const VirtualTable = (props: IProps) => {
     };
   }, [containerRef.current, tblRef.current, hasMore, loading, onLoadMore]);
 
+  // 动态计算scroll.x
+  useEffect(() => {
+    // 只统计动态列（不含log_time/_source）
+    const dynamicCols = columns.filter((col: any) => col.dataIndex !== 'log_time' && col.dataIndex !== '_source');
+    let extra = 0;
+    dynamicCols.forEach((col: any) => {
+      const titleStr = typeof col.title === 'string' ? col.title : col.dataIndex || '';
+      extra += (titleStr.length || 0) * 15;
+    });
+    setScrollX(Math.max(1300, 1300 + extra));
+  }, [columns]);
+
   // 列顺序操作
   const hasSourceColumn = columns.some((col) => col.dataIndex === '_source') && columns.length === 2;
 
@@ -324,7 +337,7 @@ const VirtualTable = (props: IProps) => {
         pagination={false}
         columns={enhancedColumns}
         loading={{ spinning: loading, size: 'small' }}
-        scroll={{ x: data.length > 0 ? 1300 : 0, y: containerHeight - headerHeight - 1 }}
+        scroll={{ x: data.length > 0 ? scrollX : 0, y: containerHeight - headerHeight - 1 }}
         expandable={{
           columnWidth: 26,
           expandedRowRender: (record) => <ExpandedRow data={record} keywords={searchParams?.keywords || []} />,
