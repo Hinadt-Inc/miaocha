@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, Fragment, useMemo } from 'react';
-import { Table } from 'antd';
+import { Table, Button, Tooltip } from 'antd';
 import ExpandedRow from './ExpandedRow';
 import styles from './VirtualTable.module.less';
 import { highlightText } from '@/utils/highlightText';
+import { CloseOutlined, DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons';
 
 interface IProps {
   data: any[]; // 数据
@@ -11,6 +12,17 @@ interface IProps {
   onLoadMore: () => void; // 加载更多数据的回调函数
   hasMore?: boolean; // 是否还有更多数据
   dynamicColumns?: ILogColumnsResponse[]; // 动态列配置
+  onChangeColumns: (params: ILogColumnsResponse[]) => void; // 列变化回调函数
+}
+
+interface ColumnHeaderProps {
+  title: React.ReactNode;
+  colIndex: number;
+  onDelete: (colIndex: number) => void;
+  onMoveLeft: (colIndex: number) => void;
+  onMoveRight: (colIndex: number) => void;
+  showActions: boolean;
+  columns: any[];
 }
 
 const ResizableTitle = (props: any) => {
@@ -51,8 +63,54 @@ const ResizableTitle = (props: any) => {
   );
 };
 
+const ColumnHeader: React.FC<ColumnHeaderProps> = ({
+  title,
+  colIndex,
+  onDelete,
+  onMoveLeft,
+  onMoveRight,
+  showActions,
+  columns,
+}) => {
+  const [hovered, setHovered] = useState(false);
+  const isLeftLogTime = colIndex > 0 && columns[colIndex - 1]?.dataIndex === '_source';
+  const isLast = colIndex === columns.length - 1;
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{ display: 'flex', alignItems: 'center' }}
+    >
+      {title}
+      {showActions && hovered && (
+        <div className={styles.headerActions}>
+          <Tooltip title="移除该列">
+            <Button color="primary" variant="link" size="small" onClick={() => onDelete(colIndex)}>
+              <CloseOutlined />
+            </Button>
+          </Tooltip>
+          {colIndex > 0 && !isLeftLogTime && (
+            <Tooltip title="将列左移​">
+              <Button color="primary" variant="link" size="small" onClick={() => onMoveLeft(colIndex)}>
+                <DoubleLeftOutlined />
+              </Button>
+            </Tooltip>
+          )}
+          {!isLast && (
+            <Tooltip title="将列右移​">
+              <Button color="primary" variant="link" size="small" onClick={() => onMoveRight(colIndex)}>
+                <DoubleRightOutlined />
+              </Button>
+            </Tooltip>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const VirtualTable = (props: IProps) => {
-  const { data, loading = false, onLoadMore, hasMore = false, dynamicColumns, searchParams } = props;
+  const { data, loading = false, onLoadMore, hasMore = false, dynamicColumns, searchParams, onChangeColumns } = props;
   const containerRef = useRef<HTMLDivElement>(null);
   const tblRef: Parameters<typeof Table>[0]['ref'] = useRef(null);
   const [containerHeight, setContainerHeight] = useState<number>(0);
@@ -204,6 +262,57 @@ const VirtualTable = (props: IProps) => {
     };
   }, [containerRef.current, tblRef.current, hasMore, loading, onLoadMore]);
 
+  // 列顺序操作
+  const hasSourceColumn = columns.some((col) => col.dataIndex === '_source') && columns.length === 2;
+
+  // 删除列
+  const handleDeleteColumn = (colIndex: number) => {
+    const col = columns[colIndex];
+    const newCols = columns.filter((_, idx) => idx !== colIndex);
+    console.log('columns', columns);
+    console.log('newCols', newCols);
+    setColumns(newCols);
+    onChangeColumns(col);
+    // 这里如果有 onChangeColumns 也要同步
+  };
+  // 左移
+  const handleMoveLeft = (colIndex: number) => {
+    if (colIndex <= 0) return;
+    const newCols = [...columns];
+    [newCols[colIndex - 1], newCols[colIndex]] = [newCols[colIndex], newCols[colIndex - 1]];
+    setColumns(newCols);
+  };
+  // 右移
+  const handleMoveRight = (colIndex: number) => {
+    if (colIndex >= columns.length - 1) return;
+    const newCols = [...columns];
+    [newCols[colIndex], newCols[colIndex + 1]] = [newCols[colIndex + 1], newCols[colIndex]];
+    setColumns(newCols);
+  };
+
+  // 包装列头
+  const enhancedColumns = !hasSourceColumn
+    ? columns.map((col, idx) => {
+        if (col.dataIndex === 'log_time') {
+          return col;
+        }
+        return {
+          ...col,
+          title: (
+            <ColumnHeader
+              title={col.title}
+              colIndex={idx}
+              onDelete={handleDeleteColumn}
+              onMoveLeft={handleMoveLeft}
+              onMoveRight={handleMoveRight}
+              showActions={true}
+              columns={columns}
+            />
+          ),
+        };
+      })
+    : columns;
+
   return (
     <div className={styles.virtualLayout} ref={containerRef}>
       <Table
@@ -213,7 +322,7 @@ const VirtualTable = (props: IProps) => {
         rowKey="_key"
         dataSource={data}
         pagination={false}
-        columns={columns}
+        columns={enhancedColumns}
         loading={{ spinning: loading, size: 'small' }}
         scroll={{ x: data.length > 0 ? 1300 : 0, y: containerHeight - headerHeight - 1 }}
         expandable={{

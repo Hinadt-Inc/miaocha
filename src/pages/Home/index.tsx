@@ -65,8 +65,6 @@ const HomePage = () => {
     },
   });
 
-  console.log('moduleOptions', moduleOptions);
-
   // 执行日志明细查询
   const getDetailData = useRequest(api.fetchLogDetails, {
     manual: true,
@@ -137,6 +135,14 @@ const HomePage = () => {
     (searchBarRef?.current as any)?.setTimeOption(timeOption);
   };
 
+  const handleChangeColumnsByLog = (col: any) => {
+    const index = logTableColumns.findIndex((item) => item.columnName === col.title);
+    if (index === -1) return;
+    logTableColumns[index].selected = false;
+    delete logTableColumns[index]._createTime;
+    setLogTableColumns([...logTableColumns]);
+  };
+
   // 优化log组件的props
   const logProps: any = useMemo(
     () => ({
@@ -147,6 +153,7 @@ const HomePage = () => {
       searchParams,
       dynamicColumns: logTableColumns,
       onSearch: onSearchFromLog,
+      onChangeColumns: handleChangeColumnsByLog,
     }),
     [histogramData, getHistogramData.loading, detailData, getDetailData, logTableColumns, searchParams],
   );
