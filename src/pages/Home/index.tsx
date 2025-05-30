@@ -50,18 +50,22 @@ const HomePage = () => {
       const moduleHierarchy = generateModuleHierarchy(res);
 
       // 设置默认数据源和模块
-      if ((!searchParams.datasourceId || !searchParams.module) && moduleHierarchy[0]) {
+      if (
+        (!searchParams.datasourceId || !searchParams.module) &&
+        moduleHierarchy[0] &&
+        moduleHierarchy[0]?.children[0]
+      ) {
         setSearchParams((prev) => ({
           ...prev,
           datasourceId: Number(moduleHierarchy[0].value),
           module: moduleHierarchy[0]?.children[0]?.value,
         }));
-      } else {
-        // todo 当切换时，需要更新数据源和模块，并更新日志数据
       }
       setModuleOptions(moduleHierarchy);
     },
   });
+
+  console.log('moduleOptions', moduleOptions);
 
   // 执行日志明细查询
   const getDetailData = useRequest(api.fetchLogDetails, {
@@ -82,7 +86,7 @@ const HomePage = () => {
   // 执行日志时间分布查询
   const getHistogramData = useRequest(api.fetchLogHistogram, {
     manual: true,
-    onSuccess: (res) => {
+    onSuccess: (res: any) => {
       setHistogramData(res);
     },
     onError: () => {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Collapse, Cascader, Spin } from 'antd';
 import { useRequest } from 'ahooks';
 import * as api from '@/api/logs';
@@ -71,8 +71,15 @@ const Sider: React.FC<IProps> = (props) => {
       return;
     }
     const [datasourceId, module] = value;
-    setSelectedModule([String(datasourceId), String(module)]);
-    getColumns.run({ datasourceId: Number(datasourceId), module: String(module) });
+    const moduleStr = String(module);
+    setSelectedModule([String(datasourceId), moduleStr]);
+    getColumns.run({ datasourceId: Number(datasourceId), module: moduleStr });
+    onSearch({
+      ...searchParams,
+      datasourceId: Number(datasourceId),
+      module: moduleStr,
+      offset: 0,
+    });
   };
 
   // 当 modules 加载完成后，自动选择第一个数据源和第一个模块
