@@ -25,9 +25,11 @@ public class LogstashMachineConverter implements Converter<LogstashMachine, Logs
      *
      * @param process LogstashProcess实体
      * @param machineId 机器ID
+     * @param deployPath 部署路径
      * @return 新的LogstashMachine实体
      */
-    public LogstashMachine createFromProcess(LogstashProcess process, Long machineId) {
+    public LogstashMachine createFromProcess(
+            LogstashProcess process, Long machineId, String deployPath) {
         if (process == null || machineId == null) {
             return null;
         }
@@ -41,6 +43,9 @@ public class LogstashMachineConverter implements Converter<LogstashMachine, Logs
         logstashMachine.setConfigContent(process.getConfigContent());
         logstashMachine.setJvmOptions(process.getJvmOptions());
         logstashMachine.setLogstashYml(process.getLogstashYml());
+
+        // 设置部署路径
+        logstashMachine.setDeployPath(deployPath);
 
         // 设置创建和更新时间
         LocalDateTime now = LocalDateTime.now();
@@ -66,6 +71,7 @@ public class LogstashMachineConverter implements Converter<LogstashMachine, Logs
         entity.setConfigContent(dto.getConfigContent());
         entity.setJvmOptions(dto.getJvmOptions());
         entity.setLogstashYml(dto.getLogstashYml());
+        entity.setDeployPath(dto.getDeployPath());
         entity.setCreateTime(dto.getCreateTime());
         entity.setUpdateTime(dto.getUpdateTime());
 
@@ -88,6 +94,7 @@ public class LogstashMachineConverter implements Converter<LogstashMachine, Logs
         dto.setConfigContent(entity.getConfigContent());
         dto.setJvmOptions(entity.getJvmOptions());
         dto.setLogstashYml(entity.getLogstashYml());
+        dto.setDeployPath(entity.getDeployPath());
         dto.setCreateTime(entity.getCreateTime());
         dto.setUpdateTime(entity.getUpdateTime());
 
@@ -123,6 +130,7 @@ public class LogstashMachineConverter implements Converter<LogstashMachine, Logs
         entity.setConfigContent(dto.getConfigContent());
         entity.setJvmOptions(dto.getJvmOptions());
         entity.setLogstashYml(dto.getLogstashYml());
+        entity.setDeployPath(dto.getDeployPath());
 
         return entity;
     }
@@ -133,14 +141,10 @@ public class LogstashMachineConverter implements Converter<LogstashMachine, Logs
      * @param logstashMachine LogstashMachine实体
      * @param process LogstashProcess实体
      * @param machineInfo Machine实体
-     * @param deployPath 部署路径
      * @return LogstashMachineDetailDTO
      */
     public LogstashMachineDetailDTO toDetailDTO(
-            LogstashMachine logstashMachine,
-            LogstashProcess process,
-            MachineInfo machineInfo,
-            String deployPath) {
+            LogstashMachine logstashMachine, LogstashProcess process, MachineInfo machineInfo) {
         if (logstashMachine == null || process == null || machineInfo == null) {
             return null;
         }
@@ -181,8 +185,8 @@ public class LogstashMachineConverter implements Converter<LogstashMachine, Logs
         detailDTO.setCreateTime(logstashMachine.getCreateTime());
         detailDTO.setUpdateTime(logstashMachine.getUpdateTime());
 
-        // 设置部署路径
-        detailDTO.setDeployPath(deployPath);
+        // 设置部署路径（从实体中获取）
+        detailDTO.setDeployPath(logstashMachine.getDeployPath());
 
         return detailDTO;
     }

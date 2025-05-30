@@ -1,10 +1,13 @@
 package com.hina.log.application.logstash.command;
 
 import com.hina.log.common.ssh.SshClient;
+import com.hina.log.domain.entity.LogstashMachine;
 import com.hina.log.domain.entity.MachineInfo;
+import com.hina.log.domain.mapper.LogstashMachineMapper;
 import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.StringUtils;
 
 /** Logstash命令抽象基类 */
 public abstract class AbstractLogstashCommand implements LogstashCommand {
@@ -12,11 +15,17 @@ public abstract class AbstractLogstashCommand implements LogstashCommand {
     protected final SshClient sshClient;
     protected final String deployDir;
     protected final Long processId;
+    protected final LogstashMachineMapper logstashMachineMapper;
 
-    protected AbstractLogstashCommand(SshClient sshClient, String deployDir, Long processId) {
+    protected AbstractLogstashCommand(
+            SshClient sshClient,
+            String deployDir,
+            Long processId,
+            LogstashMachineMapper logstashMachineMapper) {
         this.sshClient = sshClient;
         this.deployDir = deployDir;
         this.processId = processId;
+        this.logstashMachineMapper = logstashMachineMapper;
     }
 
     /**
@@ -97,9 +106,27 @@ public abstract class AbstractLogstashCommand implements LogstashCommand {
     /** 实际执行命令 */
     protected abstract CompletableFuture<Boolean> doExecute(MachineInfo machineInfo);
 
-    /** 获取Logstash进程目录 使用规范化后的部署目录路径 */
+    /** 获取Logstash进程目录 优先使用数据库中的部署路径，否则使用默认路径 */
     protected String getProcessDirectory(MachineInfo machineInfo) {
-        String normalizedDeployDir = normalizeDeployDir(machineInfo);
-        return String.format("%s/logstash-%d", normalizedDeployDir, processId);
+        String actualDeployDir = getActualDeployDir(machineInfo);
+        return String.format("%s/logstash-%d", actualDeployDir, processId);
+    }
+
+    /** 获取实际的部署目录 优先使用数据库中保存的机器特定部署路径，如果没有则使用规范化的默认路径 */
+    protected String getActualDeployDir(MachineInfo machineInfo) {
+        try {
+            // 尝试从数据库获取机器特定的部署路径
+            LogstashMachine logstashMachine =
+                    logstashMachineMapper.selectByLogstashProcessIdAndMachineId(
+                            processId, machineInfo.getId());
+            if (logstashMachine != null && StringUtils.hasText(logstashMachine.getDeployPath())) {
+                return logstashMachine.getDeployPath();
+            }
+        } catch (Exception e) {
+            logger.warn("无法从数据库获取部署路径，使用默认路径: {}", e.getMessage());
+        }
+
+        // 使用规范化的默认路径
+        return normalizeDeployDir(machineInfo);
     }
 }

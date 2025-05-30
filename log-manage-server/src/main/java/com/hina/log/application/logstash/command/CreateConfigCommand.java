@@ -3,6 +3,7 @@ package com.hina.log.application.logstash.command;
 import com.hina.log.common.exception.SshOperationException;
 import com.hina.log.common.ssh.SshClient;
 import com.hina.log.domain.entity.MachineInfo;
+import com.hina.log.domain.mapper.LogstashMachineMapper;
 import java.util.concurrent.CompletableFuture;
 
 /** 创建Logstash配置文件命令 */
@@ -11,8 +12,12 @@ public class CreateConfigCommand extends AbstractLogstashCommand {
     private final String configContent;
 
     public CreateConfigCommand(
-            SshClient sshClient, String deployDir, Long processId, String configContent) {
-        super(sshClient, deployDir, processId);
+            SshClient sshClient,
+            String deployDir,
+            Long processId,
+            String configContent,
+            LogstashMachineMapper logstashMachineMapper) {
+        super(sshClient, deployDir, processId, logstashMachineMapper);
         this.configContent = configContent;
     }
 

@@ -3,6 +3,7 @@ package com.hina.log.application.logstash.command;
 import com.hina.log.common.exception.SshOperationException;
 import com.hina.log.common.ssh.SshClient;
 import com.hina.log.domain.entity.MachineInfo;
+import com.hina.log.domain.mapper.LogstashMachineMapper;
 import java.util.concurrent.CompletableFuture;
 import org.springframework.util.StringUtils;
 
@@ -13,8 +14,12 @@ public class ModifySystemConfigCommand extends AbstractLogstashCommand {
     private final String logstashYml; // 系统配置文件内容
 
     /** 创建基本系统配置命令（仅添加allow_superuser设置） */
-    public ModifySystemConfigCommand(SshClient sshClient, String deployDir, Long processId) {
-        this(sshClient, deployDir, processId, null, null);
+    public ModifySystemConfigCommand(
+            SshClient sshClient,
+            String deployDir,
+            Long processId,
+            LogstashMachineMapper logstashMachineMapper) {
+        this(sshClient, deployDir, processId, null, null, logstashMachineMapper);
     }
 
     /**
@@ -25,14 +30,16 @@ public class ModifySystemConfigCommand extends AbstractLogstashCommand {
      * @param processId 进程ID
      * @param jvmOptions JVM配置文件内容（可为null）
      * @param logstashYml 系统配置文件内容（可为null）
+     * @param logstashMachineMapper Logstash机器映射器
      */
     public ModifySystemConfigCommand(
             SshClient sshClient,
             String deployDir,
             Long processId,
             String jvmOptions,
-            String logstashYml) {
-        super(sshClient, deployDir, processId);
+            String logstashYml,
+            LogstashMachineMapper logstashMachineMapper) {
+        super(sshClient, deployDir, processId, logstashMachineMapper);
         this.jvmOptions = jvmOptions;
         this.logstashYml = logstashYml;
     }

@@ -2,6 +2,7 @@ package com.hina.log.application.logstash.command;
 
 import com.hina.log.common.ssh.SshClient;
 import com.hina.log.domain.entity.MachineInfo;
+import com.hina.log.domain.mapper.LogstashMachineMapper;
 import java.util.concurrent.CompletableFuture;
 import org.springframework.util.StringUtils;
 
@@ -14,8 +15,12 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
 
     /** 创建仅更新主配置文件的命令（向后兼容构造函数） */
     public UpdateConfigCommand(
-            SshClient sshClient, String deployDir, Long processId, String configContent) {
-        this(sshClient, deployDir, processId, configContent, null, null);
+            SshClient sshClient,
+            String deployDir,
+            Long processId,
+            String configContent,
+            LogstashMachineMapper logstashMachineMapper) {
+        this(sshClient, deployDir, processId, configContent, null, null, logstashMachineMapper);
     }
 
     /**
@@ -27,6 +32,7 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
      * @param configContent 主配置文件内容（可为null）
      * @param jvmOptions JVM配置文件内容（可为null）
      * @param logstashYml 系统配置文件内容（可为null）
+     * @param logstashMachineMapper Logstash机器映射器
      */
     public UpdateConfigCommand(
             SshClient sshClient,
@@ -34,8 +40,9 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
             Long processId,
             String configContent,
             String jvmOptions,
-            String logstashYml) {
-        super(sshClient, deployDir, processId);
+            String logstashYml,
+            LogstashMachineMapper logstashMachineMapper) {
+        super(sshClient, deployDir, processId, logstashMachineMapper);
         this.configContent = configContent;
         this.jvmOptions = jvmOptions;
         this.logstashYml = logstashYml;

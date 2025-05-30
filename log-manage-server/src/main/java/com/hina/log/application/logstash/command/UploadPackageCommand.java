@@ -3,6 +3,7 @@ package com.hina.log.application.logstash.command;
 import com.hina.log.common.exception.SshOperationException;
 import com.hina.log.common.ssh.SshClient;
 import com.hina.log.domain.entity.MachineInfo;
+import com.hina.log.domain.mapper.LogstashMachineMapper;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.concurrent.CompletableFuture;
@@ -13,8 +14,12 @@ public class UploadPackageCommand extends AbstractLogstashCommand {
     private final String packagePath;
 
     public UploadPackageCommand(
-            SshClient sshClient, String packagePath, String deployDir, Long processId) {
-        super(sshClient, deployDir, processId);
+            SshClient sshClient,
+            String packagePath,
+            String deployDir,
+            Long processId,
+            LogstashMachineMapper logstashMachineMapper) {
+        super(sshClient, deployDir, processId, logstashMachineMapper);
         this.packagePath = packagePath;
     }
 

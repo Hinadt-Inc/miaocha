@@ -34,6 +34,9 @@ public class LogstashProcessCreateDTO {
     @Schema(description = "Doris表名, 选择性手动指定, 不指定的话会从配置中解析", example = "log_table_test_env")
     private String tableName;
 
+    @Schema(description = "自定义部署路径，如果不指定则使用系统默认配置", example = "/opt/custom/logstash")
+    private String customDeployPath;
+
     @Schema(description = "部署的机器ID列表")
     @NotEmpty(message = "部署机器不能为空")
     private List<Long> machineIds;

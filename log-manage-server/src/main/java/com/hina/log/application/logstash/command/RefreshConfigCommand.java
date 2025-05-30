@@ -16,7 +16,6 @@ import org.springframework.util.StringUtils;
 public class RefreshConfigCommand extends AbstractLogstashCommand {
 
     private final LogstashProcessMapper logstashProcessMapper;
-    private final LogstashMachineMapper logstashMachineMapper;
     private final String configContent; // 可选的主配置内容，如果为null则从数据库获取
     private final String jvmOptions; // 可选的JVM选项内容，如果为null则从数据库获取
     private final String logstashYml; // 可选的系统配置内容，如果为null则从数据库获取
@@ -60,9 +59,8 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
             String configContent,
             String jvmOptions,
             String logstashYml) {
-        super(sshClient, deployDir, processId);
+        super(sshClient, deployDir, processId, logstashMachineMapper);
         this.logstashProcessMapper = logstashProcessMapper;
-        this.logstashMachineMapper = logstashMachineMapper;
         this.configContent = configContent;
         this.jvmOptions = jvmOptions;
         this.logstashYml = logstashYml;

@@ -41,6 +41,9 @@ public class LogstashMachineDTO {
     @Schema(description = "Logstash系统配置")
     private String logstashYml;
 
+    @Schema(description = "部署路径")
+    private String deployPath;
+
     @Schema(description = "创建时间")
     private LocalDateTime createTime;
 

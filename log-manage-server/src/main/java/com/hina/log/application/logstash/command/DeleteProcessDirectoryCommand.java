@@ -3,6 +3,7 @@ package com.hina.log.application.logstash.command;
 import com.hina.log.common.exception.SshOperationException;
 import com.hina.log.common.ssh.SshClient;
 import com.hina.log.domain.entity.MachineInfo;
+import com.hina.log.domain.mapper.LogstashMachineMapper;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -27,8 +28,12 @@ import java.util.concurrent.CompletableFuture;
  */
 public class DeleteProcessDirectoryCommand extends AbstractLogstashCommand {
 
-    public DeleteProcessDirectoryCommand(SshClient sshClient, String deployDir, Long processId) {
-        super(sshClient, deployDir, processId);
+    public DeleteProcessDirectoryCommand(
+            SshClient sshClient,
+            String deployDir,
+            Long processId,
+            LogstashMachineMapper logstashMachineMapper) {
+        super(sshClient, deployDir, processId, logstashMachineMapper);
     }
 
     @Override

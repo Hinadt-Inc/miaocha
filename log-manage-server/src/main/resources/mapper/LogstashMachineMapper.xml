@@ -4,13 +4,13 @@
 
     <!-- Logstash机器表所有字段 -->
     <sql id="logstashMachineColumns">
-        id, logstash_process_id, machine_id, process_pid, state, config_content, jvm_options, logstash_yml, create_time, update_time
+        id, logstash_process_id, machine_id, process_pid, state, config_content, jvm_options, logstash_yml, deploy_path, create_time, update_time
     </sql>
 
     <!-- 插入 Logstash 机器记录 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO logstash_machine (logstash_process_id, machine_id, state, config_content, jvm_options, logstash_yml, create_time, update_time)
-        VALUES (#{logstashProcessId}, #{machineId}, #{state}, #{configContent}, #{jvmOptions}, #{logstashYml}, NOW(), NOW())
+        INSERT INTO logstash_machine (logstash_process_id, machine_id, state, config_content, jvm_options, logstash_yml, deploy_path, create_time, update_time)
+        VALUES (#{logstashProcessId}, #{machineId}, #{state}, #{configContent}, #{jvmOptions}, #{logstashYml}, #{deployPath}, NOW(), NOW())
     </insert>
 
     <!-- 更新进程 PID -->
@@ -50,7 +50,8 @@
         state = #{state},
         config_content = #{configContent},
         jvm_options = #{jvmOptions},
-        logstash_yml = #{logstashYml}
+        logstash_yml = #{logstashYml},
+        deploy_path = #{deployPath}
         WHERE id = #{id}
     </update>
 

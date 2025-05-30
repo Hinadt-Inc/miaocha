@@ -32,6 +32,9 @@ public class LogstashMachine {
     @Schema(description = "Logstash系统配置")
     private String logstashYml;
 
+    @Schema(description = "实际使用的部署路径")
+    private String deployPath;
+
     @Schema(description = "创建时间")
     private LocalDateTime createTime;
 

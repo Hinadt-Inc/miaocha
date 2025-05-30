@@ -154,6 +154,12 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         process.setUpdateTime(LocalDateTime.now());
         logstashProcessMapper.insert(process);
 
+        // 确定实际使用的部署路径
+        String actualDeployPath =
+                StringUtils.hasText(dto.getCustomDeployPath())
+                        ? dto.getCustomDeployPath()
+                        : logstashDeployService.getDeployBaseDir();
+
         // 创建进程与机器的关联关系
         for (Long machineId : dto.getMachineIds()) {
             if (machineMapper.selectById(machineId) == null) {
@@ -161,9 +167,10 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                         ErrorCode.MACHINE_NOT_FOUND, "指定的机器不存在: ID=" + machineId);
             }
 
-            // 使用转换器创建LogstashMachine，并复制配置
+            // 使用转换器创建LogstashMachine，并复制配置，设置部署路径
             LogstashMachine logstashMachine =
-                    logstashMachineConverter.createFromProcess(process, machineId);
+                    logstashMachineConverter.createFromProcess(
+                            process, machineId, actualDeployPath);
             logstashMachineMapper.insert(logstashMachine);
         }
 
@@ -965,12 +972,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         MachineInfo machineInfo = validated.machineInfo;
         LogstashMachine logstashMachine = validated.relation;
 
-        // 获取部署路径
-        String deployPath =
-                logstashDeployService.getDeployBaseDir() + "/logstash-" + process.getId();
-
-        // 使用转换器构建详细信息DTO
-        return logstashMachineConverter.toDetailDTO(
-                logstashMachine, process, machineInfo, deployPath);
+        // 使用转换器构建详细信息DTO（部署路径从数据库中的LogstashMachine获取）
+        return logstashMachineConverter.toDetailDTO(logstashMachine, process, machineInfo);
     }
 }

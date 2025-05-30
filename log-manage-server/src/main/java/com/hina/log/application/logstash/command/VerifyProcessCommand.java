@@ -9,15 +9,12 @@ import java.util.concurrent.CompletableFuture;
 /** 验证Logstash进程命令 */
 public class VerifyProcessCommand extends AbstractLogstashCommand {
 
-    private final LogstashMachineMapper logstashMachineMapper;
-
     public VerifyProcessCommand(
             SshClient sshClient,
             String deployDir,
             Long processId,
             LogstashMachineMapper logstashMachineMapper) {
-        super(sshClient, deployDir, processId);
-        this.logstashMachineMapper = logstashMachineMapper;
+        super(sshClient, deployDir, processId, logstashMachineMapper);
     }
 
     @Override
