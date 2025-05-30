@@ -12,6 +12,7 @@ import {
 import type { DatasourcePermission, TablePermission, PermissionResponse } from '../../types/permissionTypes';
 import { HomeOutlined, SearchOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
+import styles from './PermissionManagementPage.module.less';
 
 const PermissionManagementPage = () => {
   const { message, modal } = App.useApp();
@@ -374,14 +375,7 @@ const PermissionManagementPage = () => {
 
   return (
     <Card>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 12,
-        }}
-      >
+      <div className={styles.header}>
         {GrantModal}
         <Breadcrumb>
           <Breadcrumb.Item>

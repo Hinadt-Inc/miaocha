@@ -1,0 +1,49 @@
+// 表格基础变量
+@table-header-bg: #f5f5f5;
+@table-row-height: 40px;
+@table-border: 1px solid #e8e8e8;
+@table-padding: 8px;
+
+// 基础表格样式
+.systemTable {
+  width: 100%;
+  border-collapse: collapse;
+  
+  th {
+    background-color: @table-header-bg;
+    padding: @table-padding;
+    text-align: left;
+    border: @table-border;
+  }
+  
+  td {
+    padding: @table-padding;
+    border: @table-border;
+    height: @table-row-height;
+  }
+  
+  .tableHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    
+    .actions {
+      display: flex;
+      gap: 8px;
+    }
+  }
+  
+  .pagination {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
+  }
+}
+
+.header {
+  padding-block: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
