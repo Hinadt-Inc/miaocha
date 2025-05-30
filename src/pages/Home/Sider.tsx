@@ -30,7 +30,7 @@ const Sider: React.FC<IProps> = (props) => {
       // 确保log_time和message字段默认被选中
       const processedColumns = res?.map((column) => {
         if (column.columnName === 'log_time') {
-          return { ...column, selected: true };
+          return { ...column, selected: true, _createTime: new Date().getTime() };
         }
         return column;
       });
@@ -96,14 +96,24 @@ const Sider: React.FC<IProps> = (props) => {
   }, [modules]);
 
   // 切换字段选中状态
-  const toggleColumn = (_: any, index: number) => {
+  const toggleColumn = (data: ILogColumnsResponse) => {
+    const index = columns.findIndex((item) => item.columnName === data.columnName);
     // 如果是log_time字段，不允许取消选择
     if (columns[index].columnName === 'log_time' || columns[index].isFixed) {
       return;
     }
-
-    columns[index].selected = !columns[index].selected;
-    const updatedColumns = [...columns];
+    // 添加
+    if (!columns[index].selected) {
+      columns[index].selected = true;
+      columns[index]._createTime = new Date().getTime();
+    } else {
+      // 删除
+      columns[index].selected = false;
+      delete columns[index]._createTime;
+    }
+    // 排序
+    const sortedColumns = columns.sort((a, b) => (a._createTime || 0) - (b._createTime || 0));
+    const updatedColumns = [...sortedColumns];
     setColumns(updatedColumns);
 
     // 通知父组件列变化
@@ -165,9 +175,10 @@ const Sider: React.FC<IProps> = (props) => {
             {
               key: 'selected',
               label: '已选字段',
-              children: columns?.map((item, index) => {
-                if (!item.selected) return null;
-                return (
+              children: columns
+                ?.filter((item) => item.selected)
+                ?.sort((a, b) => (a._createTime || 0) - (b._createTime || 0))
+                ?.map((item, index) => (
                   <FieldListItem
                     key={item.columnName}
                     isSelected
@@ -175,15 +186,19 @@ const Sider: React.FC<IProps> = (props) => {
                     columnIndex={index}
                     fieldData={fieldListProps}
                   />
-                );
-              }),
+                )),
             },
             {
               key: 'available',
               label: '可用字段',
-              children: columns?.map((item, index) => {
-                if (item.selected) return null;
-                return (
+              children: columns
+                ?.filter((item) => !item.selected)
+                .sort((a, b) => {
+                  if (!a.columnName) return -1;
+                  if (!b.columnName) return 1;
+                  return a.columnName.localeCompare(b.columnName);
+                })
+                ?.map((item, index) => (
                   <FieldListItem
                     key={item.columnName}
                     isSelected={false}
@@ -191,8 +206,7 @@ const Sider: React.FC<IProps> = (props) => {
                     columnIndex={index}
                     fieldData={fieldListProps}
                   />
-                );
-              }),
+                )),
             },
           ]}
         />

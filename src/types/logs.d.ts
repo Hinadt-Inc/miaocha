@@ -171,5 +171,6 @@ declare global {
     isPrimaryKey?: boolean;
     isNullable?: boolean;
     isFixed?: boolean;
+    _createTime?: number;
   }
 }
