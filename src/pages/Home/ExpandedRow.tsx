@@ -25,11 +25,14 @@ const ExpandedRow = (props: IProps) => {
   ];
 
   const dataSource = useMemo(() => {
-    return Object.entries(data).map(([key, value], index) => ({
-      key: `${key}_${index}`,
-      field: key,
-      value: String(value ?? ''),
-    }));
+    console.log('data', Object.entries(data));
+    return Object.entries(data)
+      .filter((item) => item[0] !== '_key')
+      .map(([key, value], index) => ({
+        key: `${key}_${index}`,
+        field: key,
+        value: key === 'log_time' ? String(value ?? '').replace('T', ' ') : String(value ?? ''),
+      }));
   }, [data]);
 
   const items = [
