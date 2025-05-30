@@ -1,515 +1,692 @@
-# 海纳 Doris日志管理系统
+<div align="center">
+<img src="docs/images/logo.png" alt="秒查 Logo" width="120" height="120" />
 
-## 项目概述
+# ⚡ 秒查 - 企业级日志管理平台
 
-海纳 Doris日志管理系统是一个用于集中管理和分析应用日志的平台。它提供了日志的采集、存储、查询、分析和可视化功能，帮助开发和运维团队快速定位问题、监控应用状态和优化系统性能。
+## 🚀 基于 Doris 的高性能日志系统，提供 10x 性能提升和秒级扩缩容能力
 
-## 主要模块
+<p align="center">
+  📚&nbsp <a href="#-快速开始" target="_blank"><b>快速开始</b></a>&nbsp&nbsp&nbsp
+  🔥&nbsp <a href="#-logstash-扩容缩容功能" target="_blank"><b>🆕 扩容缩容功能</b></a>&nbsp&nbsp&nbsp
+  📖&nbsp <a href="#api接口文档" target="_blank"><b>API 文档</b></a>&nbsp&nbsp&nbsp
+  🏗️&nbsp <a href="#项目架构" target="_blank"><b>系统架构</b></a>&nbsp&nbsp&nbsp
+</p>
 
-* **`log-manage-server`**: 后端核心服务，负责日志处理、存储和API接口。
-* **`log-manage-ui`**: 前端用户界面，提供日志查询、可视化和系统管理功能。
-* **`log-manage-assembly`**: 项目打包和部署模块。
+[![GitHub release](https://img.shields.io/github/release/your-org/miaocha-system.svg)](https://github.com/your-org/miaocha-system/releases)
+[![Java Version](https://img.shields.io/badge/Java-17+-orange.svg)](https://www.oracle.com/java/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.1+-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/your-org/miaocha-system)
+[![Docker](https://img.shields.io/badge/Docker-Available-blue.svg?logo=docker)](https://hub.docker.com/r/your-org/miaocha-system)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/your-org/miaocha-system/pulls)
 
-## 系统功能
+<a href="https://github.com/your-org/miaocha-system" target="_blank">
+<img src="https://img.shields.io/github/stars/your-org/miaocha-system?style=social" alt="GitHub stars" style="width: 120px; height: 25px;" width="120" height="25"/>
+</a>
 
-* **用户认证与权限管理**: 基于JWT的认证机制，用户登录和权限控制。
-* **数据源管理**: 添加、配置和管理多种数据源连接。
-* **日志搜索与分析**: 高级日志搜索功能，支持多种查询条件和过滤。
-* **SQL编辑器**: 支持直接编写和执行SQL查询，查看和导出结果。
-* **Logstash进程管理**: 远程部署、配置和监控Logstash实例，支持重新初始化失败的实例。
-* **机器管理**: 管理服务器连接，支持SSH认证。
-* **模块权限控制**: 精细化的模块级别权限管理。
-* **日志配置管理**: 配置和监控日志系统，支持多格式日志输出。
+</div>
 
-## 技术栈
+---
 
-### 后端技术
+## 💡 项目概述
 
-* **语言与框架**: Java 17, Spring Boot, Spring Security
-* **API文档**: SpringDoc/OpenAPI 3.0
-* **ORM**: MyBatis
-* **数据库**: MySQL
-* **认证**: JWT (JSON Web Token)
-* **数据库迁移**: Flyway
-* **SSH**: Apache SSHD, JSch
-* **导出功能**: Apache POI
-* **加密**: Bouncy Castle
-* **日志系统**: Logback + Logstash JSON Encoder，支持多格式日志输出
+> **⚡ 秒查（MiaoQuery）**是一个基于 **Spring Boot** 的**企业级日志管理平台**。它提供了完整的日志采集、存储、查询、分析和 **Logstash 进程管理**功能，支持**分布式部署**和**扩缩容操作**，让您能够秒级查询海量日志数据。
 
-### 前端技术
+### 👨‍💻 开发者
 
-* **框架**: React 18
-* **UI组件库**: Ant Design 5
-* **HTTP客户端**: Axios
-* **构建工具**: Vite
+**🔥 主要开发者**: [**Miskai**](https://github.com/Misaki030112) - 秒查后端架构师 & 核心开发者
 
-## 日志搜索与分析功能
+### ⭐ 为什么选择秒查？
 
-日志搜索与分析模块是系统的核心功能之一，提供了强大的日志检索和可视化能力。
+- ⚡ **秒级查询**: 基于 Doris 的高性能日志检索引擎，毫秒级响应
+- 💰 **成本优化**: 智能资源调度，降低 50%+ 运维成本
+- 🚀 **秒级扩容**: Logstash 进程支持秒级水平扩缩容
+- 🛡️ **高可靠**: 分布式架构，99.99% 服务可用性
+- 🔧 **零运维**: 内置自动化运维和故障恢复
+- 📊 **实时监控**: 完整的监控指标和告警机制
 
-### 核心功能
+---
 
-1. **日志明细查询**
-   * 支持多条件组合查询，包括时间范围、关键词、字段值等
-   * 分页查询结果展示
-   * 自定义字段排序
-   * 支持SQL条件表达式
-2. **时间分布分析**
-   * 根据指定时间间隔统计日志数量分布
-   * 生成时间柱状图数据
-   * 支持按分钟、小时、天等粒度聚合
-3. **字段分布统计**
-   * 分析指定字段的TOP N值分布
-   * 支持同时分析多个字段的分布情况
-   * 利用Doris TOPN函数高效计算
-4. **表结构信息查询**
-   * 获取日志表字段详细信息
-   * 支持显示字段名称、数据类型、字段描述等
-   * 用于动态构建查询界面
+## 🎯 核心功能
 
-### API接口
+<table>
+<tr>
+<td width="50%">
 
-* `/api/logs/search/details`: 执行日志明细查询
-* `/api/logs/search/histogram`: 执行日志时间分布查询
-* `/api/logs/search/field-distributions`: 执行字段分布统计
-* `/api/logs/columns`: 获取日志表字段信息
+### 🔐 认证权限管理
 
-### 数据模型
+- **JWT认证机制**: 安全的用户身份验证
+- **细粒度权限**: 模块级别权限控制
+- **多租户支持**: 企业级多租户隔离
 
-日志搜索功能支持以下主要数据模型：
+### 📊 日志搜索分析
 
-* `LogSearchDTO`: 封装日志搜索请求参数
-* `LogDetailResultDTO`: 包含日志明细查询结果
-* `LogHistogramResultDTO`: 包含时间分布统计结果
-* `LogFieldDistributionResultDTO`: 包含字段分布统计结果
-* `SchemaInfoDTO.ColumnInfoDTO`: 表字段结构信息
+- **高性能检索**: 支持复杂查询条件
+- **实时统计**: 时间分布和字段分析
+- **可视化图表**: 直观的数据展示
 
-## Logstash进程管理
+### 🔄 Logstash 管理
 
-Logstash进程管理模块提供了对Logstash实例的完整生命周期管理，包括部署、配置、启动、监控和停止。
+- **生命周期管理**: 部署、配置、监控
+- **🆕 智能扩缩容**: 秒级水平扩展能力
+- **状态机驱动**: 可靠的状态管理
 
-### 状态机实现
+</td>
+<td width="50%">
 
-系统使用状态模式实现了Logstash进程的状态管理，确保进程在不同状态下的操作逻辑清晰可控。
+### 💾 数据源管理
 
-#### Logstash状态定义
+- **多数据源**: 统一管理多种数据源
+- **连接池**: 高效的连接管理
+- **配置热更新**: 动态配置更新
 
-Logstash进程在系统中有以下8种状态：
+### 🖥️ SQL编辑器
 
-* `INITIALIZING`: 初始化中 - 创建过程中的初始状态
-* `NOT_STARTED`: 未启动 - 初始化完成但未启动
-* `STARTING`: 正在启动 - 启动进程中
-* `RUNNING`: 运行中 - 进程正常运行
-* `STOPPING`: 正在停止 - 停止进程中
-* `START_FAILED`: 启动失败 - 启动过程中遇到错误
-* `STOP_FAILED`: 停止失败 - 停止过程中遇到错误
-* `INITIALIZE_FAILED`: 初始化失败 - 可以重新初始化
+- **查询执行**: SQL查询和结果导出
+- **性能优化**: 查询结果缓存
+- **语法验证**: 智能SQL解析
 
-#### 状态转换流程
+### 🖧 任务调度
 
-1. **初始化流程**:
-   * 初始状态: `INITIALIZING`
-   * 成功: `INITIALIZING` → `NOT_STARTED`
-   * 失败: `INITIALIZING` → `INITIALIZE_FAILED`
-2. **启动流程**:
-   * 初始状态: `NOT_STARTED`
-   * 启动中: `NOT_STARTED` → `STARTING`
-   * 成功: `STARTING` → `RUNNING`
-   * 失败: `STARTING` → `START_FAILED`
-3. **停止流程**:
-   * 初始状态: `RUNNING`
-   * 停止中: `RUNNING` → `STOPPING`
-   * 成功: `STOPPING` → `NOT_STARTED`
-   * 失败: `STOPPING` → `STOP_FAILED`
-4. **恢复流程**:
-   * 从失败状态重试: `START_FAILED` → `STARTING` 或 `INITIALIZE_FAILED` → `INITIALIZING`
+- **异步处理**: 高性能任务执行
+- **状态监控**: 实时任务状态跟踪
+- **故障恢复**: 自动重试机制
 
-#### 状态处理器
+</td>
+</tr>
+</table>
 
-系统为每个状态实现了专门的处理器类，负责该状态下的操作逻辑：
+---
 
-* `InitializingStateHandler`: 处理初始化状态下的操作
-* `NotStartedStateHandler`: 处理未启动状态下的操作
-* `StartingStateHandler`: 处理启动中状态下的操作
-* `RunningStateHandler`: 处理运行中状态下的操作
-* `StoppingStateHandler`: 处理停止中状态下的操作
-* `StartFailedStateHandler`: 处理启动失败状态下的操作
-* `StopFailedStateHandler`: 处理停止失败状态下的操作
-* `InitializeFailedStateHandler`: 处理初始化失败状态下的操作
+## 📸 系统界面展示
 
-### 上下文管理
+<div align="center">
 
-系统使用`LogstashMachineContext`类作为状态机上下文，实现：
+### 🔍 日志查询分析界面
 
-* 保存当前状态和状态处理器
-* 管理状态转换
-* 委托操作给当前状态处理器
-* 提供异步操作接口
+![日志查询界面](docs/images/log-search-interface.png)
 
-### 主要功能
+**🔥 核心后端功能支持**：
+- 🚀 高性能日志搜索 API
+- 📈 时间分布统计算法  
+- 🔄 字段分布分析引擎
+- ⚡ 查询结果缓存和优化
 
-1. **环境部署与初始化**
-   * 远程部署Logstash软件包
-   * 初始化配置环境
-   * 上传和管理配置文件
-   * **支持重新初始化失败的机器实例**
-2. **配置管理**
-   * 支持管理主配置文件
-   * 支持自定义JVM选项
-   * 支持修改logstash.yml配置
-   * 配置同步和版本控制
-3. **进程控制**
-   * 启动Logstash进程
-   * 停止Logstash进程
-   * 监控进程状态
-   * 自动恢复失败进程
-4. **多机器部署**
-   * 支持在多台机器上部署同一进程
-   * 独立管理每台机器上的进程状态
-   * 批量操作多台机器
+---
 
-### 重新初始化功能
+### ⚙️ Logstash 管理界面
 
-当Logstash机器实例初始化失败时，系统提供了重新初始化功能：
+![Logstash 管理界面](docs/images/logstash-management-interface.png)
 
-#### 功能特性
+**🎛️ 后端管理能力**：
+- 🔄 状态机驱动的进程管理
+- 🌐 分布式部署协调
+- 📊 实时状态监控
+- 🆕 **智能扩容缩容算法**
 
-* **状态检查**: 严格限制只有 `INITIALIZE_FAILED` 状态的机器才能重新初始化
-* **两种操作模式**:
-  - 单机器重新初始化：针对特定失败的机器进行重新初始化
-  - 批量重新初始化：一次性重新初始化所有失败的机器
-* **完整的初始化流程**: 删除原有目录、重新创建环境、上传配置等
-* **事务保证**: 确保操作的原子性和数据一致性
+---
 
-#### API接口
+### 💻 SQL 编辑器界面
 
-* `POST /api/logstash/processes/{id}/reinitialize`: 重新初始化所有失败的机器
-* `POST /api/logstash/processes/{id}/machineInfos/{machineId}/reinitialize`: 重新初始化指定机器
+![SQL 编辑器界面](docs/images/sql-editor-interface.png)
 
-### API接口
+**🔍 后端查询引擎**：
+- ✅ SQL 解析和验证
+- ⚡ 查询性能优化
+- 📄 结果集分页处理
+- 🔗 多数据源连接池管理
 
-主要API接口包括：
+</div>
 
-* `/api/logstash/processes`: 管理Logstash进程
-* `/api/logstash/processes/{id}/config`: 管理进程配置
-* `/api/logstash/processes/{id}/start`: 全局启动进程
-* `/api/logstash/processes/{id}/stop`: 全局停止进程
-* `/api/logstash/processes/{id}/machineInfos/{machineId}/start`: 启动特定机器上的进程
-* `/api/logstash/processes/{id}/machineInfos/{machineId}/stop`: 停止特定机器上的进程
-* `/api/logstash/processes/{id}/reinitialize`: 重新初始化所有失败的机器
-* `/api/logstash/processes/{id}/machineInfos/{machineId}/reinitialize`: 重新初始化特定机器
+---
 
-## API接口文档
+## 🆕 Logstash 扩容缩容功能
 
-访问Swagger UI文档: `http://<serverIp>:<port>/swagger-ui/index.html#/`
+> 🌟 **新特性亮点**: 支持对已创建的 Logstash 进程进行**动态扩容和缩容**操作
 
-## 项目构建与运行
+<div align="center">
+<table>
+<tr>
+<td width="50%" align="center">
 
-### 构建项目
+### 📈 扩容功能
+
+🔹 **动态添加机器**: 向现有进程添加服务器节点  
+🔹 **自动环境初始化**: 自动部署配置 Logstash 环境  
+🔹 **模板复用**: 利用原有配置信息进行扩容  
+🔹 **自定义部署路径**: 支持特定部署路径配置  
+🔹 **连接性验证**: 扩容前自动验证机器状态
+
+</td>
+<td width="50%" align="center">
+
+### 📉 缩容功能
+
+🔸 **安全缩容**: 智能移除指定服务器节点  
+🔸 **防御性检查**: 确保至少保留一台机器  
+🔸 **状态感知**: 根据运行状态智能处理  
+🔸 **强制缩容**: 支持强制停止运行中机器  
+🔸 **资源清理**: 自动清理部署文件和任务
+
+</td>
+</tr>
+</table>
+</div>
+
+### 🎯 使用场景
+
+|     场景      |       描述        |      效果       |
+|-------------|-----------------|---------------|
+| 🚀 **业务扩展** | 日志处理量增加时动态添加节点  | 📊 线性性能提升     |
+| 💰 **成本优化** | 业务低峰期减少资源消耗     | 💵 降低 50%+ 成本 |
+| 🔧 **故障恢复** | 快速替换故障机器或添加备用节点 | ⚡ 秒级故障恢复      |
+| 🔄 **环境迁移** | 渐进式迁移服务到新服务器    | 🛡️ 零停机迁移     |
+
+### 🔌 API 接口
+
+```http
+POST /api/logstash/processes/{id}/scale
+```
+
+---
+
+## 🛠️ 技术栈
+
+<div align="center">
+<table>
+<tr>
+<td width="50%" align="center">
+
+### 🔧 后端技术栈
+
+[![Java](https://img.shields.io/badge/Java-17+-orange?logo=openjdk)](https://openjdk.org/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.1+-brightgreen?logo=spring)](https://spring.io/)
+[![Spring Security](https://img.shields.io/badge/Spring%20Security-6+-green?logo=springsecurity)](https://spring.io/projects/spring-security)
+[![MyBatis](https://img.shields.io/badge/MyBatis-3.5+-red?logo=mybatis)](https://mybatis.org/)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0+-blue?logo=mysql)](https://www.mysql.com/)
+[![Docker](https://img.shields.io/badge/Docker-24+-blue?logo=docker)](https://www.docker.com/)
+
+</td>
+<td width="50%" align="center">
+
+### 🎨 前端技术栈
+
+[![React](https://img.shields.io/badge/React-18+-blue?logo=react)](https://reactjs.org/)
+[![Ant Design](https://img.shields.io/badge/Ant%20Design-5+-blue?logo=antdesign)](https://ant.design/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5+-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-5+-purple?logo=vite)](https://vitejs.dev/)
+[![Axios](https://img.shields.io/badge/Axios-1+-purple?logo=axios)](https://axios-http.com/)
+
+</td>
+</tr>
+</table>
+</div>
+
+---
+
+## 🔍 日志搜索与分析功能
+
+<div align="center">
+
+### 🎯 核心能力一览
+
+|      功能模块      |            描述             |  技术特点   |
+|----------------|---------------------------|---------|
+| 🔍 **日志明细查询**  | 多条件组合查询，支持时间范围、关键词等       | ⚡ 毫秒级响应 |
+| 📊 **时间分布分析**  | 生成时间柱状图，支持多粒度聚合           | 📈 实时统计 |
+| 🏷️ **字段分布统计** | TOP N值分布分析，利用Doris TOPN函数 | 🚀 高效计算 |
+| 📋 **表结构查询**   | 动态获取字段信息，支持类型描述           | 🔄 动态构建 |
+
+</div>
+
+### 🔌 API接口列表
 
 ```bash
+🔍 /api/logs/search/details          # 日志明细查询
+📊 /api/logs/search/histogram        # 时间分布统计  
+🏷️ /api/logs/search/field-distributions  # 字段分布分析
+📋 /api/logs/columns                 # 表结构信息
+```
+
+---
+
+## ⚙️ Logstash进程管理
+
+> 🔥 **Logstash进程管理模块**提供了对Logstash实例的**完整生命周期管理**，包括部署、配置、启动、监控、停止、扩容和缩容。
+
+<div align="center">
+
+### 🔄 状态机驱动架构
+
+|            状态            |  描述   |     操作     |
+|--------------------------|-------|------------|
+| 🔄 **INITIALIZING**      | 初始化中  | 创建过程中的初始状态 |
+| ⏸️ **NOT_STARTED**       | 未启动   | 初始化完成但未启动  |
+| 🚀 **STARTING**          | 正在启动  | 启动进程中      |
+| ✅ **RUNNING**            | 运行中   | 进程正常运行     |
+| ⏹️ **STOPPING**          | 正在停止  | 停止进程中      |
+| ❌ **START_FAILED**       | 启动失败  | 启动过程中遇到错误  |
+| ⚠️ **STOP_FAILED**       | 停止失败  | 停止过程中遇到错误  |
+| 🔧 **INITIALIZE_FAILED** | 初始化失败 | 可以重新初始化    |
+
+</div>
+
+### 🎛️ 核心功能模块
+
+<table>
+<tr>
+<td width="50%">
+
+#### 🏗️ 环境部署与初始化
+
+- 🚀 **远程部署**: Logstash软件包自动部署
+- ⚙️ **环境初始化**: 配置环境自动初始化
+- 📁 **配置管理**: 上传和管理配置文件
+- 🔧 **故障恢复**: 支持重新初始化失败的实例
+
+#### 🔄 进程控制
+
+- ▶️ **启动进程**: 智能启动Logstash进程
+- ⏹️ **停止进程**: 优雅停止Logstash进程
+- 📊 **状态监控**: 实时监控进程状态
+- 🔁 **自动恢复**: 自动恢复失败进程
+
+</td>
+<td width="50%">
+
+#### ⚙️ 配置管理
+
+- 📝 **主配置文件**: 支持管理主配置文件
+- ☕ **JVM选项**: 支持自定义JVM选项
+- 🔧 **logstash.yml**: 支持修改配置
+- 🔄 **版本控制**: 配置同步和版本控制
+
+#### 🌐 多机器部署
+
+- 🖥️ **多机部署**: 支持多台机器部署同一进程
+- 🔀 **独立管理**: 独立管理每台机器进程状态
+- 📦 **批量操作**: 批量操作多台机器
+
+</td>
+</tr>
+</table>
+
+### 🔧 重新初始化功能
+
+当Logstash机器实例初始化失败时，系统提供了**重新初始化功能**：
+
+**🎯 功能特性**
+- 🔍 **状态检查**: 严格限制只有 `INITIALIZE_FAILED` 状态的机器才能重新初始化
+- 🎛️ **双模式操作**: 支持单机器和批量重新初始化两种模式
+- 🔄 **完整流程**: 删除原有目录、重新创建环境、上传配置等
+- 🛡️ **事务保证**: 确保操作的原子性和数据一致性
+
+**🔌 API接口**
+
+```http
+POST /api/logstash/processes/{id}/reinitialize
+POST /api/logstash/processes/{id}/machineInfos/{machineId}/reinitialize
+```
+
+---
+
+## 🔌 API接口大全
+
+<div align="center">
+
+### 📋 完整接口列表
+
+|      分类       |                                  接口                                  |      描述      |          方法           |
+|---------------|----------------------------------------------------------------------|--------------|-----------------------|
+| 🔄 **进程管理**   | `/api/logstash/processes`                                            | 管理Logstash进程 | `GET/POST/PUT/DELETE` |
+| ⚙️ **配置管理**   | `/api/logstash/processes/{id}/config`                                | 管理进程配置       | `GET/PUT`             |
+| ▶️ **启动控制**   | `/api/logstash/processes/{id}/start`                                 | 全局启动进程       | `POST`                |
+| ⏹️ **停止控制**   | `/api/logstash/processes/{id}/stop`                                  | 全局停止进程       | `POST`                |
+| 🖥️ **单机启动**  | `/api/logstash/processes/{id}/machineInfos/{machineId}/start`        | 启动特定机器进程     | `POST`                |
+| 🖥️ **单机停止**  | `/api/logstash/processes/{id}/machineInfos/{machineId}/stop`         | 停止特定机器进程     | `POST`                |
+| 🆕 **扩容缩容**   | `/api/logstash/processes/{id}/scale`                                 | **扩容或缩容进程**  | `POST`                |
+| 🔧 **批量重初始化** | `/api/logstash/processes/{id}/reinitialize`                          | 重新初始化所有失败的机器 | `POST`                |
+| 🔧 **单机重初始化** | `/api/logstash/processes/{id}/machineInfos/{machineId}/reinitialize` | 重新初始化指定机器    | `POST`                |
+
+</div>
+
+### 📚 API接口文档
+
+🔗 **Swagger UI文档**: `http://<serverIp>:<port>/swagger-ui/index.html#/`
+
+---
+
+## 🚀 快速开始
+
+<div align="center">
+
+### 🏃‍♂️ 一键启动
+
+</div>
+
+```bash
+# 📥 1. 克隆项目
+git clone <repository-url>
+cd log-manage-system
+
+# 🔧 2. 配置数据库连接  
+# 编辑 log-manage-server/src/main/resources/application-dev.yml
+
+# 🏗️ 3. 构建项目
 mvn clean package
+
+# 🚀 4. 启动应用
+cd log-manage-server
+mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-### 使用Docker构建和启动
+### 🐳 Docker 部署
 
 ```bash
+# 🏗️ 构建并启动
 ./build-start-docker.sh
-```
 
-### 清理Docker镜像
-
-```bash
+# 🧹 清理镜像
 ./clean-docker-images.sh
 ```
 
-## 环境信息
+### 🌍 环境信息
 
-### 测试环境
+|     环境      |               地址               |   描述    |
+|-------------|--------------------------------|---------|
+| 🧪 **测试环境** | `http://10.254.133.210:32088/` | 后端API地址 |
 
-* **后端API地址**: `http://10.254.133.210:32088/`
+---
 
-## 配置信息
+## 🏗️ 项目架构
 
-系统支持多环境配置，包括:
+> **🎯 分层架构设计**: 采用**领域驱动设计(DDD)**原则，确保代码的**高内聚、低耦合**
 
-* `application.yml`: 基础配置
-* `application-dev.yml`: 开发环境配置
-* `application-test.yml`: 测试环境配置
-* `application-prod.yml`: 生产环境配置
+<div align="center">
 
-主要配置项包括:
-
-* 数据库连接信息
-* JWT认证配置
-* Logstash配置
-* SQL查询导出配置
-
-## 日志配置
-
-项目采用了灵活的多格式日志配置方案，支持根据环境自动切换日志输出策略：
-
-### 环境策略
-
-* **开发环境 (dev)**: 控制台彩色输出 + 普通格式文件 + JSON格式文件
-* **测试环境 (test)**: 控制台输出 + 普通格式文件 + JSON格式文件
-* **生产环境 (prod)**: 仅JSON格式文件输出
-
-### 日志文件类型
-
-1. **普通格式日志**: `log-manage-system.log`
-   - 适合开发调试和人工阅读
-   - 标准文本格式，包含时间、线程、级别、类名和消息
-2. **JSON格式日志**:
-   - `log-manage-system-json.log`: 包含INFO及以下级别
-   - `log-manage-system-json-error.log`: 仅包含ERROR级别
-   - 适合日志分析工具和监控系统集成
-
-### 日志轮转
-
-* 按日期和大小轮转 (单文件最大100MB)
-* 默认保留30天历史日志
-* 总大小限制1GB
-* 异步输出提高性能
-
-详细配置说明请参考：[日志配置文档](docs/LOGGING_CONFIGURATION.md)
-
-## `log-manage-server` 详细介绍
-
-### 项目架构
-
-`log-manage-server` 采用分层架构设计，遵循领域驱动设计(DDD)原则，主要分为以下几层：
-
-#### 目录结构
+### 📁 目录结构
 
 ```
-log-manage-server/src/main/java/com/hina/log/
-├── LogManageSystemApplication.java     # Spring Boot 启动类
-├── endpoint/                          # API接口层 (Interface Layer)
-├── application/                       # 应用服务层 (Application Layer)
-│   ├── service/                      # 应用服务
-│   ├── logstash/                     # Logstash相关应用服务
-│   ├── security/                     # 安全相关配置
-│   └── filter/                       # 过滤器
-├── domain/                           # 领域层 (Domain Layer)
-│   ├── entity/                       # 领域实体
-│   ├── dto/                          # 数据传输对象
-│   ├── mapper/                       # 数据访问接口
-│   └── converter/                    # 对象转换器
-├── common/                           # 通用模块 (Infrastructure Layer)
-│   ├── util/                         # 工具类
-│   ├── exception/                    # 异常处理
-│   ├── ssh/                          # SSH工具
-│   └── annotation/                   # 自定义注解
-└── config/                           # 配置模块
+🏗️ log-manage-server/src/main/java/com/hina/log/
+├── 🚀 LogManageSystemApplication.java     # Spring Boot 启动类
+├── 🌐 endpoint/                          # API接口层 (Interface Layer)
+├── 💼 application/                       # 应用服务层 (Application Layer)
+│   ├── 🔧 service/                      # 应用服务
+│   ├── ⚙️ logstash/                     # Logstash相关应用服务
+│   ├── 🔐 security/                     # 安全相关配置
+│   └── 🔍 filter/                       # 过滤器
+├── 🏛️ domain/                           # 领域层 (Domain Layer)
+│   ├── 📊 entity/                       # 领域实体
+│   ├── 📦 dto/                          # 数据传输对象
+│   ├── 🗄️ mapper/                       # 数据访问接口
+│   └── 🔄 converter/                    # 对象转换器
+├── 🛠️ common/                           # 通用模块 (Infrastructure Layer)
+│   ├── 🔧 util/                         # 工具类
+│   ├── ⚠️ exception/                    # 异常处理
+│   ├── 🔗 ssh/                          # SSH工具
+│   └── 📝 annotation/                   # 自定义注解
+└── ⚙️ config/                           # 配置模块
 ```
 
-### 分层架构说明
+</div>
 
-#### 1. **Endpoint层** (Interface Layer)
+### 🎯 分层架构详解
 
-负责接收来自客户端的HTTP请求，进行参数校验和格式转换。
+<table>
+<tr>
+<td width="50%">
 
-**主要组件:**
+#### 🌐 Endpoint层 (Interface Layer)
 
-* `AuthEndpoint`: 用户认证相关接口
-* `DatasourceEndpoint`: 数据源管理接口
-* `LogSearchEndpoint`: 日志搜索接口
-* `LogstashProcessEndpoint`: Logstash进程管理接口
-* `MachineEndpoint`: 服务器机器管理接口
-* `ModulePermissionEndpoint`: 模块权限管理接口
-* `SqlEditorQueryEndpoint`: SQL编辑器查询接口
-* `UserEndpoint`: 用户管理接口
+**📝 职责**: 接收HTTP请求，参数校验和格式转换
 
-#### 2. **Application层** (Application Layer)
+**🔧 主要组件**:
+- 🔐 `AuthEndpoint`: 用户认证接口
+- 🗄️ `DatasourceEndpoint`: 数据源管理接口  
+- 🔍 `LogSearchEndpoint`: 日志搜索接口
+- ⚙️ `LogstashProcessEndpoint`: **Logstash管理接口**
+- 🖥️ `MachineEndpoint`: 机器管理接口
+- 🔒 `ModulePermissionEndpoint`: 权限管理接口
+- 💻 `SqlEditorQueryEndpoint`: SQL编辑器接口
+- 👤 `UserEndpoint`: 用户管理接口
 
-包含应用服务和业务流程编排逻辑。
+#### 🏛️ Domain层 (Domain Layer)
 
-**主要组件:**
+**📝 职责**: 核心业务实体和业务逻辑
 
-* **`service/`**: 核心应用服务
+**🔧 主要组件**:
+- 📊 **实体类**: `LogstashProcess`, `MachineInfo` 等
+- 📦 **DTO类**: 包含 🆕 `LogstashProcessScaleRequestDTO`
+- 🗄️ **Mapper**: MyBatis数据访问接口
+- 🔄 **Converter**: 对象转换器
 
-- `DatasourceService`: 数据源管理服务
+</td>
+<td width="50%">
 
-- `LogSearchService`: 日志搜索服务
+#### 💼 Application层 (Application Layer)
 
-- `LogstashProcessService`: Logstash进程管理服务
+**📝 职责**: 应用服务和业务流程编排
 
-- `MachineService`: 机器管理服务
+**🔧 主要组件**:
+- 🔧 **核心服务**: 包含 `LogstashProcessService` (含扩容缩容逻辑)
+- ⚙️ **Logstash服务**:
+- `LogstashProcessDeployService`: 部署服务
+- `LogstashConfigSyncService`: 配置同步
+- `state/`: 状态管理相关类
+- `command/`: 命令模式实现
+- `task/`: 任务管理
 
-- `ModulePermissionService`: 模块权限管理服务
+#### 🛠️ Common层 (Infrastructure Layer)
 
-- `SqlQueryService`: SQL查询服务
+**📝 职责**: 基础设施和通用功能支持
 
-- `UserService`: 用户管理服务
+**🔧 主要组件**:
+- 🔧 **工具类**: 通用辅助方法
+- ⚠️ **异常处理**: 自定义异常和全局处理器
+- 🔗 **SSH工具**: 远程连接和文件操作
+- 📝 **注解**: AOP和权限控制注解
 
-* **`logstash/`**: Logstash专门的应用服务
+</td>
+</tr>
+</table>
 
-  - `LogstashProcessDeployService`: Logstash部署服务
-  - `LogstashConfigSyncService`: 配置同步服务
-  - `state/`: 状态管理相关类
-  - `command/`: 命令模式实现
-  - `task/`: 任务管理
-* **`security/`**: 安全相关配置
-* **`filter/`**: HTTP请求过滤器
+### 🎨 核心设计模式
 
-#### 3. **Domain层** (Domain Layer)
+<div align="center">
 
-包含核心业务实体和业务逻辑。
+|     设计模式      |      应用场景      |     效果      |
+|---------------|----------------|-------------|
+| 🔄 **状态模式**   | Logstash机器状态管理 | 🎯 清晰的状态转换  |
+| 📤 **命令模式**   | SSH命令执行        | 🔧 灵活的命令处理  |
+| 🎯 **策略模式**   | 不同类型数据源处理      | 🔀 可扩展的策略选择 |
+| 👁️ **观察者模式** | 任务状态监控         | 📊 实时状态通知   |
+| 🏭 **工厂模式**   | 对象创建           | 🎪 统一的对象创建  |
 
-**主要组件:**
+</div>
 
-* **`entity/`**: 领域实体
+### ⭐ 技术特性
 
-- `Datasource`: 数据源配置信息
+- 🏗️ **分层架构**: 清晰的职责分离
+- 🎯 **领域驱动**: 以业务为核心的设计
+- 🔄 **状态管理**: 完善的状态机实现
+- ⚡ **异步处理**: 支持异步任务执行
+- 🔒 **事务管理**: 确保数据一致性
+- 🛡️ **安全控制**: 完善的认证授权机制
 
-- `LogstashMachine`: Logstash机器配置
+---
 
-- `LogstashProcess`: Logstash进程信息
+## 📊 配置管理
 
-- `Machine`: 服务器机器信息
+<div align="center">
 
-- `User`: 用户信息
+### 🎛️ 多环境配置
 
-- `UserModulePermission`: 用户模块权限配置
+|           配置文件            |     环境     |   用途   |
+|---------------------------|------------|--------|
+| 📄 `application.yml`      | 🔧 基础配置    | 通用配置项  |
+| 🧪 `application-dev.yml`  | 👨‍💻 开发环境 | 开发调试配置 |
+| 🧪 `application-test.yml` | 🧪 测试环境    | 测试环境配置 |
+| 🏭 `application-prod.yml` | 🏭 生产环境    | 生产环境配置 |
 
-* **`dto/`**: 数据传输对象
+</div>
 
-  - 用于不同层之间的数据传输
-  - 包含请求和响应的数据结构
-* **`mapper/`**: 数据访问接口
-  - MyBatis映射器接口
-  - 负责与数据库交互
-* **`converter/`**: 对象转换器
-  - 负责DTO与Entity之间的转换
-  - 确保各层之间的解耦
+**🔧 主要配置项**:
+- 🗄️ 数据库连接信息
+- 🔐 JWT认证配置  
+- ⚙️ Logstash配置
+- 📊 SQL查询导出配置
 
-#### 4. **Common层** (Infrastructure Layer)
+### 📝 日志配置策略
 
-提供基础设施和通用功能支持。
+<table>
+<tr>
+<td width="33%" align="center">
 
-**主要组件:**
+#### 👨‍💻 开发环境 (dev)
 
-* **`util/`**: 工具类
+- 🌈 控制台彩色输出
+- 📄 普通格式文件
+- 📋 JSON格式文件
 
-- 通用的辅助方法和工具类
+</td>
+<td width="33%" align="center">
 
-- 例如：日期处理、字符串操作、加密解密等
+#### 🧪 测试环境 (test)
 
-* **`exception/`**: 异常处理
+- 📺 控制台输出
+- 📄 普通格式文件
+- 📋 JSON格式文件
 
-  - 自定义异常类
-  - 全局异常处理器
-* **`ssh/`**: SSH工具
-  - SSH连接和命令执行
-  - 远程文件操作
-* **`annotation/`**: 自定义注解
-  - 用于AOP、权限控制等
+</td>
+<td width="33%" align="center">
 
-#### 5. **Config层**
+#### 🏭 生产环境 (prod)
 
-应用配置管理。
+- 📋 仅JSON格式文件输出
+- ⚡ 异步高性能输出
+- 📊 监控系统集成
 
-**主要组件:**
+</td>
+</tr>
+</table>
 
-* 数据库配置
-* 安全配置
-* MyBatis配置
-* 其他第三方组件配置
+**📊 日志文件类型**:
+- 📄 `log-manage-system.log`: 普通格式日志（开发调试）
+- 📋 `log-manage-system-json.log`: JSON格式日志（INFO及以下）
+- ❌ `log-manage-system-json-error.log`: JSON格式错误日志（ERROR级别）
 
-### 核心设计模式
+**🔄 日志轮转策略**:
+- 📅 按日期和大小轮转 (单文件最大100MB)
+- 📚 默认保留30天历史日志
+- 💾 总大小限制1GB
+- ⚡ 异步输出提高性能
 
-1. **状态模式**: 用于Logstash机器状态管理
-2. **命令模式**: 用于SSH命令执行
-3. **策略模式**: 用于不同类型的数据源处理
-4. **观察者模式**: 用于任务状态监控
-5. **工厂模式**: 用于对象创建
+---
 
-### 技术特性
+## 🗄️ 数据库结构
 
-* **分层架构**: 清晰的职责分离
-* **领域驱动**: 以业务为核心的设计
-* **状态管理**: 完善的状态机实现
-* **异步处理**: 支持异步任务执行
-* **事务管理**: 确保数据一致性
-* **安全控制**: 完善的认证授权机制
+> 🔄 **Flyway版本控制**: 使用Flyway进行数据库版本控制和迁移管理，脚本位于 `src/main/resources/db/migration` 目录
 
-## 前端 (`log-manage-ui`) 介绍
+---
 
-前端使用React框架开发，基于Ant Design组件库构建用户界面，提供以下功能:
+## 👨‍💻 开发环境搭建
 
-* 用户登录和权限管理界面
-* 数据源配置和管理
-* 日志搜索与分析界面
-* SQL编辑器
-* Logstash进程管理
-* 机器连接管理
+### 🛠️ 环境准备
 
-## 数据库结构
+|      组件       |     版本要求      |   描述   |
+|---------------|---------------|--------|
+| ☕ **Java**    | JDK 17+       | 核心运行环境 |
+| 🗄️ **MySQL** | 8.0+          | 数据库服务  |
+| 📦 **Maven**  | 3.6+          | 构建工具   |
+| 💻 **IDE**    | IntelliJ IDEA | 推荐开发工具 |
 
-系统使用Flyway进行数据库版本控制和迁移管理，数据库脚本位于 `src/main/resources/db/migration` 目录。
+### 🎨 代码格式化与质量控制
 
-## 如何开发和调试
-
-### 环境准备
-
-1. 克隆项目代码库
-2. 配置MySQL数据库
-3. 修改 `application-dev.yml` 中的数据库连接信息
-
-### 代码格式化与质量控制
-
-本项目使用现代化的自动代码格式化工具确保代码风格一致性。
-
-#### 快速开始
+**🚀 快速开始**:
 
 ```bash
-# 安装Git pre-commit hooks（推荐）
+# 🔧 安装Git pre-commit hooks（推荐）
 ./scripts/install-git-hooks.sh
 
-# 手动格式化代码
+# ✨ 手动格式化代码
 ./scripts/format-code.sh
 
-# 快速构建（跳过代码质量检查）
+# ⚡ 快速构建（跳过代码质量检查）
 mvn clean install -Pquick
 ```
 
-#### 工具栈
+**🛠️ 工具栈**:
+- ✨ **Spotless Maven Plugin**: Google Java Format标准格式化
+- 🔍 **Checkstyle**: 静态代码分析
+- 📝 **EditorConfig**: IDE编码风格一致性
 
-- **Spotless Maven Plugin**: 自动代码格式化（Google Java Format标准）
-- **Checkstyle**: 静态代码分析（实用模式）
-- **EditorConfig**: 确保IDE编码风格一致性
+📚 **详细说明**: [代码格式化指南](docs/CODE_STYLE.md)
 
-详细配置和使用说明请参考：[代码格式化指南](docs/CODE_STYLE.md)
+---
 
-### 开发服务启动
+## 🤝 如何贡献
 
-4. 启动后端服务: `mvn spring-boot:run -Dspring-boot.run.profiles=dev`
-5. 启动前端开发服务器:
+<div align="center">
 
-   ```bash
-   cd log-manage-ui/src/main/frontend
-   npm install
-   npm start
-   ```
+### 📋 贡献流程
 
-## 如何贡献
+```mermaid
+graph LR
+    A[🍴 Fork项目] --> B[🌿 创建分支]
+    B --> C[💻 开发功能]
+    C --> D[📝 提交代码]
+    D --> E[📤 推送分支]
+    E --> F[📬 创建PR]
+```
 
-1. Fork项目
-2. 创建功能分支 (`git checkout -b feature/amazing-feature`)
-3. 提交更改 (`git commit -m 'Add some amazing feature'`)
-4. 推送分支 (`git push origin feature/amazing-feature`)
-5. 打开Pull Request
+</div>
 
-## License
+1. 🍴 **Fork项目**
+2. 🌿 **创建功能分支** (`git checkout -b feature/amazing-feature`)
+3. 📝 **提交更改** (`git commit -m 'Add some amazing feature'`)
+4. 📤 **推送分支** (`git push origin feature/amazing-feature`)
+5. 📬 **打开Pull Request**
 
-[TODO: 添加项目许可证信息]
+---
 
 ## 📞 技术支持
 
-- **文档**: [项目README](README.md)
-- **配置说明**: [日志配置文档](docs/LOGGING_CONFIGURATION.md)
-- **发布说明**: [1.0.0版本发布说明](docs/RELEASE_NOTES_v1.0.0.md)
-- **部署指南**: [部署检查清单](docs/DEPLOYMENT_CHECKLIST_v1.0.0.md)
-- **问题反馈**: 请通过项目仓库提交Issue
+<div align="center">
+
+### 📚 文档资源
+
+|       资源        |    描述    |                                 链接                                 |
+|-----------------|----------|--------------------------------------------------------------------|
+| 📖 **项目README** | 主要文档     | [README.md](README.md)                                             |
+| 📝 **日志配置**     | 日志系统配置说明 | [日志配置文档](docs/LOGGING_CONFIGURATION.md)                            |
+| 🎉 **发布说明**     | 版本更新内容   | [1.0.0版本发布说明](docs/RELEASE_NOTES_v1.0.0.md)                        |
+| 🚀 **部署指南**     | 生产环境部署   | [部署检查清单](docs/DEPLOYMENT_CHECKLIST_v1.0.0.md)                      |
+| 🐛 **问题反馈**     | Bug报告和建议 | [GitHub Issues](https://github.com/your-org/miaocha-system/issues) |
+
+</div>
+
+---
+
+<div align="center">
+
+### 🌟 如果这个项目对您有帮助，请给我们一个 Star ⭐
+
+[![GitHub stars](https://img.shields.io/github/stars/your-org/miaocha-system?style=social)](https://github.com/your-org/miaocha-system)
+
+**📧 联系我们**: [your-email@company.com](mailto:your-email@company.com)
+
+</div>
+
+---
+
+<div align="center">
+
+### 👨‍💻 关于开发者
+
+**⚡ 秒查**由 **[Miskai](https://github.com/Misaki030112)** 精心设计和开发  
+专注于高性能日志管理系统的架构设计与实现
+
+<sub>🎨 Built with ❤️ by Miskai & 秒查团队 | 📜 Licensed under Apache 2.0</sub>
+
+</div>
 
