@@ -7,7 +7,7 @@ interface IFieldData {
   activeColumns: string[]; // 选中的列
   searchParams: ILogSearchParams; // 搜索参数
   distributions: Record<string, IFieldDistributions>; // 字段分布
-  onToggle: (column: ILogColumnsResponse, index: number) => void; // 切换选中状态
+  onToggle: (column: ILogColumnsResponse) => void; // 切换选中状态
   onSearch: (params: ILogSearchParams) => void; // 搜索
   onDistribution: (columnName: string, newActiveColumns: string[], sql: string) => void; // 分布
   onChangeSql: (params: string) => void; // SQL变化回调函数
@@ -97,7 +97,7 @@ const FieldListItem: React.FC<IProps> = ({ isSelected, column, columnIndex, fiel
                   className={styles.footBtn}
                   onClick={(e) => {
                     e.stopPropagation();
-                    onToggle(column, columnIndex);
+                    onToggle(column);
                   }}
                 >
                   {isSelected ? '移除' : '添加'}

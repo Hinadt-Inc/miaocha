@@ -1,10 +1,10 @@
 import { useMemo, useState, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { EChartsOption } from 'echarts';
-import { Empty, message } from 'antd';
+import { Empty } from 'antd';
 import dayjs from 'dayjs';
 import { colorPrimary, isOverOneDay } from '@/utils/utils';
-import { getTimeRangeCategory, DATE_FORMAT } from './utils';
+import { DATE_FORMAT } from './utils';
 
 interface IProps {
   data: ILogHistogramData; // 直方图数据
@@ -16,7 +16,6 @@ const HistogramChart = (props: IProps) => {
   const { data, searchParams, onSearch } = props;
   const { distributionData, timeUnit } = data || {};
   const [dataZoom, setDataZoom] = useState<number[]>([0, 100]);
-  const [messageApi, contextHolder] = message.useMessage();
   const { timeGrouping = 'auto', startTime = '', endTime = '' } = searchParams;
   const chartRef = useRef<any>(null);
 
@@ -228,60 +227,45 @@ const HistogramChart = (props: IProps) => {
   };
 
   return (
-    <>
-      {contextHolder}
-      <ReactECharts
-        option={option}
-        onEvents={{
-          click: handleChartClick,
-          brushEnd: (params: { areas: Array<{ coordRange: [number, number] }> }) => {
-            if (params.areas && params.areas.length > 0 && timeUnit) {
-              const [start, end] = params.areas[0].coordRange;
-              const startTime = aggregatedData.labels[start];
-              const endTime = aggregatedData.labels[end];
+    <ReactECharts
+      option={option}
+      onEvents={{
+        click: handleChartClick,
+        brushEnd: (params: { areas: Array<{ coordRange: [number, number] }> }) => {
+          if (params.areas && params.areas.length > 0 && timeUnit) {
+            const [start, end] = params.areas[0].coordRange;
+            const startTime = aggregatedData.labels[start];
+            const endTime = aggregatedData.labels[end];
 
-              const newParams = {
-                ...searchParams,
-                startTime: dayjs(startTime).format(DATE_FORMAT),
-                endTime: dayjs(endTime)
-                  .add(1, timeUnit as any)
-                  .format(DATE_FORMAT),
-                offset: 0,
-              };
-              delete newParams.timeRange;
-              onSearch(newParams);
-            }
-          },
-          mousemove: (params: { componentType: string }) => {
-            if (!chartRef.current) return;
+            const newParams = {
+              ...searchParams,
+              startTime: dayjs(startTime).format(DATE_FORMAT),
+              endTime: dayjs(endTime)
+                .add(1, timeUnit as any)
+                .format(DATE_FORMAT),
+              offset: 0,
+            };
+            delete newParams.timeRange;
+            onSearch(newParams);
+          }
+        },
+        mousemove: (params: { componentType: string }) => {
+          if (!chartRef.current) return;
 
-            if (params.componentType === 'series') {
-              // 鼠标在柱子上，禁用 brush，启用点击
-              chartRef.current.dispatchAction({
-                type: 'takeGlobalCursor',
-                key: 'default',
-                cursor: 'pointer',
-              });
-            }
-          },
-          mouseout: () => {
-            if (!chartRef.current) return;
-
-            // 鼠标离开任何区域时，恢复横向选择模式
+          if (params.componentType === 'series') {
+            // 鼠标在柱子上，禁用 brush，启用点击
             chartRef.current.dispatchAction({
               type: 'takeGlobalCursor',
-              key: 'brush',
-              brushOption: {
-                brushType: 'lineX',
-                brushMode: 'single',
-              },
+              key: 'default',
+              cursor: 'pointer',
             });
-          },
-        }}
-        onChartReady={(chart) => {
-          chartRef.current = chart;
-          // 设置全局鼠标样式为横向选择
-          chart.dispatchAction({
+          }
+        },
+        mouseout: () => {
+          if (!chartRef.current) return;
+
+          // 鼠标离开任何区域时，恢复横向选择模式
+          chartRef.current.dispatchAction({
             type: 'takeGlobalCursor',
             key: 'brush',
             brushOption: {
@@ -289,15 +273,27 @@ const HistogramChart = (props: IProps) => {
               brushMode: 'single',
             },
           });
-          // 启用 brush 组件
-          chart.dispatchAction({
-            type: 'brush',
-            areas: [],
-          });
-        }}
-        style={{ height: 160, width: '100%' }}
-      />
-    </>
+        },
+      }}
+      onChartReady={(chart) => {
+        chartRef.current = chart;
+        // 设置全局鼠标样式为横向选择
+        chart.dispatchAction({
+          type: 'takeGlobalCursor',
+          key: 'brush',
+          brushOption: {
+            brushType: 'lineX',
+            brushMode: 'single',
+          },
+        });
+        // 启用 brush 组件
+        chart.dispatchAction({
+          type: 'brush',
+          areas: [],
+        });
+      }}
+      style={{ height: 160, width: '100%' }}
+    />
   );
 };
 
