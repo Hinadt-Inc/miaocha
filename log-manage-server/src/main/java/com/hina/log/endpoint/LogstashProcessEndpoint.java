@@ -8,6 +8,7 @@ import com.hina.log.domain.dto.logstash.LogstashMachineDetailDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessConfigUpdateRequestDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessCreateDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessResponseDTO;
+import com.hina.log.domain.dto.logstash.LogstashProcessScaleRequestDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessUpdateDTO;
 import com.hina.log.domain.dto.logstash.TaskDetailDTO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -396,5 +397,24 @@ public class LogstashProcessEndpoint {
             @Parameter(description = "元信息更新请求", required = true) @Valid @RequestBody
                     LogstashProcessUpdateDTO dto) {
         return ApiResponse.success(logstashProcessService.updateLogstashProcessMetadata(id, dto));
+    }
+
+    /**
+     * Logstash进程扩容/缩容操作
+     *
+     * @param id Logstash进程数据库ID
+     * @param dto 扩容/缩容请求DTO
+     * @return 扩容/缩容后的Logstash进程
+     */
+    @PostMapping("/{id}/scale")
+    @Operation(
+            summary = "Logstash进程扩容/缩容",
+            description = "对Logstash进程进行扩容或缩容操作。扩容：添加新机器并初始化；缩容：移除指定机器并清理资源。")
+    public ApiResponse<LogstashProcessResponseDTO> scaleLogstashProcess(
+            @Parameter(description = "Logstash进程数据库ID", required = true) @PathVariable("id")
+                    Long id,
+            @Parameter(description = "扩容/缩容请求", required = true) @Valid @RequestBody
+                    LogstashProcessScaleRequestDTO dto) {
+        return ApiResponse.success(logstashProcessService.scaleLogstashProcess(id, dto));
     }
 }

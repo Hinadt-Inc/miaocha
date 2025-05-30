@@ -4,6 +4,7 @@ import com.hina.log.domain.dto.logstash.LogstashMachineDetailDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessConfigUpdateRequestDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessCreateDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessResponseDTO;
+import com.hina.log.domain.dto.logstash.LogstashProcessScaleRequestDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessUpdateDTO;
 import java.util.List;
 
@@ -142,4 +143,13 @@ public interface LogstashProcessService {
      * @return LogstashMachine详细信息
      */
     LogstashMachineDetailDTO getLogstashMachineDetail(Long id, Long machineId);
+
+    /**
+     * Logstash进程扩容/缩容操作 扩容：将新机器添加到现有的Logstash进程中，并进行初始化 缩容：从Logstash进程中移除指定机器，并清理相关资源
+     *
+     * @param id Logstash进程ID
+     * @param dto 扩容/缩容请求DTO
+     * @return 扩容/缩容后的进程信息
+     */
+    LogstashProcessResponseDTO scaleLogstashProcess(Long id, LogstashProcessScaleRequestDTO dto);
 }

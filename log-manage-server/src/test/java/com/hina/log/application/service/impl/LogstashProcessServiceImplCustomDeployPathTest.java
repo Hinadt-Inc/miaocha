@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 import com.hina.log.application.logstash.LogstashConfigSyncService;
 import com.hina.log.application.logstash.LogstashMachineConnectionValidator;
 import com.hina.log.application.logstash.LogstashProcessDeployService;
+import com.hina.log.application.logstash.command.LogstashCommandFactory;
 import com.hina.log.application.logstash.parser.LogstashConfigParser;
 import com.hina.log.application.logstash.task.TaskService;
 import com.hina.log.application.service.TableValidationService;
@@ -49,6 +50,7 @@ class LogstashProcessServiceImplCustomDeployPathTest {
     @Mock private TaskService taskService;
     @Mock private LogstashConfigSyncService configSyncService;
     @Mock private LogstashMachineConnectionValidator connectionValidator;
+    @Mock private LogstashCommandFactory commandFactory;
 
     private LogstashProcessServiceImpl logstashProcessService;
 
@@ -68,7 +70,8 @@ class LogstashProcessServiceImplCustomDeployPathTest {
                         jdbcQueryExecutor,
                         taskService,
                         configSyncService,
-                        connectionValidator);
+                        connectionValidator,
+                        commandFactory);
     }
 
     @Test

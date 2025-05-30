@@ -3,6 +3,7 @@ package com.hina.log.application.service.impl;
 import com.hina.log.application.logstash.LogstashConfigSyncService;
 import com.hina.log.application.logstash.LogstashMachineConnectionValidator;
 import com.hina.log.application.logstash.LogstashProcessDeployService;
+import com.hina.log.application.logstash.command.LogstashCommandFactory;
 import com.hina.log.application.logstash.enums.LogstashMachineState;
 import com.hina.log.application.logstash.parser.LogstashConfigParser;
 import com.hina.log.application.logstash.task.TaskService;
@@ -17,6 +18,7 @@ import com.hina.log.domain.dto.logstash.LogstashMachineDetailDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessConfigUpdateRequestDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessCreateDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessResponseDTO;
+import com.hina.log.domain.dto.logstash.LogstashProcessScaleRequestDTO;
 import com.hina.log.domain.dto.logstash.LogstashProcessUpdateDTO;
 import com.hina.log.domain.entity.DatasourceInfo;
 import com.hina.log.domain.entity.LogstashMachine;
@@ -59,6 +61,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
     private final TaskService taskService;
     private final LogstashConfigSyncService configSyncService;
     private final LogstashMachineConnectionValidator connectionValidator;
+    private final LogstashCommandFactory commandFactory;
 
     // 构造函数
     public LogstashProcessServiceImpl(
@@ -74,7 +77,8 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             JdbcQueryExecutor jdbcQueryExecutor,
             TaskService taskService,
             LogstashConfigSyncService configSyncService,
-            LogstashMachineConnectionValidator connectionValidator) {
+            LogstashMachineConnectionValidator connectionValidator,
+            LogstashCommandFactory commandFactory) {
         this.logstashProcessMapper = logstashProcessMapper;
         this.logstashMachineMapper = logstashMachineMapper;
         this.machineMapper = machineMapper;
@@ -88,6 +92,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         this.taskService = taskService;
         this.configSyncService = configSyncService;
         this.connectionValidator = connectionValidator;
+        this.commandFactory = commandFactory;
     }
 
     // 公共方法 - 按照接口定义顺序排列
@@ -974,5 +979,291 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
 
         // 使用转换器构建详细信息DTO（部署路径从数据库中的LogstashMachine获取）
         return logstashMachineConverter.toDetailDTO(logstashMachine, process, machineInfo);
+    }
+
+    @Override
+    @Transactional
+    public LogstashProcessResponseDTO scaleLogstashProcess(
+            Long id, LogstashProcessScaleRequestDTO dto) {
+        // 参数校验
+        if (id == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
+        }
+        if (dto == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "扩容/缩容请求不能为空");
+        }
+
+        // 验证请求参数
+        try {
+            dto.validate();
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, e.getMessage());
+        }
+
+        // 验证进程是否存在
+        LogstashProcess process = getAndValidateProcess(id);
+
+        if (dto.isScaleOut()) {
+            // 扩容操作
+            return performScaleOut(process, dto);
+        } else if (dto.isScaleIn()) {
+            // 缩容操作
+            return performScaleIn(process, dto);
+        } else {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "无效的扩容/缩容操作");
+        }
+    }
+
+    /** 执行扩容操作 */
+    private LogstashProcessResponseDTO performScaleOut(
+            LogstashProcess process, LogstashProcessScaleRequestDTO dto) {
+        List<Long> addMachineIds = dto.getAddMachineIds();
+        Long processId = process.getId();
+
+        logger.info("开始扩容Logstash进程[{}]，添加{}台机器", processId, addMachineIds.size());
+
+        // 验证要添加的机器
+        List<MachineInfo> newMachineInfos =
+                validateAndGetMachinesForScaleOut(processId, addMachineIds);
+
+        // 确定部署路径 - 优先使用自定义路径，否则使用默认路径
+        String deployPath =
+                StringUtils.hasText(dto.getCustomDeployPath())
+                        ? dto.getCustomDeployPath()
+                        : logstashDeployService.getDeployBaseDir();
+
+        // 创建新的LogstashMachine关联关系
+        for (MachineInfo machineInfo : newMachineInfos) {
+            LogstashMachine logstashMachine =
+                    logstashMachineConverter.createFromProcess(
+                            process, machineInfo.getId(), deployPath);
+            logstashMachineMapper.insert(logstashMachine);
+            logger.info("已创建进程[{}]与机器[{}]的关联关系", processId, machineInfo.getId());
+        }
+
+        // 在新机器上初始化Logstash进程环境
+        logstashDeployService.initializeProcess(process, newMachineInfos);
+
+        logger.info("Logstash进程[{}]扩容完成，成功添加{}台机器", processId, newMachineInfos.size());
+        return getLogstashProcess(processId);
+    }
+
+    /** 执行缩容操作 */
+    private LogstashProcessResponseDTO performScaleIn(
+            LogstashProcess process, LogstashProcessScaleRequestDTO dto) {
+        List<Long> removeMachineIds = dto.getRemoveMachineIds();
+        Long processId = process.getId();
+        Boolean forceScale = dto.getForceScale();
+
+        logger.info(
+                "开始缩容Logstash进程[{}]，移除{}台机器，强制模式：{}",
+                processId,
+                removeMachineIds.size(),
+                forceScale);
+
+        // 验证要移除的机器和防御性检查
+        List<MachineInfo> removeMachineInfos =
+                validateAndGetMachinesForScaleIn(processId, removeMachineIds, forceScale);
+
+        // 如果有运行中的机器且非强制模式，则拒绝操作
+        if (!forceScale) {
+            validateMachinesNotRunningForScaleIn(processId, removeMachineIds);
+        } else {
+            // 强制模式：先停止运行中的机器
+            stopRunningMachinesForScaleIn(processId, removeMachineInfos);
+        }
+
+        // 删除机器上的进程目录
+        deleteProcessDirectoriesForMachines(processId, removeMachineInfos);
+
+        // 删除与进程相关的任务（针对特定机器）
+        deleteTasksForMachines(processId, removeMachineIds);
+
+        // 删除LogstashMachine关联关系
+        for (Long machineId : removeMachineIds) {
+            LogstashMachine relation =
+                    logstashMachineMapper.selectByLogstashProcessIdAndMachineId(
+                            processId, machineId);
+            if (relation != null) {
+                logstashMachineMapper.deleteById(relation.getId());
+                logger.info("已删除进程[{}]与机器[{}]的关联关系", processId, machineId);
+            }
+        }
+
+        logger.info("Logstash进程[{}]缩容完成，成功移除{}台机器", processId, removeMachineIds.size());
+        return getLogstashProcess(processId);
+    }
+
+    /** 验证并获取扩容的目标机器 */
+    private List<MachineInfo> validateAndGetMachinesForScaleOut(
+            Long processId, List<Long> addMachineIds) {
+        List<MachineInfo> newMachineInfos = new ArrayList<>();
+
+        for (Long machineId : addMachineIds) {
+            // 验证机器是否存在
+            MachineInfo machineInfo = machineMapper.selectById(machineId);
+            if (machineInfo == null) {
+                throw new BusinessException(
+                        ErrorCode.MACHINE_NOT_FOUND, "指定的机器不存在: ID=" + machineId);
+            }
+
+            // 验证机器是否已经与该进程关联
+            LogstashMachine existingRelation =
+                    logstashMachineMapper.selectByLogstashProcessIdAndMachineId(
+                            processId, machineId);
+            if (existingRelation != null) {
+                throw new BusinessException(
+                        ErrorCode.VALIDATION_ERROR,
+                        "机器[" + machineId + "]已经与进程[" + processId + "]关联，无法重复添加");
+            }
+
+            // 验证机器连接
+            connectionValidator.validateSingleMachineConnection(machineInfo);
+
+            newMachineInfos.add(machineInfo);
+        }
+
+        if (newMachineInfos.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "没有有效的机器可以添加到进程中");
+        }
+
+        return newMachineInfos;
+    }
+
+    /** 验证并获取缩容的目标机器 */
+    private List<MachineInfo> validateAndGetMachinesForScaleIn(
+            Long processId, List<Long> removeMachineIds, Boolean forceScale) {
+        List<MachineInfo> removeMachineInfos = new ArrayList<>();
+
+        // 防御性编程：确保缩容后至少保留一台机器
+        List<LogstashMachine> allRelations =
+                logstashMachineMapper.selectByLogstashProcessId(processId);
+        if (allRelations.size() <= removeMachineIds.size()) {
+            throw new BusinessException(
+                    ErrorCode.VALIDATION_ERROR,
+                    "缩容后必须至少保留一台机器，当前共"
+                            + allRelations.size()
+                            + "台机器，不能移除"
+                            + removeMachineIds.size()
+                            + "台");
+        }
+
+        for (Long machineId : removeMachineIds) {
+            // 验证机器是否存在
+            MachineInfo machineInfo = machineMapper.selectById(machineId);
+            if (machineInfo == null) {
+                throw new BusinessException(
+                        ErrorCode.MACHINE_NOT_FOUND, "指定的机器不存在: ID=" + machineId);
+            }
+
+            // 验证机器是否与该进程关联
+            LogstashMachine relation =
+                    logstashMachineMapper.selectByLogstashProcessIdAndMachineId(
+                            processId, machineId);
+            if (relation == null) {
+                throw new BusinessException(
+                        ErrorCode.VALIDATION_ERROR,
+                        "机器[" + machineId + "]未与进程[" + processId + "]关联，无法移除");
+            }
+
+            removeMachineInfos.add(machineInfo);
+        }
+
+        return removeMachineInfos;
+    }
+
+    /** 验证要缩容的机器不在运行状态 */
+    private void validateMachinesNotRunningForScaleIn(Long processId, List<Long> removeMachineIds) {
+        for (Long machineId : removeMachineIds) {
+            LogstashMachine relation =
+                    logstashMachineMapper.selectByLogstashProcessIdAndMachineId(
+                            processId, machineId);
+            if (relation != null) {
+                LogstashMachineState state = LogstashMachineState.valueOf(relation.getState());
+                if (state == LogstashMachineState.RUNNING
+                        || state == LogstashMachineState.STARTING) {
+                    throw new BusinessException(
+                            ErrorCode.VALIDATION_ERROR,
+                            "机器["
+                                    + machineId
+                                    + "]当前状态为["
+                                    + state.getDescription()
+                                    + "]，不能在非强制模式下缩容运行中的机器");
+                }
+            }
+        }
+    }
+
+    /** 停止运行中的机器（强制缩容模式） */
+    private void stopRunningMachinesForScaleIn(
+            Long processId, List<MachineInfo> removeMachineInfos) {
+        List<MachineInfo> runningMachines = new ArrayList<>();
+
+        for (MachineInfo machineInfo : removeMachineInfos) {
+            LogstashMachine relation =
+                    logstashMachineMapper.selectByLogstashProcessIdAndMachineId(
+                            processId, machineInfo.getId());
+            if (relation != null) {
+                LogstashMachineState state = LogstashMachineState.valueOf(relation.getState());
+                if (state == LogstashMachineState.RUNNING
+                        || state == LogstashMachineState.STARTING) {
+                    runningMachines.add(machineInfo);
+                }
+            }
+        }
+
+        if (!runningMachines.isEmpty()) {
+            logger.info("强制缩容模式：停止{}台运行中的机器", runningMachines.size());
+            logstashDeployService.stopProcess(processId, runningMachines);
+
+            // 等待停止完成（简单的同步等待，可以优化为异步等待）
+            try {
+                Thread.sleep(5000); // 等待5秒让停止操作完成
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                logger.warn("等待停止操作被中断");
+            }
+        }
+    }
+
+    /** 删除指定机器上的进程目录 */
+    private void deleteProcessDirectoriesForMachines(
+            Long processId, List<MachineInfo> machineInfos) {
+        // 直接调用部署服务的删除方法，复用现有逻辑
+        try {
+            CompletableFuture<Boolean> deleteFuture =
+                    logstashDeployService.deleteProcessDirectory(processId, machineInfos);
+            boolean success = deleteFuture.get(); // 等待删除完成
+            if (!success) {
+                logger.warn("删除部分机器上的进程目录失败，进程ID: {}，机器数量: {}", processId, machineInfos.size());
+            } else {
+                logger.info("成功删除{}台机器上的进程[{}]目录", machineInfos.size(), processId);
+            }
+        } catch (Exception e) {
+            logger.error("删除指定机器上的进程目录时发生错误，进程ID: {}, 错误: {}", processId, e.getMessage(), e);
+        }
+    }
+
+    /** 删除指定机器的任务记录 */
+    private void deleteTasksForMachines(Long processId, List<Long> machineIds) {
+        for (Long machineId : machineIds) {
+            try {
+                List<String> taskIds = taskService.getAllMachineTaskIds(processId, machineId);
+                for (String taskId : taskIds) {
+                    try {
+                        // 先删除任务步骤再删除任务
+                        taskService.deleteTaskSteps(taskId);
+                        taskService.deleteTask(taskId);
+                        logger.debug("已删除任务: {}", taskId);
+                    } catch (Exception e) {
+                        logger.error("删除任务[{}]失败: {}", taskId, e.getMessage(), e);
+                    }
+                }
+                logger.info("已删除进程[{}]在机器[{}]上的{}个任务记录", processId, machineId, taskIds.size());
+            } catch (Exception e) {
+                logger.error(
+                        "删除进程[{}]在机器[{}]上的任务记录时发生异常: {}", processId, machineId, e.getMessage(), e);
+            }
+        }
     }
 }
