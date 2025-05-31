@@ -14,6 +14,9 @@ declare global {
     format?: string[]; // 时间格式，如：['YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD HH:mm:ss']
     form?: () => void; // dayjs函数
     to?: () => void; // dayjs函数
+    type?: 'relative' | 'absolute' | 'quick'; // 时间范围类型，如：'relative', 'absolute', 'quick'
+    startOption?: IRelativeTime; // 开始时间选项
+    endOption?: IRelativeTime; // 结束时间选项
   }
 
   // 旧
@@ -25,6 +28,8 @@ declare global {
     unitCN: string; // 单位中文
     unitEN: string; // 单位英文
     format: string; // 时间格式
+    isExact?: boolean; // 是否精确到单位
+    number?: number; // 数量
   }
 
   // 字段值分布列表，按数量降序排序

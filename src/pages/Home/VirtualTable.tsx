@@ -282,8 +282,6 @@ const VirtualTable = (props: IProps) => {
   const handleDeleteColumn = (colIndex: number) => {
     const col = columns[colIndex];
     const newCols = columns.filter((_, idx) => idx !== colIndex);
-    console.log('columns', columns);
-    console.log('newCols', newCols);
     setColumns(newCols);
     onChangeColumns(col);
     // 这里如果有 onChangeColumns 也要同步

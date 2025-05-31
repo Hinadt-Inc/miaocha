@@ -25,7 +25,6 @@ const ExpandedRow = (props: IProps) => {
   ];
 
   const dataSource = useMemo(() => {
-    console.log('data', Object.entries(data));
     return Object.entries(data)
       .filter((item) => item[0] !== '_key')
       .map(([key, value], index) => ({
