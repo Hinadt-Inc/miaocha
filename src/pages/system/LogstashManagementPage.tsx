@@ -397,8 +397,9 @@ function LogstashManagementPage() {
             onClick={() => {
               setSqlModalVisible(true);
               setCurrentProcess(record);
+              setSql(record.dorisSql || '');
             }}
-            disabled={!!record.dorisSQL}
+            // disabled={!!record.dorisSql}
           >
             SQL
           </Button>
@@ -892,6 +893,7 @@ function LogstashManagementPage() {
                 void handleExecuteSQL(currentProcess.id);
               }
             }}
+            okButtonProps={{ disabled: !!currentProcess?.dorisSql.trim() }}
             width={800}
           >
             <div style={{ marginBottom: 16 }}>
@@ -902,6 +904,7 @@ function LogstashManagementPage() {
               onChange={(e) => setSql(e.target.value)}
               style={{ width: '100%', height: '200px' }}
               placeholder="例如：CREATE TABLE log_table_test_env (...) ENGINE=OLAP ..."
+              disabled={!!currentProcess?.dorisSql}
             />
           </Modal>
           <Modal
