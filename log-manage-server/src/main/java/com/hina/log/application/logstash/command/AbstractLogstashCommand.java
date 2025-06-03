@@ -108,7 +108,21 @@ public abstract class AbstractLogstashCommand implements LogstashCommand {
 
     /** 获取Logstash进程目录 优先使用数据库中的部署路径，否则使用默认路径 */
     protected String getProcessDirectory(MachineInfo machineInfo) {
-        String actualDeployDir = getActualDeployDir(machineInfo);
+        try {
+            // 尝试从数据库获取机器特定的部署路径
+            LogstashMachine logstashMachine =
+                    logstashMachineMapper.selectByLogstashProcessIdAndMachineId(
+                            processId, machineInfo.getId());
+            if (logstashMachine != null && StringUtils.hasText(logstashMachine.getDeployPath())) {
+                // 数据库中存储的是完整的部署路径，直接使用
+                return logstashMachine.getDeployPath();
+            }
+        } catch (Exception e) {
+            logger.warn("无法从数据库获取部署路径，使用默认路径: {}", e.getMessage());
+        }
+
+        // 使用规范化的默认路径并拼接进程ID
+        String actualDeployDir = normalizeDeployDir(machineInfo);
         return String.format("%s/logstash-%d", actualDeployDir, processId);
     }
 

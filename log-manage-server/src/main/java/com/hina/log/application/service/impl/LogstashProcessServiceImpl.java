@@ -160,10 +160,15 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         logstashProcessMapper.insert(process);
 
         // 确定实际使用的部署路径
-        String actualDeployPath =
-                StringUtils.hasText(dto.getCustomDeployPath())
-                        ? dto.getCustomDeployPath()
-                        : logstashDeployService.getDeployBaseDir();
+        String fullDeployPath;
+        if (StringUtils.hasText(dto.getCustomDeployPath())) {
+            // 用户指定了部署路径，直接使用，不拼接
+            fullDeployPath = dto.getCustomDeployPath();
+        } else {
+            // 使用默认路径并拼接进程ID
+            String baseDeployPath = logstashDeployService.getDeployBaseDir();
+            fullDeployPath = String.format("%s/logstash-%d", baseDeployPath, process.getId());
+        }
 
         // 创建进程与机器的关联关系
         for (Long machineId : dto.getMachineIds()) {
@@ -172,10 +177,9 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                         ErrorCode.MACHINE_NOT_FOUND, "指定的机器不存在: ID=" + machineId);
             }
 
-            // 使用转换器创建LogstashMachine，并复制配置，设置部署路径
+            // 使用转换器创建LogstashMachine，并复制配置，设置完整的部署路径
             LogstashMachine logstashMachine =
-                    logstashMachineConverter.createFromProcess(
-                            process, machineId, actualDeployPath);
+                    logstashMachineConverter.createFromProcess(process, machineId, fullDeployPath);
             logstashMachineMapper.insert(logstashMachine);
         }
 
@@ -1026,11 +1030,16 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         List<MachineInfo> newMachineInfos =
                 validateAndGetMachinesForScaleOut(processId, addMachineIds);
 
-        // 确定部署路径 - 优先使用自定义路径，否则使用默认路径
-        String deployPath =
-                StringUtils.hasText(dto.getCustomDeployPath())
-                        ? dto.getCustomDeployPath()
-                        : logstashDeployService.getDeployBaseDir();
+        // 确定部署路径
+        String deployPath;
+        if (StringUtils.hasText(dto.getCustomDeployPath())) {
+            // 用户指定了部署路径，直接使用，不拼接
+            deployPath = dto.getCustomDeployPath();
+        } else {
+            // 使用默认路径并拼接进程ID
+            String baseDeployPath = logstashDeployService.getDeployBaseDir();
+            deployPath = String.format("%s/logstash-%d", baseDeployPath, processId);
+        }
 
         // 创建新的LogstashMachine关联关系
         for (MachineInfo machineInfo : newMachineInfos) {

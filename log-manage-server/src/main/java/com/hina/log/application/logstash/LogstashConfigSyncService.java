@@ -134,11 +134,8 @@ public class LogstashConfigSyncService {
                             return;
                         }
 
-                        // 构建远程配置文件路径
-                        String processDir =
-                                String.format(
-                                        "%s/logstash-%d",
-                                        deployService.getDeployBaseDir(), processId);
+                        // 构建远程配置文件路径 - 优先从数据库获取完整路径
+                        String processDir = getProcessDirectory(processId, machineInfo);
                         String configDir = processDir + "/config";
 
                         // 同步JVM配置
@@ -191,6 +188,31 @@ public class LogstashConfigSyncService {
                         logger.error("同步进程 [{}] 配置文件时发生错误: {}", processId, e.getMessage(), e);
                     }
                 });
+    }
+
+    /**
+     * 获取进程目录路径
+     *
+     * @param processId 进程ID
+     * @param machineInfo 机器信息
+     * @return 进程目录路径
+     */
+    private String getProcessDirectory(Long processId, MachineInfo machineInfo) {
+        try {
+            // 尝试从数据库获取机器特定的部署路径
+            LogstashMachine logstashMachine =
+                    logstashMachineMapper.selectByLogstashProcessIdAndMachineId(
+                            processId, machineInfo.getId());
+            if (logstashMachine != null && StringUtils.hasText(logstashMachine.getDeployPath())) {
+                // 数据库中存储的是完整的部署路径，直接使用
+                return logstashMachine.getDeployPath();
+            }
+        } catch (Exception e) {
+            logger.warn("无法从数据库获取部署路径，使用默认路径: {}", e.getMessage());
+        }
+
+        // 使用默认路径并拼接进程ID
+        return String.format("%s/logstash-%d", deployService.getDeployBaseDir(), processId);
     }
 
     /**
