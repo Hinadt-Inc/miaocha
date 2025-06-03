@@ -12,11 +12,12 @@ interface IProps {
   totalCount?: number; // 记录总数
   loading?: boolean; // 是否加载中
   onSearch: (params: ILogSearchParams) => void; // 搜索回调函数
+  setWhereSqlsFromSider: any; // 设置whereSqlsFromSider
 }
 
 const SearchBar = forwardRef((props: IProps, ref) => {
   const searchBarRef = useRef<HTMLDivElement>(null);
-  const { searchParams, totalCount = 0, loading, onSearch } = props;
+  const { searchParams, totalCount = 0, loading, onSearch, setWhereSqlsFromSider } = props;
 
   const [timeGroup, setTimeGroup] = useState<string>('auto'); // 时间分组
   const [activeTab, setActiveTab] = useState('quick'); // 选项卡值
@@ -37,8 +38,11 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   // 暴露给父组件的方法
   useImperativeHandle(ref, () => ({
     // 渲染sql
-    renderSql: (sql: string) => {
+    addSql: (sql: string) => {
       setSqls((prev) => [...prev, sql]);
+    },
+    removeSql: (sql: string) => {
+      setSqls((prev) => prev.filter((item) => item !== sql));
     },
     // 渲染时间
     setTimeOption,
@@ -84,7 +88,8 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   };
 
   const handleCloseSql = (item: string) => {
-    setSqls((prev) => prev.filter((k) => k !== item));
+    setSqls((prev) => prev.filter((sub) => sub !== item));
+    setWhereSqlsFromSider((prev: any) => prev.filter((sub: any) => sub.label !== item));
     const latestTime = getLatestTime(timeOption);
     setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
   };

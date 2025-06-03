@@ -13,11 +13,12 @@ interface IProps {
   detailLoading: boolean; // 日志数据是否正在加载
   onSearch: (params: ILogSearchParams) => void; // 搜索回调函数
   onChangeColumns?: (params: ILogColumnsResponse[]) => void; // 列变化回调函数
-  onChangeSql: (params: string) => void; // SQL变化回调函数
+  setWhereSqlsFromSider: any; // 设置where条件
 }
 
 const Sider: React.FC<IProps> = (props) => {
-  const { detailLoading, modules, moduleLoading, onChangeColumns, onSearch, searchParams, onChangeSql } = props;
+  const { detailLoading, modules, moduleLoading, onChangeColumns, onSearch, searchParams, setWhereSqlsFromSider } =
+    props;
   const [columns, setColumns] = useState<ILogColumnsResponse[]>([]); // 日志表字段
   const [selectedModule, setSelectedModule] = useState<string[]>([]); // 已选模块
   const [distributions, setDistributions] = useState<Record<string, IFieldDistributions>>({}); // 字段值分布列表
@@ -142,13 +143,12 @@ const Sider: React.FC<IProps> = (props) => {
       distributions,
       activeColumns,
       onToggle: toggleColumn,
-      onSearch,
-      onChangeSql,
+      setWhereSqlsFromSider,
       onActiveColumns: setActiveColumns,
       onDistribution: (columnName: string, newActiveColumns: string[], sql: string) =>
         getDistribution(columnName, newActiveColumns, sql),
     };
-  }, [searchParams, distributions, activeColumns, toggleColumn, onSearch, onChangeSql, getDistribution]);
+  }, [searchParams, distributions, activeColumns, toggleColumn, getDistribution, setWhereSqlsFromSider]);
 
   return (
     <div className={styles.layoutSider}>
