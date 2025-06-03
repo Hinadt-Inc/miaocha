@@ -209,8 +209,6 @@ const HistogramChart = (props: IProps) => {
 
   // 处理图表点击事件
   const handleChartClick = (params: any) => {
-    console.log('【打印日志】,params =======>', params);
-    console.log('【打印日志】,timeUnit =======>', timeUnit);
     if (params.componentType === 'series' && timeUnit) {
       const { name } = params;
       const newParams = {

@@ -29,6 +29,7 @@ const TimePicker = (props: IProps) => {
       value,
       range: [from().format(format[0]), to().format(format[1])],
       ...isExist,
+      type: 'quick',
     };
     setSelectedTag(value);
     onSubmit(params);
@@ -52,6 +53,7 @@ const TimePicker = (props: IProps) => {
         label: dateStrings.join(' ~ '),
         value: dateStrings.join(' ~ '),
         range: dateStrings,
+        type: 'absolute',
       });
     } else {
       setAbsoluteOption({} as any);

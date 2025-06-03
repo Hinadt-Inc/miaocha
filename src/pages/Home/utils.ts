@@ -157,3 +157,32 @@ export const TIME_GROUP: Record<string, string> = {
   day: '天',
   auto: '自动',
 };
+
+// 获取当前时间
+export const getLatestTime = (timeOption: ILogTimeSubmitParams) => {
+  const { type, value, startOption, endOption, range } = timeOption;
+  const target: any = {};
+  if (!value) return target;
+
+  // 快捷选择
+  if (type === 'quick' && QUICK_RANGES[value]) {
+    const current = QUICK_RANGES[value];
+    target.startTime = current.from().format(current.format[0]);
+    target.endTime = current.to().format(current.format[1]);
+  } else if (type === 'relative' && startOption && endOption) {
+    // 相对时间
+    const start = dayjs()
+      .subtract(startOption.number || 0, startOption.unitEN as any)
+      .format(startOption.isExact ? startOption.format : DATE_FORMAT);
+    const end = dayjs()
+      .subtract(endOption.number || 0, endOption.unitEN as any)
+      .format(endOption.isExact ? endOption.format : DATE_FORMAT);
+    target.startTime = start;
+    target.endTime = end;
+  } else if (type === 'absolute' && range?.length === 2) {
+    // 绝对时间
+    target.startTime = range[0];
+    target.endTime = range[1];
+  }
+  return target;
+};

@@ -13,6 +13,7 @@ const HomePage = () => {
   const [detailData, setDetailData] = useState<ILogDetailsResponse | null>(null); // 日志数据
   const [logTableColumns, setLogTableColumns] = useState<ILogColumnsResponse[]>([]); // 日志字段列表
   const [histogramData, setHistogramData] = useState<ILogHistogramData | null>(null); // 日志时间分布列表
+  const [whereSqlsFromSider, setWhereSqlsFromSider] = useState<IStatus[]>([]); // 侧边栏的where条件
   const searchBarRef = useRef<HTMLDivElement>(null);
 
   // 默认的搜索参数
@@ -105,15 +106,50 @@ const HomePage = () => {
     setLogTableColumns(columns);
   };
 
+  const handleSetWhereSqlsFromSider = (flag: '=' | '!=', columnName: string, value: string) => {
+    const sql = `${columnName} ${flag} '${value}'`;
+    const newSearchParams = {
+      ...searchParams,
+      offset: 0,
+    };
+    // 添加where条件
+    if (flag === '=') {
+      const oldSql = `${columnName} != '${value}'`;
+      newSearchParams.whereSqls = [...(searchParams?.whereSqls || []), sql];
+      (searchBarRef?.current as any)?.removeSql?.(oldSql);
+      setWhereSqlsFromSider((prev: any) => [
+        ...prev,
+        {
+          label: sql,
+          value: value,
+          field: columnName,
+        },
+      ]);
+    } else {
+      // 删除where条件
+      const oldSql = `${columnName} = '${value}'`;
+      newSearchParams.whereSqls = searchParams?.whereSqls?.filter((item: any) => item !== oldSql);
+      (searchBarRef?.current as any)?.removeSql?.(oldSql);
+      setWhereSqlsFromSider((prev: any) => prev.filter((item: any) => item.value !== value));
+    }
+    // 如果where条件为空，则删除where条件
+    if (newSearchParams?.whereSqls?.length === 0) {
+      delete newSearchParams.whereSqls;
+    }
+    // 添加sql
+    (searchBarRef?.current as any)?.addSql?.(sql);
+    setSearchParams(newSearchParams);
+  };
+
   // 优化字段选择组件的props
   const siderProps = {
     searchParams,
     modules: moduleOptions,
     moduleLoading: getMyModules.loading,
     detailLoading: getDetailData.loading,
+    setWhereSqlsFromSider: handleSetWhereSqlsFromSider,
     onSearch: setSearchParams,
     onChangeColumns: handleChangeColumns,
-    onChangeSql: (sql: string) => (searchBarRef?.current as any)?.renderSql?.(sql),
   };
 
   const onSearchFromLog = (params: ILogSearchParams) => {
@@ -152,10 +188,19 @@ const HomePage = () => {
       getDetailData,
       searchParams,
       dynamicColumns: logTableColumns,
+      whereSqlsFromSider,
       onSearch: onSearchFromLog,
       onChangeColumns: handleChangeColumnsByLog,
     }),
-    [histogramData, getHistogramData.loading, detailData, getDetailData, logTableColumns, searchParams],
+    [
+      histogramData,
+      getHistogramData.loading,
+      detailData,
+      getDetailData,
+      logTableColumns,
+      searchParams,
+      whereSqlsFromSider,
+    ],
   );
 
   // 搜索栏组件props
@@ -165,8 +210,16 @@ const HomePage = () => {
       totalCount: detailData?.totalCount,
       loading: getDetailData?.loading || getHistogramData.loading,
       onSearch: setSearchParams,
+      setWhereSqlsFromSider,
     }),
-    [searchParams, detailData?.totalCount, getDetailData?.loading, getHistogramData.loading, setSearchParams],
+    [
+      searchParams,
+      detailData?.totalCount,
+      getDetailData?.loading,
+      getHistogramData.loading,
+      setSearchParams,
+      setWhereSqlsFromSider,
+    ],
   );
 
   return (

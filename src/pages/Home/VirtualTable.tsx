@@ -12,6 +12,7 @@ interface IProps {
   onLoadMore: () => void; // 加载更多数据的回调函数
   hasMore?: boolean; // 是否还有更多数据
   dynamicColumns?: ILogColumnsResponse[]; // 动态列配置
+  whereSqlsFromSider: IStatus[];
   onChangeColumns: (params: ILogColumnsResponse[]) => void; // 列变化回调函数
 }
 
@@ -110,7 +111,16 @@ const ColumnHeader: React.FC<ColumnHeaderProps> = ({
 };
 
 const VirtualTable = (props: IProps) => {
-  const { data, loading = false, onLoadMore, hasMore = false, dynamicColumns, searchParams, onChangeColumns } = props;
+  const {
+    data,
+    loading = false,
+    onLoadMore,
+    hasMore = false,
+    dynamicColumns,
+    searchParams,
+    onChangeColumns,
+    whereSqlsFromSider = [],
+  } = props;
   const containerRef = useRef<HTMLDivElement>(null);
   const tblRef: Parameters<typeof Table>[0]['ref'] = useRef(null);
   const [containerHeight, setContainerHeight] = useState<number>(0);
@@ -165,15 +175,31 @@ const VirtualTable = (props: IProps) => {
         hidden: _columns.length > 0,
         render: (_: any, record: ILogColumnsResponse) => {
           const { keywords = [] } = searchParams;
-          const highlight = (text: string) => highlightText(text, keywords);
+          // 先找出所有需要优先展示的key
+          const highlightKeys = whereSqlsFromSider.map((item) => item.field);
+          const entries = Object.entries(record);
+          // 高亮key优先，其余按原顺序
+          const sortedEntries = [
+            ...entries.filter(([key]) => highlightKeys.includes(key)),
+            ...entries.filter(([key]) => !highlightKeys.includes(key)),
+          ];
           return (
             <dl className={styles.source}>
-              {Object.entries(record).map(([key, value]) => (
-                <Fragment key={key}>
-                  <dt>{key}</dt>
-                  <dd>{highlight(value)}</dd>
-                </Fragment>
-              ))}
+              {sortedEntries.map(([key, value]) => {
+                const match = whereSqlsFromSider.find((item) => item.field === key);
+                const highlightValue = match
+                  ? highlightText(value, [String(match.value)])
+                  : highlightText(value, [
+                      ...keywords,
+                      ...whereSqlsFromSider.map((item) => String(item.value)).filter(Boolean),
+                    ]);
+                return (
+                  <Fragment key={key}>
+                    <dt>{key}</dt>
+                    <dd>{highlightValue}</dd>
+                  </Fragment>
+                );
+              })}
             </dl>
           );
         },
@@ -188,9 +214,15 @@ const VirtualTable = (props: IProps) => {
           }
           return (valueA || '').toString().localeCompare((valueB || '').toString());
         },
+        render: (text: string) => {
+          return highlightText(text, [
+            ...(searchParams?.keywords || []),
+            ...((whereSqlsFromSider.map((item) => item.value) || []) as string[]),
+          ]);
+        },
       })),
     ];
-  }, [dynamicColumns, searchParams.keywords, columnWidths]);
+  }, [dynamicColumns, searchParams.keywords, columnWidths, whereSqlsFromSider]);
 
   useEffect(() => {
     const resizableColumns = getBaseColumns.map((col, index) => ({
@@ -282,8 +314,6 @@ const VirtualTable = (props: IProps) => {
   const handleDeleteColumn = (colIndex: number) => {
     const col = columns[colIndex];
     const newCols = columns.filter((_, idx) => idx !== colIndex);
-    console.log('columns', columns);
-    console.log('newCols', newCols);
     setColumns(newCols);
     onChangeColumns(col);
     // 这里如果有 onChangeColumns 也要同步
@@ -303,7 +333,8 @@ const VirtualTable = (props: IProps) => {
     setColumns(newCols);
   };
 
-  // 包装列头
+  // 包装列头，添加删除、左移、右移按钮，并根据是否存在_source列来决定是否显示
+  // 如果存在_source列，则不显示删除、左移、右移按钮
   const enhancedColumns = !hasSourceColumn
     ? columns.map((col, idx) => {
         if (col.dataIndex === 'log_time') {

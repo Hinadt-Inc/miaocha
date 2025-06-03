@@ -3,7 +3,7 @@ import { AutoComplete, Button, Space, Tag, Popover, Statistic } from 'antd';
 import CountUp from 'react-countup';
 import SpinIndicator from '@/components/SpinIndicator';
 import styles from './SearchBar.module.less';
-import { LOG_FIELDS, QUICK_RANGES, TIME_GROUP } from './utils.ts';
+import { LOG_FIELDS, QUICK_RANGES, TIME_GROUP, getLatestTime } from './utils.ts';
 
 const TimePicker = lazy(() => import('./TimePicker.tsx'));
 
@@ -12,12 +12,14 @@ interface IProps {
   totalCount?: number; // 记录总数
   loading?: boolean; // 是否加载中
   onSearch: (params: ILogSearchParams) => void; // 搜索回调函数
+  setWhereSqlsFromSider: any; // 设置whereSqlsFromSider
 }
 
 const SearchBar = forwardRef((props: IProps, ref) => {
   const searchBarRef = useRef<HTMLDivElement>(null);
-  const { searchParams, totalCount = 0, loading, onSearch } = props;
+  const { searchParams, totalCount = 0, loading, onSearch, setWhereSqlsFromSider } = props;
 
+  const [timeGroup, setTimeGroup] = useState<string>('auto'); // 时间分组
   const [activeTab, setActiveTab] = useState('quick'); // 选项卡值
   const [keyword, setKeyword] = useState<string>(''); // 关键词
   const [keywords, setKeywords] = useState<string[]>([]); // 关键词列表
@@ -27,6 +29,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   });
   const [sql, setSql] = useState<string>(''); // sql
   const [sqls, setSqls] = useState<string[]>([]); // sql列表
+
   const [sqlHistory, setSqlHistory] = useState<string[]>(() => {
     const saved = localStorage.getItem('sqlHistory');
     return saved ? JSON.parse(saved) : [];
@@ -35,8 +38,11 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   // 暴露给父组件的方法
   useImperativeHandle(ref, () => ({
     // 渲染sql
-    renderSql: (sql: string) => {
+    addSql: (sql: string) => {
       setSqls((prev) => [...prev, sql]);
+    },
+    removeSql: (sql: string) => {
+      setSqls((prev) => prev.filter((item) => item !== sql));
     },
     // 渲染时间
     setTimeOption,
@@ -45,13 +51,14 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   // 获取默认时间选项配置
   const getDefaultTimeOption = () => {
     const { timeRange } = searchParams as any;
-    const isQucik = QUICK_RANGES[timeRange];
-    if (!isQucik) return {};
-    const { from, to, format } = isQucik;
+    const isQuick = QUICK_RANGES[timeRange];
+    if (!isQuick) return {};
+    const { from, to, format } = isQuick;
     return {
       value: timeRange,
       range: [from().format(format[0]), to().format(format[1])],
       ...QUICK_RANGES[timeRange],
+      type: 'quick',
     } as any;
   };
   const [timeOption, setTimeOption] = useState<ILogTimeSubmitParams>(getDefaultTimeOption); // 时间选项
@@ -73,42 +80,22 @@ const SearchBar = forwardRef((props: IProps, ref) => {
 
     setOpenTimeRange(true);
   };
+
+  const handleCloseKeyword = (item: string) => {
+    setKeywords((prev) => prev.filter((k) => k !== item));
+    const latestTime = getLatestTime(timeOption);
+    setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
+  };
+
+  const handleCloseSql = (item: string) => {
+    setSqls((prev) => prev.filter((sub) => sub !== item));
+    setWhereSqlsFromSider((prev: any) => prev.filter((sub: any) => sub.label !== item));
+    const latestTime = getLatestTime(timeOption);
+    setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
+  };
+
   // 显示关键字、sql、时间的标签
   const filterRender = useMemo(() => {
-    // 快速选择
-    //   {
-    //     "value": "last_24h",
-    //     "range": [
-    //         "2025-05-26 14:50:32",
-    //         "2025-05-27 14:50:32"
-    //     ],
-    //     "label": "最近24小时",
-    //     "format": [
-    //         "YYYY-MM-DD HH:mm:ss",
-    //         "YYYY-MM-DD HH:mm:ss"
-    //     ]
-    // }
-
-    // 相对时间
-    //   {
-    //     "range": [
-    //         "2025-05-26 14:50:16",
-    //         "2025-05-27 14:50:16"
-    //     ],
-    //     "label": "1天前 ~ 现在",
-    //     "value": "1天前 ~ 现在"
-    // }
-
-    // 绝对时间
-    //   {
-    //     "label": "2025-05-06 00:07:00 ~ 2025-05-23 05:04:26",
-    //     "value": "2025-05-06 00:07:00 ~ 2025-05-23 05:04:26",
-    //     "range": [
-    //         "2025-05-06 00:07:00",
-    //         "2025-05-23 05:04:26"
-    //     ]
-    // }
-
     const { range = [] } = timeOption;
     return (
       <div className={styles.filter}>
@@ -119,19 +106,13 @@ const SearchBar = forwardRef((props: IProps, ref) => {
               color="purple"
               closable
               onClick={() => setKeyword(item)}
-              onClose={() => setKeywords((prev) => prev.filter((k) => k !== item))}
+              onClose={() => handleCloseKeyword(item)}
             >
               {item}
             </Tag>
           ))}
           {sqls.map((item: string) => (
-            <Tag
-              key={item}
-              color="success"
-              closable
-              onClick={() => setSql(item)}
-              onClose={() => setSqls((prev) => prev.filter((k) => k !== item))}
-            >
+            <Tag key={item} color="success" closable onClick={() => setSql(item)} onClose={() => handleCloseSql(item)}>
               {item}
             </Tag>
           ))}
@@ -155,6 +136,8 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       ...(sqls.length > 0 && { whereSqls: sqls }),
       startTime: timeOption?.range?.[0],
       endTime: timeOption?.range?.[1],
+      timeRange: timeOption?.value,
+      timeGrouping: timeGroup,
       offset: 0,
     };
     if (keywords.length === 0) {
@@ -164,7 +147,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       delete params.whereSqls;
     }
     onSearch(params as ILogSearchParams);
-  }, [keywords, sqls, timeOption]);
+  }, [keywords, sqls, timeOption, timeGroup]);
 
   // 处理关键词搜索
   const handleSubmit = () => {
@@ -196,9 +179,8 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     setKeyword('');
     setSql('');
 
-    if (!keywordTrim && !sql) {
-      onSearch({ ...searchParams, offset: 0 } as any);
-    }
+    const latestTime = getLatestTime(timeOption);
+    setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
   };
 
   // 左侧渲染内容
@@ -293,11 +275,9 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   }, [sql, sqlHistory]);
 
   const changeTimeGroup = (text: string) => {
-    onSearch({
-      ...searchParams,
-      timeGrouping: text,
-      offset: 0,
-    } as any);
+    const latestTime = getLatestTime(timeOption);
+    setTimeGroup(text);
+    setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
     setOpenTimeGroup(false);
   };
 
@@ -326,7 +306,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
         </Button>
       </Popover>
     );
-  }, [searchParams, openTimeGroup, loading]);
+  }, [searchParams, openTimeGroup, loading, timeOption]);
 
   return (
     <div className={styles.searchBar} ref={searchBarRef}>

@@ -10,6 +10,7 @@ interface IProps {
   detailData: ILogDetailsResponse; // 日志数据;
   searchParams: ILogSearchParams; // 搜索参数
   dynamicColumns?: ILogColumnsResponse[]; // 添加动态列配置
+  whereSqlsFromSider: string[]; //
   onSearch: (params: ILogSearchParams) => void; // 搜索回调函数
   onChangeColumns: (params: ILogColumnsResponse[]) => void; // 列变化回调函数
 }
@@ -22,6 +23,7 @@ const Log = (props: IProps) => {
     getDetailData,
     dynamicColumns = [],
     searchParams,
+    whereSqlsFromSider,
     onSearch,
     onChangeColumns,
   } = props || {};
@@ -57,6 +59,7 @@ const Log = (props: IProps) => {
 
   const tableProps = useMemo(
     () => ({
+      whereSqlsFromSider,
       onChangeColumns,
       data: allRows,
       searchParams,
@@ -65,7 +68,7 @@ const Log = (props: IProps) => {
       hasMore: totalCount ? allRows.length < totalCount : false,
       dynamicColumns,
     }),
-    [allRows, getDetailData?.loading, totalCount, handleLoadMore, dynamicColumns, searchParams],
+    [allRows, getDetailData?.loading, totalCount, handleLoadMore, dynamicColumns, searchParams, whereSqlsFromSider],
   );
 
   return (

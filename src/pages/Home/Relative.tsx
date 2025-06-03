@@ -91,10 +91,13 @@ const TimePicker = (props: IProps) => {
     ];
     const startLabel = startTimeText === CURRENT ? CURRENT : `${startOption.number}${startOption.label}`;
     const endLabel = endTimeText === CURRENT ? CURRENT : `${endOption.number}${endOption.label}`;
-    const params = {
+    const params: ILogTimeSubmitParams = {
       range,
-      label: `${startLabel} ~ ${endLabel}`,
+      label: `${startLabel}${startOption.isExact ? `(精确到${startOption.unitCN})` : ''} ~ ${endLabel}${endOption.isExact ? `(精确到${endOption.unitCN})` : ''}`,
       value: `${startLabel} ~ ${endLabel}`,
+      type: 'relative',
+      startOption,
+      endOption,
     };
     onSubmit(params);
   }, [startTimeText, endTimeText, startOption, endOption, onSubmit, getTimeText]);

@@ -1,3 +1,9 @@
+/*
+  高亮文本
+  @param {string} text - 文本
+  @param {string[]} keywords - 关键词
+  @returns {React.ReactNode} - 高亮文本
+*/
 export const highlightText = (text: string, keywords: string[]) => {
   if (!keywords || !keywords.length) return <span title={text}>{text}</span>;
 

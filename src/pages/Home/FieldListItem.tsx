@@ -8,10 +8,9 @@ interface IFieldData {
   searchParams: ILogSearchParams; // 搜索参数
   distributions: Record<string, IFieldDistributions>; // 字段分布
   onToggle: (column: ILogColumnsResponse) => void; // 切换选中状态
-  onSearch: (params: ILogSearchParams) => void; // 搜索
   onDistribution: (columnName: string, newActiveColumns: string[], sql: string) => void; // 分布
-  onChangeSql: (params: string) => void; // SQL变化回调函数
   onActiveColumns: (params: string[]) => void; // 选中的列
+  setWhereSqlsFromSider: any; // 设置where条件
 }
 
 interface IProps {
@@ -26,11 +25,10 @@ const FieldListItem: React.FC<IProps> = ({ isSelected, column, columnIndex, fiel
     distributions = {},
     activeColumns = [],
     onActiveColumns,
-    onSearch,
     searchParams,
-    onChangeSql,
     onDistribution,
     onToggle,
+    setWhereSqlsFromSider,
   } = fieldData;
   const [activeKey, setActiveKey] = useState<string[]>([]);
 
@@ -64,14 +62,7 @@ const FieldListItem: React.FC<IProps> = ({ isSelected, column, columnIndex, fiel
   const query = (flag: '=' | '!=', parent: ILogColumnsResponse, son: IValueDistributions) => {
     const { columnName = '' } = parent;
     const { value } = son;
-    const sql = `${columnName} ${flag} '${value}'`;
-    onChangeSql(sql);
-    onSearch({
-      ...searchParams,
-      offset: 0,
-      whereSqls: [...(searchParams?.whereSqls || []), sql],
-    });
-    // onDistribution(columnName, activeColumns, sql);
+    setWhereSqlsFromSider(flag, columnName, value);
   };
 
   return (
