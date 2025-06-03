@@ -261,7 +261,7 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
     return (
       <div className="results-viewer-container">
         <div className="table-wrapper" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <Spin tip="执行查询中..." size="large" />
+          <Spin size="large" />
         </div>
       </div>
     );

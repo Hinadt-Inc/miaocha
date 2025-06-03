@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import initMonacoEditor from './utils/monacoInit';
 import { useDataSources } from './hooks/useDataSources';
 import { useQueryExecution } from './hooks/useQueryExecution';
 import { useEditorSettings } from './hooks/useEditorSettings';
@@ -20,7 +21,6 @@ import SettingsDrawer from './components/SettingsDrawer';
 import EditorHeader from './components/EditorHeader';
 
 // 工具和类型导入
-import initMonacoEditor from './utils/monacoInit';
 import {
   downloadAsCSV,
   insertTextToEditor,
@@ -34,7 +34,6 @@ import { ChartType, QueryResult, SchemaResult } from './types';
 // 样式导入
 import './SQLEditorPage.less';
 
-const { TabPane } = Tabs;
 const { Content, Sider } = Layout;
 
 /**
@@ -290,17 +289,21 @@ const SQLEditorImpl: React.FC = () => {
 
   // SQL片段插入
   const insertSnippet = useCallback((snippet: string) => {
-    if (editorRef.current && monacoRef.current) {
+    if (editorRef.current) {
       editorRef.current.focus();
-      editorRef.current.trigger('keyboard', 'type', { text: '' });
-      // 支持snippet格式
-      monacoRef.current.editor.getModels()[0]?.applyEdits([
-        {
-          range: editorRef.current.getSelection() || editorRef.current.getModel()!.getFullModelRange(),
-          text: '',
-        },
-      ]);
-      editorRef.current.trigger('snippet', 'insertSnippet', { snippet });
+      const selection = editorRef.current.getSelection();
+      const model = editorRef.current.getModel();
+
+      if (model && selection) {
+        // 使用executeEdits方法直接插入文本
+        editorRef.current.executeEdits('insert-snippet', [{ range: selection, text: snippet }]);
+
+        // 插入后将光标定位到合适位置
+        const position = editorRef.current.getPosition();
+        if (position) {
+          editorRef.current.setPosition(position);
+        }
+      }
     }
   }, []);
 
@@ -670,14 +673,22 @@ const SQLEditorImpl: React.FC = () => {
               <Splitter.Panel>
                 <Card
                   title={
-                    <Tabs activeKey={activeTab} onChange={(key) => setActiveTab(key)} className="results-tabs">
-                      <TabPane tab="查询结果" key="results" />
-                      <TabPane
-                        tab="可视化"
-                        key="visualization"
-                        disabled={!queryResults?.rows?.length || queryResults?.status === 'error'}
-                      />
-                    </Tabs>
+                    <Tabs
+                      activeKey={activeTab}
+                      onChange={(key) => setActiveTab(key)}
+                      className="results-tabs"
+                      items={[
+                        {
+                          key: 'results',
+                          label: '查询结果',
+                        },
+                        {
+                          key: 'visualization',
+                          label: '可视化',
+                          disabled: !queryResults?.rows?.length || queryResults?.status === 'error',
+                        },
+                      ]}
+                    />
                   }
                   className="results-card"
                   style={{ marginTop: '10px', height: 'calc(100% - 10px)', overflow: 'auto' }}

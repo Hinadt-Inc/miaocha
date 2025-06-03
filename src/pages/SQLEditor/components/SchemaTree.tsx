@@ -73,26 +73,15 @@ const SchemaTree: React.FC<SchemaTreeProps> = ({
         const isTable = !node.key.includes('-');
         return (
           <div className="tree-node-wrapper-collapsed">
-            {isTable ? (
-              <TableOutlined className="tree-table-icon" />
-            ) : (
-              <span className="tree-spacer"></span>
-            )}
+            {isTable ? <TableOutlined className="tree-table-icon" /> : <span className="tree-spacer"></span>}
           </div>
         );
       }
 
       const isTable = !node.key.includes('-');
       return (
-        <div
-          className="tree-node-wrapper"
-          onDoubleClick={() => isTable && handleTreeNodeDoubleClick(node.key)}
-        >
-          {isTable ? (
-            <TableOutlined className="tree-table-icon" />
-          ) : (
-            <span className="tree-spacer"></span>
-          )}
+        <div className="tree-node-wrapper" onDoubleClick={() => isTable && handleTreeNodeDoubleClick(node.key)}>
+          {isTable ? <TableOutlined className="tree-table-icon" /> : <span className="tree-spacer"></span>}
           <Tooltip title={node.content}>
             <span className="tree-node-title">{node.title}</span>
           </Tooltip>
@@ -162,7 +151,7 @@ const SchemaTree: React.FC<SchemaTreeProps> = ({
         if (loadingSchema) {
           return (
             <div className="loading-spinner">
-              <Spin tip={collapsed ? undefined : '加载中...'} />
+              <Spin />
             </div>
           );
         }
