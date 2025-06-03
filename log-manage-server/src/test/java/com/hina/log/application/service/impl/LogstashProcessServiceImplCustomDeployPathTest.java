@@ -191,7 +191,7 @@ class LogstashProcessServiceImplCustomDeployPathTest {
                         });
         when(logstashDeployService.getDeployBaseDir()).thenReturn("/opt/logstash");
         when(logstashMachineConverter.createFromProcess(
-                        eq(mockProcess), eq(1L), eq("/opt/logstash")))
+                        eq(mockProcess), eq(1L), eq("/opt/logstash/logstash-200")))
                 .thenReturn(mockLogstashMachine);
         when(logstashMachineMapper.insert(any(LogstashMachine.class))).thenReturn(1);
         when(logstashMachineMapper.selectByLogstashProcessId(200L))
@@ -208,8 +208,9 @@ class LogstashProcessServiceImplCustomDeployPathTest {
         // 验证结果
         assertNotNull(result);
 
-        // 验证LogstashMachine创建时使用了默认部署路径
-        verify(logstashMachineConverter).createFromProcess(mockProcess, 1L, "/opt/logstash");
+        // 验证LogstashMachine创建时使用了默认部署路径加进程ID
+        verify(logstashMachineConverter)
+                .createFromProcess(mockProcess, 1L, "/opt/logstash/logstash-200");
 
         // 验证调用了getDeployBaseDir获取默认路径
         verify(logstashDeployService).getDeployBaseDir();
@@ -248,7 +249,7 @@ class LogstashProcessServiceImplCustomDeployPathTest {
                         });
         when(logstashDeployService.getDeployBaseDir()).thenReturn("/opt/logstash");
         when(logstashMachineConverter.createFromProcess(
-                        eq(mockProcess), eq(1L), eq("/opt/logstash")))
+                        eq(mockProcess), eq(1L), eq("/opt/logstash/logstash-300")))
                 .thenReturn(mockLogstashMachine);
         when(logstashMachineMapper.insert(any(LogstashMachine.class))).thenReturn(1);
         when(logstashMachineMapper.selectByLogstashProcessId(300L))
@@ -262,8 +263,9 @@ class LogstashProcessServiceImplCustomDeployPathTest {
         // 执行测试
         LogstashProcessResponseDTO result = logstashProcessService.createLogstashProcess(createDTO);
 
-        // 验证使用了默认路径而不是空字符串
-        verify(logstashMachineConverter).createFromProcess(mockProcess, 1L, "/opt/logstash");
+        // 验证使用了默认路径加进程ID而不是空字符串
+        verify(logstashMachineConverter)
+                .createFromProcess(mockProcess, 1L, "/opt/logstash/logstash-300");
         verify(logstashDeployService).getDeployBaseDir();
     }
 }
