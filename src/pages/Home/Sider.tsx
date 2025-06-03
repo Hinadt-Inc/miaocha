@@ -23,7 +23,6 @@ const Sider: React.FC<IProps> = (props) => {
   const [selectedModule, setSelectedModule] = useState<string[]>([]); // 已选模块
   const [distributions, setDistributions] = useState<Record<string, IFieldDistributions>>({}); // 字段值分布列表
   const [activeColumns, setActiveColumns] = useState<string[]>([]); // 激活的字段
-
   // 获取日志字段
   const getColumns = useRequest(api.fetchColumns, {
     manual: true,
@@ -51,14 +50,12 @@ const Sider: React.FC<IProps> = (props) => {
   const queryDistribution = useRequest(api.fetchDistributions, {
     manual: true,
     onSuccess: (res, params: ILogSearchParams[]) => {
-      const fieldName = params[0]?.fields?.[0];
-      if (!fieldName) {
-        return;
-      }
-      setDistributions({
-        ...distributions,
-        [fieldName]: { ...(res?.fieldDistributions?.[0] || {}) },
-      } as any);
+      const { fields = [] } = params[0] || {};
+      const target: any = {};
+      fields.forEach((fieldName) => {
+        target[fieldName] = res?.fieldDistributions?.find((item) => item.fieldName === fieldName) || {};
+      });
+      setDistributions(target);
     },
     onError: () => {
       setDistributions({});

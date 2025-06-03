@@ -14,7 +14,7 @@ const HomePage = () => {
   const [logTableColumns, setLogTableColumns] = useState<ILogColumnsResponse[]>([]); // 日志字段列表
   const [histogramData, setHistogramData] = useState<ILogHistogramData | null>(null); // 日志时间分布列表
   const [whereSqlsFromSider, setWhereSqlsFromSider] = useState<IStatus[]>([]); // 侧边栏的where条件
-  const searchBarRef = useRef<HTMLDivElement>(null);
+  const searchBarRef = useRef<any>(null);
 
   // 默认的搜索参数
   const defaultSearchParams: ILogSearchParams = {

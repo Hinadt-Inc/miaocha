@@ -10,7 +10,7 @@ interface IProps {
   detailData: ILogDetailsResponse; // 日志数据;
   searchParams: ILogSearchParams; // 搜索参数
   dynamicColumns?: ILogColumnsResponse[]; // 添加动态列配置
-  whereSqlsFromSider: string[]; //
+  whereSqlsFromSider: IStatus[]; // 侧边栏的where条件
   onSearch: (params: ILogSearchParams) => void; // 搜索回调函数
   onChangeColumns: (params: ILogColumnsResponse[]) => void; // 列变化回调函数
 }
