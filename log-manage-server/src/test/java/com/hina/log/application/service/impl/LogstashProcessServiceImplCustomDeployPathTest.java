@@ -189,7 +189,8 @@ class LogstashProcessServiceImplCustomDeployPathTest {
                             mockProcess.setId(200L); // 模拟数据库插入后设置ID
                             return 1;
                         });
-        when(logstashDeployService.getDeployBaseDir()).thenReturn("/opt/logstash");
+        when(logstashDeployService.generateDefaultProcessPath(eq(200L), eq(mockMachine)))
+                .thenReturn("/opt/logstash/logstash-200");
         when(logstashMachineConverter.createFromProcess(
                         eq(mockProcess), eq(1L), eq("/opt/logstash/logstash-200")))
                 .thenReturn(mockLogstashMachine);
@@ -212,8 +213,8 @@ class LogstashProcessServiceImplCustomDeployPathTest {
         verify(logstashMachineConverter)
                 .createFromProcess(mockProcess, 1L, "/opt/logstash/logstash-200");
 
-        // 验证调用了getDeployBaseDir获取默认路径
-        verify(logstashDeployService).getDeployBaseDir();
+        // 验证调用了generateDefaultProcessPath生成默认路径
+        verify(logstashDeployService).generateDefaultProcessPath(eq(200L), eq(mockMachine));
     }
 
     @Test
@@ -247,7 +248,8 @@ class LogstashProcessServiceImplCustomDeployPathTest {
                             mockProcess.setId(300L); // 模拟数据库插入后设置ID
                             return 1;
                         });
-        when(logstashDeployService.getDeployBaseDir()).thenReturn("/opt/logstash");
+        when(logstashDeployService.generateDefaultProcessPath(eq(300L), eq(mockMachine)))
+                .thenReturn("/opt/logstash/logstash-300");
         when(logstashMachineConverter.createFromProcess(
                         eq(mockProcess), eq(1L), eq("/opt/logstash/logstash-300")))
                 .thenReturn(mockLogstashMachine);
@@ -266,6 +268,6 @@ class LogstashProcessServiceImplCustomDeployPathTest {
         // 验证使用了默认路径加进程ID而不是空字符串
         verify(logstashMachineConverter)
                 .createFromProcess(mockProcess, 1L, "/opt/logstash/logstash-300");
-        verify(logstashDeployService).getDeployBaseDir();
+        verify(logstashDeployService).generateDefaultProcessPath(eq(300L), eq(mockMachine));
     }
 }

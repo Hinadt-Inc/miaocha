@@ -109,7 +109,7 @@ class LogstashProcessServiceImplScaleTest {
                 .thenReturn(null);
         when(logstashMachineMapper.selectByLogstashProcessIdAndMachineId(processId, 4L))
                 .thenReturn(null);
-        when(logstashDeployService.getDeployBaseDir()).thenReturn("/default/deploy/path");
+        // 自定义路径情况下不需要mock generateDefaultProcessPath
         when(logstashMachineConverter.createFromProcess(
                         eq(process), eq(3L), eq("/custom/deploy/path")))
                 .thenReturn(logstashMachine3);
@@ -132,6 +132,49 @@ class LogstashProcessServiceImplScaleTest {
         verify(logstashDeployService).initializeProcess(eq(process), anyList());
         verify(connectionValidator, times(2))
                 .validateSingleMachineConnection(any(MachineInfo.class));
+    }
+
+    @Test
+    @DisplayName("扩容操作 - 使用默认路径")
+    void testScaleOut_DefaultPath() {
+        // 准备测试数据
+        Long processId = 1L;
+        LogstashProcess process = createTestProcess(processId);
+
+        LogstashProcessScaleRequestDTO dto = new LogstashProcessScaleRequestDTO();
+        dto.setAddMachineIds(Arrays.asList(3L));
+        // 不设置customDeployPath，使用默认路径
+
+        MachineInfo machine3 = createTestMachine(3L, "machine3", "192.168.1.3");
+        LogstashMachine logstashMachine3 = createTestLogstashMachine(1L, processId, 3L);
+
+        LogstashProcessResponseDTO responseDTO = new LogstashProcessResponseDTO();
+        responseDTO.setId(processId);
+
+        // Mock 方法调用
+        when(logstashProcessMapper.selectById(processId)).thenReturn(process);
+        when(machineMapper.selectById(3L)).thenReturn(machine3);
+        when(logstashMachineMapper.selectByLogstashProcessIdAndMachineId(processId, 3L))
+                .thenReturn(null);
+        when(logstashDeployService.generateDefaultProcessPath(eq(processId), eq(machine3)))
+                .thenReturn("/default/deploy/path/logstash-1");
+        when(logstashMachineConverter.createFromProcess(
+                        eq(process), eq(3L), eq("/default/deploy/path/logstash-1")))
+                .thenReturn(logstashMachine3);
+        when(logstashProcessConverter.toResponseDTO(process)).thenReturn(responseDTO);
+
+        // 执行测试
+        LogstashProcessResponseDTO result =
+                logstashProcessService.scaleLogstashProcess(processId, dto);
+
+        // 验证结果
+        assertNotNull(result);
+        assertEquals(processId, result.getId());
+
+        // 验证调用了generateDefaultProcessPath生成默认路径
+        verify(logstashDeployService).generateDefaultProcessPath(eq(processId), eq(machine3));
+        verify(logstashMachineConverter)
+                .createFromProcess(process, 3L, "/default/deploy/path/logstash-1");
     }
 
     @Test

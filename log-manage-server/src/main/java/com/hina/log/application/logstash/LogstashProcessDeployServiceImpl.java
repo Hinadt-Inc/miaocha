@@ -8,8 +8,10 @@ import com.hina.log.application.logstash.state.LogstashMachineStateManager;
 import com.hina.log.application.logstash.task.TaskService;
 import com.hina.log.common.util.FutureUtils;
 import com.hina.log.config.LogstashProperties;
+import com.hina.log.domain.entity.LogstashMachine;
 import com.hina.log.domain.entity.LogstashProcess;
 import com.hina.log.domain.entity.MachineInfo;
+import com.hina.log.domain.mapper.LogstashMachineMapper;
 import com.hina.log.domain.mapper.LogstashProcessMapper;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -26,6 +28,7 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
             LoggerFactory.getLogger(LogstashProcessDeployServiceImpl.class);
 
     private final LogstashProcessMapper logstashProcessMapper;
+    private final LogstashMachineMapper logstashMachineMapper;
     private final TaskService taskService;
     private final LogstashMachineStateManager machineStateManager;
     private final LogstashCommandFactory commandFactory;
@@ -35,6 +38,7 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
 
     public LogstashProcessDeployServiceImpl(
             LogstashProcessMapper logstashProcessMapper,
+            LogstashMachineMapper logstashMachineMapper,
             TaskService taskService,
             LogstashMachineStateManager machineStateManager,
             LogstashCommandFactory commandFactory,
@@ -42,6 +46,7 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
             LogstashProperties logstashProperties,
             LogstashMachineConnectionValidator connectionValidator) {
         this.logstashProcessMapper = logstashProcessMapper;
+        this.logstashMachineMapper = logstashMachineMapper;
         this.taskService = taskService;
         this.machineStateManager = machineStateManager;
         this.commandFactory = commandFactory;
@@ -651,6 +656,44 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
     @Override
     public String getDeployBaseDir() {
         return logstashProperties.getDeployBaseDir();
+    }
+
+    @Override
+    public String getProcessDeployPath(Long processId, MachineInfo machineInfo) {
+        try {
+            // 优先从数据库获取机器特定的部署路径
+            LogstashMachine logstashMachine =
+                    logstashMachineMapper.selectByLogstashProcessIdAndMachineId(
+                            processId, machineInfo.getId());
+            if (logstashMachine != null && StringUtils.hasText(logstashMachine.getDeployPath())) {
+                // 数据库中存储的是完整的部署路径，直接使用
+                return logstashMachine.getDeployPath();
+            }
+        } catch (Exception e) {
+            logger.warn("无法从数据库获取部署路径，使用默认路径: {}", e.getMessage());
+        }
+
+        // 使用默认路径
+        return generateDefaultProcessPath(processId, machineInfo);
+    }
+
+    @Override
+    public String generateDefaultProcessPath(Long processId, MachineInfo machineInfo) {
+        // 规范化基础部署目录
+        String baseDeployDir = getDeployBaseDir();
+        String actualDeployDir;
+
+        if (baseDeployDir.startsWith("/")) {
+            // 已经是绝对路径，直接使用
+            actualDeployDir = baseDeployDir;
+        } else {
+            // 相对路径，转换为用户家目录下的路径
+            String username = machineInfo.getUsername();
+            actualDeployDir = String.format("/home/%s/%s", username, baseDeployDir);
+        }
+
+        // 拼接进程ID
+        return String.format("%s/logstash-%d", actualDeployDir, processId);
     }
 
     @Override

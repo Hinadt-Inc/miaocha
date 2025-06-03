@@ -198,21 +198,8 @@ public class LogstashConfigSyncService {
      * @return 进程目录路径
      */
     private String getProcessDirectory(Long processId, MachineInfo machineInfo) {
-        try {
-            // 尝试从数据库获取机器特定的部署路径
-            LogstashMachine logstashMachine =
-                    logstashMachineMapper.selectByLogstashProcessIdAndMachineId(
-                            processId, machineInfo.getId());
-            if (logstashMachine != null && StringUtils.hasText(logstashMachine.getDeployPath())) {
-                // 数据库中存储的是完整的部署路径，直接使用
-                return logstashMachine.getDeployPath();
-            }
-        } catch (Exception e) {
-            logger.warn("无法从数据库获取部署路径，使用默认路径: {}", e.getMessage());
-        }
-
-        // 使用默认路径并拼接进程ID
-        return String.format("%s/logstash-%d", deployService.getDeployBaseDir(), processId);
+        // 使用统一的路径管理服务
+        return deployService.getProcessDeployPath(processId, machineInfo);
     }
 
     /**

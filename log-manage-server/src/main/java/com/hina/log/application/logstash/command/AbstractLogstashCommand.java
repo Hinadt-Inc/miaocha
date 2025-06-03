@@ -121,7 +121,7 @@ public abstract class AbstractLogstashCommand implements LogstashCommand {
             logger.warn("无法从数据库获取部署路径，使用默认路径: {}", e.getMessage());
         }
 
-        // 使用规范化的默认路径并拼接进程ID
+        // 数据库中没有路径信息，使用规范化的默认路径并拼接进程ID
         String actualDeployDir = normalizeDeployDir(machineInfo);
         return String.format("%s/logstash-%d", actualDeployDir, processId);
     }

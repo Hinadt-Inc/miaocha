@@ -2,12 +2,10 @@ package com.hina.log.application.logstash.command;
 
 import com.hina.log.common.ssh.SshClient;
 import com.hina.log.config.LogstashProperties;
-import com.hina.log.domain.entity.LogstashMachine;
 import com.hina.log.domain.entity.LogstashProcess;
 import com.hina.log.domain.mapper.LogstashMachineMapper;
 import com.hina.log.domain.mapper.LogstashProcessMapper;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 /** Logstash命令工厂 用于创建各种Logstash命令对象 */
 @Component
@@ -27,27 +25,6 @@ public class LogstashCommandFactory {
         this.sshClient = sshClient;
         this.logstashMachineMapper = logstashMachineMapper;
         this.logstashProcessMapper = logstashProcessMapper;
-    }
-
-    /**
-     * 获取指定进程在指定机器上的部署路径
-     *
-     * @param processId 进程ID
-     * @param machineId 机器ID
-     * @return 部署路径，如果数据库中没有则返回默认路径
-     */
-    private String getDeployPathForMachine(Long processId, Long machineId) {
-        try {
-            LogstashMachine logstashMachine =
-                    logstashMachineMapper.selectByLogstashProcessIdAndMachineId(
-                            processId, machineId);
-            if (logstashMachine != null && StringUtils.hasText(logstashMachine.getDeployPath())) {
-                return logstashMachine.getDeployPath();
-            }
-        } catch (Exception e) {
-            // 如果查询失败，使用默认路径
-        }
-        return logstashProperties.getDeployDir();
     }
 
     /** 创建创建目录命令 */

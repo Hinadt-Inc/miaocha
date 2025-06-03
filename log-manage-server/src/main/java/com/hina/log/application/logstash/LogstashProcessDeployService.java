@@ -114,6 +114,24 @@ public interface LogstashProcessDeployService {
     String getDeployBaseDir();
 
     /**
+     * 获取指定进程在指定机器上的实际部署路径 优先从数据库获取，如果没有则根据用户定义路径或默认路径生成
+     *
+     * @param processId 进程ID
+     * @param machineInfo 机器信息
+     * @return 实际部署路径
+     */
+    String getProcessDeployPath(Long processId, MachineInfo machineInfo);
+
+    /**
+     * 生成默认的进程部署路径（基础目录 + 进程ID） 会根据机器用户名规范化基础目录路径
+     *
+     * @param processId 进程ID
+     * @param machineInfo 机器信息
+     * @return 默认部署路径
+     */
+    String generateDefaultProcessPath(Long processId, MachineInfo machineInfo);
+
+    /**
      * 获取配置服务实例
      *
      * @return LogstashProcessConfigService 实例
