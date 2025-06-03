@@ -33,10 +33,12 @@ import {
   getMachineTasks,
   reinitializeFailedMachines,
   reinitializeMachine,
+  getLogstashMachineDetail,
 } from '../../api/logstash';
 import type { LogstashProcess, LogstashTaskSummary, MachineTask } from '../../types/logstashTypes';
 import LogstashEditModal from './components/LogstashEditModal';
 import LogstashMachineConfigModal from './components/LogstashMachineConfigModal';
+import LogstashMachineDetailModal from './components/LogstashMachineDetailModal';
 import { useState } from 'react';
 
 function LogstashManagementPage() {
@@ -61,8 +63,10 @@ function LogstashManagementPage() {
   const [sqlModalVisible, setSqlModalVisible] = useState(false);
   const [sql, setSql] = useState('');
   const [messageApi, contextHolder] = message.useMessage();
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [currentDetail, setCurrentDetail] = useState<LogstashProcess | null>(null);
+  const [detailModalVisible, setDetailModalVisible] = useState<Record<string, boolean>>({});
+  const [currentDetail, setCurrentDetail] = useState<LogstashProcess>();
+  const [machineDetailModalVisible, setMachineDetailModalVisible] = useState(false);
+  const [currentMachineDetail, setCurrentMachineDetail] = useState<LogstashProcess>();
 
   const showTaskSteps = (task: LogstashTaskSummary) => {
     setSelectedTask(task);
@@ -326,7 +330,7 @@ function LogstashManagementPage() {
           style={{ color: '#1890ff', padding: 0 }}
           onClick={() => {
             setCurrentDetail(record);
-            setDetailModalVisible(true);
+            setDetailModalVisible({ ...detailModalVisible, [record.id]: true });
           }}
         >
           {name}
@@ -492,6 +496,31 @@ function LogstashManagementPage() {
                       title: '机器ID',
                       dataIndex: 'machineId',
                       key: 'machineId',
+                      render: (machineId: number, machine: any) => (
+                        <Button
+                          type="link"
+                          onClick={async () => {
+                            try {
+                              const detail = await getLogstashMachineDetail(record.id, machine.machineId);
+                              setCurrentMachineDetail({
+                                ...detail,
+                                id: record.id,
+                                machineId: machine.machineId,
+                                machineName: machine.machineName,
+                                machineIp: machine.machineIp,
+                                state: machine.state,
+                                stateDescription: machine.stateDescription,
+                              });
+                              setMachineDetailModalVisible(true);
+                            } catch (err) {
+                              messageApi.error('获取机器详情失败');
+                              console.error('获取机器详情失败:', err);
+                            }
+                          }}
+                        >
+                          {machineId}
+                        </Button>
+                      ),
                     },
                     {
                       title: '名称',
@@ -909,8 +938,12 @@ function LogstashManagementPage() {
           </Modal>
           <Modal
             title={`Logstash进程详情 - ${currentDetail?.name || ''}`}
-            open={detailModalVisible}
-            onCancel={() => setDetailModalVisible(false)}
+            open={currentDetail ? !!detailModalVisible[currentDetail.id] : false}
+            onCancel={() => {
+              if (currentDetail) {
+                setDetailModalVisible({ ...detailModalVisible, [currentDetail.id]: false });
+              }
+            }}
             footer={null}
             width={1000}
           >
@@ -1038,6 +1071,14 @@ function LogstashManagementPage() {
               jvmOptions: currentMachine?.jvmOptions,
               logstashYml: currentMachine?.logstashYml,
             }}
+          />
+          <LogstashMachineDetailModal
+            visible={machineDetailModalVisible}
+            onCancel={() => {
+              setMachineDetailModalVisible(false);
+              setCurrentMachineDetail(undefined);
+            }}
+            detail={currentMachineDetail}
           />
         </div>
       </div>
