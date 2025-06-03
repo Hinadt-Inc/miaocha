@@ -268,9 +268,22 @@ public class LogSearchServiceImpl implements LogSearchService {
             Map<String, Object> row = rows.get(0); // TOPN查询只返回一行数据
 
             for (String field : fields) {
-                String topnColumnName = "topn(" + field + ", 5)"; // 列名格式：topn(field, 5)
-                if (row.containsKey(topnColumnName)) {
-                    String jsonValue = (String) row.get(topnColumnName);
+                String topnColumnNameLower = "topn(" + field + ", 5)"; // 小写列名格式：topn(field, 5)
+                String topnColumnNameUpper = "TOPN(" + field + ", 5)"; // 大写列名格式：TOPN(field, 5)
+
+                // 兼容大小写，优先检查小写，然后检查大写
+                String actualColumnName = null;
+                String jsonValue = null;
+
+                if (row.containsKey(topnColumnNameLower)) {
+                    actualColumnName = topnColumnNameLower;
+                    jsonValue = (String) row.get(topnColumnNameLower);
+                } else if (row.containsKey(topnColumnNameUpper)) {
+                    actualColumnName = topnColumnNameUpper;
+                    jsonValue = (String) row.get(topnColumnNameUpper);
+                }
+
+                if (actualColumnName != null) {
                     FieldDistributionDTO dto = new FieldDistributionDTO();
                     dto.setFieldName(field);
 
