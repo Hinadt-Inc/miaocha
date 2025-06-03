@@ -38,4 +38,6 @@
         SELECT <include refid="userModulePermissionColumns"/> FROM user_module_permission
     </select>
 
+
+
 </mapper>

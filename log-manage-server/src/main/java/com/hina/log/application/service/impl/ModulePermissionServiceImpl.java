@@ -3,6 +3,8 @@ package com.hina.log.application.service.impl;
 import com.hina.log.application.service.ModulePermissionService;
 import com.hina.log.common.exception.BusinessException;
 import com.hina.log.common.exception.ErrorCode;
+import com.hina.log.domain.dto.permission.ModuleUsersPermissionDTO;
+import com.hina.log.domain.dto.permission.ModuleUsersPermissionDTO.UserPermissionInfoDTO;
 import com.hina.log.domain.dto.permission.UserModulePermissionDTO;
 import com.hina.log.domain.dto.permission.UserPermissionModuleStructureDTO;
 import com.hina.log.domain.dto.permission.UserPermissionModuleStructureDTO.ModuleInfoDTO;
@@ -245,12 +247,88 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
     }
 
     @Override
-    public List<UserModulePermissionDTO> getAllUsersModulePermissions() {
+    public List<ModuleUsersPermissionDTO> getAllUsersModulePermissions() {
         // 获取所有用户的模块权限
         List<UserModulePermission> allPermissions = userModulePermissionMapper.selectAll();
 
-        // 转换为DTO
-        return allPermissions.stream().map(this::convertToDTO).collect(Collectors.toList());
+        if (allPermissions.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 获取所有用户ID并批量查询用户信息
+        List<Long> userIds =
+                allPermissions.stream()
+                        .map(UserModulePermission::getUserId)
+                        .distinct()
+                        .collect(Collectors.toList());
+
+        List<User> users = userMapper.selectByIds(userIds);
+        Map<Long, User> userMap =
+                users.stream().collect(Collectors.toMap(User::getId, user -> user));
+
+        // 获取所有数据源ID并查询数据源信息
+        List<Long> datasourceIds =
+                allPermissions.stream()
+                        .map(UserModulePermission::getDatasourceId)
+                        .distinct()
+                        .collect(Collectors.toList());
+
+        Map<Long, DatasourceInfo> datasourceMap = new HashMap<>();
+        for (Long datasourceId : datasourceIds) {
+            DatasourceInfo datasource = datasourceMapper.selectById(datasourceId);
+            if (datasource != null) {
+                datasourceMap.put(datasourceId, datasource);
+            }
+        }
+
+        // 按数据源和模块分组
+        Map<String, ModuleUsersPermissionDTO> moduleGroupMap = new HashMap<>();
+
+        for (UserModulePermission permission : allPermissions) {
+            // 构建分组key: datasourceId + "_" + module
+            String groupKey = permission.getDatasourceId() + "_" + permission.getModule();
+
+            // 获取或创建ModuleUsersPermissionDTO
+            ModuleUsersPermissionDTO moduleDto = moduleGroupMap.get(groupKey);
+            if (moduleDto == null) {
+                moduleDto = new ModuleUsersPermissionDTO();
+                moduleDto.setDatasourceId(permission.getDatasourceId());
+                moduleDto.setModule(permission.getModule());
+
+                // 设置数据源名称
+                DatasourceInfo datasource = datasourceMap.get(permission.getDatasourceId());
+                if (datasource != null) {
+                    moduleDto.setDatasourceName(datasource.getName());
+                }
+
+                moduleDto.setUsers(new ArrayList<>());
+                moduleGroupMap.put(groupKey, moduleDto);
+            }
+
+            // 创建用户权限信息DTO
+            User user = userMap.get(permission.getUserId());
+            if (user != null) {
+                UserPermissionInfoDTO userInfo = new UserPermissionInfoDTO();
+                userInfo.setPermissionId(permission.getId());
+                userInfo.setUserId(permission.getUserId());
+                userInfo.setNickname(user.getNickname());
+                userInfo.setEmail(user.getEmail());
+                userInfo.setRole(user.getRole());
+
+                // 格式化时间
+                if (permission.getCreateTime() != null) {
+                    userInfo.setCreateTime(permission.getCreateTime().format(DATE_TIME_FORMATTER));
+                }
+                if (permission.getUpdateTime() != null) {
+                    userInfo.setUpdateTime(permission.getUpdateTime().format(DATE_TIME_FORMATTER));
+                }
+
+                // 添加到用户列表
+                moduleDto.getUsers().add(userInfo);
+            }
+        }
+
+        return new ArrayList<>(moduleGroupMap.values());
     }
 
     @Override

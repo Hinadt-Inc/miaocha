@@ -1,5 +1,6 @@
 package com.hina.log.application.service;
 
+import com.hina.log.domain.dto.permission.ModuleUsersPermissionDTO;
 import com.hina.log.domain.dto.permission.UserModulePermissionDTO;
 import com.hina.log.domain.dto.permission.UserPermissionModuleStructureDTO;
 import java.util.List;
@@ -50,11 +51,11 @@ public interface ModulePermissionService {
     List<UserPermissionModuleStructureDTO> getUserAccessibleModules(Long userId);
 
     /**
-     * 获取所有用户的模块权限
+     * 获取所有用户的模块权限（按模块聚合，每个模块下显示有权限的用户列表）
      *
-     * @return 所有用户的模块权限列表
+     * @return 模块用户权限聚合列表
      */
-    List<UserModulePermissionDTO> getAllUsersModulePermissions();
+    List<ModuleUsersPermissionDTO> getAllUsersModulePermissions();
 
     /**
      * 批量授予用户对多个模块的访问权限

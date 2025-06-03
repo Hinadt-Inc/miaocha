@@ -4,6 +4,7 @@ import com.hina.log.application.service.ModulePermissionService;
 import com.hina.log.common.annotation.CurrentUser;
 import com.hina.log.domain.dto.ApiResponse;
 import com.hina.log.domain.dto.permission.ModulePermissionBatchRequestDTO;
+import com.hina.log.domain.dto.permission.ModuleUsersPermissionDTO;
 import com.hina.log.domain.dto.permission.UserModulePermissionDTO;
 import com.hina.log.domain.dto.permission.UserPermissionModuleStructureDTO;
 import com.hina.log.domain.dto.user.UserDTO;
@@ -141,11 +142,11 @@ public class ModulePermissionEndpoint {
     /**
      * 获取所有用户的模块权限
      *
-     * @return 所有用户的模块权限列表
+     * @return 按模块聚合的用户权限列表
      */
     @GetMapping("/users/all")
-    @Operation(summary = "获取所有用户的模块权限", description = "获取系统中所有用户的模块权限列表")
-    public ApiResponse<List<UserModulePermissionDTO>> getAllUsersModulePermissions() {
+    @Operation(summary = "获取所有用户的模块权限", description = "获取系统中所有模块的用户权限信息，按模块聚合显示，包含用户姓名等详细信息")
+    public ApiResponse<List<ModuleUsersPermissionDTO>> getAllUsersModulePermissions() {
         return ApiResponse.success(modulePermissionService.getAllUsersModulePermissions());
     }
 
