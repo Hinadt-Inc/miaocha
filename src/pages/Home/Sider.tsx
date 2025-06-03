@@ -23,7 +23,6 @@ const Sider: React.FC<IProps> = (props) => {
   const [selectedModule, setSelectedModule] = useState<string[]>([]); // 已选模块
   const [distributions, setDistributions] = useState<Record<string, IFieldDistributions>>({}); // 字段值分布列表
   const [activeColumns, setActiveColumns] = useState<string[]>([]); // 激活的字段
-
   // 获取日志字段
   const getColumns = useRequest(api.fetchColumns, {
     manual: true,
@@ -50,7 +49,7 @@ const Sider: React.FC<IProps> = (props) => {
   // 获取指定字段的TOP5分布数据
   const queryDistribution = useRequest(api.fetchDistributions, {
     manual: true,
-    onSuccess: (res, params: ILogSearchParams[]) => {
+    onSuccess: (res) => {
       const { fieldDistributions = [] } = res;
       const target: any = {};
       fieldDistributions.forEach((item) => {
