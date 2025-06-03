@@ -167,6 +167,7 @@ const HomePage = () => {
       label: `${startTime} ~ ${endTime}`,
       value: `${startTime} ~ ${endTime}`,
       range: [startTime, endTime],
+      type: 'absolute',
     };
     (searchBarRef?.current as any)?.setTimeOption(timeOption);
   };
