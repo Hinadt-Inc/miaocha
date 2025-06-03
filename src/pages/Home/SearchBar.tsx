@@ -65,8 +65,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   const [openTimeRange, setOpenTimeRange] = useState<boolean>(false); // 显隐浮层
   const [openTimeGroup, setOpenTimeGroup] = useState<boolean>(false); // 显隐浮层-时间分组
 
-  console.log(222, timeOption);
-
   // 处理搜索输入变化
   const changeKeyword = (value: string) => {
     setKeyword(value || '');
