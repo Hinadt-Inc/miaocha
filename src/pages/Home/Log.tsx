@@ -33,20 +33,27 @@ const Log = (props: IProps) => {
   // 当新数据到达时，将其添加到历史数据中
   useEffect(() => {
     const { offset } = getDetailData.params?.[0] || {};
-    if (offset === 0) {
-      if (rows.length > 0) {
-        setAllRows(rows);
-      } else {
-        setAllRows([]);
-      }
-    } else if (rows.length > 0) {
-      setAllRows((prevRows: any) => {
+    setAllRows((prevRows) => {
+      if (offset === 0) {
+        // 首次加载或刷新，直接替换
+        if (prevRows.length === rows.length && prevRows[0]?._key === rows[0]?._key) {
+          return prevRows;
+        }
+        return rows.length > 0 ? rows : [];
+      } else if (rows.length > 0) {
+        // 加载更多，避免重复拼接
+        const lastKey = prevRows[prevRows.length - 1]?._key;
+        const firstNewKey = rows[0]?._key;
+        if (lastKey === firstNewKey) {
+          // 已经拼接过，不再拼接
+          return prevRows;
+        }
         return [...prevRows, ...rows];
-      });
-    } else {
-      setAllRows([]);
-    }
-  }, [rows, totalCount]);
+      } else {
+        return prevRows;
+      }
+    });
+  }, [rows]);
 
   const handleLoadMore = () => {
     if (!getDetailData.loading) {
