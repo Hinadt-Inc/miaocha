@@ -79,7 +79,57 @@ public class StopFailedStateHandler extends AbstractLogstashMachineStateHandler 
     }
 
     @Override
+    public CompletableFuture<Boolean> handleForceStop(
+            LogstashProcess process, MachineInfo machineInfo, String taskId) {
+        Long processId = process.getId();
+        Long machineId = machineInfo.getId();
+
+        logger.warn("强制停止机器 [{}] 上的Logstash进程 [{}] (当前状态: 停止失败)", machineId, processId);
+
+        // 重置步骤状态
+        taskService.resetStepStatuses(taskId, StepStatus.PENDING);
+
+        taskService.updateStepStatus(
+                taskId, machineId, LogstashMachineStep.STOP_PROCESS.getId(), StepStatus.RUNNING);
+        LogstashCommand forceStopCommand = commandFactory.forceStopProcessCommand(processId);
+
+        return forceStopCommand
+                .execute(machineInfo)
+                .thenApply(
+                        success -> {
+                            // 强制停止总是认为成功
+                            taskService.updateStepStatus(
+                                    taskId,
+                                    machineId,
+                                    LogstashMachineStep.STOP_PROCESS.getId(),
+                                    StepStatus.COMPLETED,
+                                    "强制停止完成");
+
+                            logger.info("强制停止机器 [{}] 上的Logstash进程 [{}] 完成", machineId, processId);
+                            return true;
+                        })
+                .exceptionally(
+                        ex -> {
+                            // 即使发生异常，强制停止也认为成功
+                            logger.warn("强制停止过程中发生异常，但仍标记为成功: {}", ex.getMessage());
+                            taskService.updateStepStatus(
+                                    taskId,
+                                    machineId,
+                                    LogstashMachineStep.STOP_PROCESS.getId(),
+                                    StepStatus.COMPLETED,
+                                    "强制停止完成（忽略异常）");
+
+                            return true;
+                        });
+    }
+
+    @Override
     public boolean canStop() {
+        return true;
+    }
+
+    @Override
+    public boolean canForceStop() {
         return true;
     }
 
@@ -87,6 +137,9 @@ public class StopFailedStateHandler extends AbstractLogstashMachineStateHandler 
     public LogstashMachineState getNextState(OperationType operationType, boolean success) {
         if (operationType == OperationType.STOP) {
             return success ? LogstashMachineState.NOT_STARTED : LogstashMachineState.STOP_FAILED;
+        } else if (operationType == OperationType.FORCE_STOP) {
+            // 强制停止总是返回未启动状态，不管成功与否
+            return LogstashMachineState.NOT_STARTED;
         }
         return getState(); // 默认保持当前状态
     }

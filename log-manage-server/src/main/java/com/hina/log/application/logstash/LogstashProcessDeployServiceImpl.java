@@ -213,6 +213,58 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
     }
 
     @Override
+    public void forceStopProcess(Long processId, List<MachineInfo> machineInfos) {
+        if (processId == null || machineInfos == null || machineInfos.isEmpty()) {
+            logger.error(
+                    "强制停止进程参数无效: processId={}, machines是否为空={}",
+                    processId,
+                    machineInfos == null || machineInfos.isEmpty());
+            return;
+        }
+
+        // 查询进程信息
+        LogstashProcess process = logstashProcessMapper.selectById(processId);
+        if (process == null) {
+            logger.error("找不到指定的Logstash进程: {}", processId);
+            return;
+        }
+
+        // 创建任务
+        String taskName = "强制停止Logstash进程[" + process.getName() + "]";
+        String taskDescription = "强制停止Logstash进程（应急操作）";
+
+        List<String> stepIds = Collections.singletonList(LogstashMachineStep.STOP_PROCESS.getId());
+
+        // 为每台机器创建任务
+        Map<Long, String> machineTaskMap =
+                taskService.createMachineTasks(
+                        processId,
+                        taskName,
+                        taskDescription,
+                        TaskOperationType.FORCE_STOP,
+                        machineInfos,
+                        stepIds);
+
+        // 为每台机器并行执行任务
+        for (MachineInfo machineInfo : machineInfos) {
+            final MachineInfo currentMachineInfo = machineInfo;
+            String taskId = machineTaskMap.get(machineInfo.getId());
+
+            // 执行强制停止操作
+            taskService.executeAsync(
+                    taskId,
+                    FutureUtils.toSyncRunnable(
+                            () ->
+                                    machineStateManager.forceStopMachine(
+                                            process, currentMachineInfo, taskId),
+                            "机器",
+                            "强制停止Logstash进程",
+                            currentMachineInfo.getId()),
+                    null);
+        }
+    }
+
+    @Override
     public CompletableFuture<Boolean> deleteProcessDirectory(
             Long processId, List<MachineInfo> machineInfos) {
         if (processId == null || machineInfos == null || machineInfos.isEmpty()) {
@@ -402,6 +454,48 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
                         () -> machineStateManager.stopMachine(process, machineInfo, taskId),
                         "机器",
                         "停止Logstash进程",
+                        machineInfo.getId()),
+                null);
+    }
+
+    @Override
+    public void forceStopMachine(Long processId, MachineInfo machineInfo) {
+        if (processId == null || machineInfo == null) {
+            logger.error("强制停止机器参数无效: processId={}, machine={}", processId, machineInfo);
+            return;
+        }
+
+        // 查询进程信息
+        LogstashProcess process = logstashProcessMapper.selectById(processId);
+        if (process == null) {
+            logger.error("找不到指定的Logstash进程: {}", processId);
+            return;
+        }
+
+        // 创建任务
+        String taskName =
+                "强制停止Logstash进程[" + process.getName() + "]在机器[" + machineInfo.getName() + "]上";
+        String taskDescription = "强制停止单台机器上的Logstash进程（应急操作）";
+
+        List<String> stepIds = Collections.singletonList(LogstashMachineStep.STOP_PROCESS.getId());
+
+        // 创建单机任务
+        String taskId =
+                taskService.createMachineTask(
+                        processId,
+                        machineInfo.getId(),
+                        taskName,
+                        taskDescription,
+                        TaskOperationType.FORCE_STOP,
+                        stepIds);
+
+        // 执行强制停止操作
+        taskService.executeAsync(
+                taskId,
+                FutureUtils.toSyncRunnable(
+                        () -> machineStateManager.forceStopMachine(process, machineInfo, taskId),
+                        "机器",
+                        "强制停止Logstash进程",
                         machineInfo.getId()),
                 null);
     }

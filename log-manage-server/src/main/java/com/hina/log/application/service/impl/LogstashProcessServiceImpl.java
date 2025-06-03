@@ -345,6 +345,56 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
 
     @Override
     @Transactional
+    public LogstashProcessResponseDTO forceStopLogstashProcess(Long id) {
+        // 参数校验
+        if (id == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
+        }
+
+        // 检查进程是否存在
+        LogstashProcess process = logstashProcessMapper.selectById(id);
+        if (process == null) {
+            throw new BusinessException(ErrorCode.LOGSTASH_PROCESS_NOT_FOUND);
+        }
+
+        // 获取进程关联的所有机器（强制停止不检查状态）
+        List<MachineInfo> allMachines = getMachinesForProcess(id);
+        if (allMachines.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程未关联任何机器实例");
+        }
+
+        logger.warn("开始强制停止Logstash进程[{}]，涉及{}台机器", id, allMachines.size());
+
+        // 强制停止进程
+        logstashDeployService.forceStopProcess(id, allMachines);
+
+        return getLogstashProcess(id);
+    }
+
+    @Override
+    @Transactional
+    public LogstashProcessResponseDTO forceStopMachineProcess(Long id, Long machineId) {
+        // 验证进程ID
+        if (id == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
+        }
+
+        // 获取机器信息
+        MachineInfo machineInfo = machineMapper.selectById(machineId);
+        if (machineInfo == null) {
+            throw new BusinessException(ErrorCode.MACHINE_NOT_FOUND);
+        }
+
+        logger.warn("开始强制停止Logstash进程[{}]在机器[{}]上的实例", id, machineId);
+
+        // 强制停止单台机器上的进程
+        logstashDeployService.forceStopMachine(id, machineInfo);
+
+        return getLogstashProcess(id);
+    }
+
+    @Override
+    @Transactional
     public LogstashProcessResponseDTO updateSingleMachineConfig(
             Long id, Long machineId, String configContent, String jvmOptions, String logstashYml) {
         // 验证进程和机器是否存在，以及它们之间的关系

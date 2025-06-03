@@ -176,6 +176,20 @@ public class LogstashMachineStateManager {
     }
 
     /**
+     * 强制停止特定机器上的进程 应急停止功能：执行原有的停止逻辑，但无论命令成功与否，都强制将状态更改为未启动
+     *
+     * @param process 进程
+     * @param machineInfo 机器
+     * @param taskId 任务ID
+     * @return 异步操作结果
+     */
+    public CompletableFuture<Boolean> forceStopMachine(
+            LogstashProcess process, MachineInfo machineInfo, String taskId) {
+        LogstashMachineContext context = getMachineContext(process, machineInfo);
+        return context.forceStop(taskId);
+    }
+
+    /**
      * 更新特定机器上的多种配置
      *
      * @param processId 进程ID
@@ -455,6 +469,68 @@ public class LogstashMachineStateManager {
                                         process.getId());
                                 // 继续传播异常以便外部任务系统能正确处理
                                 throw new CompletionException(e);
+                            });
+        }
+
+        /**
+         * 强制停止机器上的进程 应急停止功能：执行原有的停止逻辑，但无论命令成功与否，都强制将状态更改为未启动
+         *
+         * @param taskId 任务ID
+         * @return 异步操作结果
+         */
+        public CompletableFuture<Boolean> forceStop(String taskId) {
+            // 强制停止可以在任何状态下执行
+            if (!currentHandler.canForceStop()) {
+                logger.warn("状态 [{}] 不支持强制停止操作，但仍将继续尝试", currentState.getDescription());
+            }
+
+            // 先获取当前状态处理器的引用
+            LogstashMachineStateHandler handlerBeforeOperation = currentHandler;
+            LogstashMachineState initialState = currentState;
+
+            // 标记进入停止中状态（仅DB更新）
+            stateManager.updateMachineState(
+                    process.getId(), machineInfo.getId(), LogstashMachineState.STOPPING);
+            logger.warn(
+                    "机器 [{}] 上的进程 [{}] 开始强制停止操作，状态从 [{}] 临时标记为 [STOPPING]",
+                    machineInfo.getId(),
+                    process.getId(),
+                    initialState.name());
+
+            // 执行强制停止操作，使用初始状态的处理器
+            return handlerBeforeOperation
+                    .handleForceStop(process, machineInfo, taskId)
+                    .thenApply(
+                            success -> {
+                                // 强制停止总是将状态设置为未启动
+                                LogstashMachineState nextState =
+                                        handlerBeforeOperation.getNextState(
+                                                LogstashMachineStateHandler.OperationType
+                                                        .FORCE_STOP,
+                                                success);
+                                // 直接更新数据库状态，不更新上下文（简化）
+                                stateManager.updateMachineState(
+                                        process.getId(), machineInfo.getId(), nextState);
+                                logger.warn(
+                                        "机器 [{}] 上的进程 [{}] 强制停止操作完成，最终状态强制设置为 [{}]",
+                                        machineInfo.getId(),
+                                        process.getId(),
+                                        nextState.name());
+                                return true; // 强制停止总是返回成功
+                            })
+                    .exceptionally(
+                            e -> {
+                                // 即使发生异常，强制停止也要设置为未启动状态
+                                stateManager.updateMachineState(
+                                        process.getId(),
+                                        machineInfo.getId(),
+                                        LogstashMachineState.NOT_STARTED);
+                                logger.warn(
+                                        "机器 [{}] 上的进程 [{}] 强制停止操作异常，但仍强制设置为 [NOT_STARTED]: {}",
+                                        machineInfo.getId(),
+                                        process.getId(),
+                                        e.getMessage());
+                                return true; // 强制停止总是返回成功
                             });
         }
 

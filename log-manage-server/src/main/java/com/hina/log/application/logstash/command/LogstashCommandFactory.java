@@ -143,6 +143,12 @@ public class LogstashCommandFactory {
                 sshClient, logstashProperties.getDeployDir(), processId, logstashMachineMapper);
     }
 
+    /** 创建强制停止进程命令 */
+    public LogstashCommand forceStopProcessCommand(Long processId) {
+        return new ForceStopProcessCommand(
+                sshClient, logstashProperties.getDeployDir(), processId, logstashMachineMapper);
+    }
+
     /** 创建删除进程目录命令 */
     public LogstashCommand deleteProcessDirectoryCommand(Long processId) {
         return new DeleteProcessDirectoryCommand(

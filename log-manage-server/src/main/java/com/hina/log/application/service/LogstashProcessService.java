@@ -152,4 +152,21 @@ public interface LogstashProcessService {
      * @return 扩容/缩容后的进程信息
      */
     LogstashProcessResponseDTO scaleLogstashProcess(Long id, LogstashProcessScaleRequestDTO dto);
+
+    /**
+     * 强制停止Logstash进程 - 全局操作 应急停止功能：执行原有的停止逻辑，但无论命令成功与否，都强制将状态更改为未启动 用于应急情况下确保进程状态的一致性
+     *
+     * @param id Logstash进程ID
+     * @return 强制停止后的Logstash进程信息
+     */
+    LogstashProcessResponseDTO forceStopLogstashProcess(Long id);
+
+    /**
+     * 强制停止单台机器上的Logstash进程 应急停止功能：执行原有的停止逻辑，但无论命令成功与否，都强制将状态更改为未启动 用于应急情况下确保进程状态的一致性
+     *
+     * @param id Logstash进程ID
+     * @param machineId 机器ID
+     * @return 强制停止后的Logstash进程信息
+     */
+    LogstashProcessResponseDTO forceStopMachineProcess(Long id, Long machineId);
 }

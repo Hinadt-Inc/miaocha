@@ -160,6 +160,20 @@ public class LogstashProcessEndpoint {
     }
 
     /**
+     * 全局强制停止Logstash进程 应急停止功能：执行原有的停止逻辑，但无论命令成功与否，都强制将状态更改为未启动
+     *
+     * @param id Logstash进程数据库ID
+     * @return 强制停止后的Logstash进程
+     */
+    @PostMapping("/{id}/force-stop")
+    @Operation(summary = "全局强制停止Logstash进程", description = "强制停止指定Logstash进程在所有关联机器上的实例，用于应急情况")
+    public ApiResponse<LogstashProcessResponseDTO> forceStopLogstashProcess(
+            @Parameter(description = "Logstash进程数据库ID", required = true) @PathVariable("id")
+                    Long id) {
+        return ApiResponse.success(logstashProcessService.forceStopLogstashProcess(id));
+    }
+
+    /**
      * 启动单台机器上的Logstash进程
      *
      * @param id Logstash进程ID
@@ -189,6 +203,22 @@ public class LogstashProcessEndpoint {
             @Parameter(description = "机器ID", required = true) @PathVariable("machineId")
                     Long machineId) {
         return ApiResponse.success(logstashProcessService.stopMachineProcess(id, machineId));
+    }
+
+    /**
+     * 强制停止单台机器上的Logstash进程 应急停止功能：执行原有的停止逻辑，但无论命令成功与否，都强制将状态更改为未启动
+     *
+     * @param id Logstash进程ID
+     * @param machineId 机器ID
+     * @return 强制停止后的Logstash进程信息
+     */
+    @PostMapping("/{id}/machines/{machineId}/force-stop")
+    @Operation(summary = "强制停止单台机器上的Logstash进程", description = "强制停止指定Logstash进程在特定机器上的实例，用于应急情况")
+    public ApiResponse<LogstashProcessResponseDTO> forceStopMachineProcess(
+            @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id,
+            @Parameter(description = "机器ID", required = true) @PathVariable("machineId")
+                    Long machineId) {
+        return ApiResponse.success(logstashProcessService.forceStopMachineProcess(id, machineId));
     }
 
     /**

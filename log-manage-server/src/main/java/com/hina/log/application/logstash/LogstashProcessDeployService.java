@@ -33,6 +33,14 @@ public interface LogstashProcessDeployService {
     void stopProcess(Long processId, List<MachineInfo> machineInfos);
 
     /**
+     * 强制停止Logstash进程（在多台机器上并行执行） 应急停止功能：执行原有的停止逻辑，但无论命令成功与否，都强制将状态更改为未启动
+     *
+     * @param processId 进程ID
+     * @param machineInfos 目标机器列表
+     */
+    void forceStopProcess(Long processId, List<MachineInfo> machineInfos);
+
+    /**
      * 更新多种Logstash配置并部署到目标机器（在多台机器上并行执行） 可以同时更新主配置、JVM配置和系统配置
      *
      * @param processId 进程ID
@@ -71,6 +79,14 @@ public interface LogstashProcessDeployService {
      * @param machineInfo 目标机器
      */
     void stopMachine(Long processId, MachineInfo machineInfo);
+
+    /**
+     * 在单台机器上强制停止Logstash进程 应急停止功能：执行原有的停止逻辑，但无论命令成功与否，都强制将状态更改为未启动
+     *
+     * @param processId 进程ID
+     * @param machineInfo 目标机器
+     */
+    void forceStopMachine(Long processId, MachineInfo machineInfo);
 
     /**
      * 重启单台机器上的Logstash进程

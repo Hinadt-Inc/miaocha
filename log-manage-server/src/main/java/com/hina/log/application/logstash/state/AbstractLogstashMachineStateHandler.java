@@ -43,6 +43,13 @@ public abstract class AbstractLogstashMachineStateHandler implements LogstashMac
     }
 
     @Override
+    public CompletableFuture<Boolean> handleForceStop(
+            LogstashProcess process, MachineInfo machineInfo, String taskId) {
+        logger.warn("状态 [{}] 不支持强制停止操作", getState().name());
+        return CompletableFuture.completedFuture(false);
+    }
+
+    @Override
     public CompletableFuture<Boolean> handleUpdateConfig(
             LogstashProcess process,
             String configContent,

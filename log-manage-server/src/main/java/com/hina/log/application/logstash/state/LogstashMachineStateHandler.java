@@ -50,6 +50,17 @@ public interface LogstashMachineStateHandler {
             LogstashProcess process, MachineInfo machineInfo, String taskId);
 
     /**
+     * 处理强制停止操作 应急停止功能：执行原有的停止逻辑，但无论命令成功与否，都强制将状态更改为未启动 用于应急情况下确保进程状态的一致性
+     *
+     * @param process Logstash进程
+     * @param machineInfo 目标机器
+     * @param taskId 任务ID，可以为null
+     * @return 异步操作结果
+     */
+    CompletableFuture<Boolean> handleForceStop(
+            LogstashProcess process, MachineInfo machineInfo, String taskId);
+
+    /**
      * 处理更新配置操作
      *
      * @param process Logstash进程
@@ -101,6 +112,15 @@ public interface LogstashMachineStateHandler {
     boolean canStop();
 
     /**
+     * 判断当前状态是否可以执行强制停止操作 默认情况下，能停止的状态也能强制停止
+     *
+     * @return 是否可以强制停止
+     */
+    default boolean canForceStop() {
+        return canStop();
+    }
+
+    /**
      * 判断当前状态是否可以执行更新配置操作
      *
      * @return 是否可以更新配置
@@ -135,6 +155,7 @@ public interface LogstashMachineStateHandler {
         INITIALIZE,
         START,
         STOP,
+        FORCE_STOP,
         UPDATE_CONFIG,
         REFRESH_CONFIG,
         UPDATE_JVM_OPTIONS,
