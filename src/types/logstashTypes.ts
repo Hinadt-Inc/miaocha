@@ -153,6 +153,7 @@ export interface LogstashProcess {
   machineUsername: string;
   processPid: string;
   deployPath: string;
+  customDeployPath?: string;
   processCreateTime: string;
   processUpdateTime: string;
   dorisSql: string;

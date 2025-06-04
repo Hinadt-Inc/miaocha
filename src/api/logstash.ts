@@ -173,3 +173,19 @@ export function getLogstashMachineDetail(processId: number, machineId: number): 
     method: 'GET',
   });
 }
+
+export async function scaleProcess(
+  id: number,
+  params: {
+    addMachineIds: number[];
+    removeMachineIds: number[];
+    customDeployPath?: string;
+    forceScale?: boolean;
+  },
+): Promise<void> {
+  return request({
+    url: `/api/logstash/processes/${id}/scale`,
+    method: 'POST',
+    data: params,
+  });
+}

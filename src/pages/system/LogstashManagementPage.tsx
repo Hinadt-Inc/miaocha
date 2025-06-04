@@ -14,7 +14,7 @@ import {
 import { Button, message, Popconfirm, Space, Table, Breadcrumb, Modal, Progress, Tag, Descriptions, Card } from 'antd';
 import styles from './LogstashManagementPage.module.less';
 import { Link } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   createLogstashProcess,
   deleteLogstashProcess,
@@ -34,12 +34,13 @@ import {
   reinitializeFailedMachines,
   reinitializeMachine,
   getLogstashMachineDetail,
+  scaleProcess,
 } from '../../api/logstash';
 import type { LogstashProcess, LogstashTaskSummary, MachineTask } from '../../types/logstashTypes';
 import LogstashEditModal from './components/LogstashEditModal';
 import LogstashMachineConfigModal from './components/LogstashMachineConfigModal';
 import LogstashMachineDetailModal from './components/LogstashMachineDetailModal';
-import { useState } from 'react';
+import LogstashScaleModal from './components/LogstashScaleModal';
 
 function LogstashManagementPage() {
   const [data, setData] = useState<LogstashProcess[]>([]);
@@ -67,6 +68,35 @@ function LogstashManagementPage() {
   const [currentDetail, setCurrentDetail] = useState<LogstashProcess>();
   const [machineDetailModalVisible, setMachineDetailModalVisible] = useState(false);
   const [currentMachineDetail, setCurrentMachineDetail] = useState<LogstashProcess>();
+  const [scaleModalVisible, setScaleModalVisible] = useState(false);
+  const [scaleParams, setScaleParams] = useState({
+    addMachineIds: [] as number[],
+    removeMachineIds: [] as number[],
+    customDeployPath: '',
+    forceScale: false,
+  });
+
+  const handleScale = async (
+    processId: number,
+    params?: {
+      addMachineIds: number[];
+      removeMachineIds: number[];
+      customDeployPath: string;
+      forceScale: boolean;
+    },
+  ) => {
+    try {
+      messageApi.loading('正在执行扩容/缩容操作...');
+      const scaleParameters = params || scaleParams;
+      await scaleProcess(processId, scaleParameters);
+      messageApi.success('操作成功');
+      setScaleModalVisible(false);
+      await fetchData();
+    } catch (err) {
+      messageApi.error('操作失败');
+      console.error('扩容/缩容操作失败:', err);
+    }
+  };
 
   const showTaskSteps = (task: LogstashTaskSummary) => {
     setSelectedTask(task);
@@ -406,6 +436,22 @@ function LogstashManagementPage() {
             // disabled={!!record.dorisSql}
           >
             SQL
+          </Button>
+          <Button
+            type="link"
+            icon={<SyncOutlined />}
+            onClick={async () => {
+              setScaleModalVisible(true);
+              setCurrentProcess(record);
+              setScaleParams({
+                addMachineIds: [],
+                removeMachineIds: [],
+                customDeployPath: record.customDeployPath || '',
+                forceScale: false,
+              });
+            }}
+          >
+            扩容/缩容
           </Button>
           <Button
             type="link"
@@ -1079,6 +1125,18 @@ function LogstashManagementPage() {
               setCurrentMachineDetail(undefined);
             }}
             detail={currentMachineDetail}
+          />
+          <LogstashScaleModal
+            visible={scaleModalVisible}
+            onCancel={() => setScaleModalVisible(false)}
+            onOk={async (params) => {
+              if (currentProcess) {
+                setScaleParams(params);
+                await handleScale(currentProcess.id, params);
+              }
+            }}
+            currentProcess={currentProcess}
+            initialParams={scaleParams}
           />
         </div>
       </div>
