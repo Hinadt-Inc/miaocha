@@ -15,22 +15,39 @@ export interface DatasourcePermission {
  */
 export interface TablePermission {
   moduleName: string;
-  permissionId: string | null;
-  tableName: string; // 新增tableName属性
-  permissions: string[]; // 新增权限数
+  tableName: string;
+  permissions: string[];
   id: string;
+  permissionId?: string;
+  users?: Array<{
+    userId: number;
+    nickname: string;
+    email: string;
+    role: string;
+  }>;
+}
+
+/**
+ * 用户权限详情
+ */
+export interface UserPermissionDetail {
+  permissionId: number;
+  userId: number;
+  nickname: string;
+  email: string;
+  role: string;
+  createTime: string;
+  updateTime: string;
 }
 
 /**
  * 新的权限响应类型
  */
 export interface PermissionResponse {
-  id: number;
-  userId: number;
   datasourceId: number;
+  datasourceName: string;
   module: string;
-  createTime: string;
-  updateTime: string;
+  users: UserPermissionDetail[];
 }
 
 /**
