@@ -1,4 +1,4 @@
-import { Form, Input, Modal, Select, Checkbox, message, Divider, Typography } from 'antd';
+import { Form, Input, Modal, Select, Checkbox, message, Divider, Typography, Radio } from 'antd';
 import { useEffect, useState } from 'react';
 import type { LogstashProcess } from '../../../types/logstashTypes';
 import type { Machine } from '../../../types/machineTypes';
@@ -36,6 +36,7 @@ export default function LogstashScaleModal({
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [machines, setMachines] = useState<Machine[]>([]);
   const [loading, setLoading] = useState(false);
+  const [operationType, setOperationType] = useState<'scale-out' | 'scale-in' | null>(null);
 
   // 获取当前进程已使用的机器ID
   const currentMachineIds = currentProcess?.machineStatuses?.map((m) => m.machineId) || [];
@@ -54,10 +55,12 @@ export default function LogstashScaleModal({
           const machineList = await getMachines();
           setMachines(machineList);
 
-          // 设置表单初始值
+          // 重置操作类型和表单
+          setOperationType(null);
+          form.resetFields();
           form.setFieldsValue({
-            addMachineIds: initialParams.addMachineIds,
-            removeMachineIds: initialParams.removeMachineIds,
+            addMachineIds: [],
+            removeMachineIds: [],
             customDeployPath: initialParams.customDeployPath,
             forceScale: initialParams.forceScale,
           });
@@ -77,19 +80,27 @@ export default function LogstashScaleModal({
     try {
       const values = await form.validateFields();
 
-      // 验证至少选择一种操作
-      if (
-        (!values.addMachineIds || values.addMachineIds.length === 0) &&
-        (!values.removeMachineIds || values.removeMachineIds.length === 0)
-      ) {
-        message.warning('请至少选择一种扩容或缩容操作');
+      // 验证选择了操作类型
+      if (!operationType) {
+        message.warning('请选择扩容或缩容操作');
+        return;
+      }
+
+      // 验证对应操作类型的机器选择
+      if (operationType === 'scale-out' && (!values.addMachineIds || values.addMachineIds.length === 0)) {
+        message.warning('请选择要添加的机器');
+        return;
+      }
+
+      if (operationType === 'scale-in' && (!values.removeMachineIds || values.removeMachineIds.length === 0)) {
+        message.warning('请选择要移除的机器');
         return;
       }
 
       setConfirmLoading(true);
       await onOk({
-        addMachineIds: values.addMachineIds || [],
-        removeMachineIds: values.removeMachineIds || [],
+        addMachineIds: operationType === 'scale-out' ? values.addMachineIds || [] : [],
+        removeMachineIds: operationType === 'scale-in' ? values.removeMachineIds || [] : [],
         customDeployPath: values.customDeployPath || '',
         forceScale: values.forceScale || false,
       });
@@ -102,6 +113,7 @@ export default function LogstashScaleModal({
 
   const handleCancel = () => {
     form.resetFields();
+    setOperationType(null);
     onCancel();
   };
 
@@ -132,47 +144,75 @@ export default function LogstashScaleModal({
 
         <Divider />
 
-        <Title level={5}>扩容操作</Title>
-        <Form.Item name="addMachineIds" label="添加机器" help={`可添加 ${availableMachines.length} 台机器`}>
-          <Select
-            mode="multiple"
-            placeholder="选择要添加的机器"
-            loading={loading}
-            showSearch
-            filterOption={(input, option) => {
-              const label = option?.label as string;
-              return label?.toLowerCase().includes(input.toLowerCase());
-            }}
-          >
-            {availableMachines.map((machine) => (
-              <Option key={machine.id} value={machine.id}>
-                {machine.name} ({machine.ip})
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
+        <Title level={5}>操作类型</Title>
+        <Radio.Group
+          value={operationType}
+          onChange={(e) => {
+            setOperationType(e.target.value);
+            // 清除对应的表单字段
+            if (e.target.value === 'scale-out') {
+              form.setFieldValue('removeMachineIds', []);
+            } else if (e.target.value === 'scale-in') {
+              form.setFieldValue('addMachineIds', []);
+            }
+          }}
+          style={{ marginBottom: 16 }}
+        >
+          <Radio value="scale-out">扩容（添加机器）</Radio>
+          <Radio value="scale-in">缩容（移除机器）</Radio>
+        </Radio.Group>
 
-        <Divider />
+        {operationType === 'scale-out' && (
+          <>
+            <Title level={5}>扩容操作</Title>
+            <Form.Item name="addMachineIds" label="添加机器" help={`可添加 ${availableMachines.length} 台机器`}>
+              <Select
+                mode="multiple"
+                placeholder="选择要添加的机器"
+                loading={loading}
+                showSearch
+                filterOption={(input, option) => {
+                  const label = option?.label as string;
+                  return label?.toLowerCase().includes(input.toLowerCase());
+                }}
+              >
+                {availableMachines.map((machine) => (
+                  <Option key={machine.id} value={machine.id}>
+                    {machine.name} ({machine.ip})
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+          </>
+        )}
 
-        <Title level={5}>缩容操作</Title>
-        <Form.Item name="removeMachineIds" label="移除机器" help={`当前有 ${removableMachines.length} 台机器可移除`}>
-          <Select
-            mode="multiple"
-            placeholder="选择要移除的机器"
-            loading={loading}
-            showSearch
-            filterOption={(input, option) => {
-              const label = option?.label as string;
-              return label?.toLowerCase().includes(input.toLowerCase());
-            }}
-          >
-            {removableMachines.map((machine) => (
-              <Option key={machine.id} value={machine.id}>
-                {machine.name} ({machine.ip})
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
+        {operationType === 'scale-in' && (
+          <>
+            <Title level={5}>缩容操作</Title>
+            <Form.Item
+              name="removeMachineIds"
+              label="移除机器"
+              help={`当前有 ${removableMachines.length} 台机器可移除`}
+            >
+              <Select
+                mode="multiple"
+                placeholder="选择要移除的机器"
+                loading={loading}
+                showSearch
+                filterOption={(input, option) => {
+                  const label = option?.label as string;
+                  return label?.toLowerCase().includes(input.toLowerCase());
+                }}
+              >
+                {removableMachines.map((machine) => (
+                  <Option key={machine.id} value={machine.id}>
+                    {machine.name} ({machine.ip})
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+          </>
+        )}
 
         <Divider />
 
