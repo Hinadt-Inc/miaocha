@@ -5,6 +5,8 @@ import { Spin } from 'antd';
 import { EditorSettings } from '../types';
 import './QueryEditor.less';
 
+import initMonacoEditor, { THEME_CONFIG } from '../utils/monacoInit';
+
 interface QueryEditorProps {
   sqlQuery: string;
   onChange: (value: string | undefined) => void;
@@ -32,11 +34,17 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
 
   useEffect(() => {
     setIsCollapsed(collapsed);
+    // 初始化monaco编辑器
+    initMonacoEditor().catch((error: Error) => {
+      console.error('Monaco编辑器初始化失败:', error);
+    });
   }, [collapsed]);
 
   // 处理编辑器挂载
   const handleEditorDidMount: OnMount = useCallback(
     (editor, monacoInstance) => {
+      monacoInstance.editor.defineTheme('sqlTheme', THEME_CONFIG);
+      monacoInstance.editor.setTheme('sqlTheme');
       editorRef.current = editor;
       if (onEditorMount) {
         onEditorMount(editor, monacoInstance);
@@ -63,7 +71,11 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
           value={sqlQuery}
           onChange={onChange}
           onMount={handleEditorDidMount}
-          loading={<Spin tip="加载编辑器..." />}
+          loading={
+            <div className="editor-loading">
+              <Spin />
+            </div>
+          }
           theme={editorSettings.theme}
           options={{
             minimap: { enabled: editorSettings.minimap },

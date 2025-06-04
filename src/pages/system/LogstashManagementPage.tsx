@@ -14,7 +14,7 @@ import {
 import { Button, message, Popconfirm, Space, Table, Breadcrumb, Modal, Progress, Tag, Descriptions, Card } from 'antd';
 import styles from './LogstashManagementPage.module.less';
 import { Link } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   createLogstashProcess,
   deleteLogstashProcess,
@@ -33,11 +33,14 @@ import {
   getMachineTasks,
   reinitializeFailedMachines,
   reinitializeMachine,
+  getLogstashMachineDetail,
+  scaleProcess,
 } from '../../api/logstash';
 import type { LogstashProcess, LogstashTaskSummary, MachineTask } from '../../types/logstashTypes';
 import LogstashEditModal from './components/LogstashEditModal';
 import LogstashMachineConfigModal from './components/LogstashMachineConfigModal';
-import { useState } from 'react';
+import LogstashMachineDetailModal from './components/LogstashMachineDetailModal';
+import LogstashScaleModal from './components/LogstashScaleModal';
 
 function LogstashManagementPage() {
   const [data, setData] = useState<LogstashProcess[]>([]);
@@ -61,8 +64,39 @@ function LogstashManagementPage() {
   const [sqlModalVisible, setSqlModalVisible] = useState(false);
   const [sql, setSql] = useState('');
   const [messageApi, contextHolder] = message.useMessage();
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [currentDetail, setCurrentDetail] = useState<LogstashProcess | null>(null);
+  const [detailModalVisible, setDetailModalVisible] = useState<Record<string, boolean>>({});
+  const [currentDetail, setCurrentDetail] = useState<LogstashProcess>();
+  const [machineDetailModalVisible, setMachineDetailModalVisible] = useState(false);
+  const [currentMachineDetail, setCurrentMachineDetail] = useState<LogstashProcess>();
+  const [scaleModalVisible, setScaleModalVisible] = useState(false);
+  const [scaleParams, setScaleParams] = useState({
+    addMachineIds: [] as number[],
+    removeMachineIds: [] as number[],
+    customDeployPath: '',
+    forceScale: false,
+  });
+
+  const handleScale = async (
+    processId: number,
+    params?: {
+      addMachineIds: number[];
+      removeMachineIds: number[];
+      customDeployPath: string;
+      forceScale: boolean;
+    },
+  ) => {
+    try {
+      messageApi.loading('正在执行扩容/缩容操作...');
+      const scaleParameters = params || scaleParams;
+      await scaleProcess(processId, scaleParameters);
+      messageApi.success('操作成功');
+      setScaleModalVisible(false);
+      await fetchData();
+    } catch (err) {
+      messageApi.error('操作失败');
+      console.error('扩容/缩容操作失败:', err);
+    }
+  };
 
   const showTaskSteps = (task: LogstashTaskSummary) => {
     setSelectedTask(task);
@@ -326,7 +360,7 @@ function LogstashManagementPage() {
           style={{ color: '#1890ff', padding: 0 }}
           onClick={() => {
             setCurrentDetail(record);
-            setDetailModalVisible(true);
+            setDetailModalVisible({ ...detailModalVisible, [record.id]: true });
           }}
         >
           {name}
@@ -397,10 +431,27 @@ function LogstashManagementPage() {
             onClick={() => {
               setSqlModalVisible(true);
               setCurrentProcess(record);
+              setSql(record.dorisSql || '');
             }}
-            disabled={!!record.dorisSQL}
+            // disabled={!!record.dorisSql}
           >
             SQL
+          </Button>
+          <Button
+            type="link"
+            icon={<SyncOutlined />}
+            onClick={async () => {
+              setScaleModalVisible(true);
+              setCurrentProcess(record);
+              setScaleParams({
+                addMachineIds: [],
+                removeMachineIds: [],
+                customDeployPath: record.customDeployPath || '',
+                forceScale: false,
+              });
+            }}
+          >
+            扩容/缩容
           </Button>
           <Button
             type="link"
@@ -491,6 +542,31 @@ function LogstashManagementPage() {
                       title: '机器ID',
                       dataIndex: 'machineId',
                       key: 'machineId',
+                      render: (machineId: number, machine: any) => (
+                        <Button
+                          type="link"
+                          onClick={async () => {
+                            try {
+                              const detail = await getLogstashMachineDetail(record.id, machine.machineId);
+                              setCurrentMachineDetail({
+                                ...detail,
+                                id: record.id,
+                                machineId: machine.machineId,
+                                machineName: machine.machineName,
+                                machineIp: machine.machineIp,
+                                state: machine.state,
+                                stateDescription: machine.stateDescription,
+                              });
+                              setMachineDetailModalVisible(true);
+                            } catch (err) {
+                              messageApi.error('获取机器详情失败');
+                              console.error('获取机器详情失败:', err);
+                            }
+                          }}
+                        >
+                          {machineId}
+                        </Button>
+                      ),
                     },
                     {
                       title: '名称',
@@ -892,6 +968,7 @@ function LogstashManagementPage() {
                 void handleExecuteSQL(currentProcess.id);
               }
             }}
+            okButtonProps={{ disabled: !!currentProcess?.dorisSql.trim() }}
             width={800}
           >
             <div style={{ marginBottom: 16 }}>
@@ -902,12 +979,17 @@ function LogstashManagementPage() {
               onChange={(e) => setSql(e.target.value)}
               style={{ width: '100%', height: '200px' }}
               placeholder="例如：CREATE TABLE log_table_test_env (...) ENGINE=OLAP ..."
+              disabled={!!currentProcess?.dorisSql}
             />
           </Modal>
           <Modal
             title={`Logstash进程详情 - ${currentDetail?.name || ''}`}
-            open={detailModalVisible}
-            onCancel={() => setDetailModalVisible(false)}
+            open={currentDetail ? !!detailModalVisible[currentDetail.id] : false}
+            onCancel={() => {
+              if (currentDetail) {
+                setDetailModalVisible({ ...detailModalVisible, [currentDetail.id]: false });
+              }
+            }}
             footer={null}
             width={1000}
           >
@@ -1035,6 +1117,26 @@ function LogstashManagementPage() {
               jvmOptions: currentMachine?.jvmOptions,
               logstashYml: currentMachine?.logstashYml,
             }}
+          />
+          <LogstashMachineDetailModal
+            visible={machineDetailModalVisible}
+            onCancel={() => {
+              setMachineDetailModalVisible(false);
+              setCurrentMachineDetail(undefined);
+            }}
+            detail={currentMachineDetail}
+          />
+          <LogstashScaleModal
+            visible={scaleModalVisible}
+            onCancel={() => setScaleModalVisible(false)}
+            onOk={async (params) => {
+              if (currentProcess) {
+                setScaleParams(params);
+                await handleScale(currentProcess.id, params);
+              }
+            }}
+            currentProcess={currentProcess}
+            initialParams={scaleParams}
           />
         </div>
       </div>

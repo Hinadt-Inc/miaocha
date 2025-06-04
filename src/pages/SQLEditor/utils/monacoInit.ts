@@ -1,5 +1,12 @@
 import { loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
+
+// 声明全局monaco类型
+declare global {
+  interface Window {
+    monaco: typeof import('monaco-editor');
+  }
+}
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
@@ -7,7 +14,7 @@ import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
 
 // 主题配置常量
-const THEME_CONFIG: monaco.editor.IStandaloneThemeData = {
+export const THEME_CONFIG: monaco.editor.IStandaloneThemeData = {
   base: 'vs' as monaco.editor.BuiltinTheme,
   inherit: true,
   rules: [
@@ -45,7 +52,7 @@ const WORKER_CONFIG = {
  * 初始化 Monaco 编辑器
  * 设置必要的配置并加载本地编辑器资源
  */
-const initMonacoEditor = (): void => {
+const initMonacoEditor = async (): Promise<void> => {
   // 获取对应语言的worker
   const getWorker = (label: string): Worker => {
     const WorkerClass = WORKER_CONFIG[label as keyof typeof WORKER_CONFIG] || WORKER_CONFIG.default;
@@ -55,33 +62,45 @@ const initMonacoEditor = (): void => {
   // 本地化配置 Monaco workers
   self.MonacoEnvironment = { getWorker };
 
-  // 配置 Monaco 加载设置
-  loader.config({
+  // 强制使用本地配置
+  const config = {
     monaco,
     paths: {
-      vs: '/monaco-editor/min/vs', // 本地化路径
+      vs: '/monaco-editor/min/vs',
+      'vs/loader.js': '/monaco-editor/min/vs/loader.js',
     },
     'vs/nls': {
       availableLanguages: {
         '*': 'zh-cn',
       },
     },
-  });
+    // 禁用CDN加载
+    useCDN: false,
+    // 禁用默认worker加载
+    disableWorker: false,
+    // 自定义worker路径
+    workerPath: '/monaco-workers',
+  };
+  // @ts-ignore
+  loader.config(config);
 
   // 设置超时来处理加载时间过长的情况
   const timeoutPromise = new Promise((_, reject) =>
     setTimeout(() => reject(new Error('Monaco editor 加载超时')), 30000),
   );
 
-  // 初始化编辑器
+  // 初始化编辑器并确保加载顺序
   Promise.race([loader.init(), timeoutPromise])
-    .then((monaco) => {
-      console.log('Monaco editor 本地加载成功');
+    .then((monacoInstance) => {
+      if (!monacoInstance) {
+        throw new Error('Monaco实例未正确加载');
+      }
+      window.monaco = monacoInstance as typeof import('monaco-editor');
+      console.log('Monaco editor 本地加载成功', window.monaco === monacoInstance);
 
       // 为 SQL 设置自定义主题
-      if (monaco) {
-        const monacoInstance = monaco as typeof import('monaco-editor');
-        monacoInstance.editor.defineTheme('sqlTheme', THEME_CONFIG);
+      if (window.monaco) {
+        window.monaco.editor.defineTheme('sqlTheme', THEME_CONFIG);
       }
     })
     .catch((error) => {

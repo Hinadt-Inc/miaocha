@@ -33,7 +33,11 @@ const PermissionManagementPage = () => {
   const [modulesLoading, setModulesLoading] = useState(false);
 
   // 将新格式的权限数据转换为原来的格式
+  const [moduleAuthorizedUsers, setModuleAuthorizedUsers] = useState<Record<string, string[]>>({});
+
   const transformPermissionsData = (data: PermissionResponse[]): DatasourcePermission[] => {
+    const authorizedUsersMap: Record<string, string[]> = {};
+
     // 按数据源ID分组
     const groupByDatasource = data.reduce(
       (acc, permission) => {
@@ -43,26 +47,47 @@ const PermissionManagementPage = () => {
           acc[datasourceId] = {
             modules: [],
             datasourceId,
-            datasourceName: `数据源 ${datasourceId} (JDBC)`, // 显示JDBC标识
+            datasourceName: permission.datasourceName || `数据源 ${datasourceId} (JDBC)`,
             databaseName: 'JDBC连接', // 显示数据库类型
             tables: [],
-            id: permission.id.toString(),
+            id: datasourceId.toString(),
           };
         }
 
-        // 添加模块信息
+        // 合并同一模块的用户
+        const moduleUsers = permission.users.map((user) => ({
+          userId: user.userId,
+          nickname: user.nickname,
+          email: user.email,
+          role: user.role,
+        }));
+
+        // 记录已授权用户
+        if (!authorizedUsersMap[permission.module]) {
+          authorizedUsersMap[permission.module] = [];
+        }
+        authorizedUsersMap[permission.module] = [
+          ...new Set([
+            ...(authorizedUsersMap[permission.module] || []),
+            ...moduleUsers.map((u) => u.userId.toString()),
+          ]),
+        ];
+
         acc[datasourceId].modules.push({
           moduleName: permission.module,
-          permissionId: permission.id.toString(),
-          tableName: permission.module, // 使用模块名作为表名
+          permissionId: permission.users[0].permissionId.toString(),
+          tableName: permission.module,
           permissions: ['read', 'write'], // 默认权限
-          id: permission.id.toString(),
+          id: permission.users[0].permissionId.toString(),
+          users: moduleUsers,
         });
 
         return acc;
       },
       {} as Record<number, DatasourcePermission>,
     );
+
+    setModuleAuthorizedUsers(authorizedUsersMap);
 
     // 转换为数组
     return Object.values(groupByDatasource);
@@ -210,6 +235,7 @@ const PermissionManagementPage = () => {
   // 授权单个模块
   const handleGrant = async (moduleName: string) => {
     let currentSelectedUser = selectedUser;
+    const authorizedUserIds = moduleAuthorizedUsers[moduleName] || [];
 
     modal.confirm({
       title: '授予表权限',
@@ -218,7 +244,7 @@ const PermissionManagementPage = () => {
           <div style={{ marginBottom: 8 }}>选择用户:</div>
           <Select
             style={{ width: '100%' }}
-            options={users}
+            options={users.filter((user) => !authorizedUserIds?.includes(String(user.value)))}
             placeholder="请选择用户"
             onChange={(value) => {
               currentSelectedUser = value;
@@ -251,7 +277,11 @@ const PermissionManagementPage = () => {
   };
 
   // 撤销权限
-  const handleRevoke = async (permissionId: string, moduleName: string) => {
+  const handleRevoke = async (
+    permissionId: string,
+    moduleName: string,
+    currentUsers: { userId: number | string; nickname: string }[],
+  ) => {
     if (!permissionId || !moduleName) {
       message.error('无效的权限信息');
       return;
@@ -267,7 +297,10 @@ const PermissionManagementPage = () => {
           <div style={{ marginBottom: 8 }}>选择用户:</div>
           <Select
             style={{ width: '100%' }}
-            options={users}
+            options={currentUsers.map((user) => ({
+              label: user.nickname,
+              value: user.userId,
+            }))}
             placeholder="请选择要撤销权限的用户"
             onChange={(value) => {
               currentSelectedUser = value;
@@ -313,6 +346,19 @@ const PermissionManagementPage = () => {
         key: 'moduleName',
       },
       {
+        title: '用户列表',
+        key: 'users',
+        render: (_, table) => (
+          <div>
+            {table.users?.map((user: { userId: number; nickname: string; role: string }) => (
+              <div key={user.userId}>
+                {user.nickname} ({user.role})
+              </div>
+            ))}
+          </div>
+        ),
+      },
+      {
         title: '操作',
         key: 'action',
         render: (_, table) => (
@@ -322,7 +368,7 @@ const PermissionManagementPage = () => {
                 type="link"
                 danger
                 size="small"
-                onClick={() => handleRevoke(table.permissionId as string, table.moduleName)}
+                onClick={() => handleRevoke(table.permissionId as string, table.moduleName, table.users || [])}
                 style={{ padding: '0 4px' }}
               >
                 撤销
