@@ -3,6 +3,7 @@ package com.hina.log.application.service;
 import com.hina.log.domain.dto.auth.LoginRequestDTO;
 import com.hina.log.domain.dto.auth.LoginResponseDTO;
 import com.hina.log.domain.dto.auth.RefreshTokenRequestDTO;
+import com.hina.log.domain.dto.user.AdminUpdatePasswordDTO;
 import com.hina.log.domain.dto.user.UpdatePasswordDTO;
 import com.hina.log.domain.dto.user.UserCreateDTO;
 import com.hina.log.domain.dto.user.UserDTO;
@@ -82,6 +83,14 @@ public interface UserService {
      * @param newPassword 新密码
      */
     void updatePassword(Long id, String newPassword);
+
+    /**
+     * 管理员修改用户密码
+     *
+     * @param id 用户ID
+     * @param adminUpdatePasswordDTO 管理员密码更新DTO
+     */
+    void updatePasswordByAdmin(Long id, AdminUpdatePasswordDTO adminUpdatePasswordDTO);
 
     /**
      * 修改自己的密码

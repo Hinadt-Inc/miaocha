@@ -9,6 +9,7 @@ import com.hina.log.domain.converter.UserConverter;
 import com.hina.log.domain.dto.auth.LoginRequestDTO;
 import com.hina.log.domain.dto.auth.LoginResponseDTO;
 import com.hina.log.domain.dto.auth.RefreshTokenRequestDTO;
+import com.hina.log.domain.dto.user.AdminUpdatePasswordDTO;
 import com.hina.log.domain.dto.user.UpdatePasswordDTO;
 import com.hina.log.domain.dto.user.UserCreateDTO;
 import com.hina.log.domain.dto.user.UserDTO;
@@ -210,6 +211,13 @@ public class UserServiceImpl implements UserService {
     public void updatePassword(Long id, String newPassword) {
         User user = getUserEntityById(id);
         userMapper.updatePassword(id, passwordEncoder.encode(newPassword));
+    }
+
+    @Override
+    @Transactional
+    public void updatePasswordByAdmin(Long id, AdminUpdatePasswordDTO adminUpdatePasswordDTO) {
+        User user = getUserEntityById(id);
+        userMapper.updatePassword(id, passwordEncoder.encode(adminUpdatePasswordDTO.getPassword()));
     }
 
     @Override

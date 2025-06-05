@@ -3,6 +3,7 @@ package com.hina.log.endpoint;
 import com.hina.log.application.service.UserService;
 import com.hina.log.common.annotation.CurrentUser;
 import com.hina.log.domain.dto.ApiResponse;
+import com.hina.log.domain.dto.user.AdminUpdatePasswordDTO;
 import com.hina.log.domain.dto.user.UpdatePasswordDTO;
 import com.hina.log.domain.dto.user.UserCreateDTO;
 import com.hina.log.domain.dto.user.UserDTO;
@@ -106,15 +107,16 @@ public class UserEndpoint {
      * 修改用户密码（管理员操作）
      *
      * @param id 用户ID
-     * @param newPassword 新密码
+     * @param adminUpdatePasswordDTO 密码更新DTO
      * @return 结果
      */
     @PutMapping("/{id}/password")
     @Operation(summary = "修改用户密码", description = "管理员根据用户ID修改用户密码")
     public ApiResponse<Void> updatePassword(
             @Parameter(description = "用户ID", required = true) @PathVariable("id") Long id,
-            @Parameter(description = "新密码", required = true) @RequestBody String newPassword) {
-        userService.updatePassword(id, newPassword);
+            @Parameter(description = "密码更新信息", required = true) @Valid @RequestBody
+                    AdminUpdatePasswordDTO adminUpdatePasswordDTO) {
+        userService.updatePasswordByAdmin(id, adminUpdatePasswordDTO);
         return ApiResponse.success();
     }
 
