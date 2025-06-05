@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, memo } from 'react';
-import { Form, Input, message, Modal } from 'antd';
+import { Form, Input, Modal } from 'antd';
 import { changeMyPassword, ChangePasswordParams } from '@/api/user';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
