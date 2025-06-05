@@ -1,24 +1,11 @@
 import { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import { Form, Input, message, Modal } from 'antd';
+import { changeMyPassword, ChangePasswordParams } from '@/api/user';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import {
-  Avatar,
-  Modal,
-  Dropdown,
-  Button,
-  Typography,
-  Space,
-  Spin,
-  Tooltip,
-  Card,
-  Row,
-  Col,
-  Divider,
-  Tag,
-  App,
-} from 'antd';
+import { Avatar, Dropdown, Button, Typography, Space, Spin, Tooltip, Card, Row, Col, Divider, Tag, App } from 'antd';
 import type { MenuProps } from 'antd';
-import { UserOutlined, LogoutOutlined, ReloadOutlined } from '@ant-design/icons';
+import { UserOutlined, LogoutOutlined, ReloadOutlined, LockOutlined } from '@ant-design/icons';
 import { fetchUserInfo, logoutUser } from '@/store/userSlice';
 import type { AppDispatch } from '@/store/store';
 import styles from './index.module.less';
@@ -34,9 +21,11 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
   const navigate = useNavigate();
   const user = useSelector((state: { user: IStoreUser }) => state.user);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const { modal } = App.useApp();
+  const { modal, message } = App.useApp();
+  const [form] = Form.useForm();
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
 
-  // 使用 useCallback 缓存函数
   const confirmLogout = useCallback(() => {
     modal.confirm({
       title: '确认退出登录',
@@ -55,12 +44,10 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
     });
   }, [dispatch, modal, navigate]);
 
-  // 使用 useCallback 缓存函数
   const handleRetryFetchUserInfo = useCallback(() => {
     dispatch(fetchUserInfo());
   }, [dispatch]);
 
-  // 使用 useCallback 缓存函数
   const showModal = useCallback(() => {
     if (user.isLoggedIn && !user.email) {
       dispatch(fetchUserInfo());
@@ -68,12 +55,10 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
     setIsModalVisible(true);
   }, [dispatch, user.isLoggedIn, user.email]);
 
-  // 使用 useCallback 缓存函数
   const handleCancel = useCallback(() => {
     setIsModalVisible(false);
   }, []);
 
-  // 使用 useMemo 缓存菜单项
   const items = useMemo<MenuProps['items']>(
     () => [
       {
@@ -82,11 +67,15 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
         icon: <UserOutlined />,
         onClick: showModal,
       },
-      // {
-      //   key: '2',
-      //   label: '设置',
-      //   icon: <SettingOutlined />,
-      // },
+      {
+        key: '2',
+        label: '修改密码',
+        icon: <LockOutlined />,
+        onClick: () => {
+          setPasswordModalVisible(true);
+          form.resetFields();
+        },
+      },
       {
         key: '3',
         danger: true,
@@ -98,23 +87,20 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
         },
       },
     ],
-    [showModal, confirmLogout],
+    [showModal, confirmLogout, form],
   );
 
-  // 使用 useMemo 缓存日期格式化函数
   const formatDate = useCallback((dateString?: string) => {
     if (!dateString) return '未知';
     return new Date(dateString).toLocaleString('zh-CN');
   }, []);
 
-  // 只在必要时获取用户信息
   useEffect(() => {
     if (user.isLoggedIn && user.sessionChecked && (!user.name || !user.email)) {
       dispatch(fetchUserInfo());
     }
   }, [dispatch, user.isLoggedIn, user.sessionChecked, user.name, user.email]);
 
-  // 使用 useMemo 缓存用户信息渲染
   const renderUserInfo = useMemo(() => {
     if (!user.sessionChecked) {
       return (
@@ -156,7 +142,26 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
     );
   }, [user, collapsed, handleRetryFetchUserInfo]);
 
-  // 使用 useMemo 缓存模态框内容
+  const handleChangePassword = useCallback(
+    async (values: ChangePasswordParams) => {
+      try {
+        setChangingPassword(true);
+        await changeMyPassword({
+          oldPassword: values.oldPassword,
+          newPassword: values.newPassword,
+        });
+        message.success('密码修改成功');
+        form.resetFields();
+        setPasswordModalVisible(false);
+      } catch (error) {
+        message.error('密码修改失败: ' + (error as Error).message);
+      } finally {
+        setChangingPassword(false);
+      }
+    },
+    [form, message],
+  );
+
   const modalContent = useMemo(() => {
     if (user.loading) {
       return (
@@ -267,6 +272,54 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
         className="user-profile-modal"
       >
         {modalContent}
+      </Modal>
+
+      <Modal
+        title="修改密码"
+        open={passwordModalVisible}
+        onCancel={() => setPasswordModalVisible(false)}
+        footer={null}
+        width={500}
+        centered
+      >
+        <Form form={form} onFinish={handleChangePassword} layout="vertical">
+          <Form.Item name="oldPassword" label="旧密码" rules={[{ required: true, message: '请输入旧密码' }]}>
+            <Input.Password />
+          </Form.Item>
+          <Form.Item
+            name="newPassword"
+            label="新密码"
+            rules={[
+              { required: true, message: '请输入新密码' },
+              { min: 8, message: '密码长度至少8位' },
+            ]}
+          >
+            <Input.Password />
+          </Form.Item>
+          <Form.Item
+            name="confirmPassword"
+            label="确认新密码"
+            dependencies={['newPassword']}
+            rules={[
+              { required: true, message: '请确认新密码' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('newPassword') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error('两次输入的密码不一致'));
+                },
+              }),
+            ]}
+          >
+            <Input.Password />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" loading={changingPassword}>
+              修改密码
+            </Button>
+          </Form.Item>
+        </Form>
       </Modal>
     </>
   );

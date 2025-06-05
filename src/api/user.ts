@@ -67,24 +67,19 @@ export function updateUser(data: UpdateUserParams, config?: AxiosRequestConfig):
 }
 
 // 修改用户密码(管理员)
-export function changeUserPassword(
-  id: string,
-  data: { newPassword: string },
-  config?: AxiosRequestConfig,
-): Promise<void> {
+export function changeUserPassword(id: string, newPassword: string, config?: AxiosRequestConfig): Promise<void> {
   return request({
     ...config,
     method: 'PUT',
     url: `/api/users/${id}/password`,
-    data,
+    data: {
+      password: newPassword,
+    },
   });
 }
 
 // 修改自己密码
-export function changeMyPassword(
-  data: ChangePasswordParams,
-  config?: AxiosRequestConfig,
-): Promise<void> {
+export function changeMyPassword(data: ChangePasswordParams, config?: AxiosRequestConfig): Promise<void> {
   return request({
     ...config,
     method: 'PUT',
