@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 
-import { getUsers, createUser, updateUser, deleteUser, type User } from '../../api/user';
+import { getUsers, createUser, updateUser, deleteUser, changeUserPassword, type User } from '../../api/user';
 import {
   Button,
   Input,
@@ -26,6 +26,7 @@ import {
   UserOutlined,
   ReloadOutlined,
   HomeOutlined,
+  KeyOutlined,
 } from '@ant-design/icons';
 import type { AxiosRequestConfig } from 'axios';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
@@ -73,6 +74,7 @@ const UserManagementPage = () => {
   const [data, setData] = useState<UserData[]>([]);
   const searchTimeoutRef = useRef<number | null>(null);
   const originalDataRef = useRef<UserData[]>([]);
+  const [messageApi, contextHolder] = message.useMessage();
 
   // 清理定时器
   useEffect(() => {
@@ -88,7 +90,7 @@ const UserManagementPage = () => {
     const abortController = new AbortController();
     fetchUsers({ signal: abortController.signal }).catch((error: { name: string }) => {
       if (error.name !== 'CanceledError') {
-        message.error('加载用户数据失败');
+        messageApi.error('加载用户数据失败');
       }
     });
     return () => abortController.abort();
@@ -102,11 +104,10 @@ const UserManagementPage = () => {
       setData(transformedUsers);
       // 保存原始数据供搜索使用
       originalDataRef.current = transformedUsers;
-      message.success('用户数据加载成功');
     } catch (error) {
       if (error instanceof Error) {
         if (error.name !== 'CanceledError') {
-          message.error('加载用户数据失败');
+          messageApi.error('加载用户数据失败');
         }
       } else {
         console.error('Unexpected error:', error);
@@ -118,7 +119,9 @@ const UserManagementPage = () => {
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<UserData | null>(null);
+  const [passwordForm] = Form.useForm();
   const [form] = Form.useForm();
   const [pagination, setPagination] = useState<TablePaginationConfig>({
     current: 1,
@@ -130,7 +133,7 @@ const UserManagementPage = () => {
   // 重新加载数据
   const handleReload = () => {
     fetchUsers().catch(() => {
-      message.error('加载用户数据失败');
+      messageApi.error('加载用户数据失败');
     });
   };
 
@@ -164,7 +167,7 @@ const UserManagementPage = () => {
         } else {
           // 如果原始数据不存在，则重新加载
           fetchUsers().catch(() => {
-            message.error('加载用户数据失败');
+            messageApi.error('加载用户数据失败');
           });
         }
         return;
@@ -230,9 +233,32 @@ const UserManagementPage = () => {
     try {
       await deleteUser(key);
       setData(data.filter((item) => item.key !== key));
-      message.success('用户已删除');
+      messageApi.success('用户已删除');
     } catch {
-      message.error('删除用户失败');
+      messageApi.error('删除用户失败');
+    }
+  };
+
+  // 处理修改密码
+  const handleChangePassword = (record: UserData) => {
+    setSelectedRecord(record);
+    passwordForm.resetFields();
+    setIsPasswordModalVisible(true);
+  };
+
+  // 提交密码修改
+  const handlePasswordSubmit = async () => {
+    try {
+      const values = await passwordForm.validateFields();
+      if (selectedRecord) {
+        console.log('修改密码:', selectedRecord.key, values.newPassword);
+        await changeUserPassword(selectedRecord.key, values.newPassword);
+        messageApi.success('密码修改成功');
+        setIsPasswordModalVisible(false);
+      }
+    } catch (error) {
+      messageApi.error('密码修改失败');
+      console.error('密码修改失败:', error);
     }
   };
 
@@ -245,7 +271,6 @@ const UserManagementPage = () => {
         role: string;
         status: number;
         password?: string;
-        confirmPassword?: string;
       };
 
       if (selectedRecord) {
@@ -257,11 +282,11 @@ const UserManagementPage = () => {
           role: values.role,
           status: values.status,
         });
-        message.success('用户信息已更新');
+        messageApi.success('用户信息已更新');
       } else {
         // 添加新用户
-        if (!values.password || values.password !== values.confirmPassword) {
-          message.error('密码和确认密码必须一致');
+        if (!values.password) {
+          messageApi.error('密码不能为空');
           return;
         }
 
@@ -273,13 +298,13 @@ const UserManagementPage = () => {
           role: values.role,
           status: values.status,
         });
-        message.success('用户已添加');
+        messageApi.success('用户已添加');
       }
 
       setIsModalVisible(false);
       await fetchUsers(); // 刷新数据
     } catch (error) {
-      message.error('操作失败');
+      messageApi.error('操作失败');
       console.error('操作失败:', error);
     }
   };
@@ -353,26 +378,31 @@ const UserManagementPage = () => {
       title: '操作',
       key: 'action',
       fixed: 'right',
-      width: 150,
+      width: 200,
       render: (_, record) => (
         <Space size="middle">
           <Button type="link" icon={<EditOutlined />} onClick={() => handleAddEdit(record)}>
             编辑
           </Button>
           {!['SUPER_ADMIN'].includes(record.role) && (
-            <Popconfirm
-              title="确定要删除此用户吗？"
-              description="此操作不可撤销"
-              onConfirm={() => {
-                return void handleDelete(record.key);
-              }}
-              okText="确定"
-              cancelText="取消"
-            >
-              <Button type="link" danger icon={<DeleteOutlined />}>
-                删除
+            <>
+              <Button type="link" icon={<KeyOutlined />} onClick={() => handleChangePassword(record)}>
+                改密码
               </Button>
-            </Popconfirm>
+              <Popconfirm
+                title="确定要删除此用户吗？"
+                description="此操作不可撤销"
+                onConfirm={() => {
+                  return void handleDelete(record.key);
+                }}
+                okText="确定"
+                cancelText="取消"
+              >
+                <Button type="link" danger icon={<DeleteOutlined />}>
+                  删除
+                </Button>
+              </Popconfirm>
+            </>
           )}
         </Space>
       ),
@@ -381,6 +411,7 @@ const UserManagementPage = () => {
 
   return (
     <Card>
+      {contextHolder}
       <div className={styles.header}>
         <Breadcrumb
           items={[
@@ -479,40 +510,37 @@ const UserManagementPage = () => {
             </Col>
           </Row>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="password"
-                label="密码"
-                rules={[
-                  { required: !selectedRecord, message: '请输入密码' },
-                  { min: 6, message: '密码长度不能少于6个字符' },
-                ]}
-              >
-                <Input.Password placeholder={selectedRecord ? '留空则不修改密码' : '请输入密码'} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="confirmPassword"
-                label="确认密码"
-                dependencies={['password']}
-                rules={[
-                  { required: !selectedRecord, message: '请确认密码' },
-                  ({ getFieldValue }) => ({
-                    validator(_, value) {
-                      if (!value || getFieldValue('password') === value) {
-                        return Promise.resolve();
-                      }
-                      return Promise.reject(new Error('两次输入的密码不一致'));
-                    },
-                  }),
-                ]}
-              >
-                <Input.Password placeholder={selectedRecord ? '留空则不修改密码' : '请确认密码'} />
-              </Form.Item>
-            </Col>
-          </Row>
+          {!selectedRecord && (
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item
+                  name="password"
+                  label="密码"
+                  rules={[
+                    { required: true, message: '请输入密码' },
+                    { min: 6, message: '密码长度不能少于6个字符' },
+                  ]}
+                >
+                  <Input.Password placeholder="请输入密码" />
+                </Form.Item>
+              </Col>
+            </Row>
+          )}
+        </Form>
+      </Modal>
+
+      <Modal
+        title="修改密码"
+        open={isPasswordModalVisible}
+        onOk={handlePasswordSubmit}
+        onCancel={() => setIsPasswordModalVisible(false)}
+        width={400}
+        maskClosable={false}
+      >
+        <Form form={passwordForm} layout="vertical">
+          <Form.Item name="newPassword" label="新密码" rules={[{ required: true, message: '请输入新密码' }]}>
+            <Input.Password placeholder="请输入新密码" />
+          </Form.Item>
         </Form>
       </Modal>
     </Card>
