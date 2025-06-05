@@ -101,4 +101,18 @@ public class MachineEndpoint {
             @Parameter(description = "机器ID", required = true) @PathVariable("id") Long id) {
         return ApiResponse.success(machineService.testConnection(id));
     }
+
+    /**
+     * 测试机器连接 (使用参数)
+     *
+     * @param dto 机器连接参数
+     * @return 连接测试结果
+     */
+    @PostMapping("/test-connection")
+    @Operation(summary = "测试机器连接", description = "使用机器连接参数测试SSH连接，无需保存机器")
+    public ApiResponse<Boolean> testConnectionWithParams(
+            @Parameter(description = "机器连接参数", required = true) @Valid @RequestBody
+                    MachineCreateDTO dto) {
+        return ApiResponse.success(machineService.testConnectionWithParams(dto));
+    }
 }

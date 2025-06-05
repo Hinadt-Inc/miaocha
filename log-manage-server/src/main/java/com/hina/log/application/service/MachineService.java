@@ -53,4 +53,12 @@ public interface MachineService {
      * @return 连接测试结果
      */
     boolean testConnection(Long id);
+
+    /**
+     * 测试机器连接 (使用参数)
+     *
+     * @param dto 机器连接参数
+     * @return 连接测试结果
+     */
+    boolean testConnectionWithParams(MachineCreateDTO dto);
 }

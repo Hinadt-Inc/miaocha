@@ -102,4 +102,13 @@ public class MachineServiceImpl implements MachineService {
         // 测试连接
         return sshClient.testConnection(machineInfo);
     }
+
+    @Override
+    public boolean testConnectionWithParams(MachineCreateDTO dto) {
+        // 创建临时的机器信息对象用于测试连接
+        MachineInfo machineInfo = machineConverter.toEntity(dto);
+
+        // 测试连接
+        return sshClient.testConnection(machineInfo);
+    }
 }
