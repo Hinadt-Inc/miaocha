@@ -177,31 +177,45 @@ const VirtualTable = (props: IProps) => {
         hidden: _columns.length > 0,
         render: (_: any, record: ILogColumnsResponse) => {
           const { keywords = [] } = searchParams;
-          // 先找出所有需要优先展示的key
-          const highlightKeys = whereSqlsFromSider.map((item) => item.field);
-          const entries = Object.entries(record);
-          // 高亮key优先，其余按原顺序
-          const sortedEntries = [
-            ...entries.filter(([key]) => highlightKeys.includes(key)),
-            ...entries.filter(([key]) => !highlightKeys.includes(key)),
-          ];
+          // 1. 提取所有 whereSqlsFromSider 的字段和值
+          const whereFields = new Set(whereSqlsFromSider.map((item) => item.field));
+          const whereValues = whereSqlsFromSider.map((item) => String(item.value)).filter(Boolean);
+
+          // 2. 合并所有 keywords
+          const allKeywords = Array.from(new Set([...keywords, ...whereValues])).filter(Boolean);
+
+          // 3. 预处理每个字段的优先级
+          const entries = Object.entries(record).map(([key, value]) => {
+            let priority = 2; // 默认最低
+            let highlightArr: string[] = allKeywords;
+
+            // whereSqlsFromSider 匹配优先
+            const whereMatch = whereSqlsFromSider.find((item) => item.field === key);
+            if (whereMatch) {
+              priority = 0;
+              highlightArr = [String(whereMatch.value)];
+            } else {
+              // keywords 匹配
+              const valueStr = String(value);
+              if (allKeywords.some((kw) => valueStr.includes(kw))) {
+                priority = 1;
+              }
+            }
+            return { key, value, priority, highlightArr };
+          });
+
+          // 4. 排序
+          const sortedEntries = entries.sort((a, b) => a.priority - b.priority);
+
+          // 5. 渲染
           return (
             <dl className={styles.source}>
-              {sortedEntries.map(([key, value]) => {
-                const match = whereSqlsFromSider.find((item) => item.field === key);
-                const highlightValue = match
-                  ? highlightText(value, [String(match.value)])
-                  : highlightText(value, [
-                      ...keywords,
-                      ...whereSqlsFromSider.map((item) => String(item.value)).filter(Boolean),
-                    ]);
-                return (
-                  <Fragment key={key}>
-                    <dt>{key}</dt>
-                    <dd>{highlightValue}</dd>
-                  </Fragment>
-                );
-              })}
+              {sortedEntries.map(({ key, value, highlightArr }) => (
+                <Fragment key={key}>
+                  <dt>{key}</dt>
+                  <dd>{highlightText(value, highlightArr)}</dd>
+                </Fragment>
+              ))}
             </dl>
           );
         },
