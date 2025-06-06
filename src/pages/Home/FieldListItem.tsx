@@ -99,59 +99,68 @@ const FieldListItem: React.FC<IProps> = ({ isSelected, column, columnIndex, fiel
           ),
           children: (
             <div className={styles.record}>
-              {!distributions[column.columnName as string] && <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />}
-              {distributions[column.columnName as string] && (
-                <div className={styles.header}>
-                  <b>TOP5 </b>
-                  {distributions[column.columnName as string]?.nonNullCount || 0} /{' '}
-                  {distributions[column.columnName as string]?.totalCount || 0} 记录
-                </div>
-              )}
-              <div className={styles.ul}>
-                {distributions[column.columnName as string]?.valueDistributions?.map(
-                  (sub: IValueDistributions, i: number) => (
-                    <div className={styles.li} key={`list${columnIndex}${column.columnName}${i}`}>
-                      <div className={styles.one}>
-                        <div className={styles.left}>
-                          <Typography.Paragraph
-                            type="secondary"
-                            ellipsis={{
-                              rows: 1,
-                              tooltip: true,
-                              onEllipsis: () => {},
-                            }}
-                          >
-                            {sub.value}
-                          </Typography.Paragraph>
-                        </div>
-                        <div className={styles.right}>
-                          <Button
-                            disabled={searchParams?.whereSqls?.includes(`${column.columnName} = '${sub.value}'`)}
-                            color="primary"
-                            variant="link"
-                            onClick={() => query('=', column, sub)}
-                          >
-                            <i className="iconfont icon-fangda"></i>
-                          </Button>
-                          <Button
-                            disabled={searchParams?.whereSqls?.includes(`${column.columnName} != '${sub.value}'`)}
-                            color="primary"
-                            variant="link"
-                            onClick={() => query('!=', column, sub)}
-                          >
-                            <i className="iconfont icon-suoxiao1"></i>
-                          </Button>
-                        </div>
+              {(() => {
+                const dist = distributions[column.columnName as string];
+                const hasData =
+                  !!dist &&
+                  ((dist.nonNullCount || 0) > 0 ||
+                    (dist.totalCount || 0) > 0 ||
+                    (dist.valueDistributions?.length || 0) > 0);
+                return (
+                  <>
+                    {!hasData && <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />}
+                    {hasData && (
+                      <div className={styles.header}>
+                        <b>TOP5 </b>
+                        {dist?.nonNullCount || 0} / {dist?.totalCount || 0} 记录
                       </div>
-                      <div className={styles.two}>
-                        <Tooltip placement="right" title={sub.count}>
-                          <Progress percent={sub.percentage} percentPosition={{ align: 'center', type: 'inner' }} />
-                        </Tooltip>
-                      </div>
+                    )}
+                    <div className={styles.ul}>
+                      {dist?.valueDistributions?.map((sub: IValueDistributions, i: number) => (
+                        <div className={styles.li} key={`list${columnIndex}${column.columnName}${i}`}>
+                          <div className={styles.one}>
+                            <div className={styles.left}>
+                              <Typography.Paragraph
+                                type="secondary"
+                                ellipsis={{
+                                  rows: 1,
+                                  tooltip: true,
+                                  onEllipsis: () => {},
+                                }}
+                              >
+                                {sub.value}
+                              </Typography.Paragraph>
+                            </div>
+                            <div className={styles.right}>
+                              <Button
+                                disabled={searchParams?.whereSqls?.includes(`${column.columnName} = '${sub.value}'`)}
+                                color="primary"
+                                variant="link"
+                                onClick={() => query('=', column, sub)}
+                              >
+                                <i className="iconfont icon-fangda"></i>
+                              </Button>
+                              <Button
+                                disabled={searchParams?.whereSqls?.includes(`${column.columnName} != '${sub.value}'`)}
+                                color="primary"
+                                variant="link"
+                                onClick={() => query('!=', column, sub)}
+                              >
+                                <i className="iconfont icon-suoxiao1"></i>
+                              </Button>
+                            </div>
+                          </div>
+                          <div className={styles.two}>
+                            <Tooltip placement="right" title={sub.count}>
+                              <Progress percent={sub.percentage} percentPosition={{ align: 'center', type: 'inner' }} />
+                            </Tooltip>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ),
-                )}
-              </div>
+                  </>
+                );
+              })()}
             </div>
           ),
         },

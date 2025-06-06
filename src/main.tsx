@@ -28,9 +28,9 @@ const SessionInitializer = () => {
 
 const Error = ({ children }: any) => {
   const [notificationApi, contextHolder] = notification.useNotification();
-  const notificationConfig = {
-    message: '提示',
+  const notificationConfig: any = {
     showProgress: true,
+    placement: 'top',
   };
 
   const handleUnhandledRejection = (event: any) => {
