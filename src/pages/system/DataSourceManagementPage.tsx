@@ -10,8 +10,8 @@ import {
 import type { DataSource, CreateDataSourceParams, TestConnectionParams } from '../../types/datasourceTypes';
 import dayjs from 'dayjs';
 import { ProTable, ProFormText, ProFormSelect, ModalForm, ProFormTextArea } from '@ant-design/pro-components';
-import { Button, message, Popconfirm, Breadcrumb, Card, Input, Space } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, HomeOutlined } from '@ant-design/icons';
+import { Button, message, Popconfirm, Breadcrumb, Input, Space } from 'antd';
+import { PlusOutlined, LinkOutlined, HomeOutlined, SearchOutlined } from '@ant-design/icons';
 import type { ProColumns, ActionType, RequestData, ParamsType } from '@ant-design/pro-components';
 import type { SortOrder } from 'antd/lib/table/interface';
 import { Link } from 'react-router-dom';
@@ -334,14 +334,13 @@ const DataSourceManagementPage = () => {
       valueType: 'option',
       fixed: 'right',
       render: (_, record) => (
-        <Space size={0}>
+        <Space size={4}>
           <Button
             key="edit"
             type="link"
             size="small"
             onClick={() => openEditModal(record)}
-            icon={<EditOutlined />}
-            style={{ padding: '0 4px' }}
+            style={{ padding: '0 8px' }}
           >
             编辑
           </Button>
@@ -355,7 +354,7 @@ const DataSourceManagementPage = () => {
               void handleDelete(record.id);
             }}
           >
-            <Button type="link" size="small" danger icon={<DeleteOutlined />} style={{ padding: '0 4px' }}>
+            <Button type="link" size="small" danger style={{ padding: '0 8px' }}>
               删除
             </Button>
           </Popconfirm>
@@ -367,223 +366,216 @@ const DataSourceManagementPage = () => {
   return (
     <div className={styles.container}>
       {contextHolder}
-      <Card>
-        <ProTable<DataSourceItem>
-          loading={loading.table || loading.submit || loading.test}
-          className={styles.tableContainer}
-          bordered
-          size="small"
-          search={false}
-          options={false}
-          headerTitle={
-            <Breadcrumb
-              items={[
-                {
-                  title: (
-                    <Link to="/">
-                      <HomeOutlined />
-                    </Link>
-                  ),
-                },
-                { title: '数据源管理' },
-              ]}
-            ></Breadcrumb>
-          }
-          actionRef={actionRef}
-          rowKey="id"
-          scroll={{ x: 'max-content' }}
-          cardProps={{ bodyStyle: { padding: '0px' } }}
-          toolBarRender={() => [
-            <Space key="search">
-              <Input.Search
-                placeholder="搜索数据源名称/主机/数据库/描述"
-                allowClear
-                onChange={(e) => {
-                  // 当输入变化时立即搜索，提供更即时的反馈
-                  setSearchKeyword(e.target.value);
-                  // 搜索时重置为第一页，但保留每页条数
-                  setPagination((prev) => ({ ...prev, current: 1 }));
-                  actionRef.current?.reload();
+      <ProTable<DataSourceItem>
+        loading={loading.table || loading.submit || loading.test}
+        className={styles.tableContainer}
+        bordered
+        size="small"
+        search={false}
+        options={false}
+        headerTitle={
+          <Breadcrumb
+            items={[
+              {
+                title: (
+                  <Link to="/">
+                    <HomeOutlined />
+                  </Link>
+                ),
+              },
+              { title: '数据源管理' },
+            ]}
+          ></Breadcrumb>
+        }
+        actionRef={actionRef}
+        rowKey="id"
+        scroll={{ x: 'max-content' }}
+        cardProps={{ bodyStyle: { padding: '0px' } }}
+        toolBarRender={() => [
+          <Space key="search">
+            <Input
+              placeholder="搜索数据源名称/主机/数据库/描述"
+              allowClear
+              onChange={(e) => {
+                // 当输入变化时立即搜索，提供更即时的反馈
+                setSearchKeyword(e.target.value);
+                // 搜索时重置为第一页，但保留每页条数
+                setPagination((prev) => ({ ...prev, current: 1 }));
+                actionRef.current?.reload();
+              }}
+              suffix={<SearchOutlined />}
+            />
+          </Space>,
+          <div className={styles.tableToolbar} key="toolbar">
+            <Button key="button" icon={<PlusOutlined />} type="primary" onClick={openCreateModal}>
+              新增数据源
+            </Button>
+          </div>,
+        ]}
+        request={fetchDataSources}
+        defaultData={[]}
+        columns={columns}
+        pagination={{
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          onChange: handlePageChange,
+          showSizeChanger: true,
+          responsive: true,
+          showTotal: (total) => `共 ${total} 条`,
+        }}
+      />
+
+      <ModalForm
+        title={currentDataSource ? '编辑数据源' : '新增数据源'}
+        width="850px"
+        open={modalVisible}
+        onOpenChange={setModalVisible}
+        onFinish={handleFormSubmit}
+        modalProps={{
+          destroyOnClose: true,
+          maskClosable: false,
+          centered: true,
+        }}
+        layout="horizontal"
+        labelCol={{ span: 6 }}
+        wrapperCol={{ span: 18 }}
+        grid={true}
+        rowProps={{ gutter: [16, 0] }}
+        initialValues={currentDataSource}
+        submitter={{
+          render: (props, doms: React.ReactNode[]) => {
+            return [
+              <Button
+                key="test"
+                type="default"
+                loading={loading.test}
+                icon={<LinkOutlined />}
+                onClick={() => {
+                  // 获取当前表单的值，并测试连接
+                  const values = props.form?.getFieldsValue() as TestConnectionParams;
+                  void handleTestConnection(values).catch(() => {
+                    messageApi.error('连接测试失败');
+                  });
                 }}
-                onSearch={(value) => {
-                  setSearchKeyword(value);
-                  // 搜索时重置为第一页，但保留每页条数
-                  setPagination((prev) => ({ ...prev, current: 1 }));
-                  actionRef.current?.reload();
-                }}
-              />
-            </Space>,
-            <div className={styles.tableToolbar} key="toolbar">
-              <Button key="button" icon={<PlusOutlined />} type="primary" onClick={openCreateModal}>
-                新增数据源
-              </Button>
-            </div>,
+              >
+                测试连接
+              </Button>,
+              ...doms,
+            ];
+          },
+        }}
+      >
+        <ProFormText
+          colProps={{ span: 12 }}
+          name="name"
+          label="数据源名称"
+          placeholder="请输入数据源名称"
+          rules={[{ required: true, message: '请输入数据源名称' }]}
+        />
+        <ProFormSelect
+          colProps={{ span: 12 }}
+          name="type"
+          label="类型"
+          options={dataSourceTypeOptions}
+          placeholder="请选择数据源类型"
+          rules={[{ required: true, message: '请选择数据源类型' }]}
+        />
+        <ProFormText
+          colProps={{ span: 12 }}
+          name="ip"
+          label="主机"
+          placeholder="请输入主机地址"
+          rules={[{ required: true, message: '请输入主机地址' }]}
+          tooltip="数据库服务器地址，可以是IP或域名"
+        />
+        <ProFormText
+          colProps={{ span: 12 }}
+          name="port"
+          label="端口"
+          placeholder="请输入端口号"
+          rules={[
+            { required: true, message: '请输入端口号' },
+            { pattern: /^\d+$/, message: '端口号必须为数字' },
           ]}
-          request={fetchDataSources}
-          defaultData={[]}
-          columns={columns}
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            onChange: handlePageChange,
-            showSizeChanger: true,
-            responsive: true,
-            showTotal: (total) => `共 ${total} 条`,
+        />
+        <ProFormText
+          colProps={{ span: 12 }}
+          name="database"
+          label="数据库名称"
+          placeholder="请输入数据库名称"
+          rules={[{ required: true, message: '请输入数据库名称' }]}
+        />
+        <ProFormText
+          colProps={{ span: 12 }}
+          name="username"
+          label="用户名"
+          placeholder="请输入用户名"
+          rules={[{ required: true, message: '请输入用户名' }]}
+        />
+        <ProFormText.Password
+          colProps={{ span: 12 }}
+          name="password"
+          label="密码"
+          placeholder="请输入密码"
+          rules={[{ required: true, message: '请输入密码' }]}
+          tooltip={currentDataSource ? '不修改密码请留空' : ''}
+        />
+        <ProFormTextArea
+          colProps={{ span: 24 }}
+          name="description"
+          label="数据源描述"
+          placeholder="请输入数据源描述信息（选填）"
+          labelCol={{ span: 3 }}
+          wrapperCol={{ span: 21 }}
+          fieldProps={{
+            rows: 2,
+            maxLength: 200,
+            showCount: true,
           }}
         />
-
-        <ModalForm
-          title={currentDataSource ? '编辑数据源' : '新增数据源'}
-          width="850px"
-          open={modalVisible}
-          onOpenChange={setModalVisible}
-          onFinish={handleFormSubmit}
-          modalProps={{
-            destroyOnClose: true,
-            maskClosable: false,
-            centered: true,
+        <ProFormTextArea
+          colProps={{ span: 24 }}
+          name="jdbcParams"
+          label="JDBC参数"
+          placeholder='请输入JDBC参数，例如: {"connectTimeout": 3000}'
+          labelCol={{ span: 3 }}
+          wrapperCol={{ span: 21 }}
+          fieldProps={{
+            rows: 3,
+            allowClear: true,
           }}
-          layout="horizontal"
-          labelCol={{ span: 6 }}
-          wrapperCol={{ span: 18 }}
-          grid={true}
-          rowProps={{ gutter: [16, 0] }}
-          initialValues={currentDataSource}
-          submitter={{
-            render: (props, doms: React.ReactNode[]) => {
-              return [
-                <Button
-                  key="test"
-                  type="default"
-                  loading={loading.test}
-                  icon={<LinkOutlined />}
-                  onClick={() => {
-                    // 获取当前表单的值，并测试连接
-                    const values = props.form?.getFieldsValue() as TestConnectionParams;
-                    void handleTestConnection(values).catch(() => {
-                      messageApi.error('连接测试失败');
-                    });
-                  }}
-                >
-                  测试连接
-                </Button>,
-                ...doms,
-              ];
-            },
-          }}
-        >
-          <ProFormText
-            colProps={{ span: 12 }}
-            name="name"
-            label="数据源名称"
-            placeholder="请输入数据源名称"
-            rules={[{ required: true, message: '请输入数据源名称' }]}
-          />
-          <ProFormSelect
-            colProps={{ span: 12 }}
-            name="type"
-            label="类型"
-            options={dataSourceTypeOptions}
-            placeholder="请选择数据源类型"
-            rules={[{ required: true, message: '请选择数据源类型' }]}
-          />
-          <ProFormText
-            colProps={{ span: 12 }}
-            name="ip"
-            label="主机"
-            placeholder="请输入主机地址"
-            rules={[{ required: true, message: '请输入主机地址' }]}
-            tooltip="数据库服务器地址，可以是IP或域名"
-          />
-          <ProFormText
-            colProps={{ span: 12 }}
-            name="port"
-            label="端口"
-            placeholder="请输入端口号"
-            rules={[
-              { required: true, message: '请输入端口号' },
-              { pattern: /^\d+$/, message: '端口号必须为数字' },
-            ]}
-          />
-          <ProFormText
-            colProps={{ span: 12 }}
-            name="database"
-            label="数据库名称"
-            placeholder="请输入数据库名称"
-            rules={[{ required: true, message: '请输入数据库名称' }]}
-          />
-          <ProFormText
-            colProps={{ span: 12 }}
-            name="username"
-            label="用户名"
-            placeholder="请输入用户名"
-            rules={[{ required: true, message: '请输入用户名' }]}
-          />
-          <ProFormText.Password
-            colProps={{ span: 12 }}
-            name="password"
-            label="密码"
-            placeholder="请输入密码"
-            rules={[{ required: true, message: '请输入密码' }]}
-            tooltip={currentDataSource ? '不修改密码请留空' : ''}
-          />
-          <ProFormTextArea
-            colProps={{ span: 24 }}
-            name="description"
-            label="数据源描述"
-            placeholder="请输入数据源描述信息（选填）"
-            labelCol={{ span: 3 }}
-            wrapperCol={{ span: 21 }}
-            fieldProps={{
-              rows: 2,
-              maxLength: 200,
-              showCount: true,
-            }}
-          />
-          <ProFormTextArea
-            colProps={{ span: 24 }}
-            name="jdbcParams"
-            label="JDBC参数"
-            placeholder='请输入JDBC参数，例如: {"connectTimeout": 3000}'
-            labelCol={{ span: 3 }}
-            wrapperCol={{ span: 21 }}
-            fieldProps={{
-              rows: 3,
-              allowClear: true,
-            }}
-            tooltip="JSON格式的额外连接参数配置（可留空）"
-            rules={[
-              {
-                validator: async (_: any, value: string) => {
-                  if (!value) return Promise.resolve();
-                  try {
-                    JSON.parse(value);
-                    return Promise.resolve();
-                  } catch (e) {
-                    return Promise.reject(new Error('请输入有效的JSON格式'));
-                  }
-                },
+          tooltip="JSON格式的额外连接参数配置（可留空）"
+          rules={[
+            {
+              validator: async (_: any, value: string) => {
+                if (!value) return Promise.resolve();
+                try {
+                  JSON.parse(value);
+                  return Promise.resolve();
+                } catch (e) {
+                  return Promise.reject(new Error('请输入有效的JSON格式'));
+                }
               },
-            ]}
-            transform={(value: any) => {
-              if (!value) return { jdbcParams: undefined };
-              try {
-                return { jdbcParams: JSON.parse(value) };
-              } catch (e) {
-                return { jdbcParams: undefined };
-              }
-            }}
-            convertValue={(value: any) => {
-              if (!value) return '';
-              try {
-                return typeof value === 'string' ? value : JSON.stringify(value, null, 2);
-              } catch (e) {
-                return '';
-              }
-            }}
-          />
-        </ModalForm>
-      </Card>
+            },
+          ]}
+          transform={(value: any) => {
+            if (!value) return { jdbcParams: undefined };
+            try {
+              return { jdbcParams: JSON.parse(value) };
+            } catch (e) {
+              return { jdbcParams: undefined };
+            }
+          }}
+          convertValue={(value: any) => {
+            if (!value) return '';
+            try {
+              return typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+            } catch (e) {
+              return '';
+            }
+          }}
+        />
+      </ModalForm>
     </div>
   );
 };

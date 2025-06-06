@@ -118,22 +118,22 @@ const MachineManagementPage = () => {
           <Button
             type="link"
             size="small"
-            icon={<ThunderboltOutlined />}
             loading={testingConnectionId === record.id}
             onClick={() => handleTestConnection(record.id)}
             disabled={!!testingConnectionId}
+            style={{ padding: '0 8px' }}
           >
             测试连接
           </Button>
           <Button
             type="link"
             size="small"
-            icon={<EditOutlined />}
             onClick={() => {
               setEditingMachine(record);
               form.setFieldsValue(record);
               setEditModalVisible(true);
             }}
+            style={{ padding: '0 8px' }}
           >
             编辑
           </Button>
@@ -141,11 +141,11 @@ const MachineManagementPage = () => {
             type="link"
             size="small"
             danger
-            icon={<DeleteOutlined />}
             onClick={() => {
               setDeletingId(record.id);
               setDeleteConfirmVisible(true);
             }}
+            style={{ padding: '0 8px' }}
           >
             删除
           </Button>
@@ -157,7 +157,7 @@ const MachineManagementPage = () => {
   return (
     <>
       {contextHolder}
-      <Card className={styles.container}>
+      <div className={styles.container}>
         <div className={styles.header}>
           <Breadcrumb
             items={[
@@ -250,7 +250,7 @@ const MachineManagementPage = () => {
         >
           <p>确定要删除这台机器吗？</p>
         </Modal>
-      </Card>
+      </div>
     </>
   );
 };
