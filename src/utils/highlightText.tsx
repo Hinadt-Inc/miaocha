@@ -5,6 +5,7 @@
   @returns {React.ReactNode} - 高亮文本
 */
 export const highlightText = (text: string, keywords: string[]) => {
+  // kube-node18 || data/log/hina-cl
   if (!keywords || !keywords.length) return <span title={text}>{text}</span>;
 
   let str = String(text);

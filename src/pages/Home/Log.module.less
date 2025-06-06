@@ -22,4 +22,12 @@
     flex-grow: 1;
     overflow: auto;
   }
+  :global {
+    .ant-splitter-bar {
+      z-index: 2;
+    }
+    .ant-splitter-bar .ant-splitter-bar-dragger-disabled.ant-splitter-bar-dragger::before {
+      height: 4px;
+    }
+  }
 }
