@@ -5,17 +5,29 @@
   @returns {React.ReactNode} - 高亮文本
 */
 export const highlightText = (text: string, keywords: string[]) => {
-  // kube-node18 || data/log/hina-cl
-  if (!keywords || !keywords.length) return <span title={text}>{text}</span>;
+  // 处理keywords，将每项中的中英文字符提取出来
+  const extractWords = (expr: string) => {
+    // 匹配所有连续的中英文字符串
+    return expr.match(/[\u4e00-\u9fa5a-zA-Z0-9]+/g) || [];
+  };
+
+  // 扁平化所有关键词
+  let flatKeywords: string[] = [];
+  if (keywords && keywords.length) {
+    keywords.forEach((expr) => {
+      flatKeywords.push(...extractWords(expr));
+    });
+  }
+  // 去重
+  flatKeywords = Array.from(new Set(flatKeywords)).filter(Boolean);
+
+  if (!flatKeywords.length) return <span title={text}>{text}</span>;
 
   let str = String(text);
-  keywords.forEach((keyword) => {
-    const kwStr = String(keyword);
+  flatKeywords.forEach((kwStr) => {
     // 中文单字匹配
-    if (/[\u4e00-\u9fa5]/.test(kwStr)) {
-      kwStr.split('').forEach((char) => {
-        str = str.replace(new RegExp(char, 'g'), `<mark>${char}</mark>`);
-      });
+    if (/^[\u4e00-\u9fa5]$/.test(kwStr)) {
+      str = str.replace(new RegExp(kwStr, 'g'), `<mark>${kwStr}</mark>`);
     } else {
       str = str.replace(new RegExp(kwStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), `<mark>${kwStr}</mark>`);
     }
