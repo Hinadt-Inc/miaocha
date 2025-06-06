@@ -28,7 +28,6 @@ interface ColumnHeaderProps {
 
 const ResizableTitle = (props: any) => {
   const { onResize, width, ...restProps } = props;
-
   if (!width) {
     return <th {...restProps} />;
   }
@@ -45,7 +44,11 @@ const ResizableTitle = (props: any) => {
           const startWidth = width;
 
           const handleMouseMove = (e: MouseEvent) => {
+            // 计算新宽度
+            // 鼠标往右拖，e.pageX - startX 为正，宽度变大。
+            // 鼠标往左拖，e.pageX - startX 为负，宽度变小。
             const newWidth = startWidth + (e.pageX - startX);
+            // 限制宽度
             if (newWidth >= 50 && newWidth <= 500) {
               onResize(newWidth);
             }
@@ -138,7 +141,6 @@ const VirtualTable = (props: IProps) => {
       [column.dataIndex]: width,
     }));
   };
-
   const getBaseColumns = useMemo(() => {
     const otherColumns = dynamicColumns?.filter((item) => item.selected && item.columnName !== 'log_time');
     const _columns: any[] = [];
@@ -204,35 +206,51 @@ const VirtualTable = (props: IProps) => {
           );
         },
       },
-      ..._columns.map((column) => ({
-        ...column,
-        sorter: (a: any, b: any) => {
-          const valueA = a[column.dataIndex];
-          const valueB = b[column.dataIndex];
-          if (typeof valueA === 'string' && typeof valueB === 'string') {
-            return valueA.localeCompare(valueB);
-          }
-          return (valueA || '').toString().localeCompare((valueB || '').toString());
-        },
-        render: (text: string) => {
-          return highlightText(text, [
-            ...(searchParams?.keywords || []),
-            ...((whereSqlsFromSider.map((item) => item.value) || []) as string[]),
-          ]);
-        },
-      })),
+      ..._columns.map((column, idx) => {
+        const isLast = idx === _columns.length - 1;
+        return {
+          ...column,
+          width: isLast ? undefined : columnWidths[column.dataIndex] || 150,
+          sorter: (a: any, b: any) => {
+            const valueA = a[column.dataIndex];
+            const valueB = b[column.dataIndex];
+            if (typeof valueA === 'string' && typeof valueB === 'string') {
+              return valueA.localeCompare(valueB);
+            }
+            return (valueA || '').toString().localeCompare((valueB || '').toString());
+          },
+          render: (text: string) => {
+            return highlightText(text, [
+              ...(searchParams?.keywords || []),
+              ...((whereSqlsFromSider.map((item) => item.value) || []) as string[]),
+            ]);
+          },
+        };
+      }),
     ];
   }, [dynamicColumns, searchParams.keywords, columnWidths, whereSqlsFromSider]);
 
-  useEffect(() => {
-    const resizableColumns = getBaseColumns.map((col, index) => ({
-      ...col,
-      onHeaderCell: (column: any) => ({
-        width: column.width,
-        onResize: handleResize(index),
-      }),
-    }));
+  console.log('columnWidths', columnWidths);
 
+  useEffect(() => {
+    const resizableColumns = getBaseColumns.map((col, index) => {
+      // log_time列宽度始终为190且不可拖拽
+      if (col.dataIndex === 'log_time') {
+        return {
+          ...col,
+          width: 190,
+          onHeaderCell: undefined,
+        };
+      }
+      return {
+        ...col,
+        // 接收当前列的 column 对象作为参数
+        onHeaderCell: (column: any) => ({
+          width: column.width, // 设置表头单元格的宽度
+          onResize: handleResize(index), // 设置表头单元格的拖拽事件处理函数
+        }),
+      };
+    });
     setColumns(resizableColumns);
   }, [getBaseColumns]);
 
@@ -302,7 +320,7 @@ const VirtualTable = (props: IProps) => {
     let extra = 0;
     dynamicCols.forEach((col: any) => {
       const titleStr = typeof col.title === 'string' ? col.title : col.dataIndex || '';
-      extra += (titleStr.length || 0) * 15;
+      extra += (titleStr.length || 0) * 15 + 100;
     });
     setScrollX(Math.max(1300, 1300 + extra));
   }, [columns]);
