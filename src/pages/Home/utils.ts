@@ -87,6 +87,18 @@ export const QUICK_RANGES: Record<string, IStatus> = {
     to: () => dayjs(),
     format: [DATE_FORMAT, DATE_FORMAT],
   },
+  last_7d: {
+    label: '最近7天',
+    from: () => dayjs().subtract(7, 'day'),
+    to: () => dayjs(),
+    format: [DATE_FORMAT, DATE_FORMAT],
+  },
+  last_2week: {
+    label: '最近2周',
+    from: () => dayjs().subtract(13, 'day'), // 包含今天共14天
+    to: () => dayjs(),
+    format: [DATE_FORMAT, DATE_FORMAT],
+  },
   today: {
     label: '今天',
     from: () => dayjs().subtract(0, 'day'),
@@ -105,21 +117,10 @@ export const QUICK_RANGES: Record<string, IStatus> = {
     to: () => dayjs().endOf('week'),
     format: ['YYYY-MM-DD 00:00:00', 'YYYY-MM-DD 23:59:59'],
   },
-  last_7d: {
-    label: '最近7天',
-    from: () => dayjs().subtract(7, 'day'),
-    to: () => dayjs(),
-    format: ['YYYY-MM-DD 00:00:00', 'YYYY-MM-DD 23:59:59'],
-  },
+
   last_week: {
     label: '上周',
     from: () => dayjs().subtract(1, 'week').startOf('week'),
-    to: () => dayjs().subtract(1, 'week').endOf('week'),
-    format: ['YYYY-MM-DD 00:00:00', 'YYYY-MM-DD 23:59:59'],
-  },
-  last_2week: {
-    label: '最近2周',
-    from: () => dayjs().subtract(2, 'week').startOf('week'),
     to: () => dayjs().subtract(1, 'week').endOf('week'),
     format: ['YYYY-MM-DD 00:00:00', 'YYYY-MM-DD 23:59:59'],
   },
