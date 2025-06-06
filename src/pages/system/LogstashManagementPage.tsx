@@ -968,7 +968,7 @@ function LogstashManagementPage() {
                 void handleExecuteSQL(currentProcess.id);
               }
             }}
-            okButtonProps={{ disabled: !!currentProcess?.dorisSql.trim() }}
+            okButtonProps={{ disabled: !!currentProcess?.dorisSql }}
             width={800}
           >
             <div style={{ marginBottom: 16 }}>
