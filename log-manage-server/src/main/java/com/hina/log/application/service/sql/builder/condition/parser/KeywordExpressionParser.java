@@ -79,19 +79,22 @@ public class KeywordExpressionParser {
             return ValidationResult.invalid(EMPTY_PARENTHESES);
         }
 
+        // 规范化表达式中的空格以进行运算符检查
+        String normalizedForOperatorCheck = normalizeExpression(expression);
+
         // 检查运算符使用
-        if (expression.startsWith(AND_OPERATOR)
-                || expression.startsWith(OR_OPERATOR)
-                || expression.endsWith(AND_OPERATOR)
-                || expression.endsWith(OR_OPERATOR)) {
+        if (normalizedForOperatorCheck.startsWith(AND_OPERATOR)
+                || normalizedForOperatorCheck.startsWith(OR_OPERATOR)
+                || normalizedForOperatorCheck.endsWith(AND_OPERATOR)
+                || normalizedForOperatorCheck.endsWith(OR_OPERATOR)) {
             return ValidationResult.invalid(INVALID_OPERATOR_USAGE + ": 表达式不能以运算符开始或结束");
         }
 
         // 检查连续运算符
-        if (expression.contains(AND_OPERATOR + AND_OPERATOR)
-                || expression.contains(OR_OPERATOR + OR_OPERATOR)
-                || expression.contains(AND_OPERATOR + OR_OPERATOR)
-                || expression.contains(OR_OPERATOR + AND_OPERATOR)) {
+        if (normalizedForOperatorCheck.contains(AND_OPERATOR + " " + AND_OPERATOR)
+                || normalizedForOperatorCheck.contains(OR_OPERATOR + " " + OR_OPERATOR)
+                || normalizedForOperatorCheck.contains(AND_OPERATOR + " " + OR_OPERATOR)
+                || normalizedForOperatorCheck.contains(OR_OPERATOR + " " + AND_OPERATOR)) {
             return ValidationResult.invalid(INVALID_OPERATOR_USAGE + ": 不能有连续的运算符");
         }
 
@@ -177,9 +180,18 @@ public class KeywordExpressionParser {
         if (andIndex != -1) {
             String left = parseExpression(expression.substring(0, andIndex).trim());
             String right = parseExpression(expression.substring(andIndex + 4).trim());
-            // AND 操作符用于MATCH_ALL
-            String keywords = extractKeywordsFromExpressions(left, right);
-            return "message MATCH_ALL '" + keywords + "'";
+
+            // 只有当左右两边都是简单的MATCH_ANY时，才能合并为MATCH_ALL
+            if (isSimpleMatchAny(left) && isSimpleMatchAny(right)) {
+                String keywords = extractKeywordsFromExpressions(left, right);
+                return "message MATCH_ALL '" + keywords + "'";
+            } else {
+                // 包含复杂表达式时，保持AND逻辑
+                // 去除不必要的外层括号
+                String leftClean = removeOuterParentheses(left);
+                String rightClean = removeOuterParentheses(right);
+                return leftClean + " AND " + rightClean;
+            }
         }
 
         // 如果没有操作符，处理单个项
@@ -254,8 +266,12 @@ public class KeywordExpressionParser {
     private static String parseSingleTerm(String term) {
         term = term.trim();
         if (term.startsWith("(") && term.endsWith(")")) {
-            // 去除最外层的括号
+            // 如果括号内已经是解析后的SQL表达式，直接返回
             String inner = term.substring(1, term.length() - 1).trim();
+            if (inner.contains("MATCH_ANY") || inner.contains("MATCH_ALL")) {
+                return term; // 保持括号，这是已解析的复杂表达式
+            }
+            // 否则递归解析括号内容
             return parseExpression(inner);
         }
         String keyword = extractKeyword(term);
@@ -277,7 +293,40 @@ public class KeywordExpressionParser {
         return term.trim();
     }
 
-    /** 从表达式中提取关键字 */
+    /** 检查表达式是否为简单的MATCH_ANY */
+    private static boolean isSimpleMatchAny(String expression) {
+        if (expression == null || expression.trim().isEmpty()) {
+            return false;
+        }
+        // 匹配形如 "message MATCH_ANY 'keyword'" 的简单表达式
+        return expression.matches("^message\\s+MATCH_ANY\\s+'[^']+'$");
+    }
+
+    /** 去除表达式外层不必要的括号 */
+    private static String removeOuterParentheses(String expression) {
+        if (expression == null || expression.trim().isEmpty()) {
+            return expression;
+        }
+        expression = expression.trim();
+        if (expression.startsWith("(") && expression.endsWith(")")) {
+            // 检查是否是完整的外层括号（而不是表达式中间的括号）
+            int parenCount = 0;
+            for (int i = 0; i < expression.length(); i++) {
+                if (expression.charAt(i) == '(') parenCount++;
+                else if (expression.charAt(i) == ')') parenCount--;
+
+                // 如果在中间某处括号计数为0，说明不是完整的外层括号
+                if (parenCount == 0 && i < expression.length() - 1) {
+                    return expression;
+                }
+            }
+            // 如果是完整的外层括号，去除它们
+            return expression.substring(1, expression.length() - 1).trim();
+        }
+        return expression;
+    }
+
+    /** 从简单的MATCH_ANY表达式中提取关键字 */
     private static String extractKeywordsFromExpressions(String... expressions) {
         List<String> keywords = new ArrayList<>();
         for (String expr : expressions) {
