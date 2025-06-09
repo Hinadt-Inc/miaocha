@@ -3,8 +3,8 @@ import { getMachines, createMachine, deleteMachine, updateMachine, testMachineCo
 import type { Machine, CreateMachineParams } from '../../types/machineTypes';
 import { SimpleTable } from '../../components/common/SimpleTable';
 import type { TableColumnsType } from 'antd';
-import { Breadcrumb, Button, Form, Input, InputNumber, Modal, message, Card } from 'antd';
-import { EditOutlined, DeleteOutlined, ThunderboltOutlined, PlusOutlined, HomeOutlined } from '@ant-design/icons';
+import { Breadcrumb, Button, Form, Input, InputNumber, Modal, message } from 'antd';
+import { PlusOutlined, HomeOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import dayjs from 'dayjs';
 import styles from './MachineManagementPage.module.less';
@@ -17,7 +17,7 @@ const MachineManagementPage = () => {
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [deletingId, setDeletingId] = useState<string | number | null>(null);
   const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
-  const [testingConnectionId, setTestingConnectionId] = useState<string | number | null>(null);
+  const [testingConnection, setTestingConnection] = useState(false);
   const [form] = Form.useForm<CreateMachineParams>();
   const [messageApi, contextHolder] = message.useMessage();
 
@@ -77,19 +77,20 @@ const MachineManagementPage = () => {
     }
   };
 
-  const handleTestConnection = async (id: string | number) => {
-    setTestingConnectionId(id);
+  const handleTestConnection = async () => {
     try {
-      const success = await testMachineConnection(id);
+      const values = await form.validateFields();
+      setTestingConnection(true);
+      const success = await testMachineConnection(values);
       if (success) {
         messageApi.success('连接测试成功');
       } else {
         messageApi.error('连接测试失败');
       }
-    } catch {
+    } catch (err) {
       messageApi.error('连接测试失败');
     } finally {
-      setTestingConnectionId(null);
+      setTestingConnection(false);
     }
   };
 
@@ -118,22 +119,12 @@ const MachineManagementPage = () => {
           <Button
             type="link"
             size="small"
-            icon={<ThunderboltOutlined />}
-            loading={testingConnectionId === record.id}
-            onClick={() => handleTestConnection(record.id)}
-            disabled={!!testingConnectionId}
-          >
-            测试连接
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
             onClick={() => {
               setEditingMachine(record);
               form.setFieldsValue(record);
               setEditModalVisible(true);
             }}
+            style={{ padding: '0 8px' }}
           >
             编辑
           </Button>
@@ -141,11 +132,11 @@ const MachineManagementPage = () => {
             type="link"
             size="small"
             danger
-            icon={<DeleteOutlined />}
             onClick={() => {
               setDeletingId(record.id);
               setDeleteConfirmVisible(true);
             }}
+            style={{ padding: '0 8px' }}
           >
             删除
           </Button>
@@ -157,7 +148,7 @@ const MachineManagementPage = () => {
   return (
     <>
       {contextHolder}
-      <Card className={styles.container}>
+      <div className={styles.container}>
         <div className={styles.header}>
           <Breadcrumb
             items={[
@@ -186,7 +177,14 @@ const MachineManagementPage = () => {
           title="新增机器"
           open={createModalVisible}
           onCancel={() => setCreateModalVisible(false)}
-          onOk={() => form.submit()}
+          footer={[
+            <Button key="test" loading={testingConnection} onClick={handleTestConnection}>
+              测试连接
+            </Button>,
+            <Button key="submit" type="primary" onClick={() => form.submit()}>
+              确定
+            </Button>,
+          ]}
         >
           <Form form={form} layout="vertical" onFinish={handleCreate}>
             <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入机器名称' }]}>
@@ -217,7 +215,14 @@ const MachineManagementPage = () => {
             setEditModalVisible(false);
             form.resetFields();
           }}
-          onOk={() => form.submit()}
+          footer={[
+            <Button key="test" loading={testingConnection} onClick={handleTestConnection}>
+              测试连接
+            </Button>,
+            <Button key="submit" type="primary" onClick={() => form.submit()}>
+              确定
+            </Button>,
+          ]}
         >
           <Form form={form} layout="vertical" onFinish={handleEdit}>
             <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入机器名称' }]}>
@@ -250,7 +255,7 @@ const MachineManagementPage = () => {
         >
           <p>确定要删除这台机器吗？</p>
         </Modal>
-      </Card>
+      </div>
     </>
   );
 };

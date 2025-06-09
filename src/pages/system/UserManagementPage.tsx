@@ -13,21 +13,11 @@ import {
   Popconfirm,
   message,
   Avatar,
-  Card,
   Row,
   Col,
   Breadcrumb,
 } from 'antd';
-import {
-  SearchOutlined,
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  UserOutlined,
-  ReloadOutlined,
-  HomeOutlined,
-  KeyOutlined,
-} from '@ant-design/icons';
+import { SearchOutlined, PlusOutlined, UserOutlined, ReloadOutlined, HomeOutlined } from '@ant-design/icons';
 import type { AxiosRequestConfig } from 'axios';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
@@ -380,13 +370,13 @@ const UserManagementPage = () => {
       fixed: 'right',
       width: 200,
       render: (_, record) => (
-        <Space size="middle">
-          <Button type="link" icon={<EditOutlined />} onClick={() => handleAddEdit(record)}>
+        <Space size={0}>
+          <Button type="link" onClick={() => handleAddEdit(record)} style={{ padding: '0 8px' }}>
             编辑
           </Button>
           {!['SUPER_ADMIN'].includes(record.role) && (
             <>
-              <Button type="link" icon={<KeyOutlined />} onClick={() => handleChangePassword(record)}>
+              <Button type="link" onClick={() => handleChangePassword(record)} style={{ padding: '0 8px' }}>
                 改密码
               </Button>
               <Popconfirm
@@ -398,7 +388,7 @@ const UserManagementPage = () => {
                 okText="确定"
                 cancelText="取消"
               >
-                <Button type="link" danger icon={<DeleteOutlined />}>
+                <Button type="link" danger style={{ padding: '0 8px' }}>
                   删除
                 </Button>
               </Popconfirm>
@@ -410,7 +400,7 @@ const UserManagementPage = () => {
   ];
 
   return (
-    <Card>
+    <div className={styles.container}>
       {contextHolder}
       <div className={styles.header}>
         <Breadcrumb
@@ -431,8 +421,8 @@ const UserManagementPage = () => {
             value={searchText}
             onChange={(e) => handleSearch(e.target.value)}
             style={{ width: 240 }}
-            prefix={<SearchOutlined />}
             allowClear
+            suffix={<SearchOutlined />}
           />
           <Button type="primary" icon={<PlusOutlined />} onClick={() => handleAddEdit()}>
             添加用户
@@ -543,7 +533,7 @@ const UserManagementPage = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </Card>
+    </div>
   );
 };
 

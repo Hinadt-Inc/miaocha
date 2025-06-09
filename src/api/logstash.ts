@@ -113,13 +113,6 @@ export function updateLogstashConfig(
   });
 }
 
-export function getLogstashTaskStatus(id: number): Promise<LogstashTaskStatus> {
-  return request({
-    url: `/api/logstash/processes/${id}/task-status`,
-    method: 'GET',
-  });
-}
-
 export function getLogstashTaskSummaries(processId: number): Promise<LogstashTaskSummary[]> {
   return request({
     url: `/api/logstash/processes/${processId}/tasks`,

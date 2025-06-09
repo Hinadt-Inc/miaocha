@@ -14,19 +14,16 @@ const initialState: IStoreUser = {
 };
 
 // 异步获取用户信息
-export const fetchUserInfo: any = createAsyncThunk(
-  'user/fetchUserInfo',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await getUserInfo();
-      return response;
-    } catch (error: unknown) {
-      console.error('获取用户信息失败:', error);
-      const message = error instanceof Error ? error.message : '获取用户信息失败';
-      return rejectWithValue(message);
-    }
-  },
-);
+export const fetchUserInfo: any = createAsyncThunk('user/fetchUserInfo', async (_, { rejectWithValue }) => {
+  try {
+    const response = await getUserInfo();
+    return response;
+  } catch (error: unknown) {
+    console.error('获取用户信息失败:', error);
+    const message = error instanceof Error ? error.message : '获取用户信息失败';
+    return rejectWithValue(message);
+  }
+});
 
 // 异步退出登录
 export const logoutUser = createAsyncThunk('user/logoutUser', async () => {
@@ -93,7 +90,6 @@ export const restoreSession = createAsyncThunk('user/restoreSession', async (_, 
         return { restored: true, userInfo };
       } catch (error) {
         console.error('恢复会话获取用户信息失败:', error);
-        debugger;
         clearTokens();
         window.location.href = '/login';
         return { restored: false, error };
@@ -130,10 +126,7 @@ export const userSlice: any = createSlice({
       localStorage.setItem('accessToken', action.payload.tokens.accessToken);
       localStorage.setItem('refreshToken', action.payload.tokens.refreshToken);
       localStorage.setItem('tokenExpiresAt', action.payload.tokens.expiresAt.toString());
-      localStorage.setItem(
-        'refreshTokenExpiresAt',
-        action.payload.tokens.refreshExpiresAt.toString(),
-      );
+      localStorage.setItem('refreshTokenExpiresAt', action.payload.tokens.refreshExpiresAt.toString());
     },
     logout: (state) => {
       state.userId = 0;

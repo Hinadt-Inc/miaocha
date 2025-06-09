@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Table, Button, Space, Input, Select, Breadcrumb, Modal } from 'antd';
+import { Table, Button, Space, Input, Select, Breadcrumb, Modal } from 'antd';
 import { App } from 'antd';
 import { getUsers } from '../../api/user';
 import type { ColumnsType } from 'antd/es/table';
@@ -420,7 +420,7 @@ const PermissionManagementPage = () => {
   ];
 
   return (
-    <Card>
+    <div className={styles.container}>
       <div className={styles.header}>
         {GrantModal}
         <Breadcrumb>
@@ -432,9 +432,6 @@ const PermissionManagementPage = () => {
           <Breadcrumb.Item>权限管理</Breadcrumb.Item>
         </Breadcrumb>
         <Space>
-          <Button type="primary" onClick={() => showGlobalGrantModal()}>
-            授予新权限
-          </Button>
           <Input
             placeholder="搜索数据源ID/名称/模块名"
             value={searchParams.userId || searchParams.datasourceId}
@@ -447,6 +444,9 @@ const PermissionManagementPage = () => {
             suffix={<SearchOutlined />}
             style={{ width: 240 }}
           />
+          <Button type="primary" onClick={() => showGlobalGrantModal()}>
+            授予新权限
+          </Button>
         </Space>
       </div>
       <Table
@@ -467,7 +467,7 @@ const PermissionManagementPage = () => {
           expandedRowRender,
         }}
       />
-    </Card>
+    </div>
   );
 };
 

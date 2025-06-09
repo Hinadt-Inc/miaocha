@@ -1,4 +1,10 @@
-import { Form, Input, Modal, Select, Spin } from 'antd';
+import { Form, Input, Modal, Select, Spin, Button, Space, Tooltip } from 'antd';
+import { FileTextOutlined as IconTemplate } from '@ant-design/icons';
+import {
+  LOGSTASH_CONFIG_TEMPLATE,
+  JVM_CONFIG_TEMPLATE,
+  LOGSTASH_BASE_CONFIG_TEMPLATE,
+} from '../../../utils/logstashTemplates';
 import { useEffect, useState } from 'react';
 import type { LogstashProcess } from '../../../types/logstashTypes';
 import { getAllDataSources } from '../../../api/datasource';
@@ -69,6 +75,20 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
     }
   };
 
+  const applyTemplate = (type: 'config' | 'jvm' | 'base') => {
+    switch (type) {
+      case 'config':
+        form.setFieldsValue({ configContent: LOGSTASH_CONFIG_TEMPLATE });
+        break;
+      case 'jvm':
+        form.setFieldsValue({ jvmOptions: JVM_CONFIG_TEMPLATE });
+        break;
+      case 'base':
+        form.setFieldsValue({ logstashYml: LOGSTASH_BASE_CONFIG_TEMPLATE });
+        break;
+    }
+  };
+
   return (
     <Spin spinning={loading}>
       <Modal
@@ -119,7 +139,24 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
             </div>
           </div>
 
-          <Form.Item name="configContent" label="配置内容" rules={[{ required: true, message: '请输入配置内容' }]}>
+          <Form.Item
+            name="configContent"
+            label={
+              <Space>
+                <span>配置内容</span>
+                <Tooltip title="应用标准配置模板">
+                  <Button
+                    size="small"
+                    onClick={() => applyTemplate('config')}
+                    disabled={!!initialValues}
+                    icon={<IconTemplate />}
+                  />
+                </Tooltip>
+              </Space>
+            }
+            rules={[{ required: true, message: '请输入配置内容' }]}
+            extra="模板包含Kafka输入和Doris输出的标准配置"
+          >
             <Input.TextArea
               disabled={!!initialValues}
               rows={6}
@@ -128,7 +165,23 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
             />
           </Form.Item>
 
-          <Form.Item name="jvmOptions" label="JVM参数">
+          <Form.Item
+            name="jvmOptions"
+            label={
+              <Space>
+                <span>JVM参数</span>
+                <Tooltip title="应用JVM参数模板">
+                  <Button
+                    size="small"
+                    onClick={() => applyTemplate('jvm')}
+                    disabled={!!initialValues}
+                    icon={<IconTemplate />}
+                  />
+                </Tooltip>
+              </Space>
+            }
+            extra="模板包含基础JVM参数和专家级配置选项"
+          >
             <Input.TextArea
               disabled={!!initialValues}
               rows={4}
@@ -137,7 +190,23 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
             />
           </Form.Item>
 
-          <Form.Item name="logstashYml" label="Logstash配置">
+          <Form.Item
+            name="logstashYml"
+            label={
+              <Space>
+                <span>Logstash配置</span>
+                <Tooltip title="应用基础配置模板">
+                  <Button
+                    size="small"
+                    onClick={() => applyTemplate('base')}
+                    disabled={!!initialValues}
+                    icon={<IconTemplate />}
+                  />
+                </Tooltip>
+              </Space>
+            }
+            extra="模板包含基础Logstash配置参数"
+          >
             <Input.TextArea
               disabled={!!initialValues}
               rows={4}
