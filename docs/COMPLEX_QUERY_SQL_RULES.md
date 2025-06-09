@@ -31,7 +31,7 @@
 | **带引号关键字**   | `'timeout'`                              | KeywordMatchAnyConditionBuilder | `message MATCH_ANY 'timeout'`                                | 包含特殊字符的关键字           |
 | **多词关键字**     | `'database connection'`                  | KeywordMatchAnyConditionBuilder | `message MATCH_ANY 'database connection'`                    | 短语搜索                       |
 | **简单AND表达式**  | `error && timeout`                       | KeywordMatchAllConditionBuilder | `message MATCH_ALL 'error timeout'`                          | 所有关键字都必须存在           |
-| **简单OR表达式**   | `error \|\| warning`                     | KeywordComplexExpressionBuilder | `message MATCH_ANY 'error' OR message MATCH_ANY 'warning'`   | 任一关键字存在即可             |
+| **简单OR表达式**   | `error \|\| warning`                     | KeywordComplexExpressionBuilder | `message MATCH_ANY 'error warning'`                          | 任一关键字存在即可             |
 | **复杂括号表达式** | `('error' \|\| 'warning') && 'critical'` | KeywordComplexExpressionBuilder | `message MATCH_ANY 'error' AND message MATCH_ANY 'critical'` | 简化处理：只取OR中第一个关键字 |
 
 ### 2. 详细产出规则
@@ -78,16 +78,16 @@
 
 ### 2. 复杂示例对照表
 
-| 表达式                                            | 解析步骤   | 最终SQL                                                                                | 业务含义                                |
-| ------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------- | --------------------------------------- |
-| `'user service'`                                  | 单关键字   | `message MATCH_ANY 'user service'`                                                     | 包含"user service"短语                  |
-| `error && timeout`                                | 简单AND    | `message MATCH_ALL 'error timeout'`                                                    | 同时包含error和timeout                  |
-| `error \|\| warning \|\| info`                    | 多项OR     | `message MATCH_ANY 'error' OR message MATCH_ANY 'warning' OR message MATCH_ANY 'info'` | 包含任一关键字                          |
-| `('error' \|\| 'warning') && 'critical'`          | 复杂表达式 | `message MATCH_ANY 'error' AND message MATCH_ANY 'critical'`                           | 简化处理：只取OR中第一个关键字          |
-| `'database' && ('timeout' \|\| 'connection')`     | 复杂表达式 | `message MATCH_ANY 'database' AND message MATCH_ANY 'timeout'`                         | 简化处理：只取OR中第一个关键字          |
-| `('user' \|\| 'order') && ('service' \|\| 'api')` | 复杂表达式 | `message MATCH_ANY 'user' AND message MATCH_ANY 'service'`                             | 简化处理：只取每个OR中第一个关键字      |
-| `'user' && 'service' && 'critical'`               | 多重AND    | `message MATCH_ANY 'user' AND message MATCH_ALL 'service critical'`                    | 部分优化：最后两个关键字合并为MATCH_ALL |
-| `(('error' \|\| 'warn') && 'critical')`           | 嵌套表达式 | `( (message MATCH_ANY 'error' OR message MATCH_ANY 'warn') && 'critical' )`            | 保持部分原始结构，混合处理              |
+| 表达式                                            | 解析步骤   | 最终SQL                                                                   | 业务含义                                |
+| ------------------------------------------------- | ---------- | ------------------------------------------------------------------------- | --------------------------------------- |
+| `'user service'`                                  | 单关键字   | `message MATCH_ANY 'user service'`                                        | 包含"user service"短语                  |
+| `error && timeout`                                | 简单AND    | `message MATCH_ALL 'error timeout'`                                       | 同时包含error和timeout                  |
+| `error \|\| warning \|\| info`                    | 多项OR     | `message MATCH_ANY 'error warning info'`                                  | 包含任一关键字                          |
+| `('error' \|\| 'warning') && 'critical'`          | 复杂表达式 | `message MATCH_ANY 'error warning' AND message MATCH_ANY 'critical'`      | OR关键字合并，AND连接                   |
+| `'database' && ('timeout' \|\| 'connection')`     | 复杂表达式 | `message MATCH_ANY 'database' AND message MATCH_ANY 'timeout connection'` | OR关键字合并，AND连接                   |
+| `('user' \|\| 'order') && ('service' \|\| 'api')` | 复杂表达式 | `message MATCH_ANY 'user order' AND message MATCH_ANY 'service api'`      | 每个OR都合并关键字，AND连接             |
+| `'user' && 'service' && 'critical'`               | 多重AND    | `message MATCH_ANY 'user' AND message MATCH_ALL 'service critical'`       | 部分优化：最后两个关键字合并为MATCH_ALL |
+| `(('error' \|\| 'warn') && 'critical')`           | 嵌套表达式 | `( (message MATCH_ANY 'error warn') && 'critical' )`                      | 保持部分原始结构，OR关键字合并          |
 
 ## 语法验证规则
 
@@ -167,22 +167,21 @@
 
 当前实现对复杂表达式采用简化逻辑，确保基本功能可用：
 
-| 限制类型           | 具体表现                                 | 示例                                     | 当前处理结果                                                                |
-| ------------------ | ---------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------- |
-| OR中关键字丢失     | 复杂表达式中只保留OR的第一个关键字       | `('error' \|\| 'warning') && 'critical'` | `message MATCH_ANY 'error' AND message MATCH_ANY 'critical'`                |
-| 多层AND部分优化    | 多个AND关键字的最后两个会合并为MATCH_ALL | `'user' && 'service' && 'critical'`      | `message MATCH_ANY 'user' AND message MATCH_ALL 'service critical'`         |
-| 嵌套表达式混合处理 | 深层嵌套保持部分原始结构，产生混合格式   | `(('error' \|\| 'warn') && 'critical')`  | `( (message MATCH_ANY 'error' OR message MATCH_ANY 'warn') && 'critical' )` |
+| 限制类型           | 具体表现                                 | 示例                                    | 当前处理结果                                                        |
+| ------------------ | ---------------------------------------- | --------------------------------------- | ------------------------------------------------------------------- |
+| 多层AND部分优化    | 多个AND关键字的最后两个会合并为MATCH_ALL | `'user' && 'service' && 'critical'`     | `message MATCH_ANY 'user' AND message MATCH_ALL 'service critical'` |
+| 嵌套表达式混合处理 | 深层嵌套保持部分原始结构，产生混合格式   | `(('error' \|\| 'warn') && 'critical')` | `( (message MATCH_ANY 'error warn') && 'critical' )`                |
 
 ### 2. 工作正常的功能
 
 以下功能完全按预期工作：
 
-| 功能类型      | 示例                 | 输出结果                                                                  | 状态 |
-| ------------- | -------------------- | ------------------------------------------------------------------------- | ---- |
-| 单关键字搜索  | `error`              | `message MATCH_ANY 'error'`                                               | ✓    |
-| 简单AND表达式 | `error && timeout`   | `message MATCH_ALL 'error timeout'`                                       | ✓    |
-| 简单OR表达式  | `error \|\| warning` | `message MATCH_ANY 'error' OR message MATCH_ANY 'warning'`                | ✓    |
-| 多项OR表达式  | `a \|\| b \|\| c`    | `message MATCH_ANY 'a' OR message MATCH_ANY 'b' OR message MATCH_ANY 'c'` | ✓    |
+| 功能类型      | 示例                 | 输出结果                            | 状态 |
+| ------------- | -------------------- | ----------------------------------- | ---- |
+| 单关键字搜索  | `error`              | `message MATCH_ANY 'error'`         | ✓    |
+| 简单AND表达式 | `error && timeout`   | `message MATCH_ALL 'error timeout'` | ✓    |
+| 简单OR表达式  | `error \|\| warning` | `message MATCH_ANY 'error warning'` | ✓    |
+| 多项OR表达式  | `a \|\| b \|\| c`    | `message MATCH_ANY 'a b c'`         | ✓    |
 
 ## 使用建议
 

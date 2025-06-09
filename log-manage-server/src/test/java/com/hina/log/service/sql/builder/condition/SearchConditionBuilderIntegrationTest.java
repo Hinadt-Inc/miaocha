@@ -316,7 +316,10 @@ public class SearchConditionBuilderIntegrationTest {
         assertTrue(result.contains("message MATCH_ANY 'error'"));
         assertTrue(result.contains("message MATCH_ANY 'warning critical'"));
         assertTrue(result.contains("message MATCH_ALL 'database timeout'"));
-        assertTrue(result.contains("message MATCH_")); // 复杂表达式的结果
+        assertTrue(
+                result.contains(
+                        "message MATCH_ANY 'service api' AND message MATCH_ANY"
+                                + " 'failed'")); // 复杂表达式的结果
         assertTrue(result.contains("(level IN ('ERROR', 'WARN'))"));
         assertTrue(result.contains("(duration > 5000)"));
 

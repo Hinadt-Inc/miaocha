@@ -170,9 +170,28 @@ public class KeywordExpressionParser {
         // 查找顶层 OR 操作符
         int orIndex = findTopLevelOperatorIndex(expression, " || ");
         if (orIndex != -1) {
-            String left = parseExpression(expression.substring(0, orIndex).trim());
-            String right = parseExpression(expression.substring(orIndex + 4).trim());
-            return left + " OR " + right;
+            // 对于OR表达式，我们需要收集所有的关键字到一个MATCH_ANY中
+            List<String> orTerms = splitByTopLevelOperator(expression, " || ");
+            List<String> keywords = new ArrayList<>();
+
+            for (String term : orTerms) {
+                String keyword = extractKeyword(term.trim());
+                if (!keyword.isEmpty()) {
+                    keywords.add(keyword);
+                }
+            }
+
+            if (keywords.size() == 1) {
+                return "message MATCH_ANY '" + keywords.get(0) + "'";
+            } else if (keywords.size() > 1) {
+                // 将所有OR关键字合并到一个MATCH_ANY中
+                return "message MATCH_ANY '" + String.join(" ", keywords) + "'";
+            } else {
+                // 如果没有提取到关键字，回退到原有逻辑
+                String left = parseExpression(expression.substring(0, orIndex).trim());
+                String right = parseExpression(expression.substring(orIndex + 4).trim());
+                return left + " OR " + right;
+            }
         }
 
         // 查找顶层 AND 操作符
@@ -260,6 +279,28 @@ public class KeywordExpressionParser {
             }
         }
         return -1;
+    }
+
+    /** 按照顶层操作符分割表达式 */
+    private static List<String> splitByTopLevelOperator(String expression, String operator) {
+        List<String> terms = new ArrayList<>();
+        int parenCount = 0;
+        int start = 0;
+
+        for (int i = 0; i < expression.length(); i++) {
+            char c = expression.charAt(i);
+            if (c == '(') {
+                parenCount++;
+            } else if (c == ')') {
+                parenCount--;
+            } else if (parenCount == 0 && expression.startsWith(operator, i)) {
+                terms.add(expression.substring(start, i).trim());
+                start = i + operator.length();
+                i += operator.length() - 1; // 跳过操作符
+            }
+        }
+        terms.add(expression.substring(start).trim());
+        return terms;
     }
 
     /** 解析单个项 */

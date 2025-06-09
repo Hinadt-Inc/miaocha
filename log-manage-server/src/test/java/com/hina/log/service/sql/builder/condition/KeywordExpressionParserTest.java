@@ -211,21 +211,18 @@ public class KeywordExpressionParserTest {
          */
         ParseResult result1 = KeywordExpressionParser.parse("'error' || 'warning'");
         assertTrue(result1.isSuccess());
-        assertEquals(
-                "message MATCH_ANY 'error' OR message MATCH_ANY 'warning'", result1.getResult());
+        assertEquals("message MATCH_ANY 'error warning'", result1.getResult());
 
         ParseResult result2 = KeywordExpressionParser.parse("timeout || failure");
         assertTrue(result2.isSuccess());
-        assertEquals(
-                "message MATCH_ANY 'timeout' OR message MATCH_ANY 'failure'", result2.getResult());
+        assertEquals("message MATCH_ANY 'timeout failure'", result2.getResult());
 
         ParseResult result3 =
                 KeywordExpressionParser.parse(
                         "'user service' || 'order service' || 'payment service'");
         assertTrue(result3.isSuccess());
         assertEquals(
-                "message MATCH_ANY 'user service' OR message MATCH_ANY 'order service' OR message"
-                        + " MATCH_ANY 'payment service'",
+                "message MATCH_ANY 'user service order service payment service'",
                 result3.getResult());
     }
 
@@ -255,20 +252,22 @@ public class KeywordExpressionParserTest {
         ParseResult result1 = KeywordExpressionParser.parse("('error' || 'warning') && 'critical'");
         assertTrue(result1.isSuccess());
         assertEquals(
-                "message MATCH_ANY 'error' AND message MATCH_ANY 'critical'", result1.getResult());
+                "message MATCH_ANY 'error warning' AND message MATCH_ANY 'critical'",
+                result1.getResult());
 
         ParseResult result2 =
                 KeywordExpressionParser.parse("'database' && ('timeout' || 'connection')");
         assertTrue(result2.isSuccess());
         assertEquals(
-                "message MATCH_ANY 'database' AND message MATCH_ANY 'timeout'",
+                "message MATCH_ANY 'database' AND message MATCH_ANY 'timeout connection'",
                 result2.getResult());
 
         ParseResult result3 =
                 KeywordExpressionParser.parse("('user' || 'order') && ('service' || 'api')");
         assertTrue(result3.isSuccess());
         assertEquals(
-                "message MATCH_ANY 'user' AND message MATCH_ANY 'service'", result3.getResult());
+                "message MATCH_ANY 'user order' AND message MATCH_ANY 'service api'",
+                result3.getResult());
     }
 
     @Test
@@ -277,16 +276,12 @@ public class KeywordExpressionParserTest {
         /** 测试目标：两层嵌套的表达式应该正确解析 输入：两层嵌套的复杂表达式 预期：生成正确的SQL条件 */
         ParseResult result1 = KeywordExpressionParser.parse("(('error' || 'warn') && 'critical')");
         assertTrue(result1.isSuccess());
-        assertEquals(
-                "( (message MATCH_ANY 'error' OR message MATCH_ANY 'warn') && 'critical' )",
-                result1.getResult());
+        assertEquals("( (message MATCH_ANY 'error warn') && 'critical' )", result1.getResult());
 
         ParseResult result2 =
                 KeywordExpressionParser.parse("('service' && ('timeout' || 'error'))");
         assertTrue(result2.isSuccess());
-        assertEquals(
-                "( 'service' && (message MATCH_ANY 'timeout' OR message MATCH_ANY 'error') )",
-                result2.getResult());
+        assertEquals("( 'service' && (message MATCH_ANY 'timeout error') )", result2.getResult());
     }
 
     // ==================== 边界情况测试 ====================
