@@ -15,7 +15,7 @@ interface IProps {
 const HistogramChart = (props: IProps) => {
   const { data, searchParams, onSearch } = props;
   const { distributionData, timeUnit } = data || {};
-  const [dataZoom, setDataZoom] = useState<number[]>([0, 100]);
+  // const [dataZoom, setDataZoom] = useState<number[]>([0, 100]);
   const { timeGrouping = 'auto', startTime = '', endTime = '' } = searchParams;
   const chartRef = useRef<any>(null);
 
@@ -28,7 +28,7 @@ const HistogramChart = (props: IProps) => {
       labels.push(item.timePoint?.replace('T', ' '));
       values.push(item.count);
     });
-    setDataZoom([0, 100]);
+    // setDataZoom([0, 100]);
     return {
       values,
       labels,
@@ -37,8 +37,23 @@ const HistogramChart = (props: IProps) => {
   }, [distributionData]);
 
   // 构建图表选项
-  const option = useMemo<EChartsOption>(
-    () => ({
+  const option = useMemo<EChartsOption>(() => {
+    const dataCount = distributionData?.length || 0;
+    let barWidth;
+    if (dataCount === 1) {
+      barWidth = '5%';
+    } else if (dataCount === 2) {
+      barWidth = '10%';
+    } else if (dataCount <= 10) {
+      barWidth = '30%';
+    } else if (dataCount <= 15) {
+      barWidth = '60%';
+    } else if (dataCount <= 31) {
+      barWidth = '80%';
+    } else {
+      barWidth = '90%';
+    }
+    return {
       // dataZoom: [
       //   {
       //     type: 'inside', // 鼠标在坐标系范围内滚轮滚动
@@ -121,7 +136,7 @@ const HistogramChart = (props: IProps) => {
       grid: {
         top: '5%', // 距离容器上边距
         right: '2%', // 距离容器右边距
-        bottom: '0%', // 距离容器下边距，为时间轴留出空间
+        bottom: '7%', // 距离容器下边距，为时间轴留出空间
         left: '2%', // 距离容器左边距
         containLabel: true, // 是否包含坐标轴的标签
       },
@@ -143,7 +158,7 @@ const HistogramChart = (props: IProps) => {
             const overOneDay = isOverOneDay(startTime, endTime);
             // 时间分组显示
             switch (timeGrouping) {
-              // value: 2 0 2 5 - 0 5 - 1 5    0   0 :  0  0   :  0  0
+              // value: 2 0 2 5 - 0 5 - 1 5    0  0  :  0  0  :  0  0
               //        0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19
               case 'minute':
                 return value.substring(overOneDay ? 0 : 11, 16); // 显示时分
@@ -184,10 +199,10 @@ const HistogramChart = (props: IProps) => {
           type: 'bar', // 图表类型：柱状图
           data: aggregatedData.values, // 数据数组
           large: true, // 开启大数据量优化
-          barWidth: '20%', // 柱条宽度，相对于类目宽度的百分比
+          barWidth: barWidth, // 柱条宽度，动态计算
           itemStyle: {
             color: colorPrimary, // 柱状图填充颜色
-            borderRadius: [4, 4, 0, 0], // 柱状图圆角，[左上, 右上, 右下, 左下]
+            borderRadius: [3, 3, 0, 0], // 柱状图圆角，[左上, 右上, 右下, 左下]
           },
           emphasis: {
             itemStyle: {
@@ -198,9 +213,8 @@ const HistogramChart = (props: IProps) => {
           },
         },
       ],
-    }),
-    [distributionData, dataZoom],
-  );
+    };
+  }, [distributionData, timeGrouping, startTime, endTime]);
 
   // 如果没有数据或显示标志为false，则不显示图表
   if (!distributionData || distributionData?.length === 0) {
@@ -247,31 +261,31 @@ const HistogramChart = (props: IProps) => {
             onSearch(newParams);
           }
         },
-        mousemove: (params: { componentType: string }) => {
-          if (!chartRef.current) return;
+        // mousemove: (params: { componentType: string }) => {
+        //   if (!chartRef.current) return;
 
-          if (params.componentType === 'series') {
-            // 鼠标在柱子上，禁用 brush，启用点击
-            chartRef.current.dispatchAction({
-              type: 'takeGlobalCursor',
-              key: 'default',
-              cursor: 'pointer',
-            });
-          }
-        },
-        mouseout: () => {
-          if (!chartRef.current) return;
+        //   if (params.componentType === 'series') {
+        //     // 鼠标在柱子上，禁用 brush，启用点击
+        //     chartRef.current.dispatchAction({
+        //       type: 'takeGlobalCursor',
+        //       key: 'default',
+        //       cursor: 'pointer',
+        //     });
+        //   }
+        // },
+        // mouseout: () => {
+        //   if (!chartRef.current) return;
 
-          // 鼠标离开任何区域时，恢复横向选择模式
-          chartRef.current.dispatchAction({
-            type: 'takeGlobalCursor',
-            key: 'brush',
-            brushOption: {
-              brushType: 'lineX',
-              brushMode: 'single',
-            },
-          });
-        },
+        //   // 鼠标离开任何区域时，恢复横向选择模式
+        //   chartRef.current.dispatchAction({
+        //     type: 'takeGlobalCursor',
+        //     key: 'brush',
+        //     brushOption: {
+        //       brushType: 'lineX',
+        //       brushMode: 'single',
+        //     },
+        //   });
+        // },
       }}
       onChartReady={(chart) => {
         chartRef.current = chart;
