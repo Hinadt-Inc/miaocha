@@ -1,0 +1,20 @@
+____  _____  ____  ______  ______
+  /    \/     \/    \/      \/      \
+ /_______/_____/_______/\      \      \
+ |  ***  |  ***  |  ***  |  ***  |  ***  |
+ |  ***  |  ***  |  ***  |  ***  |  ***  |
+ |_______|_______|_______|_______|_______|
+
+   ____  __  __  ____  ______
+  /    \/  \/  \/    \/      \
+ /_______/\  /\_______/\      \
+ |  ***  |  ||  |  ***  |  ***  |
+ |  ***  |  ||  |  ***  |  ***  |
+ |_______|__||__|_______|_______|
+
+${AnsiColor.MAGENTA}=== 秒查 v${spring.application.version} ===${AnsiColor.DEFAULT}
+
+${AnsiColor.BLUE}:: Spring Boot ::${AnsiColor.DEFAULT}                ${spring-boot.formatted-version}
+${AnsiColor.GREEN}:: Active Profile ::${AnsiColor.DEFAULT}            ${spring.profiles.active:default}
+${AnsiColor.CYAN}:: Application Name ::${AnsiColor.DEFAULT}          ${spring.application.name:log-manage-system}
+${AnsiColor.YELLOW}:: Server Port ::${AnsiColor.DEFAULT}              ${server.port:8080}

@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.hinadt.miaocha</groupId>
+        <artifactId>miaocha</artifactId>
+        <version>2.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>miaocha-assembly</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <!-- 依赖于服务器和UI模块 -->
+        <dependency>
+            <groupId>com.hinadt.miaocha</groupId>
+            <artifactId>miaocha-server</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!--
+        <dependency>
+            <groupId>com.hinadt.miaocha</groupId>
+            <artifactId>miaocha-ui</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        -->
+    </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <filtering>true</filtering>
+                <directory>src/main/resources</directory>
+                <includes>
+                    <include>version.txt</include>
+                    <include>banner.txt</include>
+                    <include>README.md</include>
+                    <include>RESOURCES.md</include>
+                </includes>
+            </resource>
+        </resources>
+        <plugins>
+
+            <!-- Clean up duplicate configuration files -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>warn-about-duplicate-configs</id>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <phase>validate</phase>
+                        <configuration>
+                            <target>
+                                <echo>NOTICE: Configuration files should be maintained only in
+                                    log-manage-server/src/main/resources.</echo>
+                                <echo>The assembly module will automatically use those configurations.</echo>
+                                <echo>See log-manage-assembly/src/main/resources/RESOURCES.md for details.</echo>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.7.1</version>
+                <configuration>
+                    <descriptors>
+                        <descriptor>src/assembly/assembly.xml</descriptor>
+                    </descriptors>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <phase>package</phase>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Add a comment to remind developers about resource management -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>filter-resources</id>
+                        <goals>
+                            <goal>resources</goal>
+                        </goals>
+                        <phase>process-resources</phase>
+                        <configuration>
+                            <nonFilteredFileExtensions>
+                                <nonFilteredFileExtension>ttf</nonFilteredFileExtension>
+                                <nonFilteredFileExtension>woff</nonFilteredFileExtension>
+                                <nonFilteredFileExtension>woff2</nonFilteredFileExtension>
+                            </nonFilteredFileExtensions>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <!-- Add a profile for developers to clean unnecessary resource files -->
+    <profiles>
+        <profile>
+            <id>clean-resources</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>3.1.0</version>
+                        <executions>
+                            <execution>
+                                <id>clean-duplicate-resources</id>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <phase>clean</phase>
+                                <configuration>
+                                    <target>
+                                        <echo>Removing duplicate configuration files from assembly module...</echo>
+                                        <delete>
+                                            <fileset dir="${project.basedir}/src/main/resources" excludes="version.txt,banner.txt,README.md" includes="*.yml,*.xml,*.properties"></fileset>
+                                        </delete>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hinadt.miaocha.domain.mapper.UserModulePermissionMapper">
+
+    <!-- 用户模块权限表所有字段 -->
+    <sql id="userModulePermissionColumns">
+        id, user_id, datasource_id, module, create_time, update_time
+    </sql>
+
+    <!-- 插入用户模块权限 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_module_permission (user_id, datasource_id, module, create_time, update_time)
+        VALUES (#{userId}, #{datasourceId}, #{module}, NOW(), NOW())
+    </insert>
+
+    <!-- 删除用户模块权限 -->
+    <delete id="delete">
+        DELETE FROM user_module_permission WHERE user_id = #{userId} AND datasource_id = #{datasourceId} AND module =
+        #{module}
+    </delete>
+
+    <!-- 查询用户模块权限 -->
+    <select id="select" resultType="com.hinadt.miaocha.domain.entity.UserModulePermission">
+        SELECT
+        <include refid="userModulePermissionColumns"/>
+        FROM user_module_permission WHERE user_id = #{userId} AND datasource_id = #{datasourceId} AND module = #{module}
+    </select>
+
+    <!-- 查询用户在指定数据源的所有模块权限 -->
+    <select id="selectByUserAndDatasource" resultType="com.hinadt.miaocha.domain.entity.UserModulePermission">
+        SELECT
+        <include refid="userModulePermissionColumns"/>
+        FROM user_module_permission WHERE user_id = #{userId} AND datasource_id = #{datasourceId}
+    </select>
+
+    <!-- 查询用户的所有模块权限 -->
+    <select id="selectByUser" resultType="com.hinadt.miaocha.domain.entity.UserModulePermission">
+        SELECT
+        <include refid="userModulePermissionColumns"/>
+        FROM user_module_permission WHERE user_id = #{userId}
+    </select>
+
+    <!-- 查询所有用户的模块权限 -->
+    <select id="selectAll" resultType="com.hinadt.miaocha.domain.entity.UserModulePermission">
+        SELECT
+        <include refid="userModulePermissionColumns"/>
+        FROM user_module_permission
+    </select>
+
+
+</mapper>

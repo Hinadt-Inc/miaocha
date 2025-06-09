@@ -3,17 +3,17 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.hina</groupId>
-    <artifactId>log-manage-system</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <groupId>com.hinadt.miaocha</groupId>
+    <artifactId>miaocha</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>log-manage-system</name>
+    <name>miaocha</name>
     <url>http://www.example.com</url>
     <modules>
-        <module>log-manage-server</module>
-        <!-- <module>log-manage-ui</module> -->
-        <module>log-manage-assembly</module>
+        <module>miaocha-server</module>
+        <!-- <module>miaocha-ui</module> -->
+        <module>miaocha-assembly</module>
     </modules>
 
     <properties>
@@ -253,11 +253,11 @@
                                 <reflowLongStrings>true</reflowLongStrings>
                             </googleJavaFormat>
                             <!-- Import organization -->
-                            <importOrder />
+                            <importOrder/>
                             <!-- Remove unused imports -->
-                            <removeUnusedImports />
+                            <removeUnusedImports/>
                             <!-- Format annotations -->
-                            <formatAnnotations />
+                            <formatAnnotations/>
                         </java>
 
                         <!-- XML files formatting (including pom.xml) -->
@@ -299,7 +299,7 @@
                             <includes>
                                 <include>**/*.md</include>
                             </includes>
-                            <flexmark />
+                            <flexmark/>
                         </markdown>
                     </configuration>
                     <executions>

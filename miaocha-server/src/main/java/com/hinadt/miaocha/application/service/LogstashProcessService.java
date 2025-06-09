@@ -1,0 +1,172 @@
+package com.hinadt.miaocha.application.service;
+
+import com.hinadt.miaocha.domain.dto.logstash.LogstashMachineDetailDTO;
+import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessConfigUpdateRequestDTO;
+import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessCreateDTO;
+import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessResponseDTO;
+import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessScaleRequestDTO;
+import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessUpdateDTO;
+import java.util.List;
+
+/** Logstash进程管理服务接口 */
+public interface LogstashProcessService {
+
+    /**
+     * 创建Logstash进程 创建后会自动初始化对应的LogstashMachine实例 如果jvmOptions或logstashYml为空，将在初始化后异步同步这些配置
+     *
+     * @param dto Logstash进程创建DTO
+     * @return 创建的Logstash进程信息
+     */
+    LogstashProcessResponseDTO createLogstashProcess(LogstashProcessCreateDTO dto);
+
+    /**
+     * 更新Logstash进程元信息 只能更新name和module字段，module需要校验唯一性
+     *
+     * @param id Logstash进程ID
+     * @param dto 更新请求DTO
+     * @return 更新后的Logstash进程信息
+     */
+    LogstashProcessResponseDTO updateLogstashProcessMetadata(Long id, LogstashProcessUpdateDTO dto);
+
+    /**
+     * 更新Logstash配置 支持同时更新主配置、JVM配置、系统配置中的任意组合 可以针对全部机器或指定机器
+     *
+     * @param id Logstash进程ID
+     * @param dto 配置更新请求DTO
+     * @return 更新后的Logstash进程信息
+     */
+    LogstashProcessResponseDTO updateLogstashConfig(
+            Long id, LogstashProcessConfigUpdateRequestDTO dto);
+
+    /**
+     * 手动刷新Logstash配置到目标机器 将数据库中的配置刷新到目标机器（不更改配置内容） 可以指定要刷新的机器ID，若不指定则刷新所有机器
+     *
+     * @param id Logstash进程ID
+     * @param dto 配置刷新请求DTO，其中machineIds可指定要刷新的机器
+     * @return 刷新后的Logstash进程信息
+     */
+    LogstashProcessResponseDTO refreshLogstashConfig(
+            Long id, LogstashProcessConfigUpdateRequestDTO dto);
+
+    /**
+     * 删除Logstash进程
+     *
+     * @param id Logstash进程ID
+     */
+    void deleteLogstashProcess(Long id);
+
+    /**
+     * 获取Logstash进程信息
+     *
+     * @param id Logstash进程ID
+     * @return Logstash进程信息
+     */
+    LogstashProcessResponseDTO getLogstashProcess(Long id);
+
+    /**
+     * 获取所有Logstash进程
+     *
+     * @return Logstash进程列表
+     */
+    List<LogstashProcessResponseDTO> getAllLogstashProcesses();
+
+    /**
+     * 启动Logstash进程 - 全局操作 启动所有关联机器上的Logstash实例
+     *
+     * @param id Logstash进程ID
+     * @return 启动后的Logstash进程信息
+     */
+    LogstashProcessResponseDTO startLogstashProcess(Long id);
+
+    /**
+     * 启动单台机器上的Logstash进程
+     *
+     * @param id Logstash进程ID
+     * @param machineId 机器ID
+     * @return 启动后的Logstash进程信息
+     */
+    LogstashProcessResponseDTO startMachineProcess(Long id, Long machineId);
+
+    /**
+     * 停止Logstash进程 - 全局操作 停止所有关联机器上的Logstash实例
+     *
+     * @param id Logstash进程ID
+     * @return 停止后的Logstash进程信息
+     */
+    LogstashProcessResponseDTO stopLogstashProcess(Long id);
+
+    /**
+     * 停止单台机器上的Logstash进程
+     *
+     * @param id Logstash进程ID
+     * @param machineId 机器ID
+     * @return 停止后的Logstash进程信息
+     */
+    LogstashProcessResponseDTO stopMachineProcess(Long id, Long machineId);
+
+    /**
+     * 在数据源上执行Doris SQL，并保存到进程的dorisSql字段 只有当所有机器实例都处于未启动状态时才能执行 每个进程只能执行一次
+     *
+     * @param id Logstash进程ID
+     * @param sql 要执行的SQL语句
+     * @return 更新后的进程信息
+     */
+    LogstashProcessResponseDTO executeDorisSql(Long id, String sql);
+
+    /**
+     * 更新单个机器的Logstash配置
+     *
+     * @param id 进程ID
+     * @param machineId 机器ID
+     * @param configContent Logstash主配置内容
+     * @param jvmOptions JVM选项
+     * @param logstashYml Logstash系统配置内容
+     * @return 更新后的进程信息
+     */
+    LogstashProcessResponseDTO updateSingleMachineConfig(
+            Long id, Long machineId, String configContent, String jvmOptions, String logstashYml);
+
+    /**
+     * 重新初始化Logstash机器 只有当机器状态为初始化失败时才允许重新初始化
+     *
+     * @param id 进程ID
+     * @param machineId 机器ID（可选，如果为null则重新初始化所有初始化失败的机器）
+     * @return 重新初始化后的进程信息
+     */
+    LogstashProcessResponseDTO reinitializeLogstashMachine(Long id, Long machineId);
+
+    /**
+     * 获取单个LogstashMachine在特定机器上的详细信息
+     *
+     * @param id Logstash进程ID
+     * @param machineId 机器ID
+     * @return LogstashMachine详细信息
+     */
+    LogstashMachineDetailDTO getLogstashMachineDetail(Long id, Long machineId);
+
+    /**
+     * Logstash进程扩容/缩容操作 扩容：将新机器添加到现有的Logstash进程中，并进行初始化 缩容：从Logstash进程中移除指定机器，并清理相关资源
+     *
+     * @param id Logstash进程ID
+     * @param dto 扩容/缩容请求DTO
+     * @return 扩容/缩容后的进程信息
+     */
+    LogstashProcessResponseDTO scaleLogstashProcess(Long id, LogstashProcessScaleRequestDTO dto);
+
+    /**
+     * 强制停止Logstash进程 - 全局操作 应急停止功能：执行原有的停止逻辑，但无论命令成功与否，都强制将状态更改为未启动 用于应急情况下确保进程状态的一致性
+     *
+     * @param id Logstash进程ID
+     * @return 强制停止后的Logstash进程信息
+     */
+    LogstashProcessResponseDTO forceStopLogstashProcess(Long id);
+
+    /**
+     * 强制停止单台机器上的Logstash进程 应急停止功能：执行原有的停止逻辑，但无论命令成功与否，都强制将状态更改为未启动 用于应急情况下确保进程状态的一致性
+     *
+     * @param id Logstash进程ID
+     * @param machineId 机器ID
+     * @return 强制停止后的Logstash进程信息
+     */
+    LogstashProcessResponseDTO forceStopMachineProcess(Long id, Long machineId);
+}

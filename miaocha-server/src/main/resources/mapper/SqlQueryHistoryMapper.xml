@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hinadt.miaocha.domain.mapper.SqlQueryHistoryMapper">
+
+    <!-- SQL查询历史表所有字段 -->
+    <sql id="sqlQueryHistoryColumns">
+        id, user_id, datasource_id, table_name, sql_query, result_file_path, create_time
+    </sql>
+
+    <!-- 插入SQL查询历史 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sql_query_history (user_id, datasource_id, table_name, sql_query, result_file_path, create_time)
+        VALUES (#{userId}, #{datasourceId}, #{tableName}, #{sqlQuery}, #{resultFilePath}, NOW())
+    </insert>
+
+    <!-- 根据ID查询 -->
+    <select id="selectById" resultType="com.hinadt.miaocha.domain.entity.SqlQueryHistory">
+        SELECT
+        <include refid="sqlQueryHistoryColumns"/>
+        FROM sql_query_history WHERE id=#{id}
+    </select>
+
+    <!-- 查询用户最近的查询记录 -->
+    <select id="selectRecentByUserId" resultType="com.hinadt.miaocha.domain.entity.SqlQueryHistory">
+        SELECT
+        <include refid="sqlQueryHistoryColumns"/>
+        FROM sql_query_history WHERE user_id=#{userId} ORDER BY create_time DESC LIMIT #{limit}
+    </select>
+
+    <!-- 更新查询结果文件路径 -->
+    <update id="update">
+        UPDATE sql_query_history SET result_file_path=#{resultFilePath} WHERE id=#{id}
+    </update>
+
+    <!-- 分页查询SQL历史记录 -->
+    <select id="selectByPage" resultType="com.hinadt.miaocha.domain.entity.SqlQueryHistory">
+        SELECT
+        <include refid="sqlQueryHistoryColumns"/>
+        FROM sql_query_history
+        WHERE user_id=#{userId}
+        <if test="datasourceId != null">
+            AND datasource_id=#{datasourceId}
+        </if>
+        <if test="tableName != null and tableName != ''">
+            AND table_name LIKE CONCAT('%', #{tableName}, '%')
+        </if>
+        <if test="queryKeyword != null and queryKeyword != ''">
+            AND sql_query LIKE CONCAT('%', #{queryKeyword}, '%')
+        </if>
+        ORDER BY create_time DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 查询符合条件的记录总数 -->
+    <select id="countTotal" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM sql_query_history
+        WHERE user_id=#{userId}
+        <if test="datasourceId != null">
+            AND datasource_id=#{datasourceId}
+        </if>
+        <if test="tableName != null and tableName != ''">
+            AND table_name LIKE CONCAT('%', #{tableName}, '%')
+        </if>
+        <if test="queryKeyword != null and queryKeyword != ''">
+            AND sql_query LIKE CONCAT('%', #{queryKeyword}, '%')
+        </if>
+    </select>
+
+</mapper>
