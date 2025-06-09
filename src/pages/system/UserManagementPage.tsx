@@ -13,21 +13,11 @@ import {
   Popconfirm,
   message,
   Avatar,
-  Card,
   Row,
   Col,
   Breadcrumb,
 } from 'antd';
-import {
-  SearchOutlined,
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  UserOutlined,
-  ReloadOutlined,
-  HomeOutlined,
-  KeyOutlined,
-} from '@ant-design/icons';
+import { SearchOutlined, PlusOutlined, UserOutlined, ReloadOutlined, HomeOutlined } from '@ant-design/icons';
 import type { AxiosRequestConfig } from 'axios';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';

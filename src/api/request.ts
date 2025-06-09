@@ -108,43 +108,12 @@ service.interceptors.response.use(
       } catch (err) {
         // 刷新token失败，跳转到登录页
         retryQueue = [];
-        debugger;
         window.location.href = '/login';
         return Promise.reject(err);
       } finally {
         isRefreshing = false;
       }
     } else {
-      // 处理其他HTTP错误
-
-      switch (status) {
-        case 400:
-          errorMessage = '请求参数错误';
-          break;
-        case 403:
-          errorMessage = '无权限访问该资源';
-          break;
-        case 404:
-          errorMessage = '请求的资源不存在';
-          break;
-        case 408:
-          errorMessage = '请求超时';
-          break;
-        case 500:
-          errorMessage = '服务器内部错误';
-          break;
-        case 502:
-          errorMessage = '网关错误';
-          break;
-        case 503:
-          errorMessage = '服务不可用';
-          break;
-        case 504:
-          errorMessage = '网关超时';
-          break;
-        default:
-          errorMessage = errorMessage;
-      }
       window.dispatchEvent(
         new CustomEvent('unhandledrejection', {
           detail: {

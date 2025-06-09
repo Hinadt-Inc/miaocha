@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Table, Button, Space, Input, Select, Breadcrumb, Modal } from 'antd';
+import { Table, Button, Space, Input, Select, Breadcrumb, Modal } from 'antd';
 import { App } from 'antd';
 import { getUsers } from '../../api/user';
 import type { ColumnsType } from 'antd/es/table';

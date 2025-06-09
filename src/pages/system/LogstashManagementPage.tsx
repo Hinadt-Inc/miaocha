@@ -1,17 +1,5 @@
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  PlayCircleOutlined,
-  StopOutlined,
-  SyncOutlined,
-  HistoryOutlined,
-  InfoCircleOutlined,
-  CodeOutlined,
-  SettingOutlined,
-  HomeOutlined,
-} from '@ant-design/icons';
-import { Button, message, Popconfirm, Space, Table, Breadcrumb, Modal, Progress, Tag, Descriptions, Card } from 'antd';
+import { PlusOutlined, SyncOutlined, InfoCircleOutlined, HomeOutlined } from '@ant-design/icons';
+import { Button, message, Popconfirm, Space, Table, Breadcrumb, Modal, Progress, Tag, Descriptions } from 'antd';
 import styles from './LogstashManagementPage.module.less';
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -28,7 +16,6 @@ import {
   stopLogstashProcess,
   executeLogstashSQL,
   updateLogstashConfig,
-  getLogstashTaskStatus,
   getLogstashTaskSummaries,
   getMachineTasks,
   reinitializeFailedMachines,
@@ -184,34 +171,6 @@ function LogstashManagementPage() {
       await startLogstashProcess(id);
       messageApi.success('启动命令已发送');
       await fetchData();
-
-      const pollInterval = 2000;
-      let pollTimer: NodeJS.Timeout;
-
-      const pollStatus = async () => {
-        try {
-          const status = await getLogstashTaskStatus(id);
-          if (status.status === 'COMPLETED') {
-            messageApi.success('所有机器启动完成');
-            await fetchData();
-            clearTimeout(pollTimer);
-            return;
-          }
-          if (status.status === 'FAILED') {
-            messageApi.error('部分机器启动失败');
-            await fetchData();
-            clearTimeout(pollTimer);
-            return;
-          }
-          messageApi.info(`启动中: ${status.progressPercentage}%`);
-          pollTimer = setTimeout(pollStatus, pollInterval);
-        } catch (err) {
-          messageApi.error('获取任务状态失败');
-          clearTimeout(pollTimer);
-        }
-      };
-
-      pollTimer = setTimeout(pollStatus, pollInterval);
     } catch (err) {
       messageApi.error('启动失败');
       console.error('启动Logstash进程失败:', err);
@@ -315,34 +274,6 @@ function LogstashManagementPage() {
       await stopLogstashProcess(id);
       messageApi.success('停止命令已发送');
       await fetchData();
-
-      const pollInterval = 2000;
-      let pollTimer: NodeJS.Timeout;
-
-      const pollStatus = async () => {
-        try {
-          const status = await getLogstashTaskStatus(id);
-          if (status.status === 'COMPLETED') {
-            messageApi.success('所有机器停止完成');
-            await fetchData();
-            clearTimeout(pollTimer);
-            return;
-          }
-          if (status.status === 'FAILED') {
-            messageApi.error('部分机器停止失败');
-            await fetchData();
-            clearTimeout(pollTimer);
-            return;
-          }
-          messageApi.info(`停止中: ${status.progressPercentage}%`);
-          pollTimer = setTimeout(pollStatus, pollInterval);
-        } catch (err) {
-          messageApi.error('获取任务状态失败');
-          clearTimeout(pollTimer);
-        }
-      };
-
-      pollTimer = setTimeout(pollStatus, pollInterval);
     } catch (err) {
       messageApi.error('停止失败');
       console.error('停止Logstash进程失败:', err);
