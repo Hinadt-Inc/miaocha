@@ -8,12 +8,12 @@
 
 ### 1. 核心组件
 
-| 组件                              | 职责                               | 优先级     |
-| --------------------------------- | ---------------------------------- | ---------- |
+|                组件                 |        职责         |  优先级   |
+|-----------------------------------|-------------------|--------|
 | `KeywordComplexExpressionBuilder` | 处理复杂表达式（包含括号、运算符） | 10（最高） |
-| `KeywordMatchAllConditionBuilder` | 处理简单AND表达式                  | 20         |
-| `KeywordMatchAnyConditionBuilder` | 处理简单关键字搜索                 | 20         |
-| `WhereSqlConditionBuilder`        | 处理WHERE条件                      | 30（最低） |
+| `KeywordMatchAllConditionBuilder` | 处理简单AND表达式        | 20     |
+| `KeywordMatchAnyConditionBuilder` | 处理简单关键字搜索         | 20     |
+| `WhereSqlConditionBuilder`        | 处理WHERE条件         | 30（最低） |
 
 ### 2. 处理流程
 
@@ -25,131 +25,131 @@
 
 ### 1. 基础规则表格
 
-| 输入类型           | 示例输入                                 | 处理组件                        | SQL 输出                                                     | 说明                           |
-| ------------------ | ---------------------------------------- | ------------------------------- | ------------------------------------------------------------ | ------------------------------ |
-| **单个关键字**     | `error`                                  | KeywordMatchAnyConditionBuilder | `message MATCH_ANY 'error'`                                  | 简单关键字搜索                 |
-| **带引号关键字**   | `'timeout'`                              | KeywordMatchAnyConditionBuilder | `message MATCH_ANY 'timeout'`                                | 包含特殊字符的关键字           |
-| **多词关键字**     | `'database connection'`                  | KeywordMatchAnyConditionBuilder | `message MATCH_ANY 'database connection'`                    | 短语搜索                       |
-| **简单AND表达式**  | `error && timeout`                       | KeywordMatchAllConditionBuilder | `message MATCH_ALL 'error timeout'`                          | 所有关键字都必须存在           |
-| **简单OR表达式**   | `error \|\| warning`                     | KeywordComplexExpressionBuilder | `message MATCH_ANY 'error warning'`                          | 任一关键字存在即可             |
-| **复杂括号表达式** | `('error' \|\| 'warning') && 'critical'` | KeywordComplexExpressionBuilder | `message MATCH_ANY 'error' AND message MATCH_ANY 'critical'` | 简化处理：只取OR中第一个关键字 |
+|     输入类型     |                   示例输入                   |              处理组件               |                                SQL 输出                                |      说明       |
+|--------------|------------------------------------------|---------------------------------|----------------------------------------------------------------------|---------------|
+| **单个关键字**    | `error`                                  | KeywordMatchAnyConditionBuilder | `message MATCH_ANY 'error'`                                          | 简单关键字搜索       |
+| **带引号关键字**   | `'timeout'`                              | KeywordMatchAnyConditionBuilder | `message MATCH_ANY 'timeout'`                                        | 包含特殊字符的关键字    |
+| **多词关键字**    | `'database connection'`                  | KeywordMatchAnyConditionBuilder | `message MATCH_ANY 'database connection'`                            | 短语搜索          |
+| **简单AND表达式** | `error && timeout`                       | KeywordMatchAllConditionBuilder | `message MATCH_ALL 'error timeout'`                                  | 所有关键字都必须存在    |
+| **简单OR表达式**  | `error \|\| warning`                     | KeywordComplexExpressionBuilder | `message MATCH_ANY 'error warning'`                                  | 任一关键字存在即可     |
+| **复杂括号表达式**  | `('error' \|\| 'warning') && 'critical'` | KeywordComplexExpressionBuilder | `message MATCH_ANY 'error warning' AND message MATCH_ANY 'critical'` | OR关键字合并，AND连接 |
 
 ### 2. 详细产出规则
 
 #### 2.1 关键字规则
 
-| 关键字格式   | 示例               | 提取结果         | 备注               |
-| ------------ | ------------------ | ---------------- | ------------------ |
-| 无引号单词   | `error`            | `error`          | 直接使用           |
-| 带引号字符串 | `'database error'` | `database error` | 去除引号，保留内容 |
-| 空字符串     | `''`               | `(空)`           | 返回空结果         |
-| 中文关键字   | `'错误日志'`       | `错误日志`       | 支持Unicode字符    |
+| 关键字格式  |         示例         |       提取结果       |     备注      |
+|--------|--------------------|------------------|-------------|
+| 无引号单词  | `error`            | `error`          | 直接使用        |
+| 带引号字符串 | `'database error'` | `database error` | 去除引号，保留内容   |
+| 空字符串   | `''`               | `(空)`            | 返回空结果       |
+| 中文关键字  | `'错误日志'`           | `错误日志`           | 支持Unicode字符 |
 
 #### 2.2 运算符优先级
 
-| 优先级    | 运算符    | 说明           | 示例                    |
-| --------- | --------- | -------------- | ----------------------- |
-| 1（最高） | `()` 括号 | 改变运算优先级 | `('a' \|\| 'b') && 'c'` |
-| 2         | `&&` AND  | 逻辑与运算     | `'a' && 'b'`            |
-| 3（最低） | `\|\|` OR | 逻辑或运算     | `'a' \|\| 'b'`          |
+|  优先级  |    运算符    |   说明    |           示例            |
+|-------|-----------|---------|-------------------------|
+| 1（最高） | `()` 括号   | 改变运算优先级 | `('a' \|\| 'b') && 'c'` |
+| 2     | `&&` AND  | 逻辑与运算   | `'a' && 'b'`            |
+| 3（最低） | `\|\|` OR | 逻辑或运算   | `'a' \|\| 'b'`          |
 
 #### 2.3 Doris SQL 函数映射
 
-| 逻辑操作     | Doris 函数                | 参数格式              | 用途                         |
-| ------------ | ------------------------- | --------------------- | ---------------------------- |
-| 单关键字搜索 | `MATCH_ANY`               | `'keyword'`           | 检查消息中是否包含关键字     |
-| 多关键字AND  | `MATCH_ALL`               | `'keyword1 keyword2'` | 检查消息中是否包含所有关键字 |
-| 多关键字OR   | 多个`MATCH_ANY`用`OR`连接 | 各自独立条件          | 检查消息中是否包含任一关键字 |
+|  逻辑操作   |       Doris 函数       |         参数格式          |       用途       |
+|---------|----------------------|-----------------------|----------------|
+| 单关键字搜索  | `MATCH_ANY`          | `'keyword'`           | 检查消息中是否包含关键字   |
+| 多关键字AND | `MATCH_ALL`          | `'keyword1 keyword2'` | 检查消息中是否包含所有关键字 |
+| 多关键字OR  | 多个`MATCH_ANY`用`OR`连接 | 各自独立条件                | 检查消息中是否包含任一关键字 |
 
 ## 复杂表达式解析示例
 
 ### 1. 递归解析流程
 
-| 步骤 | 输入                                       | 处理动作                   | 中间结果                                                     |
-| ---- | ------------------------------------------ | -------------------------- | ------------------------------------------------------------ |
-| 1    | `('error' \|\| 'warning') && 'critical'`   | 识别为复杂表达式           | 进入KeywordComplexExpressionBuilder                          |
-| 2    | `('error' \|\| 'warning') && 'critical'`   | 规范化空格                 | `( 'error' \|\| 'warning' ) && 'critical'`                   |
-| 3    | `( 'error' \|\| 'warning' ) && 'critical'` | 解析括号内容               | 括号内:`'error' \|\| 'warning'`                              |
-| 4    | `'error' \|\| 'warning'`                   | 递归解析OR表达式           | `message MATCH_ANY 'error' OR message MATCH_ANY 'warning'`   |
-| 5    | 替换括号内容后                             | 查找顶层AND运算符          | 左:`(...)` 右:`'critical'`                                   |
-| 6    | 检查是否为简单表达式                       | 左边包含OR，不是简单表达式 | 无法合并为MATCH_ALL                                          |
-| 7    | 提取关键字（简化逻辑）                     | 只提取第一个关键字         | `error` 和 `critical`                                        |
-| 8    | 生成最终SQL                                | 用AND连接                  | `message MATCH_ANY 'error' AND message MATCH_ANY 'critical'` |
+| 步骤 |                     输入                     |      处理动作      |                                 中间结果                                 |
+|----|--------------------------------------------|----------------|----------------------------------------------------------------------|
+| 1  | `('error' \|\| 'warning') && 'critical'`   | 识别为复杂表达式       | 进入KeywordComplexExpressionBuilder                                    |
+| 2  | `('error' \|\| 'warning') && 'critical'`   | 规范化空格          | `( 'error' \|\| 'warning' ) && 'critical'`                           |
+| 3  | `( 'error' \|\| 'warning' ) && 'critical'` | 解析括号内容         | 括号内:`'error' \|\| 'warning'`                                         |
+| 4  | `'error' \|\| 'warning'`                   | 递归解析OR表达式      | `message MATCH_ANY 'error warning'`                                  |
+| 5  | 替换括号内容后                                    | 查找顶层AND运算符     | 左:`(message MATCH_ANY 'error warning')` 右:`'critical'`               |
+| 6  | 解析右侧表达式                                    | 处理单个关键字        | `message MATCH_ANY 'critical'`                                       |
+| 7  | 合并AND表达式                                   | 保持独立的MATCH_ANY | 左右两边都是独立的MATCH_ANY                                                   |
+| 8  | 生成最终SQL                                    | 用AND连接         | `message MATCH_ANY 'error warning' AND message MATCH_ANY 'critical'` |
 
 ### 2. 复杂示例对照表
 
-| 表达式                                            | 解析步骤   | 最终SQL                                                                   | 业务含义                                |
-| ------------------------------------------------- | ---------- | ------------------------------------------------------------------------- | --------------------------------------- |
-| `'user service'`                                  | 单关键字   | `message MATCH_ANY 'user service'`                                        | 包含"user service"短语                  |
-| `error && timeout`                                | 简单AND    | `message MATCH_ALL 'error timeout'`                                       | 同时包含error和timeout                  |
-| `error \|\| warning \|\| info`                    | 多项OR     | `message MATCH_ANY 'error warning info'`                                  | 包含任一关键字                          |
-| `('error' \|\| 'warning') && 'critical'`          | 复杂表达式 | `message MATCH_ANY 'error warning' AND message MATCH_ANY 'critical'`      | OR关键字合并，AND连接                   |
-| `'database' && ('timeout' \|\| 'connection')`     | 复杂表达式 | `message MATCH_ANY 'database' AND message MATCH_ANY 'timeout connection'` | OR关键字合并，AND连接                   |
-| `('user' \|\| 'order') && ('service' \|\| 'api')` | 复杂表达式 | `message MATCH_ANY 'user order' AND message MATCH_ANY 'service api'`      | 每个OR都合并关键字，AND连接             |
-| `'user' && 'service' && 'critical'`               | 多重AND    | `message MATCH_ANY 'user' AND message MATCH_ALL 'service critical'`       | 部分优化：最后两个关键字合并为MATCH_ALL |
-| `(('error' \|\| 'warn') && 'critical')`           | 嵌套表达式 | `( (message MATCH_ANY 'error warn') && 'critical' )`                      | 保持部分原始结构，OR关键字合并          |
+|                        表达式                        | 解析步骤  |                                   最终SQL                                   |           业务含义           |
+|---------------------------------------------------|-------|---------------------------------------------------------------------------|--------------------------|
+| `'user service'`                                  | 单关键字  | `message MATCH_ANY 'user service'`                                        | 包含"user service"短语       |
+| `error && timeout`                                | 简单AND | `message MATCH_ALL 'error timeout'`                                       | 同时包含error和timeout        |
+| `error \|\| warning \|\| info`                    | 多项OR  | `message MATCH_ANY 'error warning info'`                                  | 包含任一关键字                  |
+| `('error' \|\| 'warning') && 'critical'`          | 复杂表达式 | `message MATCH_ANY 'error warning' AND message MATCH_ANY 'critical'`      | OR关键字合并，AND连接            |
+| `'database' && ('timeout' \|\| 'connection')`     | 复杂表达式 | `message MATCH_ANY 'database' AND message MATCH_ANY 'timeout connection'` | OR关键字合并，AND连接            |
+| `('user' \|\| 'order') && ('service' \|\| 'api')` | 复杂表达式 | `message MATCH_ANY 'user order' AND message MATCH_ANY 'service api'`      | 每个OR都合并关键字，AND连接         |
+| `'user' && 'service' && 'critical'`               | 多重AND | `message MATCH_ANY 'user' AND message MATCH_ALL 'service critical'`       | 部分优化：最后两个关键字合并为MATCH_ALL |
+| `(('error' \|\| 'warn') && 'critical')`           | 嵌套表达式 | `( (message MATCH_ANY 'error warn') && 'critical' )`                      | 保持部分原始结构，OR关键字合并         |
 
 ## 语法验证规则
 
 ### 1. 支持的语法
 
-| 语法元素  | 格式                 | 示例                      | 说明             |
-| --------- | -------------------- | ------------------------- | ---------------- |
+|  语法元素  |         格式          |            示例             |    说明    |
+|--------|---------------------|---------------------------|----------|
 | 关键字    | `word` 或 `'phrase'` | `error`, `'user service'` | 单词或带引号短语 |
-| AND运算符 | `&&`                 | `a && b`                  | 逻辑与           |
-| OR运算符  | `\|\|`               | `a \|\| b`                | 逻辑或           |
-| 括号      | `()`                 | `(a \|\| b)`              | 改变优先级       |
-| 嵌套      | 最多2层              | `((a \|\| b))`            | 限制嵌套深度     |
+| AND运算符 | `&&`                | `a && b`                  | 逻辑与      |
+| OR运算符  | `\|\|`              | `a \|\| b`                | 逻辑或      |
+| 括号     | `()`                | `(a \|\| b)`              | 改变优先级    |
+| 嵌套     | 最多2层                | `((a \|\| b))`            | 限制嵌套深度   |
 
 ### 2. 语法限制
 
-| 限制类型   | 规则             | 错误示例      | 错误信息             |
-| ---------- | ---------------- | ------------- | -------------------- |
-| 引号匹配   | 必须成对出现     | `'error`      | "引号不匹配"         |
-| 括号匹配   | 必须成对出现     | `(error`      | "括号不匹配"         |
-| 运算符位置 | 不能在开头或结尾 | `&& error`    | "运算符使用不正确"   |
-| 连续运算符 | 不能连续出现     | `a && \|\| b` | "不能有连续的运算符" |
-| 空括号     | 不允许空内容     | `()`          | "空括号"             |
-| 嵌套深度   | 最多2层          | `(((a)))`     | "嵌套层级过深"       |
+| 限制类型  |    规则    |     错误示例      |    错误信息     |
+|-------|----------|---------------|-------------|
+| 引号匹配  | 必须成对出现   | `'error`      | "引号不匹配"     |
+| 括号匹配  | 必须成对出现   | `(error`      | "括号不匹配"     |
+| 运算符位置 | 不能在开头或结尾 | `&& error`    | "运算符使用不正确"  |
+| 连续运算符 | 不能连续出现   | `a && \|\| b` | "不能有连续的运算符" |
+| 空括号   | 不允许空内容   | `()`          | "空括号"       |
+| 嵌套深度  | 最多2层     | `(((a)))`     | "嵌套层级过深"    |
 
 ## 边界情况处理
 
 ### 1. 特殊输入处理
 
-| 输入情况 | 处理方式       | 输出结果 | 说明           |
-| -------- | -------------- | -------- | -------------- |
-| `null`   | 返回空字符串   | `""`     | 空查询条件     |
-| `""`     | 返回空字符串   | `""`     | 空查询条件     |
-| `"   "`  | 去除空格后处理 | `""`     | 仅空格的输入   |
-| `''`     | 提取空关键字   | `""`     | 空字符串关键字 |
+|  输入情况   |  处理方式   | 输出结果 |   说明    |
+|---------|---------|------|---------|
+| `null`  | 返回空字符串  | `""` | 空查询条件   |
+| `""`    | 返回空字符串  | `""` | 空查询条件   |
+| `"   "` | 去除空格后处理 | `""` | 仅空格的输入  |
+| `''`    | 提取空关键字  | `""` | 空字符串关键字 |
 
 ### 2. 空格处理
 
-| 空格情况   | 示例输入        | 规范化结果      | 说明         |
-| ---------- | --------------- | --------------- | ------------ |
-| 关键字前后 | `  error  `     | `error`         | 自动去除     |
+| 空格情况  |      示例输入       |      规范化结果      |   说明   |
+|-------|-----------------|-----------------|--------|
+| 关键字前后 | `  error  `     | `error`         | 自动去除   |
 | 运算符周围 | `a&&b`          | `a && b`        | 自动添加空格 |
-| 括号周围   | `(a)`           | `( a )`         | 自动添加空格 |
-| 引号内空格 | `'  content  '` | `'  content  '` | 保留不变     |
+| 括号周围  | `(a)`           | `( a )`         | 自动添加空格 |
+| 引号内空格 | `'  content  '` | `'  content  '` | 保留不变   |
 
 ## 性能考虑
 
 ### 1. 优化策略
 
-| 优化点      | 策略                               | 效果         |
-| ----------- | ---------------------------------- | ------------ |
-| Builder选择 | 按优先级匹配，避免不必要的复杂解析 | 提高响应速度 |
-| 正则表达式  | 预编译常用模式                     | 减少编译开销 |
-| 字符串操作  | 使用StringBuilder处理大量拼接      | 减少内存分配 |
-| 递归深度    | 限制最大嵌套层级                   | 防止栈溢出   |
+|    优化点    |          策略           |   效果   |
+|-----------|-----------------------|--------|
+| Builder选择 | 按优先级匹配，避免不必要的复杂解析     | 提高响应速度 |
+| 正则表达式     | 预编译常用模式               | 减少编译开销 |
+| 字符串操作     | 使用StringBuilder处理大量拼接 | 减少内存分配 |
+| 递归深度      | 限制最大嵌套层级              | 防止栈溢出  |
 
 ### 2. 复杂度分析
 
-| 表达式类型 | 时间复杂度 | 空间复杂度 | 备注                 |
-| ---------- | ---------- | ---------- | -------------------- |
-| 简单关键字 | O(1)       | O(1)       | 直接处理             |
-| 简单AND/OR | O(n)       | O(n)       | n为关键字数量        |
-| 复杂表达式 | O(n*m)     | O(n*m)     | n为层级，m为关键字数 |
+|  表达式类型   | 时间复杂度  | 空间复杂度  |     备注      |
+|----------|--------|--------|-------------|
+| 简单关键字    | O(1)   | O(1)   | 直接处理        |
+| 简单AND/OR | O(n)   | O(n)   | n为关键字数量     |
+| 复杂表达式    | O(n*m) | O(n*m) | n为层级，m为关键字数 |
 
 ## 测试覆盖
 
@@ -167,21 +167,21 @@
 
 当前实现对复杂表达式采用简化逻辑，确保基本功能可用：
 
-| 限制类型           | 具体表现                                 | 示例                                    | 当前处理结果                                                        |
-| ------------------ | ---------------------------------------- | --------------------------------------- | ------------------------------------------------------------------- |
-| 多层AND部分优化    | 多个AND关键字的最后两个会合并为MATCH_ALL | `'user' && 'service' && 'critical'`     | `message MATCH_ANY 'user' AND message MATCH_ALL 'service critical'` |
-| 嵌套表达式混合处理 | 深层嵌套保持部分原始结构，产生混合格式   | `(('error' \|\| 'warn') && 'critical')` | `( (message MATCH_ANY 'error warn') && 'critical' )`                |
+|   限制类型    |            具体表现            |                   示例                    |                               当前处理结果                                |
+|-----------|----------------------------|-----------------------------------------|---------------------------------------------------------------------|
+| 多层AND部分优化 | 多个AND关键字的最后两个会合并为MATCH_ALL | `'user' && 'service' && 'critical'`     | `message MATCH_ANY 'user' AND message MATCH_ALL 'service critical'` |
+| 嵌套表达式混合处理 | 深层嵌套保持部分原始结构，产生混合格式        | `(('error' \|\| 'warn') && 'critical')` | `( (message MATCH_ANY 'error warn') && 'critical' )`                |
 
 ### 2. 工作正常的功能
 
 以下功能完全按预期工作：
 
-| 功能类型      | 示例                 | 输出结果                            | 状态 |
-| ------------- | -------------------- | ----------------------------------- | ---- |
-| 单关键字搜索  | `error`              | `message MATCH_ANY 'error'`         | ✓    |
-| 简单AND表达式 | `error && timeout`   | `message MATCH_ALL 'error timeout'` | ✓    |
-| 简单OR表达式  | `error \|\| warning` | `message MATCH_ANY 'error warning'` | ✓    |
-| 多项OR表达式  | `a \|\| b \|\| c`    | `message MATCH_ANY 'a b c'`         | ✓    |
+|   功能类型   |          示例          |                输出结果                 | 状态 |
+|----------|----------------------|-------------------------------------|----|
+| 单关键字搜索   | `error`              | `message MATCH_ANY 'error'`         | ✓  |
+| 简单AND表达式 | `error && timeout`   | `message MATCH_ALL 'error timeout'` | ✓  |
+| 简单OR表达式  | `error \|\| warning` | `message MATCH_ANY 'error warning'` | ✓  |
+| 多项OR表达式  | `a \|\| b \|\| c`    | `message MATCH_ANY 'a b c'`         | ✓  |
 
 ## 使用建议
 
