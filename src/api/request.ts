@@ -113,15 +113,14 @@ service.interceptors.response.use(
       } finally {
         isRefreshing = false;
       }
-    } else {
-      window.dispatchEvent(
-        new CustomEvent('unhandledrejection', {
-          detail: {
-            reason: new Error(errorMessage),
-          },
-        }),
-      );
     }
+    window.dispatchEvent(
+      new CustomEvent('unhandledrejection', {
+        detail: {
+          reason: new Error(errorMessage),
+        },
+      }),
+    );
     return Promise.reject(new Error(errorMessage));
   },
 );

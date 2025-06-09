@@ -1,5 +1,17 @@
 import { PlusOutlined, SyncOutlined, InfoCircleOutlined, HomeOutlined } from '@ant-design/icons';
-import { Button, message, Popconfirm, Space, Table, Breadcrumb, Modal, Progress, Tag, Descriptions } from 'antd';
+import {
+  Button,
+  message,
+  Popconfirm,
+  Space,
+  Table,
+  Breadcrumb,
+  Modal,
+  Progress,
+  Tag,
+  Descriptions,
+  Skeleton,
+} from 'antd';
 import styles from './LogstashManagementPage.module.less';
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -40,6 +52,7 @@ function LogstashManagementPage() {
   const [stepsModalVisible, setStepsModalVisible] = useState(false);
   const [machineTasks, setMachineTasks] = useState<MachineTask[]>([]);
   const [machineTasksModalVisible, setMachineTasksModalVisible] = useState(false);
+  const [machineTasksLoading, setMachineTasksLoading] = useState(false);
   const [currentMachine, setCurrentMachine] = useState<{
     processId: number;
     machineId: number;
@@ -91,14 +104,18 @@ function LogstashManagementPage() {
   };
 
   const showMachineTasks = async (processId: number, machineId: number) => {
+    setCurrentMachine({ processId, machineId });
+    setMachineTasksModalVisible(true);
+    setMachineTasksLoading(true);
+
     try {
-      setCurrentMachine({ processId, machineId });
       const tasks = await getMachineTasks(processId, machineId);
       setMachineTasks(tasks);
-      setMachineTasksModalVisible(true);
     } catch (err) {
       messageApi.error('获取机器任务失败');
       console.error('获取机器任务失败:', err);
+    } finally {
+      setMachineTasksLoading(false);
     }
   };
 
@@ -150,7 +167,13 @@ function LogstashManagementPage() {
   };
 
   const handleEdit = (record: LogstashProcess) => {
-    setCurrentProcess(record);
+    // 确保传递的数据包含datasourceId和tableName字段
+    const editValues = {
+      ...record,
+      datasourceId: record.datasourceId,
+      tableName: record.tableName,
+    };
+    setCurrentProcess(editValues);
     setEditModalVisible(true);
   };
 
@@ -736,78 +759,84 @@ function LogstashManagementPage() {
           footer={null}
           width={1200}
         >
-          {machineTasks.map((task) => (
-            <div key={task.taskId} style={{ marginBottom: 24 }}>
-              <Descriptions bordered size="small" column={2} style={{ marginBottom: 16 }}>
-                <Descriptions.Item label="任务ID">{task.taskId}</Descriptions.Item>
-                <Descriptions.Item label="任务名称">{task.name}</Descriptions.Item>
-                <Descriptions.Item label="操作类型">{task.operationType}</Descriptions.Item>
-                <Descriptions.Item label="状态">
-                  <Tag
-                    color={task.status === 'COMPLETED' ? 'success' : task.status === 'FAILED' ? 'error' : 'processing'}
-                  >
-                    {task.status}
-                  </Tag>
-                </Descriptions.Item>
-                <Descriptions.Item label="开始时间">{task.startTime}</Descriptions.Item>
-                <Descriptions.Item label="结束时间">{task.endTime || '-'}</Descriptions.Item>
-                <Descriptions.Item label="持续时间">{task.duration}ms</Descriptions.Item>
-                <Descriptions.Item label="错误信息" span={2}>
-                  {task.errorMessage || '无'}
-                </Descriptions.Item>
-              </Descriptions>
+          {machineTasksLoading ? (
+            <Skeleton active paragraph={{ rows: 8 }} />
+          ) : (
+            machineTasks.map((task) => (
+              <div key={task.taskId} style={{ marginBottom: 24 }}>
+                <Descriptions bordered size="small" column={2} style={{ marginBottom: 16 }}>
+                  <Descriptions.Item label="任务ID">{task.taskId}</Descriptions.Item>
+                  <Descriptions.Item label="任务名称">{task.name}</Descriptions.Item>
+                  <Descriptions.Item label="操作类型">{task.operationType}</Descriptions.Item>
+                  <Descriptions.Item label="状态">
+                    <Tag
+                      color={
+                        task.status === 'COMPLETED' ? 'success' : task.status === 'FAILED' ? 'error' : 'processing'
+                      }
+                    >
+                      {task.status}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="开始时间">{task.startTime}</Descriptions.Item>
+                  <Descriptions.Item label="结束时间">{task.endTime || '-'}</Descriptions.Item>
+                  <Descriptions.Item label="持续时间">{task.duration}ms</Descriptions.Item>
+                  <Descriptions.Item label="错误信息" span={2}>
+                    {task.errorMessage || '无'}
+                  </Descriptions.Item>
+                </Descriptions>
 
-              <h4 style={{ marginBottom: 16 }}>步骤详情</h4>
-              {Object.entries(task.machineSteps).map(([machineName, steps]) => (
-                <div key={machineName} style={{ marginBottom: 16 }}>
-                  <h5>
-                    {machineName} (进度: {task.machineProgressPercentages[machineName]}%)
-                  </h5>
-                  <Table
-                    size="small"
-                    bordered
-                    dataSource={steps}
-                    rowKey="stepId"
-                    columns={[
-                      { title: '步骤ID', dataIndex: 'stepId', key: 'stepId' },
-                      { title: '步骤名称', dataIndex: 'stepName', key: 'stepName' },
-                      {
-                        title: '状态',
-                        dataIndex: 'status',
-                        key: 'status',
-                        render: (status: string) => (
-                          <Tag
-                            color={status === 'COMPLETED' ? 'success' : status === 'FAILED' ? 'error' : 'processing'}
-                          >
-                            {status}
-                          </Tag>
-                        ),
-                      },
-                      { title: '开始时间', dataIndex: 'startTime', key: 'startTime' },
-                      {
-                        title: '结束时间',
-                        dataIndex: 'endTime',
-                        key: 'endTime',
-                        render: (endTime: string) => endTime || '-',
-                      },
-                      {
-                        title: '持续时间',
-                        dataIndex: 'duration',
-                        key: 'duration',
-                        render: (duration: number) => `${duration}ms`,
-                      },
-                      {
-                        title: '错误信息',
-                        dataIndex: 'errorMessage',
-                        key: 'errorMessage',
-                        render: (errorMessage: string) => errorMessage || '-',
-                      },
-                    ]}
-                  />
-                </div>
-              ))}
-            </div>
-          ))}
+                <h4 style={{ marginBottom: 16 }}>步骤详情</h4>
+                {Object.entries(task.machineSteps).map(([machineName, steps]) => (
+                  <div key={machineName} style={{ marginBottom: 16 }}>
+                    <h5>
+                      {machineName} (进度: {task.machineProgressPercentages[machineName]}%)
+                    </h5>
+                    <Table
+                      size="small"
+                      bordered
+                      dataSource={steps}
+                      rowKey="stepId"
+                      columns={[
+                        { title: '步骤ID', dataIndex: 'stepId', key: 'stepId' },
+                        { title: '步骤名称', dataIndex: 'stepName', key: 'stepName' },
+                        {
+                          title: '状态',
+                          dataIndex: 'status',
+                          key: 'status',
+                          render: (status: string) => (
+                            <Tag
+                              color={status === 'COMPLETED' ? 'success' : status === 'FAILED' ? 'error' : 'processing'}
+                            >
+                              {status}
+                            </Tag>
+                          ),
+                        },
+                        { title: '开始时间', dataIndex: 'startTime', key: 'startTime' },
+                        {
+                          title: '结束时间',
+                          dataIndex: 'endTime',
+                          key: 'endTime',
+                          render: (endTime: string) => endTime || '-',
+                        },
+                        {
+                          title: '持续时间',
+                          dataIndex: 'duration',
+                          key: 'duration',
+                          render: (duration: number) => `${duration}ms`,
+                        },
+                        {
+                          title: '错误信息',
+                          dataIndex: 'errorMessage',
+                          key: 'errorMessage',
+                          render: (errorMessage: string) => errorMessage || '-',
+                        },
+                      ]}
+                    />
+                  </div>
+                ))}
+              </div>
+            ))
+          )}
         </Modal>
         <Modal
           title="任务步骤详情"
