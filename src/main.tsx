@@ -29,6 +29,7 @@ const SessionInitializer = () => {
 const Error = ({ children }: any) => {
   const [notificationApi, contextHolder] = notification.useNotification();
   const notificationConfig: any = {
+    message: '提示',
     showProgress: true,
     placement: 'top',
   };
