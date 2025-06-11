@@ -1,10 +1,13 @@
 package com.hinadt.miaocha.application.service.impl;
 
 import com.hinadt.miaocha.application.service.TableValidationService;
+import com.hinadt.miaocha.application.service.database.DatabaseMetadataService;
 import com.hinadt.miaocha.application.service.database.DatabaseMetadataServiceFactory;
 import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
+import com.hinadt.miaocha.common.constants.FieldConstants;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
+import com.hinadt.miaocha.domain.dto.SchemaInfoDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.entity.enums.DatasourceType;
 import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
@@ -135,6 +138,61 @@ public class TableValidationServiceImpl implements TableValidationService {
                 logger.debug("尝试查询表 {} 失败，可能表不存在: {}", tableName, e.getMessage());
                 return false;
             }
+        }
+    }
+
+    @Override
+    public void validateTableStructure(Long datasourceId, String tableName) {
+        logger.debug("开始验证表结构: 数据源ID={}, 表名={}", datasourceId, tableName);
+
+        // 首先检查表是否存在
+        if (!isTableExists(datasourceId, tableName)) {
+            throw new BusinessException(
+                    ErrorCode.LOGSTASH_TARGET_TABLE_NOT_FOUND,
+                    String.format("数据源(ID: %d)中不存在表 '%s'", datasourceId, tableName));
+        }
+
+        // 获取数据源信息
+        DatasourceInfo datasourceInfo = datasourceMapper.selectById(datasourceId);
+        if (datasourceInfo == null) {
+            throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
+        }
+
+        try (Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo)) {
+            // 获取数据库元数据服务
+            DatabaseMetadataService metadataService =
+                    metadataServiceFactory.getService(datasourceInfo.getType());
+
+            // 获取表的列信息
+            List<SchemaInfoDTO.ColumnInfoDTO> columns =
+                    metadataService.getColumnInfo(conn, tableName);
+
+            // 检查是否包含message字段
+            boolean hasMessageField =
+                    columns.stream()
+                            .anyMatch(
+                                    column ->
+                                            FieldConstants.MESSAGE_FIELD.equalsIgnoreCase(
+                                                    column.getColumnName()));
+
+            if (!hasMessageField) {
+                logger.warn("表 '{}' 缺少必需的message字段，无法进行关键字搜索", tableName);
+                throw new BusinessException(
+                        ErrorCode.TABLE_MESSAGE_FIELD_MISSING,
+                        String.format(
+                                "表 '%s' 缺少必需的 '%s' 字段，无法进行关键字搜索",
+                                tableName, FieldConstants.MESSAGE_FIELD));
+            }
+
+            logger.info("表结构验证成功: 数据源ID={}, 表名={}, 包含message字段", datasourceId, tableName);
+
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            logger.error("验证表结构时发生异常: 数据源ID={}, 表名={}", datasourceId, tableName, e);
+            throw new BusinessException(
+                    ErrorCode.TABLE_FIELD_VALIDATION_FAILED,
+                    String.format("验证表 '%s' 结构时发生异常: %s", tableName, e.getMessage()));
         }
     }
 

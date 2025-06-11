@@ -897,15 +897,9 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             throw new BusinessException(ErrorCode.LOGSTASH_CONFIG_TABLE_MISSING, "表名不能为空，无法启动进程");
         }
 
-        // 检查目标数据源中是否存在该表
-        if (!tableValidationService.isTableExists(
-                process.getDatasourceId(), process.getTableName())) {
-            throw new BusinessException(
-                    ErrorCode.LOGSTASH_TARGET_TABLE_NOT_FOUND,
-                    String.format(
-                            "目标数据源(ID: %d)中不存在表 '%s'，请先创建表后再启动进程",
-                            process.getDatasourceId(), process.getTableName()));
-        }
+        // 检查目标数据源中是否存在该表，并验证表结构包含message字段
+        tableValidationService.validateTableStructure(
+                process.getDatasourceId(), process.getTableName());
     }
 
     // 内部类

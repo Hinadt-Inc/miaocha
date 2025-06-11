@@ -5,9 +5,15 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-/** 关键字MATCH_ALL条件构建器 处理多个关键字AND关系的情况 */
+/**
+ * 关键字MATCH_ALL条件构建器 处理多个关键字AND关系的情况
+ *
+ * @deprecated 该类已被废弃，请使用 {@link KeywordPhraseConditionBuilder} 替代。
+ *     新实现使用MATCH_PHRASE提供更简单的关键字搜索，不再使用MATCH_ALL的复杂优化。 该类保留是为了可能的未来迁移需求。
+ */
+@Deprecated
 @Component
-@Order(20) // 中等优先级
+@Order(25) // 降低优先级，让新的KeywordPhraseConditionBuilder优先执行
 public class KeywordMatchAllConditionBuilder implements SearchConditionBuilder {
 
     @Override

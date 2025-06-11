@@ -4,16 +4,28 @@
 
 本文档详细阐述了日志管理系统中复杂查询表达式转换为 Doris SQL 条件的规则和机制。系统支持关键字搜索、逻辑运算符（AND/OR）、括号嵌套等复杂查询功能。
 
+> **版本更新说明**：  
+> **v2.0 (当前版本)**: 引入基于MATCH_PHRASE的简化实现，提供更直观的关键字搜索体验。  
+> **v1.0 (已废弃)**: 使用MATCH_ANY/MATCH_ALL的智能优化实现，保留用于可能的未来迁移。
+
 ## 系统架构
 
 ### 1. 核心组件
 
-|                组件                 |        职责         |  优先级   |
-|-----------------------------------|-------------------|--------|
-| `KeywordComplexExpressionBuilder` | 处理复杂表达式（包含括号、运算符） | 10（最高） |
-| `KeywordMatchAllConditionBuilder` | 处理简单AND表达式        | 20     |
-| `KeywordMatchAnyConditionBuilder` | 处理简单关键字搜索         | 20     |
-| `WhereSqlConditionBuilder`        | 处理WHERE条件         | 30（最低） |
+**v2.0 (当前版本) - 基于MATCH_PHRASE的实现**
+
+|               组件                |            职责            |  优先级   |
+|---------------------------------|--------------------------|--------|
+| `KeywordPhraseConditionBuilder` | 处理所有关键字表达式（MATCH_PHRASE） | 5（最高）  |
+| `WhereSqlConditionBuilder`      | 处理WHERE条件                | 30（最低） |
+
+**v1.0 (已废弃) - 基于MATCH_ANY/MATCH_ALL的实现**
+
+|                组件                 |        职责         |   优先级   |
+|-----------------------------------|-------------------|---------|
+| `KeywordComplexExpressionBuilder` | 处理复杂表达式（包含括号、运算符） | 20（已降低） |
+| `KeywordMatchAllConditionBuilder` | 处理简单AND表达式        | 25（已降低） |
+| `KeywordMatchAnyConditionBuilder` | 处理简单关键字搜索         | 25（已降低） |
 
 ### 2. 处理流程
 
@@ -23,7 +35,18 @@
 
 ## SQL 产出规则
 
-### 1. 基础规则表格
+### 1. v2.0 基础规则表格 (当前版本 - MATCH_PHRASE)
+
+|     输入类型     |                   示例输入                   |             处理组件              |                                                  SQL 输出                                                  |         说明          |
+|--------------|------------------------------------------|-------------------------------|----------------------------------------------------------------------------------------------------------|---------------------|
+| **单个关键字**    | `error`                                  | KeywordPhraseConditionBuilder | `message MATCH_PHRASE 'error'`                                                                           | 精确短语匹配              |
+| **带引号关键字**   | `'timeout'`                              | KeywordPhraseConditionBuilder | `message MATCH_PHRASE 'timeout'`                                                                         | 包含特殊字符的关键字          |
+| **多词关键字**    | `'database connection'`                  | KeywordPhraseConditionBuilder | `message MATCH_PHRASE 'database connection'`                                                             | 完整短语搜索              |
+| **简单AND表达式** | `error && timeout`                       | KeywordPhraseConditionBuilder | `message MATCH_PHRASE 'error' AND message MATCH_PHRASE 'timeout'`                                        | 每个关键字独立MATCH_PHRASE |
+| **简单OR表达式**  | `error \|\| warning`                     | KeywordPhraseConditionBuilder | `message MATCH_PHRASE 'error' OR message MATCH_PHRASE 'warning'`                                         | 每个关键字独立MATCH_PHRASE |
+| **复杂括号表达式**  | `('error' \|\| 'warning') && 'critical'` | KeywordPhraseConditionBuilder | `( message MATCH_PHRASE 'error' OR message MATCH_PHRASE 'warning' ) AND message MATCH_PHRASE 'critical'` | 保持表达式逻辑结构           |
+
+### 2. v1.0 基础规则表格 (已废弃 - MATCH_ANY/MATCH_ALL)
 
 |     输入类型     |                   示例输入                   |              处理组件               |                                SQL 输出                                |      说明       |
 |--------------|------------------------------------------|---------------------------------|----------------------------------------------------------------------|---------------|
@@ -34,9 +57,44 @@
 | **简单OR表达式**  | `error \|\| warning`                     | KeywordComplexExpressionBuilder | `message MATCH_ANY 'error warning'`                                  | 任一关键字存在即可     |
 | **复杂括号表达式**  | `('error' \|\| 'warning') && 'critical'` | KeywordComplexExpressionBuilder | `message MATCH_ANY 'error warning' AND message MATCH_ANY 'critical'` | OR关键字合并，AND连接 |
 
-### 2. 详细产出规则
+### 3. v2.0 详细产出规则 (当前版本)
 
-#### 2.1 关键字规则
+#### 3.1 MATCH_PHRASE规则
+
+|   表达式类型    |                           输入示例                            |        解析过程         |                                                                     SQL输出                                                                      |      说明       |
+|------------|-----------------------------------------------------------|---------------------|------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
+| 单个关键字      | `error`                                                   | 直接转换                | `message MATCH_PHRASE 'error'`                                                                                                                 | 最简单的情况        |
+| 带引号短语      | `'database connection error'`                             | 去除引号，保留内容           | `message MATCH_PHRASE 'database connection error'`                                                                                             | 完整短语精确匹配      |
+| 双关键字AND    | `error && critical`                                       | 分解为两个独立MATCH_PHRASE | `message MATCH_PHRASE 'error' AND message MATCH_PHRASE 'critical'`                                                                             | 两个条件都必须满足     |
+| 双关键字OR     | `error \|\| warning`                                      | 分解为两个独立MATCH_PHRASE | `message MATCH_PHRASE 'error' OR message MATCH_PHRASE 'warning'`                                                                               | 任一条件满足即可      |
+| 三关键字AND    | `error && timeout && critical`                            | 连续AND连接             | `message MATCH_PHRASE 'error' AND message MATCH_PHRASE 'timeout' AND message MATCH_PHRASE 'critical'`                                          | 所有条件都必须满足     |
+| 三关键字OR     | `error \|\| warning \|\| info`                            | 连续OR连接              | `message MATCH_PHRASE 'error' OR message MATCH_PHRASE 'warning' OR message MATCH_PHRASE 'info'`                                                | 任一条件满足即可      |
+| 简单括号OR+AND | `('error' \|\| 'warning') && 'critical'`                  | 括号内OR，然后AND外部条件     | `( message MATCH_PHRASE 'error' OR message MATCH_PHRASE 'warning' ) AND message MATCH_PHRASE 'critical'`                                       | 保持逻辑结构，不做合并优化 |
+| 左AND右括号OR  | `'database' && ('timeout' \|\| 'connection')`             | 左侧AND，右侧括号内OR       | `message MATCH_PHRASE 'database' AND ( message MATCH_PHRASE 'timeout' OR message MATCH_PHRASE 'connection' )`                                  | 保持逻辑结构        |
+| 双括号AND     | `('user' \|\| 'order') && ('service' \|\| 'api')`         | 两个括号内分别OR，然后AND连接   | `( message MATCH_PHRASE 'user' OR message MATCH_PHRASE 'order' ) AND ( message MATCH_PHRASE 'service' OR message MATCH_PHRASE 'api' )`         | 复杂逻辑的直观表示     |
+| 嵌套括号       | `(('error' \|\| 'warning') && 'critical') \|\| 'timeout'` | 递归解析嵌套结构            | `( ( message MATCH_PHRASE 'error' OR message MATCH_PHRASE 'warning' ) AND message MATCH_PHRASE 'critical' ) OR message MATCH_PHRASE 'timeout'` | 支持深层嵌套        |
+
+#### 3.2 关键字规则
+
+| 关键字格式  |         示例         |       提取结果       |             MATCH_PHRASE输出              |     备注      |
+|--------|--------------------|------------------|-----------------------------------------|-------------|
+| 无引号单词  | `error`            | `error`          | `message MATCH_PHRASE 'error'`          | 直接使用        |
+| 带引号字符串 | `'database error'` | `database error` | `message MATCH_PHRASE 'database error'` | 去除引号，保留内容   |
+| 空字符串   | `''`               | `(空)`            | `(空条件)`                                 | 返回空结果       |
+| 中文关键字  | `'错误日志'`           | `错误日志`           | `message MATCH_PHRASE '错误日志'`           | 支持Unicode字符 |
+
+#### 3.3 v2.0与v1.0对比
+
+|                  表达式示例                   |                                          v2.0 输出 (MATCH_PHRASE)                                          |                       v1.0 输出 (MATCH_ANY/ALL)                        |         差异说明          |
+|------------------------------------------|----------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------|-----------------------|
+| `error`                                  | `message MATCH_PHRASE 'error'`                                                                           | `message MATCH_ANY 'error'`                                          | 函数不同，但功能类似            |
+| `error && timeout`                       | `message MATCH_PHRASE 'error' AND message MATCH_PHRASE 'timeout'`                                        | `message MATCH_ALL 'error timeout'`                                  | v2.0每个关键字独立，v1.0合并关键字 |
+| `error \|\| warning`                     | `message MATCH_PHRASE 'error' OR message MATCH_PHRASE 'warning'`                                         | `message MATCH_ANY 'error warning'`                                  | v2.0每个关键字独立，v1.0合并关键字 |
+| `('error' \|\| 'warning') && 'critical'` | `( message MATCH_PHRASE 'error' OR message MATCH_PHRASE 'warning' ) AND message MATCH_PHRASE 'critical'` | `message MATCH_ANY 'error warning' AND message MATCH_ANY 'critical'` | v2.0保持结构，v1.0优化合并     |
+
+### 4. v1.0 详细产出规则 (已废弃)
+
+#### 4.1 关键字规则
 
 | 关键字格式  |         示例         |       提取结果       |     备注      |
 |--------|--------------------|------------------|-------------|

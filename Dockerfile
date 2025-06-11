@@ -19,7 +19,7 @@ RUN mkdir -p /app/logs /app/logs/archive /opt/logstash && \
     chmod -R 755 /app/logs /opt/logstash
 
 # 复制打包后的tar.gz文件
-COPY log-manage-assembly/target/*-distribution.tar.gz /tmp/application.tar.gz
+COPY miaocha-assembly/target/*-distribution.tar.gz /tmp/application.tar.gz
 
 # 解压应用文件到工作目录
 RUN tar -xzf /tmp/application.tar.gz -C /app --strip-components=1 && \
@@ -30,4 +30,4 @@ RUN tar -xzf /tmp/application.tar.gz -C /app --strip-components=1 && \
 EXPOSE 8080
 
 # 启动应用 - 使用项目中提供的Docker专用启动脚本
-ENTRYPOINT ["/bin/bash", "/app/bin/docker-start.sh"] 
+ENTRYPOINT ["/bin/bash", "/app/bin/docker-start.sh"]

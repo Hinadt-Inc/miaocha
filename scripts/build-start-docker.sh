@@ -11,7 +11,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # 变量设置
-IMAGE_NAME="log-manage-system"
+IMAGE_NAME="miaocha"
 TIMESTAMP=$(date +%Y%m%d%H%M%S)
 VERSION="v1.0-${TIMESTAMP}"
 DOCKERFILE="Dockerfile"
@@ -60,7 +60,7 @@ if [ ! -f "$DOCKERFILE" ]; then
   exit 1
 fi
 
-if [ ! -f "log-manage-assembly/src/main/scripts/docker-start.sh" ]; then
+if [ ! -f "miaocha-assembly/src/main/scripts/docker-start.sh" ]; then
   error "找不到Docker专用启动脚本，请确保docker-start.sh位于正确目录"
   exit 1
 fi
@@ -72,10 +72,10 @@ if ! mvn clean package -DskipTests; then
 fi
 
 info "检查构建结果..."
-TAR_FILE=$(ls log-manage-assembly/target/log-manage-assembly-*-distribution.tar.gz 2>/dev/null || echo "")
+TAR_FILE=$(ls miaocha-assembly/target/miaocha-assembly-*-distribution.tar.gz 2>/dev/null || echo "")
 
 if [ -z "$TAR_FILE" ] || [ ! -f "$TAR_FILE" ]; then
-  error "找不到打包的tar.gz文件，请确认log-manage-assembly模块配置正确"
+  error "找不到打包的tar.gz文件，请确认miaocha-assembly模块配置正确"
   exit 1
 fi
 
@@ -143,7 +143,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   fi
 
   info "正在启动容器 $CONTAINER_NAME..."
-  
+
   # 运行新容器
   if ! docker run -d -p 8080:8080 --name $CONTAINER_NAME \
     -e "SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}" \
@@ -162,7 +162,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     error "容器启动失败"
     exit 1
   fi
-  
+
   success "容器已启动!"
   info "容器ID: $(docker ps -q -f name=$CONTAINER_NAME)"
   info "访问地址: http://localhost:8080"

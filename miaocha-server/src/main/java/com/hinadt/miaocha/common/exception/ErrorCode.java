@@ -67,7 +67,10 @@ public enum ErrorCode {
     // 任务相关错误码
     TASK_EXECUTION_FAILED("8001", "任务执行失败"),
     TASK_NOT_FOUND("8002", "任务不存在"),
-    TASK_RETRY_FAILED("8003", "任务重试失败");
+
+    // 表结构校验相关错误码
+    TABLE_MESSAGE_FIELD_MISSING("7015", "表结构中缺少必需的message字段，无法进行关键字搜索"),
+    TABLE_FIELD_VALIDATION_FAILED("7016", "表结构字段校验失败");
 
     private final String code;
     private final String message;

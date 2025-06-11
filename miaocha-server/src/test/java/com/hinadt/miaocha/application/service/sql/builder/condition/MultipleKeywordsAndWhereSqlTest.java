@@ -270,6 +270,7 @@ public class MultipleKeywordsAndWhereSqlTest {
         // 测试多个简单关键字
         dto.setKeywords(Arrays.asList("error", "timeout"));
         String conditions = searchConditionManager.buildSearchConditions(dto);
+        System.out.println("测试1 - 实际条件: " + conditions);
         assertTrue(conditions.contains("message MATCH_ANY 'error'"));
         assertTrue(conditions.contains("message MATCH_ANY 'timeout'"));
         assertTrue(conditions.contains(" AND "));
@@ -277,6 +278,7 @@ public class MultipleKeywordsAndWhereSqlTest {
         // 测试多个复杂关键字
         dto.setKeywords(Arrays.asList("'error' || 'warning'", "'timeout' && 'failure'"));
         conditions = searchConditionManager.buildSearchConditions(dto);
+        System.out.println("测试2 - 实际条件: " + conditions);
         assertTrue(conditions.contains("message MATCH_ANY 'error warning'"));
         assertTrue(conditions.contains("message MATCH_ALL 'timeout failure'"));
         assertTrue(conditions.contains(" AND "));
@@ -288,6 +290,7 @@ public class MultipleKeywordsAndWhereSqlTest {
                         "'warning' || 'critical'",
                         "('timeout' || 'failure') && 'critical'"));
         conditions = searchConditionManager.buildSearchConditions(dto);
+        System.out.println("测试3 - 实际条件: " + conditions);
         System.out.println("Actual conditions: " + conditions);
         assertTrue(conditions.contains("message MATCH_ANY 'error'"));
         assertTrue(conditions.contains("message MATCH_ANY 'warning critical'"));

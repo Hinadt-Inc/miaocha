@@ -28,8 +28,8 @@ error() {
 }
 
 # 容器名称和镜像名称
-CONTAINER_NAME="log-system"
-IMAGE_NAME="log-manage-system"
+CONTAINER_NAME="miaocha"
+IMAGE_NAME="miaocha"
 
 echo "================================================="
 echo "   Docker镜像清理脚本"
@@ -52,16 +52,16 @@ RUNNING_IMAGE=$(docker ps --filter "name=$CONTAINER_NAME" --format "{{.Image}}" 
 
 if [ -z "$RUNNING_IMAGE" ]; then
   warn "没有找到正在运行的 $CONTAINER_NAME 容器"
-  
+
   # 查找是否有停止的容器
   STOPPED_CONTAINER=$(docker ps -a --filter "name=$CONTAINER_NAME" --format "{{.ID}}" 2>/dev/null)
-  
+
   if [ -n "$STOPPED_CONTAINER" ]; then
     RUNNING_IMAGE=$(docker ps -a --filter "name=$CONTAINER_NAME" --format "{{.Image}}" 2>/dev/null)
     info "找到已停止的容器 $CONTAINER_NAME，使用的镜像: $RUNNING_IMAGE"
   else
     warn "未找到任何 $CONTAINER_NAME 容器，将删除所有 $IMAGE_NAME 镜像"
-    
+
     # 确认是否继续
     read -p "确定要删除所有 $IMAGE_NAME 镜像吗? (y/n) " -n 1 -r
     echo
@@ -69,7 +69,7 @@ if [ -z "$RUNNING_IMAGE" ]; then
       info "操作已取消"
       exit 0
     fi
-    
+
     # 删除所有相关镜像
     IMAGES_TO_DELETE=$(docker images "$IMAGE_NAME" --format "{{.ID}}" 2>/dev/null)
     if [ -n "$IMAGES_TO_DELETE" ]; then
@@ -79,7 +79,7 @@ if [ -z "$RUNNING_IMAGE" ]; then
     else
       info "没有找到任何 $IMAGE_NAME 镜像"
     fi
-    
+
     exit 0
   fi
 else
@@ -148,4 +148,4 @@ fi
 REMAINING_IMAGES=$(docker images "$IMAGE_NAME" --format "{{.Repository}}:{{.Tag}}")
 echo
 info "保留的镜像:"
-echo "$REMAINING_IMAGES" | nl 
+echo "$REMAINING_IMAGES" | nl

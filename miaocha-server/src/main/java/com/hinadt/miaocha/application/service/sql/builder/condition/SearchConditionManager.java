@@ -26,8 +26,23 @@ public class SearchConditionManager {
         StringBuilder conditions = new StringBuilder();
         boolean isFirst = true;
 
+        // 检查是否有KeywordPhraseConditionBuilder可用
+        boolean hasKeywordPhraseBuilder = false;
+        for (SearchConditionBuilder builder : conditionBuilders) {
+            if (builder.getClass().getSimpleName().equals("KeywordPhraseConditionBuilder")
+                    && builder.supports(dto)) {
+                hasKeywordPhraseBuilder = true;
+                break;
+            }
+        }
+
         for (SearchConditionBuilder builder : conditionBuilders) {
             if (builder.supports(dto)) {
+                // 如果KeywordPhraseConditionBuilder可用，跳过其他关键字Builder
+                if (hasKeywordPhraseBuilder && isOldKeywordBuilder(builder)) {
+                    continue;
+                }
+
                 String condition = builder.buildCondition(dto);
                 if (condition != null && !condition.isEmpty()) {
                     if (!isFirst) {
@@ -40,5 +55,19 @@ public class SearchConditionManager {
         }
 
         return conditions.toString();
+    }
+
+    /** 判断是否为关键字相关的Builder */
+    private boolean isKeywordBuilder(SearchConditionBuilder builder) {
+        String className = builder.getClass().getSimpleName();
+        return className.contains("Keyword") && className.contains("ConditionBuilder");
+    }
+
+    /** 判断是否为旧的关键字Builder（需要被新Builder替代的） */
+    private boolean isOldKeywordBuilder(SearchConditionBuilder builder) {
+        String className = builder.getClass().getSimpleName();
+        return className.equals("KeywordMatchAnyConditionBuilder")
+                || className.equals("KeywordMatchAllConditionBuilder")
+                || className.equals("KeywordComplexExpressionBuilder");
     }
 }

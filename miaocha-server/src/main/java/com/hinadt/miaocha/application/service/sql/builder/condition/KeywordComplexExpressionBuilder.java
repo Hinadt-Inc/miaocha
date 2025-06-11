@@ -10,9 +10,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-/** 复杂关键字表达式条件构建器 处理包含括号和复合逻辑的复杂表达式 比如: ('error' || 'warning') && ('timeout' || 'failure') */
+/**
+ * 复杂关键字表达式条件构建器 处理包含括号和复合逻辑的复杂表达式 比如: ('error' || 'warning') && ('timeout' || 'failure')
+ *
+ * @deprecated 该类已被废弃，请使用 {@link KeywordPhraseConditionBuilder} 替代。
+ *     新实现使用MATCH_PHRASE提供更简单的关键字搜索，不再使用MATCH_ANY/MATCH_ALL的复杂优化。 该类保留是为了可能的未来迁移需求。
+ */
+@Deprecated
 @Component
-@Order(10) // 高优先级，确保在简单表达式处理器之前执行
+@Order(20) // 降低优先级，让新的KeywordPhraseConditionBuilder优先执行
 public class KeywordComplexExpressionBuilder implements SearchConditionBuilder {
 
     private static final Logger logger =
@@ -20,25 +26,7 @@ public class KeywordComplexExpressionBuilder implements SearchConditionBuilder {
 
     @Override
     public boolean supports(LogSearchDTO dto) {
-        // 检查keywords列表
-        if (dto.getKeywords() != null && !dto.getKeywords().isEmpty()) {
-            for (String keyword : dto.getKeywords()) {
-                if (StringUtils.isNotBlank(keyword)) {
-                    String trimmedKeyword = keyword.trim();
-                    // 检查是否包含括号或复杂运算符组合
-                    boolean containsParentheses =
-                            trimmedKeyword.contains("(") && trimmedKeyword.contains(")");
-                    boolean containsComplexOperators =
-                            (trimmedKeyword.contains("&&") && trimmedKeyword.contains("||"))
-                                    || trimmedKeyword.contains("(")
-                                    || trimmedKeyword.contains(")");
-
-                    if (containsParentheses || containsComplexOperators) {
-                        return true;
-                    }
-                }
-            }
-        }
+        // 新的KeywordPhraseConditionBuilder已经启用，该Builder已废弃
         return false;
     }
 
