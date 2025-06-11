@@ -167,6 +167,13 @@ export function getLogstashMachineDetail(processId: number, machineId: number): 
   });
 }
 
+export function forceStopLogstashMachine(processId: number, machineId: number): Promise<void> {
+  return request({
+    url: `/api/logstash/processes/${processId}/machines/${machineId}/force-stop`,
+    method: 'POST',
+  });
+}
+
 export async function scaleProcess(
   id: number,
   params: {
