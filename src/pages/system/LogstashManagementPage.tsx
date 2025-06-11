@@ -34,6 +34,7 @@ import {
   reinitializeMachine,
   getLogstashMachineDetail,
   scaleProcess,
+  forceStopLogstashMachine,
 } from '../../api/logstash';
 import type { LogstashProcess, LogstashTaskSummary, MachineTask } from '../../types/logstashTypes';
 import LogstashEditModal from './components/LogstashEditModal';
@@ -278,6 +279,18 @@ function LogstashManagementPage() {
     } catch (err) {
       messageApi.error('重新初始化失败');
       console.error('重新初始化机器失败:', err);
+    }
+  };
+
+  const handleForceStopMachine = async (processId: number, machineId: number) => {
+    try {
+      messageApi.loading(`正在强制停止机器 ${machineId}...`);
+      await forceStopLogstashMachine(processId, machineId);
+      messageApi.success('强制停止命令已发送');
+      await fetchData();
+    } catch (err) {
+      messageApi.error('强制停止失败');
+      console.error('强制停止Logstash机器实例失败:', err);
     }
   };
 
@@ -616,6 +629,22 @@ function LogstashManagementPage() {
                           >
                             <Button type="link" style={{ padding: '0 4px' }}>
                               重新初始化
+                            </Button>
+                          </Popconfirm>
+                        )}
+                        {(machine.state === 'RUNNING' || machine.state === 'STOPPING') && (
+                          <Popconfirm
+                            title="确认强制停止"
+                            description="确定要强制停止这台机器吗？这可能会导致数据丢失"
+                            onConfirm={() => {
+                              void handleForceStopMachine(record.id, machine.machineId);
+                            }}
+                            okText="确认"
+                            cancelText="取消"
+                            okType="danger"
+                          >
+                            <Button type="link" danger style={{ padding: '0 4px' }}>
+                              强制停止
                             </Button>
                           </Popconfirm>
                         )}
