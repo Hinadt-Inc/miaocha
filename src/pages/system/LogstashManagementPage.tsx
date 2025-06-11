@@ -42,6 +42,16 @@ import LogstashMachineDetailModal from './components/LogstashMachineDetailModal'
 import LogstashScaleModal from './components/LogstashScaleModal';
 
 function LogstashManagementPage() {
+  const checkSubTableStatus = (record: LogstashProcess, action: 'start' | 'stop') => {
+    if (!record.machineStatuses) return false;
+
+    return record.machineStatuses.some((machine) =>
+      action === 'start'
+        ? ['RUNNING', 'STARTING', 'STOPPING'].includes(machine.state)
+        : ['STOPPED', 'STOPPING'].includes(machine.state),
+    );
+  };
+
   const [data, setData] = useState<LogstashProcess[]>([]);
   const [loading, setLoading] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -61,7 +71,6 @@ function LogstashManagementPage() {
     logstashYml?: string;
   } | null>(null);
   const [machineConfigModalVisible, setMachineConfigModalVisible] = useState(false);
-  const [sqlModalVisible, setSqlModalVisible] = useState(false);
   const [sql, setSql] = useState('');
   const [messageApi, contextHolder] = message.useMessage();
   const [detailModalVisible, setDetailModalVisible] = useState<Record<string, boolean>>({});
@@ -272,25 +281,6 @@ function LogstashManagementPage() {
     }
   };
 
-  const handleExecuteSQL = async (processId: number) => {
-    try {
-      if (!sql.trim()) {
-        messageApi.warning('请输入SQL语句');
-        return;
-      }
-
-      messageApi.loading('正在执行SQL...');
-      await executeLogstashSQL(processId, sql);
-      messageApi.success('SQL执行成功');
-      setSqlModalVisible(false);
-      setSql('');
-      await fetchData();
-    } catch (err) {
-      messageApi.error('SQL执行失败');
-      console.error('执行SQL失败:', err);
-    }
-  };
-
   const handleStop = async (id: number) => {
     try {
       messageApi.loading('正在停止Logstash进程...');
@@ -365,7 +355,9 @@ function LogstashManagementPage() {
           >
             <Button
               type="link"
-              disabled={['RUNNING', 'STARTING', 'STOPPING'].includes(record.state)}
+              disabled={
+                ['RUNNING', 'STARTING', 'STOPPING'].includes(record.state) || checkSubTableStatus(record, 'start')
+              }
               style={{ padding: '0 4px' }}
             >
               启动
@@ -380,7 +372,11 @@ function LogstashManagementPage() {
             okText="确认"
             cancelText="取消"
           >
-            <Button type="link" disabled={['STOPPED', 'STOPPING'].includes(record.state)} style={{ padding: '0 4px' }}>
+            <Button
+              type="link"
+              disabled={['STOPPED', 'STOPPING'].includes(record.state) || checkSubTableStatus(record, 'stop')}
+              style={{ padding: '0 4px' }}
+            >
               停止
             </Button>
           </Popconfirm>
@@ -392,17 +388,6 @@ function LogstashManagementPage() {
             style={{ padding: '0 4px' }}
           >
             历史
-          </Button>
-          <Button
-            type="link"
-            onClick={() => {
-              setSqlModalVisible(true);
-              setCurrentProcess(record);
-              setSql(record.dorisSql || '');
-            }}
-            style={{ padding: '0 4px' }}
-          >
-            SQL
           </Button>
           <Button
             type="link"
@@ -934,32 +919,6 @@ function LogstashManagementPage() {
               ))}
             </div>
           )}
-        </Modal>
-        <Modal
-          title="执行Doris SQL"
-          open={sqlModalVisible}
-          onCancel={() => {
-            setSqlModalVisible(false);
-            setSql('');
-          }}
-          onOk={() => {
-            if (currentProcess) {
-              void handleExecuteSQL(currentProcess.id);
-            }
-          }}
-          okButtonProps={{ disabled: !!currentProcess?.dorisSql }}
-          width={800}
-        >
-          <div style={{ marginBottom: 16 }}>
-            <p>请输入要执行的Doris SQL语句（主要用于创建表）：</p>
-          </div>
-          <textarea
-            value={sql}
-            onChange={(e) => setSql(e.target.value)}
-            style={{ width: '100%', height: '200px' }}
-            placeholder="例如：CREATE TABLE log_table_test_env (...) ENGINE=OLAP ..."
-            disabled={!!currentProcess?.dorisSql}
-          />
         </Modal>
         <Modal
           title={`Logstash进程详情 - ${currentDetail?.name || ''}`}
