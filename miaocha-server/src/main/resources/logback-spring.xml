@@ -4,24 +4,29 @@
     <springProperty scope="context" name="LOG_HOME" source="log-config.log-home" defaultValue="${LOG_PATH:-./logs}"/>
     <springProperty scope="context" name="MAX-HISTORY" source="log-config.max-history" defaultValue="30"/>
     <springProperty scope="context" name="TOTAL-SIZE-CAP" source="log-config.total-size-cap" defaultValue="1GB"/>
-    <springProperty scope="context" name="CLEAN-HISTORY-ON-START" source="log-config.clean-history-on-start" defaultValue="true"/>
+    <springProperty scope="context" name="CLEAN-HISTORY-ON-START" source="log-config.clean-history-on-start"
+                    defaultValue="true"/>
     <springProperty scope="context" name="MAX-FILE-SIZE" source="log-config.max-file-size" defaultValue="100MB"/>
     <springProperty scope="context" name="QUEUE-SIZE" source="log-config.queue-size" defaultValue="1024"/>
-    <springProperty scope="context" name="DISCARDING-THRESHOLD" source="log-config.discarding-threshold" defaultValue="0"/>
+    <springProperty scope="context" name="DISCARDING-THRESHOLD" source="log-config.discarding-threshold"
+                    defaultValue="0"/>
 
     <property name="FILE_NAME" value="log-manage-system"/>
 
     <!-- 日志输出格式 -->
-    <property name="CONSOLE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n" />
-    <property name="FILE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n" />
+    <property name="CONSOLE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
+    <property name="FILE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
 
     <!-- 彩色日志依赖的渲染类 -->
-    <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter" />
-    <conversionRule conversionWord="wex" converterClass="org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter" />
-    <conversionRule conversionWord="wEx" converterClass="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter" />
+    <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter"/>
+    <conversionRule conversionWord="wex"
+                    converterClass="org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter"/>
+    <conversionRule conversionWord="wEx"
+                    converterClass="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter"/>
 
     <!-- 彩色日志格式 -->
-    <property name="CONSOLE_LOG_PATTERN_COLOR" value="%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr([%thread]){magenta} %clr(%-5level){green} %clr(%logger{36}){cyan} - %msg%n" />
+    <property name="CONSOLE_LOG_PATTERN_COLOR"
+              value="%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr([%thread]){magenta} %clr(%-5level){green} %clr(%logger{36}){cyan} - %msg%n"/>
 
     <!-- 控制台输出 -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
@@ -127,7 +132,7 @@
     <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
         <queueSize>${QUEUE-SIZE}</queueSize>
         <discardingThreshold>${DISCARDING-THRESHOLD}</discardingThreshold>
-        <appender-ref ref="FILE" />
+        <appender-ref ref="FILE"/>
     </appender>
 
     <!-- 异步输出 - JSON格式INFO -->
@@ -147,37 +152,37 @@
     <!-- 开发环境配置：控制台 + 普通格式文件 + JSON格式文件 -->
     <springProfile name="dev">
         <root level="INFO">
-            <appender-ref ref="CONSOLE" />
-            <appender-ref ref="ASYNC_FILE" />
-            <appender-ref ref="ASYNC_JSON_INFO" />
-            <appender-ref ref="ASYNC_JSON_ERROR" />
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="ASYNC_FILE"/>
+            <appender-ref ref="ASYNC_JSON_INFO"/>
+            <appender-ref ref="ASYNC_JSON_ERROR"/>
         </root>
         <!-- 应用特定日志级别 -->
-        <logger name="com.hina.log" level="DEBUG" />
+        <logger name="com.hinadt.miaocha" level="DEBUG"/>
     </springProfile>
 
     <!-- 测试环境配置：控制台 + 普通格式文件 + JSON格式文件 -->
     <springProfile name="test">
         <root level="INFO">
-            <appender-ref ref="CONSOLE" />
-            <appender-ref ref="ASYNC_FILE" />
-            <appender-ref ref="ASYNC_JSON_INFO" />
-            <appender-ref ref="ASYNC_JSON_ERROR" />
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="ASYNC_FILE"/>
+            <appender-ref ref="ASYNC_JSON_INFO"/>
+            <appender-ref ref="ASYNC_JSON_ERROR"/>
         </root>
     </springProfile>
 
     <!-- 生产环境配置：只有JSON格式文件 -->
     <springProfile name="prod">
         <root level="INFO">
-            <appender-ref ref="ASYNC_JSON_INFO" />
-            <appender-ref ref="ASYNC_JSON_ERROR" />
+            <appender-ref ref="ASYNC_JSON_INFO"/>
+            <appender-ref ref="ASYNC_JSON_ERROR"/>
         </root>
         <!-- 应用特定日志级别 -->
-        <logger name="com.hina.log" level="INFO" />
+        <logger name="com.hinadt.miaocha" level="INFO"/>
         <!-- 减少一些框架的日志输出 -->
-        <logger name="org.springframework" level="WARN" />
-        <logger name="org.hibernate" level="WARN" />
-        <logger name="org.apache" level="WARN" />
+        <logger name="org.springframework" level="WARN"/>
+        <logger name="org.hibernate" level="WARN"/>
+        <logger name="org.apache" level="WARN"/>
     </springProfile>
 
 </configuration>

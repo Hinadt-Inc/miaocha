@@ -26,6 +26,7 @@ import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
 import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
 import com.hinadt.miaocha.domain.mapper.MachineMapper;
+import io.qameta.allure.*;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -39,9 +40,18 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+/**
+ * LogstashProcessService 扩容缩容功能测试
+ *
+ * <p>测试秒查系统中Logstash进程的动态扩容缩容能力 确保在日志量波动时能够自动调整处理能力
+ */
+@Epic("秒查日志管理系统")
+@Feature("Logstash进程管理")
+@Story("进程扩容缩容")
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("LogstashProcessService 扩容缩容测试")
+@Owner("开发团队")
 class LogstashProcessServiceImplScaleTest {
 
     @Mock private LogstashProcessMapper logstashProcessMapper;
@@ -82,8 +92,18 @@ class LogstashProcessServiceImplScaleTest {
     }
 
     @Test
+    @Severity(SeverityLevel.CRITICAL)
     @DisplayName("扩容操作 - 成功添加机器")
+    @Description("验证在日志处理负载增加时，能够成功向Logstash进程添加新机器节点")
+    @Issue("MIAOCHA-101")
     void testScaleOut_Success() {
+        Allure.step(
+                "准备扩容测试数据",
+                () -> {
+                    Allure.parameter("进程ID", "1");
+                    Allure.parameter("添加机器ID", "3, 4");
+                    Allure.parameter("部署路径", "/custom/deploy/path");
+                });
         // 准备测试数据
         Long processId = 1L;
         LogstashProcess process = createTestProcess(processId);
@@ -120,18 +140,29 @@ class LogstashProcessServiceImplScaleTest {
 
         // 执行测试
         LogstashProcessResponseDTO result =
-                logstashProcessService.scaleLogstashProcess(processId, dto);
+                Allure.step(
+                        "执行扩容操作",
+                        () -> {
+                            return logstashProcessService.scaleLogstashProcess(processId, dto);
+                        });
 
-        // 验证结果
-        assertNotNull(result);
-        assertEquals(processId, result.getId());
+        Allure.step(
+                "验证扩容结果",
+                () -> {
+                    assertNotNull(result);
+                    assertEquals(processId, result.getId());
+                    Allure.parameter("返回进程ID", result.getId());
+                });
 
-        // 验证方法调用
-        verify(machineMapper, times(2)).selectById(anyLong());
-        verify(logstashMachineMapper, times(2)).insert(any(LogstashMachine.class));
-        verify(logstashDeployService).initializeProcess(eq(process), anyList());
-        verify(connectionValidator, times(2))
-                .validateSingleMachineConnection(any(MachineInfo.class));
+        Allure.step(
+                "验证底层服务调用",
+                () -> {
+                    verify(machineMapper, times(2)).selectById(anyLong());
+                    verify(logstashMachineMapper, times(2)).insert(any(LogstashMachine.class));
+                    verify(logstashDeployService).initializeProcess(eq(process), anyList());
+                    verify(connectionValidator, times(2))
+                            .validateSingleMachineConnection(any(MachineInfo.class));
+                });
     }
 
     @Test
@@ -209,8 +240,18 @@ class LogstashProcessServiceImplScaleTest {
     }
 
     @Test
+    @Severity(SeverityLevel.CRITICAL)
     @DisplayName("缩容操作 - 成功移除机器")
+    @Description("验证在日志处理负载减少时，能够安全移除Logstash进程的机器节点")
+    @Issue("MIAOCHA-102")
     void testScaleIn_Success() {
+        Allure.step(
+                "准备缩容测试数据",
+                () -> {
+                    Allure.parameter("进程ID", "1");
+                    Allure.parameter("移除机器ID", "2");
+                    Allure.parameter("强制缩容", "false");
+                });
         // 准备测试数据
         Long processId = 1L;
         LogstashProcess process = createTestProcess(processId);
@@ -247,18 +288,29 @@ class LogstashProcessServiceImplScaleTest {
 
         // 执行测试
         LogstashProcessResponseDTO result =
-                logstashProcessService.scaleLogstashProcess(processId, dto);
+                Allure.step(
+                        "执行缩容操作",
+                        () -> {
+                            return logstashProcessService.scaleLogstashProcess(processId, dto);
+                        });
 
-        // 验证结果
-        assertNotNull(result);
-        assertEquals(processId, result.getId());
+        Allure.step(
+                "验证缩容结果",
+                () -> {
+                    assertNotNull(result);
+                    assertEquals(processId, result.getId());
+                    Allure.parameter("返回进程ID", result.getId());
+                });
 
-        // 验证方法调用
-        verify(logstashMachineMapper).deleteById(relation2.getId());
-        verify(logstashDeployService).deleteProcessDirectory(eq(processId), anyList());
-        verify(taskService).getAllMachineTaskIds(processId, 2L);
-        verify(taskService, times(2)).deleteTaskSteps(anyString());
-        verify(taskService, times(2)).deleteTask(anyString());
+        Allure.step(
+                "验证资源清理",
+                () -> {
+                    verify(logstashMachineMapper).deleteById(relation2.getId());
+                    verify(logstashDeployService).deleteProcessDirectory(eq(processId), anyList());
+                    verify(taskService).getAllMachineTaskIds(processId, 2L);
+                    verify(taskService, times(2)).deleteTaskSteps(anyString());
+                    verify(taskService, times(2)).deleteTask(anyString());
+                });
     }
 
     @Test

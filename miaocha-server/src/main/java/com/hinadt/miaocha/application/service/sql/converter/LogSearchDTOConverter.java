@@ -1,0 +1,196 @@
+package com.hinadt.miaocha.application.service.sql.converter;
+
+import com.hinadt.miaocha.domain.dto.LogSearchDTO;
+import com.hinadt.miaocha.domain.dto.LogSearchDTODecorator;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+/**
+ * LogSearchDTO转换服务
+ *
+ * <p>职责： 1. 协调各种字段转换器 2. 创建装饰器包装转换后的数据 3. 提供统一的转换入口
+ *
+ * <p>设计模式： - 装饰器模式：包装原始DTO而不修改 - 策略模式：不同类型字段使用不同转换策略 - 单一职责：只负责转换协调，不涉及SQL构建
+ */
+@Service
+public class LogSearchDTOConverter {
+
+    private final VariantFieldConverter variantFieldConverter;
+
+    @Autowired
+    public LogSearchDTOConverter(VariantFieldConverter variantFieldConverter) {
+        this.variantFieldConverter = variantFieldConverter;
+    }
+
+    /**
+     * 转换LogSearchDTO，返回包含转换后字段的装饰器
+     *
+     * @param original 原始DTO
+     * @return 装饰后的DTO
+     */
+    public LogSearchDTO convert(LogSearchDTO original) {
+        if (original == null) {
+            return null;
+        }
+
+        // 转换SELECT字段列表
+        List<String> convertedFields = convertSelectFields(original.getFields());
+
+        // 转换WHERE条件列表
+        List<String> convertedWhereSqls = convertWhereClauses(original.getWhereSqls());
+
+        // 如果没有任何转换，直接返回原始对象
+        if (convertedFields == original.getFields()
+                && convertedWhereSqls == original.getWhereSqls()) {
+            return original;
+        }
+
+        // 创建装饰器包装转换后的数据
+        return new LogSearchDTODecorator(original, convertedFields, convertedWhereSqls);
+    }
+
+    /**
+     * 转换SELECT字段列表
+     *
+     * @param fields 原始字段列表
+     * @return 转换后的字段列表，如果不需要转换则返回原始对象
+     */
+    private List<String> convertSelectFields(List<String> fields) {
+        if (fields == null || fields.isEmpty()) {
+            return fields;
+        }
+
+        // 检查是否需要转换
+        boolean needsConversion = fields.stream().anyMatch(this::needsVariantConversion);
+
+        if (!needsConversion) {
+            return fields; // 返回原始对象，避免不必要的复制
+        }
+
+        return variantFieldConverter.convertSelectFields(fields);
+    }
+
+    /**
+     * 转换WHERE条件列表
+     *
+     * @param whereClauses 原始WHERE条件列表
+     * @return 转换后的WHERE条件列表，如果不需要转换则返回原始对象
+     */
+    private List<String> convertWhereClauses(List<String> whereClauses) {
+        if (whereClauses == null || whereClauses.isEmpty()) {
+            return whereClauses;
+        }
+
+        // 检查是否需要转换
+        boolean needsConversion = whereClauses.stream().anyMatch(this::needsVariantConversion);
+
+        if (!needsConversion) {
+            return whereClauses; // 返回原始对象，避免不必要的复制
+        }
+
+        return variantFieldConverter.convertWhereClauses(whereClauses);
+    }
+
+    /**
+     * 检查字符串是否需要variant转换
+     *
+     * @param text 待检查的文本
+     * @return 是否需要转换
+     */
+    private boolean needsVariantConversion(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return false;
+        }
+
+        // 如果已经包含bracket语法格式，则认为已转换过
+        if (text.matches(".*\\w+\\['[^']*'\\].*")) {
+            return false;
+        }
+
+        // 如果字符串很简单（只包含字母、数字、点、下划线），可能是单纯的字段名
+        if (text.matches("^[a-zA-Z_][a-zA-Z0-9_.]*$")) {
+            // 简单字段名：直接检查是否包含点
+            return text.contains(".");
+        }
+
+        // 复杂字符串（包含空格、等号等）：检查是否包含点语法字段名（不在引号内的点）
+        return containsValidDotSyntaxField(text);
+    }
+
+    /** 检查字符串是否包含有效的点语法字段（不在引号内） */
+    private boolean containsValidDotSyntaxField(String text) {
+        boolean inSingleQuote = false;
+        boolean inDoubleQuote = false;
+
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+
+            if (c == '\'' && !inDoubleQuote) {
+                inSingleQuote = !inSingleQuote;
+            } else if (c == '"' && !inSingleQuote) {
+                inDoubleQuote = !inDoubleQuote;
+            } else if (c == '.' && !inSingleQuote && !inDoubleQuote) {
+                // 检查这个点是否在有效的字段名中
+                if (isValidDotInFieldName(text, i)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /** 检查指定位置的点是否是有效字段名中的点 */
+    private boolean isValidDotInFieldName(String text, int dotIndex) {
+        if (dotIndex == 0 || dotIndex == text.length() - 1) {
+            return false; // 点不能在开头或结尾
+        }
+
+        // 向前查找字段名开始位置
+        int fieldStart = dotIndex - 1;
+        while (fieldStart >= 0
+                && (Character.isLetterOrDigit(text.charAt(fieldStart))
+                        || text.charAt(fieldStart) == '_')) {
+            fieldStart--;
+        }
+        fieldStart++; // 调整到字段名的开始位置
+
+        // 向后查找字段名结束位置
+        int fieldEnd = dotIndex + 1;
+        while (fieldEnd < text.length()
+                && (Character.isLetterOrDigit(text.charAt(fieldEnd))
+                        || text.charAt(fieldEnd) == '_')) {
+            fieldEnd++;
+        }
+
+        // 检查点前后是否都有有效的标识符部分
+        if (fieldStart >= dotIndex || fieldEnd <= dotIndex + 1) {
+            return false;
+        }
+
+        // 检查点前的部分是否是有效的标识符（不能以数字开头）
+        char firstChar = text.charAt(fieldStart);
+        if (!Character.isLetter(firstChar) && firstChar != '_') {
+            return false; // 标识符必须以字母或下划线开头
+        }
+
+        // 检查点后的部分是否是有效的标识符开头
+        char afterDotChar = text.charAt(dotIndex + 1);
+        if (!Character.isLetter(afterDotChar) && afterDotChar != '_') {
+            return false; // 点后也必须是有效标识符开头
+        }
+
+        return true;
+    }
+
+    /**
+     * 转换TOPN字段（用于字段分布查询）
+     *
+     * @param field 字段名
+     * @return 转换后的字段名
+     */
+    public String convertTopnField(String field) {
+        return variantFieldConverter.convertTopnField(field);
+    }
+}

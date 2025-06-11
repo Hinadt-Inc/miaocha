@@ -1,6 +1,7 @@
 package com.hinadt.miaocha.application.service.database;
 
 import com.hinadt.miaocha.domain.dto.SchemaInfoDTO;
+import com.hinadt.miaocha.domain.entity.enums.DatasourceType;
 import java.sql.*;
 import java.util.*;
 import org.springframework.stereotype.Component;
@@ -63,7 +64,6 @@ public class MySqlMetadataService implements DatabaseMetadataService {
                 SchemaInfoDTO.ColumnInfoDTO column = new SchemaInfoDTO.ColumnInfoDTO();
                 column.setColumnName(rs.getString("COLUMN_NAME"));
                 column.setDataType(rs.getString("TYPE_NAME"));
-                column.setColumnComment(rs.getString("REMARKS"));
                 column.setIsPrimaryKey(primaryKeys.contains(column.getColumnName()));
                 column.setIsNullable("YES".equalsIgnoreCase(rs.getString("IS_NULLABLE")));
                 columns.add(column);
@@ -75,6 +75,6 @@ public class MySqlMetadataService implements DatabaseMetadataService {
 
     @Override
     public String getSupportedDatabaseType() {
-        return "mysql";
+        return DatasourceType.MYSQL.getType();
     }
 }

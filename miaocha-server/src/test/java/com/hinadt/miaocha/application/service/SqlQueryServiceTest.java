@@ -1,4 +1,4 @@
-package com.hinadt.miaocha.service;
+package com.hinadt.miaocha.application.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -25,6 +25,7 @@ import com.hinadt.miaocha.domain.entity.enums.UserRole;
 import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
 import com.hinadt.miaocha.domain.mapper.SqlQueryHistoryMapper;
 import com.hinadt.miaocha.domain.mapper.UserMapper;
+import io.qameta.allure.*;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,6 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -44,8 +46,17 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.test.util.ReflectionTestUtils;
 
+/**
+ * SQL查询服务测试
+ *
+ * <p>测试秒查系统的SQL查询引擎，包括查询执行、结果导出、权限控制等功能
+ */
+@Epic("秒查日志管理系统")
+@Feature("SQL查询引擎")
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
+@DisplayName("SQL查询服务测试")
+@Owner("开发团队")
 public class SqlQueryServiceTest {
 
     @Mock private DatasourceMapper datasourceMapper;
@@ -132,15 +143,36 @@ public class SqlQueryServiceTest {
     }
 
     @Test
+    @Story("SQL查询执行")
+    @Description("测试成功执行SQL查询的功能")
+    @Severity(SeverityLevel.CRITICAL)
     void testExecuteQuery_Success() {
+        Allure.step(
+                "执行SQL查询",
+                () -> {
+                    Allure.parameter("用户ID", testUser.getId());
+                    Allure.parameter("数据源ID", testQueryDTO.getDatasourceId());
+                    Allure.parameter("SQL语句", testQueryDTO.getSql());
+                });
+
         // 执行测试
         SqlQueryResultDTO result = sqlQueryService.executeQuery(testUser.getId(), testQueryDTO);
 
-        // 验证结果
-        assertNotNull(result);
-        assertEquals(testResultDTO.getColumns(), result.getColumns());
-        assertEquals(testResultDTO.getRows(), result.getRows());
-        assertEquals(testResultDTO.getExecutionTimeMs(), result.getExecutionTimeMs());
+        Allure.step(
+                "验证查询结果",
+                () -> {
+                    assertNotNull(result);
+                    assertEquals(testResultDTO.getColumns(), result.getColumns());
+                    assertEquals(testResultDTO.getRows(), result.getRows());
+                    assertEquals(testResultDTO.getExecutionTimeMs(), result.getExecutionTimeMs());
+
+                    Allure.attachment(
+                            "查询结果",
+                            "列数: "
+                                    + result.getColumns().size()
+                                    + ", 行数: "
+                                    + result.getRows().size());
+                });
 
         // 验证调用
         verify(datasourceMapper).selectById(testQueryDTO.getDatasourceId());

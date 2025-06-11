@@ -1,9 +1,9 @@
-package com.hinadt.miaocha.service.sql.builder.condition;
+package com.hinadt.miaocha.application.service.sql.builder.condition;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.hinadt.miaocha.application.service.sql.builder.condition.*;
 import com.hinadt.miaocha.domain.dto.LogSearchDTO;
+import io.qameta.allure.*;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -15,12 +15,18 @@ import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 /**
  * SearchConditionBuilder集成测试类
  *
+ * <p>测试秒查系统中搜索条件构建器的集成功能 验证整个条件构建系统在真实环境下的行为表现
+ *
  * <p>这个测试类直接使用真实的条件构建器实现，不使用Mock 用于验证整个条件构建系统的实际行为
  *
  * <p>测试覆盖： 1. 各种关键字表达式的正确处理 2. 条件构建器的优先级和支持判断 3. SQL生成的正确性 4. 边界情况和错误处理
  */
+@Epic("秒查日志管理系统")
+@Feature("日志检索")
+@Story("搜索条件构建")
 @SpringJUnitConfig
 @DisplayName("搜索条件构建器集成测试")
+@Owner("开发团队")
 public class SearchConditionBuilderIntegrationTest {
 
     private SearchConditionManager searchConditionManager;

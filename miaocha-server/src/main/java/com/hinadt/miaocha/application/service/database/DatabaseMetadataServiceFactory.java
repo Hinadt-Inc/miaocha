@@ -2,6 +2,7 @@ package com.hinadt.miaocha.application.service.database;
 
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
+import com.hinadt.miaocha.domain.entity.enums.DatasourceType;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,12 +35,13 @@ public class DatabaseMetadataServiceFactory {
             throw new BusinessException(ErrorCode.DATASOURCE_TYPE_NOT_SUPPORTED, "未指定数据库类型");
         }
 
-        // 兼容处理：doris当作mysql处理
-        if ("doris".equalsIgnoreCase(dbType)) {
-            dbType = "mysql";
+        DatabaseMetadataService service = serviceMap.get(dbType.toLowerCase());
+
+        // 如果没有找到Doris服务，则回退到MySQL服务作为兼容
+        if (service == null && DatasourceType.DORIS.getType().equalsIgnoreCase(dbType)) {
+            service = serviceMap.get(DatasourceType.MYSQL.getType());
         }
 
-        DatabaseMetadataService service = serviceMap.get(dbType.toLowerCase());
         if (service == null) {
             throw new BusinessException(
                     ErrorCode.DATASOURCE_TYPE_NOT_SUPPORTED, "不支持的数据库类型: " + dbType);

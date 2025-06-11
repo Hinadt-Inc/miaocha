@@ -1,16 +1,17 @@
-package com.hinadt.miaocha.service.sql.builder.condition;
+package com.hinadt.miaocha.application.service.sql.builder.condition;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import com.hinadt.miaocha.application.service.sql.builder.condition.*;
 import com.hinadt.miaocha.domain.dto.LogSearchDTO;
+import io.qameta.allure.*;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -18,8 +19,18 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+/**
+ * 多关键字和WHERE条件组合测试类
+ *
+ * <p>测试秒查系统中多关键字搜索与WHERE条件的组合生成 验证复杂查询场景下SQL语句的正确性和完整性
+ */
+@Epic("秒查日志管理系统")
+@Feature("SQL查询引擎")
+@Story("复杂查询组合")
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
+@DisplayName("多关键字和WHERE条件组合测试")
+@Owner("开发团队")
 public class MultipleKeywordsAndWhereSqlTest {
 
     @Mock private KeywordMatchAnyConditionBuilder keywordMatchAnyBuilder;

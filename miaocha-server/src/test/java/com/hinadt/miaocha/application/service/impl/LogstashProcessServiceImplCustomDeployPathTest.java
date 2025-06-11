@@ -24,8 +24,10 @@ import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
 import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
 import com.hinadt.miaocha.domain.mapper.MachineMapper;
+import io.qameta.allure.*;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -33,8 +35,18 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+/**
+ * LogstashProcessService 自定义部署路径测试
+ *
+ * <p>测试秒查系统中Logstash进程自定义部署路径功能 验证用户可以为不同的进程指定特定的部署路径
+ */
+@Epic("秒查日志管理系统")
+@Feature("Logstash进程管理")
+@Story("自定义部署路径")
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
+@DisplayName("LogstashProcessService 自定义部署路径测试")
+@Owner("开发团队")
 class LogstashProcessServiceImplCustomDeployPathTest {
 
     @Mock private LogstashProcessMapper logstashProcessMapper;

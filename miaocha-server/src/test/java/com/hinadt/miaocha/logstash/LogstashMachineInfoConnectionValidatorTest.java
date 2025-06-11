@@ -2,6 +2,7 @@ package com.hinadt.miaocha.logstash;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.reset;
 
 import com.hinadt.miaocha.application.logstash.LogstashMachineConnectionValidator;
 import com.hinadt.miaocha.application.service.MachineService;
@@ -11,7 +12,6 @@ import com.hinadt.miaocha.domain.entity.MachineInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -20,12 +20,16 @@ public class LogstashMachineInfoConnectionValidatorTest {
 
     @Mock private MachineService machineService;
 
-    @InjectMocks private LogstashMachineConnectionValidator connectionValidator;
+    private LogstashMachineConnectionValidator connectionValidator;
 
     private MachineInfo testMachineInfo;
 
     @BeforeEach
     void setUp() {
+        reset(machineService);
+        // 手动创建LogstashMachineConnectionValidator，注入mock的MachineService
+        connectionValidator = new LogstashMachineConnectionValidator(machineService);
+
         testMachineInfo = new MachineInfo();
         testMachineInfo.setId(1L);
         testMachineInfo.setName("test-machine");

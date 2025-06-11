@@ -38,9 +38,6 @@ public class SchemaInfoDTO {
         @Schema(description = "字段类型")
         private String dataType;
 
-        @Schema(description = "字段注释")
-        private String columnComment;
-
         @Schema(description = "是否主键")
         private Boolean isPrimaryKey;
 

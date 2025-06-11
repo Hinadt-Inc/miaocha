@@ -1,10 +1,11 @@
-package com.hinadt.miaocha.service.sql.builder.condition;
+package com.hinadt.miaocha.application.service.sql.builder.condition;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.hinadt.miaocha.application.service.sql.builder.condition.parser.KeywordExpressionParser;
 import com.hinadt.miaocha.application.service.sql.builder.condition.parser.KeywordExpressionParser.ParseResult;
 import com.hinadt.miaocha.application.service.sql.builder.condition.parser.KeywordExpressionParser.ValidationResult;
+import io.qameta.allure.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -14,9 +15,15 @@ import org.junit.jupiter.params.provider.ValueSource;
 /**
  * KeywordExpressionParser 单元测试类
  *
+ * <p>测试秒查系统中关键字表达式解析器的功能 验证复杂的搜索表达式能够被正确解析和验证
+ *
  * <p>测试范围： 1. 语法验证功能 2. 表达式解析功能 3. 边界情况处理 4. 错误情况处理
  */
+@Epic("秒查日志管理系统")
+@Feature("日志检索")
+@Story("关键字搜索")
 @DisplayName("关键字表达式解析器测试")
+@Owner("开发团队")
 public class KeywordExpressionParserTest {
 
     // ==================== 语法验证测试 ====================
@@ -32,13 +39,53 @@ public class KeywordExpressionParserTest {
 
     @Test
     @DisplayName("简单单个关键字验证 - 应该通过")
+    @Severity(SeverityLevel.NORMAL)
     public void testValidateSimpleKeywords() {
         /** 测试目标：简单的单个关键字应该通过验证 输入：各种简单关键字格式 预期：全部validation通过 */
-        assertTrue(KeywordExpressionParser.validateSyntax("error").isValid());
-        assertTrue(KeywordExpressionParser.validateSyntax("'error'").isValid());
-        assertTrue(KeywordExpressionParser.validateSyntax("timeout_error").isValid());
-        assertTrue(
-                KeywordExpressionParser.validateSyntax("'database connection failed'").isValid());
+        Allure.step(
+                "验证简单关键字表达式",
+                () -> {
+                    Allure.step(
+                            "验证不带引号的关键字",
+                            () -> {
+                                ValidationResult result =
+                                        KeywordExpressionParser.validateSyntax("error");
+                                assertTrue(result.isValid());
+                                Allure.parameter("测试表达式", "error");
+                                Allure.parameter("验证结果", "通过");
+                            });
+
+                    Allure.step(
+                            "验证带引号的关键字",
+                            () -> {
+                                ValidationResult result =
+                                        KeywordExpressionParser.validateSyntax("'error'");
+                                assertTrue(result.isValid());
+                                Allure.parameter("测试表达式", "'error'");
+                                Allure.parameter("验证结果", "通过");
+                            });
+
+                    Allure.step(
+                            "验证带下划线的关键字",
+                            () -> {
+                                ValidationResult result =
+                                        KeywordExpressionParser.validateSyntax("timeout_error");
+                                assertTrue(result.isValid());
+                                Allure.parameter("测试表达式", "timeout_error");
+                                Allure.parameter("验证结果", "通过");
+                            });
+
+                    Allure.step(
+                            "验证多词关键字",
+                            () -> {
+                                ValidationResult result =
+                                        KeywordExpressionParser.validateSyntax(
+                                                "'database connection failed'");
+                                assertTrue(result.isValid());
+                                Allure.parameter("测试表达式", "'database connection failed'");
+                                Allure.parameter("验证结果", "通过");
+                            });
+                });
     }
 
     @Test

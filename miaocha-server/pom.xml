@@ -11,7 +11,7 @@
     <version>2.0.0-SNAPSHOT</version>
 
     <properties>
-        <main.class>com.hinadt.miaocha.LogManageSystemApplication</main.class>
+        <main.class>com.hinadt.miaocha.MiaoChaApp</main.class>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -46,6 +46,18 @@
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.qameta.allure</groupId>
+            <artifactId>allure-java-commons</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Allure测试报告 -->
+        <dependency>
+            <groupId>io.qameta.allure</groupId>
+            <artifactId>allure-junit5</artifactId>
+            <scope>test</scope>
         </dependency>
 
         <!-- Logstash JSON日志编码器 -->
@@ -204,9 +216,9 @@
                 <groupId>org.flywaydb</groupId>
                 <artifactId>flyway-maven-plugin</artifactId>
                 <configuration>
-                    <url>jdbc:mysql://10.0.21.34:3306/log_manage_system?useUnicode=true&amp;characterEncoding=utf8&amp;serverTimezone=Asia/Shanghai</url>
-                    <user>root</user>
-                    <password>Root@123</password>
+                    <url>${flyway.url}</url>
+                    <user>${flyway.user}</user>
+                    <password>${flyway.password}</password>
                     <locations>classpath:db/migration/v1,classpath:db/migration/v2</locations>
                     <baselineOnMigrate>true</baselineOnMigrate>
                 </configuration>
@@ -232,4 +244,30 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- 开发环境配置 -->
+        <profile>
+            <id>dev</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <flyway.password>root</flyway.password>
+                <flyway.url>jdbc:mysql://127.0.0.1:3306/log_manage_system?useUnicode=true&amp;characterEncoding=utf8&amp;serverTimezone=Asia/Shanghai</flyway.url>
+                <flyway.user>root</flyway.user>
+            </properties>
+        </profile>
+
+        <!-- 测试环境配置 -->
+        <profile>
+            <id>test</id>
+            <properties>
+                <flyway.password>Root@123</flyway.password>
+                <flyway.url>jdbc:mysql://10.0.21.34:3306/log_manage_system?useUnicode=true&amp;characterEncoding=utf8&amp;serverTimezone=Asia/Shanghai</flyway.url>
+                <flyway.user>root</flyway.user>
+            </properties>
+        </profile>
+    </profiles>
+
 </project>

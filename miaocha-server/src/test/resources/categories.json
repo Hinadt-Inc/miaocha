@@ -1,0 +1,74 @@
+[
+    {
+        "name": "业务逻辑缺陷",
+        "description": "秒查核心业务逻辑问题导致的测试失败",
+        "matchedStatuses": [
+            "failed"
+        ],
+        "messageRegex": ".*AssertionError.*|.*BusinessException.*|.*ValidationException.*"
+    },
+    {
+        "name": "日志处理问题",
+        "description": "日志收集、解析、存储相关功能问题",
+        "matchedStatuses": [
+            "failed"
+        ],
+        "messageRegex": ".*LogstashException.*|.*LogParseException.*|.*IndexException.*"
+    },
+    {
+        "name": "数据源连接问题",
+        "description": "数据库或外部数据源连接相关问题",
+        "matchedStatuses": [
+            "broken"
+        ],
+        "messageRegex": ".*SQLException.*|.*DataAccessException.*|.*ConnectionException.*|.*JdbcException.*"
+    },
+    {
+        "name": "SSH连接问题",
+        "description": "SSH远程连接或文件传输相关问题",
+        "matchedStatuses": [
+            "broken"
+        ],
+        "messageRegex": ".*SshException.*|.*AuthenticationException.*|.*SftpException.*"
+    },
+    {
+        "name": "配置和依赖问题",
+        "description": "Spring配置、Bean注入或依赖注入问题",
+        "matchedStatuses": [
+            "broken"
+        ],
+        "messageRegex": ".*NoSuchBeanDefinitionException.*|.*BeanCreationException.*|.*ConfigurationException.*"
+    },
+    {
+        "name": "测试环境问题",
+        "description": "测试环境配置或外部依赖不可用",
+        "matchedStatuses": [
+            "broken"
+        ],
+        "messageRegex": ".*TimeoutException.*|.*UnknownHostException.*|.*NetworkException.*"
+    },
+    {
+        "name": "数据导出问题",
+        "description": "Excel导出或数据格式转换相关问题",
+        "matchedStatuses": [
+            "failed"
+        ],
+        "messageRegex": ".*ExportException.*|.*ExcelException.*|.*ConversionException.*"
+    },
+    {
+        "name": "性能问题",
+        "description": "查询性能或系统响应时间不达标",
+        "matchedStatuses": [
+            "broken"
+        ],
+        "messageRegex": ".*timeout.*|.*performance.*|.*slow.*query.*"
+    },
+    {
+        "name": "测试代码问题",
+        "description": "测试代码本身存在的问题",
+        "matchedStatuses": [
+            "broken"
+        ],
+        "messageRegex": ".*NullPointerException.*|.*IllegalArgumentException.*|.*ClassCastException.*"
+    }
+]

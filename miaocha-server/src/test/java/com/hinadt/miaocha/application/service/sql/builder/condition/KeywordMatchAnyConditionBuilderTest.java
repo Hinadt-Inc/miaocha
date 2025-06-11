@@ -1,9 +1,9 @@
-package com.hinadt.miaocha.service.sql.builder.condition;
+package com.hinadt.miaocha.application.service.sql.builder.condition;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.hinadt.miaocha.application.service.sql.builder.condition.KeywordMatchAnyConditionBuilder;
 import com.hinadt.miaocha.domain.dto.LogSearchDTO;
+import io.qameta.allure.*;
 import java.util.Arrays;
 import java.util.Collections;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,12 +13,18 @@ import org.junit.jupiter.api.Test;
 /**
  * KeywordMatchAnyConditionBuilder 单元测试类
  *
+ * <p>测试秒查系统中关键字匹配任意条件构建器的功能 验证MATCH_ANY查询语句的正确生成和匹配逻辑
+ *
  * <p>测试目标：验证MATCH_ANY条件构建器的行为
  *
  * <p>支持的表达式类型： 1. 单个关键字：error 2. 带引号的关键字：'database error' 3. OR表达式：'error' || 'warning' 4. 不支持：包含
  * && 、( 、) 的表达式
  */
+@Epic("秒查日志管理系统")
+@Feature("日志检索")
+@Story("关键字匹配")
 @DisplayName("MATCH_ANY条件构建器测试")
+@Owner("开发团队")
 public class KeywordMatchAnyConditionBuilderTest {
 
     private KeywordMatchAnyConditionBuilder builder;

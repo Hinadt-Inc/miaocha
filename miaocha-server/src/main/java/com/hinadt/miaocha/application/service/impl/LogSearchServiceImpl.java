@@ -8,6 +8,7 @@ import com.hinadt.miaocha.application.service.database.DatabaseMetadataService;
 import com.hinadt.miaocha.application.service.database.DatabaseMetadataServiceFactory;
 import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
 import com.hinadt.miaocha.application.service.sql.builder.LogSqlBuilder;
+import com.hinadt.miaocha.application.service.sql.converter.LogSearchDTOConverter;
 import com.hinadt.miaocha.application.service.sql.processor.ResultProcessor;
 import com.hinadt.miaocha.application.service.sql.processor.TimeRangeProcessor;
 import com.hinadt.miaocha.common.exception.BusinessException;
@@ -50,6 +51,8 @@ public class LogSearchServiceImpl implements LogSearchService {
     @Autowired private DatabaseMetadataServiceFactory metadataServiceFactory;
 
     @Autowired private ModuleTableMappingService moduleTableMappingService;
+
+    @Autowired private LogSearchDTOConverter dtoConverter;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -138,8 +141,11 @@ public class LogSearchServiceImpl implements LogSearchService {
         String tableName = moduleTableMappingService.getTableNameByModule(dto.getModule());
 
         try (Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo)) {
+            // 转换DTO中的variant字段语法
+            LogSearchDTO convertedDto = dtoConverter.convert(dto);
+
             // 执行详细日志查询
-            String detailSql = logSqlBuilder.buildDetailSql(dto, tableName);
+            String detailSql = logSqlBuilder.buildDetailSql(convertedDto, tableName);
             logger.debug("详细日志SQL: {}", detailSql);
 
             // 执行详细查询并获取原始结果
@@ -161,7 +167,7 @@ public class LogSearchServiceImpl implements LogSearchService {
                     .append("'");
 
             // 在where条件部分添加搜索条件
-            String searchConditions = logSqlBuilder.buildSearchConditionsOnly(dto);
+            String searchConditions = logSqlBuilder.buildSearchConditionsOnly(convertedDto);
             if (!searchConditions.isEmpty()) {
                 countSql.append(" AND ").append(searchConditions);
             }
@@ -198,8 +204,12 @@ public class LogSearchServiceImpl implements LogSearchService {
         String tableName = moduleTableMappingService.getTableNameByModule(dto.getModule());
 
         try (Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo)) {
+            // 转换DTO中的variant字段语法
+            LogSearchDTO convertedDto = dtoConverter.convert(dto);
+
             // 执行分布统计查询
-            String distributionSql = logSqlBuilder.buildDistributionSql(dto, tableName, timeUnit);
+            String distributionSql =
+                    logSqlBuilder.buildDistributionSql(convertedDto, tableName, timeUnit);
             logger.debug("分布统计SQL: {}", distributionSql);
 
             // 执行分布查询并获取原始结果
@@ -232,17 +242,32 @@ public class LogSearchServiceImpl implements LogSearchService {
         String tableName = moduleTableMappingService.getTableNameByModule(dto.getModule());
 
         try (Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo)) {
+            // 转换DTO中的variant字段语法
+            LogSearchDTO convertedDto = dtoConverter.convert(dto);
+
+            // 转换fields中的点语法为括号语法（用于TOPN函数）
+            // 注意：这里要使用原始的dto.getFields()，而不是convertedDto.getFields()
+            // 因为convertedDto.getFields()已经包含了AS语法，不适合用于TOPN函数
+            List<String> convertedTopnFields =
+                    dto.getFields().stream()
+                            .map(dtoConverter::convertTopnField)
+                            .collect(java.util.stream.Collectors.toList());
+
             // 执行字段分布查询
             String fieldDistributionSql =
                     logSqlBuilder.buildFieldDistributionSql(
-                            dto, tableName, dto.getFields(), 5); // 默认TOP 5
+                            convertedDto,
+                            tableName,
+                            convertedTopnFields,
+                            dto.getFields(),
+                            5); // 默认TOP 5
             logger.debug("字段分布SQL: {}", fieldDistributionSql);
 
             // 执行字段分布查询并获取原始结果
             Map<String, Object> fieldDistributionResult =
                     jdbcQueryExecutor.executeRawQuery(conn, fieldDistributionSql);
 
-            // 处理字段分布查询结果
+            // 处理字段分布查询结果（使用原始字段名，保持用户友好的显示）
             List<FieldDistributionDTO> fieldDistributions =
                     processTopnResult(fieldDistributionResult, dto.getFields());
             result.setFieldDistributions(fieldDistributions);
@@ -268,27 +293,29 @@ public class LogSearchServiceImpl implements LogSearchService {
             Map<String, Object> row = rows.get(0); // TOPN查询只返回一行数据
 
             for (String field : fields) {
-                String topnColumnNameLower = "topn(" + field + ", 5)"; // 小写列名格式：topn(field, 5)
-                String topnColumnNameUpper = "TOPN(" + field + ", 5)"; // 大写列名格式：TOPN(field, 5)
-
-                // 兼容大小写，优先检查小写，然后检查大写
-                String actualColumnName = null;
+                // 由于现在使用AS别名，直接使用字段名作为列名
                 String jsonValue = null;
 
-                if (row.containsKey(topnColumnNameLower)) {
-                    actualColumnName = topnColumnNameLower;
-                    jsonValue = (String) row.get(topnColumnNameLower);
-                } else if (row.containsKey(topnColumnNameUpper)) {
-                    actualColumnName = topnColumnNameUpper;
-                    jsonValue = (String) row.get(topnColumnNameUpper);
+                // 尝试获取AS别名的列值（直接使用原字段名）
+                if (row.containsKey(field)) {
+                    jsonValue = (String) row.get(field);
+                } else {
+                    // 兼容旧格式：尝试TOPN函数格式的列名
+                    String topnColumnNameLower = "topn(" + field + ", 5)"; // 小写列名格式：topn(field, 5)
+                    String topnColumnNameUpper = "TOPN(" + field + ", 5)"; // 大写列名格式：TOPN(field, 5)
+
+                    if (row.containsKey(topnColumnNameLower)) {
+                        jsonValue = (String) row.get(topnColumnNameLower);
+                    } else if (row.containsKey(topnColumnNameUpper)) {
+                        jsonValue = (String) row.get(topnColumnNameUpper);
+                    }
                 }
 
-                if (actualColumnName != null) {
+                if (jsonValue != null || row.containsKey(field)) {
                     FieldDistributionDTO dto = new FieldDistributionDTO();
                     dto.setFieldName(field);
 
                     // 解析JSON格式的TOPN结果，格式如：{"value1":count1,"value2":count2,...}
-                    // 这里简化处理，实际应该使用JSON解析库
                     List<FieldDistributionDTO.ValueDistribution> valueDistributions;
                     if (jsonValue != null) {
                         valueDistributions = parseTopnJson(jsonValue);

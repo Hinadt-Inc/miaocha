@@ -94,3 +94,12 @@ build/
 *.njsproj
 *.sln
 *.sw?
+
+.allure
+**/.allure/**
+
+allure-report
+**/allure-report/**
+
+coverage-report
+**/coverage-report/**

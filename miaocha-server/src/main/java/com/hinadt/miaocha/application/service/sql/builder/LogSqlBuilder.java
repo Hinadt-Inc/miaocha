@@ -3,7 +3,6 @@ package com.hinadt.miaocha.application.service.sql.builder;
 import com.hinadt.miaocha.application.service.sql.builder.condition.SearchConditionManager;
 import com.hinadt.miaocha.domain.dto.LogSearchDTO;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -81,22 +80,32 @@ public class LogSqlBuilder {
      *
      * @param dto 日志搜索DTO
      * @param tableName 表名
-     * @param fields 需要统计的字段列表
+     * @param fields 需要统计的字段列表（已转换为括号语法，用于TOPN函数）
+     * @param originalFields 原始字段列表（点语法，用于AS别名）
      * @param topN 每个字段取前N个值
      * @return 字段分布查询SQL
      */
     public String buildFieldDistributionSql(
-            LogSearchDTO dto, String tableName, List<String> fields, int topN) {
+            LogSearchDTO dto,
+            String tableName,
+            List<String> fields,
+            List<String> originalFields,
+            int topN) {
         StringBuilder sql = new StringBuilder();
 
-        // 构建TOPN函数调用列表
-        String topnColumns =
-                fields.stream()
-                        .map(field -> String.format("TOPN(%s, %d)", field, topN))
-                        .collect(Collectors.joining(", "));
+        // 构建TOPN函数调用列表，字段使用括号语法，AS别名使用原始点语法
+        StringBuilder topnColumns = new StringBuilder();
+        for (int i = 0; i < fields.size(); i++) {
+            if (i > 0) {
+                topnColumns.append(", ");
+            }
+            String field = fields.get(i);
+            String originalField = i < originalFields.size() ? originalFields.get(i) : field;
+            topnColumns.append(String.format("TOPN(%s, %d) AS '%s'", field, topN, originalField));
+        }
 
         sql.append("SELECT ")
-                .append(topnColumns)
+                .append(topnColumns.toString())
                 .append(" FROM ")
                 .append(tableName)
                 .append(" WHERE log_time >= '")

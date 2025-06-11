@@ -1,6 +1,7 @@
 package com.hinadt.miaocha.application.service.database;
 
 import com.hinadt.miaocha.domain.dto.SchemaInfoDTO;
+import com.hinadt.miaocha.domain.entity.enums.DatasourceType;
 import java.sql.*;
 import java.util.*;
 import org.springframework.stereotype.Component;
@@ -68,9 +69,6 @@ public class PostgreSqlMetadataService implements DatabaseMetadataService {
                 column.setColumnName(columnName);
                 column.setDataType(rs.getString("TYPE_NAME"));
 
-                // 由于JDBC驱动可能无法正确获取列注释，这里通过额外的SQL获取
-                column.setColumnComment(getColumnComment(connection, tableName, columnName));
-
                 column.setIsPrimaryKey(primaryKeys.contains(columnName));
                 column.setIsNullable("YES".equalsIgnoreCase(rs.getString("IS_NULLABLE")));
                 columns.add(column);
@@ -105,6 +103,6 @@ public class PostgreSqlMetadataService implements DatabaseMetadataService {
 
     @Override
     public String getSupportedDatabaseType() {
-        return "postgresql";
+        return DatasourceType.POSTGRESQL.getType();
     }
 }

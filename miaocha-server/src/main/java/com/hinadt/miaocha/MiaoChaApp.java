@@ -11,10 +11,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * @author hina
  */
 @SpringBootApplication
-@MapperScan("com.hina.log.domain.mapper")
+@MapperScan("com.hinadt.miaocha.domain.mapper")
 @EnableScheduling
-public class LogManageSystemApplication {
+public class MiaoChaApp {
     public static void main(String[] args) {
-        SpringApplication.run(LogManageSystemApplication.class, args);
+        SpringApplication.run(MiaoChaApp.class, args);
     }
 }

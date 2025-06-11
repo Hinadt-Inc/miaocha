@@ -2,6 +2,7 @@ package com.hinadt.miaocha.logstash.task;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.reset;
 
 import com.hinadt.miaocha.application.logstash.enums.LogstashMachineState;
 import com.hinadt.miaocha.application.logstash.task.LogstashProcessMonitorTask;
@@ -19,7 +20,6 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -34,7 +34,7 @@ public class LogstashProcessMonitorTaskTest {
 
     @Mock private SshClient sshClient;
 
-    @InjectMocks private LogstashProcessMonitorTask monitorTask;
+    private LogstashProcessMonitorTask monitorTask;
 
     private LogstashMachine logstashMachine;
     private LogstashProcess logstashProcess;
@@ -42,6 +42,12 @@ public class LogstashProcessMonitorTaskTest {
 
     @BeforeEach
     void setUp() {
+        reset(logstashMachineMapper, logstashProcessMapper, machineMapper, sshClient);
+        // 手动创建LogstashProcessMonitorTask，注入所有mock对象
+        monitorTask =
+                new LogstashProcessMonitorTask(
+                        logstashMachineMapper, logstashProcessMapper, machineMapper, sshClient);
+
         // 创建测试数据
         logstashMachine = new LogstashMachine();
         logstashMachine.setId(1L);
