@@ -32,7 +32,7 @@ fi
 
 # 如果PID文件无效，尝试通过进程名查找
 if [ -z "$PID" ]; then
-    PID=$(find_pid "log-manage-server")
+    PID=$(find_pid "miaocha-server")
     if [ -z "$PID" ]; then
         print_warning "应用未运行"
         rm -f "$PID_FILE" 2>/dev/null
@@ -76,7 +76,7 @@ if [ -n "$PORT" ]; then
             print_warning "端口 $PORT 未监听，应用可能尚未完全启动"
         fi
     fi
-    
+
     # 尝试检查健康检查接口
     if command_exists curl; then
         HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:$PORT/actuator/health 2>/dev/null)
@@ -92,7 +92,7 @@ fi
 START_TIME=$(ps -p "$PID" -o lstart= 2>/dev/null)
 if [ -n "$START_TIME" ]; then
     print_info "启动时间: $START_TIME"
-    
+
     # 计算运行时间
     if command_exists ps && command_exists awk; then
         UPTIME=$(ps -p "$PID" -o etimes= | awk '{printf "%d天%02d时%02d分%02d秒", $1/86400, ($1%86400)/3600, ($1%3600)/60, $1%60}')
@@ -103,4 +103,4 @@ fi
 # 显示环境信息
 print_info "活动环境: $ACTIVE_PROFILE"
 
-exit 0 
+exit 0

@@ -53,7 +53,7 @@ fi
 
 # 如果PID文件无效，尝试通过进程名查找
 if [ -z "$PID" ]; then
-    PID=$(find_pid "log-manage-server")
+    PID=$(find_pid "miaocha-server")
     if [ -z "$PID" ]; then
         print_warning "应用未运行"
         rm -f "$PID_FILE" 2>/dev/null
@@ -95,4 +95,4 @@ else
     rm -f "$PID_FILE"
 fi
 
-exit 0 
+exit 0

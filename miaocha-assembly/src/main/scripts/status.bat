@@ -16,21 +16,28 @@ if exist "%VERSION_FILE%" (
 
 rem ASCII 标题
 echo.
-echo   _                  __  __                                   _____           _                
-echo  ^| ^|    ___   __ _  ^|  \/  ^| __ _ _ __   __ _  __ _  ___    / ____|   _  ___^| ^|_ ___ _ __ ___ 
-echo  ^| ^|   / _ \ / _` ^| ^| ^|\/^| ^|/ _` ^| '_ \ / _` ^|/ _` ^|/ _ \  ^| ^(___  ^| ^| ^|/ __^| __/ _ \ '_ ` _ \
-echo  ^| ^|__^| ^(_^) ^| ^(_^| ^| ^| ^|  ^| ^| ^(_^| ^| ^| ^| ^| ^(_^| ^| ^(_^| ^|  __/   \___ \ ^|_^| ^|\__ \ ^|^|  __/ ^| ^| ^| ^| ^|
-echo  ^|_____\___/ \__, ^| ^|_^|  ^|_^|\__,_^|_^| ^|_^|\__,_^|\__, ^|\_^|     ____^) \__, ^|^|___/\__\_^|_^|_^| ^|_^| ^|_^|
-echo              ^|___/                             ^|___/              ^|___/                        
+echo   ____  _____  ____  ______  ______
+echo  /    \/     \/    \/      \/      \
+echo /_______/_____/_______/\      \      \
+echo ^|  ***  ^|  ***  ^|  ***  ^|  ***  ^|  ***  ^|
+echo ^|  ***  ^|  ***  ^|  ***  ^|  ***  ^|  ***  ^|
+echo ^|_______|_______|_______|_______|_______|
 echo.
-echo === 日志管理系统 v%APP_VERSION% ===
+echo    ____  __  __  ____  ______
+echo   /    \/  \/  \/    \/      \
+echo  /_______/\  /\_______/\      \
+echo  ^|  ***  ^|  ^^^|^|  ^|  ***  ^|  ***  ^|
+echo  ^|  ***  ^|  ^^^|^|  ^|  ***  ^|  ***  ^|
+echo  ^|_______|__^^^|^^^|__|_______|_______|
+echo.
+echo === 秒查(MiaoCha)日志搜索系统 v%APP_VERSION% ===
 echo.
 
 rem 首先尝试从PID文件获取PID
 set PID=
 if exist "%PID_FILE%" (
     set /p PID=<"%PID_FILE%"
-    
+
     if "!PID!"=="" (
         echo 警告: PID文件为空
         set PID=
@@ -45,10 +52,10 @@ if exist "%PID_FILE%" (
 
 rem 如果PID文件无效，尝试通过进程名查找
 if "!PID!"=="" (
-    for /f "tokens=1" %%p in ('wmic process where "commandline like '%%log-manage-server%%'" get processid ^| findstr /r "[0-9]"') do (
+    for /f "tokens=1" %%p in ('wmic process where "commandline like '%%miaocha-server%%'" get processid ^| findstr /r "[0-9]"') do (
         set PID=%%p
     )
-    
+
     if "!PID!"=="" (
         echo 警告: 应用未运行
         del "%PID_FILE%" 2>nul
@@ -96,7 +103,7 @@ if %ERRORLEVEL% EQU 0 (
 
 if defined PORT (
     echo 信息: 应用端口: !PORT!
-    
+
     rem 检查端口是否已被监听
     netstat -ano | findstr /C:":!PORT! " >nul
     if %ERRORLEVEL% EQU 0 (
@@ -104,7 +111,7 @@ if defined PORT (
     ) else (
         echo 警告: 端口 !PORT! 未监听，应用可能尚未完全启动
     )
-    
+
     rem 尝试检查健康检查接口
     where curl >nul 2>nul
     if %ERRORLEVEL% EQU 0 (
@@ -133,16 +140,16 @@ rem 计算运行时间
 for /f "tokens=1" %%u in ('wmic process where "processid='!PID!'" get workingsetsize ^| findstr /r "[0-9]"') do (
     set /a UPTIME_SEC=%time:~0,2%*3600 + %time:~3,2%*60 + %time:~6,2% - (!HOUR!*3600 + !MINUTE!*60 + !SECOND!)
     if !UPTIME_SEC! LSS 0 set /a UPTIME_SEC=!UPTIME_SEC! + 86400
-    
+
     set /a UPTIME_DAYS=!UPTIME_SEC! / 86400
     set /a UPTIME_HOURS=(!UPTIME_SEC! %% 86400) / 3600
     set /a UPTIME_MINUTES=(!UPTIME_SEC! %% 3600) / 60
     set /a UPTIME_SECONDS=!UPTIME_SEC! %% 60
-    
+
     echo 信息: 运行时间: !UPTIME_DAYS!天!UPTIME_HOURS!时!UPTIME_MINUTES!分!UPTIME_SECONDS!秒
 )
 
 rem 显示环境信息
 echo 信息: 活动环境: !ACTIVE_PROFILE!
 
-exit /b 0 
+exit /b 0

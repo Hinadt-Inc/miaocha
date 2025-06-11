@@ -5,7 +5,7 @@ rem 设置应用根目录
 set "APP_HOME=%~dp0.."
 set "LIB_DIR=%APP_HOME%\lib"
 set "CONFIG_DIR=%APP_HOME%\config"
-set "JAR_FILE=%APP_HOME%\log-manage-server.jar"
+set "JAR_FILE=%APP_HOME%\miaocha-server.jar"
 set "LOG_DIR=%APP_HOME%\logs"
 set "PID_FILE=%APP_HOME%\application.pid"
 
@@ -22,14 +22,21 @@ if exist "%VERSION_FILE%" (
 
 rem ASCII 标题
 echo.
-echo   _                  __  __                                   _____           _                
-echo  ^| ^|    ___   __ _  ^|  \/  ^| __ _ _ __   __ _  __ _  ___    / ____|   _  ___^| ^|_ ___ _ __ ___ 
-echo  ^| ^|   / _ \ / _` ^| ^| ^|\/^| ^|/ _` ^| '_ \ / _` ^|/ _` ^|/ _ \  ^| ^(___  ^| ^| ^|/ __^| __/ _ \ '_ ` _ \
-echo  ^| ^|__^| ^(_^) ^| ^(_^| ^| ^| ^|  ^| ^| ^(_^| ^| ^| ^| ^| ^(_^| ^| ^(_^| ^|  __/   \___ \ ^|_^| ^|\__ \ ^|^|  __/ ^| ^| ^| ^| ^|
-echo  ^|_____\___/ \__, ^| ^|_^|  ^|_^|\__,_^|_^| ^|_^|\__,_^|\__, ^|\_^|     ____^) \__, ^|^|___/\__\_^|_^|_^| ^|_^| ^|_^|
-echo              ^|___/                             ^|___/              ^|___/                        
+echo   ____  _____  ____  ______  ______
+echo  /    \/     \/    \/      \/      \
+echo /_______/_____/_______/\      \      \
+echo ^|  ***  ^|  ***  ^|  ***  ^|  ***  ^|  ***  ^|
+echo ^|  ***  ^|  ***  ^|  ***  ^|  ***  ^|  ***  ^|
+echo ^|_______|_______|_______|_______|_______|
 echo.
-echo === 日志管理系统 v%APP_VERSION% ===
+echo    ____  __  __  ____  ______
+echo   /    \/  \/  \/    \/      \
+echo  /_______/\  /\_______/\      \
+echo  ^|  ***  ^|  ^^^|^|  ^|  ***  ^|  ***  ^|
+echo  ^|  ***  ^|  ^^^|^|  ^|  ***  ^|  ***  ^|
+echo  ^|_______|__^^^|^^^|__|_______|_______|
+echo.
+echo === 秒查(MiaoCha)日志搜索系统 v%APP_VERSION% ===
 echo.
 
 rem 解析命令行参数
@@ -118,7 +125,7 @@ if not exist "%LOG_DIR%" (
 
 rem 检查应用是否已经运行
 set pid=
-for /f "tokens=1" %%p in ('wmic process where "commandline like '%%log-manage-server%%'" get processid ^| findstr /r "[0-9]"') do (
+for /f "tokens=1" %%p in ('wmic process where "commandline like '%%miaocha-server%%'" get processid ^| findstr /r "[0-9]"') do (
     set pid=%%p
 )
 
@@ -154,8 +161,8 @@ rem 创建启动批处理
 set "STARTUP_BAT=%TEMP%\start_%RANDOM%.bat"
 echo @echo off > "%STARTUP_BAT%"
 echo cd /d "%APP_HOME%" >> "%STARTUP_BAT%"
-echo start "日志管理系统" /b java %JAVA_OPTS% -jar "%JAR_FILE%" ^> "%LOG_DIR%\startup.log" 2^>^&1 >> "%STARTUP_BAT%"
-echo for /f "tokens=2" %%%%p in ('tasklist /fi "IMAGENAME eq java.exe" /fi "WINDOWTITLE eq 日志管理系统" /fo list ^| find "PID:"') do echo %%%%p ^> "%PID_FILE%" >> "%STARTUP_BAT%"
+echo start "秒查系统" /b java %JAVA_OPTS% -jar "%JAR_FILE%" ^> "%LOG_DIR%\startup.log" 2^>^&1 >> "%STARTUP_BAT%"
+echo for /f "tokens=2" %%%%p in ('tasklist /fi "IMAGENAME eq java.exe" /fi "WINDOWTITLE eq 秒查系统" /fo list ^| find "PID:"') do echo %%%%p ^> "%PID_FILE%" >> "%STARTUP_BAT%"
 
 rem 执行启动批处理
 call "%STARTUP_BAT%"
@@ -293,4 +300,4 @@ exit /b 0
 
 :startup_failed
 echo 错误: 应用启动失败，请检查日志: %LOG_DIR%\startup.log
-exit /b 1 
+exit /b 1

@@ -2,20 +2,20 @@
 
 # 显示欢迎信息
 echo "================================================="
-echo "   日志管理系统 - Docker容器版"
+echo "   秒查 - Docker容器版"
 echo "================================================="
 
 # 设置应用根目录
 APP_HOME="/app"
 CONFIG_DIR="$APP_HOME/config"
-JAR_FILE="$APP_HOME/log-manage-server.jar"
+JAR_FILE="$APP_HOME/miaocha-server.jar"
 LOG_DIR="$APP_HOME/logs"
 
 # 查找实际的JAR文件（优先使用exec版本）
-if [ -f "$APP_HOME"/log-manage-server-*-exec.jar ]; then
-    JAR_FILE=$(ls "$APP_HOME"/log-manage-server-*-exec.jar | head -1)
-elif [ -f "$APP_HOME"/log-manage-server.jar ]; then
-    JAR_FILE="$APP_HOME/log-manage-server.jar"
+if [ -f "$APP_HOME"/miaocha-server-*-exec.jar ]; then
+    JAR_FILE=$(ls "$APP_HOME"/miaocha-server-*-exec.jar | head -1)
+elif [ -f "$APP_HOME"/miaocha-server.jar ]; then
+    JAR_FILE="$APP_HOME/miaocha-server.jar"
 else
     echo "[ERROR] 未找到可执行的JAR文件"
     exit 1
@@ -45,4 +45,4 @@ exec java ${JAVA_OPTS:--Xms1g -Xmx2g -Dfile.encoding=UTF-8} \
   -Dspring.profiles.active=$ACTIVE_PROFILE \
   -Dspring.config.location=file:$CONFIG_DIR/ \
   -Dlogging.config=$CONFIG_DIR/logback-spring.xml \
-  -jar $JAR_FILE 
+  -jar $JAR_FILE
