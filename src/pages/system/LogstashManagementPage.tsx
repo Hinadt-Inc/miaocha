@@ -632,7 +632,7 @@ function LogstashManagementPage() {
                             </Button>
                           </Popconfirm>
                         )}
-                        {(machine.state === 'RUNNING' || machine.state === 'STOPPING') && (
+                        {machine.state === 'STOP_FAILED' && (
                           <Popconfirm
                             title="确认强制停止"
                             description="确定要强制停止这台机器吗？这可能会导致数据丢失"
