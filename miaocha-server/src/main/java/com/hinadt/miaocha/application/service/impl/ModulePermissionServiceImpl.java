@@ -6,10 +6,7 @@ import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.dto.permission.ModuleUsersPermissionDTO;
 import com.hinadt.miaocha.domain.dto.permission.ModuleUsersPermissionDTO.UserPermissionInfoDTO;
 import com.hinadt.miaocha.domain.dto.permission.UserModulePermissionDTO;
-import com.hinadt.miaocha.domain.dto.permission.UserPermissionModuleStructureDTO;
-import com.hinadt.miaocha.domain.dto.permission.UserPermissionModuleStructureDTO.ModuleInfoDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
-import com.hinadt.miaocha.domain.entity.LogstashProcess;
 import com.hinadt.miaocha.domain.entity.User;
 import com.hinadt.miaocha.domain.entity.UserModulePermission;
 import com.hinadt.miaocha.domain.entity.enums.UserRole;
@@ -152,99 +149,6 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
 
         // 转换为DTO
         return permissions.stream().map(this::convertToDTO).collect(Collectors.toList());
-    }
-
-    @Override
-    public List<UserPermissionModuleStructureDTO> getUserAccessibleModules(Long userId) {
-        // 先查询用户信息
-        User user = userMapper.selectById(userId);
-        if (user == null) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
-
-        // 获取所有数据源
-        List<DatasourceInfo> allDatasourceInfos = datasourceMapper.selectAll();
-        if (allDatasourceInfos.isEmpty()) {
-            return new ArrayList<>();
-        }
-
-        // 获取所有模块
-        List<LogstashProcess> allModules = logstashProcessMapper.selectAll();
-
-        // 数据源ID -> 数据源对象的映射
-        Map<Long, DatasourceInfo> datasourceMap = new HashMap<>();
-        allDatasourceInfos.forEach(ds -> datasourceMap.put(ds.getId(), ds));
-
-        // 结果容器
-        Map<Long, UserPermissionModuleStructureDTO> resultMap = new HashMap<>();
-
-        // 超级管理员和管理员拥有所有模块的权限
-        String role = user.getRole();
-        boolean isAdmin =
-                UserRole.SUPER_ADMIN.name().equals(role) || UserRole.ADMIN.name().equals(role);
-
-        if (isAdmin) {
-            // 管理员拥有所有数据源的权限
-            for (DatasourceInfo ds : allDatasourceInfos) {
-                UserPermissionModuleStructureDTO structureDTO =
-                        new UserPermissionModuleStructureDTO();
-                structureDTO.setDatasourceId(ds.getId());
-                structureDTO.setDatasourceName(ds.getName());
-                structureDTO.setDatabaseName(ds.getDatabase());
-
-                // 获取该数据源的所有模块
-                List<com.hinadt.miaocha.domain.entity.ModuleInfo> moduleInfos =
-                        moduleInfoMapper.selectByDatasourceId(ds.getId());
-                List<ModuleInfoDTO> modules = new ArrayList<>();
-                for (com.hinadt.miaocha.domain.entity.ModuleInfo moduleInfo : moduleInfos) {
-                    ModuleInfoDTO moduleDto = new ModuleInfoDTO();
-                    moduleDto.setModuleName(moduleInfo.getName());
-                    moduleDto.setPermissionId(null); // 管理员没有特定的权限ID
-                    modules.add(moduleDto);
-                }
-
-                structureDTO.setModules(modules);
-                resultMap.put(ds.getId(), structureDTO);
-            }
-        } else {
-            // 非管理员，查询用户所有的模块权限
-            // 获取用户的所有模块权限
-            List<UserModulePermission> allPermissions =
-                    userModulePermissionMapper.selectByUser(userId);
-
-            // 按数据源分组
-            Map<Long, List<UserModulePermission>> permissionsByDatasource =
-                    allPermissions.stream()
-                            .collect(Collectors.groupingBy(UserModulePermission::getDatasourceId));
-
-            for (DatasourceInfo ds : allDatasourceInfos) {
-                Long datasourceId = ds.getId();
-                List<UserModulePermission> permissions =
-                        permissionsByDatasource.getOrDefault(datasourceId, new ArrayList<>());
-
-                if (!permissions.isEmpty()) {
-                    UserPermissionModuleStructureDTO structureDTO =
-                            new UserPermissionModuleStructureDTO();
-                    structureDTO.setDatasourceId(datasourceId);
-                    structureDTO.setDatasourceName(ds.getName());
-                    structureDTO.setDatabaseName(ds.getDatabase());
-
-                    // 添加模块信息
-                    List<ModuleInfoDTO> modules = new ArrayList<>();
-                    for (UserModulePermission permission : permissions) {
-                        ModuleInfoDTO moduleInfo = new ModuleInfoDTO();
-                        moduleInfo.setModuleName(permission.getModule());
-                        moduleInfo.setPermissionId(permission.getId());
-                        modules.add(moduleInfo);
-                    }
-
-                    structureDTO.setModules(modules);
-                    resultMap.put(datasourceId, structureDTO);
-                }
-            }
-        }
-
-        return new ArrayList<>(resultMap.values());
     }
 
     @Override
@@ -504,6 +408,13 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
         dto.setDatasourceId(permission.getDatasourceId());
         dto.setModule(permission.getModule());
 
+        // 查询数据源信息
+        DatasourceInfo datasourceInfo = datasourceMapper.selectById(permission.getDatasourceId());
+        if (datasourceInfo != null) {
+            dto.setDatasourceName(datasourceInfo.getName());
+            dto.setDatabaseName(datasourceInfo.getDatabase());
+        }
+
         if (permission.getCreateTime() != null) {
             dto.setCreateTime(permission.getCreateTime().format(DATE_TIME_FORMATTER));
         }
@@ -527,5 +438,52 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
         }
 
         return dto;
+    }
+
+    @Override
+    public List<UserModulePermissionDTO> getUserAccessibleModules(Long userId) {
+        // 先查询用户信息
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        // 超级管理员和管理员拥有所有模块的权限
+        String role = user.getRole();
+        boolean isAdmin =
+                UserRole.SUPER_ADMIN.name().equals(role) || UserRole.ADMIN.name().equals(role);
+
+        List<UserModulePermissionDTO> result = new ArrayList<>();
+
+        if (isAdmin) {
+            // 管理员拥有所有模块的权限
+            List<com.hinadt.miaocha.domain.entity.ModuleInfo> allModules =
+                    moduleInfoMapper.selectAll();
+
+            for (com.hinadt.miaocha.domain.entity.ModuleInfo moduleInfo : allModules) {
+                UserModulePermissionDTO dto = new UserModulePermissionDTO();
+                dto.setId(null); // 管理员没有特定的权限ID
+                dto.setUserId(userId);
+                dto.setDatasourceId(moduleInfo.getDatasourceId());
+                dto.setModule(moduleInfo.getName());
+
+                // 查询数据源信息
+                DatasourceInfo datasourceInfo =
+                        datasourceMapper.selectById(moduleInfo.getDatasourceId());
+                if (datasourceInfo != null) {
+                    dto.setDatasourceName(datasourceInfo.getName());
+                    dto.setDatabaseName(datasourceInfo.getDatabase());
+                }
+
+                result.add(dto);
+            }
+        } else {
+            // 非管理员，查询用户实际的模块权限
+            List<UserModulePermission> permissions =
+                    userModulePermissionMapper.selectByUser(userId);
+            result = permissions.stream().map(this::convertToDTO).collect(Collectors.toList());
+        }
+
+        return result;
     }
 }

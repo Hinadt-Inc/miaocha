@@ -2,7 +2,6 @@ package com.hinadt.miaocha.application.service;
 
 import com.hinadt.miaocha.domain.dto.permission.ModuleUsersPermissionDTO;
 import com.hinadt.miaocha.domain.dto.permission.UserModulePermissionDTO;
-import com.hinadt.miaocha.domain.dto.permission.UserPermissionModuleStructureDTO;
 import java.util.List;
 
 /** 模块权限服务接口 用于处理基于模块的权限管理 */
@@ -46,9 +45,9 @@ public interface ModulePermissionService {
      * 获取当前用户可访问的所有模块
      *
      * @param userId 用户ID
-     * @return 用户可访问的模块结构列表
+     * @return 用户可访问的模块权限列表（扁平化结构）
      */
-    List<UserPermissionModuleStructureDTO> getUserAccessibleModules(Long userId);
+    List<UserModulePermissionDTO> getUserAccessibleModules(Long userId);
 
     /**
      * 获取所有用户的模块权限（按模块聚合，每个模块下显示有权限的用户列表）

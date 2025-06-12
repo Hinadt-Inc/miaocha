@@ -17,6 +17,12 @@ public class UserModulePermissionDTO {
     @Schema(description = "数据源ID")
     private Long datasourceId;
 
+    @Schema(description = "数据源名称")
+    private String datasourceName;
+
+    @Schema(description = "数据库名称")
+    private String databaseName;
+
     @Schema(description = "模块名称")
     private String module;
 

@@ -85,8 +85,7 @@ public class QueryPermissionChecker {
         // 获取用户可访问的所有模块
         List<String> permittedModules =
                 modulePermissionService.getUserAccessibleModules(userId).stream()
-                        .flatMap(structure -> structure.getModules().stream())
-                        .map(moduleInfo -> moduleInfo.getModuleName())
+                        .map(permission -> permission.getModule())
                         .collect(Collectors.toList());
 
         // 获取所有表

@@ -6,7 +6,6 @@ import com.hinadt.miaocha.domain.dto.ApiResponse;
 import com.hinadt.miaocha.domain.dto.permission.ModulePermissionBatchRequestDTO;
 import com.hinadt.miaocha.domain.dto.permission.ModuleUsersPermissionDTO;
 import com.hinadt.miaocha.domain.dto.permission.UserModulePermissionDTO;
-import com.hinadt.miaocha.domain.dto.permission.UserPermissionModuleStructureDTO;
 import com.hinadt.miaocha.domain.dto.user.UserDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -130,11 +129,11 @@ public class ModulePermissionEndpoint {
      * 获取当前用户可访问的所有模块
      *
      * @param user 当前用户
-     * @return 用户可访问的模块结构列表
+     * @return 用户可访问的模块权限列表（扁平化结构）
      */
     @GetMapping("/my")
-    @Operation(summary = "获取我的模块权限", description = "获取当前用户可访问的所有模块")
-    public ApiResponse<List<UserPermissionModuleStructureDTO>> getMyAccessibleModules(
+    @Operation(summary = "获取我的模块权限", description = "获取当前用户可访问的所有模块（扁平化列表）")
+    public ApiResponse<List<UserModulePermissionDTO>> getMyAccessibleModules(
             @CurrentUser UserDTO user) {
         return ApiResponse.success(modulePermissionService.getUserAccessibleModules(user.getId()));
     }
