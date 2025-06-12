@@ -365,6 +365,13 @@ const UserManagementPage = () => {
       render: (createTime: string) => dayjs(createTime).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
+      title: '更新时间',
+      dataIndex: 'updateTime',
+      key: 'updateTime',
+      width: 160,
+      render: (updateTime: string) => (updateTime ? dayjs(updateTime).format('YYYY-MM-DD HH:mm:ss') : '-'),
+    },
+    {
       title: '操作',
       key: 'action',
       fixed: 'right',

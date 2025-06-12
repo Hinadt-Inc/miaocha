@@ -2,16 +2,7 @@
 export interface DataSource {
   id: string;
   name: string;
-  type:
-    | 'mysql'
-    | 'postgresql'
-    | 'sqlserver'
-    | 'oracle'
-    | 'mongodb'
-    | 'redis'
-    | 'elasticsearch'
-    | 'clickhouse'
-    | 'hive';
+  type: 'mysql' | 'postgresql' | 'sqlserver' | 'oracle' | 'mongodb' | 'redis' | 'elasticsearch' | 'clickhouse' | 'hive';
   ip: string;
   port: number;
   username: string;
@@ -24,6 +15,8 @@ export interface DataSource {
   jdbcParams?: {
     connectTimeout: number;
   };
+  createUser?: string; // 创建用户
+  updateUser?: string; // 更新用户
 }
 
 // 创建数据源请求参数

@@ -7,10 +7,10 @@ import {
 } from '../../../utils/logstashTemplates';
 import { useEffect, useState } from 'react';
 import type { LogstashProcess } from '../../../types/logstashTypes';
-import { getAllDataSources } from '../../../api/datasource';
+import { getModules } from '../../../api/modules';
 import { getMachines } from '../../../api/machine';
-import type { DataSource } from '../../../types/datasourceTypes';
 import type { Machine } from '../../../types/machineTypes';
+import type { Module } from '../../../api/modules';
 
 interface LogstashEditModalProps {
   visible: boolean;
@@ -23,7 +23,7 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
   const [form] = Form.useForm();
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [datasources, setDatasources] = useState<DataSource[]>([]);
+  const [moduleData, setModuleData] = useState<Module[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
 
   useEffect(() => {
@@ -31,8 +31,8 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
       if (visible) {
         setLoading(true);
         try {
-          const [dsRes, machineRes] = await Promise.all([getAllDataSources(), getMachines()]);
-          setDatasources(dsRes);
+          const [dsRes, machineRes] = await Promise.all([getModules(), getMachines()]);
+          setModuleData(dsRes);
           setMachines(machineRes);
 
           form.resetFields();
@@ -106,22 +106,14 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
                 <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
                   <Input placeholder="请输入Logstash进程名称，例如：订单处理服务" />
                 </Form.Item>
-                <Form.Item name="module" label="模块" rules={[{ required: true, message: '请输入模块' }]}>
-                  <Input placeholder="请输入模块名称，例如：order-service" />
-                </Form.Item>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                <Form.Item name="datasourceId" label="数据源" rules={[{ required: true, message: '请选择数据源' }]}>
+                <Form.Item name="moduleId" label="模块" rules={[{ required: true, message: '请输入模块' }]}>
                   <Select loading={loading} disabled={!!initialValues}>
-                    {datasources.map((ds) => (
+                    {moduleData.map((ds) => (
                       <Select.Option key={ds.id} value={ds.id}>
                         {ds.name}
                       </Select.Option>
                     ))}
                   </Select>
-                </Form.Item>
-                <Form.Item name="tableName" label="表名" rules={[{ required: false, message: '请输入表名' }]}>
-                  <Input placeholder="请输入表名，例如：order_logs" disabled={!!initialValues} />
                 </Form.Item>
               </div>
               <Form.Item name="machineIds" label="部署机器" rules={[{ required: true, message: '请选择部署机器' }]}>

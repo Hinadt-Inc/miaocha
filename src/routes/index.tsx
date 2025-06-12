@@ -13,6 +13,7 @@ const PermissionManagementPage = lazy(() => import('@/pages/system/PermissionMan
 const SQLEditorPage = lazy(() => import('@/pages/SQLEditor/SQLEditorImpl'));
 const MachineManagementPage = lazy(() => import('@/pages/system/MachineManagementPage'));
 const LogstashManagementPage = lazy(() => import('@/pages/system/LogstashManagementPage'));
+const ModuleManagementPage = lazy(() => import('@/pages/system/ModuleManagementPage'));
 
 const withSuspense = (Component: React.ComponentType) => (
   <Suspense
@@ -97,6 +98,12 @@ export const routes: RouteConfig[] = [
         path: '/system/logstash',
         name: 'Logstash管理',
         element: withSuspense(LogstashManagementPage),
+        access: ['ADMIN', 'SUPER_ADMIN'],
+      },
+      {
+        path: '/system/module',
+        name: '模块管理',
+        element: withSuspense(ModuleManagementPage),
         access: ['ADMIN', 'SUPER_ADMIN'],
       },
     ],
