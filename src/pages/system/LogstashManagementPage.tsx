@@ -1,4 +1,4 @@
-import { PlusOutlined, SyncOutlined, InfoCircleOutlined, HomeOutlined } from '@ant-design/icons';
+import { PlusOutlined, SyncOutlined, InfoCircleOutlined, HomeOutlined, CopyOutlined } from '@ant-design/icons';
 import {
   Button,
   message,
@@ -26,7 +26,6 @@ import {
   refreshLogstashMachineConfig,
   refreshLogstashConfig,
   stopLogstashProcess,
-  executeLogstashSQL,
   updateLogstashConfig,
   getLogstashTaskSummaries,
   getMachineTasks,
@@ -294,6 +293,16 @@ function LogstashManagementPage() {
     }
   };
 
+  const handleCopy = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      messageApi.success(`${label}已复制到剪贴板`);
+    } catch (err) {
+      messageApi.error(`${label}复制失败`);
+      console.error('复制失败:', err);
+    }
+  };
+
   const handleStop = async (id: number) => {
     try {
       messageApi.loading('正在停止Logstash进程...');
@@ -326,8 +335,8 @@ function LogstashManagementPage() {
     },
     {
       title: '模块',
-      dataIndex: 'module',
-      key: 'module',
+      dataIndex: 'moduleName',
+      key: 'moduleName',
     },
     {
       title: '状态',
@@ -343,6 +352,28 @@ function LogstashManagementPage() {
           ))}
         </Space>
       ),
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'createTime',
+      key: 'createTime',
+      render: (createTime: string) => new Date(createTime).toLocaleString(),
+    },
+    {
+      title: '创建人',
+      dataIndex: 'createUserName',
+      key: 'createUserName',
+    },
+    {
+      title: '更新时间',
+      dataIndex: 'updateTime',
+      key: 'updateTime',
+      render: (updateTime: string) => new Date(updateTime).toLocaleString(),
+    },
+    {
+      title: '更新人',
+      dataIndex: 'updateUserName',
+      key: 'updateUserName',
     },
     {
       title: '操作',
@@ -965,13 +996,13 @@ function LogstashManagementPage() {
           width={1000}
         >
           {currentDetail && (
-            <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+            <div>
               <Descriptions bordered column={2} size="small">
                 <Descriptions.Item label="ID" span={1}>
                   {currentDetail.id}
                 </Descriptions.Item>
                 <Descriptions.Item label="模块" span={1}>
-                  {currentDetail.module}
+                  {currentDetail.moduleName}
                 </Descriptions.Item>
                 <Descriptions.Item label="创建时间" span={1}>
                   {currentDetail.createTime}
@@ -988,14 +1019,21 @@ function LogstashManagementPage() {
               </Descriptions>
 
               <div style={{ margin: '16px 0' }}>
-                <h4 style={{ marginBottom: 8 }}>JVM参数</h4>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                  <h4 style={{ margin: 0 }}>JVM参数</h4>
+                  <Button
+                    type="text"
+                    icon={<CopyOutlined />}
+                    onClick={() => handleCopy(currentDetail.jvmOptions || '', 'JVM参数')}
+                    style={{ marginLeft: 8 }}
+                  />
+                </div>
                 <pre
                   style={{
                     margin: 0,
                     padding: 12,
                     background: '#f5f5f5',
                     borderRadius: 4,
-                    maxHeight: 200,
                     overflow: 'auto',
                   }}
                 >
@@ -1004,14 +1042,21 @@ function LogstashManagementPage() {
               </div>
 
               <div style={{ margin: '16px 0' }}>
-                <h4 style={{ marginBottom: 8 }}>Logstash配置</h4>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                  <h4 style={{ margin: 0 }}>Logstash配置</h4>
+                  <Button
+                    type="text"
+                    icon={<CopyOutlined />}
+                    onClick={() => handleCopy(currentDetail.logstashYml || '', 'Logstash配置')}
+                    style={{ marginLeft: 8 }}
+                  />
+                </div>
                 <pre
                   style={{
                     margin: 0,
                     padding: 12,
                     background: '#f5f5f5',
                     borderRadius: 4,
-                    maxHeight: 200,
                     overflow: 'auto',
                   }}
                 >
@@ -1020,14 +1065,21 @@ function LogstashManagementPage() {
               </div>
 
               <div style={{ margin: '16px 0' }}>
-                <h4 style={{ marginBottom: 8 }}>配置内容</h4>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                  <h4 style={{ margin: 0 }}>配置内容</h4>
+                  <Button
+                    type="text"
+                    icon={<CopyOutlined />}
+                    onClick={() => handleCopy(currentDetail.configContent || '', '配置内容')}
+                    style={{ marginLeft: 8 }}
+                  />
+                </div>
                 <pre
                   style={{
                     margin: 0,
                     padding: 12,
                     background: '#f5f5f5',
                     borderRadius: 4,
-                    maxHeight: 200,
                     overflow: 'auto',
                   }}
                 >

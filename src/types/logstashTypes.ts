@@ -120,7 +120,8 @@ export interface MachineTask {
 export interface LogstashProcess {
   id: number;
   name: string;
-  module: string;
+  moduleName: string;
+  moduleId: number;
   description?: string;
   configContent: string;
   jvmOptions?: string;

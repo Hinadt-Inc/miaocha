@@ -317,6 +317,14 @@ const DataSourceManagementPage = () => {
       responsive: ['lg'],
     },
     {
+      title: '创建人',
+      dataIndex: 'creator',
+      width: '10%',
+      hideInSearch: true,
+      render: (_, record) => record.createUser || '-',
+      responsive: ['lg'],
+    },
+    {
       title: '更新时间',
       dataIndex: 'updateTime',
       width: '12%',
@@ -325,6 +333,14 @@ const DataSourceManagementPage = () => {
         const time = text || (record as any).updatedAt;
         return time ? dayjs(time as string).format('YYYY-MM-DD HH:mm:ss') : '-';
       },
+      responsive: ['lg'],
+    },
+    {
+      title: '更新人',
+      dataIndex: 'updater',
+      width: '10%',
+      hideInSearch: true,
+      render: (_, record) => record.updateUser || '-',
       responsive: ['lg'],
     },
     {

@@ -133,7 +133,7 @@ export default function LogstashScaleModal({
           <Text>{currentProcess?.name}</Text>
           <br />
           <Text strong>模块: </Text>
-          <Text>{currentProcess?.module}</Text>
+          <Text>{currentProcess?.moduleName}</Text>
           <br />
           <Text strong>当前机器数量: </Text>
           <Text>{currentMachineIds.length}</Text>

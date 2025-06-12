@@ -106,10 +106,22 @@ const MachineManagementPage = () => {
       render: (text) => (text ? dayjs(text).format('YYYY-MM-DD HH:mm:ss') : '-'),
     },
     {
+      title: '创建人',
+      dataIndex: 'createUser',
+      key: 'createUser',
+      render: (text) => text || '-',
+    },
+    {
       title: '更新时间',
       dataIndex: 'updateTime',
       key: 'updateTime',
       render: (text) => (text ? dayjs(text).format('YYYY-MM-DD HH:mm:ss') : '-'),
+    },
+    {
+      title: '更新人',
+      dataIndex: 'updateUser',
+      key: 'updateUser',
+      render: (text) => text || '-',
     },
     {
       title: '操作',
