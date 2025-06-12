@@ -14,11 +14,12 @@ interface IProps {
   onSearch: (params: ILogSearchParams) => void; // 搜索回调函数
   setWhereSqlsFromSider: any; // 设置whereSqlsFromSider
   columns?: ILogColumnsResponse[]; // 字段列表数据
+  onSqlsChange?: (sqls: string[]) => void; // SQL列表变化回调函数
 }
 
 const SearchBar = forwardRef((props: IProps, ref) => {
   const searchBarRef = useRef<HTMLDivElement>(null);
-  const { searchParams, totalCount = 0, loading, onSearch, setWhereSqlsFromSider, columns } = props;
+  const { searchParams, totalCount = 0, loading, onSearch, setWhereSqlsFromSider, columns, onSqlsChange } = props;
 
   const [timeGroup, setTimeGroup] = useState<string>('auto'); // 时间分组
   const [activeTab, setActiveTab] = useState('quick'); // 选项卡值
@@ -148,7 +149,12 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       delete params.whereSqls;
     }
     onSearch(params as ILogSearchParams);
-  }, [keywords, sqls, timeOption, timeGroup]);
+
+    // 通知父组件sqls数据变化
+    if (onSqlsChange) {
+      onSqlsChange(sqls);
+    }
+  }, [keywords, sqls, timeOption, timeGroup, onSqlsChange]);
 
   // 处理关键词搜索
   const handleSubmit = () => {

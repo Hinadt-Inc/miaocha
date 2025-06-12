@@ -21,6 +21,9 @@ export const highlightText = (text: string, keywords: string[]) => {
   // 去重
   flatKeywords = Array.from(new Set(flatKeywords)).filter(Boolean);
 
+  // 按长度降序排列，先匹配长的关键词，避免短关键词干扰长关键词的匹配
+  flatKeywords.sort((a, b) => b.length - a.length);
+
   if (!flatKeywords.length) return <span title={text}>{text}</span>;
 
   let str = String(text);
