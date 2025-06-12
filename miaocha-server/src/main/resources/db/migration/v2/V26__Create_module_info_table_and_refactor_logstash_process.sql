@@ -6,14 +6,14 @@
 -- 1. 创建模块信息表
 CREATE TABLE module_info (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '模块ID',
-    name VARCHAR(100) NOT NULL COMMENT '模块名称',
+    name VARCHAR(96) NOT NULL COMMENT '模块名称',
     datasource_id BIGINT NOT NULL COMMENT '数据源ID',
-    table_name VARCHAR(100) NOT NULL COMMENT '表名',
+    table_name VARCHAR(96) NOT NULL COMMENT '表名',
     doris_sql TEXT COMMENT 'Doris SQL语句',
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    create_user VARCHAR(50) COMMENT '创建人',
-    update_user VARCHAR(50) COMMENT '修改人',
+    create_user VARCHAR(48) COMMENT '创建人',
+    update_user VARCHAR(48) COMMENT '修改人',
     UNIQUE KEY uk_name (name) COMMENT '模块名称唯一索引',
     KEY idx_datasource_id (datasource_id) COMMENT '数据源ID索引'
 ) COMMENT='模块信息表';
@@ -46,8 +46,8 @@ SET module_id = (
 WHERE lp.module IS NOT NULL AND lp.module != '';
 
 -- 5. 为logstash_process表的创建人和修改人字段
-ALTER TABLE logstash_process ADD COLUMN create_user VARCHAR(50) COMMENT '创建人';
-ALTER TABLE logstash_process ADD COLUMN update_user VARCHAR(50) COMMENT '修改人';
+ALTER TABLE logstash_process ADD COLUMN create_user VARCHAR(48) COMMENT '创建人';
+ALTER TABLE logstash_process ADD COLUMN update_user VARCHAR(48) COMMENT '修改人';
 
 -- 6. 初始化用户信息
 UPDATE logstash_process SET create_user = 'admin@hinadt.com', update_user = 'admin@hinadt.com' WHERE create_user IS NULL;
@@ -60,20 +60,20 @@ ALTER TABLE logstash_process DROP COLUMN doris_sql;
 
 -- 8. 为其他相关表添加创建人和修改人字段
 ALTER TABLE datasource_info
-ADD COLUMN create_user VARCHAR(50) NULL COMMENT '创建人' AFTER update_time,
-ADD COLUMN update_user VARCHAR(50) NULL COMMENT '修改人' AFTER create_user;
+ADD COLUMN create_user VARCHAR(48) NULL COMMENT '创建人' AFTER update_time,
+ADD COLUMN update_user VARCHAR(48) NULL COMMENT '修改人' AFTER create_user;
 
 ALTER TABLE machine_info
-ADD COLUMN create_user VARCHAR(50) NULL COMMENT '创建人' AFTER update_time,
-ADD COLUMN update_user VARCHAR(50) NULL COMMENT '修改人' AFTER create_user;
+ADD COLUMN create_user VARCHAR(48) NULL COMMENT '创建人' AFTER update_time,
+ADD COLUMN update_user VARCHAR(48) NULL COMMENT '修改人' AFTER create_user;
 
 ALTER TABLE logstash_machine
-ADD COLUMN create_user VARCHAR(50) NULL COMMENT '创建人' AFTER update_time,
-ADD COLUMN update_user VARCHAR(50) NULL COMMENT '修改人' AFTER create_user;
+ADD COLUMN create_user VARCHAR(48) NULL COMMENT '创建人' AFTER update_time,
+ADD COLUMN update_user VARCHAR(48) NULL COMMENT '修改人' AFTER create_user;
 
 ALTER TABLE user_module_permission
-ADD COLUMN create_user VARCHAR(50) NULL COMMENT '创建人' AFTER update_time,
-ADD COLUMN update_user VARCHAR(50) NULL COMMENT '修改人' AFTER create_user;
+ADD COLUMN create_user VARCHAR(48) NULL COMMENT '创建人' AFTER update_time,
+ADD COLUMN update_user VARCHAR(48) NULL COMMENT '修改人' AFTER create_user;
 
 -- 9. 初始化现有数据的审计字段
 UPDATE datasource_info SET create_user = 'admin@hinadt.com', update_user = 'admin@hinadt.com' WHERE create_user IS NULL;
