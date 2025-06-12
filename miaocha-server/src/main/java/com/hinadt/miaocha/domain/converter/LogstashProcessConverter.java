@@ -4,11 +4,16 @@ import com.hinadt.miaocha.application.logstash.enums.LogstashMachineState;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessCreateDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessResponseDTO;
+import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.LogstashProcess;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
+import com.hinadt.miaocha.domain.entity.ModuleInfo;
+import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
 import com.hinadt.miaocha.domain.mapper.MachineMapper;
+import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
+import com.hinadt.miaocha.domain.mapper.UserMapper;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;
@@ -19,11 +24,21 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
 
     private final LogstashMachineMapper logstashMachineMapper;
     private final MachineMapper machineMapper;
+    private final ModuleInfoMapper moduleInfoMapper;
+    private final DatasourceMapper datasourceMapper;
+    private final UserMapper userMapper;
 
     public LogstashProcessConverter(
-            LogstashMachineMapper logstashMachineMapper, MachineMapper machineMapper) {
+            LogstashMachineMapper logstashMachineMapper,
+            MachineMapper machineMapper,
+            ModuleInfoMapper moduleInfoMapper,
+            DatasourceMapper datasourceMapper,
+            UserMapper userMapper) {
         this.logstashMachineMapper = logstashMachineMapper;
         this.machineMapper = machineMapper;
+        this.moduleInfoMapper = moduleInfoMapper;
+        this.datasourceMapper = datasourceMapper;
+        this.userMapper = userMapper;
     }
 
     /**
@@ -40,13 +55,41 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         LogstashProcessResponseDTO responseDTO = new LogstashProcessResponseDTO();
         responseDTO.setId(process.getId());
         responseDTO.setName(process.getName());
-        responseDTO.setModule(process.getModule());
+        responseDTO.setModuleId(process.getModuleId());
         responseDTO.setConfigContent(process.getConfigContent());
-        responseDTO.setDorisSql(process.getDorisSql());
         responseDTO.setJvmOptions(process.getJvmOptions());
         responseDTO.setLogstashYml(process.getLogstashYml());
         responseDTO.setCreateTime(process.getCreateTime());
         responseDTO.setUpdateTime(process.getUpdateTime());
+        responseDTO.setCreateUser(process.getCreateUser());
+        responseDTO.setUpdateUser(process.getUpdateUser());
+
+        // 查询用户昵称
+        if (process.getCreateUser() != null) {
+            String createUserName = userMapper.selectNicknameByEmail(process.getCreateUser());
+            responseDTO.setCreateUserName(createUserName);
+        }
+
+        if (process.getUpdateUser() != null) {
+            String updateUserName = userMapper.selectNicknameByEmail(process.getUpdateUser());
+            responseDTO.setUpdateUserName(updateUserName);
+        }
+
+        // 获取模块信息
+        if (process.getModuleId() != null) {
+            ModuleInfo moduleInfo = moduleInfoMapper.selectById(process.getModuleId());
+            if (moduleInfo != null) {
+                responseDTO.setModuleName(moduleInfo.getName());
+                responseDTO.setTableName(moduleInfo.getTableName());
+
+                // 获取数据源信息
+                DatasourceInfo datasourceInfo =
+                        datasourceMapper.selectById(moduleInfo.getDatasourceId());
+                if (datasourceInfo != null) {
+                    responseDTO.setDatasourceName(datasourceInfo.getName());
+                }
+            }
+        }
 
         // 获取关联的机器状态
         List<LogstashMachine> machineRelations =
@@ -109,13 +152,13 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         LogstashProcess entity = new LogstashProcess();
         entity.setId(dto.getId());
         entity.setName(dto.getName());
-        entity.setModule(dto.getModule());
+        entity.setModuleId(dto.getModuleId());
         entity.setConfigContent(dto.getConfigContent());
-        entity.setDorisSql(dto.getDorisSql());
-        entity.setDatasourceId(dto.getDatasourceId());
-        entity.setTableName(dto.getTableName());
+        entity.setJvmOptions(dto.getJvmOptions());
+        entity.setLogstashYml(dto.getLogstashYml());
         entity.setCreateTime(dto.getCreateTime());
         entity.setUpdateTime(dto.getUpdateTime());
+        // 审计字段由MyBatis拦截器自动处理
 
         return entity;
     }
@@ -128,13 +171,11 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
 
         LogstashProcess entity = new LogstashProcess();
         entity.setName(dto.getName());
-        entity.setModule(dto.getModule());
+        entity.setModuleId(dto.getModuleId());
         entity.setConfigContent(dto.getConfigContent());
-        // DorisSql不在创建时设置，将在后续执行时填充
         entity.setJvmOptions(dto.getJvmOptions());
         entity.setLogstashYml(dto.getLogstashYml());
-        entity.setDatasourceId(dto.getDatasourceId());
-        entity.setTableName(dto.getTableName());
+        // 审计字段由MyBatis拦截器自动处理
 
         return entity;
     }
@@ -149,15 +190,25 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         LogstashProcessDTO dto = new LogstashProcessDTO();
         dto.setId(entity.getId());
         dto.setName(entity.getName());
-        dto.setModule(entity.getModule());
+        dto.setModuleId(entity.getModuleId());
         dto.setConfigContent(entity.getConfigContent());
-        dto.setDorisSql(entity.getDorisSql());
         dto.setJvmOptions(entity.getJvmOptions());
         dto.setLogstashYml(entity.getLogstashYml());
-        dto.setDatasourceId(entity.getDatasourceId());
-        dto.setTableName(entity.getTableName());
         dto.setCreateTime(entity.getCreateTime());
         dto.setUpdateTime(entity.getUpdateTime());
+        dto.setCreateUser(entity.getCreateUser());
+        dto.setUpdateUser(entity.getUpdateUser());
+
+        // 查询用户昵称
+        if (entity.getCreateUser() != null) {
+            String createUserName = userMapper.selectNicknameByEmail(entity.getCreateUser());
+            dto.setCreateUserName(createUserName);
+        }
+
+        if (entity.getUpdateUser() != null) {
+            String updateUserName = userMapper.selectNicknameByEmail(entity.getUpdateUser());
+            dto.setUpdateUserName(updateUserName);
+        }
 
         return dto;
     }
@@ -170,13 +221,11 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         }
 
         entity.setName(dto.getName());
-        entity.setModule(dto.getModule());
+        entity.setModuleId(dto.getModuleId());
         entity.setConfigContent(dto.getConfigContent());
-        entity.setDorisSql(dto.getDorisSql());
         entity.setJvmOptions(dto.getJvmOptions());
         entity.setLogstashYml(dto.getLogstashYml());
-        entity.setDatasourceId(dto.getDatasourceId());
-        entity.setTableName(dto.getTableName());
+        // 审计字段由MyBatis拦截器自动处理
 
         return entity;
     }
@@ -188,13 +237,11 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         }
 
         entity.setName(dto.getName());
-        entity.setModule(dto.getModule());
+        entity.setModuleId(dto.getModuleId());
         entity.setConfigContent(dto.getConfigContent());
-        // DorisSql不在创建时设置，将在后续执行时填充
         entity.setJvmOptions(dto.getJvmOptions());
         entity.setLogstashYml(dto.getLogstashYml());
-        entity.setDatasourceId(dto.getDatasourceId());
-        entity.setTableName(dto.getTableName());
+        // 审计字段由MyBatis拦截器自动处理
 
         return entity;
     }

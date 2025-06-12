@@ -2,53 +2,49 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.hinadt.miaocha.domain.mapper.MachineMapper">
 
-    <!-- 机器表所有字段 -->
+    <!-- 机器信息表所有字段 -->
     <sql id="machineColumns">
-        id
-        , name, ip, port, username, password, ssh_key, create_time, update_time
+        id, name, ip, port, username, password, ssh_key, create_time, update_time, create_user, update_user
     </sql>
 
-    <!-- 插入机器记录 -->
+    <!-- 插入机器信息 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO machine_info (name, ip, port, username, password, ssh_key, create_time, update_time)
-        VALUES (#{name}, #{ip}, #{port}, #{username}, #{password}, #{sshKey}, NOW(), NOW())
+        INSERT INTO machine_info (name, ip, port, username, password, ssh_key)
+        VALUES (#{name}, #{ip}, #{port}, #{username}, #{password}, #{sshKey})
     </insert>
 
-    <!-- 更新机器记录 -->
+    <!-- 更新机器信息 -->
     <update id="update">
         UPDATE machine_info
         SET name=#{name},
-        ip=#{ip},
-        port=#{port},
-        username=#{username},
-        password=#{password},
-        ssh_key=#{sshKey},
-        update_time=NOW()
+            ip=#{ip},
+            port=#{port},
+            username=#{username},
+            password=#{password},
+            ssh_key=#{sshKey}
         WHERE id = #{id}
     </update>
 
-    <!-- 删除机器记录 -->
+    <!-- 删除机器信息 -->
     <delete id="deleteById">
-        DELETE
-        FROM machine_info
-        WHERE id = #{id}
+        DELETE FROM machine_info WHERE id = #{id}
     </delete>
 
-    <!-- 根据ID查询机器 -->
+    <!-- 根据ID查询机器信息 -->
     <select id="selectById" resultType="com.hinadt.miaocha.domain.entity.MachineInfo">
         SELECT
         <include refid="machineColumns"/>
-        FROM machine_info WHERE id=#{id}
+        FROM machine_info WHERE id = #{id}
     </select>
 
-    <!-- 根据名称查询机器 -->
+    <!-- 根据名称查询机器信息 -->
     <select id="selectByName" resultType="com.hinadt.miaocha.domain.entity.MachineInfo">
         SELECT
         <include refid="machineColumns"/>
-        FROM machine_info WHERE name=#{name}
+        FROM machine_info WHERE name = #{name}
     </select>
 
-    <!-- 根据ID列表查询机器 -->
+    <!-- 根据ID列表查询机器信息 -->
     <select id="selectByIds" resultType="com.hinadt.miaocha.domain.entity.MachineInfo">
         SELECT
         <include refid="machineColumns"/>
@@ -58,11 +54,11 @@
         </foreach>
     </select>
 
-    <!-- 查询所有机器 -->
+    <!-- 查询所有机器信息 -->
     <select id="selectAll" resultType="com.hinadt.miaocha.domain.entity.MachineInfo">
         SELECT
         <include refid="machineColumns"/>
-        FROM machine_info
+        FROM machine_info ORDER BY create_time DESC
     </select>
 
 </mapper>

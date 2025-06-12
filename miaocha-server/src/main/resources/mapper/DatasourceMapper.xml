@@ -4,60 +4,70 @@
 
     <!-- 数据源表所有字段 -->
     <sql id="datasourceColumns">
-        id
-        , name, type, description, ip, port, username, password, `database`, jdbc_params, create_time, update_time
+        id, name, type, ip, port, `database`, username, password, description, jdbc_params, create_time, update_time, create_user, update_user
     </sql>
 
     <!-- 插入数据源 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO datasource_info (name, type, description, ip, port, username, password, `database`, jdbc_params,
-        create_time, update_time)
-        VALUES (#{name}, #{type}, #{description}, #{ip}, #{port}, #{username}, #{password}, #{database}, #{jdbcParams},
-        NOW(), NOW())
+        INSERT INTO datasource_info (name, type, ip, port, `database`, username, password, description, jdbc_params)
+        VALUES (#{name}, #{type}, #{ip}, #{port}, #{database}, #{username}, #{password}, #{description}, #{jdbcParams})
     </insert>
 
     <!-- 更新数据源 -->
     <update id="update">
         UPDATE datasource_info
         SET name=#{name},
-        type=#{type},
-        description=#{description},
-        ip=#{ip},
-        port=#{port},
-        username=#{username},
-        password=#{password},
-        `database`=#{database},
-        jdbc_params=#{jdbcParams},
-        update_time=NOW()
+            type=#{type},
+            ip=#{ip},
+            port=#{port},
+            `database`=#{database},
+            username=#{username},
+            password=#{password},
+            description=#{description},
+            jdbc_params=#{jdbcParams}
         WHERE id = #{id}
     </update>
 
     <!-- 删除数据源 -->
     <delete id="deleteById">
-        DELETE
-        FROM datasource_info
-        WHERE id = #{id}
+        DELETE FROM datasource_info WHERE id = #{id}
     </delete>
 
     <!-- 根据ID查询数据源 -->
     <select id="selectById" resultType="com.hinadt.miaocha.domain.entity.DatasourceInfo">
         SELECT
         <include refid="datasourceColumns"/>
-        FROM datasource_info WHERE id=#{id}
+        FROM datasource_info WHERE id = #{id}
     </select>
 
     <!-- 根据名称查询数据源 -->
     <select id="selectByName" resultType="com.hinadt.miaocha.domain.entity.DatasourceInfo">
         SELECT
         <include refid="datasourceColumns"/>
-        FROM datasource_info WHERE name=#{name}
+        FROM datasource_info WHERE name = #{name}
     </select>
 
     <!-- 查询所有数据源 -->
     <select id="selectAll" resultType="com.hinadt.miaocha.domain.entity.DatasourceInfo">
         SELECT
         <include refid="datasourceColumns"/>
-        FROM datasource_info
+        FROM datasource_info ORDER BY create_time DESC
+    </select>
+
+    <!-- 根据类型查询数据源 -->
+    <select id="selectByType" resultType="com.hinadt.miaocha.domain.entity.DatasourceInfo">
+        SELECT
+        <include refid="datasourceColumns"/>
+        FROM datasource_info WHERE type = #{type} ORDER BY create_time DESC
+    </select>
+
+    <!-- 检查数据源名称是否存在 -->
+    <select id="existsByName" resultType="boolean">
+        SELECT COUNT(1) > 0 FROM datasource_info
+        WHERE name = #{name}
+        <if test="excludeId != null">
+            AND id != #{excludeId}
+        </if>
     </select>
 
 </mapper>

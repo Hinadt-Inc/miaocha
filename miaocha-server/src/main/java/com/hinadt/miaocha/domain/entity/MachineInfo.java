@@ -1,5 +1,6 @@
 package com.hinadt.miaocha.domain.entity;
 
+import com.hinadt.miaocha.common.audit.UserAuditable;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import lombok.Data;
@@ -7,7 +8,7 @@ import lombok.Data;
 /** 机器元信息实体类 */
 @Data
 @Schema(description = "机器元信息实体")
-public class MachineInfo {
+public class MachineInfo implements UserAuditable {
     @Schema(description = "机器ID", example = "1")
     private Long id;
 
@@ -34,4 +35,10 @@ public class MachineInfo {
 
     @Schema(description = "更新时间")
     private LocalDateTime updateTime;
+
+    @Schema(description = "创建人邮箱")
+    private String createUser;
+
+    /** 修改人邮箱 */
+    private String updateUser;
 }

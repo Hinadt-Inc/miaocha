@@ -13,6 +13,22 @@ public interface UserMapper {
 
     User selectByUid(String uid);
 
+    /**
+     * 根据uid获取用户邮箱（高效查询，仅返回email字段）
+     *
+     * @param uid 用户唯一标识符
+     * @return 用户邮箱
+     */
+    String selectEmailByUid(String uid);
+
+    /**
+     * 根据邮箱获取用户昵称（高效查询，仅返回nickname字段）
+     *
+     * @param email 用户邮箱
+     * @return 用户昵称
+     */
+    String selectNicknameByEmail(String email);
+
     User selectByEmail(String email);
 
     List<User> selectAll();

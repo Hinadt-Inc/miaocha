@@ -16,14 +16,20 @@ public class LogstashProcessResponseDTO {
     @Schema(description = "Logstash进程名称")
     private String name;
 
-    @Schema(description = "Logstash进程模块")
-    private String module;
+    @Schema(description = "关联的模块ID")
+    private Long moduleId;
+
+    @Schema(description = "模块名称")
+    private String moduleName;
+
+    @Schema(description = "数据源名称")
+    private String datasourceName;
+
+    @Schema(description = "表名")
+    private String tableName;
 
     @Schema(description = "Logstash配置文件内容")
     private String configContent;
-
-    @Schema(description = "与Logstash配置对应的Doris日志表SQL")
-    private String dorisSql;
 
     @Schema(description = "JVM配置文件内容")
     private String jvmOptions;
@@ -39,6 +45,18 @@ public class LogstashProcessResponseDTO {
 
     @Schema(description = "更新时间")
     private LocalDateTime updateTime;
+
+    @Schema(description = "创建人邮箱")
+    private String createUser;
+
+    @Schema(description = "创建人昵称")
+    private String createUserName;
+
+    @Schema(description = "修改人邮箱")
+    private String updateUser;
+
+    @Schema(description = "修改人昵称")
+    private String updateUserName;
 
     @Schema(description = "关联的Logstash机器状态列表")
     private List<LogstashMachineStatusInfoDTO> machineStatuses;

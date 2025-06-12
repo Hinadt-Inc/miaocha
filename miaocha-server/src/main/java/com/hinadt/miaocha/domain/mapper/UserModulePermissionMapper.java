@@ -67,4 +67,20 @@ public interface UserModulePermissionMapper {
      * @return 权限实体列表
      */
     List<UserModulePermission> selectAll();
+
+    /**
+     * 删除用户的所有权限
+     *
+     * @param userId 用户ID
+     * @return 影响的行数
+     */
+    int deleteByUserId(@Param("userId") Long userId);
+
+    /**
+     * 删除权限
+     *
+     * @param id 权限ID
+     * @return 影响的行数
+     */
+    int deleteById(@Param("id") Long id);
 }

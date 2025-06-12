@@ -340,21 +340,60 @@
                     <version>${jacoco.maven.plugin.version}</version>
                     <configuration>
                         <excludes>
-                            <!-- 排除配置类 -->
-                            <exclude>**/*Config.class</exclude>
-                            <exclude>**/*Configuration.class</exclude>
-                            <!-- 排除启动类 -->
+                            <!-- ========== 排除启动类 ========== -->
+                            <exclude>**/MiaoChaApp.class</exclude>
                             <exclude>**/Application.class</exclude>
                             <exclude>**/*App.class</exclude>
-                            <!-- 排除实体类 -->
-                            <exclude>**/entity/*.class</exclude>
-                            <exclude>**/dto/*.class</exclude>
-                            <exclude>**/vo/*.class</exclude>
-                            <!-- 排除常量类 -->
-                            <exclude>**/constant/*.class</exclude>
-                            <exclude>**/enums/*.class</exclude>
-                            <!-- 排除异常类 -->
-                            <exclude>**/exception/*.class</exclude>
+
+                            <!-- ========== 排除配置类 ========== -->
+                            <exclude>**/*Config.class</exclude>
+                            <exclude>**/*Configuration.class</exclude>
+                            <exclude>**/config/**/*.class</exclude>
+
+                            <!-- ========== 排除数据模型类 ========== -->
+                            <!-- 实体类：纯数据定义，无业务逻辑 -->
+                            <exclude>**/entity/**/*.class</exclude>
+                            <exclude>**/domain/entity/**/*.class</exclude>
+
+                            <!-- DTO类：数据传输对象，主要是getter/setter -->
+                            <exclude>**/dto/**/*.class</exclude>
+                            <exclude>**/domain/dto/**/*.class</exclude>
+
+                            <!-- VO类：视图对象 -->
+                            <exclude>**/vo/**/*.class</exclude>
+                            <exclude>**/domain/vo/**/*.class</exclude>
+
+                            <!-- Mapper接口：MyBatis映射器接口 -->
+                            <exclude>**/mapper/**/*.class</exclude>
+                            <exclude>**/domain/mapper/**/*.class</exclude>
+
+                            <!-- ========== 排除常量和枚举 ========== -->
+                            <exclude>**/constant/**/*.class</exclude>
+                            <exclude>**/constants/**/*.class</exclude>
+                            <exclude>**/enums/**/*.class</exclude>
+                            <exclude>**/domain/entity/enums/**/*.class</exclude>
+
+                            <!-- ========== 排除异常类 ========== -->
+                            <exclude>**/exception/**/*.class</exclude>
+                            <exclude>**/common/exception/**/*.class</exclude>
+
+                            <!-- ========== 排除注解类 ========== -->
+                            <exclude>**/annotation/**/*.class</exclude>
+                            <exclude>**/common/annotation/**/*.class</exclude>
+
+                            <!-- ========== 排除转换器（简单数据转换） ========== -->
+                            <exclude>**/converter/**/*Converter.class</exclude>
+                            <exclude>**/domain/converter/**/*.class</exclude>
+
+                            <!-- ========== 排除Endpoint控制器（暂时，因为主要是数据绑定） ========== -->
+                            <exclude>**/endpoint/**/*.class</exclude>
+
+                            <!-- ========== 排除特定工具类（无复杂逻辑） ========== -->
+                            <exclude>**/common/audit/**/*.class</exclude>
+
+                            <!-- ========== 排除Spring Security配置相关 ========== -->
+                            <exclude>**/security/*Config*.class</exclude>
+                            <exclude>**/filter/**/*.class</exclude>
                         </excludes>
                     </configuration>
                     <executions>

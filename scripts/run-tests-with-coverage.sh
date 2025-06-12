@@ -268,6 +268,48 @@ start_report_server() {
     fi
 }
 
+# 只启动JaCoCo覆盖率服务器
+start_jacoco_server() {
+    print_header "🌐 启动JaCoCo专用覆盖率报告服务器（无Allure）"
+
+    PORT=${1:-8000}
+
+    if command -v python3 &> /dev/null; then
+        print_info "🚀 在端口 $PORT 启动JaCoCo专用HTTP服务器..."
+        print_success "🌐 JaCoCo覆盖率报告: http://localhost:$PORT/"
+        if [ -d "coverage-report/aggregate" ]; then
+            print_info "📈 聚合报告: http://localhost:$PORT/aggregate/"
+        fi
+        for module in miaocha-server miaocha-assembly; do
+            if [ -d "coverage-report/$module" ]; then
+                print_info "📊 模块 $module: http://localhost:$PORT/$module/"
+            fi
+        done
+        print_info "按 Ctrl+C 停止服务器"
+        echo
+        cd coverage-report
+        python3 -m http.server $PORT
+    elif command -v python &> /dev/null; then
+        print_info "🚀 在端口 $PORT 启动JaCoCo专用HTTP服务器..."
+        print_success "🌐 JaCoCo覆盖率报告: http://localhost:$PORT/"
+        if [ -d "coverage-report/aggregate" ]; then
+            print_info "📈 聚合报告: http://localhost:$PORT/aggregate/"
+        fi
+        for module in miaocha-server miaocha-assembly; do
+            if [ -d "coverage-report/$module" ]; then
+                print_info "📊 模块 $module: http://localhost:$PORT/$module/"
+            fi
+        done
+        print_info "按 Ctrl+C 停止服务器"
+        echo
+        cd coverage-report
+        python -m SimpleHTTPServer $PORT
+    else
+        print_warning "未找到Python，无法启动HTTP服务器"
+        print_info "请手动用浏览器打开 coverage-report/index.html"
+    fi
+}
+
 # 显示使用帮助
 show_help() {
     echo "现代化测试覆盖率报告生成脚本"
@@ -279,14 +321,18 @@ show_help() {
     echo "  --clean-only        仅清理之前的构建"
     echo "  --test-only         仅运行测试"
     echo "  --coverage-only     仅生成覆盖率报告"
+    echo "  --jacoco-only       仅生成JaCoCo覆盖率报告（不生成Allure）"
+    echo "  --jacoco-serve [端口] 只生成JaCoCo报告并启动HTTP服务器 (默认端口: 8000)"
     echo "  --strict            使用严格的覆盖率标准"
     echo "  --serve [端口]      生成报告后启动HTTP服务器 (默认端口: 8000)"
     echo "  --skip-integration  跳过集成测试"
     echo
     echo "示例:"
-    echo "  $0                  # 运行完整的测试和报告生成"
-    echo "  $0 --strict         # 使用严格覆盖率标准"
-    echo "  $0 --serve 9000     # 生成报告并在9000端口启动服务器"
+    echo "  $0                      # 运行完整的测试和报告生成"
+    echo "  $0 --strict             # 使用严格覆盖率标准"
+    echo "  $0 --serve 9000         # 生成报告并在9000端口启动服务器"
+    echo "  $0 --jacoco-only        # 只生成JaCoCo覆盖率报告"
+    echo "  $0 --jacoco-serve 8080  # 只生成JaCoCo报告并在8080端口启动服务器"
 }
 
 # 主执行逻辑
@@ -294,6 +340,8 @@ main() {
     local clean_only=false
     local test_only=false
     local coverage_only=false
+    local jacoco_only=false
+    local jacoco_serve_mode=false
     local strict_mode=false
     local serve_mode=false
     local serve_port=8000
@@ -316,6 +364,19 @@ main() {
                 ;;
             --coverage-only)
                 coverage_only=true
+                shift
+                ;;
+            --jacoco-only)
+                jacoco_only=true
+                shift
+                ;;
+            --jacoco-serve)
+                jacoco_only=true
+                jacoco_serve_mode=true
+                if [[ $2 =~ ^[0-9]+$ ]]; then
+                    serve_port=$2
+                    shift
+                fi
                 shift
                 ;;
             --strict)
@@ -356,7 +417,19 @@ main() {
     fi
 
     if [ "$test_only" = true ] || [ "$coverage_only" = false ]; then
-        if [ "$skip_integration" = true ]; then
+        if [ "$jacoco_only" = true ]; then
+            # JaCoCo专用模式：只运行测试和生成覆盖率，不生成Allure
+            print_header "🎯 JaCoCo专用模式 - 仅生成覆盖率报告（跳过Allure）"
+            print_info "⚡ 编译项目..."
+            mvn compile test-compile -q
+            print_info "🧪 运行单元测试（带JaCoCo覆盖率）..."
+            mvn test jacoco:report -q
+            if [ "$skip_integration" = false ]; then
+                print_info "🔗 运行集成测试..."
+                mvn verify -q
+            fi
+            print_success "✅ JaCoCo专用测试执行完成 - 未生成Allure报告"
+        elif [ "$skip_integration" = true ]; then
             print_info "跳过集成测试"
             mvn test jacoco:report -q
         else
@@ -371,13 +444,36 @@ main() {
             run_coverage_profile
         fi
 
-        generate_allure_report
+        if [ "$jacoco_only" = false ]; then
+            generate_allure_report
+        fi
+        
         organize_coverage_reports
-        generate_summary
+        
+        if [ "$jacoco_only" = false ]; then
+            generate_summary
+        else
+            # JaCoCo专用摘要
+            print_header "🎯 JaCoCo专用覆盖率报告摘要（无Allure）"
+            echo "📊 JaCoCo覆盖率报告位置："
+            echo "   🔍 主报告: coverage-report/index.html"
+            if [ -d "coverage-report/aggregate" ]; then
+                echo "   📈 聚合报告: coverage-report/aggregate/index.html"
+            fi
+            for module in miaocha-server miaocha-assembly; do
+                if [ -d "coverage-report/$module" ]; then
+                    echo "   📊 模块 $module: coverage-report/$module/index.html"
+                fi
+            done
+            echo
+            print_success "✅ JaCoCo专用覆盖率报告生成完成！（已跳过Allure测试报告）"
+        fi
     fi
 
     if [ "$serve_mode" = true ]; then
         start_report_server --serve $serve_port
+    elif [ "$jacoco_serve_mode" = true ]; then
+        start_jacoco_server $serve_port
     fi
 }
 

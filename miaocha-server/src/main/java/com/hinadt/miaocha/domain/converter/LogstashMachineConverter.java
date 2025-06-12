@@ -6,7 +6,10 @@ import com.hinadt.miaocha.domain.dto.logstash.LogstashMachineDetailDTO;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.LogstashProcess;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
+import com.hinadt.miaocha.domain.entity.ModuleInfo;
 import com.hinadt.miaocha.domain.mapper.MachineMapper;
+import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
+import com.hinadt.miaocha.domain.mapper.UserMapper;
 import java.time.LocalDateTime;
 import org.springframework.stereotype.Component;
 
@@ -15,9 +18,14 @@ import org.springframework.stereotype.Component;
 public class LogstashMachineConverter implements Converter<LogstashMachine, LogstashMachineDTO> {
 
     private final MachineMapper machineMapper;
+    private final UserMapper userMapper;
+    private final ModuleInfoMapper moduleInfoMapper;
 
-    public LogstashMachineConverter(MachineMapper machineMapper) {
+    public LogstashMachineConverter(
+            MachineMapper machineMapper, UserMapper userMapper, ModuleInfoMapper moduleInfoMapper) {
         this.machineMapper = machineMapper;
+        this.userMapper = userMapper;
+        this.moduleInfoMapper = moduleInfoMapper;
     }
 
     /**
@@ -97,6 +105,19 @@ public class LogstashMachineConverter implements Converter<LogstashMachine, Logs
         dto.setDeployPath(entity.getDeployPath());
         dto.setCreateTime(entity.getCreateTime());
         dto.setUpdateTime(entity.getUpdateTime());
+        dto.setCreateUser(entity.getCreateUser());
+        dto.setUpdateUser(entity.getUpdateUser());
+
+        // 查询用户昵称
+        if (entity.getCreateUser() != null) {
+            String createUserName = userMapper.selectNicknameByEmail(entity.getCreateUser());
+            dto.setCreateUserName(createUserName);
+        }
+
+        if (entity.getUpdateUser() != null) {
+            String updateUserName = userMapper.selectNicknameByEmail(entity.getUpdateUser());
+            dto.setUpdateUserName(updateUserName);
+        }
 
         // 转换枚举状态
         LogstashMachineState state = LogstashMachineState.valueOf(entity.getState());
@@ -158,7 +179,17 @@ public class LogstashMachineConverter implements Converter<LogstashMachine, Logs
 
         // 设置进程信息
         detailDTO.setLogstashProcessName(process.getName());
-        detailDTO.setLogstashProcessModule(process.getModule());
+
+        // 通过moduleId查询模块信息
+        String moduleName = null;
+        if (process.getModuleId() != null) {
+            ModuleInfo moduleInfo = moduleInfoMapper.selectById(process.getModuleId());
+            if (moduleInfo != null) {
+                moduleName = moduleInfo.getName();
+            }
+        }
+        detailDTO.setLogstashProcessModule(moduleName);
+
         detailDTO.setLogstashProcessDescription(null); // LogstashProcess中没有description字段
         detailDTO.setCustomPackagePath(null); // LogstashProcess中没有customPackagePath字段
         detailDTO.setProcessCreateTime(process.getCreateTime());
@@ -184,6 +215,23 @@ public class LogstashMachineConverter implements Converter<LogstashMachine, Logs
         // 设置时间信息
         detailDTO.setCreateTime(logstashMachine.getCreateTime());
         detailDTO.setUpdateTime(logstashMachine.getUpdateTime());
+
+        // 设置审计字段信息
+        detailDTO.setCreateUser(logstashMachine.getCreateUser());
+        detailDTO.setUpdateUser(logstashMachine.getUpdateUser());
+
+        // 查询用户昵称
+        if (logstashMachine.getCreateUser() != null) {
+            String createUserName =
+                    userMapper.selectNicknameByEmail(logstashMachine.getCreateUser());
+            detailDTO.setCreateUserName(createUserName);
+        }
+
+        if (logstashMachine.getUpdateUser() != null) {
+            String updateUserName =
+                    userMapper.selectNicknameByEmail(logstashMachine.getUpdateUser());
+            detailDTO.setUpdateUserName(updateUserName);
+        }
 
         // 设置部署路径（从实体中获取）
         detailDTO.setDeployPath(logstashMachine.getDeployPath());

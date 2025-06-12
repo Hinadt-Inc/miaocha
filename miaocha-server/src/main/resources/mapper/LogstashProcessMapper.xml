@@ -4,34 +4,30 @@
 
     <!-- Logstash进程表所有字段 -->
     <sql id="logstashProcessColumns">
-        id, name, module, config_content, doris_sql, jvm_options, logstash_yml, datasource_id, table_name, create_time,
-        update_time
+        id, name, module_id, config_content, jvm_options, logstash_yml, create_time, update_time, create_user, update_user
     </sql>
 
     <!-- Logstash进程表所有字段（带lp别名） -->
     <sql id="logstashProcessColumnsWithAlias">
-        lp.id, lp.name, lp.module, lp.config_content, lp.doris_sql, lp.jvm_options, lp.logstash_yml, lp.datasource_id,
-        lp.table_name, lp.create_time, lp.update_time
+        lp.id, lp.name, lp.module_id, lp.config_content, lp.jvm_options, lp.logstash_yml, lp.create_time, lp.update_time, lp.create_user, lp.update_user
     </sql>
 
     <!-- 插入 Logstash 进程记录 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO logstash_process (name, module, config_content, doris_sql, jvm_options, logstash_yml, datasource_id,
-        table_name, create_time, update_time)
-        VALUES (#{name}, #{module}, #{configContent}, #{dorisSql}, #{jvmOptions}, #{logstashYml}, #{datasourceId},
-        #{tableName}, NOW(), NOW())
+        INSERT INTO logstash_process (name, module_id, config_content, jvm_options, logstash_yml)
+        VALUES (#{name}, #{moduleId}, #{configContent}, #{jvmOptions}, #{logstashYml})
     </insert>
 
     <!-- 更新进程记录 -->
     <update id="update">
-        UPDATE logstash_process SET name=#{name}, module=#{module},
-        config_content=#{configContent}, doris_sql=#{dorisSql}, jvm_options=#{jvmOptions}, logstash_yml=#{logstashYml},
-        datasource_id=#{datasourceId}, table_name=#{tableName}, update_time=NOW() WHERE id=#{id}
+        UPDATE logstash_process SET name=#{name}, module_id=#{moduleId},
+        config_content=#{configContent}, jvm_options=#{jvmOptions}, logstash_yml=#{logstashYml}
+        WHERE id=#{id}
     </update>
 
     <!-- 仅更新元信息 -->
     <update id="updateMetadataOnly">
-        UPDATE logstash_process SET name=#{name}, module=#{module}, update_time=NOW() WHERE id=#{id}
+        UPDATE logstash_process SET name=#{name}, module_id=#{moduleId} WHERE id=#{id}
     </update>
 
     <!-- 仅更新配置信息 -->
@@ -45,9 +41,8 @@
                 jvm_options=#{jvmOptions},
             </if>
             <if test="logstashYml != null">
-                logstash_yml=#{logstashYml},
+                logstash_yml=#{logstashYml}
             </if>
-            update_time=NOW()
         </set>
         WHERE id=#{id}
     </update>
@@ -71,21 +66,16 @@
         FROM logstash_process WHERE name=#{name}
     </select>
 
-    <!-- 根据模块查询 -->
-    <select id="selectByModule" resultType="com.hinadt.miaocha.domain.entity.LogstashProcess">
+    <!-- 根据模块ID查询 -->
+    <select id="selectByModuleId" resultType="com.hinadt.miaocha.domain.entity.LogstashProcess">
         SELECT
         <include refid="logstashProcessColumns"/>
-        FROM logstash_process WHERE module=#{module}
+        FROM logstash_process WHERE module_id=#{moduleId}
     </select>
 
-    <!-- 根据模块查询表名 -->
-    <select id="selectTableNameByModule" resultType="java.lang.String">
-        SELECT table_name FROM logstash_process WHERE module=#{module}
-    </select>
-
-    <!-- 根据模块统计 -->
-    <select id="countByModule" resultType="int">
-        SELECT COUNT(id) FROM logstash_process WHERE module=#{module}
+    <!-- 根据模块ID统计 -->
+    <select id="countByModuleId" resultType="int">
+        SELECT COUNT(id) FROM logstash_process WHERE module_id=#{moduleId}
     </select>
 
     <!-- 查询所有 -->

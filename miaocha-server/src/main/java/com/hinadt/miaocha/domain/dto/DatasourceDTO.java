@@ -37,4 +37,16 @@ public class DatasourceDTO {
 
     @Schema(description = "更新时间", example = "2023-06-01T10:30:00")
     private LocalDateTime updateTime;
+
+    @Schema(description = "创建人邮箱")
+    private String createUser;
+
+    @Schema(description = "创建人昵称")
+    private String createUserName;
+
+    @Schema(description = "修改人邮箱")
+    private String updateUser;
+
+    @Schema(description = "修改人昵称")
+    private String updateUserName;
 }

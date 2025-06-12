@@ -338,24 +338,6 @@ public class LogstashProcessEndpoint {
     }
 
     /**
-     * 执行Doris SQL语句（主要用于创建表）
-     *
-     * @param id Logstash进程ID
-     * @param sql SQL语句，通常是CREATE TABLE
-     * @return 更新后的Logstash进程
-     */
-    @PostMapping("/{id}/execute-sql")
-    @Operation(
-            summary = "执行Doris SQL语句",
-            description = "执行Doris SQL语句，主要用于创建表。只有当所有进程实例都处于未启动状态时才能执行。")
-    public ApiResponse<LogstashProcessResponseDTO> executeDorisSql(
-            @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id,
-            @Parameter(description = "SQL语句", required = true) @RequestBody String sql) {
-
-        return ApiResponse.success(logstashProcessService.executeDorisSql(id, sql));
-    }
-
-    /**
      * 重新初始化Logstash进程的所有初始化失败的机器
      *
      * @param id Logstash进程ID

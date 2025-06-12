@@ -3,31 +3,22 @@ package com.hinadt.miaocha.application.service.impl;
 import com.hinadt.miaocha.application.logstash.LogstashConfigSyncService;
 import com.hinadt.miaocha.application.logstash.LogstashMachineConnectionValidator;
 import com.hinadt.miaocha.application.logstash.LogstashProcessDeployService;
-import com.hinadt.miaocha.application.logstash.command.LogstashCommandFactory;
 import com.hinadt.miaocha.application.logstash.enums.LogstashMachineState;
 import com.hinadt.miaocha.application.logstash.parser.LogstashConfigParser;
 import com.hinadt.miaocha.application.logstash.task.TaskService;
 import com.hinadt.miaocha.application.service.LogstashProcessService;
-import com.hinadt.miaocha.application.service.TableValidationService;
-import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.converter.LogstashMachineConverter;
 import com.hinadt.miaocha.domain.converter.LogstashProcessConverter;
-import com.hinadt.miaocha.domain.dto.logstash.LogstashMachineDetailDTO;
-import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessConfigUpdateRequestDTO;
-import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessCreateDTO;
-import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessResponseDTO;
-import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessScaleRequestDTO;
-import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessUpdateDTO;
-import com.hinadt.miaocha.domain.entity.DatasourceInfo;
+import com.hinadt.miaocha.domain.dto.logstash.*;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.LogstashProcess;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
-import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
 import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
 import com.hinadt.miaocha.domain.mapper.MachineMapper;
+import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,48 +42,39 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
     private final LogstashProcessMapper logstashProcessMapper;
     private final LogstashMachineMapper logstashMachineMapper;
     private final MachineMapper machineMapper;
-    private final DatasourceMapper datasourceMapper;
+    private final ModuleInfoMapper moduleInfoMapper;
     private final LogstashProcessDeployService logstashDeployService;
     private final LogstashProcessConverter logstashProcessConverter;
     private final LogstashMachineConverter logstashMachineConverter;
     private final LogstashConfigParser logstashConfigParser;
-    private final TableValidationService tableValidationService;
-    private final JdbcQueryExecutor jdbcQueryExecutor;
     private final TaskService taskService;
     private final LogstashConfigSyncService configSyncService;
     private final LogstashMachineConnectionValidator connectionValidator;
-    private final LogstashCommandFactory commandFactory;
 
     // 构造函数
     public LogstashProcessServiceImpl(
             LogstashProcessMapper logstashProcessMapper,
             LogstashMachineMapper logstashMachineMapper,
             MachineMapper machineMapper,
-            DatasourceMapper datasourceMapper,
+            ModuleInfoMapper moduleInfoMapper,
             @Qualifier("logstashDeployServiceImpl") LogstashProcessDeployService logstashDeployService,
             LogstashProcessConverter logstashProcessConverter,
             LogstashMachineConverter logstashMachineConverter,
             LogstashConfigParser logstashConfigParser,
-            TableValidationService tableValidationService,
-            JdbcQueryExecutor jdbcQueryExecutor,
             TaskService taskService,
             LogstashConfigSyncService configSyncService,
-            LogstashMachineConnectionValidator connectionValidator,
-            LogstashCommandFactory commandFactory) {
+            LogstashMachineConnectionValidator connectionValidator) {
         this.logstashProcessMapper = logstashProcessMapper;
         this.logstashMachineMapper = logstashMachineMapper;
         this.machineMapper = machineMapper;
-        this.datasourceMapper = datasourceMapper;
+        this.moduleInfoMapper = moduleInfoMapper;
         this.logstashDeployService = logstashDeployService;
         this.logstashProcessConverter = logstashProcessConverter;
         this.logstashMachineConverter = logstashMachineConverter;
         this.logstashConfigParser = logstashConfigParser;
-        this.tableValidationService = tableValidationService;
-        this.jdbcQueryExecutor = jdbcQueryExecutor;
         this.taskService = taskService;
         this.configSyncService = configSyncService;
         this.connectionValidator = connectionValidator;
-        this.commandFactory = commandFactory;
     }
 
     // 公共方法 - 按照接口定义顺序排列
@@ -108,12 +90,8 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程名称不能为空");
         }
 
-        if (!StringUtils.hasText(dto.getModule())) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块名称不能为空");
-        }
-
-        if (dto.getDatasourceId() == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "数据源ID不能为空");
+        if (dto.getModuleId() == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块ID不能为空");
         }
 
         if (dto.getMachineIds() == null || dto.getMachineIds().isEmpty()) {
@@ -125,17 +103,12 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             throw new BusinessException(ErrorCode.LOGSTASH_PROCESS_NAME_EXISTS);
         }
 
-        // 检查模块名称是否已存在
-        if (logstashProcessMapper.selectByModule(dto.getModule()) != null) {
-            throw new BusinessException(ErrorCode.LOGSTASH_MODULE_EXISTS);
+        // 检查模块是否存在
+        if (moduleInfoMapper.selectById(dto.getModuleId()) == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "指定的模块不存在");
         }
 
-        // 检查数据源是否存在
-        if (datasourceMapper.selectById(dto.getDatasourceId()) == null) {
-            throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND, "指定的数据源不存在");
-        }
-
-        // 如果有配置文件，验证配置文件并提取表名
+        // 如果有配置文件，验证配置文件
         if (StringUtils.hasText(dto.getConfigContent())) {
             // 验证Logstash配置
             LogstashConfigParser.ValidationResult validationResult =
@@ -143,13 +116,6 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             if (!validationResult.isValid()) {
                 throw new BusinessException(
                         validationResult.getErrorCode(), validationResult.getErrorMessage());
-            }
-
-            // 如果没有手动指定表名，尝试从配置中提取
-            if (!StringUtils.hasText(dto.getTableName())) {
-                Optional<String> tableName =
-                        logstashConfigParser.extractTableName(dto.getConfigContent());
-                tableName.ifPresent(dto::setTableName);
             }
         }
 
@@ -534,98 +500,28 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
 
     @Override
     @Transactional
-    public LogstashProcessResponseDTO executeDorisSql(Long id, String sql) {
-        LogstashProcess process = getAndValidateProcess(id);
-
-        if (!StringUtils.hasText(sql)) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "SQL语句不能为空");
-        }
-
-        // 获取进程对应的机器状态
-        List<LogstashMachine> machineRelations =
-                logstashMachineMapper.selectByLogstashProcessId(id);
-        if (machineRelations.isEmpty()) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程未关联任何机器");
-        }
-
-        // 检查是否有任何机器不处于未启动状态
-        boolean anyNotStopped =
-                machineRelations.stream()
-                        .anyMatch(
-                                m ->
-                                        m.getState() != null
-                                                && !LogstashMachineState.NOT_STARTED
-                                                        .name()
-                                                        .equals(m.getState()));
-
-        if (anyNotStopped) {
-            throw new BusinessException(
-                    ErrorCode.VALIDATION_ERROR, "只有当所有进程实例都处于未启动状态时才能执行Doris SQL");
-        }
-
-        // 检查dorisSql字段是否已有值
-        if (StringUtils.hasText(process.getDorisSql())) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "该进程已经执行过Doris SQL，不能重复执行");
-        }
-
-        // 检查SQL是否包含DROP语句
-        String sqlLower = sql.toLowerCase().trim();
-        if (sqlLower.contains("drop ")) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "不允许执行DROP语句");
-        }
-
-        // 获取数据源
-        DatasourceInfo datasourceInfo = datasourceMapper.selectById(process.getDatasourceId());
-        if (datasourceInfo == null) {
-            throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND, "找不到关联的数据源");
-        }
-
-        try {
-            // 执行SQL
-            logger.info("执行Doris SQL: {}", sql);
-            jdbcQueryExecutor.executeQuery(datasourceInfo, sql);
-
-            // 更新进程的dorisSql字段
-            process.setDorisSql(sql);
-            process.setUpdateTime(LocalDateTime.now());
-            logstashProcessMapper.update(process);
-
-            logger.info("Doris SQL执行成功并已保存到进程 [{}]", id);
-            return getLogstashProcess(id);
-        } catch (Exception e) {
-            logger.error("执行Doris SQL失败: {}", e.getMessage(), e);
-            throw new BusinessException(
-                    ErrorCode.INTERNAL_ERROR, "执行Doris SQL失败: " + e.getMessage());
-        }
-    }
-
-    @Override
-    @Transactional
     public LogstashProcessResponseDTO updateLogstashProcessMetadata(
             Long id, LogstashProcessUpdateDTO dto) {
         // 验证进程是否存在
         LogstashProcess existingProcess = getAndValidateProcess(id);
 
-        // 如果module发生变化，验证新module的唯一性
-        if (!existingProcess.getModule().equals(dto.getModule())) {
-            LogstashProcess processWithSameModule =
-                    logstashProcessMapper.selectByModule(dto.getModule());
-            if (processWithSameModule != null && !processWithSameModule.getId().equals(id)) {
-                throw new BusinessException(
-                        ErrorCode.VALIDATION_ERROR,
-                        String.format("模块名称 '%s' 已被其他进程使用，请选择其他名称", dto.getModule()));
-            }
+        // 验证模块ID是否存在
+        if (moduleInfoMapper.selectById(dto.getModuleId()) == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "指定的模块不存在");
         }
 
         // 更新元信息
         int updateResult =
-                logstashProcessMapper.updateMetadataOnly(id, dto.getName(), dto.getModule());
+                logstashProcessMapper.updateMetadataOnly(id, dto.getName(), dto.getModuleId());
         if (updateResult == 0) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "更新进程信息失败");
         }
 
         logger.info(
-                "成功更新Logstash进程[{}]的元信息: name={}, module={}", id, dto.getName(), dto.getModule());
+                "成功更新Logstash进程[{}]的元信息: name={}, moduleId={}",
+                id,
+                dto.getName(),
+                dto.getModuleId());
 
         return getLogstashProcess(id);
     }
@@ -892,14 +788,15 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "Logstash配置不能为空");
         }
 
-        // 检查表名是否存在
-        if (!StringUtils.hasText(process.getTableName())) {
-            throw new BusinessException(ErrorCode.LOGSTASH_CONFIG_TABLE_MISSING, "表名不能为空，无法启动进程");
+        // 检查模块ID是否存在
+        if (process.getModuleId() == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块ID不能为空，无法启动进程");
         }
 
-        // 检查目标数据源中是否存在该表，并验证表结构包含message字段
-        tableValidationService.validateTableStructure(
-                process.getDatasourceId(), process.getTableName());
+        // 验证模块是否存在
+        if (moduleInfoMapper.selectById(process.getModuleId()) == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "关联的模块不存在，无法启动进程");
+        }
     }
 
     // 内部类

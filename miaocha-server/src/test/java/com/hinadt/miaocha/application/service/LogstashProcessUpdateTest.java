@@ -28,26 +28,27 @@ public class LogstashProcessUpdateTest {
                 () -> {
                     LogstashProcessUpdateDTO dto = new LogstashProcessUpdateDTO();
                     dto.setName("测试进程");
-                    dto.setModule("test-module");
+                    dto.setModuleId(1L);
 
                     Allure.parameter("进程名称", "测试进程");
-                    Allure.parameter("模块名称", "test-module");
+                    Allure.parameter("模块ID", "1");
 
                     return dto;
                 });
 
         LogstashProcessUpdateDTO dto = new LogstashProcessUpdateDTO();
         dto.setName("测试进程");
-        dto.setModule("test-module");
+        dto.setModuleId(1L);
 
         Allure.step(
                 "验证DTO字段设置正确性",
                 () -> {
                     // 验证基本的getter和setter功能
                     Assertions.assertEquals("测试进程", dto.getName());
-                    Assertions.assertEquals("test-module", dto.getModule());
+                    Assertions.assertEquals(1L, dto.getModuleId());
 
-                    Allure.attachment("验证结果", "名称: " + dto.getName() + ", 模块: " + dto.getModule());
+                    Allure.attachment(
+                            "验证结果", "名称: " + dto.getName() + ", 模块ID: " + dto.getModuleId());
                 });
 
         Allure.step(
@@ -74,10 +75,10 @@ public class LogstashProcessUpdateTest {
                 () -> {
                     // 测试空DTO
                     Assertions.assertNull(dto.getName());
-                    Assertions.assertNull(dto.getModule());
+                    Assertions.assertNull(dto.getModuleId());
 
                     Allure.parameter("进程名称", "null");
-                    Allure.parameter("模块名称", "null");
+                    Allure.parameter("模块ID", "null");
                     Allure.attachment("验证结果", "所有字段均为null，符合预期");
                 });
 

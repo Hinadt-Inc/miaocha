@@ -76,19 +76,18 @@ public class MachineServiceImpl implements MachineService {
 
     @Override
     public MachineDTO getMachine(Long id) {
-        // 检查机器是否存在
         MachineInfo machineInfo = machineMapper.selectById(id);
         if (machineInfo == null) {
             throw new BusinessException(ErrorCode.MACHINE_NOT_FOUND);
         }
-
         return machineConverter.toDto(machineInfo);
     }
 
     @Override
     public List<MachineDTO> getAllMachines() {
-        List<MachineInfo> machineInfos = machineMapper.selectAll();
-        return machineInfos.stream().map(machineConverter::toDto).collect(Collectors.toList());
+        return machineMapper.selectAll().stream()
+                .map(machineConverter::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override

@@ -1,11 +1,12 @@
 package com.hinadt.miaocha.domain.entity;
 
+import com.hinadt.miaocha.common.audit.UserAuditable;
 import java.time.LocalDateTime;
 import lombok.Data;
 
 /** 用户模块权限实体类 */
 @Data
-public class UserModulePermission {
+public class UserModulePermission implements UserAuditable {
 
     /** 权限ID */
     private Long id;
@@ -24,4 +25,10 @@ public class UserModulePermission {
 
     /** 更新时间 */
     private LocalDateTime updateTime;
+
+    /** 创建人邮箱 */
+    private String createUser;
+
+    /** 修改人邮箱 */
+    private String updateUser;
 }

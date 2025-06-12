@@ -14,7 +14,7 @@ public interface LogstashProcessMapper {
     int update(LogstashProcess logstashProcess);
 
     int updateMetadataOnly(
-            @Param("id") Long id, @Param("name") String name, @Param("module") String module);
+            @Param("id") Long id, @Param("name") String name, @Param("moduleId") Long moduleId);
 
     int updateConfigOnly(
             @Param("id") Long id,
@@ -28,11 +28,9 @@ public interface LogstashProcessMapper {
 
     LogstashProcess selectByName(String name);
 
-    LogstashProcess selectByModule(String module);
+    List<LogstashProcess> selectByModuleId(Long moduleId);
 
-    String selectTableNameByModule(String module);
-
-    int countByModule(String module);
+    int countByModuleId(Long moduleId);
 
     List<LogstashProcess> selectAll();
 

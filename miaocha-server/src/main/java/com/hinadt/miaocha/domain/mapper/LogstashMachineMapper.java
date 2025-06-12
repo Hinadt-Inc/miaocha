@@ -44,6 +44,8 @@ public interface LogstashMachineMapper {
 
     int deleteByMachineId(Long machineId);
 
+    LogstashMachine selectById(Long id);
+
     List<LogstashMachine> selectByLogstashProcessId(Long logstashProcessId);
 
     List<LogstashMachine> selectByMachineId(Long machineId);

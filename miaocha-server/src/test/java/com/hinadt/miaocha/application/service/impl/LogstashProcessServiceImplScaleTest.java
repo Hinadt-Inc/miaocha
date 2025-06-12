@@ -7,12 +7,9 @@ import static org.mockito.Mockito.*;
 import com.hinadt.miaocha.application.logstash.LogstashConfigSyncService;
 import com.hinadt.miaocha.application.logstash.LogstashMachineConnectionValidator;
 import com.hinadt.miaocha.application.logstash.LogstashProcessDeployService;
-import com.hinadt.miaocha.application.logstash.command.LogstashCommandFactory;
 import com.hinadt.miaocha.application.logstash.enums.LogstashMachineState;
 import com.hinadt.miaocha.application.logstash.parser.LogstashConfigParser;
 import com.hinadt.miaocha.application.logstash.task.TaskService;
-import com.hinadt.miaocha.application.service.TableValidationService;
-import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.converter.LogstashMachineConverter;
@@ -22,10 +19,10 @@ import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessScaleRequestDTO;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.LogstashProcess;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
-import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
 import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
 import com.hinadt.miaocha.domain.mapper.MachineMapper;
+import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
 import io.qameta.allure.*;
 import java.util.Arrays;
 import java.util.Collections;
@@ -57,17 +54,14 @@ class LogstashProcessServiceImplScaleTest {
     @Mock private LogstashProcessMapper logstashProcessMapper;
     @Mock private LogstashMachineMapper logstashMachineMapper;
     @Mock private MachineMapper machineMapper;
-    @Mock private DatasourceMapper datasourceMapper;
+    @Mock private ModuleInfoMapper moduleInfoMapper;
     @Mock private LogstashProcessDeployService logstashDeployService;
     @Mock private LogstashProcessConverter logstashProcessConverter;
     @Mock private LogstashMachineConverter logstashMachineConverter;
     @Mock private LogstashConfigParser logstashConfigParser;
-    @Mock private TableValidationService tableValidationService;
-    @Mock private JdbcQueryExecutor jdbcQueryExecutor;
     @Mock private TaskService taskService;
     @Mock private LogstashConfigSyncService configSyncService;
     @Mock private LogstashMachineConnectionValidator connectionValidator;
-    @Mock private LogstashCommandFactory commandFactory;
 
     private LogstashProcessServiceImpl logstashProcessService;
 
@@ -78,17 +72,14 @@ class LogstashProcessServiceImplScaleTest {
                         logstashProcessMapper,
                         logstashMachineMapper,
                         machineMapper,
-                        datasourceMapper,
+                        moduleInfoMapper,
                         logstashDeployService,
                         logstashProcessConverter,
                         logstashMachineConverter,
                         logstashConfigParser,
-                        tableValidationService,
-                        jdbcQueryExecutor,
                         taskService,
                         configSyncService,
-                        connectionValidator,
-                        commandFactory);
+                        connectionValidator);
     }
 
     @Test
@@ -474,7 +465,7 @@ class LogstashProcessServiceImplScaleTest {
         LogstashProcess process = new LogstashProcess();
         process.setId(id);
         process.setName("test-process");
-        process.setModule("test-module");
+        process.setModuleId(1L);
         process.setConfigContent("input {} output {}");
         return process;
     }

@@ -40,6 +40,7 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
     private final UserMapper userMapper;
     private final DatasourceMapper datasourceMapper;
     private final UserModulePermissionMapper userModulePermissionMapper;
+    private final com.hinadt.miaocha.domain.mapper.ModuleInfoMapper moduleInfoMapper;
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -191,15 +192,15 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
                 structureDTO.setDatasourceName(ds.getName());
                 structureDTO.setDatabaseName(ds.getDatabase());
 
-                // 获取所有模块
+                // 获取该数据源的所有模块
+                List<com.hinadt.miaocha.domain.entity.ModuleInfo> moduleInfos =
+                        moduleInfoMapper.selectByDatasourceId(ds.getId());
                 List<ModuleInfoDTO> modules = new ArrayList<>();
-                for (LogstashProcess process : allModules) {
-                    if (StringUtils.hasText(process.getModule())) {
-                        ModuleInfoDTO moduleInfo = new ModuleInfoDTO();
-                        moduleInfo.setModuleName(process.getModule());
-                        moduleInfo.setPermissionId(null); // 管理员没有特定的权限ID
-                        modules.add(moduleInfo);
-                    }
+                for (com.hinadt.miaocha.domain.entity.ModuleInfo moduleInfo : moduleInfos) {
+                    ModuleInfoDTO moduleDto = new ModuleInfoDTO();
+                    moduleDto.setModuleName(moduleInfo.getName());
+                    moduleDto.setPermissionId(null); // 管理员没有特定的权限ID
+                    modules.add(moduleDto);
                 }
 
                 structureDTO.setModules(modules);
@@ -429,7 +430,7 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
         }
 
         // 获取所有模块
-        List<LogstashProcess> allProcesses = logstashProcessMapper.selectAll();
+        List<com.hinadt.miaocha.domain.entity.ModuleInfo> allModules = moduleInfoMapper.selectAll();
 
         // 获取用户已有的模块权限
         List<UserModulePermission> userPermissions =
@@ -442,8 +443,8 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
                         .collect(Collectors.toSet());
 
         // 筛选出用户没有权限的模块
-        return allProcesses.stream()
-                .map(LogstashProcess::getModule)
+        return allModules.stream()
+                .map(com.hinadt.miaocha.domain.entity.ModuleInfo::getName)
                 .filter(StringUtils::hasText) // 过滤掉空模块名
                 .filter(module -> !userModules.contains(module)) // 过滤掉用户已有权限的模块
                 .distinct() // 去重
@@ -461,14 +462,9 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
             return false;
         }
 
-        List<LogstashProcess> processes = logstashProcessMapper.selectAll();
-        for (LogstashProcess process : processes) {
-            if (module.equals(process.getModule())) {
-                return true;
-            }
-        }
-
-        return false;
+        com.hinadt.miaocha.domain.entity.ModuleInfo moduleInfo =
+                moduleInfoMapper.selectByName(module);
+        return moduleInfo != null;
     }
 
     /**
@@ -482,14 +478,13 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块名称不能为空");
         }
 
-        List<LogstashProcess> processes = logstashProcessMapper.selectAll();
-        for (LogstashProcess process : processes) {
-            if (module.equals(process.getModule())) {
-                return process.getDatasourceId();
-            }
+        com.hinadt.miaocha.domain.entity.ModuleInfo moduleInfo =
+                moduleInfoMapper.selectByName(module);
+        if (moduleInfo == null) {
+            throw new BusinessException(ErrorCode.MODULE_NOT_FOUND, "未找到模块: " + module);
         }
 
-        throw new BusinessException(ErrorCode.MODULE_NOT_FOUND, "未找到模块: " + module);
+        return moduleInfo.getDatasourceId();
     }
 
     /**
@@ -515,6 +510,20 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
 
         if (permission.getUpdateTime() != null) {
             dto.setUpdateTime(permission.getUpdateTime().format(DATE_TIME_FORMATTER));
+        }
+
+        dto.setCreateUser(permission.getCreateUser());
+        dto.setUpdateUser(permission.getUpdateUser());
+
+        // 查询用户昵称
+        if (permission.getCreateUser() != null) {
+            String createUserName = userMapper.selectNicknameByEmail(permission.getCreateUser());
+            dto.setCreateUserName(createUserName);
+        }
+
+        if (permission.getUpdateUser() != null) {
+            String updateUserName = userMapper.selectNicknameByEmail(permission.getUpdateUser());
+            dto.setUpdateUserName(updateUserName);
         }
 
         return dto;

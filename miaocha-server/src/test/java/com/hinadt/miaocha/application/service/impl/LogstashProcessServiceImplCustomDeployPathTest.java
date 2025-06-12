@@ -7,20 +7,15 @@ import static org.mockito.Mockito.*;
 import com.hinadt.miaocha.application.logstash.LogstashConfigSyncService;
 import com.hinadt.miaocha.application.logstash.LogstashMachineConnectionValidator;
 import com.hinadt.miaocha.application.logstash.LogstashProcessDeployService;
-import com.hinadt.miaocha.application.logstash.command.LogstashCommandFactory;
 import com.hinadt.miaocha.application.logstash.parser.LogstashConfigParser;
 import com.hinadt.miaocha.application.logstash.task.TaskService;
-import com.hinadt.miaocha.application.service.TableValidationService;
-import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
 import com.hinadt.miaocha.domain.converter.LogstashMachineConverter;
 import com.hinadt.miaocha.domain.converter.LogstashProcessConverter;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessCreateDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessResponseDTO;
-import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.LogstashProcess;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
-import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
 import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
 import com.hinadt.miaocha.domain.mapper.MachineMapper;
@@ -52,17 +47,14 @@ class LogstashProcessServiceImplCustomDeployPathTest {
     @Mock private LogstashProcessMapper logstashProcessMapper;
     @Mock private LogstashMachineMapper logstashMachineMapper;
     @Mock private MachineMapper machineMapper;
-    @Mock private DatasourceMapper datasourceMapper;
+    @Mock private com.hinadt.miaocha.domain.mapper.ModuleInfoMapper moduleInfoMapper;
     @Mock private LogstashProcessDeployService logstashDeployService;
     @Mock private LogstashProcessConverter logstashProcessConverter;
     @Mock private LogstashMachineConverter logstashMachineConverter;
     @Mock private LogstashConfigParser logstashConfigParser;
-    @Mock private TableValidationService tableValidationService;
-    @Mock private JdbcQueryExecutor jdbcQueryExecutor;
     @Mock private TaskService taskService;
     @Mock private LogstashConfigSyncService configSyncService;
     @Mock private LogstashMachineConnectionValidator connectionValidator;
-    @Mock private LogstashCommandFactory commandFactory;
 
     private LogstashProcessServiceImpl logstashProcessService;
 
@@ -73,17 +65,14 @@ class LogstashProcessServiceImplCustomDeployPathTest {
                         logstashProcessMapper,
                         logstashMachineMapper,
                         machineMapper,
-                        datasourceMapper,
+                        moduleInfoMapper,
                         logstashDeployService,
                         logstashProcessConverter,
                         logstashMachineConverter,
                         logstashConfigParser,
-                        tableValidationService,
-                        jdbcQueryExecutor,
                         taskService,
                         configSyncService,
-                        connectionValidator,
-                        commandFactory);
+                        connectionValidator);
     }
 
     @Test
@@ -91,15 +80,14 @@ class LogstashProcessServiceImplCustomDeployPathTest {
         // 准备测试数据
         LogstashProcessCreateDTO createDTO = new LogstashProcessCreateDTO();
         createDTO.setName("Test Process");
-        createDTO.setModule("test");
+        createDTO.setModuleId(1L);
         createDTO.setCustomDeployPath("/custom/deploy/path");
-        createDTO.setDatasourceId(1L);
         createDTO.setMachineIds(List.of(1L, 2L));
 
         LogstashProcess mockProcess = new LogstashProcess();
         mockProcess.setId(100L);
         mockProcess.setName("Test Process");
-        mockProcess.setModule("test");
+        mockProcess.setModuleId(1L);
 
         MachineInfo mockMachine1 = new MachineInfo();
         mockMachine1.setId(1L);
@@ -121,8 +109,8 @@ class LogstashProcessServiceImplCustomDeployPathTest {
 
         // Mock 行为
         when(logstashProcessMapper.selectByName(anyString())).thenReturn(null);
-        when(logstashProcessMapper.selectByModule(anyString())).thenReturn(null);
-        when(datasourceMapper.selectById(1L)).thenReturn(new DatasourceInfo());
+        when(moduleInfoMapper.selectById(1L))
+                .thenReturn(new com.hinadt.miaocha.domain.entity.ModuleInfo());
         when(machineMapper.selectById(1L)).thenReturn(mockMachine1);
         when(machineMapper.selectById(2L)).thenReturn(mockMachine2);
         when(logstashProcessConverter.toEntity(createDTO)).thenReturn(mockProcess);
@@ -170,15 +158,14 @@ class LogstashProcessServiceImplCustomDeployPathTest {
         // 准备测试数据 - 不设置customDeployPath
         LogstashProcessCreateDTO createDTO = new LogstashProcessCreateDTO();
         createDTO.setName("Test Process Default");
-        createDTO.setModule("test-default");
+        createDTO.setModuleId(1L);
         // customDeployPath为null，应该使用默认路径
-        createDTO.setDatasourceId(1L);
         createDTO.setMachineIds(List.of(1L));
 
         LogstashProcess mockProcess = new LogstashProcess();
         mockProcess.setId(200L);
         mockProcess.setName("Test Process Default");
-        mockProcess.setModule("test-default");
+        mockProcess.setModuleId(1L);
 
         MachineInfo mockMachine = new MachineInfo();
         mockMachine.setId(1L);
@@ -191,8 +178,8 @@ class LogstashProcessServiceImplCustomDeployPathTest {
 
         // Mock 行为
         when(logstashProcessMapper.selectByName(anyString())).thenReturn(null);
-        when(logstashProcessMapper.selectByModule(anyString())).thenReturn(null);
-        when(datasourceMapper.selectById(1L)).thenReturn(new DatasourceInfo());
+        when(moduleInfoMapper.selectById(1L))
+                .thenReturn(new com.hinadt.miaocha.domain.entity.ModuleInfo());
         when(machineMapper.selectById(1L)).thenReturn(mockMachine);
         when(logstashProcessConverter.toEntity(createDTO)).thenReturn(mockProcess);
         when(logstashProcessMapper.insert(mockProcess))
@@ -234,9 +221,8 @@ class LogstashProcessServiceImplCustomDeployPathTest {
         // 准备测试数据 - customDeployPath为空字符串，应该使用默认路径
         LogstashProcessCreateDTO createDTO = new LogstashProcessCreateDTO();
         createDTO.setName("Test Process Empty");
-        createDTO.setModule("test-empty");
+        createDTO.setModuleId(1L);
         createDTO.setCustomDeployPath(""); // 空字符串
-        createDTO.setDatasourceId(1L);
         createDTO.setMachineIds(List.of(1L));
 
         LogstashProcess mockProcess = new LogstashProcess();
@@ -250,8 +236,8 @@ class LogstashProcessServiceImplCustomDeployPathTest {
 
         // Mock 行为
         when(logstashProcessMapper.selectByName(anyString())).thenReturn(null);
-        when(logstashProcessMapper.selectByModule(anyString())).thenReturn(null);
-        when(datasourceMapper.selectById(1L)).thenReturn(new DatasourceInfo());
+        when(moduleInfoMapper.selectById(1L))
+                .thenReturn(new com.hinadt.miaocha.domain.entity.ModuleInfo());
         when(machineMapper.selectById(1L)).thenReturn(mockMachine);
         when(logstashProcessConverter.toEntity(createDTO)).thenReturn(mockProcess);
         when(logstashProcessMapper.insert(mockProcess))

@@ -5,7 +5,7 @@
     <!-- Logstash机器表所有字段 -->
     <sql id="logstashMachineColumns">
         id, logstash_process_id, machine_id, process_pid, state, config_content, jvm_options, logstash_yml, deploy_path,
-        create_time, update_time
+        create_time, update_time, create_user, update_user
     </sql>
 
     <!-- 插入 Logstash 机器记录 -->
@@ -73,6 +73,13 @@
         DELETE FROM logstash_machine WHERE machine_id=#{machineId}
     </delete>
 
+    <!-- 根据 ID 查询 Logstash 机器记录 -->
+    <select id="selectById" resultType="com.hinadt.miaocha.domain.entity.LogstashMachine">
+        SELECT
+        <include refid="logstashMachineColumns"/>
+        FROM logstash_machine WHERE id = #{id}
+    </select>
+
     <!-- 根据 Logstash 进程 ID 查询 -->
     <select id="selectByLogstashProcessId" resultType="com.hinadt.miaocha.domain.entity.LogstashMachine">
         SELECT
@@ -94,18 +101,18 @@
         FROM logstash_machine WHERE logstash_process_id=#{logstashProcessId} AND machine_id=#{machineId}
     </select>
 
-    <!-- 查询所有带进程 PID 的记录 -->
+    <!-- 查询所有有进程 PID 的 Logstash 机器 -->
     <select id="selectAllWithProcessPid" resultType="com.hinadt.miaocha.domain.entity.LogstashMachine">
         SELECT
         <include refid="logstashMachineColumns"/>
-        FROM logstash_machine WHERE process_pid IS NOT NULL
+        FROM logstash_machine WHERE process_pid IS NOT NULL AND process_pid != ''
     </select>
 
-    <!-- 根据状态查询 -->
+    <!-- 根据状态查询 Logstash 机器 -->
     <select id="selectByState" resultType="com.hinadt.miaocha.domain.entity.LogstashMachine">
         SELECT
         <include refid="logstashMachineColumns"/>
-        FROM logstash_machine WHERE state = #{state}
+        FROM logstash_machine WHERE state=#{state}
     </select>
 
     <!-- 根据 Logstash 进程 ID 和状态查询 -->

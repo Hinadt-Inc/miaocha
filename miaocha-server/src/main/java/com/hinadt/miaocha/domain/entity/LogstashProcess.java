@@ -1,5 +1,6 @@
 package com.hinadt.miaocha.domain.entity;
 
+import com.hinadt.miaocha.common.audit.UserAuditable;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import lombok.Data;
@@ -7,27 +8,18 @@ import lombok.Data;
 /** Logstash进程任务实体类 */
 @Data
 @Schema(description = "Logstash进程任务实体")
-public class LogstashProcess {
+public class LogstashProcess implements UserAuditable {
     @Schema(description = "进程ID", example = "1")
     private Long id;
 
     @Schema(description = "进程名称", example = "Nginx日志收集")
     private String name;
 
-    @Schema(description = "模块名称", example = "nginx")
-    private String module;
+    @Schema(description = "关联的模块ID", example = "1")
+    private Long moduleId;
 
     @Schema(description = "Logstash配置文件内容")
     private String configContent;
-
-    @Schema(description = "与Logstash配置对应的Doris日志表SQL")
-    private String dorisSql;
-
-    @Schema(description = "关联的数据源ID", example = "1")
-    private Long datasourceId;
-
-    @Schema(description = "Doris表名", example = "log_table_test_env")
-    private String tableName;
 
     @Schema(description = "JVM配置选项模板")
     private String jvmOptions;
@@ -40,4 +32,10 @@ public class LogstashProcess {
 
     @Schema(description = "更新时间")
     private LocalDateTime updateTime;
+
+    @Schema(description = "创建人")
+    private String createUser;
+
+    @Schema(description = "修改人")
+    private String updateUser;
 }

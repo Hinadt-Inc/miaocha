@@ -4,7 +4,7 @@
 
     <!-- 用户模块权限表所有字段 -->
     <sql id="userModulePermissionColumns">
-        id, user_id, datasource_id, module, create_time, update_time
+        id, user_id, datasource_id, module, create_time, update_time, create_user, update_user
     </sql>
 
     <!-- 插入用户模块权限 -->
@@ -44,8 +44,17 @@
     <select id="selectAll" resultType="com.hinadt.miaocha.domain.entity.UserModulePermission">
         SELECT
         <include refid="userModulePermissionColumns"/>
-        FROM user_module_permission
+        FROM user_module_permission ORDER BY create_time DESC
     </select>
 
+    <!-- 删除用户的所有权限 -->
+    <delete id="deleteByUserId">
+        DELETE FROM user_module_permission WHERE user_id = #{userId}
+    </delete>
+
+    <!-- 删除权限 -->
+    <delete id="deleteById">
+        DELETE FROM user_module_permission WHERE id = #{id}
+    </delete>
 
 </mapper>

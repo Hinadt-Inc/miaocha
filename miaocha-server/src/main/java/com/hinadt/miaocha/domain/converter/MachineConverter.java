@@ -3,11 +3,18 @@ package com.hinadt.miaocha.domain.converter;
 import com.hinadt.miaocha.domain.dto.MachineCreateDTO;
 import com.hinadt.miaocha.domain.dto.MachineDTO;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
+import com.hinadt.miaocha.domain.mapper.UserMapper;
 import org.springframework.stereotype.Component;
 
 /** 机器实体与DTO转换器 */
 @Component
 public class MachineConverter implements Converter<MachineInfo, MachineDTO> {
+
+    private final UserMapper userMapper;
+
+    public MachineConverter(UserMapper userMapper) {
+        this.userMapper = userMapper;
+    }
 
     /** 将DTO转换为实体 */
     @Override
@@ -22,6 +29,8 @@ public class MachineConverter implements Converter<MachineInfo, MachineDTO> {
         entity.setIp(dto.getIp());
         entity.setPort(dto.getPort());
         entity.setUsername(dto.getUsername());
+        // MachineDTO不包含password字段（安全考虑）
+        // MachineInfo没有privateKey和description字段
         entity.setCreateTime(dto.getCreateTime());
         entity.setUpdateTime(dto.getUpdateTime());
 
@@ -58,8 +67,23 @@ public class MachineConverter implements Converter<MachineInfo, MachineDTO> {
         dto.setIp(entity.getIp());
         dto.setPort(entity.getPort());
         dto.setUsername(entity.getUsername());
+        // MachineDTO不包含password字段（安全考虑）
+        // MachineInfo没有privateKey和description字段
         dto.setCreateTime(entity.getCreateTime());
         dto.setUpdateTime(entity.getUpdateTime());
+        dto.setCreateUser(entity.getCreateUser());
+        dto.setUpdateUser(entity.getUpdateUser());
+
+        // 查询用户昵称
+        if (entity.getCreateUser() != null) {
+            String createUserName = userMapper.selectNicknameByEmail(entity.getCreateUser());
+            dto.setCreateUserName(createUserName);
+        }
+
+        if (entity.getUpdateUser() != null) {
+            String updateUserName = userMapper.selectNicknameByEmail(entity.getUpdateUser());
+            dto.setUpdateUserName(updateUserName);
+        }
 
         return dto;
     }
@@ -75,6 +99,8 @@ public class MachineConverter implements Converter<MachineInfo, MachineDTO> {
         entity.setIp(dto.getIp());
         entity.setPort(dto.getPort());
         entity.setUsername(dto.getUsername());
+        // MachineDTO不包含password字段（安全考虑）
+        // MachineInfo没有privateKey和description字段
 
         return entity;
     }

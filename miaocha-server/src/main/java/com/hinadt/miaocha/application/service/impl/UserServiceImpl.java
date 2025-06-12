@@ -120,6 +120,15 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public String getUserEmailByUid(String uid) {
+        String email = userMapper.selectEmailByUid(uid);
+        if (email == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+        return email;
+    }
+
+    @Override
     public User getUserEntityById(Long id) {
         User user = userMapper.selectById(id);
         if (user == null) {

@@ -3,7 +3,7 @@ package com.hinadt.miaocha.application.service.impl;
 import com.hinadt.miaocha.application.service.ModuleTableMappingService;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
-import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
+import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -12,7 +12,7 @@ import org.springframework.util.StringUtils;
 @Service
 public class ModuleTableMappingServiceImpl implements ModuleTableMappingService {
 
-    @Autowired private LogstashProcessMapper logstashProcessMapper;
+    @Autowired private ModuleInfoMapper moduleInfoMapper;
 
     @Override
     public String getTableNameByModule(String module) {
@@ -20,14 +20,16 @@ public class ModuleTableMappingServiceImpl implements ModuleTableMappingService 
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块名称不能为空");
         }
 
-        // 使用精准SQL查询，只查询表名字段
-        String tableName = logstashProcessMapper.selectTableNameByModule(module);
-        if (tableName == null) {
+        // 通过模块名称查询模块信息
+        com.hinadt.miaocha.domain.entity.ModuleInfo moduleInfo =
+                moduleInfoMapper.selectByName(module);
+        if (moduleInfo == null) {
             throw new BusinessException(ErrorCode.MODULE_NOT_FOUND, "未找到模块: " + module);
         }
 
+        String tableName = moduleInfo.getTableName();
         if (!StringUtils.hasText(tableName)) {
-            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "模块 " + module + " 对应的表名未配置");
+            throw new RuntimeException("模块 " + module + " 对应的表名未配置");
         }
 
         return tableName;
@@ -39,8 +41,9 @@ public class ModuleTableMappingServiceImpl implements ModuleTableMappingService 
             return false;
         }
 
-        // 使用精准SQL查询，只查询计数
-        int count = logstashProcessMapper.countByModule(module);
-        return count > 0;
+        // 通过模块名称查询模块信息
+        com.hinadt.miaocha.domain.entity.ModuleInfo moduleInfo =
+                moduleInfoMapper.selectByName(module);
+        return moduleInfo != null;
     }
 }

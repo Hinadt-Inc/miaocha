@@ -21,6 +21,16 @@
         FROM user WHERE uid=#{uid}
     </select>
 
+    <!-- 根据UID获取用户邮箱（高效查询） -->
+    <select id="selectEmailByUid" resultType="string">
+        SELECT email FROM user WHERE uid=#{uid}
+    </select>
+
+    <!-- 根据邮箱获取用户昵称（高效查询） -->
+    <select id="selectNicknameByEmail" resultType="string">
+        SELECT nickname FROM user WHERE email=#{email}
+    </select>
+
     <!-- 根据邮箱查询用户 -->
     <select id="selectByEmail" resultType="com.hinadt.miaocha.domain.entity.User">
         SELECT

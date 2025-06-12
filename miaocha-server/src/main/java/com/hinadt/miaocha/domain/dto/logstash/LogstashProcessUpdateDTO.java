@@ -2,6 +2,7 @@ package com.hinadt.miaocha.domain.dto.logstash;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /** 更新Logstash进程元信息DTO */
@@ -13,7 +14,9 @@ public class LogstashProcessUpdateDTO {
     @NotBlank(message = "进程名称不能为空")
     private String name;
 
-    @Schema(description = "模块名称", example = "nginx")
-    @NotBlank(message = "模块名称不能为空")
-    private String module;
+    @Schema(description = "关联的模块ID", example = "1")
+    @NotNull(message = "模块ID不能为空") private Long moduleId;
+
+    @Schema(description = "修改人", example = "admin")
+    private String updateUser;
 }

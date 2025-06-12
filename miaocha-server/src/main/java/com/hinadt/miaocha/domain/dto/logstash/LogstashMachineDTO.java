@@ -49,4 +49,16 @@ public class LogstashMachineDTO {
 
     @Schema(description = "更新时间")
     private LocalDateTime updateTime;
+
+    @Schema(description = "创建人邮箱")
+    private String createUser;
+
+    @Schema(description = "创建人昵称")
+    private String createUserName;
+
+    @Schema(description = "修改人邮箱")
+    private String updateUser;
+
+    @Schema(description = "修改人昵称")
+    private String updateUserName;
 }
