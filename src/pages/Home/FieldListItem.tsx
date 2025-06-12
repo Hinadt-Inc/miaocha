@@ -78,10 +78,8 @@ const FieldListItem: React.FC<IProps> = ({ isSelected, column, columnIndex, fiel
           key: `${column.columnName}`,
           label: (
             <div className={styles.bar}>
-              <div>
-                <Tag color={getFieldTypeColor(column.dataType)}>{column.dataType?.substr(0, 1)?.toUpperCase()}</Tag>
-                {column.columnName}
-              </div>
+              <Tag color={getFieldTypeColor(column.dataType)}>{column.dataType?.substr(0, 1)?.toUpperCase()}</Tag>
+              <span className={styles.columnName}>{column.columnName}</span>
               {!(isSelected && column.columnName === 'log_time') && (
                 <Button
                   color={isSelected ? 'danger' : 'primary'}

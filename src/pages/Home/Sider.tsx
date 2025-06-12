@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Collapse, Cascader, Spin } from 'antd';
+import { Collapse, Select, Spin, Input, Space } from 'antd';
 import { useRequest } from 'ahooks';
 import * as api from '@/api/logs';
 import styles from './Sider.module.less';
@@ -20,9 +20,10 @@ const Sider: React.FC<IProps> = (props) => {
   const { detailLoading, modules, moduleLoading, onChangeColumns, onSearch, searchParams, setWhereSqlsFromSider } =
     props;
   const [columns, setColumns] = useState<ILogColumnsResponse[]>([]); // 日志表字段
-  const [selectedModule, setSelectedModule] = useState<string[]>([]); // 已选模块
+  const [selectedModule, setSelectedModule] = useState<string>(''); // 已选模块
   const [distributions, setDistributions] = useState<Record<string, IFieldDistributions>>({}); // 字段值分布列表
   const [activeColumns, setActiveColumns] = useState<string[]>([]); // 激活的字段
+  const [searchText, setSearchText] = useState<string>(''); // 字段搜索文本
   // 获取日志字段
   const getColumns = useRequest(api.fetchColumns, {
     manual: true,
@@ -64,19 +65,19 @@ const Sider: React.FC<IProps> = (props) => {
   });
 
   // 选择模块时触发，避免重复请求和状态更新
-  const changeModules = (value: any[]) => {
+  const changeModules = (value: string) => {
     if (!value) {
-      setSelectedModule([]);
+      setSelectedModule('');
       return;
     }
-    const [datasourceId, module] = value;
-    const moduleStr = String(module);
-    setSelectedModule([String(datasourceId), moduleStr]);
-    getColumns.run({ datasourceId: Number(datasourceId), module: moduleStr });
+    const datasourceId = modules.find((item) => item.value === value)?.datasourceId;
+    // 解析value：datasourceId-module
+    setSelectedModule(value);
+    getColumns.run({ datasourceId: Number(datasourceId), module: value });
     onSearch({
       ...searchParams,
       datasourceId: Number(datasourceId),
-      module: moduleStr,
+      module: value,
       offset: 0,
     });
   };
@@ -85,10 +86,10 @@ const Sider: React.FC<IProps> = (props) => {
   useEffect(() => {
     if (modules?.length > 0 && selectedModule?.length === 0) {
       const first = modules[0];
-      if (first?.children?.[0]) {
-        const datasourceId = String(first.value);
-        const module = String(first.children[0].value);
-        setSelectedModule([datasourceId, module]);
+      if (first) {
+        const datasourceId = String(first.datasourceId);
+        const module = String(first.module);
+        setSelectedModule(module);
         getColumns.run({ datasourceId: Number(datasourceId), module });
       }
     }
@@ -148,14 +149,33 @@ const Sider: React.FC<IProps> = (props) => {
     };
   }, [searchParams, distributions, activeColumns, toggleColumn, getDistribution, setWhereSqlsFromSider]);
 
+  // 根据搜索文本过滤可用字段
+  const filteredAvailableColumns = useMemo(() => {
+    const availableColumns = columns?.filter((item) => !item.selected);
+    if (!searchText.trim()) {
+      return availableColumns?.sort((a, b) => {
+        if (!a.columnName) return -1;
+        if (!b.columnName) return 1;
+        return a.columnName.localeCompare(b.columnName);
+      });
+    }
+    return availableColumns
+      ?.filter((item) => item.columnName?.toLowerCase().includes(searchText.toLowerCase()))
+      ?.sort((a, b) => {
+        if (!a.columnName) return -1;
+        if (!b.columnName) return 1;
+        return a.columnName.localeCompare(b.columnName);
+      });
+  }, [columns, searchText]);
+
   return (
     <div className={styles.layoutSider}>
-      <Cascader
+      <Select
         showSearch
         allowClear={false}
         variant="filled"
         placeholder="请选择模块"
-        expandTrigger="hover"
+        style={{ width: '100%' }}
         options={modules}
         value={selectedModule}
         onChange={changeModules}
@@ -189,14 +209,17 @@ const Sider: React.FC<IProps> = (props) => {
             {
               key: 'available',
               label: '可用字段',
-              children: columns
-                ?.filter((item) => !item.selected)
-                .sort((a, b) => {
-                  if (!a.columnName) return -1;
-                  if (!b.columnName) return 1;
-                  return a.columnName.localeCompare(b.columnName);
-                })
-                ?.map((item, index) => (
+              children: [
+                <Input.Search
+                  key="search"
+                  placeholder="搜索字段"
+                  allowClear
+                  variant="filled"
+                  style={{ width: '100%', marginBottom: 8 }}
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                />,
+                ...(filteredAvailableColumns?.map((item, index) => (
                   <FieldListItem
                     key={item.columnName}
                     isSelected={false}
@@ -204,7 +227,8 @@ const Sider: React.FC<IProps> = (props) => {
                     columnIndex={index}
                     fieldData={fieldListProps}
                   />
-                )),
+                )) || []),
+              ],
             },
           ]}
         />
