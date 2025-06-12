@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Collapse, Cascader, Spin, Input, Space } from 'antd';
+import { Collapse, Select, Spin, Input, Space } from 'antd';
 import { useRequest } from 'ahooks';
 import * as api from '@/api/logs';
 import styles from './Sider.module.less';
@@ -20,7 +20,7 @@ const Sider: React.FC<IProps> = (props) => {
   const { detailLoading, modules, moduleLoading, onChangeColumns, onSearch, searchParams, setWhereSqlsFromSider } =
     props;
   const [columns, setColumns] = useState<ILogColumnsResponse[]>([]); // 日志表字段
-  const [selectedModule, setSelectedModule] = useState<string[]>([]); // 已选模块
+  const [selectedModule, setSelectedModule] = useState<string>(''); // 已选模块
   const [distributions, setDistributions] = useState<Record<string, IFieldDistributions>>({}); // 字段值分布列表
   const [activeColumns, setActiveColumns] = useState<string[]>([]); // 激活的字段
   const [searchText, setSearchText] = useState<string>(''); // 字段搜索文本
@@ -65,19 +65,19 @@ const Sider: React.FC<IProps> = (props) => {
   });
 
   // 选择模块时触发，避免重复请求和状态更新
-  const changeModules = (value: any[]) => {
+  const changeModules = (value: string) => {
     if (!value) {
-      setSelectedModule([]);
+      setSelectedModule('');
       return;
     }
-    const [datasourceId, module] = value;
-    const moduleStr = String(module);
-    setSelectedModule([String(datasourceId), moduleStr]);
-    getColumns.run({ datasourceId: Number(datasourceId), module: moduleStr });
+    const datasourceId = modules.find((item) => item.value === value)?.datasourceId;
+    // 解析value：datasourceId-module
+    setSelectedModule(value);
+    getColumns.run({ datasourceId: Number(datasourceId), module: value });
     onSearch({
       ...searchParams,
       datasourceId: Number(datasourceId),
-      module: moduleStr,
+      module: value,
       offset: 0,
     });
   };
@@ -86,10 +86,10 @@ const Sider: React.FC<IProps> = (props) => {
   useEffect(() => {
     if (modules?.length > 0 && selectedModule?.length === 0) {
       const first = modules[0];
-      if (first?.children?.[0]) {
-        const datasourceId = String(first.value);
-        const module = String(first.children[0].value);
-        setSelectedModule([datasourceId, module]);
+      if (first) {
+        const datasourceId = String(first.datasourceId);
+        const module = String(first.module);
+        setSelectedModule(module);
         getColumns.run({ datasourceId: Number(datasourceId), module });
       }
     }
@@ -170,12 +170,12 @@ const Sider: React.FC<IProps> = (props) => {
 
   return (
     <div className={styles.layoutSider}>
-      <Cascader
+      <Select
         showSearch
         allowClear={false}
         variant="filled"
         placeholder="请选择模块"
-        expandTrigger="hover"
+        style={{ width: '100%' }}
         options={modules}
         value={selectedModule}
         onChange={changeModules}
@@ -208,29 +208,27 @@ const Sider: React.FC<IProps> = (props) => {
             },
             {
               key: 'available',
-              label: (
-                <Space style={{ width: '100%', justifyContent: 'flex-start', whiteSpace: 'nowrap' }}>
-                  <span>可用字段</span>
-                  <Input
-                    placeholder="搜索字段"
-                    size="small"
-                    allowClear
-                    style={{ minWidth: 80, maxWidth: 120 }}
-                    value={searchText}
-                    onChange={(e) => setSearchText(e.target.value)}
-                    onClick={(e) => e.stopPropagation()} // 防止点击搜索框时触发折叠面板
+              label: '可用字段',
+              children: [
+                <Input.Search
+                  key="search"
+                  placeholder="搜索字段"
+                  allowClear
+                  variant="filled"
+                  style={{ width: '100%', marginBottom: 8 }}
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                />,
+                ...(filteredAvailableColumns?.map((item, index) => (
+                  <FieldListItem
+                    key={item.columnName}
+                    isSelected={false}
+                    column={item}
+                    columnIndex={index}
+                    fieldData={fieldListProps}
                   />
-                </Space>
-              ),
-              children: filteredAvailableColumns?.map((item, index) => (
-                <FieldListItem
-                  key={item.columnName}
-                  isSelected={false}
-                  column={item}
-                  columnIndex={index}
-                  fieldData={fieldListProps}
-                />
-              )),
+                )) || []),
+              ],
             },
           ]}
         />

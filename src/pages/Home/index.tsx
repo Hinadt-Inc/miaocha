@@ -30,17 +30,15 @@ const HomePage = () => {
   // 日志检索请求参数
   const [searchParams, setSearchParams] = useState<ILogSearchParams>(defaultSearchParams);
 
-  // 获取模块名称
-  const generateModuleHierarchy = (modulesData: IMyModulesResponse[]): IStatus[] => {
+  // 获取模块选项
+  const generateModuleOptions = (modulesData: IMyModulesResponse[]): IStatus[] => {
     return (
-      modulesData?.map(({ modules, datasourceId, datasourceName }) => ({
-        label: String(datasourceName),
-        value: String(datasourceId),
-        children:
-          modules?.map(({ moduleName }) => ({
-            value: String(moduleName),
-            label: String(moduleName),
-          })) || [],
+      modulesData?.map(({ datasourceId, datasourceName, module }) => ({
+        label: module,
+        value: module,
+        datasourceId,
+        datasourceName,
+        module,
       })) || []
     );
   };
@@ -48,21 +46,16 @@ const HomePage = () => {
   // 获取模块列表
   const getMyModules = useRequest(api.fetchMyModules, {
     onSuccess: (res) => {
-      const moduleHierarchy = generateModuleHierarchy(res);
-
+      const moduleOptions = generateModuleOptions(res);
       // 设置默认数据源和模块
-      if (
-        (!searchParams.datasourceId || !searchParams.module) &&
-        moduleHierarchy[0] &&
-        moduleHierarchy[0]?.children[0]
-      ) {
+      if ((!searchParams.datasourceId || !searchParams.module) && moduleOptions[0]) {
         setSearchParams((prev) => ({
           ...prev,
-          datasourceId: Number(moduleHierarchy[0].value),
-          module: moduleHierarchy[0]?.children[0]?.value,
+          datasourceId: Number(moduleOptions[0].datasourceId),
+          module: moduleOptions[0].module,
         }));
       }
-      setModuleOptions(moduleHierarchy);
+      setModuleOptions(moduleOptions);
     },
   });
 

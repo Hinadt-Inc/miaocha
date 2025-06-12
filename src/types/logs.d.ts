@@ -13,14 +13,30 @@ declare global {
    * 我的模块响应接口
    */
   interface IMyModulesResponse {
-    /** 数据库名称 */
-    databaseName: number;
+    /** ID */
+    id: number | null;
+    /** 用户ID */
+    userId: number;
     /** 数据源ID */
-    datasourceId: string;
+    datasourceId: number;
     /** 数据源名称 */
     datasourceName: string;
-    /** 模块列表 */
-    modules: IModules[];
+    /** 数据库名称 */
+    databaseName: string;
+    /** 模块名称 */
+    module: string;
+    /** 创建时间 */
+    createTime: string | null;
+    /** 更新时间 */
+    updateTime: string | null;
+    /** 创建用户 */
+    createUser: number | null;
+    /** 创建用户名 */
+    createUserName: string | null;
+    /** 更新用户 */
+    updateUser: number | null;
+    /** 更新用户名 */
+    updateUserName: string | null;
   }
 
   /**
