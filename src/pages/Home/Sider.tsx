@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Collapse, Cascader, Spin } from 'antd';
+import { Collapse, Cascader, Spin, Input, Space } from 'antd';
 import { useRequest } from 'ahooks';
 import * as api from '@/api/logs';
 import styles from './Sider.module.less';
@@ -23,6 +23,7 @@ const Sider: React.FC<IProps> = (props) => {
   const [selectedModule, setSelectedModule] = useState<string[]>([]); // 已选模块
   const [distributions, setDistributions] = useState<Record<string, IFieldDistributions>>({}); // 字段值分布列表
   const [activeColumns, setActiveColumns] = useState<string[]>([]); // 激活的字段
+  const [searchText, setSearchText] = useState<string>(''); // 字段搜索文本
   // 获取日志字段
   const getColumns = useRequest(api.fetchColumns, {
     manual: true,
@@ -148,6 +149,25 @@ const Sider: React.FC<IProps> = (props) => {
     };
   }, [searchParams, distributions, activeColumns, toggleColumn, getDistribution, setWhereSqlsFromSider]);
 
+  // 根据搜索文本过滤可用字段
+  const filteredAvailableColumns = useMemo(() => {
+    const availableColumns = columns?.filter((item) => !item.selected);
+    if (!searchText.trim()) {
+      return availableColumns?.sort((a, b) => {
+        if (!a.columnName) return -1;
+        if (!b.columnName) return 1;
+        return a.columnName.localeCompare(b.columnName);
+      });
+    }
+    return availableColumns
+      ?.filter((item) => item.columnName?.toLowerCase().includes(searchText.toLowerCase()))
+      ?.sort((a, b) => {
+        if (!a.columnName) return -1;
+        if (!b.columnName) return 1;
+        return a.columnName.localeCompare(b.columnName);
+      });
+  }, [columns, searchText]);
+
   return (
     <div className={styles.layoutSider}>
       <Cascader
@@ -188,23 +208,29 @@ const Sider: React.FC<IProps> = (props) => {
             },
             {
               key: 'available',
-              label: '可用字段',
-              children: columns
-                ?.filter((item) => !item.selected)
-                .sort((a, b) => {
-                  if (!a.columnName) return -1;
-                  if (!b.columnName) return 1;
-                  return a.columnName.localeCompare(b.columnName);
-                })
-                ?.map((item, index) => (
-                  <FieldListItem
-                    key={item.columnName}
-                    isSelected={false}
-                    column={item}
-                    columnIndex={index}
-                    fieldData={fieldListProps}
+              label: (
+                <Space style={{ width: '100%', justifyContent: 'flex-start', whiteSpace: 'nowrap' }}>
+                  <span>可用字段</span>
+                  <Input
+                    placeholder="搜索字段"
+                    size="small"
+                    allowClear
+                    style={{ minWidth: 80, maxWidth: 120 }}
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    onClick={(e) => e.stopPropagation()} // 防止点击搜索框时触发折叠面板
                   />
-                )),
+                </Space>
+              ),
+              children: filteredAvailableColumns?.map((item, index) => (
+                <FieldListItem
+                  key={item.columnName}
+                  isSelected={false}
+                  column={item}
+                  columnIndex={index}
+                  fieldData={fieldListProps}
+                />
+              )),
             },
           ]}
         />
