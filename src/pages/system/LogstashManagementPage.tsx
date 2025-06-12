@@ -467,14 +467,18 @@ function LogstashManagementPage() {
     <div className={styles.container}>
       {contextHolder}
       <div className={styles.header}>
-        <Breadcrumb>
-          <Breadcrumb.Item>
-            <Link to="/">
-              <HomeOutlined />
-            </Link>
-          </Breadcrumb.Item>
-          <Breadcrumb.Item>Logstash管理</Breadcrumb.Item>
-        </Breadcrumb>
+        <Breadcrumb
+          items={[
+            {
+              title: (
+                <Link to="/">
+                  <HomeOutlined />
+                </Link>
+              ),
+            },
+            { title: 'Logstash管理' },
+          ]}
+        ></Breadcrumb>
         <div className={styles.tableToolbar}>
           <Button
             type="default"

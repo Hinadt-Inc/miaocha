@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Space, Input, Select, Breadcrumb, Modal } from 'antd';
-import { App } from 'antd';
+import { Table, Button, Space, Input, Select, Breadcrumb, Modal, App, Avatar, Tag, Tooltip } from 'antd';
 import { getUsers } from '../../api/user';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -9,15 +8,23 @@ import {
   batchRevokeModulePermissions,
   getUserUnauthorizedModules,
 } from '../../api/permission';
-import type { DatasourcePermission, TablePermission, PermissionResponse } from '../../types/permissionTypes';
+import type { PermissionResponse } from '../../types/permissionTypes';
+
+interface FlatPermission {
+  module: string;
+  datasourceName: string;
+  users: Array<{ userId: number; nickname: string; email: string; role: string }>;
+  permissionId: string;
+  datasourceId: number;
+}
 import { HomeOutlined, SearchOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import styles from './PermissionManagementPage.module.less';
 
 const PermissionManagementPage = () => {
   const { message, modal } = App.useApp();
-  const [permissions, setPermissions] = useState<DatasourcePermission[]>([]);
-  const [filteredPermissions, setFilteredPermissions] = useState<DatasourcePermission[]>([]);
+  const [permissions, setPermissions] = useState<FlatPermission[]>([]);
+  const [filteredPermissions, setFilteredPermissions] = useState<FlatPermission[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchParams, setSearchParams] = useState({
     userId: '',
@@ -35,62 +42,51 @@ const PermissionManagementPage = () => {
   // 将新格式的权限数据转换为原来的格式
   const [moduleAuthorizedUsers, setModuleAuthorizedUsers] = useState<Record<string, string[]>>({});
 
-  const transformPermissionsData = (data: PermissionResponse[]): DatasourcePermission[] => {
+  const transformPermissionsData = (
+    data: PermissionResponse[],
+  ): Array<{
+    module: string;
+    datasourceName: string;
+    users: Array<{ userId: number; nickname: string; email: string; role: string }>;
+    permissionId: string;
+    datasourceId: number;
+  }> => {
     const authorizedUsersMap: Record<string, string[]> = {};
+    const result: Array<{
+      module: string;
+      datasourceName: string;
+      users: Array<{ userId: number; nickname: string; email: string; role: string }>;
+      permissionId: string;
+      datasourceId: number;
+    }> = [];
 
-    // 按数据源ID分组
-    const groupByDatasource = data.reduce(
-      (acc, permission) => {
-        const datasourceId = permission.datasourceId;
+    data.forEach((permission) => {
+      const moduleUsers = permission.users.map((user) => ({
+        userId: user.userId,
+        nickname: user.nickname,
+        email: user.email,
+        role: user.role,
+      }));
 
-        if (!acc[datasourceId]) {
-          acc[datasourceId] = {
-            modules: [],
-            datasourceId,
-            datasourceName: permission.datasourceName || `数据源 ${datasourceId} (JDBC)`,
-            databaseName: 'JDBC连接', // 显示数据库类型
-            tables: [],
-            id: datasourceId.toString(),
-          };
-        }
+      // 记录已授权用户
+      if (!authorizedUsersMap[permission.module]) {
+        authorizedUsersMap[permission.module] = [];
+      }
+      authorizedUsersMap[permission.module] = [
+        ...new Set([...(authorizedUsersMap[permission.module] || []), ...moduleUsers.map((u) => u.userId.toString())]),
+      ];
 
-        // 合并同一模块的用户
-        const moduleUsers = permission.users.map((user) => ({
-          userId: user.userId,
-          nickname: user.nickname,
-          email: user.email,
-          role: user.role,
-        }));
-
-        // 记录已授权用户
-        if (!authorizedUsersMap[permission.module]) {
-          authorizedUsersMap[permission.module] = [];
-        }
-        authorizedUsersMap[permission.module] = [
-          ...new Set([
-            ...(authorizedUsersMap[permission.module] || []),
-            ...moduleUsers.map((u) => u.userId.toString()),
-          ]),
-        ];
-
-        acc[datasourceId].modules.push({
-          moduleName: permission.module,
-          permissionId: permission.users[0].permissionId.toString(),
-          tableName: permission.module,
-          permissions: ['read', 'write'], // 默认权限
-          id: permission.users[0].permissionId.toString(),
-          users: moduleUsers,
-        });
-
-        return acc;
-      },
-      {} as Record<number, DatasourcePermission>,
-    );
+      result.push({
+        module: permission.module,
+        datasourceName: permission.datasourceName || `数据源 ${permission.datasourceId} (JDBC)`,
+        users: moduleUsers,
+        permissionId: permission.users[0].permissionId.toString(),
+        datasourceId: permission.datasourceId,
+      });
+    });
 
     setModuleAuthorizedUsers(authorizedUsersMap);
-
-    // 转换为数组
-    return Object.values(groupByDatasource);
+    return result;
   };
 
   // 全局授权模态框状态
@@ -196,14 +192,14 @@ const PermissionManagementPage = () => {
   };
 
   // 前端搜索过滤方法
-  const filterPermissions = (data: DatasourcePermission[], searchValue: string) => {
+  const filterPermissions = (data: FlatPermission[], searchValue: string) => {
     if (!searchValue) return data;
     const lowerValue = searchValue.toLowerCase();
     return data.filter(
       (permission) =>
         permission.datasourceId.toString().toLowerCase().includes(lowerValue) ||
         permission.datasourceName.toLowerCase().includes(lowerValue) ||
-        permission.modules.some((module) => module.moduleName.toLowerCase().includes(lowerValue)),
+        permission.module.toLowerCase().includes(lowerValue),
     );
   };
 
@@ -233,9 +229,9 @@ const PermissionManagementPage = () => {
   }, []);
 
   // 授权单个模块
-  const handleGrant = async (moduleName: string) => {
+  const handleGrant = async (module: string) => {
     let currentSelectedUser = selectedUser;
-    const authorizedUserIds = moduleAuthorizedUsers[moduleName] || [];
+    const authorizedUserIds = moduleAuthorizedUsers[module] || [];
 
     modal.confirm({
       title: '授予表权限',
@@ -263,7 +259,7 @@ const PermissionManagementPage = () => {
         try {
           await grantTablePermission(currentSelectedUser, {
             userId: currentSelectedUser,
-            modules: [moduleName],
+            modules: [module],
           });
           message.success('权限授予成功');
           fetchPermissions();
@@ -338,74 +334,11 @@ const PermissionManagementPage = () => {
     });
   };
 
-  const expandedRowRender = (record: DatasourcePermission) => {
-    const columns: ColumnsType<TablePermission> = [
-      {
-        title: '模块名',
-        dataIndex: 'moduleName',
-        key: 'moduleName',
-      },
-      {
-        title: '用户列表',
-        key: 'users',
-        render: (_, table) => (
-          <div>
-            {table.users?.map((user: { userId: number; nickname: string; role: string }) => (
-              <div key={user.userId}>
-                {user.nickname} ({user.role})
-              </div>
-            ))}
-          </div>
-        ),
-      },
-      {
-        title: '操作',
-        key: 'action',
-        render: (_, table) => (
-          <Space size="small">
-            {table.permissionId && (
-              <Button
-                type="link"
-                danger
-                size="small"
-                onClick={() => handleRevoke(table.permissionId as string, table.moduleName, table.users || [])}
-                style={{ padding: '0 4px' }}
-              >
-                撤销
-              </Button>
-            )}
-            {table.permissionId && (
-              <Button
-                type="link"
-                size="small"
-                onClick={() => handleGrant(table.moduleName)}
-                style={{ padding: '0 4px' }}
-              >
-                授予
-              </Button>
-            )}
-          </Space>
-        ),
-      },
-    ];
-
-    return (
-      <Table
-        columns={columns}
-        dataSource={record.modules}
-        rowKey="moduleName"
-        pagination={false}
-        size="small"
-        style={{ margin: '0' }}
-      />
-    );
-  };
-
-  const columns: ColumnsType<DatasourcePermission> = [
+  const columns: ColumnsType<FlatPermission> = [
     {
-      title: '数据源ID',
-      dataIndex: 'datasourceId',
-      key: 'datasourceId',
+      title: '模块',
+      dataIndex: 'module',
+      key: 'module',
     },
     {
       title: '数据源名称',
@@ -413,9 +346,47 @@ const PermissionManagementPage = () => {
       key: 'datasourceName',
     },
     {
-      title: '数据库名',
-      dataIndex: 'databaseName',
-      key: 'databaseName',
+      title: '用户',
+      key: 'users',
+      render: (_, record) => (
+        <Space size={4} wrap>
+          {record.users.map((user) => (
+            <Tooltip key={user.userId} title={`${user.nickname} (${user.email}) - ${user.role}`}>
+              <Tag
+                className={styles.tagHover}
+                color={user.role === 'SUPER_ADMIN' ? 'red' : user.role === 'USER' ? 'blue' : 'green'}
+                icon={
+                  <Avatar size={16} style={{ marginRight: 4 }}>
+                    {user.nickname.charAt(0)}
+                  </Avatar>
+                }
+              >
+                {user.nickname}
+              </Tag>
+            </Tooltip>
+          ))}
+        </Space>
+      ),
+    },
+    {
+      title: '操作',
+      key: 'action',
+      render: (_, record) => (
+        <Space size="small">
+          <Button
+            type="link"
+            danger
+            size="small"
+            onClick={() => handleRevoke(record.permissionId, record.module, record.users)}
+            style={{ padding: '0 4px' }}
+          >
+            撤销
+          </Button>
+          <Button type="link" size="small" onClick={() => handleGrant(record.module)} style={{ padding: '0 4px' }}>
+            授予
+          </Button>
+        </Space>
+      ),
     },
   ];
 
@@ -462,9 +433,6 @@ const PermissionManagementPage = () => {
           showSizeChanger: true,
           responsive: true,
           showTotal: (total) => `共 ${total} 条`,
-        }}
-        expandable={{
-          expandedRowRender,
         }}
       />
     </div>
