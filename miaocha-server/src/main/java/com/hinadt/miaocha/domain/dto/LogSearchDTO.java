@@ -60,6 +60,11 @@ public class LogSearchDTO {
             allowableValues = {"second", "minute", "hour", "day", "auto"})
     private String timeGrouping = "auto";
 
+    @Schema(
+            description = "目标桶数量（用于智能时间颗粒度计算），当timeGrouping为auto时，系统会计算出接近该目标桶数的最优时间颗粒度",
+            example = "50")
+    private Integer targetBuckets;
+
     @Schema(description = "分页大小", example = "50")
     private Integer pageSize = 50;
 

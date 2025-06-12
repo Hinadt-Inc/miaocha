@@ -20,8 +20,26 @@ public class LogHistogramResultDTO {
     @Schema(description = "日志时间分布数据，用于生成时间分布图")
     private List<LogDistributionData> distributionData;
 
-    @Schema(description = "时间点分组单位timeUnit", example = "second,minute,hour,day")
+    @Schema(
+            description = "时间点分组单位",
+            example = "minute",
+            allowableValues = {"second", "minute", "hour", "day"})
     private String timeUnit;
+
+    @Schema(description = "时间间隔数值，表示每个桶的间隔，如5分钟、2小时等", example = "5")
+    private Integer timeInterval;
+
+    @Schema(description = "预估桶数量，基于时间范围和颗粒度计算的预期桶数量", example = "48")
+    private Integer estimatedBuckets;
+
+    @Schema(description = "实际桶数量，实际返回的数据桶数量", example = "45")
+    private Integer actualBuckets;
+
+    @Schema(
+            description = "颗粒度计算方法",
+            example = "AUTO_CALCULATED",
+            allowableValues = {"AUTO_CALCULATED", "USER_SPECIFIED", "FALLBACK"})
+    private String calculationMethod;
 
     /** 日志时间分布数据 */
     @Data

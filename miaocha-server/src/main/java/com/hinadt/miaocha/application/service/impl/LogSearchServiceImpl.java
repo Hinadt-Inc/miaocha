@@ -10,6 +10,7 @@ import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
 import com.hinadt.miaocha.application.service.sql.builder.LogSqlBuilder;
 import com.hinadt.miaocha.application.service.sql.converter.LogSearchDTOConverter;
 import com.hinadt.miaocha.application.service.sql.processor.ResultProcessor;
+import com.hinadt.miaocha.application.service.sql.processor.TimeGranularityCalculator;
 import com.hinadt.miaocha.application.service.sql.processor.TimeRangeProcessor;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
@@ -90,11 +91,12 @@ public class LogSearchServiceImpl implements LogSearchService {
         try {
             timeRangeProcessor.processTimeRange(dto);
 
-            // 确定时间分组单位
-            String timeUnit = timeRangeProcessor.determineTimeUnit(dto);
+            // 使用新的智能时间颗粒度计算器，支持自定义目标桶数量
+            TimeGranularityCalculator.TimeGranularityResult granularityResult =
+                    timeRangeProcessor.calculateOptimalTimeGranularity(dto, dto.getTargetBuckets());
 
             // 执行时间分布查询
-            return executeHistogramSearch(datasourceInfo, dto, timeUnit);
+            return executeHistogramSearchWithGranularity(datasourceInfo, dto, granularityResult);
         } catch (KeywordSyntaxException e) {
             return createHistogramErrorResult("关键字表达式语法错误: " + e.getMessage());
         } catch (Exception e) {
@@ -193,9 +195,11 @@ public class LogSearchServiceImpl implements LogSearchService {
         return result;
     }
 
-    /** 执行时间分布查询 */
-    private LogHistogramResultDTO executeHistogramSearch(
-            DatasourceInfo datasourceInfo, LogSearchDTO dto, String timeUnit) {
+    /** 执行时间分布查询 - 基于颗粒度计算结果的新实现 */
+    private LogHistogramResultDTO executeHistogramSearchWithGranularity(
+            DatasourceInfo datasourceInfo,
+            LogSearchDTO dto,
+            TimeGranularityCalculator.TimeGranularityResult granularityResult) {
         long startTime = System.currentTimeMillis();
         LogHistogramResultDTO result = new LogHistogramResultDTO();
         result.setSuccess(true);
@@ -207,10 +211,14 @@ public class LogSearchServiceImpl implements LogSearchService {
             // 转换DTO中的variant字段语法
             LogSearchDTO convertedDto = dtoConverter.convert(dto);
 
-            // 执行分布统计查询
+            // 执行分布统计查询，使用计算出的时间单位
+            String timeUnit = granularityResult.getSqlTimeUnit();
             String distributionSql =
                     logSqlBuilder.buildDistributionSql(convertedDto, tableName, timeUnit);
-            logger.debug("分布统计SQL: {}", distributionSql);
+            logger.debug(
+                    "分布统计SQL: {}, 颗粒度详情: {}",
+                    distributionSql,
+                    granularityResult.getDetailedDescription());
 
             // 执行分布查询并获取原始结果
             Map<String, Object> distributionQueryResult =
@@ -226,7 +234,17 @@ public class LogSearchServiceImpl implements LogSearchService {
 
         long endTime = System.currentTimeMillis();
         result.setExecutionTimeMs(endTime - startTime);
-        result.setTimeUnit(timeUnit);
+
+        // 设置更丰富的时间颗粒度信息
+        result.setTimeUnit(granularityResult.getTimeUnit());
+        result.setTimeInterval(granularityResult.getInterval());
+        result.setEstimatedBuckets(granularityResult.getEstimatedBuckets());
+        result.setCalculationMethod(granularityResult.getCalculationMethod());
+
+        // 计算实际桶数量（基于返回的数据）
+        if (result.getDistributionData() != null) {
+            result.setActualBuckets(result.getDistributionData().size());
+        }
 
         return result;
     }
