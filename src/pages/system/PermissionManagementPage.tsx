@@ -21,6 +21,17 @@ import { HomeOutlined, SearchOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import styles from './PermissionManagementPage.module.less';
 
+const getTagColor = (role: string) => {
+  switch (role) {
+    case 'SUPER_ADMIN':
+      return 'volcano';
+    case 'USER':
+      return 'blue';
+    default:
+      return 'red';
+  }
+};
+
 const PermissionManagementPage = () => {
   const { message, modal } = App.useApp();
   const [permissions, setPermissions] = useState<FlatPermission[]>([]);
@@ -354,7 +365,7 @@ const PermissionManagementPage = () => {
             <Tooltip key={user.userId} title={`${user.nickname} (${user.email}) - ${user.role}`}>
               <Tag
                 className={styles.tagHover}
-                color={user.role === 'SUPER_ADMIN' ? 'red' : user.role === 'USER' ? 'blue' : 'green'}
+                color={getTagColor(user.role)}
                 icon={
                   <Avatar size={16} style={{ marginRight: 4 }}>
                     {user.nickname.charAt(0)}
@@ -373,6 +384,9 @@ const PermissionManagementPage = () => {
       key: 'action',
       render: (_, record) => (
         <Space size="small">
+          <Button type="link" size="small" onClick={() => handleGrant(record.module)} style={{ padding: '0 4px' }}>
+            授予
+          </Button>
           <Button
             type="link"
             danger
@@ -381,9 +395,6 @@ const PermissionManagementPage = () => {
             style={{ padding: '0 4px' }}
           >
             撤销
-          </Button>
-          <Button type="link" size="small" onClick={() => handleGrant(record.module)} style={{ padding: '0 4px' }}>
-            授予
           </Button>
         </Space>
       ),
