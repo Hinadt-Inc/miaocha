@@ -14,6 +14,7 @@ interface IProps {
   dynamicColumns?: ILogColumnsResponse[]; // 动态列配置
   whereSqlsFromSider: IStatus[];
   onChangeColumns: (params: ILogColumnsResponse[]) => void; // 列变化回调函数
+  sqls?: string[]; // SQL语句列表
 }
 
 interface ColumnHeaderProps {
@@ -123,6 +124,7 @@ const VirtualTable = (props: IProps) => {
     searchParams,
     onChangeColumns,
     whereSqlsFromSider = [],
+    sqls,
   } = props;
   const containerRef = useRef<HTMLDivElement>(null);
   const tblRef: Parameters<typeof Table>[0]['ref'] = useRef(null);
@@ -131,6 +133,24 @@ const VirtualTable = (props: IProps) => {
   const [columns, setColumns] = useState<any[]>([]);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [scrollX, setScrollX] = useState(1300);
+
+  // 处理sqls数据，过滤特殊字符并提取关键词
+  const sqlFilterValue = useMemo(() => {
+    if (!sqls || sqls.length === 0) return [];
+
+    return Array.from(
+      new Set(
+        sqls
+          .map((sql) =>
+            // 过滤掉特殊字符，保留字母、数字、中文、空格
+            sql.replace(/[@#￥%……&*（）()=+'".,;:!?<>\[\]{}|\\\/~`-]/g, ' '),
+          )
+          .map((sql) => sql.split(/\s+/)) // 以空格分割
+          .flat() // 扁平化为一维数组
+          .filter((word) => word.trim()?.length > 0), // 过滤空字符串
+      ),
+    );
+  }, [sqls]);
 
   const handleResize = (index: number) => (width: number) => {
     const column = columns[index];
@@ -184,10 +204,12 @@ const VirtualTable = (props: IProps) => {
           // 2. 合并所有 keywords
           const allKeywords = Array.from(new Set([...keywords, ...whereValues])).filter(Boolean);
 
-          // 3. 预处理每个字段的优先级
+          // 3. 合并所有关键词（包含SQL过滤后的关键词）
+          const finalKeywords = Array.from(new Set([...allKeywords, ...sqlFilterValue])).filter(Boolean);
+          // 预处理每个字段的优先级
           const entries = Object.entries(record).map(([key, value]) => {
             let priority = 2; // 默认最低
-            let highlightArr: string[] = allKeywords;
+            let highlightArr: string[] = finalKeywords;
 
             // whereSqlsFromSider 匹配优先
             const whereMatch = whereSqlsFromSider.find((item) => item.field === key);
@@ -197,7 +219,7 @@ const VirtualTable = (props: IProps) => {
             } else {
               // keywords 匹配
               const valueStr = String(value);
-              if (allKeywords.some((kw) => valueStr.includes(kw))) {
+              if (finalKeywords.some((kw) => valueStr.includes(kw))) {
                 priority = 1;
               }
             }
@@ -242,9 +264,9 @@ const VirtualTable = (props: IProps) => {
         };
       }),
     ];
-  }, [dynamicColumns, searchParams.keywords, columnWidths, whereSqlsFromSider]);
+  }, [dynamicColumns, searchParams.keywords, columnWidths, whereSqlsFromSider, sqls]);
 
-  console.log('columnWidths', columnWidths);
+  // console.log('columnWidths', columnWidths);
 
   useEffect(() => {
     const resizableColumns = getBaseColumns.map((col, index) => {

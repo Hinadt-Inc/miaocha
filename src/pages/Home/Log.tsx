@@ -11,6 +11,7 @@ interface IProps {
   searchParams: ILogSearchParams; // 搜索参数
   dynamicColumns?: ILogColumnsResponse[]; // 添加动态列配置
   whereSqlsFromSider: IStatus[]; // 侧边栏的where条件
+  sqls?: string[]; // SQL语句列表
   onSearch: (params: ILogSearchParams) => void; // 搜索回调函数
   onChangeColumns: (params: ILogColumnsResponse[]) => void; // 列变化回调函数
 }
@@ -24,6 +25,7 @@ const Log = (props: IProps) => {
     dynamicColumns = [],
     searchParams,
     whereSqlsFromSider,
+    sqls,
     onSearch,
     onChangeColumns,
   } = props || {};
@@ -74,8 +76,18 @@ const Log = (props: IProps) => {
       onLoadMore: handleLoadMore,
       hasMore: totalCount ? allRows.length < totalCount : false,
       dynamicColumns,
+      sqls,
     }),
-    [allRows, getDetailData?.loading, totalCount, handleLoadMore, dynamicColumns, searchParams, whereSqlsFromSider],
+    [
+      allRows,
+      getDetailData?.loading,
+      totalCount,
+      handleLoadMore,
+      dynamicColumns,
+      searchParams,
+      whereSqlsFromSider,
+      sqls,
+    ],
   );
 
   return (

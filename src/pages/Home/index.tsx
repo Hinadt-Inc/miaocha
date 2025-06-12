@@ -14,6 +14,7 @@ const HomePage = () => {
   const [logTableColumns, setLogTableColumns] = useState<ILogColumnsResponse[]>([]); // 日志字段列表
   const [histogramData, setHistogramData] = useState<ILogHistogramData | null>(null); // 日志时间分布列表
   const [whereSqlsFromSider, setWhereSqlsFromSider] = useState<IStatus[]>([]); // 侧边栏的where条件
+  const [sqls, setSqls] = useState<string[]>([]); // SQL语句列表
   const searchBarRef = useRef<any>(null);
 
   // 默认的搜索参数
@@ -190,6 +191,7 @@ const HomePage = () => {
       searchParams,
       dynamicColumns: logTableColumns,
       whereSqlsFromSider,
+      sqls,
       onSearch: onSearchFromLog,
       onChangeColumns: handleChangeColumnsByLog,
     }),
@@ -201,6 +203,7 @@ const HomePage = () => {
       logTableColumns,
       searchParams,
       whereSqlsFromSider,
+      sqls,
     ],
   );
 
@@ -212,6 +215,8 @@ const HomePage = () => {
       loading: getDetailData?.loading || getHistogramData.loading,
       onSearch: setSearchParams,
       setWhereSqlsFromSider,
+      columns: logTableColumns,
+      onSqlsChange: setSqls,
     }),
     [
       searchParams,
@@ -220,6 +225,7 @@ const HomePage = () => {
       getHistogramData.loading,
       setSearchParams,
       setWhereSqlsFromSider,
+      logTableColumns,
     ],
   );
 

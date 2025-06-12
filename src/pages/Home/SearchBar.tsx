@@ -3,7 +3,7 @@ import { AutoComplete, Button, Space, Tag, Popover, Statistic } from 'antd';
 import CountUp from 'react-countup';
 import SpinIndicator from '@/components/SpinIndicator';
 import styles from './SearchBar.module.less';
-import { LOG_FIELDS, QUICK_RANGES, TIME_GROUP, getLatestTime } from './utils.ts';
+import { QUICK_RANGES, TIME_GROUP, getLatestTime } from './utils.ts';
 
 const TimePicker = lazy(() => import('./TimePicker.tsx'));
 
@@ -13,11 +13,13 @@ interface IProps {
   loading?: boolean; // 是否加载中
   onSearch: (params: ILogSearchParams) => void; // 搜索回调函数
   setWhereSqlsFromSider: any; // 设置whereSqlsFromSider
+  columns?: ILogColumnsResponse[]; // 字段列表数据
+  onSqlsChange?: (sqls: string[]) => void; // SQL列表变化回调函数
 }
 
 const SearchBar = forwardRef((props: IProps, ref) => {
   const searchBarRef = useRef<HTMLDivElement>(null);
-  const { searchParams, totalCount = 0, loading, onSearch, setWhereSqlsFromSider } = props;
+  const { searchParams, totalCount = 0, loading, onSearch, setWhereSqlsFromSider, columns, onSqlsChange } = props;
 
   const [timeGroup, setTimeGroup] = useState<string>('auto'); // 时间分组
   const [activeTab, setActiveTab] = useState('quick'); // 选项卡值
@@ -147,7 +149,12 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       delete params.whereSqls;
     }
     onSearch(params as ILogSearchParams);
-  }, [keywords, sqls, timeOption, timeGroup]);
+
+    // 通知父组件sqls数据变化
+    if (onSqlsChange) {
+      onSqlsChange(sqls);
+    }
+  }, [keywords, sqls, timeOption, timeGroup, onSqlsChange]);
 
   // 处理关键词搜索
   const handleSubmit = () => {
@@ -246,6 +253,27 @@ const SearchBar = forwardRef((props: IProps, ref) => {
 
   // 渲染SQL查询输入框，包含历史SQL查询记录和常用字段模板
   const sqlRender = useMemo(() => {
+    // 获取当前正在输入的词汇，用于字段匹配
+    const getCurrentInputWord = (inputValue: string) => {
+      if (!inputValue) return '';
+
+      // 按空格分割，获取最后一个词汇
+      const words = inputValue.split(/\s+/);
+      const lastWord = words[words.length - 1] || '';
+
+      // 如果最后一个词汇包含操作符，提取字段名部分
+      const operatorMatch = lastWord.match(/^([a-zA-Z_][a-zA-Z0-9_.]*)/);
+      return operatorMatch ? operatorMatch[1] : lastWord;
+    };
+
+    // 根据当前输入的词汇筛选字段
+    const currentWord = getCurrentInputWord(sql);
+    const filteredColumns = currentWord
+      ? (columns || []).filter(
+          (column) => column.columnName && column.columnName.toLowerCase().includes(currentWord.toLowerCase()),
+        )
+      : columns || [];
+
     return (
       <Space.Compact style={{ width: '100%' }}>
         <AutoComplete
@@ -259,12 +287,33 @@ const SearchBar = forwardRef((props: IProps, ref) => {
               value: item,
               label: item,
             })),
-            ...LOG_FIELDS.map((item: IStatus) => ({
-              value: `${item.value} = ''`,
+            ...filteredColumns.map((item: ILogColumnsResponse) => ({
+              value: (() => {
+                // 智能替换/拼接逻辑
+                if (!item.columnName) return sql || '';
+
+                // 如果当前输入为空，直接返回字段名
+                if (!sql) return item.columnName;
+
+                // 如果当前有匹配的词汇，说明用户正在输入字段名，需要替换
+                if (currentWord) {
+                  const words = sql.split(/\s+/);
+                  words[words.length - 1] = item.columnName;
+                  return words.join(' ');
+                }
+
+                // 如果没有匹配词汇但输入以空格结尾，直接拼接
+                if (sql.endsWith(' ')) {
+                  return sql + item.columnName;
+                }
+
+                // 否则在当前输入和字段名之间添加空格拼接
+                return sql + ' ' + item.columnName;
+              })(),
               label: (
                 <>
-                  <Tag>{item.label}:</Tag>
-                  <Tag>{item.example}</Tag>
+                  {item.columnName}
+                  {/* <Tag>{item.dataType}</Tag> */}
                 </>
               ),
             })),
@@ -272,7 +321,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
         />
       </Space.Compact>
     );
-  }, [sql, sqlHistory]);
+  }, [sql, sqlHistory, columns]);
 
   const changeTimeGroup = (text: string) => {
     const latestTime = getLatestTime(timeOption);
