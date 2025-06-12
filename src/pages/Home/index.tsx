@@ -212,6 +212,7 @@ const HomePage = () => {
       loading: getDetailData?.loading || getHistogramData.loading,
       onSearch: setSearchParams,
       setWhereSqlsFromSider,
+      columns: logTableColumns,
     }),
     [
       searchParams,
@@ -220,6 +221,7 @@ const HomePage = () => {
       getHistogramData.loading,
       setSearchParams,
       setWhereSqlsFromSider,
+      logTableColumns,
     ],
   );
 
