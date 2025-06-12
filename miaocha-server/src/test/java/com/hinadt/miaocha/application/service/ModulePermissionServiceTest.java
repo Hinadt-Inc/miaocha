@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 import com.hinadt.miaocha.application.service.impl.ModulePermissionServiceImpl;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
+import com.hinadt.miaocha.domain.converter.ModulePermissionConverter;
 import com.hinadt.miaocha.domain.dto.permission.UserModulePermissionDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.entity.ModuleInfo;
@@ -40,6 +41,7 @@ public class ModulePermissionServiceTest {
     @Mock private DatasourceMapper datasourceMapper;
     @Mock private UserModulePermissionMapper userModulePermissionMapper;
     @Mock private ModuleInfoMapper moduleInfoMapper;
+    @Mock private ModulePermissionConverter modulePermissionConverter;
 
     private ModulePermissionServiceImpl modulePermissionService;
 
@@ -52,7 +54,12 @@ public class ModulePermissionServiceTest {
     @BeforeEach
     void setUp() {
         // 重置所有Mock
-        reset(userMapper, datasourceMapper, userModulePermissionMapper, moduleInfoMapper);
+        reset(
+                userMapper,
+                datasourceMapper,
+                userModulePermissionMapper,
+                moduleInfoMapper,
+                modulePermissionConverter);
 
         // 创建服务实例
         modulePermissionService =
@@ -61,7 +68,8 @@ public class ModulePermissionServiceTest {
                         userMapper,
                         datasourceMapper,
                         userModulePermissionMapper,
-                        moduleInfoMapper);
+                        moduleInfoMapper,
+                        modulePermissionConverter);
 
         // 准备测试数据
         setupTestData();
@@ -180,10 +188,19 @@ public class ModulePermissionServiceTest {
     @DisplayName("获取普通用户可访问模块列表")
     @Description("验证普通用户能正确获取其可访问的模块列表")
     void testGetUserAccessibleModules_NormalUser() {
+        // 设置converter mock
+        UserModulePermissionDTO mockDto = new UserModulePermissionDTO();
+        mockDto.setId(testPermission.getId());
+        mockDto.setUserId(testPermission.getUserId());
+        mockDto.setDatasourceId(testPermission.getDatasourceId());
+        mockDto.setModule(testPermission.getModule());
+        mockDto.setDatasourceName(testDatasource.getName());
+        mockDto.setDatabaseName(testDatasource.getDatabase());
+
         // Mock设置
         when(userMapper.selectById(1L)).thenReturn(testUser);
         when(userModulePermissionMapper.selectByUser(1L)).thenReturn(Arrays.asList(testPermission));
-        when(datasourceMapper.selectById(1L)).thenReturn(testDatasource);
+        when(modulePermissionConverter.toDtos(anyList())).thenReturn(Arrays.asList(mockDto));
 
         // 执行测试
         List<UserModulePermissionDTO> result = modulePermissionService.getUserAccessibleModules(1L);
@@ -202,7 +219,7 @@ public class ModulePermissionServiceTest {
 
         verify(userMapper).selectById(1L);
         verify(userModulePermissionMapper).selectByUser(1L);
-        verify(datasourceMapper).selectById(1L);
+        verify(modulePermissionConverter).toDtos(Arrays.asList(testPermission));
     }
 
     @Test
@@ -214,10 +231,30 @@ public class ModulePermissionServiceTest {
         module2.setName("订单模块");
         module2.setDatasourceId(1L);
 
+        // 设置converter mock for admin permissions
+        UserModulePermissionDTO mockAdminDto1 = new UserModulePermissionDTO();
+        mockAdminDto1.setId(null); // 管理员没有特定的权限ID
+        mockAdminDto1.setUserId(testAdmin.getId());
+        mockAdminDto1.setDatasourceId(testDatasource.getId());
+        mockAdminDto1.setModule(testModule.getName());
+        mockAdminDto1.setDatasourceName(testDatasource.getName());
+        mockAdminDto1.setDatabaseName(testDatasource.getDatabase());
+
+        UserModulePermissionDTO mockAdminDto2 = new UserModulePermissionDTO();
+        mockAdminDto2.setId(null);
+        mockAdminDto2.setUserId(testAdmin.getId());
+        mockAdminDto2.setDatasourceId(testDatasource.getId());
+        mockAdminDto2.setModule(module2.getName());
+        mockAdminDto2.setDatasourceName(testDatasource.getName());
+        mockAdminDto2.setDatabaseName(testDatasource.getDatabase());
+
         // Mock设置
         when(userMapper.selectById(2L)).thenReturn(testAdmin);
         when(moduleInfoMapper.selectAll()).thenReturn(Arrays.asList(testModule, module2));
         when(datasourceMapper.selectById(1L)).thenReturn(testDatasource);
+        when(modulePermissionConverter.createAdminPermissionDto(
+                        anyLong(), anyLong(), anyString(), any(DatasourceInfo.class)))
+                .thenReturn(mockAdminDto1, mockAdminDto2);
 
         // 执行测试
         List<UserModulePermissionDTO> result = modulePermissionService.getUserAccessibleModules(2L);
@@ -239,6 +276,9 @@ public class ModulePermissionServiceTest {
         verify(userMapper).selectById(2L);
         verify(moduleInfoMapper).selectAll();
         verify(datasourceMapper, times(2)).selectById(1L);
+        verify(modulePermissionConverter, times(2))
+                .createAdminPermissionDto(
+                        anyLong(), anyLong(), anyString(), any(DatasourceInfo.class));
     }
 
     @Test
@@ -262,12 +302,22 @@ public class ModulePermissionServiceTest {
     @DisplayName("授予用户模块权限 - 成功")
     @Description("验证能够成功授予用户对模块的访问权限")
     void testGrantModulePermission_Success() {
+        // 设置converter mock
+        UserModulePermissionDTO mockDto = new UserModulePermissionDTO();
+        mockDto.setId(testPermission.getId());
+        mockDto.setUserId(testPermission.getUserId());
+        mockDto.setDatasourceId(testPermission.getDatasourceId());
+        mockDto.setModule(testPermission.getModule());
+        mockDto.setDatasourceName(testDatasource.getName());
+        mockDto.setDatabaseName(testDatasource.getDatabase());
+
         // Mock设置
         when(userMapper.selectById(1L)).thenReturn(testUser);
         when(moduleInfoMapper.selectByName("用户模块")).thenReturn(testModule);
         when(datasourceMapper.selectById(1L)).thenReturn(testDatasource);
         when(userModulePermissionMapper.select(1L, 1L, "用户模块")).thenReturn(null);
         when(userModulePermissionMapper.insert(any(UserModulePermission.class))).thenReturn(1);
+        when(modulePermissionConverter.toDto(any(UserModulePermission.class))).thenReturn(mockDto);
 
         // 执行测试
         UserModulePermissionDTO result = modulePermissionService.grantModulePermission(1L, "用户模块");
@@ -280,19 +330,30 @@ public class ModulePermissionServiceTest {
 
         verify(userMapper).selectById(1L);
         verify(moduleInfoMapper, times(2)).selectByName("用户模块");
-        verify(datasourceMapper, times(2)).selectById(1L);
+        verify(datasourceMapper).selectById(1L); // 只在service中检查datasource存在性
         verify(userModulePermissionMapper).select(1L, 1L, "用户模块");
         verify(userModulePermissionMapper).insert(any(UserModulePermission.class));
+        verify(modulePermissionConverter).toDto(any(UserModulePermission.class));
     }
 
     @Test
     @DisplayName("授予用户模块权限 - 权限已存在")
     void testGrantModulePermission_PermissionExists() {
+        // 设置converter mock
+        UserModulePermissionDTO mockDto = new UserModulePermissionDTO();
+        mockDto.setId(testPermission.getId());
+        mockDto.setUserId(testPermission.getUserId());
+        mockDto.setDatasourceId(testPermission.getDatasourceId());
+        mockDto.setModule(testPermission.getModule());
+        mockDto.setDatasourceName(testDatasource.getName());
+        mockDto.setDatabaseName(testDatasource.getDatabase());
+
         // Mock设置
         when(userMapper.selectById(1L)).thenReturn(testUser);
         when(moduleInfoMapper.selectByName("用户模块")).thenReturn(testModule);
         when(datasourceMapper.selectById(1L)).thenReturn(testDatasource);
         when(userModulePermissionMapper.select(1L, 1L, "用户模块")).thenReturn(testPermission);
+        when(modulePermissionConverter.toDto(any(UserModulePermission.class))).thenReturn(mockDto);
 
         // 执行测试
         UserModulePermissionDTO result = modulePermissionService.grantModulePermission(1L, "用户模块");
@@ -303,6 +364,7 @@ public class ModulePermissionServiceTest {
 
         // 不应该插入新权限
         verify(userModulePermissionMapper, never()).insert(any(UserModulePermission.class));
+        verify(modulePermissionConverter).toDto(testPermission);
     }
 
     @Test
@@ -386,6 +448,19 @@ public class ModulePermissionServiceTest {
         module2.setName("订单模块");
         module2.setDatasourceId(1L);
 
+        // 设置converter mock
+        UserModulePermissionDTO mockDto1 = new UserModulePermissionDTO();
+        mockDto1.setId(1L);
+        mockDto1.setUserId(1L);
+        mockDto1.setDatasourceId(1L);
+        mockDto1.setModule("用户模块");
+
+        UserModulePermissionDTO mockDto2 = new UserModulePermissionDTO();
+        mockDto2.setId(2L);
+        mockDto2.setUserId(1L);
+        mockDto2.setDatasourceId(1L);
+        mockDto2.setModule("订单模块");
+
         // Mock设置
         when(userMapper.selectById(1L)).thenReturn(testUser);
         when(moduleInfoMapper.selectByName("用户模块")).thenReturn(testModule);
@@ -393,6 +468,8 @@ public class ModulePermissionServiceTest {
         when(datasourceMapper.selectById(1L)).thenReturn(testDatasource);
         when(userModulePermissionMapper.select(eq(1L), eq(1L), anyString())).thenReturn(null);
         when(userModulePermissionMapper.insert(any(UserModulePermission.class))).thenReturn(1);
+        when(modulePermissionConverter.toDto(any(UserModulePermission.class)))
+                .thenReturn(mockDto1, mockDto2);
 
         // 执行测试
         List<UserModulePermissionDTO> result =
@@ -406,6 +483,7 @@ public class ModulePermissionServiceTest {
         verify(moduleInfoMapper, times(2)).selectByName("用户模块");
         verify(moduleInfoMapper, times(2)).selectByName("订单模块");
         verify(userModulePermissionMapper, times(2)).insert(any(UserModulePermission.class));
+        verify(modulePermissionConverter, times(2)).toDto(any(UserModulePermission.class));
     }
 
     @Test

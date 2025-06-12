@@ -3,8 +3,8 @@ package com.hinadt.miaocha.application.service.impl;
 import com.hinadt.miaocha.application.service.ModulePermissionService;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
+import com.hinadt.miaocha.domain.converter.ModulePermissionConverter;
 import com.hinadt.miaocha.domain.dto.permission.ModuleUsersPermissionDTO;
-import com.hinadt.miaocha.domain.dto.permission.ModuleUsersPermissionDTO.UserPermissionInfoDTO;
 import com.hinadt.miaocha.domain.dto.permission.UserModulePermissionDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.entity.User;
@@ -14,7 +14,6 @@ import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
 import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
 import com.hinadt.miaocha.domain.mapper.UserMapper;
 import com.hinadt.miaocha.domain.mapper.UserModulePermissionMapper;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -38,9 +37,7 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
     private final DatasourceMapper datasourceMapper;
     private final UserModulePermissionMapper userModulePermissionMapper;
     private final com.hinadt.miaocha.domain.mapper.ModuleInfoMapper moduleInfoMapper;
-
-    private static final DateTimeFormatter DATE_TIME_FORMATTER =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private final ModulePermissionConverter modulePermissionConverter;
 
     @Override
     public boolean hasModulePermission(Long userId, String module) {
@@ -93,7 +90,7 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
                 userModulePermissionMapper.select(userId, datasourceId, module);
         if (existingPermission != null) {
             // 权限已存在，直接返回
-            return convertToDTO(existingPermission);
+            return modulePermissionConverter.toDto(existingPermission);
         }
 
         // 创建新的权限
@@ -106,7 +103,7 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
         userModulePermissionMapper.insert(permission);
 
         // 返回创建的权限DTO
-        return convertToDTO(permission);
+        return modulePermissionConverter.toDto(permission);
     }
 
     @Override
@@ -148,7 +145,7 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
         List<UserModulePermission> permissions = userModulePermissionMapper.selectByUser(userId);
 
         // 转换为DTO
-        return permissions.stream().map(this::convertToDTO).collect(Collectors.toList());
+        return modulePermissionConverter.toDtos(permissions);
     }
 
     @Override
@@ -186,54 +183,9 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
             }
         }
 
-        // 按数据源和模块分组
-        Map<String, ModuleUsersPermissionDTO> moduleGroupMap = new HashMap<>();
-
-        for (UserModulePermission permission : allPermissions) {
-            // 构建分组key: datasourceId + "_" + module
-            String groupKey = permission.getDatasourceId() + "_" + permission.getModule();
-
-            // 获取或创建ModuleUsersPermissionDTO
-            ModuleUsersPermissionDTO moduleDto = moduleGroupMap.get(groupKey);
-            if (moduleDto == null) {
-                moduleDto = new ModuleUsersPermissionDTO();
-                moduleDto.setDatasourceId(permission.getDatasourceId());
-                moduleDto.setModule(permission.getModule());
-
-                // 设置数据源名称
-                DatasourceInfo datasource = datasourceMap.get(permission.getDatasourceId());
-                if (datasource != null) {
-                    moduleDto.setDatasourceName(datasource.getName());
-                }
-
-                moduleDto.setUsers(new ArrayList<>());
-                moduleGroupMap.put(groupKey, moduleDto);
-            }
-
-            // 创建用户权限信息DTO
-            User user = userMap.get(permission.getUserId());
-            if (user != null) {
-                UserPermissionInfoDTO userInfo = new UserPermissionInfoDTO();
-                userInfo.setPermissionId(permission.getId());
-                userInfo.setUserId(permission.getUserId());
-                userInfo.setNickname(user.getNickname());
-                userInfo.setEmail(user.getEmail());
-                userInfo.setRole(user.getRole());
-
-                // 格式化时间
-                if (permission.getCreateTime() != null) {
-                    userInfo.setCreateTime(permission.getCreateTime().format(DATE_TIME_FORMATTER));
-                }
-                if (permission.getUpdateTime() != null) {
-                    userInfo.setUpdateTime(permission.getUpdateTime().format(DATE_TIME_FORMATTER));
-                }
-
-                // 添加到用户列表
-                moduleDto.getUsers().add(userInfo);
-            }
-        }
-
-        return new ArrayList<>(moduleGroupMap.values());
+        // 使用converter进行数据转换
+        return modulePermissionConverter.toModuleUsersPermissionDtos(
+                allPermissions, userMap, datasourceMap);
     }
 
     @Override
@@ -276,7 +228,7 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
                         userModulePermissionMapper.select(userId, datasourceId, module);
                 if (existingPermission != null) {
                     // 权限已存在，直接添加到结果中
-                    result.add(convertToDTO(existingPermission));
+                    result.add(modulePermissionConverter.toDto(existingPermission));
                     continue;
                 }
 
@@ -290,7 +242,7 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
                 userModulePermissionMapper.insert(permission);
 
                 // 添加到结果中
-                result.add(convertToDTO(permission));
+                result.add(modulePermissionConverter.toDto(permission));
             } catch (Exception e) {
                 log.error("授予模块权限失败: {}, 用户ID: {}, 错误: {}", module, userId, e.getMessage());
             }
@@ -391,55 +343,6 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
         return moduleInfo.getDatasourceId();
     }
 
-    /**
-     * 将模块权限实体转换为DTO
-     *
-     * @param permission 模块权限实体
-     * @return 模块权限DTO
-     */
-    private UserModulePermissionDTO convertToDTO(UserModulePermission permission) {
-        if (permission == null) {
-            return null;
-        }
-
-        UserModulePermissionDTO dto = new UserModulePermissionDTO();
-        dto.setId(permission.getId());
-        dto.setUserId(permission.getUserId());
-        dto.setDatasourceId(permission.getDatasourceId());
-        dto.setModule(permission.getModule());
-
-        // 查询数据源信息
-        DatasourceInfo datasourceInfo = datasourceMapper.selectById(permission.getDatasourceId());
-        if (datasourceInfo != null) {
-            dto.setDatasourceName(datasourceInfo.getName());
-            dto.setDatabaseName(datasourceInfo.getDatabase());
-        }
-
-        if (permission.getCreateTime() != null) {
-            dto.setCreateTime(permission.getCreateTime().format(DATE_TIME_FORMATTER));
-        }
-
-        if (permission.getUpdateTime() != null) {
-            dto.setUpdateTime(permission.getUpdateTime().format(DATE_TIME_FORMATTER));
-        }
-
-        dto.setCreateUser(permission.getCreateUser());
-        dto.setUpdateUser(permission.getUpdateUser());
-
-        // 查询用户昵称
-        if (permission.getCreateUser() != null) {
-            String createUserName = userMapper.selectNicknameByEmail(permission.getCreateUser());
-            dto.setCreateUserName(createUserName);
-        }
-
-        if (permission.getUpdateUser() != null) {
-            String updateUserName = userMapper.selectNicknameByEmail(permission.getUpdateUser());
-            dto.setUpdateUserName(updateUserName);
-        }
-
-        return dto;
-    }
-
     @Override
     public List<UserModulePermissionDTO> getUserAccessibleModules(Long userId) {
         // 先查询用户信息
@@ -461,19 +364,16 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
                     moduleInfoMapper.selectAll();
 
             for (com.hinadt.miaocha.domain.entity.ModuleInfo moduleInfo : allModules) {
-                UserModulePermissionDTO dto = new UserModulePermissionDTO();
-                dto.setId(null); // 管理员没有特定的权限ID
-                dto.setUserId(userId);
-                dto.setDatasourceId(moduleInfo.getDatasourceId());
-                dto.setModule(moduleInfo.getName());
-
                 // 查询数据源信息
                 DatasourceInfo datasourceInfo =
                         datasourceMapper.selectById(moduleInfo.getDatasourceId());
-                if (datasourceInfo != null) {
-                    dto.setDatasourceName(datasourceInfo.getName());
-                    dto.setDatabaseName(datasourceInfo.getDatabase());
-                }
+
+                UserModulePermissionDTO dto =
+                        modulePermissionConverter.createAdminPermissionDto(
+                                userId,
+                                moduleInfo.getDatasourceId(),
+                                moduleInfo.getName(),
+                                datasourceInfo);
 
                 result.add(dto);
             }
@@ -481,7 +381,7 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
             // 非管理员，查询用户实际的模块权限
             List<UserModulePermission> permissions =
                     userModulePermissionMapper.selectByUser(userId);
-            result = permissions.stream().map(this::convertToDTO).collect(Collectors.toList());
+            result = modulePermissionConverter.toDtos(permissions);
         }
 
         return result;
