@@ -142,9 +142,14 @@ public class ModulePermissionEndpoint {
      * 获取所有用户的模块权限
      *
      * @return 按模块聚合的用户权限列表
+     * @deprecated 此接口将被废弃，请使用 /api/modules 接口获取包含权限信息的模块列表
      */
+    @Deprecated
     @GetMapping("/users/all")
-    @Operation(summary = "获取所有用户的模块权限", description = "获取系统中所有模块的用户权限信息，按模块聚合显示，包含用户姓名等详细信息")
+    @Operation(
+            summary = "获取所有用户的模块权限",
+            description = "获取系统中所有模块的用户权限信息，按模块聚合显示，包含用户姓名等详细信息。此接口已废弃，请使用 /api/modules 接口",
+            deprecated = true)
     public ApiResponse<List<ModuleUsersPermissionDTO>> getAllUsersModulePermissions() {
         return ApiResponse.success(modulePermissionService.getAllUsersModulePermissions());
     }

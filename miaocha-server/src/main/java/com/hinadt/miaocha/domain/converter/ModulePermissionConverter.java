@@ -181,7 +181,7 @@ public class ModulePermissionConverter
     }
 
     /** 创建UserPermissionInfoDTO */
-    private UserPermissionInfoDTO createUserPermissionInfoDTO(
+    public UserPermissionInfoDTO createUserPermissionInfoDTO(
             UserModulePermission permission, User user) {
         UserPermissionInfoDTO userInfo = new UserPermissionInfoDTO();
         userInfo.setPermissionId(permission.getId());

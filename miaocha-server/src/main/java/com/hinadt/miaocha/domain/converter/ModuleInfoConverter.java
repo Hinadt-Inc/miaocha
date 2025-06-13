@@ -3,9 +3,12 @@ package com.hinadt.miaocha.domain.converter;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoCreateDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoUpdateDTO;
+import com.hinadt.miaocha.domain.dto.module.ModuleInfoWithPermissionsDTO;
+import com.hinadt.miaocha.domain.dto.permission.ModuleUsersPermissionDTO.UserPermissionInfoDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.entity.ModuleInfo;
 import com.hinadt.miaocha.domain.mapper.UserMapper;
+import java.util.List;
 import org.springframework.stereotype.Component;
 
 /** 模块信息实体与DTO转换器 */
@@ -152,5 +155,45 @@ public class ModuleInfoConverter implements Converter<ModuleInfo, ModuleInfoDTO>
         // 注意：不更新dorisSql，保持原有值
 
         return entity;
+    }
+
+    /** 将实体转换为包含权限信息的响应DTO */
+    public ModuleInfoWithPermissionsDTO toWithPermissionsDto(
+            ModuleInfo entity, DatasourceInfo datasourceInfo, List<UserPermissionInfoDTO> users) {
+        if (entity == null) {
+            return null;
+        }
+
+        ModuleInfoWithPermissionsDTO dto = new ModuleInfoWithPermissionsDTO();
+        dto.setId(entity.getId());
+        dto.setName(entity.getName());
+        dto.setDatasourceId(entity.getDatasourceId());
+        dto.setTableName(entity.getTableName());
+        dto.setDorisSql(entity.getDorisSql());
+        dto.setCreateTime(entity.getCreateTime());
+        dto.setUpdateTime(entity.getUpdateTime());
+        dto.setCreateUser(entity.getCreateUser());
+        dto.setUpdateUser(entity.getUpdateUser());
+
+        // 设置数据源名称
+        if (datasourceInfo != null) {
+            dto.setDatasourceName(datasourceInfo.getName());
+        }
+
+        // 查询用户昵称
+        if (entity.getCreateUser() != null) {
+            String createUserName = userMapper.selectNicknameByEmail(entity.getCreateUser());
+            dto.setCreateUserName(createUserName);
+        }
+
+        if (entity.getUpdateUser() != null) {
+            String updateUserName = userMapper.selectNicknameByEmail(entity.getUpdateUser());
+            dto.setUpdateUserName(updateUserName);
+        }
+
+        // 设置权限用户列表
+        dto.setUsers(users);
+
+        return dto;
     }
 }

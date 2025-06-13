@@ -6,6 +6,7 @@ import com.hinadt.miaocha.domain.dto.module.ModuleExecuteDorisSqlDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoCreateDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoUpdateDTO;
+import com.hinadt.miaocha.domain.dto.module.ModuleInfoWithPermissionsDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -47,8 +48,16 @@ public class ModuleEndpoint {
     }
 
     @GetMapping
-    @Operation(summary = "获取所有模块", description = "获取所有模块列表")
-    public ApiResponse<List<ModuleInfoDTO>> getAllModules() {
+    @Operation(summary = "获取所有模块（包含权限信息）", description = "获取所有模块列表，包含每个模块对应的用户权限信息")
+    public ApiResponse<List<ModuleInfoWithPermissionsDTO>> getAllModules() {
+        List<ModuleInfoWithPermissionsDTO> response =
+                moduleInfoService.getAllModulesWithPermissions();
+        return ApiResponse.success(response);
+    }
+
+    @GetMapping("/basic")
+    @Operation(summary = "获取所有模块基本信息", description = "获取所有模块基本信息列表，不包含权限信息")
+    public ApiResponse<List<ModuleInfoDTO>> getAllModulesBasic() {
         List<ModuleInfoDTO> response = moduleInfoService.getAllModules();
         return ApiResponse.success(response);
     }

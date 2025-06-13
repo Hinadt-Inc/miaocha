@@ -5,17 +5,27 @@ import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.converter.ModuleInfoConverter;
+import com.hinadt.miaocha.domain.converter.ModulePermissionConverter;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoCreateDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoUpdateDTO;
+import com.hinadt.miaocha.domain.dto.module.ModuleInfoWithPermissionsDTO;
+import com.hinadt.miaocha.domain.dto.permission.ModuleUsersPermissionDTO.UserPermissionInfoDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.entity.ModuleInfo;
+import com.hinadt.miaocha.domain.entity.User;
+import com.hinadt.miaocha.domain.entity.UserModulePermission;
 import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
 import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
 import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
+import com.hinadt.miaocha.domain.mapper.UserMapper;
+import com.hinadt.miaocha.domain.mapper.UserModulePermissionMapper;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -35,6 +45,12 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
     @Autowired private ModuleInfoConverter moduleInfoConverter;
 
     @Autowired private LogstashProcessMapper logstashProcessMapper;
+
+    @Autowired private UserModulePermissionMapper userModulePermissionMapper;
+
+    @Autowired private UserMapper userMapper;
+
+    @Autowired private ModulePermissionConverter modulePermissionConverter;
 
     @Override
     @Transactional
@@ -118,6 +134,76 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
                             return moduleInfoConverter.toDto(moduleInfo, datasourceInfo);
                         })
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ModuleInfoWithPermissionsDTO> getAllModulesWithPermissions() {
+        // 获取所有模块
+        List<ModuleInfo> moduleInfos = moduleInfoMapper.selectAll();
+        if (moduleInfos.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 获取所有数据源信息
+        Map<Long, DatasourceInfo> datasourceMap = new HashMap<>();
+        for (ModuleInfo moduleInfo : moduleInfos) {
+            if (!datasourceMap.containsKey(moduleInfo.getDatasourceId())) {
+                DatasourceInfo datasourceInfo =
+                        datasourceMapper.selectById(moduleInfo.getDatasourceId());
+                if (datasourceInfo != null) {
+                    datasourceMap.put(moduleInfo.getDatasourceId(), datasourceInfo);
+                }
+            }
+        }
+
+        // 获取所有用户模块权限
+        List<UserModulePermission> allPermissions = userModulePermissionMapper.selectAll();
+
+        // 按模块名称分组权限
+        Map<String, List<UserModulePermission>> permissionsByModule =
+                allPermissions.stream()
+                        .collect(Collectors.groupingBy(UserModulePermission::getModule));
+
+        // 获取所有用户信息
+        List<Long> userIds =
+                allPermissions.stream()
+                        .map(UserModulePermission::getUserId)
+                        .distinct()
+                        .collect(Collectors.toList());
+
+        Map<Long, User> userMap = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            List<User> users = userMapper.selectByIds(userIds);
+            userMap = users.stream().collect(Collectors.toMap(User::getId, user -> user));
+        }
+
+        // 构建返回结果
+        List<ModuleInfoWithPermissionsDTO> result = new ArrayList<>();
+        for (ModuleInfo moduleInfo : moduleInfos) {
+            DatasourceInfo datasourceInfo = datasourceMap.get(moduleInfo.getDatasourceId());
+
+            // 获取该模块的权限用户列表
+            List<UserModulePermission> modulePermissions =
+                    permissionsByModule.getOrDefault(moduleInfo.getName(), new ArrayList<>());
+
+            // 转换为UserPermissionInfoDTO列表
+            List<UserPermissionInfoDTO> users = new ArrayList<>();
+            for (UserModulePermission permission : modulePermissions) {
+                User user = userMap.get(permission.getUserId());
+                if (user != null) {
+                    UserPermissionInfoDTO userInfo =
+                            modulePermissionConverter.createUserPermissionInfoDTO(permission, user);
+                    users.add(userInfo);
+                }
+            }
+
+            // 创建包含权限的模块DTO
+            ModuleInfoWithPermissionsDTO dto =
+                    moduleInfoConverter.toWithPermissionsDto(moduleInfo, datasourceInfo, users);
+            result.add(dto);
+        }
+
+        return result;
     }
 
     @Override

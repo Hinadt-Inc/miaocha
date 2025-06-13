@@ -3,6 +3,7 @@ package com.hinadt.miaocha.application.service;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoCreateDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoUpdateDTO;
+import com.hinadt.miaocha.domain.dto.module.ModuleInfoWithPermissionsDTO;
 import java.util.List;
 
 /** 模块信息服务接口 */
@@ -38,6 +39,13 @@ public interface ModuleInfoService {
      * @return 模块信息列表
      */
     List<ModuleInfoDTO> getAllModules();
+
+    /**
+     * 查询所有模块信息（包含用户权限）
+     *
+     * @return 包含权限信息的模块信息列表
+     */
+    List<ModuleInfoWithPermissionsDTO> getAllModulesWithPermissions();
 
     /**
      * 删除模块信息
