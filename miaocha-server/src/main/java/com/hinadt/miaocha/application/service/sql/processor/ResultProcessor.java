@@ -97,12 +97,21 @@ public class ResultProcessor {
             return "";
         }
 
+        // 如果是Number类型，直接转换
+        if (timePointObj instanceof Number) {
+            long millisTimestamp = ((Number) timePointObj).longValue();
+            Instant instant = Instant.ofEpochMilli(millisTimestamp);
+            return instant.atZone(ZoneId.systemDefault()).format(DATETIME_FORMATTER);
+        }
+
         String timeStr = timePointObj.toString();
 
-        // 检查是否为纯数字（毫秒时间戳）
-        if (timeStr.matches("\\d+")) {
+        // 检查是否为数字格式（包括科学计数法）
+        if (timeStr.matches("\\d+") || timeStr.matches("\\d+\\.\\d+E\\d+")) {
             try {
-                long millisTimestamp = Long.parseLong(timeStr);
+                // 处理科学计数法和普通数字
+                double doubleValue = Double.parseDouble(timeStr);
+                long millisTimestamp = (long) doubleValue;
                 // 将毫秒时间戳转换为可读时间格式
                 Instant instant = Instant.ofEpochMilli(millisTimestamp);
                 return instant.atZone(ZoneId.systemDefault()).format(DATETIME_FORMATTER);
