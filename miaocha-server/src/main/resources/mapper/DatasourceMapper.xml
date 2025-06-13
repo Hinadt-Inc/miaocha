@@ -9,8 +9,8 @@
 
     <!-- 插入数据源 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO datasource_info (name, type, ip, port, `database`, username, password, description, jdbc_params)
-        VALUES (#{name}, #{type}, #{ip}, #{port}, #{database}, #{username}, #{password}, #{description}, #{jdbcParams})
+        INSERT INTO datasource_info (name, type, ip, port, `database`, username, password, description, jdbc_params, create_user, update_user)
+        VALUES (#{name}, #{type}, #{ip}, #{port}, #{database}, #{username}, #{password}, #{description}, #{jdbcParams}, #{createUser}, #{updateUser})
     </insert>
 
     <!-- 更新数据源 -->
@@ -24,7 +24,8 @@
             username=#{username},
             password=#{password},
             description=#{description},
-            jdbc_params=#{jdbcParams}
+            jdbc_params=#{jdbcParams},
+            update_user=#{updateUser}
         WHERE id = #{id}
     </update>
 

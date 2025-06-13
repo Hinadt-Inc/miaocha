@@ -17,8 +17,8 @@
 
     <!-- 插入模块信息 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO module_info (name, datasource_id, table_name, doris_sql)
-        VALUES (#{name}, #{datasourceId}, #{tableName}, #{dorisSql})
+        INSERT INTO module_info (name, datasource_id, table_name, create_user, update_user)
+        VALUES (#{name}, #{datasourceId}, #{tableName}, #{createUser}, #{updateUser})
     </insert>
 
     <!-- 根据ID查询模块信息（带用户昵称） -->
@@ -75,7 +75,8 @@
             name = #{name},
             datasource_id = #{datasourceId},
             table_name = #{tableName},
-            doris_sql = #{dorisSql}
+            doris_sql = #{dorisSql},
+            update_user = #{updateUser}
         WHERE id = #{id}
     </update>
 

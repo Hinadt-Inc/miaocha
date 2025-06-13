@@ -31,7 +31,7 @@ public class ModuleInfoConverter implements Converter<ModuleInfo, ModuleInfoDTO>
         entity.setName(dto.getName());
         entity.setDatasourceId(dto.getDatasourceId());
         entity.setTableName(dto.getTableName());
-        entity.setDorisSql(dto.getDorisSql());
+        // 注意：不设置dorisSql，这应该只能通过executeDorisSql方法设置
 
         return entity;
     }
@@ -138,7 +138,7 @@ public class ModuleInfoConverter implements Converter<ModuleInfo, ModuleInfoDTO>
         entity.setName(dto.getName());
         entity.setDatasourceId(dto.getDatasourceId());
         entity.setTableName(dto.getTableName());
-        entity.setDorisSql(dto.getDorisSql());
+        // 注意：不更新dorisSql，保持原有值
 
         return entity;
     }

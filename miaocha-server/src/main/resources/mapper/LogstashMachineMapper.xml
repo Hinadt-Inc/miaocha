@@ -11,38 +11,38 @@
     <!-- 插入 Logstash 机器记录 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO logstash_machine (logstash_process_id, machine_id, state, config_content, jvm_options, logstash_yml,
-        deploy_path, create_time, update_time)
+        deploy_path, create_time, update_time, create_user, update_user)
         VALUES (#{logstashProcessId}, #{machineId}, #{state}, #{configContent}, #{jvmOptions}, #{logstashYml},
-        #{deployPath}, NOW(), NOW())
+        #{deployPath}, NOW(), NOW(), #{createUser}, #{updateUser})
     </insert>
 
     <!-- 更新进程 PID -->
     <update id="updateProcessPid">
-        UPDATE logstash_machine SET process_pid = #{processPid}
+        UPDATE logstash_machine SET process_pid = #{processPid}, update_user = #{updateUser}
         WHERE logstash_process_id = #{logstashProcessId} AND machine_id = #{machineId}
     </update>
 
     <!-- 更新状态 -->
     <update id="updateState">
-        UPDATE logstash_machine SET state = #{state}
+        UPDATE logstash_machine SET state = #{state}, update_user = #{updateUser}
         WHERE logstash_process_id = #{logstashProcessId} AND machine_id = #{machineId}
     </update>
 
     <!-- 更新配置内容 -->
     <update id="updateConfigContent">
-        UPDATE logstash_machine SET config_content = #{configContent}
+        UPDATE logstash_machine SET config_content = #{configContent}, update_user = #{updateUser}
         WHERE logstash_process_id = #{logstashProcessId} AND machine_id = #{machineId}
     </update>
 
     <!-- 更新 JVM 选项 -->
     <update id="updateJvmOptions">
-        UPDATE logstash_machine SET jvm_options = #{jvmOptions}
+        UPDATE logstash_machine SET jvm_options = #{jvmOptions}, update_user = #{updateUser}
         WHERE logstash_process_id = #{logstashProcessId} AND machine_id = #{machineId}
     </update>
 
     <!-- 更新 logstash.yml -->
     <update id="updateLogstashYml">
-        UPDATE logstash_machine SET logstash_yml = #{logstashYml}
+        UPDATE logstash_machine SET logstash_yml = #{logstashYml}, update_user = #{updateUser}
         WHERE logstash_process_id = #{logstashProcessId} AND machine_id = #{machineId}
     </update>
 
@@ -54,7 +54,8 @@
         config_content = #{configContent},
         jvm_options = #{jvmOptions},
         logstash_yml = #{logstashYml},
-        deploy_path = #{deployPath}
+        deploy_path = #{deployPath},
+        update_user = #{updateUser}
         WHERE id = #{id}
     </update>
 

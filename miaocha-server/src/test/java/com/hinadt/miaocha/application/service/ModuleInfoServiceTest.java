@@ -93,7 +93,7 @@ class ModuleInfoServiceTest {
         createDTO.setName("New Module");
         createDTO.setDatasourceId(1L);
         createDTO.setTableName("new_logs");
-        createDTO.setDorisSql("CREATE TABLE new_logs (id INT, message TEXT)");
+        // 注意：不再设置dorisSql字段，因为创建时不应该设置
 
         // Mock 行为
         when(moduleInfoMapper.existsByName("New Module", null)).thenReturn(false);

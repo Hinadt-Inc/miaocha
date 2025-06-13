@@ -9,8 +9,8 @@
 
     <!-- 插入用户模块权限 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO user_module_permission (user_id, datasource_id, module, create_time, update_time)
-        VALUES (#{userId}, #{datasourceId}, #{module}, NOW(), NOW())
+        INSERT INTO user_module_permission (user_id, datasource_id, module, create_time, update_time, create_user, update_user)
+        VALUES (#{userId}, #{datasourceId}, #{module}, NOW(), NOW(), #{createUser}, #{updateUser})
     </insert>
 
     <!-- 删除用户模块权限 -->

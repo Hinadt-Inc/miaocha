@@ -21,6 +21,5 @@ public class ModuleInfoCreateDTO {
     @Schema(description = "表名", example = "nginx_logs", required = true)
     private String tableName;
 
-    @Schema(description = "Doris SQL语句", example = "CREATE TABLE IF NOT EXISTS nginx_logs (...)")
-    private String dorisSql;
+    // 注意：dorisSql字段已移除，只能通过executeDorisSql方法设置
 }

@@ -43,7 +43,7 @@ class ModuleInfoConverterTest {
         createDTO.setName("Test Module");
         createDTO.setDatasourceId(1L);
         createDTO.setTableName("test_logs");
-        createDTO.setDorisSql("CREATE TABLE test_logs (id INT)");
+        // 注意：不再设置dorisSql字段，因为创建时不应该设置
 
         // 执行转换
         ModuleInfo result = converter.toEntity(createDTO);
@@ -53,7 +53,7 @@ class ModuleInfoConverterTest {
         assertEquals("Test Module", result.getName());
         assertEquals(1L, result.getDatasourceId());
         assertEquals("test_logs", result.getTableName());
-        assertEquals("CREATE TABLE test_logs (id INT)", result.getDorisSql());
+        assertNull(result.getDorisSql()); // 创建时dorisSql应该为null
         assertNull(result.getId()); // ID在创建时应该为null
     }
 
@@ -194,7 +194,7 @@ class ModuleInfoConverterTest {
         updateDTO.setName("New Module");
         updateDTO.setDatasourceId(2L);
         updateDTO.setTableName("new_logs");
-        updateDTO.setDorisSql("CREATE TABLE new_logs (id INT)");
+        // 注意：不再设置dorisSql字段
 
         // 执行更新
         ModuleInfo result = converter.updateEntity(existingEntity, updateDTO);
@@ -204,7 +204,7 @@ class ModuleInfoConverterTest {
         assertEquals("New Module", result.getName());
         assertEquals(2L, result.getDatasourceId());
         assertEquals("new_logs", result.getTableName());
-        assertEquals("CREATE TABLE new_logs (id INT)", result.getDorisSql());
+        assertNull(result.getDorisSql()); // dorisSql应该保持原有值（此例中为null）
         assertEquals(1L, result.getId()); // ID应该保持不变
     }
 

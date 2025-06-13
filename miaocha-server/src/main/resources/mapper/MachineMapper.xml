@@ -9,8 +9,8 @@
 
     <!-- 插入机器信息 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO machine_info (name, ip, port, username, password, ssh_key)
-        VALUES (#{name}, #{ip}, #{port}, #{username}, #{password}, #{sshKey})
+        INSERT INTO machine_info (name, ip, port, username, password, ssh_key, create_user, update_user)
+        VALUES (#{name}, #{ip}, #{port}, #{username}, #{password}, #{sshKey}, #{createUser}, #{updateUser})
     </insert>
 
     <!-- 更新机器信息 -->
@@ -21,7 +21,8 @@
             port=#{port},
             username=#{username},
             password=#{password},
-            ssh_key=#{sshKey}
+            ssh_key=#{sshKey},
+            update_user=#{updateUser}
         WHERE id = #{id}
     </update>
 

@@ -14,20 +14,20 @@
 
     <!-- 插入 Logstash 进程记录 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO logstash_process (name, module_id, config_content, jvm_options, logstash_yml)
-        VALUES (#{name}, #{moduleId}, #{configContent}, #{jvmOptions}, #{logstashYml})
+        INSERT INTO logstash_process (name, module_id, config_content, jvm_options, logstash_yml, create_user, update_user)
+        VALUES (#{name}, #{moduleId}, #{configContent}, #{jvmOptions}, #{logstashYml}, #{createUser}, #{updateUser})
     </insert>
 
     <!-- 更新进程记录 -->
     <update id="update">
         UPDATE logstash_process SET name=#{name}, module_id=#{moduleId},
-        config_content=#{configContent}, jvm_options=#{jvmOptions}, logstash_yml=#{logstashYml}
+        config_content=#{configContent}, jvm_options=#{jvmOptions}, logstash_yml=#{logstashYml}, update_user=#{updateUser}
         WHERE id=#{id}
     </update>
 
     <!-- 仅更新元信息 -->
     <update id="updateMetadataOnly">
-        UPDATE logstash_process SET name=#{name}, module_id=#{moduleId} WHERE id=#{id}
+        UPDATE logstash_process SET name=#{name}, module_id=#{moduleId}, update_user=#{updateUser} WHERE id=#{id}
     </update>
 
     <!-- 仅更新配置信息 -->
@@ -41,8 +41,9 @@
                 jvm_options=#{jvmOptions},
             </if>
             <if test="logstashYml != null">
-                logstash_yml=#{logstashYml}
+                logstash_yml=#{logstashYml},
             </if>
+            update_user=#{updateUser}
         </set>
         WHERE id=#{id}
     </update>
