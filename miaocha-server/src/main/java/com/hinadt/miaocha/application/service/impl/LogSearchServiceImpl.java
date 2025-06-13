@@ -288,9 +288,15 @@ public class LogSearchServiceImpl implements LogSearchService {
             Map<String, Object> fieldDistributionResult =
                     jdbcQueryExecutor.executeRawQuery(conn, fieldDistributionSql);
 
+            // 使用采样大小常量进行百分比计算
+            result.setActualSampleCount(LogSqlBuilder.FIELD_DISTRIBUTION_SAMPLE_SIZE);
+
             // 处理字段分布查询结果（使用原始字段名，保持用户友好的显示）
             List<FieldDistributionDTO> fieldDistributions =
-                    processTopnResult(fieldDistributionResult, dto.getFields());
+                    processTopnResult(
+                            fieldDistributionResult,
+                            dto.getFields(),
+                            LogSqlBuilder.FIELD_DISTRIBUTION_SAMPLE_SIZE);
             result.setFieldDistributions(fieldDistributions);
 
         } catch (SQLException e) {
@@ -306,7 +312,7 @@ public class LogSearchServiceImpl implements LogSearchService {
 
     /** 处理TOPN查询结果，转换为FieldDistributionDTO列表 */
     private List<FieldDistributionDTO> processTopnResult(
-            Map<String, Object> queryResult, List<String> fields) {
+            Map<String, Object> queryResult, List<String> fields, Integer sampleSize) {
         List<FieldDistributionDTO> result = new ArrayList<>();
         List<Map<String, Object>> rows = (List<Map<String, Object>>) queryResult.get("rows");
 
@@ -339,22 +345,11 @@ public class LogSearchServiceImpl implements LogSearchService {
                     // 解析JSON格式的TOPN结果，格式如：{"value1":count1,"value2":count2,...}
                     List<FieldDistributionDTO.ValueDistribution> valueDistributions;
                     if (jsonValue != null) {
-                        valueDistributions = parseTopnJson(jsonValue);
+                        valueDistributions = parseTopnJson(jsonValue, sampleSize);
                     } else {
                         valueDistributions = new ArrayList<>();
                     }
                     dto.setValueDistributions(valueDistributions);
-
-                    // 计算总数（所有值的计数之和）
-                    int totalCount =
-                            valueDistributions.stream()
-                                    .mapToInt(FieldDistributionDTO.ValueDistribution::getCount)
-                                    .sum();
-
-                    dto.setTotalCount(totalCount);
-                    dto.setNonNullCount(totalCount); // 简化处理，实际应该计算非空值数量
-                    dto.setNullCount(0); // 简化处理，实际应该计算空值数量
-                    dto.setUniqueValueCount(valueDistributions.size());
 
                     result.add(dto);
                 }
@@ -365,7 +360,8 @@ public class LogSearchServiceImpl implements LogSearchService {
     }
 
     /** 解析TOPN函数返回的JSON字符串 格式如：{"value1":count1,"value2":count2,...} */
-    private List<FieldDistributionDTO.ValueDistribution> parseTopnJson(String jsonValue) {
+    private List<FieldDistributionDTO.ValueDistribution> parseTopnJson(
+            String jsonValue, Integer sampleSize) {
         List<FieldDistributionDTO.ValueDistribution> result = new ArrayList<>();
 
         // 检查输入是否为null或空
@@ -378,9 +374,6 @@ public class LogSearchServiceImpl implements LogSearchService {
             Map<String, Integer> jsonMap =
                     objectMapper.readValue(jsonValue, new TypeReference<Map<String, Integer>>() {});
 
-            // 计算总数
-            int totalCount = jsonMap.values().stream().mapToInt(Integer::intValue).sum();
-
             // 解析每个键值对
             for (Map.Entry<String, Integer> entry : jsonMap.entrySet()) {
                 String key = entry.getKey();
@@ -391,8 +384,8 @@ public class LogSearchServiceImpl implements LogSearchService {
                 vd.setValue(key);
                 vd.setCount(count);
 
-                // 计算百分比，保留2位小数
-                double percentage = totalCount > 0 ? (double) count / totalCount * 100 : 0.0;
+                // 计算基于采样总数的百分比，保留2位小数
+                double percentage = sampleSize > 0 ? (double) count / sampleSize * 100 : 0.0;
                 vd.setPercentage(Math.round(percentage * 100) / 100.0);
 
                 result.add(vd);

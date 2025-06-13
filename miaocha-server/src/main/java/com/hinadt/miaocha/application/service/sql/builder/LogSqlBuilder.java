@@ -11,6 +11,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class LogSqlBuilder {
 
+    /** 字段分布统计的采样大小常量 */
+    public static final int FIELD_DISTRIBUTION_SAMPLE_SIZE = 5000;
+
     private final SearchConditionManager searchConditionManager;
 
     @Autowired
@@ -145,7 +148,7 @@ public class LogSqlBuilder {
     }
 
     /**
-     * 构建字段分布TOP N查询SQL，使用Doris的TOPN函数
+     * 构建字段分布TOP N查询SQL，使用两层查询优化性能 内层：先筛选出前5000条数据 外层：对这5000条数据使用Doris的TOPN函数进行统计
      *
      * @param dto 日志搜索DTO
      * @param tableName 表名
@@ -173,9 +176,11 @@ public class LogSqlBuilder {
             topnColumns.append(String.format("TOPN(%s, %d) AS '%s'", field, topN, originalField));
         }
 
+        // 构建两层查询：外层TOPN，内层限制5000条数据
         sql.append("SELECT ")
                 .append(topnColumns.toString())
-                .append(" FROM ")
+                .append(" FROM (")
+                .append("SELECT * FROM ")
                 .append(tableName)
                 .append(" WHERE log_time >= '")
                 .append(dto.getStartTime())
@@ -185,6 +190,12 @@ public class LogSqlBuilder {
                 .append("'");
 
         appendSearchConditions(sql, dto);
+
+        // 内层查询：按时间倒序排序，限制采样数据
+        sql.append(" ORDER BY log_time DESC")
+                .append(" LIMIT ")
+                .append(FIELD_DISTRIBUTION_SAMPLE_SIZE)
+                .append(") AS sub_query");
 
         return sql.toString();
     }

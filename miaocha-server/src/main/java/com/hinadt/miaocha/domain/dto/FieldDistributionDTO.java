@@ -15,18 +15,6 @@ public class FieldDistributionDTO {
     @Schema(description = "字段值分布列表，按数量降序排序")
     private List<ValueDistribution> valueDistributions;
 
-    @Schema(description = "该字段的总记录数")
-    private Integer totalCount;
-
-    @Schema(description = "该字段的非空记录数")
-    private Integer nonNullCount;
-
-    @Schema(description = "该字段的空值记录数")
-    private Integer nullCount;
-
-    @Schema(description = "该字段的唯一值数量")
-    private Integer uniqueValueCount;
-
     /** 字段值分布数据 */
     @Data
     @Schema(description = "字段值分布数据")
@@ -37,7 +25,7 @@ public class FieldDistributionDTO {
         @Schema(description = "出现次数", example = "42")
         private Integer count;
 
-        @Schema(description = "占比百分比", example = "14.5")
+        @Schema(description = "在采样数据中的占比百分比", example = "14.5")
         private Double percentage;
     }
 }
