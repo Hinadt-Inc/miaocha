@@ -52,6 +52,9 @@ const WORKER_CONFIG = {
  * 初始化 Monaco 编辑器
  * 设置必要的配置并加载本地编辑器资源
  */
+let retryCount = 0;
+const MAX_RETRIES = 3;
+
 const initMonacoEditor = async (): Promise<void> => {
   // 获取对应语言的worker
   const getWorker = (label: string): Worker => {
@@ -62,17 +65,21 @@ const initMonacoEditor = async (): Promise<void> => {
   // 本地化配置 Monaco workers
   self.MonacoEnvironment = { getWorker };
 
-  // 强制使用本地配置
+  // 强制使用本地配置(使用相对路径)
   const config = {
     monaco,
     paths: {
-      vs: '/monaco-editor/min/vs',
-      'vs/loader.js': '/monaco-editor/min/vs/loader.js',
+      vs: './public/monaco-editor/min/vs',
+      'vs/loader.js': './public/monaco-editor/min/vs/loader.js',
     },
     'vs/nls': {
       availableLanguages: {
         '*': 'zh-cn',
       },
+    },
+    'vs/loader': {
+      usePlainModuleNames: true,
+      ignoreDuplicateModules: ['vs/editor/editor.main'],
     },
     // 禁用CDN加载
     useCDN: false,
@@ -81,8 +88,8 @@ const initMonacoEditor = async (): Promise<void> => {
     // 自定义worker路径
     workerPath: '/monaco-workers',
   };
-  // @ts-ignore
-  loader.config(config);
+  // 精确类型声明
+  loader.config(config as Parameters<typeof loader.config>[0]);
 
   // 设置超时来处理加载时间过长的情况
   const timeoutPromise = new Promise((_, reject) =>
@@ -107,6 +114,15 @@ const initMonacoEditor = async (): Promise<void> => {
       console.error('Monaco editor 初始化失败:', error);
       // 即使初始化失败，也确保 MonacoEnvironment 被全局设置
       window.MonacoEnvironment = self.MonacoEnvironment;
+      // 添加重试机制
+      if (retryCount < MAX_RETRIES) {
+        console.log(`正在重试Monaco初始化(第${retryCount + 1}次)...`);
+        retryCount++;
+        return initMonacoEditor();
+      } else {
+        retryCount = 0; // 重置计数器
+      }
+      throw error;
     });
 };
 
