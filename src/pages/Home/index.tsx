@@ -54,7 +54,7 @@ const HomePage = () => {
         setSearchParams((prev) => ({
           ...prev,
           datasourceId: Number(moduleOptions[0].datasourceId),
-          module: moduleOptions[0].module,
+          module: localStorage.getItem('favoriteModule') || moduleOptions[0].module,
         }));
       }
       setModuleOptions(moduleOptions);
