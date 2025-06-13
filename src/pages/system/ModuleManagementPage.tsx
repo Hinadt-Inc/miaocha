@@ -15,6 +15,7 @@ import {
   Breadcrumb,
   Tag,
   Descriptions,
+  Tooltip,
 } from 'antd';
 import { getModuleDetail } from '@/api/modules';
 import type { ColumnsType } from 'antd/es/table';
@@ -25,18 +26,47 @@ import {
   updateModule,
   deleteModule,
   executeDorisSql,
-  type Module,
+  authorizeModule,
+  revokeModule,
+  type Module as BaseModule,
   type CreateModuleParams,
   type UpdateModuleParams,
 } from '@/api/modules';
+
+interface Module extends BaseModule {
+  users?: Array<{
+    userId: string;
+    nickname: string;
+    role: string;
+  }>;
+}
+
+import { getUsers } from '@/api/user';
 import { Link } from 'react-router-dom';
 import styles from './UserManagementPage.module.less';
+
+const getTagColor = (role: string) => {
+  switch (role) {
+    case 'SUPER_ADMIN':
+      return 'volcano';
+    case 'USER':
+      return 'blue';
+    default:
+      return 'red';
+  }
+};
+
 import { getDataSources } from '@/api/datasource';
 import type { DataSource } from '@/types/datasourceTypes';
 import dayjs from 'dayjs';
 
 interface ModuleData extends Module {
   key: string;
+  users?: Array<{
+    nickname: string;
+    userId: string;
+    role: string;
+  }>;
 }
 
 const transformModuleData = (modules: Module[]): ModuleData[] => {
@@ -55,10 +85,38 @@ const ModuleManagementPage = () => {
   const [isDetailVisible, setIsDetailVisible] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<ModuleData | null>(null);
   const [moduleDetail, setModuleDetail] = useState<Module | null>(null);
+  const [isGrantModalVisible, setIsGrantModalVisible] = useState(false);
+  const [grantUserId, setGrantUserId] = useState('');
+  const [users, setUsers] = useState<{ label: string; value: string }[]>([]);
+  const [isRevokeOperation, setIsRevokeOperation] = useState(false);
   const [form] = Form.useForm();
   const searchTimeoutRef = useRef<number | null>(null);
   const originalDataRef = useRef<ModuleData[]>([]);
   const [messageApi, contextHolder] = message.useMessage();
+
+  const handleGrant = async (moduleName: string) => {
+    try {
+      await authorizeModule(grantUserId, moduleName);
+      messageApi.success('授权成功');
+      setIsGrantModalVisible(false);
+      setGrantUserId('');
+      fetchModules();
+    } catch (error) {
+      messageApi.error('授权失败');
+    }
+  };
+
+  const handleRevoke = async (moduleName: string) => {
+    try {
+      await revokeModule(grantUserId, moduleName);
+      messageApi.success('撤销成功');
+      setIsGrantModalVisible(false);
+      setGrantUserId('');
+      fetchModules();
+    } catch (error) {
+      messageApi.error('撤销失败');
+    }
+  };
 
   useEffect(() => {
     return () => {
@@ -78,14 +136,37 @@ const ModuleManagementPage = () => {
     fetchDataSources().catch(() => {
       messageApi.error('加载数据源失败');
     });
+    const loadUsers = async () => {
+      try {
+        const userList = await getUsers();
+        setUsers(
+          userList.map((user) => ({
+            label: user.nickname ?? user.username,
+            value: user.id,
+          })),
+        );
+      } catch {
+        messageApi.error('加载用户列表失败');
+      }
+    };
+    loadUsers();
     return () => abortController.abort();
   }, []);
 
   const fetchModules = async (config?: any) => {
     setLoading(true);
     try {
-      const modules = await getModules(config);
-      const transformedModules = transformModuleData(modules);
+      const modules = await getModules({ ...config, includeUsers: true });
+      const transformedModules = transformModuleData(
+        modules.map((m) => ({
+          ...m,
+          users: m.users?.map((u) => ({
+            nickname: u.nickname,
+            userId: u.userId,
+            role: (u as any).role || 'USER',
+          })),
+        })),
+      );
       setData(transformedModules);
       originalDataRef.current = transformedModules;
     } catch (error) {
@@ -208,7 +289,13 @@ const ModuleManagementPage = () => {
     try {
       setLoading(true);
       const detail = await getModuleDetail(Number(record.key));
-      setModuleDetail(detail);
+      setModuleDetail({
+        ...detail,
+        users: detail.users?.map((user) => ({
+          ...user,
+          role: (user as any).role || 'USER',
+        })),
+      });
       setIsDetailVisible(true);
     } catch (error) {
       messageApi.error('获取模块详情失败');
@@ -216,6 +303,7 @@ const ModuleManagementPage = () => {
       setLoading(false);
     }
   };
+
   const { modal } = App.useApp();
   const handleExecuteDorisSql = async (record: ModuleData) => {
     modal.confirm({
@@ -298,10 +386,24 @@ const ModuleManagementPage = () => {
       render: (updateUserName: string, record: ModuleData) => updateUserName || record.updateUser,
     },
     {
+      title: '授权用户',
+      key: 'users',
+      width: 200,
+      render: (_, record) => (
+        <Space size={4} wrap>
+          {record.users?.map((user) => (
+            <Tooltip key={user.userId} title={user.role}>
+              <Tag color={getTagColor(user.role)}>{user.nickname}</Tag>
+            </Tooltip>
+          ))}
+        </Space>
+      ),
+    },
+    {
       title: '操作',
       key: 'action',
       fixed: 'right' as const,
-      width: 250,
+      width: 300,
       render: (_: any, record: ModuleData) => (
         <Space size={0}>
           <Button type="link" onClick={() => handleViewDetail(record)} style={{ padding: '0 8px' }}>
@@ -312,6 +414,31 @@ const ModuleManagementPage = () => {
           </Button>
           <Button type="link" onClick={() => handleExecuteDorisSql(record)} style={{ padding: '0 8px' }}>
             执行SQL
+          </Button>
+          <Button
+            type="link"
+            onClick={() => {
+              setGrantUserId('');
+              setSelectedRecord(record);
+              setIsRevokeOperation(false);
+              setIsGrantModalVisible(true);
+            }}
+            style={{ padding: '0 8px' }}
+          >
+            授权
+          </Button>
+          <Button
+            type="link"
+            danger
+            onClick={() => {
+              setGrantUserId('');
+              setSelectedRecord(record);
+              setIsRevokeOperation(true);
+              setIsGrantModalVisible(true);
+            }}
+            style={{ padding: '0 8px' }}
+          >
+            撤销
           </Button>
           <Popconfirm
             title="确定要删除此模块吗？"
@@ -454,9 +581,51 @@ const ModuleManagementPage = () => {
             </Descriptions.Item>
           </Descriptions>
         )}
+        {moduleDetail && moduleDetail.users && moduleDetail.users.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <h3>授权用户</h3>
+            <Space size={4} wrap>
+              {moduleDetail.users.map((user) => (
+                <Tooltip key={user.userId} title={user.role}>
+                  <Tag color={getTagColor(user.role)}>{user.nickname}</Tag>
+                </Tooltip>
+              ))}
+            </Space>
+          </div>
+        )}
+      </Modal>
+      <Modal
+        title={isRevokeOperation ? '撤销授权' : '授权用户'}
+        open={isGrantModalVisible}
+        onCancel={() => setIsGrantModalVisible(false)}
+        onOk={() => {
+          if (isRevokeOperation) {
+            handleRevoke(selectedRecord?.name || '');
+          } else {
+            handleGrant(selectedRecord?.name || '');
+          }
+        }}
+        okText={isRevokeOperation ? '撤销' : '授权'}
+        cancelText="取消"
+        width={400}
+      >
+        <Form layout="vertical">
+          <Form.Item label="选择用户" required rules={[{ required: true, message: '请选择要授权的用户' }]}>
+            <Select
+              placeholder="请选择用户"
+              value={grantUserId}
+              onChange={(value) => setGrantUserId(value)}
+              options={users}
+              showSearch
+              optionFilterProp="label"
+              style={{ width: '100%' }}
+              allowClear
+              // mode="multiple"
+            />
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );
 };
-
 export default ModuleManagementPage;
