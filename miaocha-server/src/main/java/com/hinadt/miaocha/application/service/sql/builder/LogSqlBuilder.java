@@ -81,10 +81,11 @@ public class LogSqlBuilder {
     /** 生成桶分组表达式，支持自定义间隔 */
     private String generateBucketExpression(String timeUnit, int intervalValue) {
         if ("millisecond".equals(timeUnit)) {
-            // 毫秒级间隔：使用UNIX_TIMESTAMP的微秒精度
+            // 毫秒级间隔：使用DATE_FORMAT获取带毫秒的时间格式
             double intervalSeconds = intervalValue / 1000.0;
             return String.format(
-                    "FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(log_time) / %.3f) * %.3f)",
+                    "DATE_FORMAT(FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(log_time) / %.3f) * %.3f),"
+                            + " '%%Y-%%m-%%d %%H:%%i:%%s.%%f')",
                     intervalSeconds, intervalSeconds);
         }
 
