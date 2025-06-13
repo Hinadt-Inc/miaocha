@@ -37,5 +37,5 @@ export const highlightText = (text: string, keywords: string[]) => {
       str = str.replace(new RegExp(`(${escapedKeyword})`, 'gi'), '<mark>$1</mark>');
     }
   });
-  return <span dangerouslySetInnerHTML={{ __html: str }} title={text} />;
+  return <span dangerouslySetInnerHTML={{ __html: ['null', 'undefined'].includes(str) ? '' : str }} title={text} />;
 };
