@@ -132,6 +132,7 @@ declare global {
   interface ILogHistogramData {
     distributionData: ILogHistogram[];
     timeUnit: string; // 时间单位
+    timeInterval: number; // 时间间隔
   }
 
   interface ILogHistogramResponse {

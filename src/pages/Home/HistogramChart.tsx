@@ -14,7 +14,7 @@ interface IProps {
 
 const HistogramChart = (props: IProps) => {
   const { data, searchParams, onSearch } = props;
-  const { distributionData, timeUnit } = data || {};
+  const { distributionData, timeUnit, timeInterval } = data || {};
   // const [dataZoom, setDataZoom] = useState<number[]>([0, 100]);
   const { timeGrouping = 'auto', startTime = '', endTime = '' } = searchParams;
   const chartRef = useRef<any>(null);
@@ -229,7 +229,7 @@ const HistogramChart = (props: IProps) => {
         ...searchParams,
         startTime: dayjs(name).format(DATE_FORMAT),
         endTime: dayjs(name)
-          .add(1, timeUnit as any)
+          .add(timeInterval, timeUnit as any)
           .format(DATE_FORMAT),
         offset: 0,
       };
