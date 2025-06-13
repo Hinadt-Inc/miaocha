@@ -211,10 +211,13 @@ public class LogSearchServiceImpl implements LogSearchService {
             // 转换DTO中的variant字段语法
             LogSearchDTO convertedDto = dtoConverter.convert(dto);
 
-            // 执行分布统计查询，使用计算出的时间单位
-            String timeUnit = granularityResult.getSqlTimeUnit();
+            // 执行分布统计查询，使用计算出的时间颗粒度
             String distributionSql =
-                    logSqlBuilder.buildDistributionSql(convertedDto, tableName, timeUnit);
+                    logSqlBuilder.buildDistributionSqlWithInterval(
+                            convertedDto,
+                            tableName,
+                            granularityResult.getTimeUnit(),
+                            granularityResult.getInterval());
             logger.debug(
                     "分布统计SQL: {}, 颗粒度详情: {}",
                     distributionSql,

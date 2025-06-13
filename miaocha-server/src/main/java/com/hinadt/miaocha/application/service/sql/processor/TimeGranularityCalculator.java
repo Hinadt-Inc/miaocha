@@ -19,13 +19,16 @@ import org.springframework.stereotype.Component;
 public class TimeGranularityCalculator {
     private static final Logger logger = LoggerFactory.getLogger(TimeGranularityCalculator.class);
 
+    // 支持毫秒精度的时间格式解析器
     private static final DateTimeFormatter DATETIME_FORMATTER =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter DATETIME_FORMATTER_WITH_MILLIS =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
     /** 默认目标桶数量，平衡展示效果和性能 */
     private static final int DEFAULT_TARGET_BUCKETS = 55;
 
-    /** 最大允许桶数量，防止性能问题 */
+    /** 最大允许桶数量，性能保护上限 */
     private static final int MAX_BUCKETS = 10000;
 
     /** 最小桶数量，确保基本的数据展示 */
@@ -34,10 +37,10 @@ public class TimeGranularityCalculator {
     /** 最大桶数量建议值，超过此值会提示选择更大间隔 */
     private static final int MAX_RECOMMENDED_BUCKETS = 60;
 
-    /** 标准时间间隔列表，按从小到大排序，新增毫秒级别支持 */
+    /** 标准时间间隔列表，支持毫秒级到天级的完整间隔范围 */
     private static final List<TimeInterval> STANDARD_INTERVALS =
             Arrays.asList(
-                    // 毫秒级别间隔 - 用于极短时间范围
+                    // 毫秒级别间隔
                     new TimeInterval("millisecond", 10, Duration.ofMillis(10)),
                     new TimeInterval("millisecond", 20, Duration.ofMillis(20)),
                     new TimeInterval("millisecond", 50, Duration.ofMillis(50)),
@@ -85,8 +88,9 @@ public class TimeGranularityCalculator {
             String startTime, String endTime, String userSpecifiedUnit, Integer targetBuckets) {
 
         try {
-            LocalDateTime start = LocalDateTime.parse(startTime, DATETIME_FORMATTER);
-            LocalDateTime end = LocalDateTime.parse(endTime, DATETIME_FORMATTER);
+            // 支持毫秒精度的时间解析
+            LocalDateTime start = parseDateTime(startTime);
+            LocalDateTime end = parseDateTime(endTime);
 
             // 如果用户指定了非auto的时间单位，直接使用
             if (!"auto".equals(userSpecifiedUnit)) {
@@ -244,8 +248,31 @@ public class TimeGranularityCalculator {
         return result;
     }
 
+    /** 解析日期时间，支持毫秒精度 */
+    private LocalDateTime parseDateTime(String dateTimeStr) {
+        try {
+            if (dateTimeStr.contains(".")) {
+                return LocalDateTime.parse(dateTimeStr, DATETIME_FORMATTER_WITH_MILLIS);
+            } else {
+                return LocalDateTime.parse(dateTimeStr, DATETIME_FORMATTER);
+            }
+        } catch (Exception e) {
+            // 尝试其他格式或抛出更详细的错误
+            throw new IllegalArgumentException("无法解析时间格式: " + dateTimeStr, e);
+        }
+    }
+
     /** 查找标准时间间隔 */
     private TimeInterval findStandardInterval(String unit) {
+        // 对于毫秒级，查找最小的标准间隔（10ms）
+        if ("millisecond".equals(unit)) {
+            return STANDARD_INTERVALS.stream()
+                    .filter(interval -> interval.unit.equals(unit))
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        // 对于其他单位，查找value=1的间隔
         return STANDARD_INTERVALS.stream()
                 .filter(interval -> interval.unit.equals(unit) && interval.value == 1)
                 .findFirst()
@@ -367,15 +394,14 @@ public class TimeGranularityCalculator {
             return rawIntervalSeconds;
         }
 
-        /** 获取用于SQL查询的时间单位字符串 如果interval > 1，需要特殊处理 */
+        /** 获取用于SQL查询的时间单位字符串（保持向后兼容） */
         public String getSqlTimeUnit() {
-            if (interval == 1) {
-                return timeUnit;
-            } else {
-                // 对于非1的间隔，可能需要在SQL层面特殊处理
-                // 这里先返回基础单位，具体的间隔处理在SQL构建器中实现
-                return timeUnit;
-            }
+            return timeUnit;
+        }
+
+        /** 获取实际的SQL时间间隔字符串，用于支持非1间隔 */
+        public String getSqlTimeInterval() {
+            return String.format("%d %s", interval, timeUnit);
         }
 
         /** 获取详细描述信息，用于调试和日志 */

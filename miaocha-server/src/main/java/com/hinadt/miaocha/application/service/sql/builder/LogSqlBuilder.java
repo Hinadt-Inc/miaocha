@@ -18,7 +18,7 @@ public class LogSqlBuilder {
         this.searchConditionManager = searchConditionManager;
     }
 
-    /** 构建日志分布统计SQL */
+    /** 构建日志分布统计SQL - 支持自定义间隔分组 */
     public String buildDistributionSql(LogSearchDTO dto, String tableName, String timeUnit) {
         StringBuilder sql = new StringBuilder();
 
@@ -43,6 +43,74 @@ public class LogSqlBuilder {
                 .append(" ORDER BY log_time_ ASC");
 
         return sql.toString();
+    }
+
+    /** 构建支持自定义间隔的日志分布统计SQL */
+    public String buildDistributionSqlWithInterval(
+            LogSearchDTO dto, String tableName, String timeUnit, int intervalValue) {
+        StringBuilder sql = new StringBuilder();
+
+        if (intervalValue == 1) {
+            // 间隔为1时，使用原有的date_trunc逻辑
+            return buildDistributionSql(dto, tableName, timeUnit);
+        }
+
+        // 间隔大于1时，使用FLOOR函数实现自定义间隔分组
+        String bucketExpression = generateBucketExpression(timeUnit, intervalValue);
+
+        sql.append("SELECT ")
+                .append(bucketExpression)
+                .append(" AS log_time_, ")
+                .append(" COUNT(1) AS count ")
+                .append("FROM ")
+                .append(tableName)
+                .append(" WHERE log_time >= '")
+                .append(dto.getStartTime())
+                .append("'")
+                .append(" AND log_time < '")
+                .append(dto.getEndTime())
+                .append("'");
+
+        appendSearchConditions(sql, dto);
+
+        sql.append(" GROUP BY ").append(bucketExpression).append(" ORDER BY log_time_ ASC");
+
+        return sql.toString();
+    }
+
+    /** 生成桶分组表达式，支持自定义间隔 */
+    private String generateBucketExpression(String timeUnit, int intervalValue) {
+        if ("millisecond".equals(timeUnit)) {
+            // 毫秒级间隔：使用UNIX_TIMESTAMP的微秒精度
+            double intervalSeconds = intervalValue / 1000.0;
+            return String.format(
+                    "FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(log_time) / %.3f) * %.3f)",
+                    intervalSeconds, intervalSeconds);
+        }
+
+        String intervalSeconds;
+        switch (timeUnit) {
+            case "second":
+                intervalSeconds = String.valueOf(intervalValue);
+                break;
+            case "minute":
+                intervalSeconds = String.valueOf(intervalValue * 60);
+                break;
+            case "hour":
+                intervalSeconds = String.valueOf(intervalValue * 3600);
+                break;
+            case "day":
+                intervalSeconds = String.valueOf(intervalValue * 86400);
+                break;
+            default:
+                throw new IllegalArgumentException("不支持的时间单位: " + timeUnit);
+        }
+
+        // 使用FLOOR函数实现自定义间隔分组
+        // 原理：将时间转为秒数，除以间隔秒数取整，再乘以间隔秒数，最后转回时间
+        return String.format(
+                "FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(log_time) / %s) * %s)",
+                intervalSeconds, intervalSeconds);
     }
 
     /** 构建详细日志查询SQL */
