@@ -48,23 +48,6 @@ const DataSourceManagementPage = () => {
   };
   const actionRef = useRef<ActionType>(null);
 
-  // 在组件挂载后自动加载数据源数据
-  useEffect(() => {
-    setTableLoading(true);
-    getAllDataSources()
-      .then((data) => {
-        if (data) {
-          // 数据直接通过API获取，不再需要本地状态
-        }
-      })
-      .catch(() => {
-        messageApi.error('获取数据源列表失败');
-      })
-      .finally(() => {
-        setTableLoading(false);
-      });
-  }, []); // 空依赖数组，只在组件挂载时执行一次
-
   // 获取数据源列表
   const fetchDataSources: (
     params: ParamsType & {

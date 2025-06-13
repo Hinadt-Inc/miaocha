@@ -11,10 +11,11 @@ import {
   Tag,
   Descriptions,
   Skeleton,
+  Tooltip,
 } from 'antd';
 import styles from './LogstashManagementPage.module.less';
 import { Link } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import {
   createLogstashProcess,
   deleteLogstashProcess,
@@ -346,7 +347,7 @@ function LogstashManagementPage() {
           {record.machineStatuses?.map((machine) => (
             <div key={machine.machineId}>
               <Tag color={machine.state === 'RUNNING' ? 'green' : machine.state === 'STOPPED' ? 'red' : 'orange'}>
-                {machine.machineName} ({machine.machineIp}): {machine.state}
+                {machine.machineName} ({machine.machineIp}): {machine.stateDescription}
               </Tag>
             </div>
           ))}
@@ -357,7 +358,7 @@ function LogstashManagementPage() {
       title: '创建时间',
       dataIndex: 'createTime',
       key: 'createTime',
-      render: (createTime: string) => new Date(createTime).toLocaleString(),
+      render: (createTime: string) => dayjs(createTime).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
       title: '创建人',
@@ -368,7 +369,7 @@ function LogstashManagementPage() {
       title: '更新时间',
       dataIndex: 'updateTime',
       key: 'updateTime',
-      render: (updateTime: string) => new Date(updateTime).toLocaleString(),
+      render: (updateTime: string) => dayjs(updateTime).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
       title: '更新人',
@@ -586,19 +587,23 @@ function LogstashManagementPage() {
                     title: '状态',
                     dataIndex: 'state',
                     key: 'state',
-                    render: (state: string) => (
-                      <Tag color={state === 'RUNNING' ? 'green' : state === 'STOPPED' ? 'red' : 'orange'}>{state}</Tag>
+                    render: (state: string, record) => (
+                      <Tag color={state === 'RUNNING' ? 'green' : state === 'STOPPED' ? 'red' : 'orange'}>
+                        {record.stateDescription}
+                      </Tag>
                     ),
-                  },
-                  {
-                    title: '状态描述',
-                    dataIndex: 'stateDescription',
-                    key: 'stateDescription',
                   },
                   {
                     title: '操作',
                     key: 'action',
-                    render: (_: unknown, machine: { machineId: number; state: string }) => (
+                    render: (
+                      _: unknown,
+                      machine: {
+                        stateDescription: ReactNode;
+                        machineId: number;
+                        state: string;
+                      },
+                    ) => (
                       <Space size="small">
                         {machine.state !== 'INITIALIZE_FAILED' && (
                           <>
@@ -788,6 +793,8 @@ function LogstashManagementPage() {
                 title: '开始时间',
                 dataIndex: 'startTime',
                 key: 'startTime',
+                render: (startTime: string) => dayjs(startTime).format('YYYY-MM-DD HH:mm:ss'),
+                width: 200,
               },
               {
                 title: '操作',
@@ -826,8 +833,12 @@ function LogstashManagementPage() {
                       {task.status}
                     </Tag>
                   </Descriptions.Item>
-                  <Descriptions.Item label="开始时间">{task.startTime}</Descriptions.Item>
-                  <Descriptions.Item label="结束时间">{task.endTime || '-'}</Descriptions.Item>
+                  <Descriptions.Item label="开始时间">
+                    {dayjs(task.startTime).format('YYYY-MM-DD HH:mm:ss')}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="结束时间">
+                    {dayjs(task.endTime).format('YYYY-MM-DD HH:mm:ss') || '-'}
+                  </Descriptions.Item>
                   <Descriptions.Item label="持续时间">{task.duration}ms</Descriptions.Item>
                   <Descriptions.Item label="错误信息" span={2}>
                     {task.errorMessage || '无'}
@@ -860,12 +871,17 @@ function LogstashManagementPage() {
                             </Tag>
                           ),
                         },
-                        { title: '开始时间', dataIndex: 'startTime', key: 'startTime' },
+                        {
+                          title: '开始时间',
+                          dataIndex: 'startTime',
+                          key: 'startTime',
+                          render: (startTime: string) => dayjs(startTime).format('YYYY-MM-DD HH:mm:ss'),
+                        },
                         {
                           title: '结束时间',
                           dataIndex: 'endTime',
                           key: 'endTime',
-                          render: (endTime: string) => endTime || '-',
+                          render: (endTime: string) => dayjs(endTime).format('YYYY-MM-DD HH:mm:ss') || '-',
                         },
                         {
                           title: '持续时间',
@@ -912,8 +928,12 @@ function LogstashManagementPage() {
                     {selectedTask.status}
                   </Tag>
                 </Descriptions.Item>
-                <Descriptions.Item label="开始时间">{selectedTask.startTime}</Descriptions.Item>
-                <Descriptions.Item label="结束时间">{selectedTask.endTime || '-'}</Descriptions.Item>
+                <Descriptions.Item label="开始时间">
+                  {dayjs(selectedTask.startTime).format('YYYY-MM-DD HH:mm:ss')}
+                </Descriptions.Item>
+                <Descriptions.Item label="结束时间">
+                  {dayjs(selectedTask.endTime).format('YYYY-MM-DD HH:mm:ss') || '-'}
+                </Descriptions.Item>
                 <Descriptions.Item label="持续时间">{selectedTask.duration}ms</Descriptions.Item>
                 <Descriptions.Item label="错误信息" span={2}>
                   {selectedTask.errorMessage || '无'}
@@ -958,12 +978,13 @@ function LogstashManagementPage() {
                         title: '开始时间',
                         dataIndex: 'startTime',
                         key: 'startTime',
+                        render: (startTime: string) => dayjs(startTime).format('YYYY-MM-DD HH:mm:ss'),
                       },
                       {
                         title: '结束时间',
                         dataIndex: 'endTime',
                         key: 'endTime',
-                        render: (endTime: string) => endTime || '-',
+                        render: (endTime: string) => dayjs(endTime).format('YYYY-MM-DD HH:mm:ss') || '-',
                       },
                       {
                         title: '持续时间',
@@ -1005,10 +1026,10 @@ function LogstashManagementPage() {
                   {currentDetail.moduleName}
                 </Descriptions.Item>
                 <Descriptions.Item label="创建时间" span={1}>
-                  {currentDetail.createTime}
+                  {dayjs(currentDetail.createTime).format('YYYY-MM-DD HH:mm:ss')}
                 </Descriptions.Item>
                 <Descriptions.Item label="更新时间" span={1}>
-                  {currentDetail.updateTime}
+                  {dayjs(currentDetail.updateTime).format('YYYY-MM-DD HH:mm:ss')}
                 </Descriptions.Item>
                 <Descriptions.Item label="描述" span={2}>
                   {currentDetail.description || '无描述'}
@@ -1021,12 +1042,14 @@ function LogstashManagementPage() {
               <div style={{ margin: '16px 0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
                   <h4 style={{ margin: 0 }}>JVM参数</h4>
-                  <Button
-                    type="text"
-                    icon={<CopyOutlined />}
-                    onClick={() => handleCopy(currentDetail.jvmOptions || '', 'JVM参数')}
-                    style={{ marginLeft: 8 }}
-                  />
+                  <Tooltip title="复制">
+                    <Button
+                      type="text"
+                      icon={<CopyOutlined />}
+                      onClick={() => handleCopy(currentDetail.jvmOptions || '', 'JVM参数')}
+                      style={{ marginLeft: 8 }}
+                    />
+                  </Tooltip>
                 </div>
                 <pre
                   style={{
@@ -1044,12 +1067,14 @@ function LogstashManagementPage() {
               <div style={{ margin: '16px 0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
                   <h4 style={{ margin: 0 }}>Logstash配置</h4>
-                  <Button
-                    type="text"
-                    icon={<CopyOutlined />}
-                    onClick={() => handleCopy(currentDetail.logstashYml || '', 'Logstash配置')}
-                    style={{ marginLeft: 8 }}
-                  />
+                  <Tooltip title="复制">
+                    <Button
+                      type="text"
+                      icon={<CopyOutlined />}
+                      onClick={() => handleCopy(currentDetail.logstashYml || '', 'Logstash配置')}
+                      style={{ marginLeft: 8 }}
+                    />
+                  </Tooltip>
                 </div>
                 <pre
                   style={{
@@ -1067,12 +1092,14 @@ function LogstashManagementPage() {
               <div style={{ margin: '16px 0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
                   <h4 style={{ margin: 0 }}>配置内容</h4>
-                  <Button
-                    type="text"
-                    icon={<CopyOutlined />}
-                    onClick={() => handleCopy(currentDetail.configContent || '', '配置内容')}
-                    style={{ marginLeft: 8 }}
-                  />
+                  <Tooltip title="复制">
+                    <Button
+                      type="text"
+                      icon={<CopyOutlined />}
+                      onClick={() => handleCopy(currentDetail.configContent || '', '配置内容')}
+                      style={{ marginLeft: 8 }}
+                    />
+                  </Tooltip>
                 </div>
                 <pre
                   style={{
@@ -1167,4 +1194,5 @@ function LogstashManagementPage() {
 }
 
 import withSystemAccess from '@/utils/withSystemAccess';
+import dayjs from 'dayjs';
 export default withSystemAccess(LogstashManagementPage);

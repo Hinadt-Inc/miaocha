@@ -33,6 +33,7 @@ import { Link } from 'react-router-dom';
 import styles from './UserManagementPage.module.less';
 import { getDataSources } from '@/api/datasource';
 import type { DataSource } from '@/types/datasourceTypes';
+import dayjs from 'dayjs';
 
 interface ModuleData extends Module {
   key: string;
@@ -272,7 +273,7 @@ const ModuleManagementPage = () => {
       dataIndex: 'createTime',
       key: 'createTime',
       width: 160,
-      render: (createTime: string) => new Date(createTime).toLocaleString(),
+      render: (createTime: string) => dayjs(createTime).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
       title: '创建人',
@@ -286,7 +287,7 @@ const ModuleManagementPage = () => {
       dataIndex: 'updateTime',
       key: 'updateTime',
       width: 160,
-      render: (updateTime: string) => new Date(updateTime).toLocaleString(),
+      render: (updateTime: string) => dayjs(updateTime).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
       title: '更新人',
@@ -435,8 +436,12 @@ const ModuleManagementPage = () => {
             <Descriptions.Item label="数据源ID">{moduleDetail.datasourceId}</Descriptions.Item>
             <Descriptions.Item label="数据源名称">{moduleDetail.datasourceName}</Descriptions.Item>
             <Descriptions.Item label="表名">{moduleDetail.tableName}</Descriptions.Item>
-            <Descriptions.Item label="创建时间">{new Date(moduleDetail.createTime).toLocaleString()}</Descriptions.Item>
-            <Descriptions.Item label="更新时间">{new Date(moduleDetail.updateTime).toLocaleString()}</Descriptions.Item>
+            <Descriptions.Item label="创建时间">
+              {dayjs(moduleDetail.createTime).format('YYYY-MM-DD HH:mm:ss')}
+            </Descriptions.Item>
+            <Descriptions.Item label="更新时间">
+              {dayjs(moduleDetail.updateTime).format('YYYY-MM-DD HH:mm:ss')}
+            </Descriptions.Item>
             <Descriptions.Item label="创建人">
               {moduleDetail.createUserName || moduleDetail.createUser}
             </Descriptions.Item>
