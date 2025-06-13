@@ -121,6 +121,7 @@ service.interceptors.response.use(
         },
       }),
     );
+    return Promise.reject(new Error(errorMessage));
   },
 );
 
