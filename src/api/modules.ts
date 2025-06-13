@@ -13,6 +13,10 @@ export interface Module {
   createUserName: string;
   updateUser: string;
   updateUserName: string;
+  users?: Array<{
+    userId: string;
+    nickname: string;
+  }>;
 }
 
 export interface CreateModuleParams {
@@ -72,5 +76,37 @@ export const executeDorisSql = async (id: number, sql: string) => {
     url: `/api/modules/${id}/execute-doris-sql`,
     method: 'POST',
     data: { sql },
+  });
+};
+
+export const authorizeModule = async (userId: string, moduleName: string) => {
+  return request({
+    url: `/api/permissions/modules/user/${userId}/grant?module=${moduleName}`,
+    method: 'POST',
+  });
+};
+
+export const revokeModule = async (userId: string, moduleName: string) => {
+  return request({
+    url: `/api/permissions/modules/user/${userId}/revoke?module=${moduleName}`,
+    method: 'DELETE',
+  });
+};
+
+// 批量授权
+export const batchAuthorizeModules = async (userId: string, moduleNames: string[]) => {
+  return request({
+    url: `/api/permissions/modules/user/${userId}/batch-grant`,
+    method: 'POST',
+    data: { userId, modules: moduleNames },
+  });
+};
+
+// 批量撤销授权
+export const batchRevokeModules = async (userId: string, moduleNames: string[]) => {
+  return request({
+    url: `/api/permissions/modules/user/${userId}/batch-revoke`,
+    method: 'DELETE',
+    data: { userId, modules: moduleNames },
   });
 };
