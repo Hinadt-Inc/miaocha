@@ -107,7 +107,7 @@ public class ResultProcessor {
         String timeStr = timePointObj.toString();
 
         // 检查是否为数字格式（包括科学计数法）
-        if (timeStr.matches("\\d+") || timeStr.matches("\\d+\\.\\d+E\\d+")) {
+        if (timeStr.matches("\\d+") || timeStr.matches("\\d+\\.\\d+E[+-]?\\d+")) {
             try {
                 // 处理科学计数法和普通数字
                 double doubleValue = Double.parseDouble(timeStr);
