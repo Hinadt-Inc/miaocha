@@ -107,7 +107,7 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
                   <Input placeholder="请输入Logstash进程名称，例如：订单处理服务" />
                 </Form.Item>
                 <Form.Item name="moduleId" label="模块" rules={[{ required: true, message: '请输入模块' }]}>
-                  <Select loading={loading} disabled={!!initialValues}>
+                  <Select loading={loading}>
                     {moduleData.map((ds) => (
                       <Select.Option key={ds.id} value={ds.id}>
                         {ds.name}

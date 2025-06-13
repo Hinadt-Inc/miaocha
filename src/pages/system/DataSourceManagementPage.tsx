@@ -246,13 +246,6 @@ const DataSourceManagementPage = () => {
       hideInSearch: true,
     },
     {
-      title: '描述',
-      dataIndex: 'description',
-      width: '12%',
-      ellipsis: true,
-      hideInSearch: true,
-    },
-    {
       title: '主机',
       dataIndex: 'ip',
       width: '10%',
