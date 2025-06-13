@@ -57,7 +57,7 @@ public class LogSearchDTO {
     @Schema(
             description = "时间分组单位（用于统计图表）",
             example = "minute",
-            allowableValues = {"second", "minute", "hour", "day", "auto"})
+            allowableValues = {"millisecond", "second", "minute", "hour", "day", "auto"})
     private String timeGrouping = "auto";
 
     @Schema(

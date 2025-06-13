@@ -2,6 +2,9 @@ package com.hinadt.miaocha.application.service.sql.processor;
 
 import com.hinadt.miaocha.domain.dto.LogDetailResultDTO;
 import com.hinadt.miaocha.domain.dto.LogHistogramResultDTO;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +13,9 @@ import org.springframework.stereotype.Component;
 /** 查询结果处理器 专注于处理数据库查询返回的原始结果，将其转换为应用所需的数据结构 */
 @Component
 public class ResultProcessor {
+
+    private static final DateTimeFormatter DATETIME_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
     /**
      * 处理日志分布统计查询结果 注意：保持从数据库查询结果中获取的时间倒序排序（即从最新日期到最旧日期）
@@ -29,7 +35,8 @@ public class ResultProcessor {
                 LogHistogramResultDTO.LogDistributionData data =
                         new LogHistogramResultDTO.LogDistributionData();
                 if (row.containsKey("log_time_")) {
-                    data.setTimePoint(row.get("log_time_").toString());
+                    String timePoint = formatTimePoint(row.get("log_time_"));
+                    data.setTimePoint(timePoint);
                 }
                 if (row.containsKey("count")) {
                     Object countObj = row.get("count");
@@ -77,5 +84,35 @@ public class ResultProcessor {
         }
 
         return totalCount;
+    }
+
+    /**
+     * 格式化时间点，支持毫秒时间戳和标准时间字符串
+     *
+     * @param timePointObj 时间点对象，可能是毫秒时间戳(Long)或时间字符串
+     * @return 格式化后的时间字符串
+     */
+    private String formatTimePoint(Object timePointObj) {
+        if (timePointObj == null) {
+            return "";
+        }
+
+        String timeStr = timePointObj.toString();
+
+        // 检查是否为纯数字（毫秒时间戳）
+        if (timeStr.matches("\\d+")) {
+            try {
+                long millisTimestamp = Long.parseLong(timeStr);
+                // 将毫秒时间戳转换为可读时间格式
+                Instant instant = Instant.ofEpochMilli(millisTimestamp);
+                return instant.atZone(ZoneId.systemDefault()).format(DATETIME_FORMATTER);
+            } catch (NumberFormatException e) {
+                // 如果转换失败，直接返回原字符串
+                return timeStr;
+            }
+        }
+
+        // 非数字字符串，直接返回（已经是时间格式）
+        return timeStr;
     }
 }
