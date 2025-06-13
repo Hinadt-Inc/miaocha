@@ -1,7 +1,8 @@
-import { Modal, Descriptions, Tag, Divider, Button, message } from 'antd';
+import { Modal, Descriptions, Tag, Divider, Button, message, Tooltip } from 'antd';
 import { CopyOutlined } from '@ant-design/icons';
 import type { LogstashProcess } from '../../../types/logstashTypes';
 import { startLogstashMachine, stopLogstashMachine, refreshLogstashMachineConfig } from '../../../api/logstash';
+import dayjs from 'dayjs';
 
 interface LogstashMachineDetailModalProps {
   visible: boolean;
@@ -86,15 +87,17 @@ export default function LogstashMachineDetailModal({ visible, onCancel, detail }
         </Descriptions.Item>
         <Descriptions.Item label="进程PID">{detail.processPid || '无'}</Descriptions.Item>
         <Descriptions.Item label="部署路径">{detail.deployPath}</Descriptions.Item>
-        <Descriptions.Item label="创建时间">{detail.createTime}</Descriptions.Item>
-        <Descriptions.Item label="更新时间">{detail.updateTime}</Descriptions.Item>
+        <Descriptions.Item label="创建时间">{dayjs(detail.createTime).format('YYYY-MM-DD HH:mm:ss')}</Descriptions.Item>
+        <Descriptions.Item label="更新时间">{dayjs(detail.updateTime).format('YYYY-MM-DD HH:mm:ss')}</Descriptions.Item>
       </Descriptions>
 
       <Divider orientation="left">配置信息</Divider>
       <div style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <h4>JVM参数</h4>
-          <Button icon={<CopyOutlined />} onClick={() => handleCopy(detail.jvmOptions || '')} size="small" />
+          <Tooltip title="复制">
+            <Button icon={<CopyOutlined />} onClick={() => handleCopy(detail.jvmOptions || '')} size="small" />
+          </Tooltip>
         </div>
         <pre style={{ background: '#f5f5f5', padding: 12, borderRadius: 4, overflow: 'auto' }}>{detail.jvmOptions}</pre>
       </div>
@@ -102,7 +105,9 @@ export default function LogstashMachineDetailModal({ visible, onCancel, detail }
       <div style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <h4>Logstash配置</h4>
-          <Button icon={<CopyOutlined />} onClick={() => handleCopy(detail.logstashYml || '')} size="small" />
+          <Tooltip title="复制">
+            <Button icon={<CopyOutlined />} onClick={() => handleCopy(detail.logstashYml)} size="small" />
+          </Tooltip>
         </div>
         <pre style={{ background: '#f5f5f5', padding: 12, borderRadius: 4, overflow: 'auto' }}>
           {detail.logstashYml}
@@ -112,7 +117,9 @@ export default function LogstashMachineDetailModal({ visible, onCancel, detail }
       <div style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <h4>配置内容</h4>
-          <Button icon={<CopyOutlined />} onClick={() => handleCopy(detail.configContent)} size="small" />
+          <Tooltip title="复制">
+            <Button icon={<CopyOutlined />} onClick={() => handleCopy(detail.configContent)} size="small" />
+          </Tooltip>
         </div>
         <pre style={{ background: '#f5f5f5', padding: 12, borderRadius: 4, overflow: 'auto' }}>
           {detail.configContent}
