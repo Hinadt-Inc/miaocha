@@ -161,8 +161,9 @@ class TimeGranularityCalculatorTest {
                     calculator.calculateOptimalGranularity(startTime, endTime, "auto", 50);
 
             // 目标桶数量更少时，桶数应该更少或相等（考虑标准间隔限制）
-            assertTrue(result20.getEstimatedBuckets() <= result50.getEstimatedBuckets());
-            assertTrue(result20.getEstimatedBuckets() <= 35); // 接近目标20，但允许标准间隔的影响
+            // 但是由于新的最小桶数量限制为45，这个测试需要调整
+            assertTrue(result20.getEstimatedBuckets() >= 45); // 不能少于45
+            assertTrue(result50.getEstimatedBuckets() >= 45); // 不能少于45
         }
 
         @Test
@@ -195,8 +196,11 @@ class TimeGranularityCalculatorTest {
             TimeGranularityCalculator.TimeGranularityResult result =
                     calculator.calculateOptimalGranularity(startTime, endTime, "auto", 50);
 
-            assertTrue(result.getEstimatedBuckets() >= 5); // 确保最小桶数量
-            assertEquals("second", result.getTimeUnit());
+            assertTrue(result.getEstimatedBuckets() >= 45); // 更新为45最小桶数量
+            // 30秒范围现在可以使用毫秒级别，所以应该是millisecond或second
+            assertTrue(
+                    "millisecond".equals(result.getTimeUnit())
+                            || "second".equals(result.getTimeUnit()));
         }
 
         @Test
@@ -225,6 +229,19 @@ class TimeGranularityCalculatorTest {
 
             assertEquals("FALLBACK", result.getCalculationMethod());
             assertEquals("minute", result.getTimeUnit());
+        }
+
+        @Test
+        @DisplayName("零时间范围 - 特殊处理")
+        void testZeroTimeRange() {
+            String startTime = "2023-01-01 10:00:00";
+            String endTime = "2023-01-01 10:00:00"; // 0秒
+
+            TimeGranularityCalculator.TimeGranularityResult result =
+                    calculator.calculateOptimalGranularity(startTime, endTime, "auto", 50);
+
+            assertTrue(result.getEstimatedBuckets() >= 45); // 更新为45最小桶数量
+            assertEquals("millisecond", result.getTimeUnit()); // 现在使用毫秒级别
         }
     }
 
@@ -409,18 +426,16 @@ class TimeGranularityCalculatorTest {
         }
 
         @Test
-        @DisplayName("粗粒度查询 - 目标桶数20验证")
+        @DisplayName("粗粒度查询 - 验证小目标桶数")
         void testCoarseGrainQuery() {
             String startTime = "2023-01-01 10:00:00";
             String endTime = "2023-01-01 11:00:00";
 
             TimeGranularityCalculator.TimeGranularityResult result =
-                    calculator.calculateOptimalGranularity(startTime, endTime, "auto", 20);
+                    calculator.calculateOptimalGranularity(startTime, endTime, "auto", 15);
 
-            // 1小时目标20桶：3600÷20=180秒=3分钟，应选择2-5分钟间隔
-            assertEquals("minute", result.getTimeUnit());
-            assertTrue(result.getInterval() >= 2 && result.getInterval() <= 5);
-            assertTrue(result.getEstimatedBuckets() >= 12 && result.getEstimatedBuckets() <= 30);
+            // 即使目标桶数量很小，也不应该少于最小桶数量45
+            assertTrue(result.getEstimatedBuckets() >= 45);
         }
     }
 
@@ -453,24 +468,12 @@ class TimeGranularityCalculatorTest {
             TimeGranularityCalculator.TimeGranularityResult result =
                     calculator.calculateOptimalGranularity(startTime, endTime, "auto", 50);
 
-            assertTrue(result.getEstimatedBuckets() >= 5); // 最小桶数保证
-            assertEquals("second", result.getTimeUnit());
-            assertTrue(result.getInterval() >= 1 && result.getInterval() <= 2);
-        }
-
-        @Test
-        @DisplayName("0秒时间范围 - 验证边界处理")
-        void testZeroTimeRange() {
-            String startTime = "2023-01-01 10:00:00";
-            String endTime = "2023-01-01 10:00:00"; // 0秒差
-
-            TimeGranularityCalculator.TimeGranularityResult result =
-                    calculator.calculateOptimalGranularity(startTime, endTime, "auto", 50);
-
-            // 0秒时间范围会触发最小桶数保证，选择最小的时间间隔
-            assertTrue(result.getEstimatedBuckets() >= 5); // 最小桶数保证
-            assertEquals("second", result.getTimeUnit());
-            assertEquals(1, result.getInterval());
+            assertTrue(result.getEstimatedBuckets() >= 45); // 更新为45最小桶数量
+            // 10秒范围现在可以使用毫秒级别，所以应该是millisecond或second
+            assertTrue(
+                    "millisecond".equals(result.getTimeUnit())
+                            || "second".equals(result.getTimeUnit()));
+            assertTrue(result.getInterval() >= 1 && result.getInterval() <= 500); // 调整间隔范围
         }
     }
 
@@ -498,15 +501,24 @@ class TimeGranularityCalculatorTest {
         @DisplayName("接近匹配验证 - 四舍五入到最近标准间隔")
         void testNearestStandardIntervalMatch() {
             String startTime = "2023-01-01 10:00:00";
-            String endTime = "2023-01-01 10:22:00"; // 22分钟 = 1320秒
+            String endTime = "2023-01-01 10:25:00"; // 25分钟 = 1500秒
 
-            // 目标50桶：1320÷50=26.4秒，应该选择30秒间隔（最接近）
             TimeGranularityCalculator.TimeGranularityResult result =
                     calculator.calculateOptimalGranularity(startTime, endTime, "auto", 50);
 
+            // 1500秒 ÷ 50 = 30秒，应该选择30秒间隔
+            // 1500 ÷ 30 = 50桶，正好在45-60范围内
+            assertTrue(result.getEstimatedBuckets() >= 45);
+            assertTrue(result.getEstimatedBuckets() <= 60); // 在建议范围内
+
+            // 验证时间单位合理（秒级或分钟级）
+            assertTrue(
+                    "second".equals(result.getTimeUnit()) || "minute".equals(result.getTimeUnit()));
+
+            // 期望选择30秒间隔，得到50桶
             assertEquals("second", result.getTimeUnit());
             assertEquals(30, result.getInterval());
-            assertEquals(44, result.getEstimatedBuckets()); // 1320÷30=44
+            assertEquals(50, result.getEstimatedBuckets());
         }
 
         @Test
@@ -522,6 +534,59 @@ class TimeGranularityCalculatorTest {
             assertEquals("minute", result.getTimeUnit());
             assertTrue(result.getInterval() >= 2 && result.getInterval() <= 5); // 应该在2-5分钟范围内
             assertTrue(result.getEstimatedBuckets() >= 30 && result.getEstimatedBuckets() <= 75);
+        }
+    }
+
+    @Nested
+    @DisplayName("小时间范围精确度测试")
+    class SmallTimeRangeTests {
+
+        @Test
+        @DisplayName("6秒时间范围 - 验证桶数量应该在45-60之间")
+        void test6SecondRange() {
+            String startTime = "2023-01-01 10:00:00";
+            String endTime = "2023-01-01 10:00:06"; // 6秒
+
+            TimeGranularityCalculator.TimeGranularityResult result =
+                    calculator.calculateOptimalGranularity(startTime, endTime, "auto", 50);
+
+            // 用户期望：6秒时间范围应该有45-60个桶，而不是仅仅6个
+            assertTrue(
+                    result.getEstimatedBuckets() >= 45 && result.getEstimatedBuckets() <= 60,
+                    "6秒时间范围应该有45-60个桶，实际：" + result.getEstimatedBuckets());
+
+            // 应该使用毫秒级别的时间单位
+            assertEquals("millisecond", result.getTimeUnit(), "应该使用毫秒级别的时间单位");
+        }
+
+        @Test
+        @DisplayName("30秒时间范围 - 验证桶数量优化")
+        void test30SecondRange() {
+            String startTime = "2023-01-01 10:00:00";
+            String endTime = "2023-01-01 10:00:30"; // 30秒
+
+            TimeGranularityCalculator.TimeGranularityResult result =
+                    calculator.calculateOptimalGranularity(startTime, endTime, "auto", 50);
+
+            // 30秒时间范围应该有合理的桶数量
+            assertTrue(
+                    result.getEstimatedBuckets() >= 45 && result.getEstimatedBuckets() <= 60,
+                    "30秒时间范围应该有45-60个桶，实际：" + result.getEstimatedBuckets());
+        }
+
+        @Test
+        @DisplayName("2分钟时间范围 - 验证毫秒级别支持")
+        void test2MinuteRange() {
+            String startTime = "2023-01-01 10:00:00";
+            String endTime = "2023-01-01 10:02:00"; // 2分钟
+
+            TimeGranularityCalculator.TimeGranularityResult result =
+                    calculator.calculateOptimalGranularity(startTime, endTime, "auto", 50);
+
+            // 2分钟时间范围应该有合理的桶数量
+            assertTrue(
+                    result.getEstimatedBuckets() >= 45 && result.getEstimatedBuckets() <= 60,
+                    "2分钟时间范围应该有45-60个桶，实际：" + result.getEstimatedBuckets());
         }
     }
 }

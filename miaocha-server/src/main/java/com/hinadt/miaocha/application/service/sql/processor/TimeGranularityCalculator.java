@@ -23,33 +23,48 @@ public class TimeGranularityCalculator {
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /** 默认目标桶数量，平衡展示效果和性能 */
-    private static final int DEFAULT_TARGET_BUCKETS = 50;
+    private static final int DEFAULT_TARGET_BUCKETS = 55;
 
     /** 最大允许桶数量，防止性能问题 */
     private static final int MAX_BUCKETS = 10000;
 
     /** 最小桶数量，确保基本的数据展示 */
-    private static final int MIN_BUCKETS = 5;
+    private static final int MIN_BUCKETS = 45;
 
-    /** 标准时间间隔列表，按从小到大排序 */
+    /** 最大桶数量建议值，超过此值会提示选择更大间隔 */
+    private static final int MAX_RECOMMENDED_BUCKETS = 60;
+
+    /** 标准时间间隔列表，按从小到大排序，新增毫秒级别支持 */
     private static final List<TimeInterval> STANDARD_INTERVALS =
             Arrays.asList(
+                    // 毫秒级别间隔 - 用于极短时间范围
+                    new TimeInterval("millisecond", 10, Duration.ofMillis(10)),
+                    new TimeInterval("millisecond", 20, Duration.ofMillis(20)),
+                    new TimeInterval("millisecond", 50, Duration.ofMillis(50)),
+                    new TimeInterval("millisecond", 100, Duration.ofMillis(100)),
+                    new TimeInterval("millisecond", 200, Duration.ofMillis(200)),
+                    new TimeInterval("millisecond", 500, Duration.ofMillis(500)),
+                    // 秒级别间隔
                     new TimeInterval("second", 1, Duration.ofSeconds(1)),
+                    new TimeInterval("second", 2, Duration.ofSeconds(2)),
                     new TimeInterval("second", 5, Duration.ofSeconds(5)),
                     new TimeInterval("second", 10, Duration.ofSeconds(10)),
                     new TimeInterval("second", 15, Duration.ofSeconds(15)),
                     new TimeInterval("second", 30, Duration.ofSeconds(30)),
+                    // 分钟级别间隔
                     new TimeInterval("minute", 1, Duration.ofMinutes(1)),
                     new TimeInterval("minute", 2, Duration.ofMinutes(2)),
                     new TimeInterval("minute", 5, Duration.ofMinutes(5)),
                     new TimeInterval("minute", 10, Duration.ofMinutes(10)),
                     new TimeInterval("minute", 15, Duration.ofMinutes(15)),
                     new TimeInterval("minute", 30, Duration.ofMinutes(30)),
+                    // 小时级别间隔
                     new TimeInterval("hour", 1, Duration.ofHours(1)),
                     new TimeInterval("hour", 2, Duration.ofHours(2)),
                     new TimeInterval("hour", 3, Duration.ofHours(3)),
                     new TimeInterval("hour", 6, Duration.ofHours(6)),
                     new TimeInterval("hour", 12, Duration.ofHours(12)),
+                    // 天级别间隔
                     new TimeInterval("day", 1, Duration.ofDays(1)),
                     new TimeInterval("day", 2, Duration.ofDays(2)),
                     new TimeInterval("day", 3, Duration.ofDays(3)),
@@ -101,7 +116,8 @@ public class TimeGranularityCalculator {
         }
 
         Duration timeRange = Duration.between(start, end);
-        long actualBuckets = timeRange.toSeconds() / matchedInterval.duration.toSeconds();
+        // 使用毫秒精度计算桶数量
+        long actualBuckets = timeRange.toMillis() / matchedInterval.duration.toMillis();
 
         return TimeGranularityResult.builder()
                 .timeUnit(matchedInterval.unit)
@@ -121,8 +137,8 @@ public class TimeGranularityCalculator {
         // 特殊处理：0秒时间范围
         if (timeRange.isZero()) {
             return TimeGranularityResult.builder()
-                    .timeUnit("second")
-                    .interval(1)
+                    .timeUnit("millisecond")
+                    .interval(100)
                     .estimatedBuckets(MIN_BUCKETS)
                     .calculationMethod("AUTO_CALCULATED")
                     .timeRangeDuration(timeRange)
@@ -131,31 +147,41 @@ public class TimeGranularityCalculator {
                     .build();
         }
 
-        // 计算原始间隔：时间范围 / 目标桶数量
-        Duration rawInterval = timeRange.dividedBy(targetBuckets);
+        // 计算原始间隔：时间范围 / 目标桶数量（使用毫秒精度）
+        long timeRangeMillis = timeRange.toMillis();
+        long rawIntervalMillis = timeRangeMillis / targetBuckets;
 
         // 找到最接近的标准时间间隔
-        TimeInterval optimalInterval = findClosestStandardInterval(rawInterval);
+        TimeInterval optimalInterval = findClosestStandardIntervalByMillis(rawIntervalMillis);
 
-        // 计算实际桶数量
-        long actualBuckets = timeRange.toSeconds() / optimalInterval.duration.toSeconds();
+        // 计算实际桶数量（使用毫秒精度）
+        long actualBuckets = timeRangeMillis / optimalInterval.duration.toMillis();
 
         // 性能保护：如果桶数过多，选择更大的间隔
         if (actualBuckets > MAX_BUCKETS) {
-            optimalInterval = findIntervalForMaxBuckets(timeRange, MAX_BUCKETS);
-            actualBuckets = timeRange.toSeconds() / optimalInterval.duration.toSeconds();
+            optimalInterval = findIntervalForMaxBucketsByMillis(timeRangeMillis, MAX_BUCKETS);
+            actualBuckets = timeRangeMillis / optimalInterval.duration.toMillis();
             logger.warn("桶数量超过最大限制，调整为更大的时间间隔: {}", optimalInterval);
         }
 
         // 确保最小桶数量
         if (actualBuckets < MIN_BUCKETS) {
-            optimalInterval = findIntervalForMinBuckets(timeRange, MIN_BUCKETS);
-            actualBuckets = timeRange.toSeconds() / optimalInterval.duration.toSeconds();
+            optimalInterval = findIntervalForMinBucketsByMillis(timeRangeMillis, MIN_BUCKETS);
+            actualBuckets = timeRangeMillis / optimalInterval.duration.toMillis();
+        }
+
+        // 检查是否超过建议桶数量范围
+        if (actualBuckets > MAX_RECOMMENDED_BUCKETS) {
+            logger.info(
+                    "桶数量{}超过建议范围({}-{})，考虑选择更大的时间间隔以优化性能",
+                    actualBuckets,
+                    MIN_BUCKETS,
+                    MAX_RECOMMENDED_BUCKETS);
         }
 
         logger.debug(
-                "时间颗粒度计算: 时间范围={}分钟, 目标桶数={}, 选择间隔={}_{}, 实际桶数={}",
-                timeRange.toMinutes(),
+                "时间颗粒度计算: 时间范围={}毫秒, 目标桶数={}, 选择间隔={}_{}, 实际桶数={}",
+                timeRangeMillis,
                 targetBuckets,
                 optimalInterval.unit,
                 optimalInterval.value,
@@ -168,27 +194,17 @@ public class TimeGranularityCalculator {
                 .calculationMethod("AUTO_CALCULATED")
                 .timeRangeDuration(timeRange)
                 .targetBuckets(targetBuckets)
-                .rawIntervalSeconds(rawInterval.toSeconds())
+                .rawIntervalSeconds(rawIntervalMillis / 1000L) // 保持向后兼容
                 .build();
     }
 
-    /** 查找标准时间间隔 */
-    private TimeInterval findStandardInterval(String unit) {
-        return STANDARD_INTERVALS.stream()
-                .filter(interval -> interval.unit.equals(unit) && interval.value == 1)
-                .findFirst()
-                .orElse(null);
-    }
-
-    /** 查找最接近原始间隔的标准时间间隔 */
-    private TimeInterval findClosestStandardInterval(Duration rawInterval) {
-        long rawSeconds = rawInterval.toSeconds();
-
+    /** 基于毫秒精度查找最接近原始间隔的标准时间间隔 */
+    private TimeInterval findClosestStandardIntervalByMillis(long rawIntervalMillis) {
         TimeInterval closest = STANDARD_INTERVALS.get(0);
-        long minDifference = Math.abs(rawSeconds - closest.duration.toSeconds());
+        long minDifference = Math.abs(rawIntervalMillis - closest.duration.toMillis());
 
         for (TimeInterval interval : STANDARD_INTERVALS) {
-            long difference = Math.abs(rawSeconds - interval.duration.toSeconds());
+            long difference = Math.abs(rawIntervalMillis - interval.duration.toMillis());
             if (difference < minDifference) {
                 minDifference = difference;
                 closest = interval;
@@ -198,12 +214,12 @@ public class TimeGranularityCalculator {
         return closest;
     }
 
-    /** 查找能满足最大桶数限制的时间间隔 */
-    private TimeInterval findIntervalForMaxBuckets(Duration timeRange, int maxBuckets) {
-        long minIntervalSeconds = timeRange.toSeconds() / maxBuckets;
+    /** 基于毫秒精度查找能满足最大桶数限制的时间间隔 */
+    private TimeInterval findIntervalForMaxBucketsByMillis(long timeRangeMillis, int maxBuckets) {
+        long minIntervalMillis = timeRangeMillis / maxBuckets;
 
         for (TimeInterval interval : STANDARD_INTERVALS) {
-            if (interval.duration.toSeconds() >= minIntervalSeconds) {
+            if (interval.duration.toMillis() >= minIntervalMillis) {
                 return interval;
             }
         }
@@ -212,13 +228,13 @@ public class TimeGranularityCalculator {
         return STANDARD_INTERVALS.get(STANDARD_INTERVALS.size() - 1);
     }
 
-    /** 查找能满足最小桶数要求的时间间隔 */
-    private TimeInterval findIntervalForMinBuckets(Duration timeRange, int minBuckets) {
-        long maxIntervalSeconds = timeRange.toSeconds() / minBuckets;
+    /** 基于毫秒精度查找能满足最小桶数要求的时间间隔 */
+    private TimeInterval findIntervalForMinBucketsByMillis(long timeRangeMillis, int minBuckets) {
+        long maxIntervalMillis = timeRangeMillis / minBuckets;
 
         TimeInterval result = STANDARD_INTERVALS.get(0);
         for (TimeInterval interval : STANDARD_INTERVALS) {
-            if (interval.duration.toSeconds() <= maxIntervalSeconds) {
+            if (interval.duration.toMillis() <= maxIntervalMillis) {
                 result = interval;
             } else {
                 break;
@@ -226,6 +242,14 @@ public class TimeGranularityCalculator {
         }
 
         return result;
+    }
+
+    /** 查找标准时间间隔 */
+    private TimeInterval findStandardInterval(String unit) {
+        return STANDARD_INTERVALS.stream()
+                .filter(interval -> interval.unit.equals(unit) && interval.value == 1)
+                .findFirst()
+                .orElse(null);
     }
 
     /** 创建降级结果 */
@@ -240,8 +264,8 @@ public class TimeGranularityCalculator {
 
     /** 时间间隔定义 */
     private static class TimeInterval {
-        final String unit; // 时间单位：second, minute, hour, day
-        final int value; // 数值：如 5 (5分钟)
+        final String unit; // 时间单位：millisecond, second, minute, hour, day
+        final int value; // 数值：如 5 (5分钟)，100 (100毫秒)
         final Duration duration; // 实际时长
 
         TimeInterval(String unit, int value, Duration duration) {

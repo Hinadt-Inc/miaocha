@@ -23,16 +23,16 @@ public class LogHistogramResultDTO {
     @Schema(
             description = "时间点分组单位",
             example = "minute",
-            allowableValues = {"second", "minute", "hour", "day"})
+            allowableValues = {"millisecond", "second", "minute", "hour", "day"})
     private String timeUnit;
 
-    @Schema(description = "时间间隔数值，表示每个桶的间隔，如5分钟、2小时等", example = "5")
+    @Schema(description = "时间间隔数值，表示每个桶的间隔，如5分钟、2小时、100毫秒等", example = "5")
     private Integer timeInterval;
 
-    @Schema(description = "预估桶数量，基于时间范围和颗粒度计算的预期桶数量", example = "48")
+    @Schema(description = "预估桶数量，基于时间范围和颗粒度计算的预期桶数量，优化后目标范围45-60", example = "48")
     private Integer estimatedBuckets;
 
-    @Schema(description = "实际桶数量，实际返回的数据桶数量", example = "45")
+    @Schema(description = "实际桶数量，实际返回的数据桶数量，应该与预估桶数量接近", example = "45")
     private Integer actualBuckets;
 
     @Schema(
