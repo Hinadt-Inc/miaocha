@@ -151,7 +151,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       timeRange: timeOption?.value,
       timeGrouping: timeGroup,
       offset: 0,
-      fields: activeColumns || [],
+      fields: activeColumns?.filter((item) => item !== 'log_time') || [],
     };
     if (keywords.length === 0) {
       delete params.keywords;
