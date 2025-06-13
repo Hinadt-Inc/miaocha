@@ -186,6 +186,7 @@ const HomePage = () => {
       searchParams,
       dynamicColumns: logTableColumns,
       whereSqlsFromSider,
+      sqls,
       onSearch: onSearchFromLog,
       onChangeColumns: handleChangeColumnsByLog,
     }),
@@ -197,6 +198,7 @@ const HomePage = () => {
       logTableColumns,
       searchParams,
       whereSqlsFromSider,
+      sqls,
     ],
   );
 
