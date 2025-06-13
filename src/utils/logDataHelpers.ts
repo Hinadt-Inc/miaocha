@@ -96,20 +96,15 @@ export const getFilterDisplayText = (filter: {
 
 // 获取字段类型对应的图标颜色
 export const getFieldTypeColor = (type: string): string => {
-  switch (type) {
-    case 'TEXT':
-      return 'purple';
-    case 'keyword':
-      return 'blue';
-    case 'NUMBER':
-      return 'cyan';
-    case 'DATETIME':
-      return 'green';
-    case 'ip':
-      return 'orange';
-    default:
-      return 'default';
-  }
+  const typeMap: Record<string, string> = {
+    T: 'purple',
+    S: 'blue',
+    V: 'cyan',
+    D: 'green',
+    I: 'orange',
+  };
+  const firstChar = type.charAt(0).toUpperCase();
+  return typeMap[firstChar] || 'default';
 };
 
 // 防抖函数

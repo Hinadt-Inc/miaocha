@@ -14,11 +14,20 @@ interface IProps {
   onSearch: (params: ILogSearchParams) => void; // 搜索回调函数
   onChangeColumns?: (params: ILogColumnsResponse[]) => void; // 列变化回调函数
   setWhereSqlsFromSider: any; // 设置where条件
+  onActiveColumnsChange?: (activeColumns: string[]) => void; // 激活字段变化回调函数
 }
 
 const Sider: React.FC<IProps> = (props) => {
-  const { detailLoading, modules, moduleLoading, onChangeColumns, onSearch, searchParams, setWhereSqlsFromSider } =
-    props;
+  const {
+    detailLoading,
+    modules,
+    moduleLoading,
+    onChangeColumns,
+    onSearch,
+    searchParams,
+    setWhereSqlsFromSider,
+    onActiveColumnsChange,
+  } = props;
   const [columns, setColumns] = useState<ILogColumnsResponse[]>([]); // 日志表字段
   const [selectedModule, setSelectedModule] = useState<string>(''); // 已选模块
   const [distributions, setDistributions] = useState<Record<string, IFieldDistributions>>({}); // 字段值分布列表
@@ -111,6 +120,19 @@ const Sider: React.FC<IProps> = (props) => {
       columns[index].selected = false;
       delete columns[index]._createTime;
     }
+
+    // if (data?.columnName?.includes('.')) {
+    // 添加或者移除的时候，计算新的激活字段列表
+    const newActiveColumns = columns
+      .filter((item) => item.selected)
+      .map((item) => item.columnName)
+      .filter(Boolean) as string[];
+    // 通知父组件激活字段变化;
+    if (onActiveColumnsChange) {
+      onActiveColumnsChange(newActiveColumns);
+    }
+    // }
+
     // 排序
     const sortedColumns = columns.sort((a, b) => (a._createTime || 0) - (b._createTime || 0));
     const updatedColumns = [...sortedColumns];
@@ -125,6 +147,11 @@ const Sider: React.FC<IProps> = (props) => {
   // 获取字段值分布
   const getDistribution = (columnName: string, newActiveColumns: string[], sql: string) => {
     if (!newActiveColumns.includes(columnName)) return;
+    // 通知父组件激活字段变化
+    // if (onActiveColumnsChange) {
+    //   onActiveColumnsChange(newActiveColumns);
+    // }
+
     const params: ILogSearchParams = {
       ...searchParams,
       fields: newActiveColumns,

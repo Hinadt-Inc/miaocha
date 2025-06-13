@@ -78,7 +78,9 @@ const FieldListItem: React.FC<IProps> = ({ isSelected, column, columnIndex, fiel
           key: `${column.columnName}`,
           label: (
             <div className={styles.bar}>
-              <Tag color={getFieldTypeColor(column.dataType)}>{column.dataType?.substr(0, 1)?.toUpperCase()}</Tag>
+              <Tooltip placement="topLeft" title={column.dataType} arrow={false}>
+                <Tag color={getFieldTypeColor(column.dataType)}>{column.dataType?.substr(0, 1)?.toUpperCase()}</Tag>
+              </Tooltip>
               <span className={styles.columnName}>{column.columnName}</span>
               {!(isSelected && column.columnName === 'log_time') && (
                 <Button
