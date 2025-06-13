@@ -29,7 +29,9 @@ export const highlightText = (text: string, keywords: string[]) => {
     if (/^[\u4e00-\u9fa5]$/.test(kwStr)) {
       str = str.replace(new RegExp(kwStr, 'g'), `<mark>${kwStr}</mark>`);
     } else {
-      str = str.replace(new RegExp(kwStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), `<mark>${kwStr}</mark>`);
+      // 英文匹配，不区分大小写，但保持原始字符串格式
+      const escapedKeyword = kwStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      str = str.replace(new RegExp(`(${escapedKeyword})`, 'gi'), '<mark>$1</mark>');
     }
   });
   return <span dangerouslySetInnerHTML={{ __html: str }} title={text} />;

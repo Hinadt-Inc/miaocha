@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, Suspense, lazy, forwardRef, useImperativeHandle, useRef } from 'react';
-import { AutoComplete, Button, Space, Tag, Popover, Statistic } from 'antd';
+import { AutoComplete, Button, Space, Tag, Popover, Statistic, Tooltip } from 'antd';
 import CountUp from 'react-countup';
 import SpinIndicator from '@/components/SpinIndicator';
 import styles from './SearchBar.module.less';
@@ -124,9 +124,17 @@ const SearchBar = forwardRef((props: IProps, ref) => {
             </Tag>
           ))}
           {sqls.map((item: string) => (
-            <Tag key={item} color="success" closable onClick={() => setSql(item)} onClose={() => handleCloseSql(item)}>
-              {item}
-            </Tag>
+            <Tooltip placement="topLeft" title={item}>
+              <Tag
+                key={item}
+                color="success"
+                closable
+                onClick={() => setSql(item)}
+                onClose={() => handleCloseSql(item)}
+              >
+                {item}
+              </Tag>
+            </Tooltip>
           ))}
 
           {/* 时间范围 */}
@@ -142,6 +150,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
 
   // 当keywords或sqls或时间变化时触发搜索
   useEffect(() => {
+    const _fields = activeColumns?.length === 1 && activeColumns[0] === 'log_time' ? [] : activeColumns || [];
     const params = {
       ...searchParams,
       ...(keywords.length > 0 && { keywords }),
@@ -151,7 +160,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       timeRange: timeOption?.value,
       timeGrouping: timeGroup,
       offset: 0,
-      fields: activeColumns?.filter((item) => item !== 'log_time') || [],
+      fields: _fields,
     };
     if (keywords.length === 0) {
       delete params.keywords;
