@@ -272,14 +272,6 @@ const DataSourceManagementPage = () => {
       width: '12%',
       ellipsis: true,
       hideInSearch: true,
-      render: (text) => {
-        if (!text) return '-';
-        try {
-          return typeof text === 'string' ? text : JSON.stringify(text);
-        } catch {
-          return '-';
-        }
-      },
     },
     {
       title: '创建时间',
