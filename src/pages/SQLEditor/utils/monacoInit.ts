@@ -69,27 +69,19 @@ const initMonacoEditor = async (): Promise<void> => {
   const config = {
     monaco,
     paths: {
-      vs: './public/monaco-editor/min/vs',
-      'vs/loader.js': './public/monaco-editor/min/vs/loader.js',
+      vs: '/monaco-editor/min/vs',
     },
     'vs/nls': {
       availableLanguages: {
         '*': 'zh-cn',
       },
     },
-    'vs/loader': {
-      usePlainModuleNames: true,
-      ignoreDuplicateModules: ['vs/editor/editor.main'],
-    },
-    // 禁用CDN加载
     useCDN: false,
-    // 禁用默认worker加载
     disableWorker: false,
-    // 自定义worker路径
     workerPath: '/monaco-workers',
   };
   // 精确类型声明
-  loader.config(config as Parameters<typeof loader.config>[0]);
+  loader.config(config);
 
   // 设置超时来处理加载时间过长的情况
   const timeoutPromise = new Promise((_, reject) =>
