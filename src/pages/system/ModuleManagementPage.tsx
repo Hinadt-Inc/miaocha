@@ -220,10 +220,11 @@ const ModuleManagementPage = () => {
   const handleExecuteDorisSql = async (record: ModuleData) => {
     modal.confirm({
       title: '执行Doris SQL',
+      width: 600,
       content: (
         <Input.TextArea
           placeholder={`输入要执行的Doris SQL，例如: CREATE TABLE IF NOT EXISTS ${record.tableName} (...)`}
-          rows={4}
+          rows={6}
         />
       ),
       okText: '执行',
