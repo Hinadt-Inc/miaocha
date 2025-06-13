@@ -303,10 +303,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
           value={sql}
           onChange={changeSql}
           options={[
-            ...sqlHistory.map((item: string) => ({
-              value: item,
-              label: item,
-            })),
             ...filteredColumns.map((item: ILogColumnsResponse) => ({
               value: (() => {
                 // 智能替换/拼接逻辑
@@ -337,6 +333,11 @@ const SearchBar = forwardRef((props: IProps, ref) => {
                 </>
               ),
             })),
+            // 查询历史，暂时去掉
+            // ...sqlHistory.map((item: string) => ({
+            //   value: item,
+            //   label: item,
+            // })),
           ]}
         />
       </Space.Compact>
