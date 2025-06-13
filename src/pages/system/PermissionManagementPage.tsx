@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Space, Input, Select, Breadcrumb, Modal, App, Avatar, Tag, Tooltip } from 'antd';
+import { Table, Button, Space, Input, Select, Breadcrumb, Modal, App, Tag, Tooltip } from 'antd';
 import { getUsers } from '../../api/user';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -363,15 +363,7 @@ const PermissionManagementPage = () => {
         <Space size={4} wrap>
           {record.users.map((user) => (
             <Tooltip key={user.userId} title={`${user.nickname} (${user.email}) - ${user.role}`}>
-              <Tag
-                className={styles.tagHover}
-                color={getTagColor(user.role)}
-                icon={
-                  <Avatar size={16} style={{ marginRight: 4 }}>
-                    {user.nickname.charAt(0)}
-                  </Avatar>
-                }
-              >
+              <Tag className={styles.tagHover} color={getTagColor(user.role)}>
                 {user.nickname}
               </Tag>
             </Tooltip>
@@ -415,7 +407,7 @@ const PermissionManagementPage = () => {
         </Breadcrumb>
         <Space>
           <Input
-            placeholder="搜索数据源ID/名称/模块名"
+            placeholder="搜索模块或数据源"
             value={searchParams.userId || searchParams.datasourceId}
             onChange={(e) => {
               const value = e.target.value;

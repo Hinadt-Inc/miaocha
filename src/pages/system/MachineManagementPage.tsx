@@ -171,7 +171,7 @@ const MachineManagementPage = () => {
                   </Link>
                 ),
               },
-              { title: '机器管理' },
+              { title: '服务器管理' },
             ]}
           />
           <div className={styles.actions}>
