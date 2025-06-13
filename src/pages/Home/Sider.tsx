@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Collapse, Select, Spin, Input, Space } from 'antd';
+import { StarOutlined, StarFilled } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
 import * as api from '@/api/logs';
 import styles from './Sider.module.less';
@@ -33,6 +34,8 @@ const Sider: React.FC<IProps> = (props) => {
   const [distributions, setDistributions] = useState<Record<string, IFieldDistributions>>({}); // 字段值分布列表
   const [activeColumns, setActiveColumns] = useState<string[]>([]); // 激活的字段
   const [searchText, setSearchText] = useState<string>(''); // 字段搜索文本
+  const [favoriteModule, setFavoriteModule] = useState<string>(''); // 收藏的模块
+
   // 获取日志字段
   const getColumns = useRequest(api.fetchColumns, {
     manual: true,
@@ -73,6 +76,40 @@ const Sider: React.FC<IProps> = (props) => {
     },
   });
 
+  // 获取收藏的模块
+  const getFavoriteModule = () => {
+    return localStorage.getItem('favoriteModule') || '';
+  };
+
+  // 设置收藏的模块
+  const setFavoriteModuleStorage = (module: string) => {
+    if (module) {
+      localStorage.setItem('favoriteModule', module);
+    } else {
+      localStorage.removeItem('favoriteModule');
+    }
+    setFavoriteModule(module);
+  };
+
+  // 切换收藏状态
+  const toggleFavorite = (module: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // 防止触发Select的选择
+    const currentFavorite = getFavoriteModule();
+    if (currentFavorite === module) {
+      // 取消收藏
+      setFavoriteModuleStorage('');
+    } else {
+      // 设置收藏
+      setFavoriteModuleStorage(module);
+    }
+  };
+
+  // 初始化收藏状态
+  useEffect(() => {
+    const favorite = getFavoriteModule();
+    setFavoriteModule(favorite);
+  }, []);
+
   // 选择模块时触发，避免重复请求和状态更新
   const changeModules = (value: string) => {
     if (!value) {
@@ -94,15 +131,27 @@ const Sider: React.FC<IProps> = (props) => {
   // 当 modules 加载完成后，自动选择第一个数据源和第一个模块
   useEffect(() => {
     if (modules?.length > 0 && selectedModule?.length === 0) {
-      const first = modules[0];
-      if (first) {
-        const datasourceId = String(first.datasourceId);
-        const module = String(first.module);
+      const favorite = getFavoriteModule();
+      let targetModule = null;
+
+      // 优先选择收藏的模块
+      if (favorite) {
+        targetModule = modules.find((item) => item.module === favorite);
+      }
+
+      // 如果没有收藏或收藏的模块不存在，选择第一个
+      if (!targetModule) {
+        targetModule = modules[0];
+      }
+
+      if (targetModule) {
+        const datasourceId = String(targetModule.datasourceId);
+        const module = String(targetModule.module);
         setSelectedModule(module);
         getColumns.run({ datasourceId: Number(datasourceId), module });
       }
     }
-  }, [modules]);
+  }, [modules, favoriteModule]);
 
   // 切换字段选中状态
   const toggleColumn = (data: ILogColumnsResponse) => {
@@ -203,11 +252,30 @@ const Sider: React.FC<IProps> = (props) => {
         variant="filled"
         placeholder="请选择模块"
         style={{ width: '100%' }}
-        options={modules}
         value={selectedModule}
         onChange={changeModules}
         loading={moduleLoading}
         disabled={moduleLoading || detailLoading}
+        optionLabelProp="title"
+        options={modules?.map((item) => ({
+          ...item,
+          title: item.label,
+          label: (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>{item.label}</span>
+              <span
+                onClick={(e) => toggleFavorite(item.module, e)}
+                style={{
+                  cursor: 'pointer',
+                  color: favoriteModule === item.module ? '#0038ff' : '#d9d9d9',
+                  fontSize: '12px',
+                }}
+              >
+                {favoriteModule === item.module ? <StarFilled /> : <StarOutlined />}
+              </span>
+            </div>
+          ),
+        }))}
       />
 
       <Spin spinning={getColumns.loading || queryDistribution.loading} size="small">
