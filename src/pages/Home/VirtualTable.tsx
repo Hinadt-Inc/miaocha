@@ -244,7 +244,7 @@ const VirtualTable = (props: IProps) => {
     ];
   }, [dynamicColumns, searchParams.keywords, columnWidths, whereSqlsFromSider]);
 
-  console.log('columnWidths', columnWidths);
+  // console.log('columnWidths', columnWidths);
 
   useEffect(() => {
     const resizableColumns = getBaseColumns.map((col, index) => {
