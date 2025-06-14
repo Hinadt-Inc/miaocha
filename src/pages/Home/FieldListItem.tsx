@@ -59,6 +59,15 @@ const FieldListItem: React.FC<IProps> = ({ isSelected, column, columnIndex, fiel
     return null;
   }
 
+  // 数组count求和
+  const sumArrayCount = (_valueDistributions: IValueDistributions[]): number => {
+    const _counts = _valueDistributions.map((item) => item.count);
+    return _counts.reduce((sum: number, item: string | number): number => {
+      const num = typeof item === 'string' ? parseFloat(item) : item;
+      return sum + (isNaN(num) ? 0 : num);
+    }, 0);
+  };
+
   // 点击查询
   const query = (flag: '=' | '!=', parent: ILogColumnsResponse, son: IValueDistributions) => {
     const { columnName = '' } = parent;
@@ -112,7 +121,7 @@ const FieldListItem: React.FC<IProps> = ({ isSelected, column, columnIndex, fiel
                     {hasData && (
                       <div className={styles.header}>
                         <b>TOP5 </b>
-                        {dist?.nonNullCount || 0} / {dist?.totalCount || 0} 记录
+                        {sumArrayCount(dist?.valueDistributions) || 0} / {dist?.sampleSize || 0} 记录
                       </div>
                     )}
                     <div className={styles.ul}>

@@ -63,11 +63,11 @@ const Sider: React.FC<IProps> = (props) => {
   const queryDistribution = useRequest(api.fetchDistributions, {
     manual: true,
     onSuccess: (res) => {
-      const { fieldDistributions = [] } = res;
+      const { fieldDistributions = [], sampleSize } = res;
       const target: any = {};
       fieldDistributions.forEach((item) => {
         const { fieldName } = item;
-        target[fieldName] = item;
+        target[fieldName] = { ...item, sampleSize };
       });
       setDistributions(target);
     },

@@ -147,6 +147,7 @@ declare global {
     fieldDistributions: Array<{
       /** 字段名称 */
       fieldName: string;
+
       /** 字段值分布列表，按数量降序排序 */
       valueDistributions: Array<{
         /** 字段值 */
@@ -165,6 +166,7 @@ declare global {
       /** 该字段的唯一值数 */
       uniqueCount: number;
     }>;
+    sampleSize: number; // 样本大小
     /** 查询是否成功 */
     success: boolean;
     /** 错误信息 */
