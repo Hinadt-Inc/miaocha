@@ -74,10 +74,15 @@
           line-height: 18px;
           padding: 0 6px;
           cursor: pointer;
-          max-width: 300px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
+          display: flex;
+          align-items: center;
+        .tagContent {
+            max-width: 300px;
+            display: inline-block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
         }
         .ant-tag-close-icon {
           margin-left: 4px;

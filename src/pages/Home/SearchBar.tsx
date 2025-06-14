@@ -122,7 +122,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
               onClick={() => setKeyword(item)}
               onClose={() => handleCloseKeyword(item)}
             >
-              {item}
+              <span className="tagContent">{item}</span>
             </Tag>
           ))}
           {sqls.map((item: string) => (
@@ -134,7 +134,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
                 onClick={() => setSql(item)}
                 onClose={() => handleCloseSql(item)}
               >
-                {item}
+                <span className="tagContent">{item}</span>
               </Tag>
             </Tooltip>
           ))}

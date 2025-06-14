@@ -204,7 +204,14 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
 
   // 获取字段值分布
   const getDistribution = (columnName: string, newActiveColumns: string[], sql: string) => {
-    if (!newActiveColumns.includes(columnName)) return;
+    // 折叠的时候重新赋值
+    if (!newActiveColumns.includes(columnName)) {
+      _setSearchParams({
+        ..._searchParams,
+        fields: newActiveColumns,
+      });
+      return;
+    }
     const params: ILogSearchParams = {
       ...searchParams,
       fields: newActiveColumns,
