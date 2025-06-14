@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Splitter } from 'antd';
 import { useRequest } from 'ahooks';
 import * as api from '@/api/logs';
@@ -17,6 +17,7 @@ const HomePage = () => {
   const [sqls, setSqls] = useState<string[]>([]); // SQL语句列表
   const [activeColumns, setActiveColumns] = useState<string[]>([]); // 激活的字段列表
   const searchBarRef = useRef<any>(null);
+  const siderRef = useRef<any>(null);
 
   // 默认的搜索参数
   const defaultSearchParams: ILogSearchParams = {
@@ -148,6 +149,11 @@ const HomePage = () => {
     onActiveColumnsChange: setActiveColumns,
   };
 
+  // 使用useCallback稳定getDistributionWithSearchBar函数引用
+  const getDistributionWithSearchBar = useCallback(() => {
+    siderRef.current?.getDistributionWithSearchBar?.();
+  }, []);
+
   const onSearchFromLog = (params: ILogSearchParams) => {
     // 绝对时间
     //   {
@@ -213,6 +219,7 @@ const HomePage = () => {
       columns: logTableColumns,
       onSqlsChange: setSqls,
       activeColumns,
+      getDistributionWithSearchBar,
     }),
     [
       searchParams,
@@ -223,6 +230,7 @@ const HomePage = () => {
       setWhereSqlsFromSider,
       logTableColumns,
       activeColumns,
+      getDistributionWithSearchBar,
     ],
   );
 
@@ -232,7 +240,7 @@ const HomePage = () => {
 
       <Splitter className={styles.container}>
         <Splitter.Panel collapsible defaultSize={200} min={0} max="40%">
-          <Sider {...siderProps} />
+          <Sider ref={siderRef} {...siderProps} />
         </Splitter.Panel>
         <Splitter.Panel collapsible>
           <div className={styles.right}>

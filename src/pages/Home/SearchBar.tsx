@@ -16,6 +16,7 @@ interface IProps {
   columns?: ILogColumnsResponse[]; // 字段列表数据
   onSqlsChange?: (sqls: string[]) => void; // SQL列表变化回调函数
   activeColumns?: string[]; // 激活的字段列表
+  getDistributionWithSearchBar?: () => void; // 获取字段分布回调函数
 }
 
 const SearchBar = forwardRef((props: IProps, ref) => {
@@ -29,6 +30,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     columns,
     onSqlsChange,
     activeColumns,
+    getDistributionWithSearchBar,
   } = props;
 
   const [timeGroup, setTimeGroup] = useState<string>('auto'); // 时间分组
@@ -173,6 +175,11 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     // 通知父组件sqls数据变化
     if (onSqlsChange) {
       onSqlsChange(sqls);
+    }
+
+    // 调用Sider组件的getDistributionWithSearchBar方法
+    if (getDistributionWithSearchBar) {
+      getDistributionWithSearchBar();
     }
   }, [keywords, sqls, timeOption, timeGroup, activeColumns, onSqlsChange]);
 
