@@ -40,6 +40,7 @@ declare global {
   }
 
   interface IFieldDistributions {
+    sampleSize: any; // 样本大小
     fieldName: string; // 字段名称
     nonNullCount: number; // 非空记录数
     nullCount: number; // 空记录数
