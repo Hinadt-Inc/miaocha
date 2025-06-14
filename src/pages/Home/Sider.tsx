@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { Collapse, Select, Spin, Input, Space } from 'antd';
 import { StarOutlined, StarFilled } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
@@ -18,7 +18,7 @@ interface IProps {
   onActiveColumnsChange?: (activeColumns: string[]) => void; // 激活字段变化回调函数
 }
 
-const Sider: React.FC<IProps> = (props) => {
+const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((props, ref) => {
   const {
     detailLoading,
     modules,
@@ -35,6 +35,7 @@ const Sider: React.FC<IProps> = (props) => {
   const [activeColumns, setActiveColumns] = useState<string[]>([]); // 激活的字段
   const [searchText, setSearchText] = useState<string>(''); // 字段搜索文本
   const [favoriteModule, setFavoriteModule] = useState<string>(''); // 收藏的模块
+  const [_searchParams, _setSearchParams] = useState<ILogSearchParams>(searchParams); // 临时查询参数，供searchBar查询调用
 
   // 获取日志字段
   const getColumns = useRequest(api.fetchColumns, {
@@ -194,13 +195,16 @@ const Sider: React.FC<IProps> = (props) => {
   };
 
   // 获取字段值分布
+  const getDistributionWithSearchBar = () => {
+    // 有字段的时候调用
+    if (_searchParams?.fields?.length) {
+      queryDistribution.run(_searchParams);
+    }
+  };
+
+  // 获取字段值分布
   const getDistribution = (columnName: string, newActiveColumns: string[], sql: string) => {
     if (!newActiveColumns.includes(columnName)) return;
-    // 通知父组件激活字段变化
-    // if (onActiveColumnsChange) {
-    //   onActiveColumnsChange(newActiveColumns);
-    // }
-
     const params: ILogSearchParams = {
       ...searchParams,
       fields: newActiveColumns,
@@ -209,6 +213,7 @@ const Sider: React.FC<IProps> = (props) => {
     if (sql) {
       params.whereSqls = [...(searchParams?.whereSqls || []), sql];
     }
+    _setSearchParams(params);
     queryDistribution.run(params);
   };
 
@@ -243,6 +248,10 @@ const Sider: React.FC<IProps> = (props) => {
         return a.columnName.localeCompare(b.columnName);
       });
   }, [columns, searchText]);
+
+  useImperativeHandle(ref, () => ({
+    getDistributionWithSearchBar,
+  }));
 
   return (
     <div className={styles.layoutSider}>
@@ -330,5 +339,6 @@ const Sider: React.FC<IProps> = (props) => {
       </Spin>
     </div>
   );
-};
+});
+
 export default Sider;
