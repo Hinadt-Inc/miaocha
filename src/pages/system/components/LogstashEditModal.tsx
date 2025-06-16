@@ -1,5 +1,5 @@
 import { Form, Input, Modal, Select, Spin, Button, Space, Tooltip } from 'antd';
-import { FileTextOutlined as IconTemplate } from '@ant-design/icons';
+import { FileTextOutlined as IconTemplate, CopyOutlined } from '@ant-design/icons';
 import {
   LOGSTASH_CONFIG_TEMPLATE,
   JVM_CONFIG_TEMPLATE,
@@ -76,6 +76,21 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
   };
 
   const applyTemplate = (type: 'config' | 'jvm' | 'base') => {
+    if (initialValues) {
+      // 如果是编辑模式，则为复制功能
+      switch (type) {
+        case 'config':
+          navigator.clipboard.writeText(form.getFieldValue('configContent'));
+          break;
+        case 'jvm':
+          navigator.clipboard.writeText(form.getFieldValue('jvmOptions'));
+          break;
+        case 'base':
+          navigator.clipboard.writeText(form.getFieldValue('logstashYml'));
+          break;
+      }
+      return;
+    }
     switch (type) {
       case 'config':
         form.setFieldsValue({ configContent: LOGSTASH_CONFIG_TEMPLATE });
@@ -136,12 +151,11 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
             label={
               <Space>
                 <span>配置内容</span>
-                <Tooltip title="应用标准配置模板">
+                <Tooltip title={initialValues ? '复制' : '应用标准配置模板'}>
                   <Button
                     size="small"
                     onClick={() => applyTemplate('config')}
-                    disabled={!!initialValues}
-                    icon={<IconTemplate />}
+                    icon={initialValues ? <CopyOutlined /> : <IconTemplate />}
                   />
                 </Tooltip>
               </Space>
@@ -166,8 +180,7 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
                   <Button
                     size="small"
                     onClick={() => applyTemplate('jvm')}
-                    disabled={!!initialValues}
-                    icon={<IconTemplate />}
+                    icon={initialValues ? <CopyOutlined /> : <IconTemplate />}
                   />
                 </Tooltip>
               </Space>
@@ -191,8 +204,7 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
                   <Button
                     size="small"
                     onClick={() => applyTemplate('base')}
-                    disabled={!!initialValues}
-                    icon={<IconTemplate />}
+                    icon={initialValues ? <CopyOutlined /> : <IconTemplate />}
                   />
                 </Tooltip>
               </Space>

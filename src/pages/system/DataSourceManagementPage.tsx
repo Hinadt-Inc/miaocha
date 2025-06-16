@@ -489,25 +489,21 @@ const DataSourceManagementPage = () => {
           placeholder="请输入数据库名称"
           rules={[{ required: true, message: '请输入数据库名称' }]}
         />
-        {!currentDataSource && (
-          <>
-            <ProFormText
-              colProps={{ span: 12 }}
-              name="username"
-              label="用户名"
-              placeholder="请输入用户名"
-              rules={[{ required: true, message: '请输入用户名' }]}
-            />
-            <ProFormText.Password
-              colProps={{ span: 12 }}
-              name="password"
-              label="密码"
-              placeholder="请输入密码"
-              rules={[{ required: true, message: '请输入密码' }]}
-              tooltip={currentDataSource ? '不修改密码请留空' : ''}
-            />
-          </>
-        )}
+        <ProFormText
+          colProps={{ span: 12 }}
+          name="username"
+          label="用户名"
+          placeholder="请输入用户名"
+          rules={[{ required: true, message: '请输入用户名' }]}
+        />
+        <ProFormText.Password
+          colProps={{ span: 12 }}
+          name="password"
+          label="密码"
+          placeholder="请输入密码"
+          rules={[{ required: true, message: '请输入密码' }]}
+          tooltip={currentDataSource ? '不修改密码请留空' : ''}
+        />
 
         <ProFormTextArea
           colProps={{ span: 24 }}

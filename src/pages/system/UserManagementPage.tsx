@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 
 import { getUsers, createUser, updateUser, deleteUser, changeUserPassword, type User } from '../../api/user';
+import { getModules, authorizeModule, revokeModule, batchAuthorizeModules } from '../../api/modules';
+import ModulePermissionModal from './components/ModulePermissionModal';
 import {
   Button,
   Input,
@@ -32,6 +34,10 @@ interface UserData extends User {
   name: string;
   role: string;
   createTime: string;
+  modules?: Array<{
+    moduleId: string;
+    moduleName: string;
+  }>;
 }
 
 // 转换API数据到表格数据
@@ -62,6 +68,13 @@ const roleOptions = [
 
 const UserManagementPage = () => {
   const [data, setData] = useState<UserData[]>([]);
+  const [moduleList, setModuleList] = useState<Array<{ value: string; label: string }>>([]);
+  const [isModuleModalVisible, setIsModuleModalVisible] = useState(false);
+  const [selectedModule, setSelectedModule] = useState('');
+  const [selectedUserForModule, setSelectedUserForModule] = useState<UserData | null>(null);
+  const [isRevokeModuleOperation, setIsRevokeModuleOperation] = useState(false);
+  const [moduleDrawerVisible, setModuleDrawerVisible] = useState(false);
+  const [selectedUserForDrawer, setSelectedUserForDrawer] = useState<UserData | null>(null);
   const searchTimeoutRef = useRef<number | null>(null);
   const originalDataRef = useRef<UserData[]>([]);
   const [messageApi, contextHolder] = message.useMessage();
@@ -75,7 +88,7 @@ const UserManagementPage = () => {
     };
   }, []);
 
-  // 加载用户数据
+  // 加载用户数据和模块列表
   useEffect(() => {
     const abortController = new AbortController();
     fetchUsers({ signal: abortController.signal }).catch((error: { name: string }) => {
@@ -83,6 +96,7 @@ const UserManagementPage = () => {
         messageApi.error('加载用户数据失败');
       }
     });
+    fetchModules();
     return () => abortController.abort();
   }, []);
 
@@ -104,6 +118,20 @@ const UserManagementPage = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchModules = async () => {
+    try {
+      const modules = await getModules();
+      setModuleList(
+        modules.map((module) => ({
+          value: module.id.toString(),
+          label: module.name,
+        })),
+      );
+    } catch (error) {
+      messageApi.error('加载模块列表失败');
     }
   };
   const [loading, setLoading] = useState(false);
@@ -241,7 +269,22 @@ const UserManagementPage = () => {
     try {
       const values = await passwordForm.validateFields();
       if (selectedRecord) {
-        console.log('修改密码:', selectedRecord.key, values.newPassword);
+        // 确保两次密码输入一致
+        if (values.newPassword !== values.confirmPassword) {
+          messageApi.error('两次输入的密码不一致');
+          return;
+        }
+
+        // 检查密码复杂度
+        if (values.newPassword.length < 6 || values.newPassword.length > 20) {
+          messageApi.error('密码长度需在6~20个字符之间');
+          return;
+        }
+        if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(values.newPassword)) {
+          messageApi.error('密码必须包含字母和数字');
+          return;
+        }
+
         await changeUserPassword(selectedRecord.key, values.newPassword);
         messageApi.success('密码修改成功');
         setIsPasswordModalVisible(false);
@@ -253,6 +296,58 @@ const UserManagementPage = () => {
   };
 
   // 处理表单提交
+  const handleModuleGrant = async () => {
+    try {
+      if (!selectedUserForModule || !selectedModule) {
+        messageApi.error('请选择用户和模块');
+        return;
+      }
+
+      await authorizeModule(selectedUserForModule.key, selectedModule);
+      messageApi.success('授权成功');
+      setIsModuleModalVisible(false);
+      setSelectedModule('');
+      setSelectedUserForModule(null);
+      fetchUsers();
+    } catch (error) {
+      messageApi.error('授权失败');
+    }
+  };
+
+  const handleModuleRevoke = async () => {
+    try {
+      if (!selectedUserForModule || !selectedModule) {
+        messageApi.error('请选择用户和模块');
+        return;
+      }
+
+      await revokeModule(selectedUserForModule.key, selectedModule);
+      messageApi.success('撤销成功');
+      setIsModuleModalVisible(false);
+      setSelectedModule('');
+      setSelectedUserForModule(null);
+      fetchUsers();
+    } catch (error) {
+      messageApi.error('撤销失败');
+    }
+  };
+
+  const handleOpenModuleDrawer = (record: UserData) => {
+    setSelectedUserForDrawer(record);
+    setModuleDrawerVisible(true);
+  };
+
+  const handleSaveModules = async (userId: string, modules: Array<{ moduleId: string; expireTime?: string }>) => {
+    try {
+      const moduleNames = modules.map((m) => m.moduleId);
+      await batchAuthorizeModules(userId, moduleNames);
+      messageApi.success('模块权限更新成功');
+      fetchUsers();
+    } catch (error) {
+      messageApi.error('模块权限更新失败');
+    }
+  };
+
   const handleSubmit = async () => {
     try {
       const values = (await form.validateFields()) as {
@@ -372,6 +467,23 @@ const UserManagementPage = () => {
       render: (updateTime: string) => (updateTime ? dayjs(updateTime).format('YYYY-MM-DD HH:mm:ss') : '-'),
     },
     {
+      title: '已授权模块',
+      dataIndex: 'modules',
+      key: 'modules',
+      width: 180,
+      render: (modules: Array<{ moduleId: string; moduleName: string }>) =>
+        modules?.length > 0 ? (
+          <Space size={[0, 8]} wrap>
+            {modules.slice(0, 3).map((module) => (
+              <Tag key={module.moduleId}>{module.moduleName}</Tag>
+            ))}
+            {modules.length > 3 && <Tag>+{modules.length - 3}个</Tag>}
+          </Space>
+        ) : (
+          <Tag color="default">无</Tag>
+        ),
+    },
+    {
       title: '操作',
       key: 'action',
       fixed: 'right',
@@ -380,6 +492,9 @@ const UserManagementPage = () => {
         <Space size={0}>
           <Button type="link" onClick={() => handleAddEdit(record)} style={{ padding: '0 8px' }}>
             编辑
+          </Button>
+          <Button type="link" onClick={() => handleOpenModuleDrawer(record)} style={{ padding: '0 8px' }}>
+            模块权限
           </Button>
           {!['SUPER_ADMIN'].includes(record.role) && (
             <>
@@ -535,11 +650,85 @@ const UserManagementPage = () => {
         maskClosable={false}
       >
         <Form form={passwordForm} layout="vertical">
-          <Form.Item name="newPassword" label="新密码" rules={[{ required: true, message: '请输入新密码' }]}>
+          <Form.Item label="用户名">
+            <Input value={selectedRecord?.nickname || selectedRecord?.username} readOnly disabled />
+          </Form.Item>
+          <Form.Item
+            name="newPassword"
+            label="新密码"
+            rules={[
+              { required: true, message: '请输入新密码' },
+              {
+                min: 6,
+                max: 20,
+                message: '密码长度需在6~20个字符之间',
+              },
+              {
+                pattern: /^(?=.*[a-zA-Z])(?=.*\d).+$/,
+                message: '密码必须包含字母和数字',
+              },
+            ]}
+          >
             <Input.Password placeholder="请输入新密码" />
+          </Form.Item>
+          <Form.Item
+            name="confirmPassword"
+            label="确认新密码"
+            dependencies={['newPassword']}
+            rules={[
+              { required: true, message: '请再次输入新密码' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('newPassword') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error('两次输入的密码不一致'));
+                },
+              }),
+            ]}
+          >
+            <Input.Password placeholder="请再次输入新密码" />
           </Form.Item>
         </Form>
       </Modal>
+
+      <Modal
+        title={isRevokeModuleOperation ? '撤销模块授权' : '模块授权'}
+        open={isModuleModalVisible}
+        onCancel={() => setIsModuleModalVisible(false)}
+        onOk={isRevokeModuleOperation ? handleModuleRevoke : handleModuleGrant}
+        okText={isRevokeModuleOperation ? '撤销' : '授权'}
+        cancelText="取消"
+        width={400}
+      >
+        <Form layout="vertical">
+          <Form.Item label="用户">
+            <Input value={selectedUserForModule?.nickname || ''} readOnly />
+          </Form.Item>
+          <Form.Item
+            label={isRevokeModuleOperation ? '选择要撤销的模块' : '选择要授权的模块'}
+            rules={[{ required: true, message: '请选择模块' }]}
+          >
+            <Select
+              placeholder="请选择模块"
+              value={selectedModule}
+              onChange={(value) => setSelectedModule(value)}
+              options={moduleList}
+              showSearch
+              optionFilterProp="label"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <ModulePermissionModal
+        open={moduleDrawerVisible}
+        onClose={() => setModuleDrawerVisible(false)}
+        userId={selectedUserForDrawer?.key || ''}
+        modules={selectedUserForDrawer?.modules || []}
+        allModules={moduleList}
+        onSave={handleSaveModules}
+      />
     </div>
   );
 };

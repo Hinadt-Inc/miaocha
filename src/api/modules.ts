@@ -110,3 +110,17 @@ export const batchRevokeModules = async (userId: string, moduleNames: string[]) 
     data: { userId, modules: moduleNames },
   });
 };
+
+export const batchAuthorizeModulesWithExpiry = async (
+  userId: string,
+  modules: Array<{
+    moduleId: string;
+    expireTime?: string;
+  }>,
+) => {
+  return request({
+    url: `/api/permissions/modules/user/${userId}/batch-grant-with-expiry`,
+    method: 'POST',
+    data: { userId, modules },
+  });
+};
