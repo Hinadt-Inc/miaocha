@@ -5,7 +5,7 @@ import * as api from '@/api/logs';
 import SearchBar from './SearchBar';
 import Log from './Log';
 import Sider from './Sider';
-import { QUICK_RANGES, DATE_FORMAT } from './utils';
+import { QUICK_RANGES, DATE_FORMAT_THOUSOND } from './utils';
 import styles from './index.module.less';
 
 const HomePage = () => {
@@ -25,8 +25,8 @@ const HomePage = () => {
     pageSize: 20,
     datasourceId: null,
     module: null,
-    startTime: QUICK_RANGES.last_15m.from().format(DATE_FORMAT),
-    endTime: QUICK_RANGES.last_15m.to().format(DATE_FORMAT),
+    startTime: QUICK_RANGES.last_15m.from().format(DATE_FORMAT_THOUSOND),
+    endTime: QUICK_RANGES.last_15m.to().format(DATE_FORMAT_THOUSOND),
     timeRange: 'last_15m',
     timeGrouping: 'auto',
   };

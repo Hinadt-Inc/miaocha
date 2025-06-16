@@ -4,7 +4,7 @@ import { EChartsOption } from 'echarts';
 import { Empty } from 'antd';
 import dayjs from 'dayjs';
 import { colorPrimary, isOverOneDay } from '@/utils/utils';
-import { DATE_FORMAT } from './utils';
+import { DATE_FORMAT_THOUSOND } from './utils';
 
 interface IProps {
   data: ILogHistogramData; // 直方图数据
@@ -227,10 +227,10 @@ const HistogramChart = (props: IProps) => {
       const { name } = params;
       const newParams = {
         ...searchParams,
-        startTime: dayjs(name).format(DATE_FORMAT),
+        startTime: dayjs(name).format(DATE_FORMAT_THOUSOND),
         endTime: dayjs(name)
           .add(timeInterval, timeUnit as any)
-          .format(DATE_FORMAT),
+          .format(DATE_FORMAT_THOUSOND),
         offset: 0,
       };
       delete newParams.timeRange;
@@ -251,10 +251,10 @@ const HistogramChart = (props: IProps) => {
 
             const newParams = {
               ...searchParams,
-              startTime: dayjs(startTime).format(DATE_FORMAT),
+              startTime: dayjs(startTime).format(DATE_FORMAT_THOUSOND),
               endTime: dayjs(endTime)
                 .add(1, timeUnit as any)
-                .format(DATE_FORMAT),
+                .format(DATE_FORMAT_THOUSOND),
               offset: 0,
             };
             delete newParams.timeRange;

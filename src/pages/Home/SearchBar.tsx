@@ -3,8 +3,8 @@ import { AutoComplete, Button, Space, Tag, Popover, Statistic, Tooltip } from 'a
 import CountUp from 'react-countup';
 import SpinIndicator from '@/components/SpinIndicator';
 import styles from './SearchBar.module.less';
-import { QUICK_RANGES, TIME_GROUP, getLatestTime } from './utils.ts';
-
+import { QUICK_RANGES, TIME_GROUP, getLatestTime, DATE_FORMAT_THOUSOND } from './utils.ts';
+import dayjs from 'dayjs';
 const TimePicker = lazy(() => import('./TimePicker.tsx'));
 
 interface IProps {
@@ -157,8 +157,8 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       ...searchParams,
       ...(keywords.length > 0 && { keywords }),
       ...(sqls.length > 0 && { whereSqls: sqls }),
-      startTime: timeOption?.range?.[0],
-      endTime: timeOption?.range?.[1],
+      startTime: dayjs(timeOption?.range?.[0]).format(DATE_FORMAT_THOUSOND),
+      endTime: dayjs(timeOption?.range?.[1]).format(DATE_FORMAT_THOUSOND),
       timeRange: timeOption?.value,
       timeGrouping: timeGroup,
       offset: 0,
