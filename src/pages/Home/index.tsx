@@ -7,6 +7,7 @@ import Log from './Log';
 import Sider from './Sider';
 import { QUICK_RANGES, DATE_FORMAT_THOUSOND } from './utils';
 import styles from './index.module.less';
+import dayjs from 'dayjs';
 
 const HomePage = () => {
   const [moduleOptions, setModuleOptions] = useState<IStatus[]>([]); // 模块名称列表，用于字段选择等组件
@@ -70,6 +71,7 @@ const HomePage = () => {
       // 为每条记录添加唯一ID
       (rows || []).map((item, index) => {
         item._key = `${Date.now()}_${index}`;
+        item['log_time'] = item['log_time'] ? dayjs(item['log_time'] as string).format(DATE_FORMAT_THOUSOND) : '';
       });
       setDetailData(res);
     },
