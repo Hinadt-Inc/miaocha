@@ -64,6 +64,9 @@ public class LogstashProcessResponseDTO {
     @Data
     @Schema(description = "Logstash机器状态信息DTO")
     public static class LogstashMachineStatusInfoDTO {
+        @Schema(description = "LogstashMachine实例ID")
+        private Long logstashMachineId;
+
         @Schema(description = "机器ID")
         private Long machineId;
 

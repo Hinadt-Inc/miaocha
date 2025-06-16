@@ -102,6 +102,7 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
             if (machineInfo != null) {
                 LogstashProcessResponseDTO.LogstashMachineStatusInfoDTO statusInfo =
                         new LogstashProcessResponseDTO.LogstashMachineStatusInfoDTO();
+                statusInfo.setLogstashMachineId(relation.getId());
                 statusInfo.setMachineId(machineInfo.getId());
                 statusInfo.setMachineName(machineInfo.getName());
                 statusInfo.setMachineIp(machineInfo.getIp());
