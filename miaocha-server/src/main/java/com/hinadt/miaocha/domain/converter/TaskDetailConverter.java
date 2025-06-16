@@ -46,12 +46,12 @@ public class TaskDetailConverter {
      * @param step 任务步骤实体
      * @return 任务步骤DTO
      */
-    public TaskDetailDTO.MachineStepDTO convertToStepDTO(LogstashTaskMachineStep step) {
+    public TaskDetailDTO.InstanceStepDTO convertToStepDTO(LogstashTaskMachineStep step) {
         if (step == null) {
             return null;
         }
 
-        TaskDetailDTO.MachineStepDTO dto = new TaskDetailDTO.MachineStepDTO();
+        TaskDetailDTO.InstanceStepDTO dto = new TaskDetailDTO.InstanceStepDTO();
         dto.setStepId(step.getStepId());
         dto.setStepName(step.getStepName());
         dto.setStatus(step.getStatus());

@@ -58,11 +58,11 @@ public class TaskDetailDTO {
     @Schema(description = "错误信息")
     private String errorMessage;
 
-    @Schema(description = "机器步骤详情")
-    private Map<String, List<MachineStepDTO>> machineSteps;
+    @Schema(description = "实例步骤详情")
+    private Map<String, List<InstanceStepDTO>> instanceSteps;
 
-    @Schema(description = "每台机器的进度百分比 (机器名称 -> 百分比值)")
-    private Map<String, Integer> machineProgressPercentages;
+    @Schema(description = "每个实例的进度百分比 (实例名称 -> 百分比值)")
+    private Map<String, Integer> instanceProgressPercentages;
 
     /**
      * 计算并获取任务进度百分比
@@ -84,10 +84,10 @@ public class TaskDetailDTO {
         return Math.min(100, Math.round((float) completedSteps * 100 / totalSteps));
     }
 
-    /** 机器步骤DTO */
+    /** 实例步骤DTO */
     @Data
-    @Schema(description = "机器步骤DTO")
-    public static class MachineStepDTO {
+    @Schema(description = "Logstash实例步骤DTO")
+    public static class InstanceStepDTO {
         @Schema(description = "步骤ID")
         private String stepId;
 
@@ -111,29 +111,29 @@ public class TaskDetailDTO {
     }
 
     /**
-     * 计算获取每台机器的步骤进度百分比
+     * 计算获取每个实例的步骤进度百分比
      *
-     * @return 每台机器的进度百分比 (机器ID -> 百分比值)
+     * @return 每个实例的进度百分比 (实例ID -> 百分比值)
      */
-    @Schema(description = "每台机器的进度百分比")
-    public Map<String, Integer> getMachineProgressPercentages() {
-        if (machineSteps == null || machineSteps.isEmpty()) {
-            this.machineProgressPercentages = Map.of();
-            return this.machineProgressPercentages;
+    @Schema(description = "每个实例的进度百分比")
+    public Map<String, Integer> getInstanceProgressPercentages() {
+        if (instanceSteps == null || instanceSteps.isEmpty()) {
+            this.instanceProgressPercentages = Map.of();
+            return this.instanceProgressPercentages;
         }
 
-        this.machineProgressPercentages =
-                machineSteps.entrySet().stream()
+        this.instanceProgressPercentages =
+                instanceSteps.entrySet().stream()
                         .collect(
                                 java.util.stream.Collectors.toMap(
                                         Map.Entry::getKey,
                                         entry -> {
-                                            List<MachineStepDTO> steps = entry.getValue();
+                                            List<InstanceStepDTO> steps = entry.getValue();
                                             if (steps == null || steps.isEmpty()) {
                                                 return 0;
                                             }
 
-                                            long totalStepsForMachine = steps.size();
+                                            long totalStepsForInstance = steps.size();
                                             long completedSteps =
                                                     steps.stream()
                                                             .filter(
@@ -158,9 +158,9 @@ public class TaskDetailDTO {
                                                             Math.round(
                                                                     (double) completedSteps
                                                                             * 100
-                                                                            / totalStepsForMachine));
+                                                                            / totalStepsForInstance));
                                         }));
 
-        return this.machineProgressPercentages;
+        return this.instanceProgressPercentages;
     }
 }

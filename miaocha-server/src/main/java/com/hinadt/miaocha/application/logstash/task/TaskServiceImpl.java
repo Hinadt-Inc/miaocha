@@ -179,15 +179,16 @@ public class TaskServiceImpl implements TaskService {
         List<LogstashTaskMachineStep> steps = stepMapper.findByTaskId(taskId);
 
         // 按机器分组步骤
-        Map<Long, List<LogstashTaskMachineStep>> machineStepsMap =
+        Map<Long, List<LogstashTaskMachineStep>> instanceStepsMap =
                 steps.stream()
-                        .collect(Collectors.groupingBy(LogstashTaskMachineStep::getMachineId));
+                        .collect(
+                                Collectors.groupingBy(
+                                        LogstashTaskMachineStep::getLogstashMachineId));
 
-        // 使用转换器将基于机器ID的步骤转换为基于机器名称的步骤
-        Map<String, List<TaskDetailDTO.MachineStepDTO>> nameBasedStepMap =
-                taskMachineStepConverter.convertToNameBasedMap(machineStepsMap);
+        Map<String, List<TaskDetailDTO.InstanceStepDTO>> nameBasedStepMap =
+                taskMachineStepConverter.convertToNameBasedMap(instanceStepsMap);
 
-        dto.setMachineSteps(nameBasedStepMap);
+        dto.setInstanceSteps(nameBasedStepMap);
 
         // 计算统计信息
         int[] counts = countStepStatus(steps);

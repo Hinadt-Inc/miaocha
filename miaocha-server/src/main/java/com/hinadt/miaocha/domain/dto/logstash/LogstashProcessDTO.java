@@ -27,8 +27,8 @@ public class LogstashProcessDTO {
     @Schema(description = "Logstash系统配置模板")
     private String logstashYml;
 
-    @Schema(description = "部署的机器列表")
-    private List<LogstashMachineDTO> machines;
+    @Schema(description = "部署的Logstash实例列表")
+    private List<LogstashMachineDTO> instances;
 
     @Schema(description = "创建时间")
     private LocalDateTime createTime;
