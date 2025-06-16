@@ -37,6 +37,13 @@ const MachineManagementPage = () => {
 
   const handleCreate = async (values: CreateMachineParams) => {
     try {
+      setTestingConnection(true);
+      const testResult = await testMachineConnection(values);
+      if (!testResult.success) {
+        messageApi.error('连接测试失败，请检查配置');
+        return;
+      }
+
       await createMachine(values);
       messageApi.success('机器创建成功');
       setCreateModalVisible(false);
@@ -44,6 +51,8 @@ const MachineManagementPage = () => {
       fetchMachines();
     } catch {
       messageApi.error('机器创建失败');
+    } finally {
+      setTestingConnection(false);
     }
   };
 
@@ -51,6 +60,13 @@ const MachineManagementPage = () => {
     if (!editingMachine) return;
 
     try {
+      setTestingConnection(true);
+      const testResult = await testMachineConnection(values);
+      if (!testResult.success) {
+        messageApi.error('连接测试失败，请检查配置');
+        return;
+      }
+
       await updateMachine({
         ...values,
         id: editingMachine.id,
@@ -61,6 +77,8 @@ const MachineManagementPage = () => {
       fetchMachines();
     } catch {
       messageApi.error('机器更新失败');
+    } finally {
+      setTestingConnection(false);
     }
   };
 
@@ -193,7 +211,7 @@ const MachineManagementPage = () => {
             <Button key="test" loading={testingConnection} onClick={handleTestConnection}>
               测试连接
             </Button>,
-            <Button key="submit" type="primary" onClick={() => form.submit()}>
+            <Button key="submit" type="primary" loading={testingConnection} onClick={() => form.submit()}>
               确定
             </Button>,
           ]}
@@ -231,7 +249,7 @@ const MachineManagementPage = () => {
             <Button key="test" loading={testingConnection} onClick={handleTestConnection}>
               测试连接
             </Button>,
-            <Button key="submit" type="primary" onClick={() => form.submit()}>
+            <Button key="submit" type="primary" loading={testingConnection} onClick={() => form.submit()}>
               确定
             </Button>,
           ]}

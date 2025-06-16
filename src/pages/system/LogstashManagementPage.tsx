@@ -53,6 +53,10 @@ function LogstashManagementPage() {
     );
   };
 
+  const hasInitializeFailedMachines = (record: LogstashProcess) => {
+    return record.machineStatuses?.some((machine) => machine.state === 'INITIALIZE_FAILED') || false;
+  };
+
   const [data, setData] = useState<LogstashProcess[]>([]);
   const [loading, setLoading] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -472,7 +476,11 @@ function LogstashManagementPage() {
             okText="确认"
             cancelText="取消"
           >
-            <Button type="link" disabled={record.state === 'RUNNING'} style={{ padding: '0 4px' }}>
+            <Button
+              type="link"
+              disabled={record.state === 'RUNNING' || !hasInitializeFailedMachines(record)}
+              style={{ padding: '0 4px' }}
+            >
               重新初始化失败机器
             </Button>
           </Popconfirm>
@@ -1058,6 +1066,7 @@ function LogstashManagementPage() {
                     background: '#f5f5f5',
                     borderRadius: 4,
                     overflow: 'auto',
+                    height: 200,
                   }}
                 >
                   {currentDetail.jvmOptions}
@@ -1083,6 +1092,7 @@ function LogstashManagementPage() {
                     background: '#f5f5f5',
                     borderRadius: 4,
                     overflow: 'auto',
+                    height: 200,
                   }}
                 >
                   {currentDetail.logstashYml}
@@ -1108,6 +1118,7 @@ function LogstashManagementPage() {
                     background: '#f5f5f5',
                     borderRadius: 4,
                     overflow: 'auto',
+                    height: 200,
                   }}
                 >
                   {currentDetail.configContent}

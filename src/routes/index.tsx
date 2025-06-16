@@ -82,12 +82,12 @@ export const routes: RouteConfig[] = [
         element: withSuspense(DataSourceManagementPage),
         access: ['ADMIN', 'SUPER_ADMIN'],
       },
-      {
-        path: '/system/permission',
-        name: '权限管理',
-        element: withSuspense(PermissionManagementPage),
-        access: ['ADMIN', 'SUPER_ADMIN'],
-      },
+      // {
+      //   path: '/system/permission',
+      //   name: '权限管理',
+      //   element: withSuspense(PermissionManagementPage),
+      //   access: ['ADMIN', 'SUPER_ADMIN'],
+      // },
       {
         path: '/system/machine',
         name: '服务器管理',
