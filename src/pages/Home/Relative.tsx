@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { Checkbox, Button, InputNumber, Select, Typography, Tag } from 'antd';
 import dayjs from 'dayjs';
 import styles from './Relative.module.less';
-import { RELATIVE_TIME, DATE_FORMAT } from './utils';
+import { RELATIVE_TIME, DATE_FORMAT_THOUSOND } from './utils';
 
 const { Text } = Typography;
 
@@ -43,9 +43,9 @@ const TimePicker = (props: IProps) => {
     if (number === 0 && unitEN === 'second') {
       timeString = CURRENT;
     } else if (label.endsWith('前')) {
-      timeString = now.subtract(number, unitEN as any).format(isExact ? format : DATE_FORMAT);
+      timeString = now.subtract(number, unitEN as any).format(isExact ? format : DATE_FORMAT_THOUSOND);
     } else if (label.endsWith('后')) {
-      timeString = now.add(number, unitEN as any).format(isExact ? format : DATE_FORMAT);
+      timeString = now.add(number, unitEN as any).format(isExact ? format : DATE_FORMAT_THOUSOND);
     }
     return timeString;
   }, []);
@@ -84,7 +84,7 @@ const TimePicker = (props: IProps) => {
 
   // 提交时间
   const handleSubmit = useCallback(() => {
-    const now = dayjs().format(DATE_FORMAT);
+    const now = dayjs().format(DATE_FORMAT_THOUSOND);
     const range = [
       startTimeText === CURRENT ? now : getTimeText(startOption),
       endTimeText === CURRENT ? now : getTimeText(endOption),
