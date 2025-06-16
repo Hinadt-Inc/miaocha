@@ -50,6 +50,8 @@ public class UserServiceTest {
 
     @Mock private UserConverter userConverter;
 
+    @Mock private ModulePermissionService modulePermissionService;
+
     private UserServiceImpl userService;
 
     private User testUser;
@@ -61,10 +63,16 @@ public class UserServiceTest {
     @BeforeEach
     void setUp() {
         // 重置所有Mock - 这很重要，避免测试间状态污染
-        reset(userMapper, passwordEncoder, jwtUtils, userConverter);
+        reset(userMapper, passwordEncoder, jwtUtils, userConverter, modulePermissionService);
 
         // 手动创建UserServiceImpl，注入所有mock对象
-        userService = new UserServiceImpl(userMapper, passwordEncoder, jwtUtils, userConverter);
+        userService =
+                new UserServiceImpl(
+                        userMapper,
+                        passwordEncoder,
+                        jwtUtils,
+                        userConverter,
+                        modulePermissionService);
 
         // 准备测试用户
         testUser = createTestUser();

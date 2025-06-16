@@ -1,7 +1,9 @@
 package com.hinadt.miaocha.domain.dto.user;
 
+import com.hinadt.miaocha.domain.dto.permission.UserModulePermissionDTO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
+import java.util.List;
 import lombok.Data;
 
 /** 用户信息DTO */
@@ -31,4 +33,7 @@ public class UserDTO {
 
     @Schema(description = "更新时间")
     private LocalDateTime updateTime;
+
+    @Schema(description = "用户拥有的模块权限列表")
+    private List<UserModulePermissionDTO> modulePermissions;
 }

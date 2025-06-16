@@ -2,6 +2,7 @@ package com.hinadt.miaocha.application.service.impl;
 
 import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
 import com.hinadt.miaocha.application.security.JwtUtils;
+import com.hinadt.miaocha.application.service.ModulePermissionService;
 import com.hinadt.miaocha.application.service.UserService;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
@@ -9,6 +10,7 @@ import com.hinadt.miaocha.domain.converter.UserConverter;
 import com.hinadt.miaocha.domain.dto.auth.LoginRequestDTO;
 import com.hinadt.miaocha.domain.dto.auth.LoginResponseDTO;
 import com.hinadt.miaocha.domain.dto.auth.RefreshTokenRequestDTO;
+import com.hinadt.miaocha.domain.dto.permission.UserModulePermissionDTO;
 import com.hinadt.miaocha.domain.dto.user.AdminUpdatePasswordDTO;
 import com.hinadt.miaocha.domain.dto.user.UpdatePasswordDTO;
 import com.hinadt.miaocha.domain.dto.user.UserCreateDTO;
@@ -36,6 +38,7 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
     private final UserConverter userConverter;
+    private final ModulePermissionService modulePermissionService;
 
     @Override
     public LoginResponseDTO login(LoginRequestDTO loginRequest) {
@@ -103,7 +106,7 @@ public class UserServiceImpl implements UserService {
         } catch (Exception e) {
             // 处理其他异常
             log.error("Error during token refresh: {}", e.getMessage());
-            throw new BusinessException(ErrorCode.INVALID_TOKEN, "无效的刷新令牌");
+            throw new BusinessException(ErrorCode.INVALID_TOKEN, "无�的刷新令牌");
         }
     }
 
@@ -149,7 +152,17 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<UserDTO> getAllUsers() {
         List<User> users = userMapper.selectAll();
-        return users.stream().map(userConverter::toDto).collect(Collectors.toList());
+        List<UserDTO> userDTOs =
+                users.stream().map(userConverter::toDto).collect(Collectors.toList());
+
+        // 为每个用户填充模块权限信息
+        for (UserDTO userDTO : userDTOs) {
+            List<UserModulePermissionDTO> permissions =
+                    modulePermissionService.getUserModulePermissions(userDTO.getId());
+            userDTO.setModulePermissions(permissions);
+        }
+
+        return userDTOs;
     }
 
     @Override
