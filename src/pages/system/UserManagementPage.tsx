@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 
 import { getUsers, createUser, updateUser, deleteUser, changeUserPassword, type User } from '../../api/user';
-import { getModules, authorizeModule, revokeModule, batchAuthorizeModules } from '../../api/modules';
+import { getModules, batchAuthorizeModules } from '../../api/modules';
 import ModulePermissionModal from './components/ModulePermissionModal';
 import {
   Button,
@@ -27,6 +27,8 @@ import dayjs from 'dayjs';
 import { Link } from 'react-router-dom';
 import styles from './UserManagementPage.module.less';
 
+import type { ModulePermission } from '@/types/permissionTypes';
+
 interface UserData extends User {
   key: string;
   department: string;
@@ -38,6 +40,7 @@ interface UserData extends User {
     moduleId: string;
     moduleName: string;
   }>;
+  modulePermissions?: ModulePermission[];
 }
 
 // 转换API数据到表格数据
@@ -69,10 +72,6 @@ const roleOptions = [
 const UserManagementPage = () => {
   const [data, setData] = useState<UserData[]>([]);
   const [moduleList, setModuleList] = useState<Array<{ value: string; label: string }>>([]);
-  const [isModuleModalVisible, setIsModuleModalVisible] = useState(false);
-  const [selectedModule, setSelectedModule] = useState('');
-  const [selectedUserForModule, setSelectedUserForModule] = useState<UserData | null>(null);
-  const [isRevokeModuleOperation, setIsRevokeModuleOperation] = useState(false);
   const [moduleDrawerVisible, setModuleDrawerVisible] = useState(false);
   const [selectedUserForDrawer, setSelectedUserForDrawer] = useState<UserData | null>(null);
   const searchTimeoutRef = useRef<number | null>(null);
@@ -295,43 +294,6 @@ const UserManagementPage = () => {
     }
   };
 
-  // 处理表单提交
-  const handleModuleGrant = async () => {
-    try {
-      if (!selectedUserForModule || !selectedModule) {
-        messageApi.error('请选择用户和模块');
-        return;
-      }
-
-      await authorizeModule(selectedUserForModule.key, selectedModule);
-      messageApi.success('授权成功');
-      setIsModuleModalVisible(false);
-      setSelectedModule('');
-      setSelectedUserForModule(null);
-      fetchUsers();
-    } catch (error) {
-      messageApi.error('授权失败');
-    }
-  };
-
-  const handleModuleRevoke = async () => {
-    try {
-      if (!selectedUserForModule || !selectedModule) {
-        messageApi.error('请选择用户和模块');
-        return;
-      }
-
-      await revokeModule(selectedUserForModule.key, selectedModule);
-      messageApi.success('撤销成功');
-      setIsModuleModalVisible(false);
-      setSelectedModule('');
-      setSelectedUserForModule(null);
-      fetchUsers();
-    } catch (error) {
-      messageApi.error('撤销失败');
-    }
-  };
-
   const handleOpenModuleDrawer = (record: UserData) => {
     setSelectedUserForDrawer(record);
     setModuleDrawerVisible(true);
@@ -339,7 +301,11 @@ const UserManagementPage = () => {
 
   const handleSaveModules = async (userId: string, modules: Array<{ moduleId: string; expireTime?: string }>) => {
     try {
-      const moduleNames = modules.map((m) => m.moduleId);
+      // 获取模块名称列表
+      const moduleNames = modules.map((m) => {
+        const moduleInfo = moduleList.find((ml) => ml.value === m.moduleId);
+        return moduleInfo?.label || m.moduleId;
+      });
       await batchAuthorizeModules(userId, moduleNames);
       messageApi.success('模块权限更新成功');
       fetchUsers();
@@ -468,20 +434,27 @@ const UserManagementPage = () => {
     },
     {
       title: '已授权模块',
-      dataIndex: 'modules',
-      key: 'modules',
+      dataIndex: 'modulePermissions',
+      key: 'modulePermissions',
       width: 180,
-      render: (modules: Array<{ moduleId: string; moduleName: string }>) =>
-        modules?.length > 0 ? (
-          <Space size={[0, 8]} wrap>
-            {modules.slice(0, 3).map((module) => (
-              <Tag key={module.moduleId}>{module.moduleName}</Tag>
-            ))}
-            {modules.length > 3 && <Tag>+{modules.length - 3}个</Tag>}
-          </Space>
-        ) : (
-          <Tag color="default">无</Tag>
-        ),
+      render: (modules: Array<{ id: string; module: string }>, record) => (
+        <>
+          {record.role === 'USER' ? (
+            modules?.length ? (
+              <Space size={[0, 8]} wrap>
+                {modules.slice(0, 3).map((module) => (
+                  <Tag key={module.id}>{module.module}</Tag>
+                ))}
+                {modules.length > 3 && <Tag>+{modules.length - 3}个</Tag>}
+              </Space>
+            ) : (
+              <Tag color="default">无</Tag>
+            )
+          ) : (
+            '-'
+          )}
+        </>
+      ),
     },
     {
       title: '操作',
@@ -493,9 +466,11 @@ const UserManagementPage = () => {
           <Button type="link" onClick={() => handleAddEdit(record)} style={{ padding: '0 8px' }}>
             编辑
           </Button>
-          <Button type="link" onClick={() => handleOpenModuleDrawer(record)} style={{ padding: '0 8px' }}>
-            模块权限
-          </Button>
+          {record.role === 'USER' && (
+            <Button type="link" onClick={() => handleOpenModuleDrawer(record)} style={{ padding: '0 8px' }}>
+              模块权限
+            </Button>
+          )}
           {!['SUPER_ADMIN'].includes(record.role) && (
             <>
               <Button type="link" onClick={() => handleChangePassword(record)} style={{ padding: '0 8px' }}>
@@ -692,42 +667,19 @@ const UserManagementPage = () => {
         </Form>
       </Modal>
 
-      <Modal
-        title={isRevokeModuleOperation ? '撤销模块授权' : '模块授权'}
-        open={isModuleModalVisible}
-        onCancel={() => setIsModuleModalVisible(false)}
-        onOk={isRevokeModuleOperation ? handleModuleRevoke : handleModuleGrant}
-        okText={isRevokeModuleOperation ? '撤销' : '授权'}
-        cancelText="取消"
-        width={400}
-      >
-        <Form layout="vertical">
-          <Form.Item label="用户">
-            <Input value={selectedUserForModule?.nickname || ''} readOnly />
-          </Form.Item>
-          <Form.Item
-            label={isRevokeModuleOperation ? '选择要撤销的模块' : '选择要授权的模块'}
-            rules={[{ required: true, message: '请选择模块' }]}
-          >
-            <Select
-              placeholder="请选择模块"
-              value={selectedModule}
-              onChange={(value) => setSelectedModule(value)}
-              options={moduleList}
-              showSearch
-              optionFilterProp="label"
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
-
       <ModulePermissionModal
         open={moduleDrawerVisible}
         onClose={() => setModuleDrawerVisible(false)}
         userId={selectedUserForDrawer?.key || ''}
-        modules={selectedUserForDrawer?.modules || []}
+        modules={selectedUserForDrawer?.modulePermissions || []}
+        userModulePermissions={selectedUserForDrawer?.modulePermissions?.map((m) => ({ moduleName: m.module })) || []}
         allModules={moduleList}
         onSave={handleSaveModules}
+        onRefresh={() => {
+          fetchUsers().catch(() => {
+            messageApi.error('加载用户数据失败');
+          });
+        }}
       />
     </div>
   );

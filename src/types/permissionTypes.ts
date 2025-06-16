@@ -71,3 +71,30 @@ export interface TablePermissionOperation {
  * 模块响应类型 - 用于未授权模块列表
  */
 export type IModulesResponse = string;
+
+/**
+ * 模块权限类型
+ */
+export interface ModulePermission {
+  id: string;
+  userId: number;
+  datasourceId: number;
+  datasourceName: string;
+  databaseName: string;
+  module: string;
+  createTime: string;
+  createUser: string;
+  createUserName: string;
+  updateTime: string;
+  updateUser: string;
+  updateUserName: string;
+  users?: Array<{
+    userId: number;
+    userName: string;
+  }>;
+}
+
+export interface UserModulePermission {
+  moduleId: string;
+  moduleName?: string;
+}

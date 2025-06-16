@@ -1,24 +1,32 @@
 import { Modal, Table, Space, Button, Input, Tag, message } from 'antd';
-import { batchRevokeModules } from '../../../api/modules';
+import { batchRevokeModules, authorizeModule, revokeModule } from '../../../api/modules';
 import { SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useState } from 'react';
 
-interface Module {
-  moduleId: string;
-  moduleName: string;
-}
+import type { ModulePermission } from '@/types/permissionTypes';
 
 interface ModulePermissionModalProps {
   open: boolean;
   onClose: () => void;
   userId: string;
-  modules: Module[];
+  modules: ModulePermission[];
+  userModulePermissions: Array<{ moduleName: string }>;
   allModules: Array<{ value: string; label: string }>;
-  onSave: (userId: string, modules: Array<{ moduleId: string }>) => Promise<void>;
+  onSave: (userId: string, modules: Array<{ moduleId: string; moduleName?: string }>) => Promise<void>;
+  onRefresh: () => void;
 }
 
-const ModulePermissionModal = ({ open, onClose, userId, modules, allModules, onSave }: ModulePermissionModalProps) => {
+const ModulePermissionModal = ({
+  open,
+  onClose,
+  userId,
+  modules,
+  userModulePermissions,
+  allModules,
+  onSave,
+  onRefresh,
+}: ModulePermissionModalProps) => {
   const [selectedModules, setSelectedModules] = useState<string[]>([]);
   const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,15 +37,17 @@ const ModulePermissionModal = ({ open, onClose, userId, modules, allModules, onS
     moduleId: m.value,
     moduleName: m.label,
   }));
-
   // 合并当前用户已有模块和所有模块
   const mergedModules = allModuleData.map((module) => {
-    const isAuthorized = modules.some((m) => m.moduleId === module.moduleId);
+    const hasUserPermission = userModulePermissions.some((p) => p.moduleName === module.moduleName);
+    const modulePermission = modules.find((m) => m.module === module.moduleName);
     return {
       ...module,
-      authorized: isAuthorized,
+      authorized: hasUserPermission,
+      modulePermission,
     };
   });
+  console.log('Merged Modules:', mergedModules);
 
   // 处理搜索
   const filteredModules = mergedModules.filter((module) =>
@@ -53,10 +63,19 @@ const ModulePermissionModal = ({ open, onClose, userId, modules, allModules, onS
   const handleModuleToggle = async (moduleId: string, isAuthorized: boolean) => {
     setLoading(true);
     try {
-      await onSave(userId, isAuthorized ? [] : [{ moduleId }]);
-      messageApi.success(isAuthorized ? '模块权限已撤销' : '模块授权成功');
-    } catch {
+      const moduleName = allModules.find((m) => m.value === moduleId)?.label || moduleId;
+      if (isAuthorized) {
+        await revokeModule(userId, moduleName);
+      } else {
+        await authorizeModule(userId, moduleName);
+      }
+      messageApi.success(!isAuthorized ? '授权成功' : '撤销成功');
+      // 成功后改变状态
+      onClose();
+      onRefresh();
+    } catch (error) {
       messageApi.error('操作失败');
+      console.error('模块权限操作失败:', error);
     } finally {
       setLoading(false);
     }
@@ -72,7 +91,10 @@ const ModulePermissionModal = ({ open, onClose, userId, modules, allModules, onS
     setLoading(true);
     try {
       if (authorize) {
-        const modulesToUpdate = selectedModules.map((moduleId) => ({ moduleId }));
+        const modulesToUpdate = selectedModules.map((moduleId) => ({
+          moduleId,
+          moduleName: allModules.find((m) => m.value === moduleId)?.label || moduleId,
+        }));
         await onSave(userId, modulesToUpdate);
         onClose();
       } else {
@@ -100,7 +122,11 @@ const ModulePermissionModal = ({ open, onClose, userId, modules, allModules, onS
       title: '状态',
       dataIndex: 'authorized',
       key: 'status',
-      render: (authorized) => <Tag color={authorized ? 'green' : 'red'}>{authorized ? '已授权' : '未授权'}</Tag>,
+      render: (authorized, record) => (
+        <Tag color={authorized ? 'green' : 'red'}>
+          {authorized ? `已授权 (${record.modulePermission?.datasourceName})` : '未授权'}
+        </Tag>
+      ),
     },
     {
       title: '操作',

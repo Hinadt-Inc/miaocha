@@ -79,18 +79,37 @@ export const executeDorisSql = async (id: number, sql: string) => {
   });
 };
 
-export const authorizeModule = async (userId: string, moduleName: string) => {
-  return request({
-    url: `/api/permissions/modules/user/${userId}/grant?module=${moduleName}`,
-    method: 'POST',
-  });
+// 授权模块
+interface ModulePermissionResponse {
+  success: boolean;
+  message?: string;
+}
+
+export const authorizeModule = async (userId: string, moduleName: string): Promise<boolean> => {
+  try {
+    const response = await request<ModulePermissionResponse>({
+      url: `/api/permissions/modules/user/${userId}/grant?module=${moduleName}`,
+      method: 'POST',
+    });
+    return response.success;
+  } catch (error) {
+    console.error('授权模块失败:', error);
+    return false;
+  }
 };
 
-export const revokeModule = async (userId: string, moduleName: string) => {
-  return request({
-    url: `/api/permissions/modules/user/${userId}/revoke?module=${moduleName}`,
-    method: 'DELETE',
-  });
+// 撤销模块授权
+export const revokeModule = async (userId: string, moduleName: string): Promise<boolean> => {
+  try {
+    const response = await request<ModulePermissionResponse>({
+      url: `/api/permissions/modules/user/${userId}/revoke?module=${moduleName}`,
+      method: 'DELETE',
+    });
+    return response.success;
+  } catch (error) {
+    console.error('撤销模块授权失败:', error);
+    return false;
+  }
 };
 
 // 批量授权
