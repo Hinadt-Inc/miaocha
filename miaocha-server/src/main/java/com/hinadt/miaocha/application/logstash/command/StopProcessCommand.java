@@ -1,20 +1,80 @@
 package com.hinadt.miaocha.application.logstash.command;
 
+import com.hinadt.miaocha.application.logstash.path.LogstashDeployPathManager;
 import com.hinadt.miaocha.common.exception.SshOperationException;
 import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
 import java.util.concurrent.CompletableFuture;
 
-/** 停止Logstash进程命令 */
+/** 停止Logstash进程命令 - 重构支持多实例，基于logstashMachineId */
 public class StopProcessCommand extends AbstractLogstashCommand {
 
     public StopProcessCommand(
             SshClient sshClient,
-            String deployDir,
-            Long processId,
-            LogstashMachineMapper logstashMachineMapper) {
-        super(sshClient, deployDir, processId, logstashMachineMapper);
+            String deployBaseDir,
+            Long logstashMachineId,
+            LogstashMachineMapper logstashMachineMapper,
+            LogstashDeployPathManager deployPathManager) {
+        super(
+                sshClient,
+                deployBaseDir,
+                logstashMachineId,
+                logstashMachineMapper,
+                deployPathManager);
+    }
+
+    @Override
+    protected CompletableFuture<Boolean> checkAlreadyExecuted(MachineInfo machineInfo) {
+        return CompletableFuture.supplyAsync(
+                () -> {
+                    try {
+                        String processDir = getProcessDirectory(machineInfo);
+                        String pidFile =
+                                processDir + "/logs/logstash-" + logstashMachineId + ".pid";
+
+                        // 检查PID文件是否存在
+                        String checkPidFileCommand =
+                                String.format(
+                                        "if [ -f \"%s\" ]; then echo \"exists\"; else echo"
+                                                + " \"not_exists\"; fi",
+                                        pidFile);
+                        String pidFileResult =
+                                sshClient.executeCommand(machineInfo, checkPidFileCommand);
+
+                        if (!"exists".equals(pidFileResult.trim())) {
+                            logger.info("PID文件不存在，进程可能已停止，实例ID: {}", logstashMachineId);
+                            return true; // 已经停止
+                        }
+
+                        // 读取PID并检查进程是否运行
+                        String readPidCommand = String.format("cat %s", pidFile);
+                        String pid = sshClient.executeCommand(machineInfo, readPidCommand).trim();
+
+                        if (pid.isEmpty()) {
+                            logger.info("PID文件为空，进程可能已停止，实例ID: {}", logstashMachineId);
+                            return true; // 已经停止
+                        }
+
+                        String checkProcessCommand =
+                                String.format(
+                                        "if ps -p %s > /dev/null 2>&1; then echo \"running\"; else"
+                                                + " echo \"not_running\"; fi",
+                                        pid);
+                        String processResult =
+                                sshClient.executeCommand(machineInfo, checkProcessCommand);
+
+                        boolean running = "running".equals(processResult.trim());
+                        if (!running) {
+                            logger.info("进程已停止，实例ID: {}, PID: {}", logstashMachineId, pid);
+                        }
+                        return !running; // 如果不在运行，则已经停止
+                    } catch (Exception e) {
+                        logger.warn(
+                                "检查进程是否已停止时出错，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage());
+                        return false; // 出错时假设需要执行停止操作
+                    }
+                });
     }
 
     @Override
@@ -23,88 +83,87 @@ public class StopProcessCommand extends AbstractLogstashCommand {
 
         try {
             String processDir = getProcessDirectory(machineInfo);
-            String pidFile = processDir + "/logs/logstash-" + processId + ".pid";
+            String pidFile = processDir + "/logs/logstash-" + logstashMachineId + ".pid";
 
-            // 检查PID文件是否存在 - 使用不会出错的命令
+            // 检查PID文件是否存在
             String checkPidCommand =
                     String.format(
                             "if [ -f \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi",
                             pidFile);
             String checkPidResult = sshClient.executeCommand(machineInfo, checkPidCommand);
 
-            if ("exists".equals(checkPidResult.trim())) {
-                // 读取PID
-                String readPidCommand = String.format("cat %s", pidFile);
-                String pid = sshClient.executeCommand(machineInfo, readPidCommand).trim();
-
-                if (!pid.isEmpty()) {
-                    // 检查进程是否存在
-                    String checkProcessCommand =
-                            String.format("ps -p %s > /dev/null && echo \"running\"", pid);
-                    String checkProcessResult =
-                            sshClient.executeCommand(machineInfo, checkProcessCommand);
-
-                    if ("running".equals(checkProcessResult.trim())) {
-                        // 杀死进程
-                        logger.info("停止Logstash进程，PID: {}", pid);
-                        String killCommand = String.format("kill -15 %s", pid);
-                        sshClient.executeCommand(machineInfo, killCommand);
-
-                        // 给进程一些时间来优雅地终止
-                        Thread.sleep(3000);
-
-                        // 检查进程是否仍然存在
-                        String recheckCommand =
-                                String.format("ps -p %s > /dev/null || echo \"stopped\"", pid);
-                        String recheckResult =
-                                sshClient.executeCommand(machineInfo, recheckCommand);
-
-                        if (!"stopped".equals(recheckResult.trim())) {
-                            // 如果进程仍在运行，强制终止
-                            logger.warn("Logstash进程没有响应SIGTERM信号，使用SIGKILL强制终止");
-                            String forceKillCommand = String.format("kill -9 %s", pid);
-                            sshClient.executeCommand(machineInfo, forceKillCommand);
-                        }
-                    } else {
-                        logger.info("Logstash进程已不在运行状态，PID: {}", pid);
-                    }
-                } else {
-                    logger.warn("PID文件为空");
-                }
-
-                // 删除PID文件
-                String removePidCommand = String.format("rm -f %s", pidFile);
-                sshClient.executeCommand(machineInfo, removePidCommand);
-            } else {
-                logger.info("找不到PID文件，尝试通过进程名查找并终止Logstash进程");
-
-                // 尝试通过进程名称查找
-                String findPidCommand =
-                        String.format(
-                                "ps -ef | grep logstash | grep \"logstash-%s.conf\" | grep -v grep"
-                                        + " | awk '{print $2}'",
-                                processId);
-                String foundPids = sshClient.executeCommand(machineInfo, findPidCommand);
-
-                if (foundPids != null && !foundPids.trim().isEmpty()) {
-                    // 终止找到的所有进程
-                    for (String pid : foundPids.trim().split("\\s+")) {
-                        logger.info("通过进程名找到Logstash进程，PID: {}", pid);
-                        String killCommand = String.format("kill -9 %s", pid);
-                        sshClient.executeCommand(machineInfo, killCommand);
-                    }
-                } else {
-                    logger.info("未找到相关的Logstash进程");
-                }
+            if (!"exists".equals(checkPidResult.trim())) {
+                logger.info("PID文件不存在，可能进程已停止，实例ID: {}", logstashMachineId);
+                // 清理数据库中的PID
+                logstashMachineMapper.updateProcessPidById(logstashMachineId, null);
+                future.complete(true);
+                return future;
             }
 
-            // 不论进程是否存在，我们都认为停止操作成功完成
-            logger.info("Logstash进程停止操作完成");
-            future.complete(true);
+            // 读取PID
+            String readPidCommand = String.format("cat %s", pidFile);
+            String pid = sshClient.executeCommand(machineInfo, readPidCommand).trim();
+
+            if (pid.isEmpty()) {
+                logger.info("PID文件为空，可能进程已停止，实例ID: {}", logstashMachineId);
+                // 删除空的PID文件并清理数据库
+                String removePidCommand = String.format("rm -f %s", pidFile);
+                sshClient.executeCommand(machineInfo, removePidCommand);
+                logstashMachineMapper.updateProcessPidById(logstashMachineId, null);
+                future.complete(true);
+                return future;
+            }
+
+            logger.info("开始停止Logstash进程，实例ID: {}, PID: {}", logstashMachineId, pid);
+
+            // 尝试优雅停止（发送TERM信号）
+            String stopCommand = String.format("kill %s", pid);
+            sshClient.executeCommand(machineInfo, stopCommand);
+
+            // 等待进程停止
+            Thread.sleep(5000);
+
+            // 检查进程是否已停止
+            String checkProcessCommand =
+                    String.format(
+                            "if ps -p %s > /dev/null 2>&1; then echo \"running\"; else echo"
+                                    + " \"stopped\"; fi",
+                            pid);
+            String checkResult = sshClient.executeCommand(machineInfo, checkProcessCommand);
+
+            boolean stopped = "stopped".equals(checkResult.trim());
+
+            if (!stopped) {
+                // 如果优雅停止失败，尝试强制停止
+                logger.warn("优雅停止失败，尝试强制停止，实例ID: {}, PID: {}", logstashMachineId, pid);
+                String forceStopCommand = String.format("kill -9 %s", pid);
+                sshClient.executeCommand(machineInfo, forceStopCommand);
+
+                // 再次等待
+                Thread.sleep(2000);
+
+                // 再次检查
+                String finalCheckResult =
+                        sshClient.executeCommand(machineInfo, checkProcessCommand);
+                stopped = "stopped".equals(finalCheckResult.trim());
+            }
+
+            if (stopped) {
+                // 删除PID文件并清理数据库
+                String removePidCommand = String.format("rm -f %s", pidFile);
+                sshClient.executeCommand(machineInfo, removePidCommand);
+                logstashMachineMapper.updateProcessPidById(logstashMachineId, null);
+
+                logger.info("成功停止Logstash进程，实例ID: {}, PID: {}", logstashMachineId, pid);
+            } else {
+                logger.error("停止Logstash进程失败，实例ID: {}, PID: {}", logstashMachineId, pid);
+            }
+
+            future.complete(stopped);
         } catch (Exception e) {
-            logger.error("停止Logstash进程时发生错误: {}", e.getMessage(), e);
-            future.completeExceptionally(
-                    new SshOperationException("停止Logstash进程失败: " + e.getMessage(), e));
+            logger.error(
+                    "停止Logstash进程时发生错误，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage(), e);
+            future.completeExceptionally(new SshOperationException("停止进程失败: " + e.getMessage(), e));
         }
 
         return future;

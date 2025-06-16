@@ -1,45 +1,64 @@
 package com.hinadt.miaocha.application.logstash.command;
 
+import com.hinadt.miaocha.application.logstash.path.LogstashDeployPathManager;
 import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
 import java.util.concurrent.CompletableFuture;
 
-/** 强制停止Logstash进程命令 应急停止功能：执行原有的停止逻辑，但无论命令成功与否，都强制返回成功 用于应急情况下确保进程状态的一致性 */
+/**
+ * 强制停止Logstash进程命令 - 重构支持多实例，基于logstashMachineId 应急停止功能：执行原有的停止逻辑，但无论命令成功与否，都强制返回成功
+ * 用于应急情况下确保进程状态的一致性
+ */
 public class ForceStopProcessCommand extends AbstractLogstashCommand {
+
+    private static final int WAIT_TIMEOUT_SECONDS = 5;
 
     private final StopProcessCommand normalStopCommand;
 
     public ForceStopProcessCommand(
             SshClient sshClient,
-            String deployDir,
-            Long processId,
-            LogstashMachineMapper logstashMachineMapper) {
-        super(sshClient, deployDir, processId, logstashMachineMapper);
+            String deployBaseDir,
+            Long logstashMachineId,
+            LogstashMachineMapper logstashMachineMapper,
+            LogstashDeployPathManager deployPathManager) {
+        super(
+                sshClient,
+                deployBaseDir,
+                logstashMachineId,
+                logstashMachineMapper,
+                deployPathManager);
         // 创建普通的停止命令
         this.normalStopCommand =
-                new StopProcessCommand(sshClient, deployDir, processId, logstashMachineMapper);
+                new StopProcessCommand(
+                        sshClient,
+                        deployBaseDir,
+                        logstashMachineId,
+                        logstashMachineMapper,
+                        deployPathManager);
     }
 
     @Override
     protected CompletableFuture<Boolean> doExecute(MachineInfo machineInfo) {
-        logger.warn("执行强制停止操作 - 机器: {}, 进程ID: {}", machineInfo.getIp(), processId);
+        logger.info("执行强制停止命令，实例ID: {}", logstashMachineId);
 
-        // 执行普通的停止逻辑
+        // 执行普通停止命令，但无论结果如何都返回成功
         return normalStopCommand
                 .doExecute(machineInfo)
                 .handle(
-                        (success, throwable) -> {
+                        (result, throwable) -> {
                             if (throwable != null) {
                                 logger.warn(
-                                        "强制停止过程中SSH命令执行失败，但将强制返回成功: {}", throwable.getMessage());
-                            } else if (!success) {
-                                logger.warn("强制停止过程中停止命令返回失败，但将强制返回成功");
+                                        "强制停止过程中发生异常，但仍返回成功，实例ID: {}, 异常: {}",
+                                        logstashMachineId,
+                                        throwable.getMessage());
+                            } else if (!result) {
+                                logger.warn("强制停止命令执行失败，但仍返回成功，实例ID: {}", logstashMachineId);
                             } else {
-                                logger.info("强制停止执行成功");
+                                logger.info("强制停止命令执行成功，实例ID: {}", logstashMachineId);
                             }
 
-                            // 无论如何都返回成功，确保状态能够更新为未启动
+                            // 无论如何都返回成功，确保状态机能够继续
                             return true;
                         });
     }

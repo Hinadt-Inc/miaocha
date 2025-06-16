@@ -4,74 +4,95 @@
 
     <!-- Logstash机器表所有字段 -->
     <sql id="logstashMachineColumns">
-        id, logstash_process_id, machine_id, process_pid, state, config_content, jvm_options, logstash_yml, deploy_path,
+        id
+        , logstash_process_id, machine_id, process_pid, state, config_content, jvm_options, logstash_yml, deploy_path,
         create_time, update_time, create_user, update_user
     </sql>
 
     <!-- 插入 Logstash 机器记录 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO logstash_machine (logstash_process_id, machine_id, state, config_content, jvm_options, logstash_yml,
-        deploy_path, create_time, update_time, create_user, update_user)
+                                      deploy_path, create_time, update_time, create_user, update_user)
         VALUES (#{logstashProcessId}, #{machineId}, #{state}, #{configContent}, #{jvmOptions}, #{logstashYml},
-        #{deployPath}, NOW(), NOW(), #{createUser}, #{updateUser})
+                #{deployPath}, NOW(), NOW(), #{createUser}, #{updateUser})
     </insert>
 
-    <!-- 更新进程 PID -->
-    <update id="updateProcessPid">
-        UPDATE logstash_machine SET process_pid = #{processPid}, update_user = #{updateUser}
-        WHERE logstash_process_id = #{logstashProcessId} AND machine_id = #{machineId}
+    <!-- 基于实例ID更新进程 PID -->
+    <update id="updateProcessPidById">
+        UPDATE logstash_machine
+        SET process_pid = #{processPid},
+            update_time = NOW()
+        WHERE id = #{id}
     </update>
 
-    <!-- 更新状态 -->
-    <update id="updateState">
-        UPDATE logstash_machine SET state = #{state}, update_user = #{updateUser}
-        WHERE logstash_process_id = #{logstashProcessId} AND machine_id = #{machineId}
+    <!-- 基于实例ID更新状态 -->
+    <update id="updateStateById">
+        UPDATE logstash_machine
+        SET state       = #{state},
+            update_time = NOW()
+        WHERE id = #{id}
     </update>
 
-    <!-- 更新配置内容 -->
-    <update id="updateConfigContent">
-        UPDATE logstash_machine SET config_content = #{configContent}, update_user = #{updateUser}
-        WHERE logstash_process_id = #{logstashProcessId} AND machine_id = #{machineId}
+    <!-- 基于实例ID更新配置内容 -->
+    <update id="updateConfigContentById">
+        UPDATE logstash_machine
+        SET config_content = #{configContent},
+            update_time    = NOW(),
+            update_user    = #{updateUser}
+        WHERE id = #{id}
     </update>
 
-    <!-- 更新 JVM 选项 -->
-    <update id="updateJvmOptions">
-        UPDATE logstash_machine SET jvm_options = #{jvmOptions}, update_user = #{updateUser}
-        WHERE logstash_process_id = #{logstashProcessId} AND machine_id = #{machineId}
+    <!-- 基于实例ID更新 JVM 选项 -->
+    <update id="updateJvmOptionsById">
+        UPDATE logstash_machine
+        SET jvm_options = #{jvmOptions},
+            update_time = NOW(),
+            update_user = #{updateUser}
+        WHERE id = #{id}
     </update>
 
-    <!-- 更新 logstash.yml -->
-    <update id="updateLogstashYml">
-        UPDATE logstash_machine SET logstash_yml = #{logstashYml}, update_user = #{updateUser}
-        WHERE logstash_process_id = #{logstashProcessId} AND machine_id = #{machineId}
+    <!-- 基于实例ID更新 logstash.yml -->
+    <update id="updateLogstashYmlById">
+        UPDATE logstash_machine
+        SET logstash_yml = #{logstashYml},
+            update_time  = NOW(),
+            update_user  = #{updateUser}
+        WHERE id = #{id}
     </update>
 
     <!-- 更新 Logstash 机器记录 -->
     <update id="update">
-        UPDATE logstash_machine SET
-        process_pid = #{processPid},
-        state = #{state},
-        config_content = #{configContent},
-        jvm_options = #{jvmOptions},
-        logstash_yml = #{logstashYml},
-        deploy_path = #{deployPath},
-        update_user = #{updateUser}
+        UPDATE logstash_machine
+        SET process_pid    = #{processPid},
+            state          = #{state},
+            config_content = #{configContent},
+            jvm_options    = #{jvmOptions},
+            logstash_yml   = #{logstashYml},
+            deploy_path    = #{deployPath},
+            update_time    = NOW(),
+            update_user    = #{updateUser}
         WHERE id = #{id}
     </update>
 
     <!-- 根据 ID 删除 -->
     <delete id="deleteById">
-        DELETE FROM logstash_machine WHERE id=#{id}
+        DELETE
+        FROM logstash_machine
+        WHERE id = #{id}
     </delete>
 
     <!-- 根据 Logstash 进程 ID 删除 -->
     <delete id="deleteByLogstashProcessId">
-        DELETE FROM logstash_machine WHERE logstash_process_id=#{logstashProcessId}
+        DELETE
+        FROM logstash_machine
+        WHERE logstash_process_id = #{logstashProcessId}
     </delete>
 
     <!-- 根据机器 ID 删除 -->
     <delete id="deleteByMachineId">
-        DELETE FROM logstash_machine WHERE machine_id=#{machineId}
+        DELETE
+        FROM logstash_machine
+        WHERE machine_id = #{machineId}
     </delete>
 
     <!-- 根据 ID 查询 Logstash 机器记录 -->
@@ -79,6 +100,17 @@
         SELECT
         <include refid="logstashMachineColumns"/>
         FROM logstash_machine WHERE id = #{id}
+    </select>
+
+    <!-- 根据 ID 列表批量查询 Logstash 机器记录 -->
+    <select id="selectByIds" resultType="com.hinadt.miaocha.domain.entity.LogstashMachine">
+        SELECT
+        <include refid="logstashMachineColumns"/>
+        FROM logstash_machine
+        WHERE id IN
+        <foreach collection="list" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
     </select>
 
     <!-- 根据 Logstash 进程 ID 查询 -->
@@ -95,11 +127,11 @@
         FROM logstash_machine WHERE machine_id=#{machineId}
     </select>
 
-    <!-- 根据 Logstash 进程 ID 和机器 ID 查询 -->
-    <select id="selectByLogstashProcessIdAndMachineId" resultType="com.hinadt.miaocha.domain.entity.LogstashMachine">
+    <!-- 查询所有 Logstash 机器记录 -->
+    <select id="selectAll" resultType="com.hinadt.miaocha.domain.entity.LogstashMachine">
         SELECT
         <include refid="logstashMachineColumns"/>
-        FROM logstash_machine WHERE logstash_process_id=#{logstashProcessId} AND machine_id=#{machineId}
+        FROM logstash_machine
     </select>
 
     <!-- 查询所有有进程 PID 的 Logstash 机器 -->
@@ -123,9 +155,29 @@
         FROM logstash_machine WHERE logstash_process_id = #{logstashProcessId} AND state = #{state}
     </select>
 
-    <!-- 根据 Logstash 进程 ID 和机器 ID 计数 -->
-    <select id="countByLogstashProcessIdAndMachineId" resultType="int">
-        SELECT COUNT(*) FROM logstash_machine WHERE logstash_process_id=#{logstashProcessId} AND machine_id=#{machineId}
+    <!-- 根据部署路径查询实例 -->
+    <select id="selectByDeployPath" resultType="com.hinadt.miaocha.domain.entity.LogstashMachine">
+        SELECT
+        <include refid="logstashMachineColumns"/>
+        FROM logstash_machine WHERE deploy_path = #{deployPath}
+    </select>
+
+    <!-- 检查部署路径是否已存在（排除指定实例） -->
+    <select id="countByDeployPathExcludeId" resultType="int">
+        SELECT COUNT(*) FROM logstash_machine
+        WHERE deploy_path = #{deployPath}
+        <if test="excludeId != null">
+            AND id != #{excludeId}
+        </if>
+    </select>
+
+    <!-- 根据机器ID和部署路径查询实例（用于检查路径冲突） -->
+    <select id="selectByMachineAndPath" resultType="com.hinadt.miaocha.domain.entity.LogstashMachine">
+        SELECT
+        <include refid="logstashMachineColumns"/>
+        FROM logstash_machine
+        WHERE machine_id = #{machineId}
+        AND deploy_path = #{deployPath}
     </select>
 
 </mapper>

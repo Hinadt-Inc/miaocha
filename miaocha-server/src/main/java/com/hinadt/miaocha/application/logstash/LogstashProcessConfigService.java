@@ -6,103 +6,119 @@ import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.Set;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /** Logstash进程配置服务 处理配置相关的业务逻辑和状态检查 */
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class LogstashProcessConfigService {
 
-    private static final Logger logger =
-            LoggerFactory.getLogger(LogstashProcessConfigService.class);
     private final LogstashMachineMapper logstashMachineMapper;
 
-    public LogstashProcessConfigService(LogstashMachineMapper logstashMachineMapper) {
-        this.logstashMachineMapper = logstashMachineMapper;
+    /**
+     * 验证配置操作的前置条件 确保目标实例不在禁止配置操作的状态
+     *
+     * @param processId 进程ID
+     * @param instanceIds 指定的实例ID列表，为null则检查所有实例
+     * @param operationType 操作类型描述
+     */
+    public void validateConfigOperationConditions(
+            Long processId, List<Long> instanceIds, String operationType) {
+        if (processId == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
+        }
+
+        log.debug("验证进程[{}]的{}条件", processId, operationType);
+
+        List<LogstashMachine> targetInstances = getTargetInstances(processId, instanceIds);
+        validateInstancesNotInForbiddenStates(targetInstances, operationType);
+
+        log.debug("进程[{}]的{}条件验证通过", processId, operationType);
     }
 
     /**
-     * 验证更新配置的前置条件 确保目标进程不在运行状态
+     * 验证配置更新的前置条件 确保目标实例不在运行状态
      *
      * @param processId 进程ID
-     * @param machineId 机器ID (如果为null则检查所有机器)
+     * @param instanceIds 指定的实例ID列表，为null则检查所有实例
      */
-    public void validateConfigUpdateConditions(Long processId, Long machineId) {
-        logger.debug("验证进程 [{}] 在机器 [{}] 上的配置更新条件", processId, machineId);
+    public void validateConfigUpdateConditions(Long processId, List<Long> instanceIds) {
+        validateConfigOperationConditions(processId, instanceIds, "配置更新");
+    }
 
-        List<LogstashMachine> machines;
-        if (machineId != null) {
-            // 检查单个机器
-            LogstashMachine machine =
-                    logstashMachineMapper.selectByLogstashProcessIdAndMachineId(
-                            processId, machineId);
-            if (machine == null) {
-                throw new BusinessException(
-                        ErrorCode.VALIDATION_ERROR,
-                        String.format("找不到进程 [%s] 在机器 [%s] 上的记录", processId, machineId));
-            }
-            machines = List.of(machine);
+    /**
+     * 验证配置刷新的前置条件 确保目标实例不在运行状态
+     *
+     * @param processId 进程ID
+     * @param instanceIds 指定的实例ID列表，为null则检查所有实例
+     */
+    public void validateConfigRefreshConditions(Long processId, List<Long> instanceIds) {
+        validateConfigOperationConditions(processId, instanceIds, "配置刷新");
+    }
+
+    /** 获取目标实例列表 */
+    private List<LogstashMachine> getTargetInstances(Long processId, List<Long> instanceIds) {
+        if (instanceIds == null || instanceIds.isEmpty()) {
+            // 获取进程的所有实例
+            return logstashMachineMapper.selectByLogstashProcessId(processId);
         } else {
-            // 检查所有关联机器
-            machines = logstashMachineMapper.selectByLogstashProcessId(processId);
+            // 获取指定的实例并验证它们属于该进程
+            return instanceIds.stream()
+                    .map(
+                            instanceId -> {
+                                LogstashMachine instance =
+                                        logstashMachineMapper.selectById(instanceId);
+                                if (instance == null) {
+                                    throw new BusinessException(
+                                            ErrorCode.RESOURCE_NOT_FOUND,
+                                            "指定的LogstashMachine实例不存在: ID=" + instanceId);
+                                }
+                                if (!instance.getLogstashProcessId().equals(processId)) {
+                                    throw new BusinessException(
+                                            ErrorCode.VALIDATION_ERROR,
+                                            "LogstashMachine实例["
+                                                    + instanceId
+                                                    + "]不属于进程["
+                                                    + processId
+                                                    + "]");
+                                }
+                                return instance;
+                            })
+                    .toList();
         }
+    }
 
-        for (LogstashMachine machine : machines) {
-            LogstashMachineState state = LogstashMachineState.valueOf(machine.getState());
+    /** 验证实例不在禁止配置操作的状态 */
+    private void validateInstancesNotInForbiddenStates(
+            List<LogstashMachine> instances, String operationType) {
+        // 禁止配置操作的状态
+        Set<LogstashMachineState> forbiddenStates =
+                Set.of(
+                        LogstashMachineState.RUNNING,
+                        LogstashMachineState.STARTING,
+                        LogstashMachineState.STOPPING);
 
-            // 检查状态是否允许更新配置
-            if (state == LogstashMachineState.RUNNING
-                    || state == LogstashMachineState.STARTING
-                    || state == LogstashMachineState.STOPPING) {
+        for (LogstashMachine instance : instances) {
+            LogstashMachineState state = LogstashMachineState.valueOf(instance.getState());
+
+            if (forbiddenStates.contains(state)) {
                 throw new BusinessException(
                         ErrorCode.VALIDATION_ERROR,
-                        String.format("当前状态 [%s] 不允许更新配置，请先停止进程", state.getDescription()));
+                        String.format(
+                                "实例[%s]当前状态[%s]不允许%s，请先停止实例",
+                                instance.getId(), state.getDescription(), operationType));
             }
 
             if (state == LogstashMachineState.INITIALIZE_FAILED) {
                 throw new BusinessException(
                         ErrorCode.VALIDATION_ERROR,
-                        String.format("当前状态 [%s] 不允许更新配置，请重新初始化", state.getDescription()));
-            }
-        }
-
-        logger.debug("进程 [{}] 配置更新条件验证通过", processId);
-    }
-
-    /**
-     * 验证刷新配置的前置条件 确保目标进程不在运行状态
-     *
-     * @param processId 进程ID
-     * @param machineId 机器ID (如果为null则检查所有机器)
-     */
-    public void validateConfigRefreshConditions(Long processId, Long machineId) {
-        if (processId == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进程ID不能为空");
-        }
-
-        if (machineId == null) {
-            // 全局刷新：检查所有机器上的进程状态
-            List<LogstashMachine> runningMachines =
-                    logstashMachineMapper.selectByLogstashProcessIdAndState(
-                            processId, LogstashMachineState.RUNNING.name());
-
-            if (!runningMachines.isEmpty()) {
-                logger.error("无法刷新配置：存在正在运行的Logstash进程实例");
-                throw new BusinessException(
-                        ErrorCode.VALIDATION_ERROR, "无法刷新配置：在刷新配置前，所有Logstash进程实例必须处于非运行状态");
-            }
-        } else {
-            // 单机刷新：检查当前机器上的进程状态
-            LogstashMachine logstashMachine =
-                    logstashMachineMapper.selectByLogstashProcessIdAndMachineId(
-                            processId, machineId);
-
-            if (logstashMachine != null
-                    && LogstashMachineState.RUNNING.name().equals(logstashMachine.getState())) {
-                logger.error("无法刷新配置：机器 [{}] 上的Logstash进程 [{}] 正在运行中", machineId, processId);
-                throw new BusinessException(
-                        ErrorCode.VALIDATION_ERROR, "无法刷新配置：在刷新配置前，Logstash进程必须处于非运行状态");
+                        String.format(
+                                "实例[%s]当前状态[%s]不允许%s，请重新初始化",
+                                instance.getId(), state.getDescription(), operationType));
             }
         }
     }

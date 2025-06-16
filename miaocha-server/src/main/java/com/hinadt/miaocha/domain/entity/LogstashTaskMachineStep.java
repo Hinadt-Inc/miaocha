@@ -17,6 +17,9 @@ public class LogstashTaskMachineStep {
     @Schema(description = "机器ID", example = "1")
     private Long machineId;
 
+    @Schema(description = "LogstashMachine实例ID", example = "1")
+    private Long logstashMachineId;
+
     @Schema(description = "步骤ID", example = "CREATE_REMOTE_DIR")
     private String stepId;
 

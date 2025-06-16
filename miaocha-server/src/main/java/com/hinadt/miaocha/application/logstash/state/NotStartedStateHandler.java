@@ -6,7 +6,7 @@ import com.hinadt.miaocha.application.logstash.enums.LogstashMachineState;
 import com.hinadt.miaocha.application.logstash.enums.LogstashMachineStep;
 import com.hinadt.miaocha.application.logstash.enums.StepStatus;
 import com.hinadt.miaocha.application.logstash.task.TaskService;
-import com.hinadt.miaocha.domain.entity.LogstashProcess;
+import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
@@ -30,11 +30,11 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
 
     @Override
     public CompletableFuture<Boolean> handleStart(
-            LogstashProcess process, MachineInfo machineInfo, String taskId) {
-        Long processId = process.getId();
+            LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId) {
+        Long logstashMachineId = logstashMachine.getId();
         Long machineId = machineInfo.getId();
 
-        logger.info("启动机器 [{}] 上的Logstash进程 [{}]", machineId, processId);
+        logger.info("启动机器 [{}] 上的LogstashMachine实例 [{}]", machineId, logstashMachineId);
 
         CompletableFuture<Boolean> result = CompletableFuture.completedFuture(true);
 
@@ -46,50 +46,27 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
 
                             taskService.updateStepStatus(
                                     taskId,
-                                    machineId,
+                                    logstashMachineId,
                                     LogstashMachineStep.START_PROCESS.getId(),
                                     StepStatus.RUNNING);
+
                             LogstashCommand startCommand =
-                                    commandFactory.startProcessCommand(processId);
+                                    commandFactory.startProcessCommand(logstashMachineId);
 
                             return startCommand
                                     .execute(machineInfo)
                                     .thenApply(
                                             startSuccess -> {
-                                                StepStatus status =
+                                                StepStatus stepStatus =
                                                         startSuccess
                                                                 ? StepStatus.COMPLETED
                                                                 : StepStatus.FAILED;
-                                                String errorMessage =
-                                                        startSuccess ? null : "启动Logstash进程失败";
                                                 taskService.updateStepStatus(
                                                         taskId,
-                                                        machineId,
+                                                        logstashMachineId,
                                                         LogstashMachineStep.START_PROCESS.getId(),
-                                                        status,
-                                                        errorMessage);
-
-                                                if (!startSuccess) {
-                                                    throw new RuntimeException("启动Logstash进程失败");
-                                                }
+                                                        stepStatus);
                                                 return startSuccess;
-                                            })
-                                    .exceptionally(
-                                            ex -> {
-                                                // 更新任务状态为失败，不记录详细日志（由外层处理）
-                                                taskService.updateStepStatus(
-                                                        taskId,
-                                                        machineId,
-                                                        LogstashMachineStep.START_PROCESS.getId(),
-                                                        StepStatus.FAILED,
-                                                        ex.getMessage());
-
-                                                // 重新抛出异常，确保异常传递到外层
-                                                if (ex instanceof RuntimeException) {
-                                                    throw (RuntimeException) ex;
-                                                } else {
-                                                    throw new RuntimeException(ex.getMessage(), ex);
-                                                }
                                             });
                         });
 
@@ -101,53 +78,27 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
 
                             taskService.updateStepStatus(
                                     taskId,
-                                    machineId,
+                                    logstashMachineId,
                                     LogstashMachineStep.VERIFY_PROCESS.getId(),
                                     StepStatus.RUNNING);
+
                             LogstashCommand verifyCommand =
-                                    commandFactory.verifyProcessCommand(processId);
+                                    commandFactory.verifyProcessCommand(logstashMachineId);
 
                             return verifyCommand
                                     .execute(machineInfo)
                                     .thenApply(
                                             verifySuccess -> {
-                                                StepStatus status =
+                                                StepStatus stepStatus =
                                                         verifySuccess
                                                                 ? StepStatus.COMPLETED
                                                                 : StepStatus.FAILED;
-                                                String errorMessage =
-                                                        verifySuccess
-                                                                ? null
-                                                                : "验证Logstash进程失败，进程可能未正常运行";
                                                 taskService.updateStepStatus(
                                                         taskId,
-                                                        machineId,
+                                                        logstashMachineId,
                                                         LogstashMachineStep.VERIFY_PROCESS.getId(),
-                                                        status,
-                                                        errorMessage);
-
-                                                if (!verifySuccess) {
-                                                    throw new RuntimeException(
-                                                            "验证Logstash进程失败，进程可能未正常运行");
-                                                }
+                                                        stepStatus);
                                                 return verifySuccess;
-                                            })
-                                    .exceptionally(
-                                            ex -> {
-                                                // 更新任务状态为失败，不记录详细日志（由外层处理）
-                                                taskService.updateStepStatus(
-                                                        taskId,
-                                                        machineId,
-                                                        LogstashMachineStep.VERIFY_PROCESS.getId(),
-                                                        StepStatus.FAILED,
-                                                        ex.getMessage());
-
-                                                // 重新抛出异常，确保异常传递到外层
-                                                if (ex instanceof RuntimeException) {
-                                                    throw (RuntimeException) ex;
-                                                } else {
-                                                    throw new RuntimeException(ex.getMessage(), ex);
-                                                }
                                             });
                         });
 
@@ -156,36 +107,36 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
 
     @Override
     public CompletableFuture<Boolean> handleUpdateConfig(
-            LogstashProcess process,
+            LogstashMachine logstashMachine,
             String configContent,
             String jvmOptions,
             String logstashYml,
             MachineInfo machineInfo,
             String taskId) {
-        Long processId = process.getId();
+        Long logstashMachineId = logstashMachine.getId();
         Long machineId = machineInfo.getId();
 
-        logger.info("更新机器 [{}] 上的Logstash进程 [{}] 配置", machineId, processId);
+        logger.info("更新机器 [{}] 上的LogstashMachine实例 [{}] 配置", machineId, logstashMachineId);
 
         // 更新相关步骤的状态为运行中
         if (configContent != null) {
             taskService.updateStepStatus(
                     taskId,
-                    machineId,
+                    logstashMachineId,
                     LogstashMachineStep.UPDATE_MAIN_CONFIG.getId(),
                     StepStatus.RUNNING);
         }
         if (jvmOptions != null) {
             taskService.updateStepStatus(
                     taskId,
-                    machineId,
+                    logstashMachineId,
                     LogstashMachineStep.UPDATE_JVM_CONFIG.getId(),
                     StepStatus.RUNNING);
         }
         if (logstashYml != null) {
             taskService.updateStepStatus(
                     taskId,
-                    machineId,
+                    logstashMachineId,
                     LogstashMachineStep.UPDATE_SYSTEM_CONFIG.getId(),
                     StepStatus.RUNNING);
         }
@@ -193,7 +144,7 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
         // 创建一个命令来同时更新所有配置
         LogstashCommand updateCommand =
                 commandFactory.updateConfigCommand(
-                        processId, configContent, jvmOptions, logstashYml);
+                        logstashMachineId, configContent, jvmOptions, logstashYml);
 
         // 执行更新命令
         return updateCommand
@@ -207,7 +158,7 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
                             if (configContent != null) {
                                 taskService.updateStepStatus(
                                         taskId,
-                                        machineId,
+                                        logstashMachineId,
                                         LogstashMachineStep.UPDATE_MAIN_CONFIG.getId(),
                                         status,
                                         errorMessage);
@@ -215,7 +166,7 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
                             if (jvmOptions != null) {
                                 taskService.updateStepStatus(
                                         taskId,
-                                        machineId,
+                                        logstashMachineId,
                                         LogstashMachineStep.UPDATE_JVM_CONFIG.getId(),
                                         status,
                                         errorMessage);
@@ -223,7 +174,7 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
                             if (logstashYml != null) {
                                 taskService.updateStepStatus(
                                         taskId,
-                                        machineId,
+                                        logstashMachineId,
                                         LogstashMachineStep.UPDATE_SYSTEM_CONFIG.getId(),
                                         status,
                                         errorMessage);
@@ -243,7 +194,7 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
                             if (configContent != null) {
                                 taskService.updateStepStatus(
                                         taskId,
-                                        machineId,
+                                        logstashMachineId,
                                         LogstashMachineStep.UPDATE_MAIN_CONFIG.getId(),
                                         StepStatus.FAILED,
                                         errorMessage);
@@ -251,7 +202,7 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
                             if (jvmOptions != null) {
                                 taskService.updateStepStatus(
                                         taskId,
-                                        machineId,
+                                        logstashMachineId,
                                         LogstashMachineStep.UPDATE_JVM_CONFIG.getId(),
                                         StepStatus.FAILED,
                                         errorMessage);
@@ -259,7 +210,7 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
                             if (logstashYml != null) {
                                 taskService.updateStepStatus(
                                         taskId,
-                                        machineId,
+                                        logstashMachineId,
                                         LogstashMachineStep.UPDATE_SYSTEM_CONFIG.getId(),
                                         StepStatus.FAILED,
                                         errorMessage);
@@ -276,19 +227,22 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
 
     @Override
     public CompletableFuture<Boolean> handleRefreshConfig(
-            LogstashProcess process, MachineInfo machineInfo, String taskId) {
-        Long processId = process.getId();
+            LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId) {
+        Long logstashMachineId = logstashMachine.getId();
         Long machineId = machineInfo.getId();
 
-        logger.info("刷新机器 [{}] 上的Logstash进程 [{}] 配置", machineId, processId);
+        logger.info("刷新机器 [{}] 上的LogstashMachine实例 [{}] 配置", machineId, logstashMachineId);
 
         taskService.updateStepStatus(
-                taskId, machineId, LogstashMachineStep.REFRESH_CONFIG.getId(), StepStatus.RUNNING);
+                taskId,
+                logstashMachineId,
+                LogstashMachineStep.REFRESH_CONFIG.getId(),
+                StepStatus.RUNNING);
 
         // 使用支持所有配置类型的刷新命令
         // 传递null将从数据库中获取最新配置
         LogstashCommand refreshConfigCommand =
-                commandFactory.refreshConfigCommand(processId, null, null, null);
+                commandFactory.refreshConfigCommand(logstashMachineId);
 
         return refreshConfigCommand
                 .execute(machineInfo)
@@ -298,7 +252,7 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
                             String errorMessage = success ? null : "刷新配置失败";
                             taskService.updateStepStatus(
                                     taskId,
-                                    machineId,
+                                    logstashMachineId,
                                     LogstashMachineStep.REFRESH_CONFIG.getId(),
                                     status,
                                     errorMessage);
@@ -314,7 +268,7 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
                             // 更新任务状态为失败，不记录详细日志（由外层处理）
                             taskService.updateStepStatus(
                                     taskId,
-                                    machineId,
+                                    logstashMachineId,
                                     LogstashMachineStep.REFRESH_CONFIG.getId(),
                                     StepStatus.FAILED,
                                     ex.getMessage());

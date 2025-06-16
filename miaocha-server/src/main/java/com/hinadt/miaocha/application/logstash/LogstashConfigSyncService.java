@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-/** Logstash配置同步服务 解耦配置同步逻辑，从进程初始化中分离出来 */
+/** Logstash配置同步服务 - 基于实例级架构 */
 @Service
 public class LogstashConfigSyncService {
     private static final Logger logger = LoggerFactory.getLogger(LogstashConfigSyncService.class);
@@ -41,7 +41,7 @@ public class LogstashConfigSyncService {
     }
 
     /**
-     * 异步同步配置文件 在进程初始化完成后从远程读取配置并更新到数据库
+     * 异步同步配置文件 - 在进程初始化完成后从远程读取配置并更新到数据库
      *
      * @param processId 进程ID
      * @param needJvmOptions 是否需要同步JVM配置
@@ -53,76 +53,26 @@ public class LogstashConfigSyncService {
                 () -> {
                     try {
                         Thread.sleep(5000);
-                        // 等待初始化完成
-                        logger.info("等待进程 [{}] 初始化完成后同步配置文件", processId);
+                        logger.info("等待进程 [{}] 所有实例初始化完成后同步配置文件", processId);
 
-                        // 创建一个间隔查询任务，间隔5秒检查一次初始化状态
-                        int maxTries = 60; // 最多等待5分钟 (60 * 5秒)
-                        int tries = 0;
-                        boolean initializationComplete = false;
-
-                        while (!initializationComplete && tries < maxTries) {
-                            // 获取所有机器的状态
-                            List<LogstashMachine> machineStates =
-                                    logstashMachineMapper.selectByLogstashProcessId(processId);
-
-                            if (machineStates.isEmpty()) {
-                                logger.warn("进程 [{}] 没有关联的机器，无法同步配置文件", processId);
-                                Thread.sleep(5000);
-                                tries++;
-                                continue;
-                            }
-
-                            // 检查是否所有机器都已完成初始化
-                            initializationComplete =
-                                    machineStates.stream()
-                                            .allMatch(
-                                                    m ->
-                                                            !LogstashMachineState.INITIALIZING
-                                                                            .name()
-                                                                            .equals(m.getState())
-                                                                    && !LogstashMachineState
-                                                                            .INITIALIZE_FAILED
-                                                                            .name()
-                                                                            .equals(m.getState()));
-                            if (!initializationComplete) {
-                                tries++;
-                                logger.debug(
-                                        "进程 [{}] 等待初始化完成 ({}/{}): 还有机器在初始化中",
-                                        processId,
-                                        tries,
-                                        maxTries);
-                                Thread.sleep(5000); // 等待5秒
-                            }
-                        }
-
-                        if (!initializationComplete) {
-                            logger.warn("进程 [{}] 初始化超时，部分机器仍在初始化中，无法同步配置文件", processId);
+                        // 等待所有实例初始化完成
+                        if (!waitForAllInstancesInitialized(processId)) {
+                            logger.warn("进程 [{}] 初始化超时，部分实例仍在初始化中，无法同步配置文件", processId);
                             return;
                         }
 
-                        // 初始化完成后，选择一台成功的机器来读取配置
-                        List<LogstashMachine> successfulMachines =
-                                logstashMachineMapper.selectByLogstashProcessId(processId).stream()
-                                        .filter(
-                                                m ->
-                                                        LogstashMachineState.NOT_STARTED
-                                                                .name()
-                                                                .equals(m.getState()))
-                                        .toList();
-
-                        if (successfulMachines.isEmpty()) {
-                            logger.warn("进程 [{}] 没有初始化成功的机器，无法同步配置文件", processId);
+                        // 选择一个成功初始化的实例来读取配置
+                        LogstashMachine sourceInstance = selectSourceInstanceForSync(processId);
+                        if (sourceInstance == null) {
+                            logger.warn("进程 [{}] 没有可用的实例来同步配置文件", processId);
                             return;
                         }
 
-                        // 选择第一台成功的机器
-                        LogstashMachine targetMachine = successfulMachines.get(0);
+                        // 获取机器信息
                         MachineInfo machineInfo =
-                                machineMapper.selectById(targetMachine.getMachineId());
-
+                                machineMapper.selectById(sourceInstance.getMachineId());
                         if (machineInfo == null) {
-                            logger.warn("找不到机器 [{}]，无法同步配置文件", targetMachine.getMachineId());
+                            logger.warn("找不到实例 [{}] 对应的机器信息，无法同步配置文件", sourceInstance.getId());
                             return;
                         }
 
@@ -134,49 +84,20 @@ public class LogstashConfigSyncService {
                             return;
                         }
 
-                        // 构建远程配置文件路径 - 优先从数据库获取完整路径
-                        String processDir = getProcessDirectory(processId, machineInfo);
-                        String configDir = processDir + "/config";
+                        // 构建远程配置文件路径
+                        String instanceDeployPath =
+                                deployService.getInstanceDeployPath(sourceInstance);
+                        String configDir = instanceDeployPath + "/config";
 
                         // 同步JVM配置
                         if (needJvmOptions) {
-                            try {
-                                String jvmOptionsFile = configDir + "/jvm.options";
-                                String jvmOptions =
-                                        syncRemoteFileContent(machineInfo, jvmOptionsFile);
-
-                                if (StringUtils.hasText(jvmOptions)) {
-                                    currentProcess.setJvmOptions(jvmOptions);
-
-                                    // 同步到所有LogstashMachine
-                                    updateConfigForAllMachines(processId, null, jvmOptions, null);
-
-                                    logger.info("成功同步进程 [{}] 的JVM配置", processId);
-                                }
-                            } catch (Exception e) {
-                                logger.error(
-                                        "同步进程 [{}] 的JVM配置失败: {}", processId, e.getMessage(), e);
-                            }
+                            syncJvmConfiguration(processId, currentProcess, machineInfo, configDir);
                         }
 
                         // 同步Logstash系统配置
                         if (needLogstashYml) {
-                            try {
-                                String logstashYmlFile = configDir + "/logstash.yml";
-                                String logstashYml =
-                                        syncRemoteFileContent(machineInfo, logstashYmlFile);
-
-                                if (StringUtils.hasText(logstashYml)) {
-                                    currentProcess.setLogstashYml(logstashYml);
-
-                                    // 同步到所有LogstashMachine
-                                    updateConfigForAllMachines(processId, null, null, logstashYml);
-
-                                    logger.info("成功同步进程 [{}] 的系统配置", processId);
-                                }
-                            } catch (Exception e) {
-                                logger.error("同步进程 [{}] 的系统配置失败: {}", processId, e.getMessage(), e);
-                            }
+                            syncLogstashYmlConfiguration(
+                                    processId, currentProcess, machineInfo, configDir);
                         }
 
                         // 更新进程记录
@@ -190,16 +111,107 @@ public class LogstashConfigSyncService {
                 });
     }
 
-    /**
-     * 获取进程目录路径
-     *
-     * @param processId 进程ID
-     * @param machineInfo 机器信息
-     * @return 进程目录路径
-     */
-    private String getProcessDirectory(Long processId, MachineInfo machineInfo) {
-        // 使用统一的路径管理服务
-        return deployService.getProcessDeployPath(processId, machineInfo);
+    /** 等待所有实例初始化完成 */
+    private boolean waitForAllInstancesInitialized(Long processId) throws InterruptedException {
+        int maxTries = 60; // 最多等待5分钟 (60 * 5秒)
+        int tries = 0;
+
+        while (tries < maxTries) {
+            List<LogstashMachine> allInstances =
+                    logstashMachineMapper.selectByLogstashProcessId(processId);
+
+            if (allInstances.isEmpty()) {
+                logger.warn("进程 [{}] 没有关联的实例，无法同步配置文件", processId);
+                Thread.sleep(5000);
+                tries++;
+                continue;
+            }
+
+            // 检查是否所有实例都已完成初始化
+            boolean allInitialized =
+                    allInstances.stream()
+                            .allMatch(
+                                    instance ->
+                                            !LogstashMachineState.INITIALIZING
+                                                            .name()
+                                                            .equals(instance.getState())
+                                                    && !LogstashMachineState.INITIALIZE_FAILED
+                                                            .name()
+                                                            .equals(instance.getState()));
+
+            if (allInitialized) {
+                logger.info("进程 [{}] 所有 {} 个实例初始化完成", processId, allInstances.size());
+                return true;
+            }
+
+            tries++;
+            logger.debug("进程 [{}] 等待实例初始化完成 ({}/{}): 还有实例在初始化中", processId, tries, maxTries);
+            Thread.sleep(5000);
+        }
+
+        return false;
+    }
+
+    /** 选择一个成功初始化的实例作为配置同步的源 */
+    private LogstashMachine selectSourceInstanceForSync(Long processId) {
+        List<LogstashMachine> successfulInstances =
+                logstashMachineMapper.selectByLogstashProcessId(processId).stream()
+                        .filter(
+                                instance ->
+                                        LogstashMachineState.NOT_STARTED
+                                                .name()
+                                                .equals(instance.getState()))
+                        .toList();
+
+        if (successfulInstances.isEmpty()) {
+            logger.warn("进程 [{}] 没有初始化成功的实例", processId);
+            return null;
+        }
+
+        // 选择第一个成功的实例
+        LogstashMachine sourceInstance = successfulInstances.get(0);
+        logger.info("选择实例 [{}] 作为配置同步源", sourceInstance.getId());
+        return sourceInstance;
+    }
+
+    /** 同步JVM配置 */
+    private void syncJvmConfiguration(
+            Long processId,
+            LogstashProcess currentProcess,
+            MachineInfo machineInfo,
+            String configDir) {
+        try {
+            String jvmOptionsFile = configDir + "/jvm.options";
+            String jvmOptions = syncRemoteFileContent(machineInfo, jvmOptionsFile);
+
+            if (StringUtils.hasText(jvmOptions)) {
+                currentProcess.setJvmOptions(jvmOptions);
+                updateConfigForAllInstances(processId, null, jvmOptions, null);
+                logger.info("成功同步进程 [{}] 的JVM配置", processId);
+            }
+        } catch (Exception e) {
+            logger.error("同步进程 [{}] 的JVM配置失败: {}", processId, e.getMessage(), e);
+        }
+    }
+
+    /** 同步Logstash系统配置 */
+    private void syncLogstashYmlConfiguration(
+            Long processId,
+            LogstashProcess currentProcess,
+            MachineInfo machineInfo,
+            String configDir) {
+        try {
+            String logstashYmlFile = configDir + "/logstash.yml";
+            String logstashYml = syncRemoteFileContent(machineInfo, logstashYmlFile);
+
+            if (StringUtils.hasText(logstashYml)) {
+                currentProcess.setLogstashYml(logstashYml);
+                updateConfigForAllInstances(processId, null, null, logstashYml);
+                logger.info("成功同步进程 [{}] 的系统配置", processId);
+            }
+        } catch (Exception e) {
+            logger.error("同步进程 [{}] 的系统配置失败: {}", processId, e.getMessage(), e);
+        }
     }
 
     /**
@@ -228,28 +240,19 @@ public class LogstashConfigSyncService {
     }
 
     /**
-     * 更新单台机器的配置
+     * 更新单个实例的配置
      *
-     * @param processId 进程ID
-     * @param machineId 机器ID
+     * @param instanceId 实例ID
      * @param configContent 主配置内容，为null表示不更新
      * @param jvmOptions JVM配置内容，为null表示不更新
      * @param logstashYml Logstash系统配置内容，为null表示不更新
      */
-    public void updateConfigForSingleMachine(
-            Long processId,
-            Long machineId,
-            String configContent,
-            String jvmOptions,
-            String logstashYml) {
+    public void updateConfigForSingleInstance(
+            Long instanceId, String configContent, String jvmOptions, String logstashYml) {
         try {
-            // 获取指定机器的LogstashMachine记录
-            LogstashMachine machine =
-                    logstashMachineMapper.selectByLogstashProcessIdAndMachineId(
-                            processId, machineId);
-
-            if (machine == null) {
-                logger.warn("找不到进程 [{}] 在机器 [{}] 上的记录，跳过数据库同步", processId, machineId);
+            LogstashMachine instance = logstashMachineMapper.selectById(instanceId);
+            if (instance == null) {
+                logger.warn("找不到实例 [{}]，跳过配置更新", instanceId);
                 return;
             }
 
@@ -257,82 +260,58 @@ public class LogstashConfigSyncService {
 
             // 更新主配置
             if (configContent != null) {
-                machine.setConfigContent(configContent);
+                instance.setConfigContent(configContent);
                 updated = true;
             }
 
             // 更新JVM配置
             if (jvmOptions != null) {
-                machine.setJvmOptions(jvmOptions);
+                instance.setJvmOptions(jvmOptions);
                 updated = true;
             }
 
             // 更新系统配置
             if (logstashYml != null) {
-                machine.setLogstashYml(logstashYml);
+                instance.setLogstashYml(logstashYml);
                 updated = true;
             }
 
             // 如果有更新，保存到数据库
             if (updated) {
-                machine.setUpdateTime(LocalDateTime.now());
-                logstashMachineMapper.update(machine);
-                logger.info("已更新机器 [{}] 上的进程 [{}] 配置", machineId, processId);
+                instance.setUpdateTime(LocalDateTime.now());
+                logstashMachineMapper.update(instance);
+                logger.info("已更新实例 [{}] 配置", instanceId);
             } else {
-                logger.debug("机器 [{}] 上的进程 [{}] 配置无需更新", machineId, processId);
+                logger.debug("实例 [{}] 配置无需更新", instanceId);
             }
         } catch (Exception e) {
-            logger.error("更新机器 [{}] 配置时出错: {}", machineId, e.getMessage(), e);
+            logger.error("更新实例 [{}] 配置时出错: {}", instanceId, e.getMessage(), e);
         }
     }
 
     /**
-     * 更新所有LogstashMachine的配置
+     * 更新所有实例的配置
      *
      * @param processId 进程ID
      * @param configContent 主配置内容，为null表示不更新
      * @param jvmOptions JVM配置内容，为null表示不更新
      * @param logstashYml Logstash系统配置内容，为null表示不更新
      */
-    public void updateConfigForAllMachines(
+    public void updateConfigForAllInstances(
             Long processId, String configContent, String jvmOptions, String logstashYml) {
         try {
-            // 获取进程关联的所有LogstashMachine
-            List<LogstashMachine> machines =
+            // 获取进程关联的所有实例
+            List<LogstashMachine> allInstances =
                     logstashMachineMapper.selectByLogstashProcessId(processId);
 
-            for (LogstashMachine machine : machines) {
-                boolean updated = false;
-
-                // 更新主配置
-                if (configContent != null) {
-                    machine.setConfigContent(configContent);
-                    updated = true;
-                }
-
-                // 更新JVM配置
-                if (jvmOptions != null) {
-                    machine.setJvmOptions(jvmOptions);
-                    updated = true;
-                }
-
-                // 更新系统配置
-                if (logstashYml != null) {
-                    machine.setLogstashYml(logstashYml);
-                    updated = true;
-                }
-
-                // 如果有更新，保存到数据库
-                if (updated) {
-                    machine.setUpdateTime(LocalDateTime.now());
-                    logstashMachineMapper.update(machine);
-                    logger.debug("已更新机器 [{}] 上的进程 [{}] 配置", machine.getMachineId(), processId);
-                }
+            for (LogstashMachine instance : allInstances) {
+                updateConfigForSingleInstance(
+                        instance.getId(), configContent, jvmOptions, logstashYml);
             }
 
-            logger.info("已完成同步配置到所有 [{}] 台机器", machines.size());
+            logger.info("已完成同步配置到所有 [{}] 个实例", allInstances.size());
         } catch (Exception e) {
-            logger.error("更新所有机器配置时出错: {}", e.getMessage(), e);
+            logger.error("更新所有实例配置时出错: {}", e.getMessage(), e);
         }
     }
 }

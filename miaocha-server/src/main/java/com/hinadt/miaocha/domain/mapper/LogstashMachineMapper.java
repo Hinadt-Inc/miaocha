@@ -5,36 +5,11 @@ import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-/** Logstash机器关联Mapper接口 */
+/** Logstash机器关联Mapper接口 - 重构支持多实例 */
 @Mapper
 public interface LogstashMachineMapper {
 
     int insert(LogstashMachine logstashMachine);
-
-    int updateProcessPid(
-            @Param("logstashProcessId") Long logstashProcessId,
-            @Param("machineId") Long machineId,
-            @Param("processPid") String processPid);
-
-    int updateState(
-            @Param("logstashProcessId") Long logstashProcessId,
-            @Param("machineId") Long machineId,
-            @Param("state") String state);
-
-    int updateConfigContent(
-            @Param("logstashProcessId") Long logstashProcessId,
-            @Param("machineId") Long machineId,
-            @Param("configContent") String configContent);
-
-    int updateJvmOptions(
-            @Param("logstashProcessId") Long logstashProcessId,
-            @Param("machineId") Long machineId,
-            @Param("jvmOptions") String jvmOptions);
-
-    int updateLogstashYml(
-            @Param("logstashProcessId") Long logstashProcessId,
-            @Param("machineId") Long machineId,
-            @Param("logstashYml") String logstashYml);
 
     int update(LogstashMachine logstashMachine);
 
@@ -46,12 +21,13 @@ public interface LogstashMachineMapper {
 
     LogstashMachine selectById(Long id);
 
+    List<LogstashMachine> selectByIds(List<Long> ids);
+
     List<LogstashMachine> selectByLogstashProcessId(Long logstashProcessId);
 
     List<LogstashMachine> selectByMachineId(Long machineId);
 
-    LogstashMachine selectByLogstashProcessIdAndMachineId(
-            @Param("logstashProcessId") Long logstashProcessId, @Param("machineId") Long machineId);
+    List<LogstashMachine> selectAll();
 
     List<LogstashMachine> selectAllWithProcessPid();
 
@@ -60,6 +36,29 @@ public interface LogstashMachineMapper {
     List<LogstashMachine> selectByLogstashProcessIdAndState(
             @Param("logstashProcessId") Long logstashProcessId, @Param("state") String state);
 
-    int countByLogstashProcessIdAndMachineId(
-            @Param("logstashProcessId") Long logstashProcessId, @Param("machineId") Long machineId);
+    /** 基于实例ID更新进程PID */
+    int updateProcessPidById(@Param("id") Long id, @Param("processPid") String processPid);
+
+    /** 基于实例ID更新状态 */
+    int updateStateById(@Param("id") Long id, @Param("state") String state);
+
+    /** 基于实例ID更新配置内容 */
+    int updateConfigContentById(@Param("id") Long id, @Param("configContent") String configContent);
+
+    /** 基于实例ID更新JVM配置 */
+    int updateJvmOptionsById(@Param("id") Long id, @Param("jvmOptions") String jvmOptions);
+
+    /** 基于实例ID更新Logstash系统配置 */
+    int updateLogstashYmlById(@Param("id") Long id, @Param("logstashYml") String logstashYml);
+
+    /** 根据部署路径查询实例（用于检查路径冲突） */
+    LogstashMachine selectByDeployPath(@Param("deployPath") String deployPath);
+
+    /** 检查部署路径是否已存在（排除指定实例） */
+    int countByDeployPathExcludeId(
+            @Param("deployPath") String deployPath, @Param("excludeId") Long excludeId);
+
+    /** 根据机器ID和部署路径查询实例（用于检查路径冲突） */
+    LogstashMachine selectByMachineAndPath(
+            @Param("machineId") Long machineId, @Param("deployPath") String deployPath);
 }

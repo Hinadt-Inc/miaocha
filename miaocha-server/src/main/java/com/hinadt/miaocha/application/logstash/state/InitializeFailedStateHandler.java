@@ -6,7 +6,7 @@ import com.hinadt.miaocha.application.logstash.enums.LogstashMachineState;
 import com.hinadt.miaocha.application.logstash.enums.LogstashMachineStep;
 import com.hinadt.miaocha.application.logstash.enums.StepStatus;
 import com.hinadt.miaocha.application.logstash.task.TaskService;
-import com.hinadt.miaocha.domain.entity.LogstashProcess;
+import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import java.util.concurrent.CompletableFuture;
 import org.springframework.stereotype.Component;
@@ -27,11 +27,11 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
 
     @Override
     public CompletableFuture<Boolean> handleInitialize(
-            LogstashProcess process, MachineInfo machineInfo, String taskId) {
-        Long processId = process.getId();
+            LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId) {
+        Long logstashMachineId = logstashMachine.getId();
         Long machineId = machineInfo.getId();
 
-        logger.info("重新初始化机器 [{}] 上的Logstash进程 [{}]", machineId, processId);
+        logger.info("重新初始化机器 [{}] 上的LogstashMachine实例 [{}]", machineId, logstashMachineId);
 
         // 重置所有初始化步骤的状态
         taskService.resetStepStatuses(taskId, StepStatus.PENDING);
@@ -44,9 +44,12 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
                         success -> {
                             if (!success) return CompletableFuture.completedFuture(false);
 
-                            logger.info("删除机器 [{}] 上的Logstash进程 [{}] 目录", machineId, processId);
+                            logger.info(
+                                    "删除机器 [{}] 上的LogstashMachine实例 [{}] 目录",
+                                    machineId,
+                                    logstashMachineId);
                             LogstashCommand deleteCommand =
-                                    commandFactory.deleteProcessDirectoryCommand(processId);
+                                    commandFactory.deleteProcessDirectoryCommand(logstashMachineId);
 
                             return deleteCommand
                                     .execute(machineInfo)
@@ -67,11 +70,11 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
 
                             taskService.updateStepStatus(
                                     taskId,
-                                    machineId,
+                                    logstashMachineId,
                                     LogstashMachineStep.CREATE_REMOTE_DIR.getId(),
                                     StepStatus.RUNNING);
                             LogstashCommand createDirCommand =
-                                    commandFactory.createDirectoryCommand(processId);
+                                    commandFactory.createDirectoryCommand(logstashMachineId);
 
                             return createDirCommand
                                     .execute(machineInfo)
@@ -85,7 +88,7 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
                                                         createDirSuccess ? null : "创建远程目录失败";
                                                 taskService.updateStepStatus(
                                                         taskId,
-                                                        machineId,
+                                                        logstashMachineId,
                                                         LogstashMachineStep.CREATE_REMOTE_DIR
                                                                 .getId(),
                                                         status,
@@ -102,7 +105,7 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
                                                 // 更新任务状态为失败，不记录详细日志（由外层处理）
                                                 taskService.updateStepStatus(
                                                         taskId,
-                                                        machineId,
+                                                        logstashMachineId,
                                                         LogstashMachineStep.CREATE_REMOTE_DIR
                                                                 .getId(),
                                                         StepStatus.FAILED,
@@ -125,11 +128,11 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
 
                             taskService.updateStepStatus(
                                     taskId,
-                                    machineId,
+                                    logstashMachineId,
                                     LogstashMachineStep.UPLOAD_PACKAGE.getId(),
                                     StepStatus.RUNNING);
                             LogstashCommand uploadCommand =
-                                    commandFactory.uploadPackageCommand(processId);
+                                    commandFactory.uploadPackageCommand(logstashMachineId);
 
                             return uploadCommand
                                     .execute(machineInfo)
@@ -143,7 +146,7 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
                                                         uploadSuccess ? null : "上传Logstash安装包失败";
                                                 taskService.updateStepStatus(
                                                         taskId,
-                                                        machineId,
+                                                        logstashMachineId,
                                                         LogstashMachineStep.UPLOAD_PACKAGE.getId(),
                                                         status,
                                                         errorMessage);
@@ -159,7 +162,7 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
                                                 // 更新任务状态为失败，不记录详细日志（由外层处理）
                                                 taskService.updateStepStatus(
                                                         taskId,
-                                                        machineId,
+                                                        logstashMachineId,
                                                         LogstashMachineStep.UPLOAD_PACKAGE.getId(),
                                                         StepStatus.FAILED,
                                                         ex.getMessage());
@@ -181,11 +184,11 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
 
                             taskService.updateStepStatus(
                                     taskId,
-                                    machineId,
+                                    logstashMachineId,
                                     LogstashMachineStep.EXTRACT_PACKAGE.getId(),
                                     StepStatus.RUNNING);
                             LogstashCommand extractCommand =
-                                    commandFactory.extractPackageCommand(processId);
+                                    commandFactory.extractPackageCommand(logstashMachineId);
 
                             return extractCommand
                                     .execute(machineInfo)
@@ -199,7 +202,7 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
                                                         extractSuccess ? null : "解压Logstash安装包失败";
                                                 taskService.updateStepStatus(
                                                         taskId,
-                                                        machineId,
+                                                        logstashMachineId,
                                                         LogstashMachineStep.EXTRACT_PACKAGE.getId(),
                                                         status,
                                                         errorMessage);
@@ -215,7 +218,7 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
                                                 // 更新任务状态为失败，不记录详细日志（由外层处理）
                                                 taskService.updateStepStatus(
                                                         taskId,
-                                                        machineId,
+                                                        logstashMachineId,
                                                         LogstashMachineStep.EXTRACT_PACKAGE.getId(),
                                                         StepStatus.FAILED,
                                                         ex.getMessage());
@@ -237,11 +240,11 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
 
                             taskService.updateStepStatus(
                                     taskId,
-                                    machineId,
+                                    logstashMachineId,
                                     LogstashMachineStep.CREATE_CONFIG.getId(),
                                     StepStatus.RUNNING);
                             LogstashCommand configCommand =
-                                    commandFactory.createConfigCommand(process);
+                                    commandFactory.createConfigCommand(logstashMachine);
 
                             return configCommand
                                     .execute(machineInfo)
@@ -255,7 +258,7 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
                                                         configSuccess ? null : "创建配置文件失败";
                                                 taskService.updateStepStatus(
                                                         taskId,
-                                                        machineId,
+                                                        logstashMachineId,
                                                         LogstashMachineStep.CREATE_CONFIG.getId(),
                                                         status,
                                                         errorMessage);
@@ -271,7 +274,7 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
                                                 // 更新任务状态为失败，不记录详细日志（由外层处理）
                                                 taskService.updateStepStatus(
                                                         taskId,
-                                                        machineId,
+                                                        logstashMachineId,
                                                         LogstashMachineStep.CREATE_CONFIG.getId(),
                                                         StepStatus.FAILED,
                                                         ex.getMessage());
@@ -293,16 +296,16 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
 
                             taskService.updateStepStatus(
                                     taskId,
-                                    machineId,
+                                    logstashMachineId,
                                     LogstashMachineStep.MODIFY_CONFIG.getId(),
                                     StepStatus.RUNNING);
 
                             // 获取JVM选项和系统配置，传递给增强的ModifySystemConfigCommand
-                            String jvmOptions = process.getJvmOptions();
-                            String logstashYml = process.getLogstashYml();
+                            String jvmOptions = logstashMachine.getJvmOptions();
+                            String logstashYml = logstashMachine.getLogstashYml();
                             LogstashCommand modifyConfigCommand =
                                     commandFactory.modifySystemConfigCommand(
-                                            processId, jvmOptions, logstashYml);
+                                            logstashMachineId, jvmOptions, logstashYml);
 
                             return modifyConfigCommand
                                     .execute(machineInfo)
@@ -316,7 +319,7 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
                                                         modifyConfigSuccess ? null : "修改系统配置失败";
                                                 taskService.updateStepStatus(
                                                         taskId,
-                                                        machineId,
+                                                        logstashMachineId,
                                                         LogstashMachineStep.MODIFY_CONFIG.getId(),
                                                         status,
                                                         errorMessage);
@@ -333,7 +336,7 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
                                                 // 异常已在命令层记录，这里只更新任务状态
                                                 taskService.updateStepStatus(
                                                         taskId,
-                                                        machineId,
+                                                        logstashMachineId,
                                                         LogstashMachineStep.MODIFY_CONFIG.getId(),
                                                         StepStatus.FAILED,
                                                         errorMessage);

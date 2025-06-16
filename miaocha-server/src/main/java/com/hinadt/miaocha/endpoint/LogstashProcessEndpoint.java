@@ -4,7 +4,6 @@ import com.hinadt.miaocha.application.logstash.task.TaskService;
 import com.hinadt.miaocha.application.service.LogstashProcessService;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.dto.ApiResponse;
-import com.hinadt.miaocha.domain.dto.logstash.LogstashMachineDetailDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessConfigUpdateRequestDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessCreateDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessResponseDTO;
@@ -22,10 +21,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-/** Logstash进程管理控制器 所有操作都需要管理员权限 */
+/** Logstash进程管理控制器 - 重构支持多实例，基于logstashMachineId */
 @RestController
 @RequestMapping("/api/logstash/processes")
-@Tag(name = "Logstash进程管理", description = "提供Logstash进程的创建、启停和配置更新等功能，需要管理员权限")
+@Tag(name = "Logstash进程管理", description = "提供Logstash进程的创建、启停和配置更新等功能，支持多实例部署，需要管理员权限")
 @RequiredArgsConstructor
 @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
 public class LogstashProcessEndpoint {
@@ -132,7 +131,7 @@ public class LogstashProcessEndpoint {
     }
 
     /**
-     * 启动Logstash进程 - 全局操作（所有机器）
+     * 启动Logstash进程 - 全局操作（所有实例）
      *
      * @param id Logstash进程数据库ID
      * @return 启动后的Logstash进程
@@ -146,7 +145,7 @@ public class LogstashProcessEndpoint {
     }
 
     /**
-     * 停止Logstash进程 - 全局操作（所有机器）
+     * 停止Logstash进程 - 全局操作（所有实例）
      *
      * @param id Logstash进程数据库ID
      * @return 停止后的Logstash进程
@@ -174,64 +173,60 @@ public class LogstashProcessEndpoint {
     }
 
     /**
-     * 启动单台机器上的Logstash进程
+     * 获取LogstashMachine实例的所有任务
      *
-     * @param id Logstash进程ID
-     * @param machineId 机器ID
-     * @return 启动后的Logstash进程信息
+     * @param instanceId LogstashMachine实例ID
+     * @return 任务详情列表
      */
-    @PostMapping("/{id}/machines/{machineId}/start")
-    @Operation(summary = "启动单台机器上的Logstash进程", description = "启动指定Logstash进程在特定机器上的实例")
-    public ApiResponse<LogstashProcessResponseDTO> startMachineProcess(
-            @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id,
-            @Parameter(description = "机器ID", required = true) @PathVariable("machineId")
-                    Long machineId) {
-        return ApiResponse.success(logstashProcessService.startMachineProcess(id, machineId));
+    @GetMapping("/instances/{instanceId}/tasks")
+    @Operation(summary = "获取Logstash实例任务", description = "获取指定LogstashMachine实例的所有任务信息，包括步骤执行状态和进度")
+    public ApiResponse<List<TaskDetailDTO>> getInstanceTasks(
+            @Parameter(description = "LogstashMachine实例ID", required = true)
+                    @PathVariable("instanceId")
+                    Long instanceId) {
+        List<String> taskIds = taskService.getAllInstanceTaskIds(instanceId);
+        List<TaskDetailDTO> taskDetails =
+                taskIds.stream()
+                        .map(taskId -> taskService.getTaskDetail(taskId).orElse(null))
+                        .filter(task -> task != null)
+                        .collect(Collectors.toList());
+
+        return ApiResponse.success(taskDetails);
     }
 
     /**
-     * 停止单台机器上的Logstash进程
+     * 获取LogstashMachine实例的最新任务
      *
-     * @param id Logstash进程ID
-     * @param machineId 机器ID
-     * @return 停止后的Logstash进程信息
+     * @param instanceId LogstashMachine实例ID
+     * @return 最新任务详情
      */
-    @PostMapping("/{id}/machines/{machineId}/stop")
-    @Operation(summary = "停止单台机器上的Logstash进程", description = "停止指定Logstash进程在特定机器上的实例")
-    public ApiResponse<LogstashProcessResponseDTO> stopMachineProcess(
-            @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id,
-            @Parameter(description = "机器ID", required = true) @PathVariable("machineId")
-                    Long machineId) {
-        return ApiResponse.success(logstashProcessService.stopMachineProcess(id, machineId));
+    @GetMapping("/instances/{instanceId}/tasks/latest")
+    @Operation(summary = "获取Logstash实例最新任务", description = "获取指定LogstashMachine实例的最新任务信息")
+    public ApiResponse<TaskDetailDTO> getLatestInstanceTask(
+            @Parameter(description = "LogstashMachine实例ID", required = true)
+                    @PathVariable("instanceId")
+                    Long instanceId) {
+        List<String> taskIds = taskService.getAllInstanceTaskIds(instanceId);
+        if (taskIds.isEmpty()) {
+            return ApiResponse.error(ErrorCode.TASK_NOT_FOUND, "找不到任务信息");
+        }
+
+        Optional<TaskDetailDTO> latestTask = taskService.getTaskDetail(taskIds.get(0));
+        return latestTask
+                .map(ApiResponse::success)
+                .orElseGet(() -> ApiResponse.error(ErrorCode.TASK_NOT_FOUND, "找不到任务信息"));
     }
 
     /**
-     * 强制停止单台机器上的Logstash进程 应急停止功能：执行原有的停止逻辑，但无论命令成功与否，都强制将状态更改为未启动
+     * 获取进程任务信息
      *
      * @param id Logstash进程ID
-     * @param machineId 机器ID
-     * @return 强制停止后的Logstash进程信息
-     */
-    @PostMapping("/{id}/machines/{machineId}/force-stop")
-    @Operation(summary = "强制停止单台机器上的Logstash进程", description = "强制停止指定Logstash进程在特定机器上的实例，用于应急情况")
-    public ApiResponse<LogstashProcessResponseDTO> forceStopMachineProcess(
-            @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id,
-            @Parameter(description = "机器ID", required = true) @PathVariable("machineId")
-                    Long machineId) {
-        return ApiResponse.success(logstashProcessService.forceStopMachineProcess(id, machineId));
-    }
-
-    /**
-     * 获取Logstash进程的所有任务信息
-     *
-     * @param id Logstash进程ID
-     * @return 进程的所有任务详情列表
+     * @return 任务详情列表
      */
     @GetMapping("/{id}/tasks")
     @Operation(summary = "获取进程任务信息", description = "获取指定Logstash进程的所有任务信息，包括步骤执行状态和进度")
     public ApiResponse<List<TaskDetailDTO>> getProcessTasks(
             @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id) {
-
         List<String> taskIds = taskService.getAllProcessTaskIds(id);
         List<TaskDetailDTO> taskDetails =
                 taskIds.stream()
@@ -240,156 +235,6 @@ public class LogstashProcessEndpoint {
                         .collect(Collectors.toList());
 
         return ApiResponse.success(taskDetails);
-    }
-
-    /**
-     * 获取Logstash进程在特定机器上的所有任务信息
-     *
-     * @param id Logstash进程ID
-     * @param machineId 机器ID
-     * @return 特定机器上进程的所有任务详情列表
-     */
-    @GetMapping("/{id}/machines/{machineId}/tasks")
-    @Operation(summary = "获取特定机器上的进程任务信息", description = "获取指定Logstash进程在特定机器上的所有任务信息，包括步骤执行状态和进度")
-    public ApiResponse<List<TaskDetailDTO>> getMachineProcessTasks(
-            @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id,
-            @Parameter(description = "机器ID", required = true) @PathVariable("machineId")
-                    Long machineId) {
-
-        List<String> taskIds = taskService.getAllMachineTaskIds(id, machineId);
-        List<TaskDetailDTO> taskDetails =
-                taskIds.stream()
-                        .map(taskId -> taskService.getTaskDetail(taskId).orElse(null))
-                        .filter(task -> task != null)
-                        .collect(Collectors.toList());
-
-        return ApiResponse.success(taskDetails);
-    }
-
-    /**
-     * 获取Logstash进程在特定机器上的最新任务信息
-     *
-     * @param id Logstash进程ID
-     * @param machineId 机器ID
-     * @return 特定机器上进程的最新任务详情
-     */
-    @GetMapping("/{id}/machines/{machineId}/tasks/latest")
-    @Operation(
-            summary = "获取特定机器上的最新进程任务信息",
-            description = "获取指定Logstash进程在特定机器上的最新任务信息，包括步骤执行状态和进度")
-    public ApiResponse<TaskDetailDTO> getLatestMachineProcessTask(
-            @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id,
-            @Parameter(description = "机器ID", required = true) @PathVariable("machineId")
-                    Long machineId) {
-
-        Optional<TaskDetailDTO> latestTask = taskService.getLatestMachineTaskDetail(id, machineId);
-        return latestTask
-                .map(ApiResponse::success)
-                .orElseGet(() -> ApiResponse.error(ErrorCode.TASK_NOT_FOUND, "找不到任务信息"));
-    }
-
-    /**
-     * 更新单台机器上的Logstash进程配置 支持同时更新主配置、JVM配置、系统配置中的任意组合
-     *
-     * @param id Logstash进程ID
-     * @param machineId 机器ID
-     * @param dto 配置更新请求DTO
-     * @return 更新后的Logstash进程
-     */
-    @PutMapping("/{id}/machines/{machineId}/config")
-    @Operation(
-            summary = "更新单台机器上的Logstash配置",
-            description = "更新特定机器上的Logstash进程配置信息。可以同时更新任意组合的：主配置文件、JVM配置、Logstash系统配置。")
-    public ApiResponse<LogstashProcessResponseDTO> updateMachineConfig(
-            @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id,
-            @Parameter(description = "机器ID", required = true) @PathVariable("machineId")
-                    Long machineId,
-            @Parameter(description = "Logstash配置更新请求", required = true) @Valid @RequestBody
-                    LogstashProcessConfigUpdateRequestDTO dto) {
-
-        return ApiResponse.success(
-                logstashProcessService.updateSingleMachineConfig(
-                        id,
-                        machineId,
-                        dto.getConfigContent(),
-                        dto.getJvmOptions(),
-                        dto.getLogstashYml()));
-    }
-
-    /**
-     * 刷新单台机器上的Logstash进程配置 将数据库中的配置刷新到目标机器（不更改配置内容）
-     *
-     * @param id Logstash进程ID
-     * @param machineId 机器ID
-     * @return 操作结果
-     */
-    @PostMapping("/{id}/machines/{machineId}/config/refresh")
-    @Operation(summary = "刷新单台机器上的Logstash配置", description = "手动将数据库中的配置刷新到特定机器（不更改配置内容）。")
-    public ApiResponse<LogstashProcessResponseDTO> refreshMachineConfig(
-            @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id,
-            @Parameter(description = "机器ID", required = true) @PathVariable("machineId")
-                    Long machineId) {
-
-        // 创建请求DTO并设置目标机器ID
-        LogstashProcessConfigUpdateRequestDTO dto = new LogstashProcessConfigUpdateRequestDTO();
-        dto.setMachineIds(List.of(machineId));
-
-        return ApiResponse.success(logstashProcessService.refreshLogstashConfig(id, dto));
-    }
-
-    /**
-     * 重新初始化Logstash进程的所有初始化失败的机器
-     *
-     * @param id Logstash进程ID
-     * @return 重新初始化后的Logstash进程信息
-     */
-    @PostMapping("/{id}/reinitialize")
-    @Operation(
-            summary = "重新初始化所有失败的机器",
-            description = "重新初始化指定Logstash进程的所有初始化失败的机器。只有状态为'初始化失败'的机器才会被重新初始化。")
-    public ApiResponse<LogstashProcessResponseDTO> reinitializeAllFailedMachines(
-            @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id) {
-
-        return ApiResponse.success(logstashProcessService.reinitializeLogstashMachine(id, null));
-    }
-
-    /**
-     * 重新初始化Logstash进程在指定机器上的实例
-     *
-     * @param id Logstash进程ID
-     * @param machineId 机器ID
-     * @return 重新初始化后的Logstash进程信息
-     */
-    @PostMapping("/{id}/machines/{machineId}/reinitialize")
-    @Operation(
-            summary = "重新初始化指定机器",
-            description = "重新初始化指定Logstash进程在特定机器上的实例。只有当该机器状态为'初始化失败'时才能重新初始化。")
-    public ApiResponse<LogstashProcessResponseDTO> reinitializeMachine(
-            @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id,
-            @Parameter(description = "机器ID", required = true) @PathVariable("machineId")
-                    Long machineId) {
-
-        return ApiResponse.success(
-                logstashProcessService.reinitializeLogstashMachine(id, machineId));
-    }
-
-    /**
-     * 获取Logstash进程在特定机器上的详细信息
-     *
-     * @param id Logstash进程ID
-     * @param machineId 机器ID
-     * @return 进程在指定机器上的详细信息，包括配置、状态等
-     */
-    @GetMapping("/{id}/machines/{machineId}/detail")
-    @Operation(
-            summary = "获取单个LogstashMachine的详细信息",
-            description = "获取指定Logstash进程在特定机器上的完整详细信息，包括进程状态、配置内容、机器信息、部署路径等")
-    public ApiResponse<LogstashMachineDetailDTO> getLogstashMachineDetail(
-            @Parameter(description = "Logstash进程ID", required = true) @PathVariable("id") Long id,
-            @Parameter(description = "机器ID", required = true) @PathVariable("machineId")
-                    Long machineId) {
-
-        return ApiResponse.success(logstashProcessService.getLogstashMachineDetail(id, machineId));
     }
 
     /**

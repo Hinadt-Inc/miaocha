@@ -34,6 +34,9 @@ public class TaskDetailDTO {
     @Schema(description = "结束时间")
     private LocalDateTime endTime;
 
+    @Schema(description = "创建时间")
+    private LocalDateTime createTime;
+
     @Schema(description = "耗时(毫秒)")
     private Long duration;
 

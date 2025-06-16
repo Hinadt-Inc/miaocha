@@ -1,13 +1,14 @@
 package com.hinadt.miaocha.application.logstash.command;
 
+import com.hinadt.miaocha.application.logstash.path.LogstashDeployPathManager;
 import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.config.LogstashProperties;
-import com.hinadt.miaocha.domain.entity.LogstashProcess;
+import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
 import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
 import org.springframework.stereotype.Component;
 
-/** Logstash命令工厂 用于创建各种Logstash命令对象 */
+/** Logstash命令工厂 - 重构支持多实例，基于logstashMachineId创建命令 */
 @Component
 public class LogstashCommandFactory {
 
@@ -15,120 +16,160 @@ public class LogstashCommandFactory {
     private final SshClient sshClient;
     private final LogstashMachineMapper logstashMachineMapper;
     private final LogstashProcessMapper logstashProcessMapper;
+    private final LogstashDeployPathManager deployPathManager;
 
     public LogstashCommandFactory(
             LogstashProperties logstashProperties,
             SshClient sshClient,
             LogstashMachineMapper logstashMachineMapper,
-            LogstashProcessMapper logstashProcessMapper) {
+            LogstashProcessMapper logstashProcessMapper,
+            LogstashDeployPathManager deployPathManager) {
         this.logstashProperties = logstashProperties;
         this.sshClient = sshClient;
         this.logstashMachineMapper = logstashMachineMapper;
         this.logstashProcessMapper = logstashProcessMapper;
+        this.deployPathManager = deployPathManager;
     }
 
-    /** 创建创建目录命令 */
-    public LogstashCommand createDirectoryCommand(Long processId) {
+    /** 创建创建目录命令 - 基于logstashMachineId */
+    public LogstashCommand createDirectoryCommand(Long logstashMachineId) {
         return new CreateDirectoryCommand(
-                sshClient, logstashProperties.getDeployDir(), processId, logstashMachineMapper);
+                sshClient,
+                logstashProperties.getDeployDir(),
+                logstashMachineId,
+                logstashMachineMapper,
+                deployPathManager);
     }
 
-    /** 创建上传文件命令 */
-    public LogstashCommand uploadPackageCommand(Long processId) {
+    /** 创建上传文件命令 - 基于logstashMachineId */
+    public LogstashCommand uploadPackageCommand(Long logstashMachineId) {
         return new UploadPackageCommand(
                 sshClient,
                 logstashProperties.getPackagePath(),
                 logstashProperties.getDeployDir(),
-                processId,
-                logstashMachineMapper);
+                logstashMachineId,
+                logstashMachineMapper,
+                deployPathManager);
     }
 
-    /** 创建解压文件命令 */
-    public LogstashCommand extractPackageCommand(Long processId) {
+    /** 创建解压文件命令 - 基于logstashMachineId */
+    public LogstashCommand extractPackageCommand(Long logstashMachineId) {
         return new ExtractPackageCommand(
                 sshClient,
                 logstashProperties.getDeployDir(),
                 logstashProperties.getPackagePath(),
-                processId,
-                logstashMachineMapper);
+                logstashMachineId,
+                logstashMachineMapper,
+                deployPathManager);
     }
 
-    /** 创建创建配置文件命令 */
-    public LogstashCommand createConfigCommand(LogstashProcess process) {
+    /** 创建创建配置文件命令 - 基于logstashMachine实例 */
+    public LogstashCommand createConfigCommand(LogstashMachine logstashMachine) {
         return new CreateConfigCommand(
                 sshClient,
                 logstashProperties.getDeployDir(),
-                process.getId(),
-                process.getConfigContent(),
-                logstashMachineMapper);
+                logstashMachine.getId(),
+                logstashMachine.getConfigContent(),
+                logstashMachineMapper,
+                deployPathManager);
     }
 
-    /** 创建更新多种配置文件命令 可同时更新主配置文件、JVM配置和系统配置 */
+    /** 创建创建配置文件命令 - 基于logstashMachineId和配置内容 */
+    public LogstashCommand createConfigCommand(Long logstashMachineId, String configContent) {
+        return new CreateConfigCommand(
+                sshClient,
+                logstashProperties.getDeployDir(),
+                logstashMachineId,
+                configContent,
+                logstashMachineMapper,
+                deployPathManager);
+    }
+
+    /** 创建更新多种配置文件命令 - 基于logstashMachineId */
     public LogstashCommand updateConfigCommand(
-            Long processId, String configContent, String jvmOptions, String logstashYml) {
+            Long logstashMachineId, String configContent, String jvmOptions, String logstashYml) {
         return new UpdateConfigCommand(
                 sshClient,
                 logstashProperties.getDeployDir(),
-                processId,
+                logstashMachineId,
                 configContent,
                 jvmOptions,
                 logstashYml,
-                logstashMachineMapper);
+                logstashMachineMapper,
+                deployPathManager);
     }
 
-    /** 创建刷新多种配置文件命令 可同时刷新主配置文件、JVM配置和系统配置 */
-    public LogstashCommand refreshConfigCommand(
-            Long processId, String configContent, String jvmOptions, String logstashYml) {
+    /** 创建刷新配置文件命令 - 从数据库获取配置并写入文件 */
+    public LogstashCommand refreshConfigCommand(Long logstashMachineId) {
         return new RefreshConfigCommand(
                 sshClient,
                 logstashProperties.getDeployDir(),
-                processId,
+                logstashMachineId,
                 logstashProcessMapper,
                 logstashMachineMapper,
-                configContent,
-                jvmOptions,
-                logstashYml);
+                deployPathManager);
     }
 
-    /** 创建修改系统配置命令（增强版：支持JVM选项和系统配置） */
+    /** 创建修改系统配置命令 - 基于logstashMachineId */
     public LogstashCommand modifySystemConfigCommand(
-            Long processId, String jvmOptions, String logstashYml) {
+            Long logstashMachineId, String jvmOptions, String logstashYml) {
         return new ModifySystemConfigCommand(
                 sshClient,
                 logstashProperties.getDeployDir(),
-                processId,
+                logstashMachineId,
                 jvmOptions,
                 logstashYml,
-                logstashMachineMapper);
+                logstashMachineMapper,
+                deployPathManager);
     }
 
-    /** 创建启动进程命令 */
-    public LogstashCommand startProcessCommand(Long processId) {
+    /** 创建启动进程命令 - 基于logstashMachineId */
+    public LogstashCommand startProcessCommand(Long logstashMachineId) {
         return new StartProcessCommand(
-                sshClient, logstashProperties.getDeployDir(), processId, logstashMachineMapper);
+                sshClient,
+                logstashProperties.getDeployDir(),
+                logstashMachineId,
+                logstashMachineMapper,
+                deployPathManager);
     }
 
-    /** 创建验证进程命令 */
-    public LogstashCommand verifyProcessCommand(Long processId) {
+    /** 创建验证进程命令 - 基于logstashMachineId */
+    public LogstashCommand verifyProcessCommand(Long logstashMachineId) {
         return new VerifyProcessCommand(
-                sshClient, logstashProperties.getDeployDir(), processId, logstashMachineMapper);
+                sshClient,
+                logstashProperties.getDeployDir(),
+                logstashMachineId,
+                logstashMachineMapper,
+                deployPathManager);
     }
 
-    /** 创建停止进程命令 */
-    public LogstashCommand stopProcessCommand(Long processId) {
+    /** 创建停止进程命令 - 基于logstashMachineId */
+    public LogstashCommand stopProcessCommand(Long logstashMachineId) {
         return new StopProcessCommand(
-                sshClient, logstashProperties.getDeployDir(), processId, logstashMachineMapper);
+                sshClient,
+                logstashProperties.getDeployDir(),
+                logstashMachineId,
+                logstashMachineMapper,
+                deployPathManager);
     }
 
-    /** 创建强制停止进程命令 */
-    public LogstashCommand forceStopProcessCommand(Long processId) {
+    /** 创建强制停止进程命令 - 基于logstashMachineId */
+    public LogstashCommand forceStopProcessCommand(Long logstashMachineId) {
         return new ForceStopProcessCommand(
-                sshClient, logstashProperties.getDeployDir(), processId, logstashMachineMapper);
+                sshClient,
+                logstashProperties.getDeployDir(),
+                logstashMachineId,
+                logstashMachineMapper,
+                deployPathManager);
     }
 
-    /** 创建删除进程目录命令 */
-    public LogstashCommand deleteProcessDirectoryCommand(Long processId) {
+    /** 创建删除进程目录命令 - 基于logstashMachineId */
+    public LogstashCommand deleteProcessDirectoryCommand(Long logstashMachineId) {
         return new DeleteProcessDirectoryCommand(
-                sshClient, logstashProperties.getDeployDir(), processId, logstashMachineMapper);
+                sshClient,
+                logstashProperties.getDeployDir(),
+                logstashMachineId,
+                logstashMachineMapper,
+                deployPathManager);
     }
 }

@@ -23,10 +23,24 @@ public interface LogstashTaskMachineStepMapper {
     List<LogstashTaskMachineStep> findByTaskIdAndMachineId(
             @Param("taskId") String taskId, @Param("machineId") Long machineId);
 
+    /** 根据任务ID和LogstashMachine实例ID查询所有步骤 */
+    List<LogstashTaskMachineStep> findByTaskIdAndLogstashMachineId(
+            @Param("taskId") String taskId, @Param("logstashMachineId") Long logstashMachineId);
+
+    /** 根据LogstashMachine实例ID查询所有步骤 */
+    List<LogstashTaskMachineStep> findByLogstashMachineId(Long logstashMachineId);
+
     /** 更新步骤状态 */
     void updateStatus(
             @Param("taskId") String taskId,
             @Param("machineId") Long machineId,
+            @Param("stepId") String stepId,
+            @Param("status") String status);
+
+    /** 根据LogstashMachine实例ID更新步骤状态 */
+    void updateStatusByLogstashMachineId(
+            @Param("taskId") String taskId,
+            @Param("logstashMachineId") Long logstashMachineId,
             @Param("stepId") String stepId,
             @Param("status") String status);
 
@@ -37,6 +51,13 @@ public interface LogstashTaskMachineStepMapper {
             @Param("stepId") String stepId,
             @Param("startTime") LocalDateTime startTime);
 
+    /** 根据LogstashMachine实例ID更新步骤开始时间 */
+    void updateStartTimeByLogstashMachineId(
+            @Param("taskId") String taskId,
+            @Param("logstashMachineId") Long logstashMachineId,
+            @Param("stepId") String stepId,
+            @Param("startTime") LocalDateTime startTime);
+
     /** 更新步骤结束时间 */
     void updateEndTime(
             @Param("taskId") String taskId,
@@ -44,10 +65,24 @@ public interface LogstashTaskMachineStepMapper {
             @Param("stepId") String stepId,
             @Param("endTime") LocalDateTime endTime);
 
+    /** 根据LogstashMachine实例ID更新步骤结束时间 */
+    void updateEndTimeByLogstashMachineId(
+            @Param("taskId") String taskId,
+            @Param("logstashMachineId") Long logstashMachineId,
+            @Param("stepId") String stepId,
+            @Param("endTime") LocalDateTime endTime);
+
     /** 更新步骤错误信息 */
     void updateErrorMessage(
             @Param("taskId") String taskId,
             @Param("machineId") Long machineId,
+            @Param("stepId") String stepId,
+            @Param("errorMessage") String errorMessage);
+
+    /** 根据LogstashMachine实例ID更新步骤错误信息 */
+    void updateErrorMessageByLogstashMachineId(
+            @Param("taskId") String taskId,
+            @Param("logstashMachineId") Long logstashMachineId,
             @Param("stepId") String stepId,
             @Param("errorMessage") String errorMessage);
 
@@ -75,4 +110,11 @@ public interface LogstashTaskMachineStepMapper {
      * @param taskId 任务ID
      */
     void deleteByTaskId(String taskId);
+
+    /**
+     * 删除LogstashMachine实例相关的所有步骤
+     *
+     * @param logstashMachineId LogstashMachine实例ID
+     */
+    void deleteByLogstashMachineId(Long logstashMachineId);
 }

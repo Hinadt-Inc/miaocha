@@ -148,6 +148,7 @@ public class LogstashProcessMonitorTask {
     private void checkProcessStatus(LogstashMachine logstashMachine) {
         Long processId = logstashMachine.getLogstashProcessId();
         Long machineId = logstashMachine.getMachineId();
+        Long logstashMachineId = logstashMachine.getId();
         String pid = logstashMachine.getProcessPid();
 
         // 获取机器信息
@@ -161,7 +162,7 @@ public class LogstashProcessMonitorTask {
             // 通过SSH检查进程是否存在
             boolean processExists = checkProcessExistsBySsh(machineInfo, pid);
             if (!processExists) {
-                handleDeadProcess(processId, machineInfo, pid);
+                handleDeadProcess(logstashMachineId, machineInfo, pid);
             } else {
                 logger.debug(
                         "Logstash进程[{}]在机器[{}]上正常运行中，PID={}", processId, machineInfo.getIp(), pid);
@@ -203,37 +204,50 @@ public class LogstashProcessMonitorTask {
     /**
      * 处理已经死亡的进程
      *
-     * @param processId Logstash进程ID
+     * @param logstashMachineId LogstashMachine实例ID
      * @param machineInfo 目标机器
      * @param pid 进程PID
      */
-    private void handleDeadProcess(Long processId, MachineInfo machineInfo, String pid) {
-        logger.warn("检测到Logstash进程[{}]在机器[{}]上异常终止，PID={}", processId, machineInfo.getIp(), pid);
+    private void handleDeadProcess(Long logstashMachineId, MachineInfo machineInfo, String pid) {
+        logger.warn(
+                "检测到LogstashMachine实例[{}]在机器[{}]上异常终止，PID={}",
+                logstashMachineId,
+                machineInfo.getIp(),
+                pid);
 
         try {
-            // 更新机器上的进程状态为未启动
+            // 更新实例状态为未启动
             int updateResult =
-                    logstashMachineMapper.updateState(
-                            processId,
-                            machineInfo.getId(),
-                            LogstashMachineState.NOT_STARTED.name());
+                    logstashMachineMapper.updateStateById(
+                            logstashMachineId, LogstashMachineState.NOT_STARTED.name());
             if (updateResult > 0) {
-                logger.info("已将Logstash进程[{}]在机器[{}]上的状态更新为未启动", processId, machineInfo.getId());
+                logger.info(
+                        "已将LogstashMachine实例[{}]在机器[{}]上的状态更新为未启动",
+                        logstashMachineId,
+                        machineInfo.getId());
             } else {
-                logger.warn("更新Logstash进程[{}]在机器[{}]上的状态失败，可能已被删除", processId, machineInfo.getId());
+                logger.warn(
+                        "更新LogstashMachine实例[{}]在机器[{}]上的状态失败，可能已被删除",
+                        logstashMachineId,
+                        machineInfo.getId());
             }
 
             // 清空PID记录
             int pidUpdateResult =
-                    logstashMachineMapper.updateProcessPid(processId, machineInfo.getId(), null);
+                    logstashMachineMapper.updateProcessPidById(logstashMachineId, null);
             if (pidUpdateResult > 0) {
-                logger.info("已清除Logstash进程[{}]在机器[{}]上的PID记录", processId, machineInfo.getIp());
+                logger.info(
+                        "已清除LogstashMachine实例[{}]在机器[{}]上的PID记录",
+                        logstashMachineId,
+                        machineInfo.getIp());
             } else {
                 logger.warn(
-                        "清除Logstash进程[{}]在机器[{}]上的PID记录失败，可能已被删除", processId, machineInfo.getIp());
+                        "清除LogstashMachine实例[{}]在机器[{}]上的PID记录失败，可能已被删除",
+                        logstashMachineId,
+                        machineInfo.getIp());
             }
         } catch (Exception e) {
-            logger.error("处理死亡进程[{}]时发生错误: {}", processId, e.getMessage(), e);
+            logger.error("处理死亡进程[{}]时发生错误: {}", logstashMachineId, e.getMessage(), e);
         }
     }
 }

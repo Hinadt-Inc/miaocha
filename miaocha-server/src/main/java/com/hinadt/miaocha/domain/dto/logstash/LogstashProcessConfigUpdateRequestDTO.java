@@ -8,9 +8,11 @@ import lombok.Data;
 @Schema(description = "Logstash配置更新请求DTO")
 public class LogstashProcessConfigUpdateRequestDTO {
 
-    @Schema(description = "要更新配置的机器ID列表。如果为空或不传，则表示全局更新（更新所有关联的机器）。")
+    @Schema(description = "要更新配置的LogstashMachine实例ID列表。如果为空或不传，则表示全局更新（更新所有关联的实例）。")
     private List<Long>
-            machineIds; // Optional: if null or empty, applies to all machines of the process
+            logstashMachineIds; // Optional: if null or empty, applies to all instances of the
+
+    // process
 
     @Schema(description = "新的Logstash配置文件内容 (e.g., input {} filter {} output {}). 如果为空，则不更新此项。")
     private String configContent; // Optional

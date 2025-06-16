@@ -1,5 +1,6 @@
 package com.hinadt.miaocha.application.logstash.command;
 
+import com.hinadt.miaocha.application.logstash.path.LogstashDeployPathManager;
 import com.hinadt.miaocha.common.exception.SshOperationException;
 import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
@@ -7,39 +8,55 @@ import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
 import java.util.concurrent.CompletableFuture;
 import org.springframework.util.StringUtils;
 
-/** 修改Logstash系统配置命令 支持设置默认系统配置以及应用JVM选项 */
+/** 修改系统配置命令 - 重构支持多实例，基于logstashMachineId 支持修改JVM配置和系统配置 */
 public class ModifySystemConfigCommand extends AbstractLogstashCommand {
 
     private final String jvmOptions; // JVM配置文件内容
     private final String logstashYml; // 系统配置文件内容
 
-    /** 创建基本系统配置命令（仅添加allow_superuser设置） */
+    /** 创建仅修改JVM配置的命令（向后兼容构造函数） */
     public ModifySystemConfigCommand(
             SshClient sshClient,
-            String deployDir,
-            Long processId,
-            LogstashMachineMapper logstashMachineMapper) {
-        this(sshClient, deployDir, processId, null, null, logstashMachineMapper);
+            String deployBaseDir,
+            Long logstashMachineId,
+            String jvmOptions,
+            LogstashMachineMapper logstashMachineMapper,
+            LogstashDeployPathManager deployPathManager) {
+        this(
+                sshClient,
+                deployBaseDir,
+                logstashMachineId,
+                jvmOptions,
+                null,
+                logstashMachineMapper,
+                deployPathManager);
     }
 
     /**
-     * 创建增强型系统配置命令（支持JVM选项和完整的系统配置）
+     * 创建可同时修改JVM配置和系统配置的命令
      *
      * @param sshClient SSH客户端
-     * @param deployDir 部署基础目录
-     * @param processId 进程ID
+     * @param deployBaseDir 部署基础目录
+     * @param logstashMachineId LogstashMachine实例ID
      * @param jvmOptions JVM配置文件内容（可为null）
      * @param logstashYml 系统配置文件内容（可为null）
      * @param logstashMachineMapper Logstash机器映射器
+     * @param deployPathManager 部署路径管理器
      */
     public ModifySystemConfigCommand(
             SshClient sshClient,
-            String deployDir,
-            Long processId,
+            String deployBaseDir,
+            Long logstashMachineId,
             String jvmOptions,
             String logstashYml,
-            LogstashMachineMapper logstashMachineMapper) {
-        super(sshClient, deployDir, processId, logstashMachineMapper);
+            LogstashMachineMapper logstashMachineMapper,
+            LogstashDeployPathManager deployPathManager) {
+        super(
+                sshClient,
+                deployBaseDir,
+                logstashMachineId,
+                logstashMachineMapper,
+                deployPathManager);
         this.jvmOptions = jvmOptions;
         this.logstashYml = logstashYml;
     }
@@ -53,160 +70,127 @@ public class ModifySystemConfigCommand extends AbstractLogstashCommand {
                         String processDir = getProcessDirectory(machineInfo);
                         String configDir = processDir + "/config";
 
-                        // 1. 修改系统配置文件 (logstash.yml)
-                        success = modifyLogstashYml(machineInfo, configDir) && success;
+                        // 确保配置目录存在
+                        String createDirCommand = String.format("mkdir -p %s", configDir);
+                        sshClient.executeCommand(machineInfo, createDirCommand);
 
-                        // 2. 修改JVM选项 (jvm.options)，如果提供了内容
+                        // 1. 修改JVM配置（如果提供）
                         if (StringUtils.hasText(jvmOptions)) {
                             success = modifyJvmOptions(machineInfo, configDir) && success;
                         }
 
+                        // 2. 修改系统配置（如果提供，否则使用默认配置）
+                        success = modifyLogstashYml(machineInfo, configDir) && success;
+
                         return success;
                     } catch (Exception e) {
-                        logger.error("修改Logstash系统配置时发生错误: {}", e.getMessage(), e);
+                        logger.error(
+                                "修改Logstash系统配置时发生错误，实例ID: {}, 错误: {}",
+                                logstashMachineId,
+                                e.getMessage(),
+                                e);
                         throw new SshOperationException("修改Logstash系统配置失败: " + e.getMessage(), e);
                     }
                 });
     }
 
-    /** 修改Logstash系统配置文件 */
-    private boolean modifyLogstashYml(MachineInfo machineInfo, String configDir) throws Exception {
-        String configPath = configDir + "/logstash.yml";
+    /** 修改JVM配置文件 */
+    private boolean modifyJvmOptions(MachineInfo machineInfo, String configDir) {
+        try {
+            String jvmFile = configDir + "/jvm.options";
 
-        // 如果提供了完整的系统配置文件内容，则使用该内容
-        if (StringUtils.hasText(logstashYml)) {
-            // 检查配置文件是否存在
-            String checkCommand =
+            // 创建临时文件
+            String tempFile =
                     String.format(
-                            "if [ -f \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi",
-                            configPath);
-            String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
+                            "/tmp/logstash-jvm-%d-%d.options",
+                            logstashMachineId, System.currentTimeMillis());
 
-            if ("exists".equals(checkResult.trim())) {
-                // 备份现有配置
-                String backupFile =
-                        String.format("%s.bak.%d", configPath, System.currentTimeMillis());
-                String backupCommand = String.format("cp %s %s", configPath, backupFile);
-                sshClient.executeCommand(machineInfo, backupCommand);
-                logger.info("已备份现有系统配置文件: {}", backupFile);
+            // 将JVM配置写入临时文件
+            String createConfigCommand =
+                    String.format("cat > %s << 'EOF'\n%s\nEOF", tempFile, jvmOptions);
+            sshClient.executeCommand(machineInfo, createConfigCommand);
+
+            // 移动到最终位置
+            String moveCommand = String.format("mv %s %s", tempFile, jvmFile);
+            sshClient.executeCommand(machineInfo, moveCommand);
+
+            // 检查配置文件是否修改成功
+            String verifyCommand =
+                    String.format(
+                            "if [ -f \"%s\" ]; then echo \"success\"; else echo \"failed\"; fi",
+                            jvmFile);
+            String verifyResult = sshClient.executeCommand(machineInfo, verifyCommand);
+
+            boolean success = "success".equals(verifyResult.trim());
+            if (success) {
+                logger.info("成功修改JVM配置文件，实例ID: {}, 路径: {}", logstashMachineId, jvmFile);
+            } else {
+                logger.error("修改JVM配置文件失败，实例ID: {}, 路径: {}", logstashMachineId, jvmFile);
+            }
+
+            return success;
+        } catch (Exception e) {
+            logger.error("修改JVM配置文件时发生错误，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /** 修改系统配置文件 */
+    private boolean modifyLogstashYml(MachineInfo machineInfo, String configDir) {
+        try {
+            String ymlFile = configDir + "/logstash.yml";
+
+            // 使用提供的配置或默认配置
+            String actualLogstashYml = logstashYml;
+            if (!StringUtils.hasText(actualLogstashYml)) {
+                // 使用默认的基本配置
+                actualLogstashYml =
+                        "# Logstash系统配置\n"
+                                + "# 允许以超级用户身份运行\n"
+                                + "allow_superuser: true\n"
+                                + "\n"
+                                + "# 数据路径\n"
+                                + "path.data: data\n"
+                                + "\n"
+                                + "# 日志配置\n"
+                                + "log.level: info\n"
+                                + "path.logs: logs\n";
             }
 
             // 创建临时文件
             String tempFile =
                     String.format(
-                            "/tmp/logstash-yml-%d-%d.yml", processId, System.currentTimeMillis());
+                            "/tmp/logstash-yml-%d-%d.yml",
+                            logstashMachineId, System.currentTimeMillis());
 
-            // 将新配置写入临时文件，使用heredoc避免特殊字符问题
+            // 将系统配置写入临时文件
             String createConfigCommand =
-                    String.format("cat > %s << 'EOF'\n%s\nEOF", tempFile, logstashYml);
+                    String.format("cat > %s << 'EOF'\n%s\nEOF", tempFile, actualLogstashYml);
             sshClient.executeCommand(machineInfo, createConfigCommand);
 
             // 移动到最终位置
-            String moveCommand = String.format("mv %s %s", tempFile, configPath);
+            String moveCommand = String.format("mv %s %s", tempFile, ymlFile);
             sshClient.executeCommand(machineInfo, moveCommand);
 
-            // 验证配置是否写入成功
+            // 检查配置文件是否修改成功
             String verifyCommand =
                     String.format(
-                            "if [ -f \"%s\" ] && [ -s \"%s\" ]; then echo \"success\"; else echo"
-                                    + " \"failed\"; fi",
-                            configPath, configPath);
+                            "if [ -f \"%s\" ]; then echo \"success\"; else echo \"failed\"; fi",
+                            ymlFile);
             String verifyResult = sshClient.executeCommand(machineInfo, verifyCommand);
 
             boolean success = "success".equals(verifyResult.trim());
             if (success) {
-                logger.info("成功写入Logstash系统配置: {}", configPath);
+                logger.info("成功修改系统配置文件，实例ID: {}, 路径: {}", logstashMachineId, ymlFile);
             } else {
-                logger.error("写入Logstash系统配置失败: {}", configPath);
+                logger.error("修改系统配置文件失败，实例ID: {}, 路径: {}", logstashMachineId, ymlFile);
             }
 
             return success;
-        } else {
-            // 默认行为：添加allow_superuser设置
-            // 检查配置文件是否存在
-            String checkCommand =
-                    String.format(
-                            "if [ -f \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi",
-                            configPath);
-            String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
-
-            if ("exists".equals(checkResult.trim())) {
-                // 添加配置
-                String appendCommand =
-                        String.format("echo '\nallow_superuser: true' >> %s", configPath);
-                sshClient.executeCommand(machineInfo, appendCommand);
-            } else {
-                // 文件不存在，创建新文件
-                String createCommand =
-                        String.format("echo 'allow_superuser: true' > %s", configPath);
-                sshClient.executeCommand(machineInfo, createCommand);
-            }
-
-            // 验证配置是否添加成功
-            String validateCommand =
-                    String.format("grep \"allow_superuser: true\" %s | wc -l", configPath);
-            String validateResult = sshClient.executeCommand(machineInfo, validateCommand);
-
-            boolean success = !"0".equals(validateResult.trim());
-            if (success) {
-                logger.info("成功修改Logstash系统配置: {}", configPath);
-            } else {
-                logger.error("修改Logstash系统配置失败: {}", configPath);
-            }
-
-            return success;
+        } catch (Exception e) {
+            logger.error("修改系统配置文件时发生错误，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage(), e);
+            return false;
         }
-    }
-
-    /** 修改Logstash JVM选项 */
-    private boolean modifyJvmOptions(MachineInfo machineInfo, String configDir) throws Exception {
-        String jvmFile = configDir + "/jvm.options";
-
-        // 检查JVM配置文件是否存在
-        String checkCommand =
-                String.format(
-                        "if [ -f \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi",
-                        jvmFile);
-        String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
-
-        if ("exists".equals(checkResult.trim())) {
-            // 备份现有配置
-            String backupFile = String.format("%s.bak.%d", jvmFile, System.currentTimeMillis());
-            String backupCommand = String.format("cp %s %s", jvmFile, backupFile);
-            sshClient.executeCommand(machineInfo, backupCommand);
-            logger.info("已备份现有JVM配置文件: {}", backupFile);
-        }
-
-        // 创建临时文件
-        String tempFile =
-                String.format(
-                        "/tmp/logstash-jvm-%d-%d.options", processId, System.currentTimeMillis());
-
-        // 将JVM选项写入临时文件，使用heredoc避免特殊字符问题
-        String createConfigCommand =
-                String.format("cat > %s << 'EOF'\n%s\nEOF", tempFile, jvmOptions);
-        sshClient.executeCommand(machineInfo, createConfigCommand);
-
-        // 移动到最终位置
-        String moveCommand = String.format("mv %s %s", tempFile, jvmFile);
-        sshClient.executeCommand(machineInfo, moveCommand);
-
-        // 验证配置是否写入成功
-        String verifyCommand =
-                String.format(
-                        "if [ -f \"%s\" ] && [ -s \"%s\" ]; then echo \"success\"; else echo"
-                                + " \"failed\"; fi",
-                        jvmFile, jvmFile);
-        String verifyResult = sshClient.executeCommand(machineInfo, verifyCommand);
-
-        boolean success = "success".equals(verifyResult.trim());
-        if (success) {
-            logger.info("成功写入Logstash JVM配置: {}", jvmFile);
-        } else {
-            logger.error("写入Logstash JVM配置失败: {}", jvmFile);
-        }
-
-        return success;
     }
 
     @Override

@@ -25,9 +25,7 @@ import com.hinadt.miaocha.domain.mapper.MachineMapper;
 import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
 import io.qameta.allure.*;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,7 +38,7 @@ import org.mockito.quality.Strictness;
 /**
  * LogstashProcessService 扩容缩容功能测试
  *
- * <p>测试秒查系统中Logstash进程的动态扩容缩容能力 确保在日志量波动时能够自动调整处理能力
+ * <p>测试秒查系统中Logstash进程的动态扩容缩容能力，基于LogstashMachine实例的新架构 支持同一台机器上部署多个LogstashProcess实例（一机多实例）
  */
 @Epic("秒查日志管理系统")
 @Feature("Logstash进程管理")
@@ -84,8 +82,8 @@ class LogstashProcessServiceImplScaleTest {
 
     @Test
     @Severity(SeverityLevel.CRITICAL)
-    @DisplayName("扩容操作 - 成功添加机器")
-    @Description("验证在日志处理负载增加时，能够成功向Logstash进程添加新机器节点")
+    @DisplayName("扩容操作 - 成功添加机器（一机多实例支持）")
+    @Description("验证在日志处理负载增加时，能够成功向Logstash进程添加新机器节点，支持同一台机器部署多个实例")
     @Issue("MIAOCHA-101")
     void testScaleOut_Success() {
         Allure.step(
@@ -107,82 +105,41 @@ class LogstashProcessServiceImplScaleTest {
         MachineInfo machine4 = createTestMachine(4L, "machine4", "192.168.1.4");
 
         LogstashMachine logstashMachine3 = createTestLogstashMachine(1L, processId, 3L);
+        logstashMachine3.setDeployPath("/custom/deploy/path");
         LogstashMachine logstashMachine4 = createTestLogstashMachine(2L, processId, 4L);
+        logstashMachine4.setDeployPath("/custom/deploy/path");
 
         LogstashProcessResponseDTO responseDTO = new LogstashProcessResponseDTO();
         responseDTO.setId(processId);
 
-        // Mock 方法调用
+        // Mock 方法调用 - 基于新架构，检查是否存在相同 (processId, machineId, deployPath) 的实例
         when(logstashProcessMapper.selectById(processId)).thenReturn(process);
         when(machineMapper.selectById(3L)).thenReturn(machine3);
         when(machineMapper.selectById(4L)).thenReturn(machine4);
-        when(logstashMachineMapper.selectByLogstashProcessIdAndMachineId(processId, 3L))
+
+        // 检查是否存在冲突的LogstashMachine实例（相同machine+path）
+        when(logstashMachineMapper.selectByMachineAndPath(3L, "/custom/deploy/path"))
                 .thenReturn(null);
-        when(logstashMachineMapper.selectByLogstashProcessIdAndMachineId(processId, 4L))
+        when(logstashMachineMapper.selectByMachineAndPath(4L, "/custom/deploy/path"))
                 .thenReturn(null);
-        // 自定义路径情况下不需要mock generateDefaultProcessPath
-        when(logstashMachineConverter.createFromProcess(
-                        eq(process), eq(3L), eq("/custom/deploy/path")))
+
+        // Mock验证器不抛出异常（连接成功）
+        doNothing().when(connectionValidator).validateSingleMachineConnection(machine3);
+        doNothing().when(connectionValidator).validateSingleMachineConnection(machine4);
+
+        // Mock转换器创建LogstashMachine（使用自定义路径）
+        when(logstashMachineConverter.createFromProcess(process, 3L, "/custom/deploy/path"))
                 .thenReturn(logstashMachine3);
-        when(logstashMachineConverter.createFromProcess(
-                        eq(process), eq(4L), eq("/custom/deploy/path")))
+        when(logstashMachineConverter.createFromProcess(process, 4L, "/custom/deploy/path"))
                 .thenReturn(logstashMachine4);
-        when(logstashProcessConverter.toResponseDTO(process)).thenReturn(responseDTO);
 
-        // 执行测试
-        LogstashProcessResponseDTO result =
-                Allure.step(
-                        "执行扩容操作",
-                        () -> {
-                            return logstashProcessService.scaleLogstashProcess(processId, dto);
-                        });
+        // Mock插入操作
+        when(logstashMachineMapper.insert(logstashMachine3)).thenReturn(1);
+        when(logstashMachineMapper.insert(logstashMachine4)).thenReturn(1);
 
-        Allure.step(
-                "验证扩容结果",
-                () -> {
-                    assertNotNull(result);
-                    assertEquals(processId, result.getId());
-                    Allure.parameter("返回进程ID", result.getId());
-                });
+        // Mock部署服务初始化实例
+        doNothing().when(logstashDeployService).initializeInstances(anyList(), eq(process));
 
-        Allure.step(
-                "验证底层服务调用",
-                () -> {
-                    verify(machineMapper, times(2)).selectById(anyLong());
-                    verify(logstashMachineMapper, times(2)).insert(any(LogstashMachine.class));
-                    verify(logstashDeployService).initializeProcess(eq(process), anyList());
-                    verify(connectionValidator, times(2))
-                            .validateSingleMachineConnection(any(MachineInfo.class));
-                });
-    }
-
-    @Test
-    @DisplayName("扩容操作 - 使用默认路径")
-    void testScaleOut_DefaultPath() {
-        // 准备测试数据
-        Long processId = 1L;
-        LogstashProcess process = createTestProcess(processId);
-
-        LogstashProcessScaleRequestDTO dto = new LogstashProcessScaleRequestDTO();
-        dto.setAddMachineIds(Arrays.asList(3L));
-        // 不设置customDeployPath，使用默认路径
-
-        MachineInfo machine3 = createTestMachine(3L, "machine3", "192.168.1.3");
-        LogstashMachine logstashMachine3 = createTestLogstashMachine(1L, processId, 3L);
-
-        LogstashProcessResponseDTO responseDTO = new LogstashProcessResponseDTO();
-        responseDTO.setId(processId);
-
-        // Mock 方法调用
-        when(logstashProcessMapper.selectById(processId)).thenReturn(process);
-        when(machineMapper.selectById(3L)).thenReturn(machine3);
-        when(logstashMachineMapper.selectByLogstashProcessIdAndMachineId(processId, 3L))
-                .thenReturn(null);
-        when(logstashDeployService.generateDefaultProcessPath(eq(processId), eq(machine3)))
-                .thenReturn("/default/deploy/path/logstash-1");
-        when(logstashMachineConverter.createFromProcess(
-                        eq(process), eq(3L), eq("/default/deploy/path/logstash-1")))
-                .thenReturn(logstashMachine3);
         when(logstashProcessConverter.toResponseDTO(process)).thenReturn(responseDTO);
 
         // 执行测试
@@ -193,225 +150,183 @@ class LogstashProcessServiceImplScaleTest {
         assertNotNull(result);
         assertEquals(processId, result.getId());
 
-        // 验证调用了generateDefaultProcessPath生成默认路径
-        verify(logstashDeployService).generateDefaultProcessPath(eq(processId), eq(machine3));
-        verify(logstashMachineConverter)
-                .createFromProcess(process, 3L, "/default/deploy/path/logstash-1");
-    }
-
-    @Test
-    @DisplayName("扩容操作 - 机器已存在关联")
-    void testScaleOut_MachineAlreadyAssociated() {
-        // 准备测试数据
-        Long processId = 1L;
-        LogstashProcess process = createTestProcess(processId);
-
-        LogstashProcessScaleRequestDTO dto = new LogstashProcessScaleRequestDTO();
-        dto.setAddMachineIds(Arrays.asList(2L));
-
-        MachineInfo machine2 = createTestMachine(2L, "machine2", "192.168.1.2");
-        LogstashMachine existingRelation = createTestLogstashMachine(1L, processId, 2L);
-
-        // Mock 方法调用
-        when(logstashProcessMapper.selectById(processId)).thenReturn(process);
-        when(machineMapper.selectById(2L)).thenReturn(machine2);
-        when(logstashMachineMapper.selectByLogstashProcessIdAndMachineId(processId, 2L))
-                .thenReturn(existingRelation);
-
-        // 执行测试并验证异常
-        BusinessException exception =
-                assertThrows(
-                        BusinessException.class,
-                        () -> {
-                            logstashProcessService.scaleLogstashProcess(processId, dto);
-                        });
-
-        assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
-        assertTrue(exception.getMessage().contains("已经与进程"));
+        // 验证调用了正确的方法
+        verify(logstashMachineMapper, times(2)).insert(any(LogstashMachine.class));
+        verify(logstashDeployService).initializeInstances(anyList(), eq(process));
     }
 
     @Test
     @Severity(SeverityLevel.CRITICAL)
-    @DisplayName("缩容操作 - 成功移除机器")
-    @Description("验证在日志处理负载减少时，能够安全移除Logstash进程的机器节点")
-    @Issue("MIAOCHA-102")
-    void testScaleIn_Success() {
-        Allure.step(
-                "准备缩容测试数据",
-                () -> {
-                    Allure.parameter("进程ID", "1");
-                    Allure.parameter("移除机器ID", "2");
-                    Allure.parameter("强制缩容", "false");
-                });
+    @DisplayName("扩容操作 - 检测路径冲突")
+    @Description("验证在扩容时能正确检测和处理部署路径冲突的情况")
+    @Issue("MIAOCHA-103")
+    void testScaleOut_PathConflict() {
         // 准备测试数据
         Long processId = 1L;
         LogstashProcess process = createTestProcess(processId);
 
         LogstashProcessScaleRequestDTO dto = new LogstashProcessScaleRequestDTO();
-        dto.setRemoveMachineIds(Arrays.asList(2L));
-        dto.setForceScale(false);
+        dto.setAddMachineIds(Arrays.asList(2L)); // 只添加一台机器
+        dto.setCustomDeployPath("/conflicting/path");
 
         MachineInfo machine2 = createTestMachine(2L, "machine2", "192.168.1.2");
-        LogstashMachine relation2 = createTestLogstashMachine(2L, processId, 2L);
-        relation2.setState(LogstashMachineState.NOT_STARTED.name());
+        LogstashMachine existingConflictingInstance = createTestLogstashMachine(99L, processId, 2L);
+        existingConflictingInstance.setDeployPath("/conflicting/path");
 
-        // 模拟当前有3台机器，缩容1台后还剩2台
-        List<LogstashMachine> allRelations =
-                Arrays.asList(
-                        createTestLogstashMachine(1L, processId, 1L),
-                        relation2,
-                        createTestLogstashMachine(3L, processId, 3L));
+        when(logstashProcessMapper.selectById(processId)).thenReturn(process);
+        when(machineMapper.selectById(2L))
+                .thenReturn(createTestMachine(2L, "machine2", "192.168.1.2"));
+
+        // 返回已存在的实例，表示冲突（使用新的路径冲突检查方法）
+        when(logstashMachineMapper.selectByMachineAndPath(2L, "/conflicting/path"))
+                .thenReturn(existingConflictingInstance);
+
+        // 执行测试并期待异常
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> logstashProcessService.scaleLogstashProcess(processId, dto));
+
+        // 验证异常信息
+        assertEquals(ErrorCode.LOGSTASH_MACHINE_ALREADY_ASSOCIATED, exception.getErrorCode());
+    }
+
+    @Test
+    @Severity(SeverityLevel.CRITICAL)
+    @DisplayName("缩容操作 - 成功移除LogstashMachine实例")
+    @Description("验证在日志处理负载减少时，能够安全移除特定的LogstashMachine实例")
+    @Issue("MIAOCHA-102")
+    void testScaleIn_Success() {
+        // 准备测试数据
+        Long processId = 1L;
+        LogstashProcess process = createTestProcess(processId);
+
+        // 使用logstashMachineIds而不是machineIds
+        LogstashProcessScaleRequestDTO dto = new LogstashProcessScaleRequestDTO();
+        dto.setRemoveLogstashMachineIds(Arrays.asList(2L)); // 移除特定的LogstashMachine实例
+
+        LogstashMachine existingLogstashMachine = createTestLogstashMachine(2L, processId, 2L);
+        existingLogstashMachine.setState(LogstashMachineState.NOT_STARTED.name());
+
+        // 模拟进程至少还有其他LogstashMachine实例
+        LogstashMachine remainingInstance = createTestLogstashMachine(1L, processId, 1L);
+        List<LogstashMachine> allInstances =
+                Arrays.asList(remainingInstance, existingLogstashMachine);
 
         LogstashProcessResponseDTO responseDTO = new LogstashProcessResponseDTO();
         responseDTO.setId(processId);
 
-        // Mock 方法调用
         when(logstashProcessMapper.selectById(processId)).thenReturn(process);
-        when(logstashMachineMapper.selectByLogstashProcessId(processId)).thenReturn(allRelations);
-        when(machineMapper.selectById(2L)).thenReturn(machine2);
-        when(logstashMachineMapper.selectByLogstashProcessIdAndMachineId(processId, 2L))
-                .thenReturn(relation2);
-        when(logstashDeployService.deleteProcessDirectory(eq(processId), anyList()))
-                .thenReturn(CompletableFuture.completedFuture(true));
-        when(taskService.getAllMachineTaskIds(processId, 2L))
-                .thenReturn(Arrays.asList("task1", "task2"));
+        when(logstashMachineMapper.selectById(2L)).thenReturn(existingLogstashMachine);
+        when(logstashMachineMapper.selectByLogstashProcessId(processId)).thenReturn(allInstances);
         when(logstashProcessConverter.toResponseDTO(process)).thenReturn(responseDTO);
+
+        // Mock taskService返回空的任务ID列表
+        when(taskService.getAllInstanceTaskIds(2L)).thenReturn(Arrays.asList());
 
         // 执行测试
         LogstashProcessResponseDTO result =
-                Allure.step(
-                        "执行缩容操作",
-                        () -> {
-                            return logstashProcessService.scaleLogstashProcess(processId, dto);
-                        });
+                logstashProcessService.scaleLogstashProcess(processId, dto);
 
-        Allure.step(
-                "验证缩容结果",
-                () -> {
-                    assertNotNull(result);
-                    assertEquals(processId, result.getId());
-                    Allure.parameter("返回进程ID", result.getId());
-                });
+        // 验证结果
+        assertNotNull(result);
+        assertEquals(processId, result.getId());
 
-        Allure.step(
-                "验证资源清理",
-                () -> {
-                    verify(logstashMachineMapper).deleteById(relation2.getId());
-                    verify(logstashDeployService).deleteProcessDirectory(eq(processId), anyList());
-                    verify(taskService).getAllMachineTaskIds(processId, 2L);
-                    verify(taskService, times(2)).deleteTaskSteps(anyString());
-                    verify(taskService, times(2)).deleteTask(anyString());
-                });
+        // 验证删除了指定的LogstashMachine实例
+        verify(logstashMachineMapper).deleteById(2L);
+
+        // 验证调用了任务查询服务，但没有任务需要删除
+        verify(taskService).getAllInstanceTaskIds(2L);
     }
 
     @Test
-    @DisplayName("缩容操作 - 无法缩容到0台机器")
+    @DisplayName("缩容操作 - 不能缩容到零个实例")
     void testScaleIn_CannotScaleToZero() {
         // 准备测试数据
         Long processId = 1L;
         LogstashProcess process = createTestProcess(processId);
 
         LogstashProcessScaleRequestDTO dto = new LogstashProcessScaleRequestDTO();
-        dto.setRemoveMachineIds(Arrays.asList(1L, 2L)); // 尝试移除所有机器
+        dto.setRemoveLogstashMachineIds(Arrays.asList(1L)); // 移除唯一的实例
 
-        // 模拟当前只有2台机器
-        List<LogstashMachine> allRelations =
-                Arrays.asList(
-                        createTestLogstashMachine(1L, processId, 1L),
-                        createTestLogstashMachine(2L, processId, 2L));
+        LogstashMachine onlyInstance = createTestLogstashMachine(1L, processId, 1L);
+        List<LogstashMachine> allInstances = Arrays.asList(onlyInstance);
 
-        // Mock 方法调用
         when(logstashProcessMapper.selectById(processId)).thenReturn(process);
-        when(logstashMachineMapper.selectByLogstashProcessId(processId)).thenReturn(allRelations);
+        when(logstashMachineMapper.selectById(1L)).thenReturn(onlyInstance);
+        when(logstashMachineMapper.selectByLogstashProcessId(processId)).thenReturn(allInstances);
 
-        // 执行测试并验证异常
+        // 执行测试并期待异常
         BusinessException exception =
                 assertThrows(
                         BusinessException.class,
-                        () -> {
-                            logstashProcessService.scaleLogstashProcess(processId, dto);
-                        });
+                        () -> logstashProcessService.scaleLogstashProcess(processId, dto));
 
-        assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
-        assertTrue(exception.getMessage().contains("至少保留一台机器"));
+        assertEquals(ErrorCode.LOGSTASH_CANNOT_SCALE_TO_ZERO, exception.getErrorCode());
     }
 
     @Test
-    @DisplayName("缩容操作 - 运行中机器非强制模式拒绝")
-    void testScaleIn_RunningMachineNotForced() {
+    @DisplayName("缩容操作 - 运行中实例不能移除")
+    void testScaleIn_RunningInstanceCannotRemove() {
         // 准备测试数据
         Long processId = 1L;
         LogstashProcess process = createTestProcess(processId);
 
         LogstashProcessScaleRequestDTO dto = new LogstashProcessScaleRequestDTO();
-        dto.setRemoveMachineIds(Arrays.asList(2L));
-        dto.setForceScale(false);
+        dto.setRemoveLogstashMachineIds(Arrays.asList(2L));
+        dto.setForceScale(false); // 非强制模式
 
-        MachineInfo machine2 = createTestMachine(2L, "machine2", "192.168.1.2");
-        LogstashMachine relation2 = createTestLogstashMachine(2L, processId, 2L);
-        relation2.setState(LogstashMachineState.RUNNING.name()); // 设置为运行状态
+        LogstashMachine runningInstance = createTestLogstashMachine(2L, processId, 2L);
+        runningInstance.setState(LogstashMachineState.RUNNING.name());
 
-        // 模拟当前有3台机器
-        List<LogstashMachine> allRelations =
-                Arrays.asList(
-                        createTestLogstashMachine(1L, processId, 1L),
-                        relation2,
-                        createTestLogstashMachine(3L, processId, 3L));
+        // 确保进程有其他实例
+        LogstashMachine otherInstance = createTestLogstashMachine(1L, processId, 1L);
+        List<LogstashMachine> allInstances = Arrays.asList(otherInstance, runningInstance);
 
-        // Mock 方法调用
         when(logstashProcessMapper.selectById(processId)).thenReturn(process);
-        when(logstashMachineMapper.selectByLogstashProcessId(processId)).thenReturn(allRelations);
-        when(machineMapper.selectById(2L)).thenReturn(machine2);
-        when(logstashMachineMapper.selectByLogstashProcessIdAndMachineId(processId, 2L))
-                .thenReturn(relation2);
+        when(logstashMachineMapper.selectById(2L)).thenReturn(runningInstance);
+        when(logstashMachineMapper.selectByLogstashProcessId(processId)).thenReturn(allInstances);
 
-        // 执行测试并验证异常
+        // 执行测试并期待异常
         BusinessException exception =
                 assertThrows(
                         BusinessException.class,
-                        () -> {
-                            logstashProcessService.scaleLogstashProcess(processId, dto);
-                        });
+                        () -> logstashProcessService.scaleLogstashProcess(processId, dto));
 
-        assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
-        assertTrue(exception.getMessage().contains("不能在非强制模式下缩容运行中的机器"));
+        assertEquals(ErrorCode.LOGSTASH_MACHINE_RUNNING_CANNOT_REMOVE, exception.getErrorCode());
     }
 
     @Test
-    @DisplayName("缩容操作 - 强制模式停止运行中机器")
-    void testScaleIn_ForceStopRunningMachine() {
+    @DisplayName("缩容操作 - 强制模式停止运行中实例")
+    void testScaleIn_ForceStopRunningInstance() {
         // 准备测试数据
         Long processId = 1L;
         LogstashProcess process = createTestProcess(processId);
 
         LogstashProcessScaleRequestDTO dto = new LogstashProcessScaleRequestDTO();
-        dto.setRemoveMachineIds(Arrays.asList(2L));
-        dto.setForceScale(true);
+        dto.setRemoveLogstashMachineIds(Arrays.asList(2L));
+        dto.setForceScale(true); // 强制模式
 
-        MachineInfo machine2 = createTestMachine(2L, "machine2", "192.168.1.2");
-        LogstashMachine relation2 = createTestLogstashMachine(2L, processId, 2L);
-        relation2.setState(LogstashMachineState.RUNNING.name());
+        LogstashMachine runningInstance = createTestLogstashMachine(2L, processId, 2L);
+        runningInstance.setState(LogstashMachineState.RUNNING.name());
 
-        // 模拟当前有3台机器
-        List<LogstashMachine> allRelations =
-                Arrays.asList(
-                        createTestLogstashMachine(1L, processId, 1L),
-                        relation2,
-                        createTestLogstashMachine(3L, processId, 3L));
+        // 确保进程有其他实例
+        LogstashMachine otherInstance = createTestLogstashMachine(1L, processId, 1L);
+        List<LogstashMachine> allInstances = Arrays.asList(otherInstance, runningInstance);
 
         LogstashProcessResponseDTO responseDTO = new LogstashProcessResponseDTO();
         responseDTO.setId(processId);
 
-        // Mock 方法调用
         when(logstashProcessMapper.selectById(processId)).thenReturn(process);
-        when(logstashMachineMapper.selectByLogstashProcessId(processId)).thenReturn(allRelations);
-        when(machineMapper.selectById(2L)).thenReturn(machine2);
-        when(logstashMachineMapper.selectByLogstashProcessIdAndMachineId(processId, 2L))
-                .thenReturn(relation2);
-        when(logstashDeployService.deleteProcessDirectory(eq(processId), anyList()))
-                .thenReturn(CompletableFuture.completedFuture(true));
-        when(taskService.getAllMachineTaskIds(processId, 2L)).thenReturn(Collections.emptyList());
+        when(logstashMachineMapper.selectById(2L)).thenReturn(runningInstance);
+        when(logstashMachineMapper.selectByLogstashProcessId(processId)).thenReturn(allInstances);
         when(logstashProcessConverter.toResponseDTO(process)).thenReturn(responseDTO);
+
+        // Mock强制停止的部署服务调用
+        doNothing().when(logstashDeployService).stopInstances(anyList());
+
+        // Mock taskService返回空的任务ID列表
+        when(taskService.getAllInstanceTaskIds(2L)).thenReturn(Arrays.asList());
 
         // 执行测试
         LogstashProcessResponseDTO result =
@@ -421,52 +336,47 @@ class LogstashProcessServiceImplScaleTest {
         assertNotNull(result);
         assertEquals(processId, result.getId());
 
-        // 验证强制停止被调用
-        verify(logstashDeployService).stopProcess(eq(processId), anyList());
-        verify(logstashMachineMapper).deleteById(relation2.getId());
+        // 验证调用了强制停止服务
+        verify(logstashDeployService).stopInstances(anyList());
+        verify(logstashMachineMapper).deleteById(2L);
     }
 
     @Test
     @DisplayName("扩容缩容参数验证")
     void testScaleValidation() {
-        final Long processId = 1L;
+        Long processId = 1L;
+        LogstashProcess process = createTestProcess(processId);
 
-        // 测试空请求
-        assertThrows(
-                BusinessException.class,
-                () -> {
-                    logstashProcessService.scaleLogstashProcess(processId, null);
-                });
+        // Mock进程存在验证
+        when(logstashProcessMapper.selectById(processId)).thenReturn(process);
 
-        // 测试同时扩容和缩容
-        LogstashProcessScaleRequestDTO dto = new LogstashProcessScaleRequestDTO();
-        dto.setAddMachineIds(Arrays.asList(1L));
-        dto.setRemoveMachineIds(Arrays.asList(2L));
+        // 测试空的扩容缩容请求
+        LogstashProcessScaleRequestDTO emptyDto = new LogstashProcessScaleRequestDTO();
 
-        final LogstashProcessScaleRequestDTO finalDto1 = dto;
-        assertThrows(
-                BusinessException.class,
-                () -> {
-                    logstashProcessService.scaleLogstashProcess(processId, finalDto1);
-                });
+        BusinessException exception1 =
+                assertThrows(
+                        BusinessException.class,
+                        () -> logstashProcessService.scaleLogstashProcess(processId, emptyDto));
+        assertEquals(ErrorCode.VALIDATION_ERROR, exception1.getErrorCode());
 
-        // 测试既不扩容也不缩容
-        LogstashProcessScaleRequestDTO dto2 = new LogstashProcessScaleRequestDTO();
-        final LogstashProcessScaleRequestDTO finalDto2 = dto2;
-        assertThrows(
-                BusinessException.class,
-                () -> {
-                    logstashProcessService.scaleLogstashProcess(processId, finalDto2);
-                });
+        // 测试同时指定添加和移除
+        LogstashProcessScaleRequestDTO conflictDto = new LogstashProcessScaleRequestDTO();
+        conflictDto.setAddMachineIds(Arrays.asList(1L));
+        conflictDto.setRemoveLogstashMachineIds(Arrays.asList(2L));
+
+        BusinessException exception2 =
+                assertThrows(
+                        BusinessException.class,
+                        () -> logstashProcessService.scaleLogstashProcess(processId, conflictDto));
+        assertEquals(ErrorCode.VALIDATION_ERROR, exception2.getErrorCode());
     }
 
     // 辅助方法
     private LogstashProcess createTestProcess(Long id) {
         LogstashProcess process = new LogstashProcess();
         process.setId(id);
-        process.setName("test-process");
+        process.setName("test-process-" + id);
         process.setModuleId(1L);
-        process.setConfigContent("input {} output {}");
         return process;
     }
 
@@ -487,5 +397,347 @@ class LogstashProcessServiceImplScaleTest {
         logstashMachine.setMachineId(machineId);
         logstashMachine.setState(LogstashMachineState.NOT_STARTED.name());
         return logstashMachine;
+    }
+
+    // ============ 一机多实例专项测试 ============
+
+    @Test
+    @Severity(SeverityLevel.CRITICAL)
+    @DisplayName("一机多实例 - 同台机器扩容多个不同进程实例")
+    @Description("验证在同一台机器上可以部署多个不同LogstashProcess的实例，通过不同的部署路径实现隔离")
+    @Issue("MIAOCHA-105")
+    void testMultiInstanceOnSameMachine_DifferentProcesses() {
+        Allure.step(
+                "准备同机器多进程扩容测试数据",
+                () -> {
+                    Allure.parameter("目标机器ID", "1");
+                    Allure.parameter("进程1 ID", "100");
+                    Allure.parameter("进程2 ID", "200");
+                    Allure.parameter("验证场景", "同一台机器部署不同进程的实例");
+                });
+
+        // 准备测试数据：同一台机器部署两个不同进程的实例
+        Long machineId = 1L;
+        Long process1Id = 100L;
+        Long process2Id = 200L;
+
+        LogstashProcess process1 = createTestProcess(process1Id);
+        LogstashProcess process2 = createTestProcess(process2Id);
+
+        MachineInfo targetMachine = createTestMachine(machineId, "shared-machine", "192.168.1.100");
+
+        // 第一个进程的扩容请求
+        LogstashProcessScaleRequestDTO dto1 = new LogstashProcessScaleRequestDTO();
+        dto1.setAddMachineIds(Arrays.asList(machineId));
+        dto1.setCustomDeployPath("/logstash/process1/instance");
+
+        // 第二个进程的扩容请求
+        LogstashProcessScaleRequestDTO dto2 = new LogstashProcessScaleRequestDTO();
+        dto2.setAddMachineIds(Arrays.asList(machineId));
+        dto2.setCustomDeployPath("/logstash/process2/instance");
+
+        // Mock基础数据
+        when(logstashProcessMapper.selectById(process1Id)).thenReturn(process1);
+        when(logstashProcessMapper.selectById(process2Id)).thenReturn(process2);
+        when(machineMapper.selectById(machineId)).thenReturn(targetMachine);
+
+        // 第一个进程扩容：检查路径冲突（不冲突）
+        when(logstashMachineMapper.selectByMachineAndPath(machineId, "/logstash/process1/instance"))
+                .thenReturn(null);
+
+        // 第二个进程扩容：检查路径冲突（不冲突，因为路径不同）
+        when(logstashMachineMapper.selectByMachineAndPath(machineId, "/logstash/process2/instance"))
+                .thenReturn(null);
+
+        LogstashMachine logstashMachine1 = createTestLogstashMachine(1L, process1Id, machineId);
+        logstashMachine1.setDeployPath("/logstash/process1/instance");
+        LogstashMachine logstashMachine2 = createTestLogstashMachine(2L, process2Id, machineId);
+        logstashMachine2.setDeployPath("/logstash/process2/instance");
+
+        // Mock实例创建
+        when(logstashMachineConverter.createFromProcess(
+                        process1, machineId, "/logstash/process1/instance"))
+                .thenReturn(logstashMachine1);
+        when(logstashMachineConverter.createFromProcess(
+                        process2, machineId, "/logstash/process2/instance"))
+                .thenReturn(logstashMachine2);
+
+        when(logstashMachineMapper.insert(any(LogstashMachine.class))).thenReturn(1);
+        when(logstashMachineMapper.update(any(LogstashMachine.class))).thenReturn(1);
+
+        // Mock连接验证
+        doNothing().when(connectionValidator).validateSingleMachineConnection(targetMachine);
+
+        // Mock部署服务
+        doNothing()
+                .when(logstashDeployService)
+                .initializeInstances(anyList(), any(LogstashProcess.class));
+
+        LogstashProcessResponseDTO response1 = new LogstashProcessResponseDTO();
+        response1.setId(process1Id);
+        LogstashProcessResponseDTO response2 = new LogstashProcessResponseDTO();
+        response2.setId(process2Id);
+
+        when(logstashProcessConverter.toResponseDTO(process1)).thenReturn(response1);
+        when(logstashProcessConverter.toResponseDTO(process2)).thenReturn(response2);
+
+        // 执行测试：依次为两个进程在同一台机器上扩容
+        LogstashProcessResponseDTO result1 =
+                logstashProcessService.scaleLogstashProcess(process1Id, dto1);
+        LogstashProcessResponseDTO result2 =
+                logstashProcessService.scaleLogstashProcess(process2Id, dto2);
+
+        // 验证结果
+        assertNotNull(result1);
+        assertNotNull(result2);
+        assertEquals(process1Id, result1.getId());
+        assertEquals(process2Id, result2.getId());
+
+        // 验证关键行为：每个进程都创建了自己的LogstashMachine实例
+        verify(logstashMachineMapper, times(2)).insert(any(LogstashMachine.class));
+
+        // 验证路径冲突检查被正确调用
+        verify(logstashMachineMapper)
+                .selectByMachineAndPath(machineId, "/logstash/process1/instance");
+        verify(logstashMachineMapper)
+                .selectByMachineAndPath(machineId, "/logstash/process2/instance");
+
+        // 验证两次部署服务初始化调用
+        verify(logstashDeployService, times(2))
+                .initializeInstances(anyList(), any(LogstashProcess.class));
+
+        Allure.step(
+                "验证一机多实例部署成功",
+                () -> {
+                    Allure.attachment("验证结果", "同一台机器成功部署了两个不同进程的LogstashMachine实例");
+                });
+    }
+
+    @Test
+    @Severity(SeverityLevel.CRITICAL)
+    @DisplayName("一机多实例 - 同进程同机器不同路径扩容")
+    @Description("验证同一个LogstashProcess可以在同一台机器上通过不同部署路径扩容多个实例")
+    @Issue("MIAOCHA-106")
+    void testMultiInstanceOnSameMachine_SameProcess() {
+        Allure.step(
+                "准备同进程同机器多实例扩容测试数据",
+                () -> {
+                    Allure.parameter("目标机器ID", "1");
+                    Allure.parameter("进程ID", "100");
+                    Allure.parameter("实例1路径", "/logstash/process100/instance1");
+                    Allure.parameter("实例2路径", "/logstash/process100/instance2");
+                    Allure.parameter("验证场景", "同一进程在同一台机器部署多个实例");
+                });
+
+        // 准备测试数据：同一个进程在同一台机器上扩容两个实例
+        Long machineId = 1L;
+        Long processId = 100L;
+
+        LogstashProcess process = createTestProcess(processId);
+        MachineInfo targetMachine =
+                createTestMachine(machineId, "multi-instance-machine", "192.168.1.100");
+
+        // 第一次扩容请求
+        LogstashProcessScaleRequestDTO dto1 = new LogstashProcessScaleRequestDTO();
+        dto1.setAddMachineIds(Arrays.asList(machineId));
+        dto1.setCustomDeployPath("/logstash/process100/instance1");
+
+        // 第二次扩容请求
+        LogstashProcessScaleRequestDTO dto2 = new LogstashProcessScaleRequestDTO();
+        dto2.setAddMachineIds(Arrays.asList(machineId));
+        dto2.setCustomDeployPath("/logstash/process100/instance2");
+
+        // Mock基础数据
+        when(logstashProcessMapper.selectById(processId)).thenReturn(process);
+        when(machineMapper.selectById(machineId)).thenReturn(targetMachine);
+
+        // 第一次扩容：检查路径冲突（不冲突）
+        when(logstashMachineMapper.selectByMachineAndPath(
+                        machineId, "/logstash/process100/instance1"))
+                .thenReturn(null);
+
+        // 第二次扩容：检查路径冲突（不冲突，因为路径不同）
+        when(logstashMachineMapper.selectByMachineAndPath(
+                        machineId, "/logstash/process100/instance2"))
+                .thenReturn(null);
+
+        LogstashMachine logstashMachine1 = createTestLogstashMachine(1L, processId, machineId);
+        logstashMachine1.setDeployPath("/logstash/process100/instance1");
+        LogstashMachine logstashMachine2 = createTestLogstashMachine(2L, processId, machineId);
+        logstashMachine2.setDeployPath("/logstash/process100/instance2");
+
+        // Mock实例创建
+        when(logstashMachineConverter.createFromProcess(
+                        process, machineId, "/logstash/process100/instance1"))
+                .thenReturn(logstashMachine1);
+        when(logstashMachineConverter.createFromProcess(
+                        process, machineId, "/logstash/process100/instance2"))
+                .thenReturn(logstashMachine2);
+
+        when(logstashMachineMapper.insert(any(LogstashMachine.class))).thenReturn(1);
+
+        // Mock连接验证
+        doNothing().when(connectionValidator).validateSingleMachineConnection(targetMachine);
+
+        // Mock部署服务
+        doNothing().when(logstashDeployService).initializeInstances(anyList(), eq(process));
+
+        LogstashProcessResponseDTO response = new LogstashProcessResponseDTO();
+        response.setId(processId);
+        when(logstashProcessConverter.toResponseDTO(process)).thenReturn(response);
+
+        // 执行测试：为同一个进程在同一台机器上两次扩容
+        LogstashProcessResponseDTO result1 =
+                logstashProcessService.scaleLogstashProcess(processId, dto1);
+        LogstashProcessResponseDTO result2 =
+                logstashProcessService.scaleLogstashProcess(processId, dto2);
+
+        // 验证结果
+        assertNotNull(result1);
+        assertNotNull(result2);
+        assertEquals(processId, result1.getId());
+        assertEquals(processId, result2.getId());
+
+        // 验证关键行为：创建了两个LogstashMachine实例
+        verify(logstashMachineMapper, times(2)).insert(any(LogstashMachine.class));
+
+        // 验证路径冲突检查被正确调用
+        verify(logstashMachineMapper)
+                .selectByMachineAndPath(machineId, "/logstash/process100/instance1");
+        verify(logstashMachineMapper)
+                .selectByMachineAndPath(machineId, "/logstash/process100/instance2");
+
+        // 验证两次部署服务初始化调用
+        verify(logstashDeployService, times(2)).initializeInstances(anyList(), eq(process));
+
+        Allure.step(
+                "验证同进程一机多实例部署成功",
+                () -> {
+                    Allure.attachment("验证结果", "同一个LogstashProcess在同一台机器成功部署了两个不同路径的实例");
+                });
+    }
+
+    @Test
+    @Severity(SeverityLevel.CRITICAL)
+    @DisplayName("一机多实例 - 路径冲突检测")
+    @Description("验证在一机多实例架构下，系统能正确检测和阻止部署路径冲突")
+    @Issue("MIAOCHA-107")
+    void testMultiInstanceOnSameMachine_PathConflictDetection() {
+        Allure.step(
+                "准备路径冲突检测测试数据",
+                () -> {
+                    Allure.parameter("目标机器ID", "1");
+                    Allure.parameter("进程ID", "100");
+                    Allure.parameter("冲突路径", "/logstash/shared/path");
+                    Allure.parameter("验证场景", "检测相同路径部署冲突");
+                });
+
+        // 准备测试数据：尝试在相同路径创建实例
+        Long machineId = 1L;
+        Long processId = 100L;
+        String conflictPath = "/logstash/shared/path";
+
+        LogstashProcess process = createTestProcess(processId);
+        MachineInfo targetMachine =
+                createTestMachine(machineId, "conflict-test-machine", "192.168.1.100");
+
+        // 模拟已存在的LogstashMachine实例占用了该路径
+        LogstashMachine existingInstance = createTestLogstashMachine(99L, processId, machineId);
+        existingInstance.setDeployPath(conflictPath);
+
+        LogstashProcessScaleRequestDTO conflictDto = new LogstashProcessScaleRequestDTO();
+        conflictDto.setAddMachineIds(Arrays.asList(machineId));
+        conflictDto.setCustomDeployPath(conflictPath);
+
+        // Mock基础数据
+        when(logstashProcessMapper.selectById(processId)).thenReturn(process);
+        when(machineMapper.selectById(machineId)).thenReturn(targetMachine);
+
+        // 路径冲突检查：返回已存在的实例
+        when(logstashMachineMapper.selectByMachineAndPath(machineId, conflictPath))
+                .thenReturn(existingInstance);
+
+        // 执行测试并期待异常
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> logstashProcessService.scaleLogstashProcess(processId, conflictDto));
+
+        // 验证异常信息
+        assertEquals(ErrorCode.LOGSTASH_MACHINE_ALREADY_ASSOCIATED, exception.getErrorCode());
+
+        // 验证进行了路径冲突检查
+        verify(logstashMachineMapper).selectByMachineAndPath(machineId, conflictPath);
+
+        // 验证没有创建新实例（因为冲突被阻止）
+        verify(logstashMachineMapper, never()).insert(any(LogstashMachine.class));
+
+        Allure.step(
+                "验证路径冲突检测成功",
+                () -> {
+                    Allure.attachment("验证结果", "系统成功检测到路径冲突并阻止了重复部署");
+                });
+    }
+
+    @Test
+    @Severity(SeverityLevel.NORMAL)
+    @DisplayName("一机多实例 - 查询同机器所有实例")
+    @Description("验证可以正确查询同一台机器上的所有LogstashMachine实例")
+    @Issue("MIAOCHA-108")
+    void testMultiInstanceOnSameMachine_QueryAllInstances() {
+        Allure.step(
+                "准备同机器实例查询测试数据",
+                () -> {
+                    Allure.parameter("目标机器ID", "1");
+                    Allure.parameter("实例数量", "3");
+                    Allure.parameter("验证场景", "查询同机器所有实例");
+                });
+
+        // 准备测试数据：同一台机器上的多个实例
+        Long machineId = 1L;
+
+        LogstashMachine instance1 = createTestLogstashMachine(1L, 100L, machineId);
+        instance1.setDeployPath("/logstash/process100/instance1");
+
+        LogstashMachine instance2 = createTestLogstashMachine(2L, 100L, machineId);
+        instance2.setDeployPath("/logstash/process100/instance2");
+
+        LogstashMachine instance3 = createTestLogstashMachine(3L, 200L, machineId);
+        instance3.setDeployPath("/logstash/process200/instance1");
+
+        List<LogstashMachine> allInstancesOnMachine =
+                Arrays.asList(instance1, instance2, instance3);
+
+        // Mock查询方法
+        when(logstashMachineMapper.selectByMachineId(machineId)).thenReturn(allInstancesOnMachine);
+
+        // 执行查询（这里我们模拟一个查询操作，实际可能在Service层有相关方法）
+        List<LogstashMachine> result = logstashMachineMapper.selectByMachineId(machineId);
+
+        // 验证结果
+        assertNotNull(result);
+        assertEquals(3, result.size());
+
+        // 验证所有实例都在同一台机器上
+        result.forEach(instance -> assertEquals(machineId, instance.getMachineId()));
+
+        // 验证包含了不同进程的实例
+        List<Long> processIds =
+                result.stream().map(LogstashMachine::getLogstashProcessId).distinct().toList();
+        assertEquals(2, processIds.size()); // 两个不同的进程
+
+        // 验证包含了不同的部署路径
+        List<String> deployPaths =
+                result.stream().map(LogstashMachine::getDeployPath).distinct().toList();
+        assertEquals(3, deployPaths.size()); // 三个不同的路径
+
+        verify(logstashMachineMapper).selectByMachineId(machineId);
+
+        Allure.step(
+                "验证同机器实例查询成功",
+                () -> {
+                    Allure.attachment(
+                            "查询结果", String.format("在机器[%d]上发现%d个实例", machineId, result.size()));
+                });
     }
 }

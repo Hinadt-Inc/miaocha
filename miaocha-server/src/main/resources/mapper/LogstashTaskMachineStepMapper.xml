@@ -4,21 +4,21 @@
 
     <!-- Logstash任务机器步骤表所有字段 -->
     <sql id="logstashTaskMachineStepColumns">
-        id, task_id, machine_id, step_id, step_name, status, start_time, end_time, error_message, create_time,
+        id, task_id, machine_id, logstash_machine_id, step_id, step_name, status, start_time, end_time, error_message, create_time,
         update_time
     </sql>
 
     <!-- 插入步骤记录 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO logstash_task_machine_step (task_id, machine_id, step_id, step_name, status)
-        VALUES (#{taskId}, #{machineId}, #{stepId}, #{stepName}, #{status})
+        INSERT INTO logstash_task_machine_step (task_id, machine_id, logstash_machine_id, step_id, step_name, status)
+        VALUES (#{taskId}, #{machineId}, #{logstashMachineId}, #{stepId}, #{stepName}, #{status})
     </insert>
 
     <!-- 批量插入步骤记录 -->
     <insert id="batchInsert">
-        INSERT INTO logstash_task_machine_step (task_id, machine_id, step_id, step_name, status) VALUES
+        INSERT INTO logstash_task_machine_step (task_id, machine_id, logstash_machine_id, step_id, step_name, status) VALUES
         <foreach collection="steps" item="step" separator=",">
-            (#{step.taskId}, #{step.machineId}, #{step.stepId}, #{step.stepName}, #{step.status})
+            (#{step.taskId}, #{step.machineId}, #{step.logstashMachineId}, #{step.stepId}, #{step.stepName}, #{step.status})
         </foreach>
     </insert>
 
@@ -36,10 +36,30 @@
         FROM logstash_task_machine_step WHERE task_id = #{taskId} AND machine_id = #{machineId} ORDER BY id
     </select>
 
+    <!-- 根据任务ID和LogstashMachine实例ID查询所有步骤 -->
+    <select id="findByTaskIdAndLogstashMachineId" resultType="com.hinadt.miaocha.domain.entity.LogstashTaskMachineStep">
+        SELECT
+        <include refid="logstashTaskMachineStepColumns"/>
+        FROM logstash_task_machine_step WHERE task_id = #{taskId} AND logstash_machine_id = #{logstashMachineId} ORDER BY id
+    </select>
+
+    <!-- 根据LogstashMachine实例ID查询所有步骤 -->
+    <select id="findByLogstashMachineId" resultType="com.hinadt.miaocha.domain.entity.LogstashTaskMachineStep">
+        SELECT
+        <include refid="logstashTaskMachineStepColumns"/>
+        FROM logstash_task_machine_step WHERE logstash_machine_id = #{logstashMachineId} ORDER BY create_time DESC
+    </select>
+
     <!-- 更新步骤状态 -->
     <update id="updateStatus">
         UPDATE logstash_task_machine_step SET status = #{status}, update_time = NOW()
         WHERE task_id = #{taskId} AND machine_id = #{machineId} AND step_id = #{stepId}
+    </update>
+
+    <!-- 根据LogstashMachine实例ID更新步骤状态 -->
+    <update id="updateStatusByLogstashMachineId">
+        UPDATE logstash_task_machine_step SET status = #{status}, update_time = NOW()
+        WHERE task_id = #{taskId} AND logstash_machine_id = #{logstashMachineId} AND step_id = #{stepId}
     </update>
 
     <!-- 更新步骤开始时间 -->
@@ -48,16 +68,34 @@
         WHERE task_id = #{taskId} AND machine_id = #{machineId} AND step_id = #{stepId}
     </update>
 
+    <!-- 根据LogstashMachine实例ID更新步骤开始时间 -->
+    <update id="updateStartTimeByLogstashMachineId">
+        UPDATE logstash_task_machine_step SET start_time = #{startTime}, update_time = NOW()
+        WHERE task_id = #{taskId} AND logstash_machine_id = #{logstashMachineId} AND step_id = #{stepId}
+    </update>
+
     <!-- 更新步骤结束时间 -->
     <update id="updateEndTime">
         UPDATE logstash_task_machine_step SET end_time = #{endTime}, update_time = NOW()
         WHERE task_id = #{taskId} AND machine_id = #{machineId} AND step_id = #{stepId}
     </update>
 
+    <!-- 根据LogstashMachine实例ID更新步骤结束时间 -->
+    <update id="updateEndTimeByLogstashMachineId">
+        UPDATE logstash_task_machine_step SET end_time = #{endTime}, update_time = NOW()
+        WHERE task_id = #{taskId} AND logstash_machine_id = #{logstashMachineId} AND step_id = #{stepId}
+    </update>
+
     <!-- 更新步骤错误信息 -->
     <update id="updateErrorMessage">
         UPDATE logstash_task_machine_step SET error_message = #{errorMessage}, update_time = NOW()
         WHERE task_id = #{taskId} AND machine_id = #{machineId} AND step_id = #{stepId}
+    </update>
+
+    <!-- 根据LogstashMachine实例ID更新步骤错误信息 -->
+    <update id="updateErrorMessageByLogstashMachineId">
+        UPDATE logstash_task_machine_step SET error_message = #{errorMessage}, update_time = NOW()
+        WHERE task_id = #{taskId} AND logstash_machine_id = #{logstashMachineId} AND step_id = #{stepId}
     </update>
 
     <!-- 根据任务ID统计各状态步骤数量 -->
@@ -82,6 +120,11 @@
     <!-- 删除任务所有步骤 -->
     <delete id="deleteByTaskId">
         DELETE FROM logstash_task_machine_step WHERE task_id = #{taskId}
+    </delete>
+
+    <!-- 删除LogstashMachine实例相关的所有步骤 -->
+    <delete id="deleteByLogstashMachineId">
+        DELETE FROM logstash_task_machine_step WHERE logstash_machine_id = #{logstashMachineId}
     </delete>
 
 </mapper>

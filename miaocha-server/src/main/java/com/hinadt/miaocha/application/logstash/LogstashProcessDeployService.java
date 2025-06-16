@@ -1,110 +1,74 @@
 package com.hinadt.miaocha.application.logstash;
 
+import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.LogstashProcess;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-/** Logstash进程服务接口 - 负责Logstash进程的部署、启动和停止 所有批量机器操作默认并行执行 */
+/** Logstash进程部署服务接口 - 基于LogstashMachine实例级操作 */
 public interface LogstashProcessDeployService {
 
     /**
-     * 初始化Logstash进程环境（在多台机器上并行执行）
+     * 批量初始化LogstashMachine实例环境（并行执行）
      *
-     * @param process Logstash进程
-     * @param machineInfos 目标机器列表
+     * @param logstashMachines LogstashMachine实例列表
+     * @param process 关联的Logstash进程
      */
-    void initializeProcess(LogstashProcess process, List<MachineInfo> machineInfos);
+    void initializeInstances(List<LogstashMachine> logstashMachines, LogstashProcess process);
 
     /**
-     * 启动Logstash进程（在多台机器上并行执行）
+     * 批量启动LogstashMachine实例（并行执行）
      *
-     * @param process Logstash进程
-     * @param machineInfos 目标机器列表
+     * @param logstashMachines LogstashMachine实例列表
+     * @param process 关联的Logstash进程
      */
-    void startProcess(LogstashProcess process, List<MachineInfo> machineInfos);
+    void startInstances(List<LogstashMachine> logstashMachines, LogstashProcess process);
 
     /**
-     * 停止Logstash进程（在多台机器上并行执行）
+     * 批量停止LogstashMachine实例（并行执行）
      *
-     * @param processId 进程ID
-     * @param machineInfos 目标机器列表
+     * @param logstashMachines LogstashMachine实例列表
      */
-    void stopProcess(Long processId, List<MachineInfo> machineInfos);
+    void stopInstances(List<LogstashMachine> logstashMachines);
 
     /**
-     * 强制停止Logstash进程（在多台机器上并行执行） 应急停止功能：执行原有的停止逻辑，但无论命令成功与否，都强制将状态更改为未启动
+     * 批量强制停止LogstashMachine实例（并行执行）
      *
-     * @param processId 进程ID
-     * @param machineInfos 目标机器列表
+     * @param logstashMachines LogstashMachine实例列表
      */
-    void forceStopProcess(Long processId, List<MachineInfo> machineInfos);
+    void forceStopInstances(List<LogstashMachine> logstashMachines);
 
     /**
-     * 更新多种Logstash配置并部署到目标机器（在多台机器上并行执行） 可以同时更新主配置、JVM配置和系统配置
+     * 批量更新LogstashMachine实例配置（并行执行）
      *
-     * @param processId 进程ID
-     * @param machineInfos 目标机器列表
+     * @param logstashMachines LogstashMachine实例列表
      * @param configContent 主配置内容 (可为null)
      * @param jvmOptions JVM配置内容 (可为null)
      * @param logstashYml 系统配置内容 (可为null)
      */
-    void updateMultipleConfigs(
-            Long processId,
-            List<MachineInfo> machineInfos,
+    void updateInstancesConfig(
+            List<LogstashMachine> logstashMachines,
             String configContent,
             String jvmOptions,
             String logstashYml);
 
     /**
-     * 刷新Logstash配置到目标机器（在多台机器上并行执行）
+     * 批量刷新LogstashMachine实例配置（并行执行）
      *
-     * @param processId 进程ID
-     * @param machineInfos 目标机器列表
+     * @param logstashMachines LogstashMachine实例列表
+     * @param process 关联的Logstash进程
      */
-    void refreshConfig(Long processId, List<MachineInfo> machineInfos);
+    void refreshInstancesConfig(List<LogstashMachine> logstashMachines, LogstashProcess process);
 
     /**
-     * 在单台机器上启动Logstash进程
+     * 批量删除LogstashMachine实例目录（并行执行）
      *
-     * @param process Logstash进程
-     * @param machineInfo 目标机器
+     * @param logstashMachines LogstashMachine实例列表
      */
-    void startMachine(LogstashProcess process, MachineInfo machineInfo);
+    CompletableFuture<Boolean> deleteInstancesDirectory(List<LogstashMachine> logstashMachines);
 
-    /**
-     * 在单台机器上停止Logstash进程
-     *
-     * @param processId 进程ID
-     * @param machineInfo 目标机器
-     */
-    void stopMachine(Long processId, MachineInfo machineInfo);
-
-    /**
-     * 在单台机器上强制停止Logstash进程 应急停止功能：执行原有的停止逻辑，但无论命令成功与否，都强制将状态更改为未启动
-     *
-     * @param processId 进程ID
-     * @param machineInfo 目标机器
-     */
-    void forceStopMachine(Long processId, MachineInfo machineInfo);
-
-    /**
-     * 重启单台机器上的Logstash进程
-     *
-     * @param processId 进程ID
-     * @param machineInfo 目标机器
-     */
-    void restartMachine(Long processId, MachineInfo machineInfo);
-
-    /**
-     * 删除进程目录（清理）
-     *
-     * @param processId 进程ID
-     * @param machineInfos 目标机器列表
-     * @return 删除结果
-     */
-    CompletableFuture<Boolean> deleteProcessDirectory(
-            Long processId, List<MachineInfo> machineInfos);
+    // ==================== 辅助方法 ====================
 
     /**
      * 获取Logstash进程部署的基础目录
@@ -114,22 +78,20 @@ public interface LogstashProcessDeployService {
     String getDeployBaseDir();
 
     /**
-     * 获取指定进程在指定机器上的实际部署路径 优先从数据库获取，如果没有则根据用户定义路径或默认路径生成
+     * 获取指定LogstashMachine实例的部署路径
      *
-     * @param processId 进程ID
-     * @param machineInfo 机器信息
-     * @return 实际部署路径
+     * @param logstashMachine LogstashMachine实例
+     * @return 实例部署路径
      */
-    String getProcessDeployPath(Long processId, MachineInfo machineInfo);
+    String getInstanceDeployPath(LogstashMachine logstashMachine);
 
     /**
-     * 生成默认的进程部署路径（基础目录 + 进程ID） 会根据机器用户名规范化基础目录路径
+     * 生成默认的实例部署路径 基于进程ID和机器ID生成路径，不依赖实例ID避免插入前的依赖问题
      *
-     * @param processId 进程ID
      * @param machineInfo 机器信息
      * @return 默认部署路径
      */
-    String generateDefaultProcessPath(Long processId, MachineInfo machineInfo);
+    String generateDefaultInstancePath(MachineInfo machineInfo);
 
     /**
      * 获取配置服务实例

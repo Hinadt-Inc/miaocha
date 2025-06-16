@@ -4,14 +4,14 @@
 
     <!-- Logstash任务表所有字段 -->
     <sql id="logstashTaskColumns">
-        id, process_id, machine_id, name, description, status, operation_type, start_time, end_time, error_message,
+        id, process_id, machine_id, logstash_machine_id, name, description, status, operation_type, start_time, end_time, error_message,
         create_time, update_time
     </sql>
 
     <!-- 插入任务记录 -->
     <insert id="insert">
-        INSERT INTO logstash_task (id, process_id, machine_id, name, description, status, operation_type)
-        VALUES (#{id}, #{processId}, #{machineId}, #{name}, #{description}, #{status}, #{operationType})
+        INSERT INTO logstash_task (id, process_id, machine_id, logstash_machine_id, name, description, status, operation_type)
+        VALUES (#{id}, #{processId}, #{machineId}, #{logstashMachineId}, #{name}, #{description}, #{status}, #{operationType})
     </insert>
 
     <!-- 根据ID查询任务 -->
@@ -26,6 +26,20 @@
         SELECT
         <include refid="logstashTaskColumns"/>
         FROM logstash_task WHERE process_id = #{processId} ORDER BY create_time DESC
+    </select>
+
+    <!-- 根据LogstashMachine实例ID查询关联的任务 -->
+    <select id="findByLogstashMachineId" resultType="com.hinadt.miaocha.domain.entity.LogstashTask">
+        SELECT
+        <include refid="logstashTaskColumns"/>
+        FROM logstash_task WHERE logstash_machine_id = #{logstashMachineId} ORDER BY create_time DESC
+    </select>
+
+    <!-- 根据LogstashMachine实例ID查询任务ID列表 -->
+    <select id="findTaskIdsByLogstashMachineId" resultType="java.lang.String">
+        SELECT id FROM logstash_task
+        WHERE logstash_machine_id = #{logstashMachineId}
+        ORDER BY create_time DESC
     </select>
 
     <!-- 更新任务状态 -->
@@ -53,6 +67,13 @@
         SELECT
         <include refid="logstashTaskColumns"/>
         FROM logstash_task WHERE process_id = #{processId} ORDER BY create_time DESC LIMIT 1
+    </select>
+
+    <!-- 获取LogstashMachine实例最近一次任务 -->
+    <select id="findLatestByLogstashMachineId" resultType="com.hinadt.miaocha.domain.entity.LogstashTask">
+        SELECT
+        <include refid="logstashTaskColumns"/>
+        FROM logstash_task WHERE logstash_machine_id = #{logstashMachineId} ORDER BY create_time DESC LIMIT 1
     </select>
 
     <!-- 获取进程在指定机器上的最近一次任务 -->
@@ -101,6 +122,11 @@
     <!-- 删除任务 -->
     <delete id="deleteById">
         DELETE FROM logstash_task WHERE id = #{id}
+    </delete>
+
+    <!-- 批量删除LogstashMachine实例相关的所有任务 -->
+    <delete id="deleteByLogstashMachineId">
+        DELETE FROM logstash_task WHERE logstash_machine_id = #{logstashMachineId}
     </delete>
 
 </mapper>

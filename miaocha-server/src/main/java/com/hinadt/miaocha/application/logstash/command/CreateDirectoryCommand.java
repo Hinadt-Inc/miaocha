@@ -1,20 +1,27 @@
 package com.hinadt.miaocha.application.logstash.command;
 
+import com.hinadt.miaocha.application.logstash.path.LogstashDeployPathManager;
 import com.hinadt.miaocha.common.exception.SshOperationException;
 import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
 import java.util.concurrent.CompletableFuture;
 
-/** 创建目录命令 */
+/** 创建目录命令 - 重构支持多实例，基于logstashMachineId */
 public class CreateDirectoryCommand extends AbstractLogstashCommand {
 
     public CreateDirectoryCommand(
             SshClient sshClient,
-            String deployDir,
-            Long processId,
-            LogstashMachineMapper logstashMachineMapper) {
-        super(sshClient, deployDir, processId, logstashMachineMapper);
+            String deployBaseDir,
+            Long logstashMachineId,
+            LogstashMachineMapper logstashMachineMapper,
+            LogstashDeployPathManager deployPathManager) {
+        super(
+                sshClient,
+                deployBaseDir,
+                logstashMachineId,
+                logstashMachineMapper,
+                deployPathManager);
     }
 
     @Override
@@ -22,7 +29,7 @@ public class CreateDirectoryCommand extends AbstractLogstashCommand {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         try {
-            // 创建进程目录
+            // 创建实例目录
             String processDir = getProcessDirectory(machineInfo);
             String command = String.format("mkdir -p %s", processDir);
             sshClient.executeCommand(machineInfo, command);
@@ -36,14 +43,14 @@ public class CreateDirectoryCommand extends AbstractLogstashCommand {
 
             boolean success = "exists".equals(checkResult.trim());
             if (success) {
-                logger.info("成功创建目录: {}", processDir);
+                logger.info("成功创建实例目录: {}, 实例ID: {}", processDir, logstashMachineId);
             } else {
-                logger.error("创建目录失败: {}", processDir);
+                logger.error("创建实例目录失败: {}, 实例ID: {}", processDir, logstashMachineId);
             }
 
             future.complete(success);
         } catch (Exception e) {
-            logger.error("创建目录时发生错误: {}", e.getMessage(), e);
+            logger.error("创建实例目录时发生错误，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage(), e);
             future.completeExceptionally(new SshOperationException("创建目录失败: " + e.getMessage(), e));
         }
 
@@ -80,6 +87,6 @@ public class CreateDirectoryCommand extends AbstractLogstashCommand {
 
     @Override
     public String getDescription() {
-        return "创建Logstash进程目录";
+        return "创建Logstash实例目录";
     }
 }

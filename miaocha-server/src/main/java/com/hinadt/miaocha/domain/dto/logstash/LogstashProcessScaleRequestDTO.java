@@ -11,8 +11,8 @@ public class LogstashProcessScaleRequestDTO {
     @Schema(description = "要添加的机器ID列表，用于扩容操作")
     private List<Long> addMachineIds;
 
-    @Schema(description = "要移除的机器ID列表，用于缩容操作")
-    private List<Long> removeMachineIds;
+    @Schema(description = "要移除的LogstashMachine实例ID列表，用于缩容操作")
+    private List<Long> removeLogstashMachineIds;
 
     @Schema(description = "自定义部署路径，仅在扩容时有效。如果不指定，将使用默认部署路径")
     private String customDeployPath;
@@ -23,10 +23,10 @@ public class LogstashProcessScaleRequestDTO {
     /** 验证请求参数的有效性 */
     public void validate() {
         boolean hasAdd = addMachineIds != null && !addMachineIds.isEmpty();
-        boolean hasRemove = removeMachineIds != null && !removeMachineIds.isEmpty();
+        boolean hasRemove = removeLogstashMachineIds != null && !removeLogstashMachineIds.isEmpty();
 
         if (!hasAdd && !hasRemove) {
-            throw new IllegalArgumentException("扩容或缩容操作至少需要指定一个机器ID列表");
+            throw new IllegalArgumentException("扩容或缩容操作至少需要指定一个ID列表");
         }
 
         if (hasAdd && hasRemove) {
@@ -41,6 +41,6 @@ public class LogstashProcessScaleRequestDTO {
 
     /** 判断是否为缩容操作 */
     public boolean isScaleIn() {
-        return removeMachineIds != null && !removeMachineIds.isEmpty();
+        return removeLogstashMachineIds != null && !removeLogstashMachineIds.isEmpty();
     }
 }
