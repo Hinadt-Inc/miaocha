@@ -58,8 +58,8 @@ public class LogstashProcessResponseDTO {
     @Schema(description = "修改人昵称")
     private String updateUserName;
 
-    @Schema(description = "关联的Logstash机器状态列表")
-    private List<LogstashMachineStatusInfoDTO> machineStatuses;
+    @Schema(description = "关联的LogstashMachine实例状态列表")
+    private List<LogstashMachineStatusInfoDTO> logstashMachineStatusInfo;
 
     @Data
     @Schema(description = "Logstash机器状态信息DTO")

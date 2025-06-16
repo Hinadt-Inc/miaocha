@@ -4,16 +4,8 @@ import com.hinadt.miaocha.application.logstash.enums.LogstashMachineState;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessCreateDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessResponseDTO;
-import com.hinadt.miaocha.domain.entity.DatasourceInfo;
-import com.hinadt.miaocha.domain.entity.LogstashMachine;
-import com.hinadt.miaocha.domain.entity.LogstashProcess;
-import com.hinadt.miaocha.domain.entity.MachineInfo;
-import com.hinadt.miaocha.domain.entity.ModuleInfo;
-import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
-import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
-import com.hinadt.miaocha.domain.mapper.MachineMapper;
-import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
-import com.hinadt.miaocha.domain.mapper.UserMapper;
+import com.hinadt.miaocha.domain.entity.*;
+import com.hinadt.miaocha.domain.mapper.*;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;
@@ -113,7 +105,7 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
             }
         }
 
-        responseDTO.setMachineStatuses(machineStatuses);
+        responseDTO.setLogstashMachineStatusInfo(machineStatuses);
         return responseDTO;
     }
 
