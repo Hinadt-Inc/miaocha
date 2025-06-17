@@ -49,6 +49,7 @@ import LogstashEditModal from './components/LogstashEditModal';
 import LogstashMachineConfigModal from './components/LogstashMachineConfigModal';
 import LogstashMachineDetailModal from './components/LogstashMachineDetailModal';
 import LogstashScaleModal from './components/LogstashScaleModal';
+import LogstashLogTailModal from './components/LogstashLogTailModal';
 
 function LogstashManagementPage() {
   const checkSubTableStatus = (record: LogstashProcess, action: 'start' | 'stop') => {
@@ -94,6 +95,9 @@ function LogstashManagementPage() {
   const [machineDetailModalVisible, setMachineDetailModalVisible] = useState(false);
   const [currentMachineDetail, setCurrentMachineDetail] = useState<LogstashProcess>();
   const [scaleModalVisible, setScaleModalVisible] = useState(false);
+  const [logTailModalVisible, setLogTailModalVisible] = useState(false);
+  const [bottomLogTailModalVisible, setBottomLogTailModalVisible] = useState(false);
+  const [currentLogTailMachineId, setCurrentLogTailMachineId] = useState<number>();
   const [scaleParams, setScaleParams] = useState({
     addMachineIds: [] as number[],
     removeLogstashMachineIds: [] as number[],
@@ -592,6 +596,11 @@ function LogstashManagementPage() {
                     ),
                   },
                   {
+                    title: '实例ID',
+                    dataIndex: 'logstashMachineId',
+                    key: 'logstashMachineId',
+                  },
+                  {
                     title: '名称',
                     dataIndex: 'machineName',
                     key: 'machineName',
@@ -724,6 +733,16 @@ function LogstashManagementPage() {
                           onClick={() => showMachineTasks(record.id, machine.logstashMachineId)}
                         >
                           任务
+                        </Button>
+                        <Button
+                          type="link"
+                          style={{ padding: '0 4px' }}
+                          onClick={() => {
+                            setCurrentLogTailMachineId(machine.logstashMachineId);
+                            setBottomLogTailModalVisible(true);
+                          }}
+                        >
+                          底部日志跟踪
                         </Button>
                       </Space>
                     ),
@@ -1240,6 +1259,29 @@ function LogstashManagementPage() {
           }}
           currentProcess={currentProcess}
           initialParams={scaleParams}
+        />
+        <LogstashLogTailModal
+          visible={logTailModalVisible}
+          logstashMachineId={currentLogTailMachineId || 0}
+          onCancel={() => setLogTailModalVisible(false)}
+        />
+        <LogstashLogTailModal
+          visible={bottomLogTailModalVisible}
+          logstashMachineId={currentLogTailMachineId || 0}
+          onCancel={() => setBottomLogTailModalVisible(false)}
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            margin: 0,
+            maxWidth: '100%',
+            height: '300px',
+          }}
+          bodyStyle={{
+            padding: 0,
+            height: '100%',
+          }}
         />
       </div>
     </div>

@@ -28,9 +28,26 @@ let retryQueue: Array<() => void> = [];
 // 响应拦截器
 service.interceptors.response.use(
   (response: AxiosResponse) => {
+    // console.log('Response:', response);
     // 如果是blob类型，直接返回原始响应
     if (response.config.responseType === 'blob') {
       return response;
+    }
+    // 处理EventSource响应
+    if (response.config.responseType === 'text' && response.headers['content-type']?.includes('text/event-stream')) {
+      console.log('EventSource response received:', response);
+      // 创建新的EventSource对象
+      const eventSource = new EventSource(response.request.responseURL, {
+        withCredentials: true,
+      });
+
+      // 添加错误处理
+      eventSource.onerror = (err) => {
+        console.error('EventSource error:', err);
+        eventSource.close();
+      };
+
+      return eventSource;
     }
 
     const res = response.data;
