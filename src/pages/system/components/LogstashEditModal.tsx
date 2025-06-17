@@ -1,4 +1,5 @@
-import { Form, Input, Modal, Select, Spin, Button, Space, Tooltip } from 'antd';
+import { Form, Input, Modal, Select, Spin, Button, Space, Tooltip, message } from 'antd';
+import { safeCopy } from '@/utils/clipboard';
 import { FileTextOutlined as IconTemplate, CopyOutlined } from '@ant-design/icons';
 import {
   LOGSTASH_CONFIG_TEMPLATE,
@@ -79,19 +80,23 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
     }
   };
 
-  const applyTemplate = (type: 'config' | 'jvm' | 'base') => {
+  const applyTemplate = async (type: 'config' | 'jvm' | 'base') => {
     if (initialValues) {
       // 如果是编辑模式，则为复制功能
-      switch (type) {
-        case 'config':
-          navigator.clipboard.writeText(form.getFieldValue('configContent'));
-          break;
-        case 'jvm':
-          navigator.clipboard.writeText(form.getFieldValue('jvmOptions'));
-          break;
-        case 'base':
-          navigator.clipboard.writeText(form.getFieldValue('logstashYml'));
-          break;
+      const textToCopy = (() => {
+        switch (type) {
+          case 'config':
+            return form.getFieldValue('configContent');
+          case 'jvm':
+            return form.getFieldValue('jvmOptions');
+          case 'base':
+            return form.getFieldValue('logstashYml');
+        }
+      })();
+
+      const success = await safeCopy(textToCopy);
+      if (!success) {
+        message.error('复制失败，请手动选择文本后复制');
       }
       return;
     }

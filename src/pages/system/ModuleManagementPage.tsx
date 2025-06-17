@@ -453,9 +453,7 @@ const ModuleManagementPage = () => {
       >
         {moduleDetail && (
           <Descriptions bordered column={2}>
-            <Descriptions.Item label="模块ID">{moduleDetail.id}</Descriptions.Item>
             <Descriptions.Item label="模块名称">{moduleDetail.name}</Descriptions.Item>
-            <Descriptions.Item label="数据源ID">{moduleDetail.datasourceId}</Descriptions.Item>
             <Descriptions.Item label="数据源名称">{moduleDetail.datasourceName}</Descriptions.Item>
             <Descriptions.Item label="表名">{moduleDetail.tableName}</Descriptions.Item>
             <Descriptions.Item label="创建时间">

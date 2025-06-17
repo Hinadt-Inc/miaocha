@@ -54,9 +54,9 @@ function LogstashManagementPage() {
   const checkSubTableStatus = (record: LogstashProcess, action: 'start' | 'stop') => {
     if (!record.logstashMachineStatusInfo) return false;
 
-    return record.logstashMachineStatusInfo.some((machine) =>
+    return record.logstashMachineStatusInfo.every((machine) =>
       action === 'start'
-        ? ['RUNNING', 'STARTING', 'STOPPING'].includes(machine.state)
+        ? !['RUNNING', 'STARTING', 'STOPPING'].includes(machine.state)
         : ['STOPPED', 'STOPPING'].includes(machine.state),
     );
   };
@@ -96,7 +96,7 @@ function LogstashManagementPage() {
   const [scaleModalVisible, setScaleModalVisible] = useState(false);
   const [scaleParams, setScaleParams] = useState({
     addMachineIds: [] as number[],
-    removeMachineIds: [] as number[],
+    removeLogstashMachineIds: [] as number[],
     customDeployPath: '',
     forceScale: false,
   });
@@ -105,7 +105,7 @@ function LogstashManagementPage() {
     processId: number,
     params?: {
       addMachineIds: number[];
-      removeMachineIds: number[];
+      removeLogstashMachineIds: number[];
       customDeployPath: string;
       forceScale: boolean;
     },
@@ -214,10 +214,10 @@ function LogstashManagementPage() {
     }
   };
 
-  const handleStartMachine = async (processId: number, machineId: number) => {
+  const handleStartMachine = async (machineId: number) => {
     try {
       messageApi.loading(`正在启动机器 ${machineId} 的Logstash实例...`);
-      await startLogstashMachine(processId, machineId);
+      await startLogstashMachine(machineId);
       messageApi.success('启动命令已发送');
       await fetchData();
     } catch (err) {
@@ -262,10 +262,10 @@ function LogstashManagementPage() {
     }
   };
 
-  const handleStopMachine = async (processId: number, machineId: number) => {
+  const handleStopMachine = async (machineId: number) => {
     try {
       messageApi.loading(`正在停止机器 ${machineId} 的Logstash实例...`);
-      await stopLogstashMachine(processId, machineId);
+      await stopLogstashMachine(machineId);
       messageApi.success('停止命令已发送');
       await fetchData();
     } catch (err) {
@@ -274,10 +274,10 @@ function LogstashManagementPage() {
     }
   };
 
-  const handleReinitializeMachine = async (processId: number, machineId: number) => {
+  const handleReinitializeMachine = async (machineId: number) => {
     try {
       messageApi.loading(`正在重新初始化机器 ${machineId}...`);
-      await reinitializeMachine(processId, machineId);
+      await reinitializeMachine(machineId);
       messageApi.success('重新初始化命令已发送');
       await fetchData();
     } catch (err) {
@@ -381,17 +381,6 @@ function LogstashManagementPage() {
       ),
     },
     {
-      title: '创建时间',
-      dataIndex: 'createTime',
-      key: 'createTime',
-      render: (createTime: string) => dayjs(createTime).format('YYYY-MM-DD HH:mm:ss'),
-    },
-    {
-      title: '创建人',
-      dataIndex: 'createUserName',
-      key: 'createUserName',
-    },
-    {
       title: '更新时间',
       dataIndex: 'updateTime',
       key: 'updateTime',
@@ -459,7 +448,7 @@ function LogstashManagementPage() {
               setCurrentProcess(record);
               setScaleParams({
                 addMachineIds: [],
-                removeMachineIds: [],
+                removeLogstashMachineIds: [],
                 customDeployPath: record.customDeployPath || '',
                 forceScale: false,
               });
@@ -481,7 +470,7 @@ function LogstashManagementPage() {
               刷新配置
             </Button>
           </Popconfirm>
-          {hasInitializeFailedMachines(record) && (
+          {/* {hasInitializeFailedMachines(record) && (
             <Popconfirm
               title="确认重新初始化"
               description="确定要重新初始化所有初始化失败的机器吗？"
@@ -495,8 +484,8 @@ function LogstashManagementPage() {
                 重新初始化失败机器
               </Button>
             </Popconfirm>
-          )}
-          {!allMachinesStopFailed(record) && (
+          )} */}
+          {allMachinesStopFailed(record) && (
             <Popconfirm
               title="确认强制停止"
               description="确定要强制停止所有机器吗？这可能会导致数据丢失"
@@ -589,16 +578,8 @@ function LogstashManagementPage() {
                         type="link"
                         onClick={async () => {
                           try {
-                            const detail = await getLogstashMachineDetail(record.id, machine.machineId);
-                            setCurrentMachineDetail({
-                              ...detail,
-                              id: record.id,
-                              machineId: machine.machineId,
-                              machineName: machine.machineName,
-                              machineIp: machine.machineIp,
-                              state: machine.state,
-                              stateDescription: machine.stateDescription,
-                            });
+                            const detail = await getLogstashProcess(machine.logstashMachineId);
+                            setCurrentMachineDetail(detail);
                             setMachineDetailModalVisible(true);
                           } catch (err) {
                             messageApi.error('获取机器详情失败');
@@ -645,29 +626,40 @@ function LogstashManagementPage() {
                       <Space size="small">
                         {machine.state !== 'INITIALIZE_FAILED' && (
                           <>
-                            <Button
-                              type="link"
-                              onClick={() => handleStartMachine(record.id, machine.machineId)}
-                              disabled={machine.state === 'RUNNING'}
-                              style={{ padding: '0 4px' }}
-                            >
-                              启动
-                            </Button>
                             <Popconfirm
-                              title="确认停止"
-                              description="确定要停止这台机器吗？"
-                              onConfirm={() => handleStopMachine(record.id, machine.machineId)}
+                              title="确认启动"
+                              description="确定要启动这台机器吗？"
+                              onConfirm={() => handleStartMachine(machine.logstashMachineId)}
                               okText="确认"
                               cancelText="取消"
                             >
-                              <Button type="link" disabled={machine.state === 'STOPPED'} style={{ padding: '0 4px' }}>
+                              <Button
+                                type="link"
+                                disabled={['RUNNING', 'STARTING'].includes(machine.state)}
+                                style={{ padding: '0 4px' }}
+                              >
+                                启动
+                              </Button>
+                            </Popconfirm>
+                            <Popconfirm
+                              title="确认停止"
+                              description="确定要停止这台机器吗？"
+                              onConfirm={() => handleStopMachine(machine.logstashMachineId)}
+                              okText="确认"
+                              cancelText="取消"
+                            >
+                              <Button
+                                type="link"
+                                disabled={['STOPPED', 'STOPPING'].includes(machine.state)}
+                                style={{ padding: '0 4px' }}
+                              >
                                 停止
                               </Button>
                             </Popconfirm>
                             <Popconfirm
                               title="确认刷新配置"
                               description="确定要刷新这台机器的配置吗？"
-                              onConfirm={() => handleRefreshConfig(record.id, machine.machineId)}
+                              onConfirm={() => handleRefreshConfig(record.id, machine.logstashMachineId)}
                               okText="确认"
                               cancelText="取消"
                             >
@@ -700,7 +692,7 @@ function LogstashManagementPage() {
                             title="确认重新初始化"
                             description="确定要重新初始化这台机器吗？"
                             onConfirm={() => {
-                              void handleReinitializeMachine(record.id, machine.machineId);
+                              void handleReinitializeMachine(machine.logstashMachineId);
                             }}
                             okText="确认"
                             cancelText="取消"

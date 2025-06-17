@@ -45,16 +45,16 @@ export function startLogstashProcess(id: number): Promise<void> {
   });
 }
 
-export function startLogstashMachine(processId: number, machineId: number): Promise<void> {
+export function startLogstashMachine(instanceId: number): Promise<void> {
   return request({
-    url: `/api/logstash/processes/${processId}/machines/${machineId}/start`,
+    url: `/api/logstash/processes/instances/${instanceId}/start`,
     method: 'POST',
   });
 }
 
-export function stopLogstashMachine(processId: number, machineId: number): Promise<void> {
+export function stopLogstashMachine(instanceId: number): Promise<void> {
   return request({
-    url: `/api/logstash/processes/${processId}/machines/${machineId}/stop`,
+    url: `/api/logstash/processes/instances/${instanceId}/stop`,
     method: 'POST',
   });
 }
@@ -153,9 +153,9 @@ export function reinitializeFailedMachines(processId: number): Promise<void> {
   });
 }
 
-export function reinitializeMachine(processId: number, machineId: number): Promise<void> {
+export function reinitializeMachine(instanceId: number): Promise<void> {
   return request({
-    url: `/api/logstash/processes/${processId}/machines/${machineId}/reinitialize`,
+    url: `/api/logstash/processes/instances/${instanceId}/reinitialize`,
     method: 'POST',
   });
 }
@@ -207,7 +207,7 @@ export async function scaleProcess(
   id: number,
   params: {
     addMachineIds: number[];
-    removeMachineIds: number[];
+    removeLogstashMachineIds: number[];
     customDeployPath?: string;
     forceScale?: boolean;
   },

@@ -114,18 +114,6 @@ const MachineManagementPage = () => {
     { title: '端口', dataIndex: 'port', key: 'port' },
     { title: '用户名', dataIndex: 'username', key: 'username' },
     {
-      title: '创建时间',
-      dataIndex: 'createTime',
-      key: 'createTime',
-      render: (text) => (text ? dayjs(text).format('YYYY-MM-DD HH:mm:ss') : '-'),
-    },
-    {
-      title: '创建人',
-      dataIndex: 'createUser',
-      key: 'createUser',
-      render: (text) => text || '-',
-    },
-    {
       title: '更新时间',
       dataIndex: 'updateTime',
       key: 'updateTime',

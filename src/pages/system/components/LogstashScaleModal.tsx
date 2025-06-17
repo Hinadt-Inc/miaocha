@@ -12,14 +12,14 @@ interface LogstashScaleModalProps {
   onCancel: () => void;
   onOk: (params: {
     addMachineIds: number[];
-    removeMachineIds: number[];
+    removeLogstashMachineIds: number[];
     customDeployPath: string;
     forceScale: boolean;
   }) => Promise<void>;
   currentProcess?: LogstashProcess | null;
   initialParams: {
     addMachineIds: number[];
-    removeMachineIds: number[];
+    removeLogstashMachineIds: number[];
     customDeployPath: string;
     forceScale: boolean;
   };
@@ -39,7 +39,7 @@ export default function LogstashScaleModal({
   const [operationType, setOperationType] = useState<'scale-out' | 'scale-in' | null>(null);
 
   // 获取当前进程已使用的机器ID
-  const currentMachineIds = currentProcess?.machineStatuses?.map((m) => m.machineId) || [];
+  const currentMachineIds = currentProcess?.logstashMachineStatusInfo?.map((m) => m.machineId) || [];
 
   // 可添加的机器（排除当前已使用的机器）
   const availableMachines = machines.filter((machine) => !currentMachineIds.includes(machine.id));
@@ -60,7 +60,7 @@ export default function LogstashScaleModal({
           form.resetFields();
           form.setFieldsValue({
             addMachineIds: [],
-            removeMachineIds: [],
+            removeLogstashMachineIds: [],
             customDeployPath: initialParams.customDeployPath,
             forceScale: initialParams.forceScale,
           });
@@ -92,7 +92,10 @@ export default function LogstashScaleModal({
         return;
       }
 
-      if (operationType === 'scale-in' && (!values.removeMachineIds || values.removeMachineIds.length === 0)) {
+      if (
+        operationType === 'scale-in' &&
+        (!values.removeLogstashMachineIds || values.removeLogstashMachineIds.length === 0)
+      ) {
         message.warning('请选择要移除的机器');
         return;
       }
@@ -100,7 +103,7 @@ export default function LogstashScaleModal({
       setConfirmLoading(true);
       await onOk({
         addMachineIds: operationType === 'scale-out' ? values.addMachineIds || [] : [],
-        removeMachineIds: operationType === 'scale-in' ? values.removeMachineIds || [] : [],
+        removeLogstashMachineIds: operationType === 'scale-in' ? values.removeLogstashMachineIds || [] : [],
         customDeployPath: values.customDeployPath || '',
         forceScale: values.forceScale || false,
       });
@@ -151,7 +154,7 @@ export default function LogstashScaleModal({
             setOperationType(e.target.value);
             // 清除对应的表单字段
             if (e.target.value === 'scale-out') {
-              form.setFieldValue('removeMachineIds', []);
+              form.setFieldValue('removeLogstashMachineIds', []);
             } else if (e.target.value === 'scale-in') {
               form.setFieldValue('addMachineIds', []);
             }
@@ -177,7 +180,7 @@ export default function LogstashScaleModal({
                 }}
               >
                 {availableMachines.map((machine) => (
-                  <Option key={machine.id} value={machine.id}>
+                  <Option key={machine.id} value={machine.logstashMachineId}>
                     {machine.name} ({machine.ip})
                   </Option>
                 ))}
@@ -190,7 +193,7 @@ export default function LogstashScaleModal({
           <>
             <Title level={5}>缩容操作</Title>
             <Form.Item
-              name="removeMachineIds"
+              name="removeLogstashMachineIds"
               label="移除机器"
               help={`当前有 ${removableMachines.length} 台机器可移除`}
             >

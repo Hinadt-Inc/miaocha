@@ -433,30 +433,6 @@ const UserManagementPage = () => {
       render: (updateTime: string) => (updateTime ? dayjs(updateTime).format('YYYY-MM-DD HH:mm:ss') : '-'),
     },
     {
-      title: '已授权模块',
-      dataIndex: 'modulePermissions',
-      key: 'modulePermissions',
-      width: 180,
-      render: (modules: Array<{ id: string; module: string }>, record) => (
-        <>
-          {record.role === 'USER' ? (
-            modules?.length ? (
-              <Space size={[0, 8]} wrap>
-                {modules.slice(0, 3).map((module) => (
-                  <Tag key={module.id}>{module.module}</Tag>
-                ))}
-                {modules.length > 3 && <Tag>+{modules.length - 3}个</Tag>}
-              </Space>
-            ) : (
-              <Tag color="default">无</Tag>
-            )
-          ) : (
-            '-'
-          )}
-        </>
-      ),
-    },
-    {
       title: '操作',
       key: 'action',
       fixed: 'right',
@@ -468,7 +444,7 @@ const UserManagementPage = () => {
           </Button>
           {record.role === 'USER' && (
             <Button type="link" onClick={() => handleOpenModuleDrawer(record)} style={{ padding: '0 8px' }}>
-              模块权限
+              授权
             </Button>
           )}
           {!['SUPER_ADMIN'].includes(record.role) && (
