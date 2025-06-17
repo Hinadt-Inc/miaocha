@@ -31,11 +31,7 @@ public interface LogstashProcessMapper {
 
     LogstashProcess selectByName(String name);
 
-    List<LogstashProcess> selectByModuleId(Long moduleId);
-
     int countByModuleId(Long moduleId);
 
     List<LogstashProcess> selectAll();
-
-    List<LogstashProcess> selectByMachineId(Long machineId);
 }

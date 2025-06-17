@@ -4,30 +4,44 @@
 
     <!-- Logstash进程表所有字段 -->
     <sql id="logstashProcessColumns">
-        id, name, module_id, config_content, jvm_options, logstash_yml, create_time, update_time, create_user, update_user
+        id
+        , name, module_id, config_content, jvm_options, logstash_yml, create_time, update_time, create_user, update_user
     </sql>
 
     <!-- Logstash进程表所有字段（带lp别名） -->
     <sql id="logstashProcessColumnsWithAlias">
-        lp.id, lp.name, lp.module_id, lp.config_content, lp.jvm_options, lp.logstash_yml, lp.create_time, lp.update_time, lp.create_user, lp.update_user
+        lp
+        .
+        id
+        , lp.name, lp.module_id, lp.config_content, lp.jvm_options, lp.logstash_yml, lp.create_time, lp.update_time, lp.create_user, lp.update_user
     </sql>
 
     <!-- 插入 Logstash 进程记录 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO logstash_process (name, module_id, config_content, jvm_options, logstash_yml, create_user, update_user)
+        INSERT INTO logstash_process (name, module_id, config_content, jvm_options, logstash_yml, create_user,
+                                      update_user)
         VALUES (#{name}, #{moduleId}, #{configContent}, #{jvmOptions}, #{logstashYml}, #{createUser}, #{updateUser})
     </insert>
 
     <!-- 更新进程记录 -->
     <update id="update">
-        UPDATE logstash_process SET name=#{name}, module_id=#{moduleId},
-        config_content=#{configContent}, jvm_options=#{jvmOptions}, logstash_yml=#{logstashYml}, update_user=#{updateUser}
-        WHERE id=#{id}
+        UPDATE logstash_process
+        SET name=#{name},
+            module_id=#{moduleId},
+            config_content=#{configContent},
+            jvm_options=#{jvmOptions},
+            logstash_yml=#{logstashYml},
+            update_user=#{updateUser}
+        WHERE id = #{id}
     </update>
 
     <!-- 仅更新元信息 -->
     <update id="updateMetadataOnly">
-        UPDATE logstash_process SET name=#{name}, module_id=#{moduleId}, update_user=#{updateUser} WHERE id=#{id}
+        UPDATE logstash_process
+        SET name=#{name},
+            module_id=#{moduleId},
+            update_user=#{updateUser}
+        WHERE id = #{id}
     </update>
 
     <!-- 仅更新配置信息 -->
@@ -50,7 +64,9 @@
 
     <!-- 根据ID删除 -->
     <delete id="deleteById">
-        DELETE FROM logstash_process WHERE id=#{id}
+        DELETE
+        FROM logstash_process
+        WHERE id = #{id}
     </delete>
 
     <!-- 根据ID查询 -->
@@ -67,16 +83,11 @@
         FROM logstash_process WHERE name=#{name}
     </select>
 
-    <!-- 根据模块ID查询 -->
-    <select id="selectByModuleId" resultType="com.hinadt.miaocha.domain.entity.LogstashProcess">
-        SELECT
-        <include refid="logstashProcessColumns"/>
-        FROM logstash_process WHERE module_id=#{moduleId}
-    </select>
-
     <!-- 根据模块ID统计 -->
     <select id="countByModuleId" resultType="int">
-        SELECT COUNT(id) FROM logstash_process WHERE module_id=#{moduleId}
+        SELECT COUNT(id)
+        FROM logstash_process
+        WHERE module_id = #{moduleId}
     </select>
 
     <!-- 查询所有 -->
@@ -86,13 +97,5 @@
         FROM logstash_process
     </select>
 
-    <!-- 根据机器ID查询 -->
-    <select id="selectByMachineId" resultType="com.hinadt.miaocha.domain.entity.LogstashProcess">
-        SELECT
-        <include refid="logstashProcessColumnsWithAlias"/>
-        FROM logstash_process lp
-        JOIN logstash_machine lm ON lp.id = lm.logstash_process_id
-        WHERE lm.machine_id = #{machineId}
-    </select>
 
 </mapper>

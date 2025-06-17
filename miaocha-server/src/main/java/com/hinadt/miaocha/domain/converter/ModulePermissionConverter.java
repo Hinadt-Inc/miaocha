@@ -6,6 +6,7 @@ import com.hinadt.miaocha.domain.dto.permission.UserModulePermissionDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.entity.User;
 import com.hinadt.miaocha.domain.entity.UserModulePermission;
+import com.hinadt.miaocha.domain.entity.enums.DatasourceType;
 import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
 import com.hinadt.miaocha.domain.mapper.UserMapper;
 import java.time.format.DateTimeFormatter;
@@ -61,7 +62,7 @@ public class ModulePermissionConverter
         DatasourceInfo datasourceInfo = datasourceMapper.selectById(entity.getDatasourceId());
         if (datasourceInfo != null) {
             dto.setDatasourceName(datasourceInfo.getName());
-            dto.setDatabaseName(datasourceInfo.getDatabase());
+            dto.setDatabaseName(DatasourceType.extractDatabaseName(datasourceInfo.getJdbcUrl()));
         }
 
         // 格式化时间
@@ -240,7 +241,7 @@ public class ModulePermissionConverter
 
         if (datasource != null) {
             dto.setDatasourceName(datasource.getName());
-            dto.setDatabaseName(datasource.getDatabase());
+            dto.setDatabaseName(DatasourceType.extractDatabaseName(datasource.getJdbcUrl()));
         }
 
         return dto;

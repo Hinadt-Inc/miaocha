@@ -40,33 +40,6 @@ public interface LogstashTaskMapper {
     void updateErrorMessage(
             @Param("taskId") String taskId, @Param("errorMessage") String errorMessage);
 
-    /** 获取进程最近一次任务 */
-    Optional<LogstashTask> findLatestByProcessId(Long processId);
-
-    /** 获取LogstashMachine实例最近一次任务 */
-    Optional<LogstashTask> findLatestByLogstashMachineId(Long logstashMachineId);
-
-    /** 获取进程在指定机器上的最近一次任务 (使用新增的machine_id字段) */
-    Optional<LogstashTask> findLatestByProcessIdAndMachineId(
-            @Param("processId") Long processId, @Param("machineId") Long machineId);
-
-    /** 获取进程在指定机器上的所有任务 (使用新增的machine_id字段) */
-    List<LogstashTask> findByProcessIdAndMachineId(
-            @Param("processId") Long processId, @Param("machineId") Long machineId);
-
-    /** 获取进程在指定机器上的所有任务ID */
-    List<String> findTaskIdsByProcessIdAndMachineId(
-            @Param("processId") Long processId, @Param("machineId") Long machineId);
-
-    /** 获取进程相关的所有机器特定任务 */
-    List<LogstashTask> findMachineTasksByProcessId(Long processId);
-
-    /** 获取进程相关的所有全局任务 */
-    List<LogstashTask> findGlobalTasksByProcessId(Long processId);
-
     /** 删除任务 */
     void deleteById(String id);
-
-    /** 批量删除LogstashMachine实例相关的所有任务 */
-    void deleteByLogstashMachineId(Long logstashMachineId);
 }

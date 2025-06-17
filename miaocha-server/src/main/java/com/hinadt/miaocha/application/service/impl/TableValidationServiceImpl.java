@@ -127,7 +127,7 @@ public class TableValidationServiceImpl implements TableValidationService {
             String query =
                     "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ? AND"
                             + " table_name = ?";
-            String dbName = datasourceInfo.getDatabase();
+            String dbName = DatasourceType.extractDatabaseName(datasourceInfo.getJdbcUrl());
             return jdbcTemplate.queryForObject(query, Integer.class, dbName, tableName) > 0;
         } else {
             // 通用查询，尝试直接查询表
@@ -214,13 +214,8 @@ public class TableValidationServiceImpl implements TableValidationService {
     /** 创建数据源 */
     private DriverManagerDataSource createDataSource(
             DatasourceInfo datasourceInfo, DatasourceType datasourceType) {
-        // 构建 JDBC URL
-        String url =
-                datasourceType.buildJdbcUrl(
-                        datasourceInfo.getIp(),
-                        datasourceInfo.getPort(),
-                        datasourceInfo.getDatabase(),
-                        datasourceInfo.getJdbcParams());
+        // 直接使用 JDBC URL
+        String url = datasourceInfo.getJdbcUrl();
 
         // 创建临时数据源连接
         DriverManagerDataSource dataSource = new DriverManagerDataSource();

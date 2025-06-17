@@ -13,6 +13,7 @@ import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.entity.ModuleInfo;
 import com.hinadt.miaocha.domain.entity.User;
 import com.hinadt.miaocha.domain.entity.UserModulePermission;
+import com.hinadt.miaocha.domain.entity.enums.DatasourceType;
 import com.hinadt.miaocha.domain.entity.enums.UserRole;
 import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
 import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
@@ -96,7 +97,7 @@ public class ModulePermissionServiceTest {
         testDatasource = new DatasourceInfo();
         testDatasource.setId(1L);
         testDatasource.setName("测试数据源");
-        testDatasource.setDatabase("test_db");
+        testDatasource.setJdbcUrl("jdbc:mysql://localhost:3306/test_db");
 
         // 测试模块
         testModule = new ModuleInfo();
@@ -195,7 +196,7 @@ public class ModulePermissionServiceTest {
         mockDto.setDatasourceId(testPermission.getDatasourceId());
         mockDto.setModule(testPermission.getModule());
         mockDto.setDatasourceName(testDatasource.getName());
-        mockDto.setDatabaseName(testDatasource.getDatabase());
+        mockDto.setDatabaseName(DatasourceType.extractDatabaseName(testDatasource.getJdbcUrl()));
 
         // Mock设置
         when(userMapper.selectById(1L)).thenReturn(testUser);
@@ -215,7 +216,9 @@ public class ModulePermissionServiceTest {
         assertEquals(testPermission.getDatasourceId(), dto.getDatasourceId());
         assertEquals(testPermission.getModule(), dto.getModule());
         assertEquals(testDatasource.getName(), dto.getDatasourceName());
-        assertEquals(testDatasource.getDatabase(), dto.getDatabaseName());
+        assertEquals(
+                DatasourceType.extractDatabaseName(testDatasource.getJdbcUrl()),
+                dto.getDatabaseName());
 
         verify(userMapper).selectById(1L);
         verify(userModulePermissionMapper).selectByUser(1L);
@@ -238,7 +241,8 @@ public class ModulePermissionServiceTest {
         mockAdminDto1.setDatasourceId(testDatasource.getId());
         mockAdminDto1.setModule(testModule.getName());
         mockAdminDto1.setDatasourceName(testDatasource.getName());
-        mockAdminDto1.setDatabaseName(testDatasource.getDatabase());
+        mockAdminDto1.setDatabaseName(
+                DatasourceType.extractDatabaseName(testDatasource.getJdbcUrl()));
 
         UserModulePermissionDTO mockAdminDto2 = new UserModulePermissionDTO();
         mockAdminDto2.setId(null);
@@ -246,7 +250,8 @@ public class ModulePermissionServiceTest {
         mockAdminDto2.setDatasourceId(testDatasource.getId());
         mockAdminDto2.setModule(module2.getName());
         mockAdminDto2.setDatasourceName(testDatasource.getName());
-        mockAdminDto2.setDatabaseName(testDatasource.getDatabase());
+        mockAdminDto2.setDatabaseName(
+                DatasourceType.extractDatabaseName(testDatasource.getJdbcUrl()));
 
         // Mock设置
         when(userMapper.selectById(2L)).thenReturn(testAdmin);
@@ -309,7 +314,7 @@ public class ModulePermissionServiceTest {
         mockDto.setDatasourceId(testPermission.getDatasourceId());
         mockDto.setModule(testPermission.getModule());
         mockDto.setDatasourceName(testDatasource.getName());
-        mockDto.setDatabaseName(testDatasource.getDatabase());
+        mockDto.setDatabaseName(DatasourceType.extractDatabaseName(testDatasource.getJdbcUrl()));
 
         // Mock设置
         when(userMapper.selectById(1L)).thenReturn(testUser);
@@ -346,7 +351,7 @@ public class ModulePermissionServiceTest {
         mockDto.setDatasourceId(testPermission.getDatasourceId());
         mockDto.setModule(testPermission.getModule());
         mockDto.setDatasourceName(testDatasource.getName());
-        mockDto.setDatabaseName(testDatasource.getDatabase());
+        mockDto.setDatabaseName(DatasourceType.extractDatabaseName(testDatasource.getJdbcUrl()));
 
         // Mock设置
         when(userMapper.selectById(1L)).thenReturn(testUser);

@@ -17,6 +17,7 @@ import com.hinadt.miaocha.domain.dto.SqlQueryResultDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.entity.SqlQueryHistory;
 import com.hinadt.miaocha.domain.entity.User;
+import com.hinadt.miaocha.domain.entity.enums.DatasourceType;
 import com.hinadt.miaocha.domain.entity.enums.UserRole;
 import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
 import com.hinadt.miaocha.domain.mapper.SqlQueryHistoryMapper;
@@ -291,7 +292,7 @@ public class SqlQueryServiceImpl implements SqlQueryService {
         }
 
         SchemaInfoDTO schemaInfo = new SchemaInfoDTO();
-        schemaInfo.setDatabaseName(datasourceInfo.getDatabase());
+        schemaInfo.setDatabaseName(DatasourceType.extractDatabaseName(datasourceInfo.getJdbcUrl()));
 
         try {
             // 统一同步执行

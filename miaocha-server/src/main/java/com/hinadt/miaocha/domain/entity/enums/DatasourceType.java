@@ -74,4 +74,40 @@ public enum DatasourceType {
     public String buildJdbcUrl(String ip, int port, String database) {
         return buildJdbcUrl(ip, port, database, null);
     }
+
+    /**
+     * 从 JDBC URL 中解析数据库名称
+     *
+     * @param jdbcUrl JDBC连接URL
+     * @return 数据库名称，如果解析失败则返回空字符串
+     */
+    public static String extractDatabaseName(String jdbcUrl) {
+        if (jdbcUrl == null || jdbcUrl.isEmpty()) {
+            return "";
+        }
+
+        try {
+            // 处理 MySQL/Doris 格式: jdbc:mysql://host:port/database?params
+            if (jdbcUrl.startsWith("jdbc:mysql://") || jdbcUrl.startsWith("jdbc:postgresql://")) {
+                String afterProtocol = jdbcUrl.substring(jdbcUrl.indexOf("://") + 3);
+                int slashIndex = afterProtocol.indexOf('/');
+                if (slashIndex > 0 && slashIndex < afterProtocol.length() - 1) {
+                    String afterSlash = afterProtocol.substring(slashIndex + 1);
+                    int questionIndex = afterSlash.indexOf('?');
+                    return questionIndex > 0 ? afterSlash.substring(0, questionIndex) : afterSlash;
+                }
+            }
+            // 处理 Oracle 格式: jdbc:oracle:thin:@host:port:database
+            else if (jdbcUrl.startsWith("jdbc:oracle:thin:@")) {
+                String[] parts = jdbcUrl.split(":");
+                if (parts.length >= 5) {
+                    return parts[parts.length - 1];
+                }
+            }
+        } catch (Exception e) {
+            // 如果解析失败，返回空字符串
+        }
+
+        return "";
+    }
 }

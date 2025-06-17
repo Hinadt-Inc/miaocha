@@ -15,10 +15,6 @@ public interface LogstashMachineMapper {
 
     int deleteById(Long id);
 
-    int deleteByLogstashProcessId(Long logstashProcessId);
-
-    int deleteByMachineId(Long machineId);
-
     LogstashMachine selectById(Long id);
 
     List<LogstashMachine> selectByIds(List<Long> ids);
@@ -30,11 +26,6 @@ public interface LogstashMachineMapper {
     List<LogstashMachine> selectAll();
 
     List<LogstashMachine> selectAllWithProcessPid();
-
-    List<LogstashMachine> selectByState(String state);
-
-    List<LogstashMachine> selectByLogstashProcessIdAndState(
-            @Param("logstashProcessId") Long logstashProcessId, @Param("state") String state);
 
     /** 基于实例ID更新进程PID */
     int updateProcessPidById(@Param("id") Long id, @Param("processPid") String processPid);
@@ -50,13 +41,6 @@ public interface LogstashMachineMapper {
 
     /** 基于实例ID更新Logstash系统配置 */
     int updateLogstashYmlById(@Param("id") Long id, @Param("logstashYml") String logstashYml);
-
-    /** 根据部署路径查询实例（用于检查路径冲突） */
-    LogstashMachine selectByDeployPath(@Param("deployPath") String deployPath);
-
-    /** 检查部署路径是否已存在（排除指定实例） */
-    int countByDeployPathExcludeId(
-            @Param("deployPath") String deployPath, @Param("excludeId") Long excludeId);
 
     /** 根据机器ID和部署路径查询实例（用于检查路径冲突） */
     LogstashMachine selectByMachineAndPath(

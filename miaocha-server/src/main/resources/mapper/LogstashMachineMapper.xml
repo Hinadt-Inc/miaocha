@@ -81,20 +81,6 @@
         WHERE id = #{id}
     </delete>
 
-    <!-- 根据 Logstash 进程 ID 删除 -->
-    <delete id="deleteByLogstashProcessId">
-        DELETE
-        FROM logstash_machine
-        WHERE logstash_process_id = #{logstashProcessId}
-    </delete>
-
-    <!-- 根据机器 ID 删除 -->
-    <delete id="deleteByMachineId">
-        DELETE
-        FROM logstash_machine
-        WHERE machine_id = #{machineId}
-    </delete>
-
     <!-- 根据 ID 查询 Logstash 机器记录 -->
     <select id="selectById" resultType="com.hinadt.miaocha.domain.entity.LogstashMachine">
         SELECT
@@ -141,35 +127,6 @@
         FROM logstash_machine WHERE process_pid IS NOT NULL AND process_pid != ''
     </select>
 
-    <!-- 根据状态查询 Logstash 机器 -->
-    <select id="selectByState" resultType="com.hinadt.miaocha.domain.entity.LogstashMachine">
-        SELECT
-        <include refid="logstashMachineColumns"/>
-        FROM logstash_machine WHERE state=#{state}
-    </select>
-
-    <!-- 根据 Logstash 进程 ID 和状态查询 -->
-    <select id="selectByLogstashProcessIdAndState" resultType="com.hinadt.miaocha.domain.entity.LogstashMachine">
-        SELECT
-        <include refid="logstashMachineColumns"/>
-        FROM logstash_machine WHERE logstash_process_id = #{logstashProcessId} AND state = #{state}
-    </select>
-
-    <!-- 根据部署路径查询实例 -->
-    <select id="selectByDeployPath" resultType="com.hinadt.miaocha.domain.entity.LogstashMachine">
-        SELECT
-        <include refid="logstashMachineColumns"/>
-        FROM logstash_machine WHERE deploy_path = #{deployPath}
-    </select>
-
-    <!-- 检查部署路径是否已存在（排除指定实例） -->
-    <select id="countByDeployPathExcludeId" resultType="int">
-        SELECT COUNT(*) FROM logstash_machine
-        WHERE deploy_path = #{deployPath}
-        <if test="excludeId != null">
-            AND id != #{excludeId}
-        </if>
-    </select>
 
     <!-- 根据机器ID和部署路径查询实例（用于检查路径冲突） -->
     <select id="selectByMachineAndPath" resultType="com.hinadt.miaocha.domain.entity.LogstashMachine">

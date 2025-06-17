@@ -106,11 +106,9 @@ public class SqlQueryServiceTest {
         testDatasourceInfo.setId(1L);
         testDatasourceInfo.setName("测试数据源");
         testDatasourceInfo.setType("MYSQL");
-        testDatasourceInfo.setIp("localhost");
-        testDatasourceInfo.setPort(3306);
+        testDatasourceInfo.setJdbcUrl("jdbc:mysql://localhost:3306/test_db");
         testDatasourceInfo.setUsername("test");
         testDatasourceInfo.setPassword("test");
-        testDatasourceInfo.setDatabase("test_db");
 
         // 创建测试查询DTO
         testQueryDTO = new SqlQueryDTO();

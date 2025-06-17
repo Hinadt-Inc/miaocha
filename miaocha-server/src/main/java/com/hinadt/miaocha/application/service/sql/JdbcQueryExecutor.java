@@ -4,7 +4,6 @@ import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.dto.SqlQueryResultDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
-import com.hinadt.miaocha.domain.entity.enums.DatasourceType;
 import java.sql.*;
 import java.util.*;
 import org.springframework.stereotype.Component;
@@ -75,17 +74,11 @@ public class JdbcQueryExecutor {
     }
 
     public Connection getConnection(DatasourceInfo datasourceInfo) throws SQLException {
-        DatasourceType datasourceType = DatasourceType.fromType(datasourceInfo.getType());
-        if (datasourceType == null) {
-            throw new BusinessException(ErrorCode.DATASOURCE_TYPE_NOT_SUPPORTED);
+        // 直接使用 JDBC URL
+        String url = datasourceInfo.getJdbcUrl();
+        if (url == null || url.isEmpty()) {
+            throw new BusinessException(ErrorCode.DATASOURCE_CONNECTION_FAILED, "JDBC URL不能为空");
         }
-
-        String url =
-                datasourceType.buildJdbcUrl(
-                        datasourceInfo.getIp(),
-                        datasourceInfo.getPort(),
-                        datasourceInfo.getDatabase(),
-                        datasourceInfo.getJdbcParams());
 
         return DriverManager.getConnection(
                 url, datasourceInfo.getUsername(), datasourceInfo.getPassword());

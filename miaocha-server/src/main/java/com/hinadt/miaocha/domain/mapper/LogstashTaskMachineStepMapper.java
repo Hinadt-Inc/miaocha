@@ -19,14 +19,6 @@ public interface LogstashTaskMachineStepMapper {
     /** 根据任务ID查询所有步骤 */
     List<LogstashTaskMachineStep> findByTaskId(String taskId);
 
-    /** 根据任务ID和机器ID查询所有步骤 */
-    List<LogstashTaskMachineStep> findByTaskIdAndMachineId(
-            @Param("taskId") String taskId, @Param("machineId") Long machineId);
-
-    /** 根据任务ID和LogstashMachine实例ID查询所有步骤 */
-    List<LogstashTaskMachineStep> findByTaskIdAndLogstashMachineId(
-            @Param("taskId") String taskId, @Param("logstashMachineId") Long logstashMachineId);
-
     /** 根据LogstashMachine实例ID查询所有步骤 */
     List<LogstashTaskMachineStep> findByLogstashMachineId(Long logstashMachineId);
 
@@ -58,13 +50,6 @@ public interface LogstashTaskMachineStepMapper {
             @Param("stepId") String stepId,
             @Param("startTime") LocalDateTime startTime);
 
-    /** 更新步骤结束时间 */
-    void updateEndTime(
-            @Param("taskId") String taskId,
-            @Param("machineId") Long machineId,
-            @Param("stepId") String stepId,
-            @Param("endTime") LocalDateTime endTime);
-
     /** 根据LogstashMachine实例ID更新步骤结束时间 */
     void updateEndTimeByLogstashMachineId(
             @Param("taskId") String taskId,
@@ -72,22 +57,12 @@ public interface LogstashTaskMachineStepMapper {
             @Param("stepId") String stepId,
             @Param("endTime") LocalDateTime endTime);
 
-    /** 更新步骤错误信息 */
-    void updateErrorMessage(
-            @Param("taskId") String taskId,
-            @Param("machineId") Long machineId,
-            @Param("stepId") String stepId,
-            @Param("errorMessage") String errorMessage);
-
     /** 根据LogstashMachine实例ID更新步骤错误信息 */
     void updateErrorMessageByLogstashMachineId(
             @Param("taskId") String taskId,
             @Param("logstashMachineId") Long logstashMachineId,
             @Param("stepId") String stepId,
             @Param("errorMessage") String errorMessage);
-
-    /** 根据任务ID统计各状态步骤数量 */
-    List<Object[]> countStepStatusByTaskId(String taskId);
 
     /**
      * 重置任务所有步骤的状态
@@ -98,23 +73,9 @@ public interface LogstashTaskMachineStepMapper {
     void resetStepStatuses(@Param("taskId") String taskId, @Param("status") String status);
 
     /**
-     * 清除任务所有步骤的错误信息
-     *
-     * @param taskId 任务ID
-     */
-    void clearStepErrorMessages(String taskId);
-
-    /**
      * 删除任务所有步骤
      *
      * @param taskId 任务ID
      */
     void deleteByTaskId(String taskId);
-
-    /**
-     * 删除LogstashMachine实例相关的所有步骤
-     *
-     * @param logstashMachineId LogstashMachine实例ID
-     */
-    void deleteByLogstashMachineId(Long logstashMachineId);
 }

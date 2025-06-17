@@ -7,7 +7,6 @@ import com.hinadt.miaocha.domain.converter.DatasourceConverter;
 import com.hinadt.miaocha.domain.dto.DatasourceCreateDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
-import com.hinadt.miaocha.domain.entity.enums.DatasourceType;
 import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -104,16 +103,8 @@ public class DatasourceServiceImpl implements DatasourceService {
     @Override
     public boolean testConnection(DatasourceCreateDTO dto) {
         try {
-            // 根据类型获取数据源类型枚举
-            DatasourceType datasourceType = DatasourceType.fromType(dto.getType());
-            if (datasourceType == null) {
-                throw new BusinessException(ErrorCode.DATASOURCE_TYPE_NOT_SUPPORTED);
-            }
-
-            // 使用枚举构建JDBC URL（包含JDBC参数）
-            String url =
-                    datasourceType.buildJdbcUrl(
-                            dto.getIp(), dto.getPort(), dto.getDatabase(), dto.getJdbcParams());
+            // 直接使用传入的 JDBC URL
+            String url = dto.getJdbcUrl();
 
             try (Connection conn =
                     DriverManager.getConnection(url, dto.getUsername(), dto.getPassword())) {
@@ -135,12 +126,9 @@ public class DatasourceServiceImpl implements DatasourceService {
         // 创建一个DTO并填充已保存的连接参数
         DatasourceCreateDTO dto = new DatasourceCreateDTO();
         dto.setType(datasourceInfo.getType());
-        dto.setIp(datasourceInfo.getIp());
-        dto.setPort(datasourceInfo.getPort());
+        dto.setJdbcUrl(datasourceInfo.getJdbcUrl());
         dto.setUsername(datasourceInfo.getUsername());
         dto.setPassword(datasourceInfo.getPassword());
-        dto.setDatabase(datasourceInfo.getDatabase());
-        dto.setJdbcParams(datasourceInfo.getJdbcParams());
 
         // 使用已保存的参数测试连接
         return testConnection(dto);

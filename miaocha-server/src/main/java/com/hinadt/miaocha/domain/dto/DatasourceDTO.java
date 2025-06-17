@@ -20,17 +20,10 @@ public class DatasourceDTO {
     @Schema(description = "数据源描述", example = "用于测试的Doris数据库")
     private String description;
 
-    @Schema(description = "数据源IP地址", example = "192.168.1.100")
-    private String ip;
-
-    @Schema(description = "数据源端口", example = "9030")
-    private Integer port;
-
-    @Schema(description = "数据库名称", example = "logs_db")
-    private String database;
-
-    @Schema(description = "JDBC连接参数，JSON格式", example = "{\"connectTimeout\":3000}")
-    private String jdbcParams;
+    @Schema(
+            description = "JDBC连接URL",
+            example = "jdbc:mysql://192.168.1.100:9030/logs_db?connectTimeout=3000")
+    private String jdbcUrl;
 
     @Schema(description = "创建时间", example = "2023-06-01T10:30:00")
     private LocalDateTime createTime;

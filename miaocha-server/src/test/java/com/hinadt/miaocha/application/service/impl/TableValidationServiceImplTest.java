@@ -537,11 +537,9 @@ public class TableValidationServiceImplTest {
         datasourceInfo.setId(id);
         datasourceInfo.setType(type.name());
         datasourceInfo.setName("Test " + type.name());
-        datasourceInfo.setIp("192.168.1.100");
-        datasourceInfo.setPort(9030);
+        datasourceInfo.setJdbcUrl("jdbc:mysql://192.168.1.100:9030/test_db");
         datasourceInfo.setUsername("admin");
         datasourceInfo.setPassword("password");
-        datasourceInfo.setDatabase("test_db");
         return datasourceInfo;
     }
 

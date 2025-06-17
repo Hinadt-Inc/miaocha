@@ -55,23 +55,18 @@ class DatasourceInfoServiceTest {
         createDTO = new DatasourceCreateDTO();
         createDTO.setName("Test Datasource");
         createDTO.setType("MySQL");
-        createDTO.setIp("localhost");
-        createDTO.setPort(3306);
+        createDTO.setJdbcUrl("jdbc:mysql://localhost:3306/test_db?useSSL=false&serverTimezone=UTC");
         createDTO.setUsername("root");
         createDTO.setPassword("password");
-        createDTO.setDatabase("test_db");
-        createDTO.setJdbcParams("useSSL=false&serverTimezone=UTC");
 
         existingDatasourceInfo = new DatasourceInfo();
         existingDatasourceInfo.setId(1L);
         existingDatasourceInfo.setName("Test Datasource");
         existingDatasourceInfo.setType("MySQL");
-        existingDatasourceInfo.setIp("localhost");
-        existingDatasourceInfo.setPort(3306);
+        existingDatasourceInfo.setJdbcUrl(
+                "jdbc:mysql://localhost:3306/test_db?useSSL=false&serverTimezone=UTC");
         existingDatasourceInfo.setUsername("root");
         existingDatasourceInfo.setPassword("password");
-        existingDatasourceInfo.setDatabase("test_db");
-        existingDatasourceInfo.setJdbcParams("useSSL=false&serverTimezone=UTC");
         existingDatasourceInfo.setCreateTime(LocalDateTime.now());
         existingDatasourceInfo.setUpdateTime(LocalDateTime.now());
 
@@ -79,10 +74,7 @@ class DatasourceInfoServiceTest {
         datasourceDTO.setId(existingDatasourceInfo.getId());
         datasourceDTO.setName(existingDatasourceInfo.getName());
         datasourceDTO.setType(existingDatasourceInfo.getType());
-        datasourceDTO.setIp(existingDatasourceInfo.getIp());
-        datasourceDTO.setPort(existingDatasourceInfo.getPort());
-        datasourceDTO.setDatabase(existingDatasourceInfo.getDatabase());
-        datasourceDTO.setJdbcParams(existingDatasourceInfo.getJdbcParams());
+        datasourceDTO.setJdbcUrl(existingDatasourceInfo.getJdbcUrl());
 
         // 设置转换器行为
         when(datasourceConverter.toDto(any(DatasourceInfo.class))).thenReturn(datasourceDTO);
@@ -103,7 +95,7 @@ class DatasourceInfoServiceTest {
                 () -> {
                     Allure.parameter("数据源名称", createDTO.getName());
                     Allure.parameter("数据源类型", createDTO.getType());
-                    Allure.parameter("连接地址", createDTO.getIp() + ":" + createDTO.getPort());
+                    Allure.parameter("连接地址", createDTO.getJdbcUrl());
                 });
 
         Allure.step(

@@ -27,10 +27,7 @@ public class DatasourceConverter implements Converter<DatasourceInfo, Datasource
         entity.setId(dto.getId());
         entity.setName(dto.getName());
         entity.setType(dto.getType());
-        entity.setIp(dto.getIp());
-        entity.setPort(dto.getPort());
-        entity.setDatabase(dto.getDatabase());
-        entity.setJdbcParams(dto.getJdbcParams());
+        entity.setJdbcUrl(dto.getJdbcUrl());
         entity.setDescription(dto.getDescription());
         entity.setCreateTime(dto.getCreateTime());
         entity.setUpdateTime(dto.getUpdateTime());
@@ -47,11 +44,9 @@ public class DatasourceConverter implements Converter<DatasourceInfo, Datasource
         DatasourceInfo entity = new DatasourceInfo();
         entity.setName(dto.getName());
         entity.setType(dto.getType());
-        entity.setIp(dto.getIp());
-        entity.setPort(dto.getPort());
+        entity.setJdbcUrl(dto.getJdbcUrl());
         entity.setUsername(dto.getUsername());
         entity.setPassword(dto.getPassword());
-        entity.setDatabase(dto.getDatabase());
         entity.setDescription(dto.getDescription());
 
         return entity;
@@ -73,10 +68,7 @@ public class DatasourceConverter implements Converter<DatasourceInfo, Datasource
         dto.setId(entity.getId());
         dto.setName(entity.getName());
         dto.setType(entity.getType());
-        dto.setIp(entity.getIp());
-        dto.setPort(entity.getPort());
-        dto.setDatabase(entity.getDatabase());
-        dto.setJdbcParams(entity.getJdbcParams());
+        dto.setJdbcUrl(entity.getJdbcUrl());
         dto.setDescription(entity.getDescription());
         dto.setCreateTime(entity.getCreateTime());
         dto.setUpdateTime(entity.getUpdateTime());
@@ -106,10 +98,8 @@ public class DatasourceConverter implements Converter<DatasourceInfo, Datasource
 
         entity.setName(dto.getName());
         entity.setType(dto.getType());
-        entity.setIp(dto.getIp());
-        entity.setPort(dto.getPort());
-        entity.setDatabase(dto.getDatabase());
-        entity.setJdbcParams(dto.getJdbcParams());
+        entity.setJdbcUrl(dto.getJdbcUrl());
+        entity.setDescription(dto.getDescription());
 
         return entity;
     }
@@ -122,12 +112,10 @@ public class DatasourceConverter implements Converter<DatasourceInfo, Datasource
 
         entity.setName(dto.getName());
         entity.setType(dto.getType());
-        entity.setIp(dto.getIp());
-        entity.setPort(dto.getPort());
+        entity.setJdbcUrl(dto.getJdbcUrl());
         entity.setUsername(dto.getUsername());
         entity.setPassword(dto.getPassword());
-        entity.setDatabase(dto.getDatabase());
-        entity.setJdbcParams(dto.getJdbcParams());
+        entity.setDescription(dto.getDescription());
 
         return entity;
     }
