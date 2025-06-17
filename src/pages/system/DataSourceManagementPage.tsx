@@ -127,11 +127,8 @@ const DataSourceManagementPage = () => {
   const handleFormSubmit = async (values: Omit<CreateDataSourceParams, 'id'>) => {
     setSubmitLoading(true);
     try {
-      // 确保数据兼容性，如果后端期望ip字段而不是ip
       const formattedValues = {
         ...values,
-        // 如果后端API实际使用的是ip字段，可以启用下面的映射
-        // ip: values.ip,
       };
 
       if (currentDataSource) {
@@ -174,12 +171,8 @@ const DataSourceManagementPage = () => {
       ...record,
       // 如果record有ip字段但没有ip字段，则使用ip值作为ip值
       ip: record.ip,
-      // 保持jdbcParams作为对象
-      jdbcParams: record.jdbcParams
-        ? typeof record.jdbcParams === 'string'
-          ? JSON.parse(record.jdbcParams)
-          : record.jdbcParams
-        : undefined,
+      // 使用jdbcUrl字段
+      jdbcUrl: record.jdbcUrl,
     };
     setCurrentDataSource(mappedRecord);
     setModalVisible(true);
@@ -187,7 +180,7 @@ const DataSourceManagementPage = () => {
 
   // 测试数据库连接
   const handleTestConnection = async (values: TestConnectionParams) => {
-    if (!values.ip || !values.port || !values.database || !values.username) {
+    if (!values.jdbcUrl || !values.username || !values.password) {
       messageApi.error('请填写完整的连接信息');
       return;
     }
@@ -198,17 +191,10 @@ const DataSourceManagementPage = () => {
       const testParams = {
         name: values.name, // 添加数据源名称
         type: values.type,
-        ip: values.ip,
-        port: Number(values.port),
-        database: values.database,
+        jdbcUrl: values.jdbcUrl,
         username: values.username,
         password: values.password,
       } as TestConnectionParams;
-
-      // 如果有 JDBC 参数，则添加到请求中
-      if (values.jdbcParams) {
-        testParams.jdbcParams = values.jdbcParams;
-      }
 
       const success = await testDataSourceConnection(testParams);
 
@@ -246,29 +232,8 @@ const DataSourceManagementPage = () => {
       hideInSearch: true,
     },
     {
-      title: '主机',
-      dataIndex: 'ip',
-      width: '10%',
-      ellipsis: true,
-      hideInSearch: true,
-      render: (_, record) => record.ip,
-    },
-    {
-      title: '端口',
-      dataIndex: 'port',
-      width: '6%',
-      hideInSearch: true,
-    },
-    {
-      title: '数据库名称',
-      dataIndex: 'database',
-      width: '10%',
-      ellipsis: true,
-      hideInSearch: true,
-    },
-    {
-      title: 'JDBC参数',
-      dataIndex: 'jdbcParams',
+      title: 'JDBC URL',
+      dataIndex: 'jdbcUrl',
       width: '12%',
       ellipsis: true,
       hideInSearch: true,
@@ -466,31 +431,6 @@ const DataSourceManagementPage = () => {
         />
         <ProFormText
           colProps={{ span: 12 }}
-          name="ip"
-          label="主机"
-          placeholder="请输入主机地址"
-          rules={[{ required: true, message: '请输入主机地址' }]}
-          tooltip="数据库服务器地址，可以是IP或域名"
-        />
-        <ProFormText
-          colProps={{ span: 12 }}
-          name="port"
-          label="端口"
-          placeholder="请输入端口号"
-          rules={[
-            { required: true, message: '请输入端口号' },
-            { pattern: /^\d+$/, message: '端口号必须为数字' },
-          ]}
-        />
-        <ProFormText
-          colProps={{ span: 12 }}
-          name="database"
-          label="数据库名称"
-          placeholder="请输入数据库名称"
-          rules={[{ required: true, message: '请输入数据库名称' }]}
-        />
-        <ProFormText
-          colProps={{ span: 12 }}
           name="username"
           label="用户名"
           placeholder="请输入用户名"
@@ -505,6 +445,16 @@ const DataSourceManagementPage = () => {
           tooltip={currentDataSource ? '不修改密码请留空' : ''}
         />
 
+        <ProFormText
+          colProps={{ span: 24 }}
+          name="jdbcUrl"
+          label="JDBC URL"
+          placeholder="jdbc:mysql://host:port/database?params"
+          rules={[{ required: true, message: '请输入JDBC连接URL' }]}
+          labelCol={{ span: 3 }}
+          wrapperCol={{ span: 21 }}
+        />
+
         <ProFormTextArea
           colProps={{ span: 24 }}
           name="description"
@@ -516,48 +466,6 @@ const DataSourceManagementPage = () => {
             rows: 2,
             maxLength: 200,
             showCount: true,
-          }}
-        />
-        <ProFormTextArea
-          colProps={{ span: 24 }}
-          name="jdbcParams"
-          label="JDBC参数"
-          placeholder='请输入JDBC参数，例如: {"connectTimeout": 3000}'
-          labelCol={{ span: 3 }}
-          wrapperCol={{ span: 21 }}
-          fieldProps={{
-            rows: 3,
-            allowClear: true,
-          }}
-          tooltip="JSON格式的额外连接参数配置（可留空）"
-          rules={[
-            {
-              validator: async (_: any, value: string) => {
-                if (!value) return Promise.resolve();
-                try {
-                  JSON.parse(value);
-                  return Promise.resolve();
-                } catch (e) {
-                  return Promise.reject(new Error('请输入有效的JSON格式'));
-                }
-              },
-            },
-          ]}
-          transform={(value: any) => {
-            if (!value) return { jdbcParams: undefined };
-            try {
-              return { jdbcParams: JSON.parse(value) };
-            } catch (e) {
-              return { jdbcParams: undefined };
-            }
-          }}
-          convertValue={(value: any) => {
-            if (!value) return '';
-            try {
-              return typeof value === 'string' ? value : JSON.stringify(value, null, 2);
-            } catch (e) {
-              return '';
-            }
           }}
         />
       </ModalForm>
