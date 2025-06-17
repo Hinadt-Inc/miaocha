@@ -36,24 +36,20 @@ const MachineManagementPage = () => {
   };
 
   const handleCreate = async (values: CreateMachineParams) => {
-    try {
-      setTestingConnection(true);
-      const testResult = await testMachineConnection(values);
-      if (!testResult.success) {
-        messageApi.error('连接测试失败，请检查配置');
-        return;
-      }
-
-      await createMachine(values);
-      messageApi.success('机器创建成功');
-      setCreateModalVisible(false);
-      form.resetFields();
-      fetchMachines();
-    } catch {
-      messageApi.error('机器创建失败');
-    } finally {
-      setTestingConnection(false);
+    setTestingConnection(true);
+    const testResult = await testMachineConnection(values);
+    console.log('Test connection result:', testResult);
+    if (!testResult) {
+      messageApi.error('连接测试失败，请检查配置');
+      return;
     }
+
+    await createMachine(values);
+    messageApi.success('机器创建成功');
+    setCreateModalVisible(false);
+    form.resetFields();
+    fetchMachines();
+    setTestingConnection(false);
   };
 
   const handleEdit = async (values: CreateMachineParams) => {
@@ -62,7 +58,7 @@ const MachineManagementPage = () => {
     try {
       setTestingConnection(true);
       const testResult = await testMachineConnection(values);
-      if (!testResult.success) {
+      if (!testResult) {
         messageApi.error('连接测试失败，请检查配置');
         return;
       }

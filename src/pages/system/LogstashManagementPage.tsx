@@ -36,6 +36,7 @@ import {
   scaleProcess,
   forceStopLogstashMachine,
   updateLogstashProcessMetadata,
+  forceStopLogstashProcess,
 } from '../../api/logstash';
 import type { LogstashProcess, LogstashTaskSummary, MachineTask } from '../../types/logstashTypes';
 import LogstashEditModal from './components/LogstashEditModal';
@@ -56,6 +57,10 @@ function LogstashManagementPage() {
 
   const hasInitializeFailedMachines = (record: LogstashProcess) => {
     return record.logstashMachineStatusInfo?.some((machine) => machine.state === 'INITIALIZE_FAILED') || false;
+  };
+
+  const allMachinesStopFailed = (record: LogstashProcess) => {
+    return record.logstashMachineStatusInfo?.every((machine) => machine.state === 'STOP_FAILED') || false;
   };
 
   const [data, setData] = useState<LogstashProcess[]>([]);
@@ -137,18 +142,7 @@ function LogstashManagementPage() {
     setLoading(true);
     try {
       const processes = await getLogstashProcesses();
-      // 获取每个进程的详细信息
-      const detailedProcesses = await Promise.all(
-        processes.map(async (process) => {
-          try {
-            return await getLogstashProcess(process.id);
-          } catch (err) {
-            console.error(`获取进程 ${process.id} 详情失败:`, err);
-            return process; // 返回基本信息如果获取详情失败
-          }
-        }),
-      );
-      setData(detailedProcesses);
+      setData(processes);
     } catch (err) {
       messageApi.error('获取Logstash进程列表失败');
       console.error('获取Logstash进程列表失败:', err);
@@ -295,6 +289,18 @@ function LogstashManagementPage() {
     } catch (err) {
       messageApi.error('强制停止失败');
       console.error('强制停止Logstash机器实例失败:', err);
+    }
+  };
+
+  const handleForceStopProcess = async (id: number) => {
+    try {
+      messageApi.loading('正在强制停止所有机器...');
+      await forceStopLogstashProcess(id);
+      messageApi.success('全局强制停止命令已发送');
+      await fetchData();
+    } catch (err) {
+      messageApi.error('全局强制停止失败');
+      console.error('强制停止Logstash进程失败:', err);
     }
   };
 
@@ -491,6 +497,22 @@ function LogstashManagementPage() {
             >
               <Button type="link" style={{ padding: '0 4px' }}>
                 重新初始化失败机器
+              </Button>
+            </Popconfirm>
+          )}
+          {allMachinesStopFailed(record) && (
+            <Popconfirm
+              title="确认强制停止"
+              description="确定要强制停止所有机器吗？这可能会导致数据丢失"
+              onConfirm={() => {
+                void handleForceStopProcess(record.id);
+              }}
+              okText="确认"
+              cancelText="取消"
+              okType="danger"
+            >
+              <Button type="link" danger style={{ padding: '0 4px' }}>
+                强制停止
               </Button>
             </Popconfirm>
           )}
