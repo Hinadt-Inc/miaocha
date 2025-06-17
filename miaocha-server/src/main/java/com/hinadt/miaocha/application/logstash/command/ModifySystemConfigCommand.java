@@ -49,7 +49,7 @@ public class ModifySystemConfigCommand extends AbstractLogstashCommand {
                 () -> {
                     try {
                         boolean success = true;
-                        String processDir = getProcessDirectory(machineInfo);
+                        String processDir = getProcessDirectory();
                         String configDir = processDir + "/config";
 
                         // 确保配置目录存在

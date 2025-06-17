@@ -30,7 +30,7 @@ public class StopProcessCommand extends AbstractLogstashCommand {
         return CompletableFuture.supplyAsync(
                 () -> {
                     try {
-                        String processDir = getProcessDirectory(machineInfo);
+                        String processDir = getProcessDirectory();
                         String pidFile =
                                 LogstashPathUtils.buildPidFilePath(processDir, logstashMachineId);
 
@@ -83,7 +83,7 @@ public class StopProcessCommand extends AbstractLogstashCommand {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         try {
-            String processDir = getProcessDirectory(machineInfo);
+            String processDir = getProcessDirectory();
             String pidFile = LogstashPathUtils.buildPidFilePath(processDir, logstashMachineId);
 
             // 检查PID文件是否存在

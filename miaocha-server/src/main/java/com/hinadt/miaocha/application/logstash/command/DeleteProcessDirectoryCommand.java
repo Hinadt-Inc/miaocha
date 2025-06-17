@@ -48,7 +48,7 @@ public class DeleteProcessDirectoryCommand extends AbstractLogstashCommand {
         return CompletableFuture.supplyAsync(
                 () -> {
                     try {
-                        String processDir = getProcessDirectory(machineInfo);
+                        String processDir = getProcessDirectory();
 
                         // 检查目录是否存在
                         String checkCommand =
@@ -79,7 +79,7 @@ public class DeleteProcessDirectoryCommand extends AbstractLogstashCommand {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         try {
-            String processDir = getProcessDirectory(machineInfo);
+            String processDir = getProcessDirectory();
 
             // 检查目录是否存在
             String checkCommand =

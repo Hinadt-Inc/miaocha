@@ -34,7 +34,7 @@ public class UploadPackageCommand extends AbstractLogstashCommand {
         return CompletableFuture.supplyAsync(
                 () -> {
                     try {
-                        String processDir = getProcessDirectory(machineInfo);
+                        String processDir = getProcessDirectory();
                         String fileName = new File(localPackagePath).getName();
                         String remotePackagePath = processDir + "/" + fileName;
 
@@ -75,7 +75,7 @@ public class UploadPackageCommand extends AbstractLogstashCommand {
                 return future;
             }
 
-            String processDir = getProcessDirectory(machineInfo);
+            String processDir = getProcessDirectory();
             String fileName = localFile.getName();
             String remotePackagePath = processDir + "/" + fileName;
 

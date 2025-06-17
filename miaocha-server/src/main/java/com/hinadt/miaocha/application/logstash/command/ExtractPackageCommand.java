@@ -34,7 +34,7 @@ public class ExtractPackageCommand extends AbstractLogstashCommand {
         return CompletableFuture.supplyAsync(
                 () -> {
                     try {
-                        String processDir = getProcessDirectory(machineInfo);
+                        String processDir = getProcessDirectory();
 
                         // 检查是否已经解压（检查bin目录和logstash可执行文件）
                         String checkCommand =
@@ -65,7 +65,7 @@ public class ExtractPackageCommand extends AbstractLogstashCommand {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         try {
-            String processDir = getProcessDirectory(machineInfo);
+            String processDir = getProcessDirectory();
             String fileName = new File(localPackagePath).getName();
             String remotePackagePath = processDir + "/" + fileName;
 

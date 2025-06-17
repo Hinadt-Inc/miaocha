@@ -96,7 +96,7 @@ public abstract class AbstractLogstashCommand implements LogstashCommand {
     protected abstract CompletableFuture<Boolean> doExecute(MachineInfo machineInfo);
 
     /** 获取Logstash实例目录 - 基于logstashMachineId 优先使用数据库中的部署路径，否则使用基于logstashMachineId的默认路径 */
-    protected String getProcessDirectory(MachineInfo machineInfo) {
+    protected String getProcessDirectory() {
         return deployPathManager.getInstanceDeployPath(logstashMachineId);
     }
 

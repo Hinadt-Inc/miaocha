@@ -761,12 +761,11 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         // 检查实例状态是否允许停止
         LogstashMachineState currentState = LogstashMachineState.valueOf(instance.getState());
         if (currentState != LogstashMachineState.RUNNING
-                && currentState != LogstashMachineState.STARTING
                 && currentState != LogstashMachineState.STOP_FAILED) {
             throw new BusinessException(
                     ErrorCode.VALIDATION_ERROR,
                     String.format(
-                            "实例[%s]当前状态[%s]不允许停止，只有运行中、启动中或停止失败状态的实例才能停止",
+                            "实例[%s]当前状态[%s]不允许停止，只有运行中或停止失败状态的实例才能停止",
                             instanceId, currentState.getDescription()));
         }
 

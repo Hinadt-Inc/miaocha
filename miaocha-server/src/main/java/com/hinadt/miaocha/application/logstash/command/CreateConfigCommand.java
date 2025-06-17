@@ -33,7 +33,7 @@ public class CreateConfigCommand extends AbstractLogstashCommand {
         return CompletableFuture.supplyAsync(
                 () -> {
                     try {
-                        String processDir = getProcessDirectory(machineInfo);
+                        String processDir = getProcessDirectory();
                         String configDir = processDir + "/config";
                         String configPath = configDir + "/logstash-" + logstashMachineId + ".conf";
 
@@ -66,7 +66,7 @@ public class CreateConfigCommand extends AbstractLogstashCommand {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         try {
-            String processDir = getProcessDirectory(machineInfo);
+            String processDir = getProcessDirectory();
             String configDir = processDir + "/config";
             String configPath = configDir + "/logstash-" + logstashMachineId + ".conf";
 

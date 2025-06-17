@@ -30,7 +30,7 @@ public class VerifyProcessCommand extends AbstractLogstashCommand {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         try {
-            String processDir = getProcessDirectory(machineInfo);
+            String processDir = getProcessDirectory();
             String logDir = LogstashPathUtils.buildLogDirPath(processDir);
             String pidFile = LogstashPathUtils.buildPidFilePath(processDir, logstashMachineId);
             String logFile = LogstashPathUtils.buildLogFilePath(processDir, logstashMachineId);

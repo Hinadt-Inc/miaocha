@@ -30,7 +30,7 @@ public class CreateDirectoryCommand extends AbstractLogstashCommand {
 
         try {
             // 创建实例目录
-            String processDir = getProcessDirectory(machineInfo);
+            String processDir = getProcessDirectory();
             String command = String.format("mkdir -p %s", processDir);
             sshClient.executeCommand(machineInfo, command);
 
@@ -63,7 +63,7 @@ public class CreateDirectoryCommand extends AbstractLogstashCommand {
 
         try {
             // 检查目录是否已经存在
-            String processDir = getProcessDirectory(machineInfo);
+            String processDir = getProcessDirectory();
 
             // 使用不会因目录不存在而失败的命令
             // 使用 || 实现短路逻辑：如果第一个命令失败（目录不存在），则执行第二个命令返回"not_exists"
