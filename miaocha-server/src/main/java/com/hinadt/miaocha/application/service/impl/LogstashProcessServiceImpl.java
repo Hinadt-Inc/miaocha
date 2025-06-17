@@ -751,7 +751,6 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
 
         List<LogstashMachine> instances = List.of(instance);
         logstashDeployService.startInstances(instances, process);
-        log.info("成功启动LogstashMachine实例[{}]", instanceId);
     }
 
     @Override
@@ -773,7 +772,6 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
 
         List<LogstashMachine> instances = List.of(instance);
         logstashDeployService.stopInstances(instances);
-        log.info("成功停止LogstashMachine实例[{}]", instanceId);
     }
 
     @Override
@@ -784,7 +782,6 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         // 强制停止不需要状态检查，任何状态都可以强制停止
         List<LogstashMachine> instances = List.of(instance);
         logstashDeployService.forceStopInstances(instances);
-        log.info("成功强制停止LogstashMachine实例[{}]", instanceId);
     }
 
     @Override
@@ -806,7 +803,6 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
 
         List<LogstashMachine> instances = List.of(instance);
         logstashDeployService.initializeInstances(instances, process);
-        log.info("成功重新初始化LogstashMachine实例[{}]", instanceId);
     }
 
     /**
