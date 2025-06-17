@@ -6,16 +6,23 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public interface LogTailService {
 
     /**
-     * 开始跟踪指定Logstash实例的日志
+     * 创建日志跟踪任务（不返回SSE流）
      *
      * @param logstashMachineId Logstash实例ID
      * @param tailLines 从末尾开始读取的行数
-     * @return SSE发射器
      */
-    SseEmitter startTailing(Long logstashMachineId, Integer tailLines);
+    void createTailing(Long logstashMachineId, Integer tailLines);
 
     /**
-     * 停止指定的日志跟踪任务
+     * 获取指定Logstash实例的SSE日志流
+     *
+     * @param logstashMachineId Logstash实例ID
+     * @return SSE发射器
+     */
+    SseEmitter getLogStream(Long logstashMachineId);
+
+    /**
+     * 停止指定的日志跟踪任务（幂等操作）
      *
      * @param logstashMachineId Logstash实例ID
      */

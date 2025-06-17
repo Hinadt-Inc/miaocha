@@ -1,5 +1,6 @@
 package com.hinadt.miaocha.domain.dto.logstash;
 
+import com.hinadt.miaocha.domain.entity.enums.LogTailResponseStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,8 +26,8 @@ public class LogTailResponseDTO {
     @Schema(description = "数据生成时间")
     private LocalDateTime timestamp;
 
-    @Schema(description = "连接状态", example = "CONNECTED|DISCONNECTED|ERROR")
-    private String status;
+    @Schema(description = "连接状态")
+    private LogTailResponseStatus status;
 
     @Schema(description = "错误信息（如果有）")
     private String errorMessage;
