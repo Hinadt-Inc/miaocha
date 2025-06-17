@@ -1,3 +1,9 @@
+export interface LogstashProcessMetadataUpdate {
+  name: string;
+  moduleId: number;
+  updateUser: string;
+}
+
 export interface LogstashMachine {
   id: number;
   name: string;
@@ -127,6 +133,7 @@ export interface LogstashProcess {
   jvmOptions?: string;
   logstashYml?: string;
   customPackagePath?: string;
+  customDeployPath?: string;
   datasourceId: number;
   datasourceName: string;
   tableName: string;
@@ -134,7 +141,7 @@ export interface LogstashProcess {
   stateDescription: string;
   machineIds?: number[];
   machines: LogstashMachine[];
-  machineStatuses: {
+  logstashMachineStatusInfo: {
     machineId: number;
     machineName: string;
     machineIp: string;
@@ -143,6 +150,10 @@ export interface LogstashProcess {
   }[];
   createTime: string;
   updateTime: string;
+  createUser?: string;
+  createUserName?: string;
+  updateUser?: string;
+  updateUserName?: string;
   logstashProcessId: number;
   logstashProcessName: string;
   logstashProcessModule: string;
@@ -154,7 +165,6 @@ export interface LogstashProcess {
   machineUsername: string;
   processPid: string;
   deployPath: string;
-  customDeployPath?: string;
   processCreateTime: string;
   processUpdateTime: string;
   dorisSql: string;

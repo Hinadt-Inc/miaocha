@@ -35,6 +35,7 @@ import {
   getLogstashMachineDetail,
   scaleProcess,
   forceStopLogstashMachine,
+  updateLogstashProcessMetadata,
 } from '../../api/logstash';
 import type { LogstashProcess, LogstashTaskSummary, MachineTask } from '../../types/logstashTypes';
 import LogstashEditModal from './components/LogstashEditModal';
@@ -44,9 +45,9 @@ import LogstashScaleModal from './components/LogstashScaleModal';
 
 function LogstashManagementPage() {
   const checkSubTableStatus = (record: LogstashProcess, action: 'start' | 'stop') => {
-    if (!record.machineStatuses) return false;
+    if (!record.logstashMachineStatusInfo) return false;
 
-    return record.machineStatuses.some((machine) =>
+    return record.logstashMachineStatusInfo.some((machine) =>
       action === 'start'
         ? ['RUNNING', 'STARTING', 'STOPPING'].includes(machine.state)
         : ['STOPPED', 'STOPPING'].includes(machine.state),
@@ -54,7 +55,7 @@ function LogstashManagementPage() {
   };
 
   const hasInitializeFailedMachines = (record: LogstashProcess) => {
-    return record.machineStatuses?.some((machine) => machine.state === 'INITIALIZE_FAILED') || false;
+    return record.logstashMachineStatusInfo?.some((machine) => machine.state === 'INITIALIZE_FAILED') || false;
   };
 
   const [data, setData] = useState<LogstashProcess[]>([]);
@@ -76,7 +77,6 @@ function LogstashManagementPage() {
     logstashYml?: string;
   } | null>(null);
   const [machineConfigModalVisible, setMachineConfigModalVisible] = useState(false);
-  const [sql, setSql] = useState('');
   const [messageApi, contextHolder] = message.useMessage();
   const [detailModalVisible, setDetailModalVisible] = useState<Record<string, boolean>>({});
   const [currentDetail, setCurrentDetail] = useState<LogstashProcess>();
@@ -344,11 +344,21 @@ function LogstashManagementPage() {
       key: 'moduleName',
     },
     {
+      title: '数据源',
+      dataIndex: 'datasourceName',
+      key: 'datasourceName',
+    },
+    {
+      title: '表名',
+      dataIndex: 'tableName',
+      key: 'tableName',
+    },
+    {
       title: '状态',
       key: 'state',
       render: (_: unknown, record: LogstashProcess) => (
         <Space direction="vertical" size={4}>
-          {record.machineStatuses?.map((machine) => (
+          {record.logstashMachineStatusInfo?.map((machine) => (
             <div key={machine.machineId}>
               <Tag color={machine.state === 'RUNNING' ? 'green' : machine.state === 'STOPPED' ? 'red' : 'orange'}>
                 {machine.machineName} ({machine.machineIp}): {machine.stateDescription}
@@ -383,6 +393,8 @@ function LogstashManagementPage() {
     {
       title: '操作',
       key: 'action',
+      fixed: 'right' as const,
+      width: 300,
       render: (_: unknown, record: LogstashProcess) => (
         <Space size="small">
           <Button
@@ -467,23 +479,21 @@ function LogstashManagementPage() {
               刷新配置
             </Button>
           </Popconfirm>
-          <Popconfirm
-            title="确认重新初始化"
-            description="确定要重新初始化所有初始化失败的机器吗？"
-            onConfirm={() => {
-              void handleReinitializeFailedMachines(record.id);
-            }}
-            okText="确认"
-            cancelText="取消"
-          >
-            <Button
-              type="link"
-              disabled={record.state === 'RUNNING' || !hasInitializeFailedMachines(record)}
-              style={{ padding: '0 4px' }}
+          {hasInitializeFailedMachines(record) && (
+            <Popconfirm
+              title="确认重新初始化"
+              description="确定要重新初始化所有初始化失败的机器吗？"
+              onConfirm={() => {
+                void handleReinitializeFailedMachines(record.id);
+              }}
+              okText="确认"
+              cancelText="取消"
             >
-              重新初始化失败机器
-            </Button>
-          </Popconfirm>
+              <Button type="link" style={{ padding: '0 4px' }}>
+                重新初始化失败机器
+              </Button>
+            </Popconfirm>
+          )}
           <Popconfirm
             title="确认删除"
             description="确定要删除这个Logstash进程吗？"
@@ -543,12 +553,13 @@ function LogstashManagementPage() {
           rowKey="id"
           loading={loading}
           bordered
+          scroll={{ x: 'max-content' }}
           expandable={{
             expandedRowRender: (record) => (
               <Table
                 size="small"
                 bordered
-                dataSource={record.machineStatuses}
+                dataSource={record.logstashMachineStatusInfo}
                 rowKey="machineId"
                 columns={[
                   {
@@ -718,13 +729,19 @@ function LogstashManagementPage() {
           onOk={async (values: Partial<LogstashProcess>) => {
             try {
               if (currentProcess) {
-                // 只更新配置相关字段
+                // 更新元数据
+                await updateLogstashProcessMetadata(currentProcess.id, {
+                  name: values.name || currentProcess.name,
+                  moduleId: values.moduleId || currentProcess.moduleId,
+                });
+
+                // 更新配置相关字段
                 await updateLogstashConfig(currentProcess.id, {
                   configContent: values.configContent,
                   jvmOptions: values.jvmOptions,
                   logstashYml: values.logstashYml,
                 });
-                messageApi.success('配置更新成功');
+                messageApi.success('更新成功');
               } else {
                 const process = await createLogstashProcess(values);
                 messageApi.success('创建成功');
@@ -747,7 +764,7 @@ function LogstashManagementPage() {
               setEditModalVisible(false);
               await fetchData();
             } catch (err) {
-              messageApi.error(currentProcess ? '配置更新失败' : '创建失败');
+              messageApi.error(currentProcess ? '更新失败' : '创建失败');
               console.error('操作Logstash进程失败:', err);
             }
           }}
@@ -1033,11 +1050,23 @@ function LogstashManagementPage() {
                 <Descriptions.Item label="模块" span={1}>
                   {currentDetail.moduleName}
                 </Descriptions.Item>
+                <Descriptions.Item label="数据源" span={1}>
+                  {currentDetail.datasourceName || '未设置'}
+                </Descriptions.Item>
+                <Descriptions.Item label="表名" span={1}>
+                  {currentDetail.tableName || '未设置'}
+                </Descriptions.Item>
                 <Descriptions.Item label="创建时间" span={1}>
                   {dayjs(currentDetail.createTime).format('YYYY-MM-DD HH:mm:ss')}
                 </Descriptions.Item>
                 <Descriptions.Item label="更新时间" span={1}>
                   {dayjs(currentDetail.updateTime).format('YYYY-MM-DD HH:mm:ss')}
+                </Descriptions.Item>
+                <Descriptions.Item label="创建人" span={1}>
+                  {currentDetail.createUserName || '未知'}
+                </Descriptions.Item>
+                <Descriptions.Item label="更新人" span={1}>
+                  {currentDetail.updateUserName || '未知'}
                 </Descriptions.Item>
                 <Descriptions.Item label="描述" span={2}>
                   {currentDetail.description || '无描述'}
@@ -1130,7 +1159,7 @@ function LogstashManagementPage() {
                 <Table
                   size="small"
                   bordered
-                  dataSource={currentDetail.machineStatuses}
+                  dataSource={currentDetail.logstashMachineStatusInfo}
                   rowKey="machineId"
                   pagination={false}
                   scroll={{ x: true }}

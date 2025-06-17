@@ -38,8 +38,7 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
           form.resetFields();
           if (initialValues) {
             console.log('Initial values for edit:', initialValues);
-            const machineIds =
-              initialValues.machines?.map((m) => m.id) || initialValues.machineStatuses?.map((m) => m.machineId);
+            const machineIds = initialValues.logstashMachineStatusInfo?.map((m) => m.machineId) || [];
             console.log('Calculated machineIds:', machineIds);
 
             form.setFieldsValue({
@@ -60,14 +59,19 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
     try {
       setConfirmLoading(true);
       const values = await form.validateFields();
-      const submitValues = initialValues
-        ? {
-            id: initialValues.id,
-            name: values.name,
-            module: values.module,
-          }
-        : values;
-      await onOk(submitValues);
+
+      if (initialValues) {
+        // 编辑模式 - 使用metadata接口更新
+        await onOk({
+          id: initialValues.id,
+          name: values.name,
+          moduleId: values.moduleId,
+          updateUser: 'admin', // 这里应该从用户上下文获取实际用户
+        });
+      } else {
+        // 创建模式 - 使用原有逻辑
+        await onOk(values);
+      }
     } catch (error) {
       console.error('表单验证失败:', error);
     } finally {
@@ -142,6 +146,9 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
               </Form.Item>
               <Form.Item name="description" label="描述">
                 <Input.TextArea rows={2} placeholder="请输入Logstash进程描述信息" disabled={!!initialValues} />
+              </Form.Item>
+              <Form.Item name="customDeployPath" label="自定义部署路径">
+                <Input placeholder="例如：/opt/custom/logstash" disabled={!!initialValues} />
               </Form.Item>
             </div>
           </div>

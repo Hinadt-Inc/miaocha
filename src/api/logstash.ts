@@ -174,6 +174,21 @@ export function forceStopLogstashMachine(processId: number, machineId: number): 
   });
 }
 
+export function updateLogstashProcessMetadata(
+  id: number,
+  data: {
+    name: string;
+    moduleId: number;
+    updateUser?: string;
+  },
+): Promise<void> {
+  return request({
+    url: `/api/logstash/processes/${id}/metadata`,
+    method: 'PUT',
+    data,
+  });
+}
+
 export async function scaleProcess(
   id: number,
   params: {
