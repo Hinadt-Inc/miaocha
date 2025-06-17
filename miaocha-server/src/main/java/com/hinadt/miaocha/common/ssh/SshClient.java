@@ -298,10 +298,27 @@ public class SshClient {
     /** 上传单个文件 */
     private void uploadSingleFile(ClientSession session, Path localFile, String remotePath)
             throws IOException {
-        // 提取本地文件名并拼接
-        String fileName = localFile.getFileName().toString();
-        String finalRemotePath =
-                remotePath.endsWith("/") ? remotePath + fileName : remotePath + "/" + fileName;
+        // 判断remotePath是文件路径还是目录路径
+        String finalRemotePath;
+        if (remotePath.endsWith("/")) {
+            // 如果以/结尾，说明是目录路径，需要拼接文件名
+            String fileName = localFile.getFileName().toString();
+            finalRemotePath = remotePath + fileName;
+        } else {
+            // 否则直接使用完整的远程路径
+            finalRemotePath = remotePath;
+        }
+
+        // 确保远程目录存在
+        String remoteDir = finalRemotePath.substring(0, finalRemotePath.lastIndexOf('/'));
+        try (SftpClient sftpClient = SftpClientFactory.instance().createSftpClient(session)) {
+            try {
+                sftpClient.mkdir(remoteDir);
+            } catch (IOException e) {
+                // 目录可能已经存在，忽略错误
+                logger.debug("创建远程目录失败(可能已存在): {}", e.getMessage());
+            }
+        }
 
         // 使用SFTP上传文件
         try (SftpClient sftpClient = SftpClientFactory.instance().createSftpClient(session);
