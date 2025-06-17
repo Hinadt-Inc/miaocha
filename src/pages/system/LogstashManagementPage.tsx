@@ -37,8 +37,14 @@ import {
   forceStopLogstashMachine,
   updateLogstashProcessMetadata,
   forceStopLogstashProcess,
+  getLogstashInstanceTasks,
 } from '../../api/logstash';
-import type { LogstashProcess, LogstashTaskSummary, MachineTask } from '../../types/logstashTypes';
+import type {
+  LogstashProcess,
+  LogstashTaskSummary,
+  LogstashTaskStatus,
+  LogstashTaskStep,
+} from '../../types/logstashTypes';
 import LogstashEditModal from './components/LogstashEditModal';
 import LogstashMachineConfigModal from './components/LogstashMachineConfigModal';
 import LogstashMachineDetailModal from './components/LogstashMachineDetailModal';
@@ -71,7 +77,7 @@ function LogstashManagementPage() {
   const [summaryModalVisible, setSummaryModalVisible] = useState(false);
   const [selectedTask, setSelectedTask] = useState<LogstashTaskSummary | null>(null);
   const [stepsModalVisible, setStepsModalVisible] = useState(false);
-  const [machineTasks, setMachineTasks] = useState<MachineTask[]>([]);
+  const [machineTasks, setMachineTasks] = useState<LogstashTaskStatus[]>([]);
   const [machineTasksModalVisible, setMachineTasksModalVisible] = useState(false);
   const [machineTasksLoading, setMachineTasksLoading] = useState(false);
   const [currentMachine, setCurrentMachine] = useState<{
@@ -128,11 +134,11 @@ function LogstashManagementPage() {
     setMachineTasksLoading(true);
 
     try {
-      const tasks = await getMachineTasks(processId, machineId);
+      const tasks = await getLogstashInstanceTasks(machineId.toString());
       setMachineTasks(tasks);
     } catch (err) {
-      messageApi.error('获取机器任务失败');
-      console.error('获取机器任务失败:', err);
+      messageApi.error('获取实例任务失败');
+      console.error('获取实例任务失败:', err);
     } finally {
       setMachineTasksLoading(false);
     }
@@ -420,13 +426,7 @@ function LogstashManagementPage() {
             okText="确认"
             cancelText="取消"
           >
-            <Button
-              type="link"
-              disabled={
-                ['RUNNING', 'STARTING', 'STOPPING'].includes(record.state) || checkSubTableStatus(record, 'start')
-              }
-              style={{ padding: '0 4px' }}
-            >
+            <Button type="link" disabled={checkSubTableStatus(record, 'start')} style={{ padding: '0 4px' }}>
               启动
             </Button>
           </Popconfirm>
@@ -439,11 +439,7 @@ function LogstashManagementPage() {
             okText="确认"
             cancelText="取消"
           >
-            <Button
-              type="link"
-              disabled={['STOPPED', 'STOPPING'].includes(record.state) || checkSubTableStatus(record, 'stop')}
-              style={{ padding: '0 4px' }}
-            >
+            <Button type="link" disabled={checkSubTableStatus(record, 'stop')} style={{ padding: '0 4px' }}>
               停止
             </Button>
           </Popconfirm>
@@ -500,7 +496,7 @@ function LogstashManagementPage() {
               </Button>
             </Popconfirm>
           )}
-          {allMachinesStopFailed(record) && (
+          {!allMachinesStopFailed(record) && (
             <Popconfirm
               title="确认强制停止"
               description="确定要强制停止所有机器吗？这可能会导致数据丢失"
@@ -643,6 +639,7 @@ function LogstashManagementPage() {
                         stateDescription: ReactNode;
                         machineId: number;
                         state: string;
+                        logstashMachineId: number;
                       },
                     ) => (
                       <Space size="small">
@@ -732,7 +729,7 @@ function LogstashManagementPage() {
                         <Button
                           type="link"
                           style={{ padding: '0 4px' }}
-                          onClick={() => showMachineTasks(record.id, machine.machineId)}
+                          onClick={() => showMachineTasks(record.id, machine.logstashMachineId)}
                         >
                           任务
                         </Button>
@@ -758,11 +755,11 @@ function LogstashManagementPage() {
                 });
 
                 // 更新配置相关字段
-                await updateLogstashConfig(currentProcess.id, {
-                  configContent: values.configContent,
-                  jvmOptions: values.jvmOptions,
-                  logstashYml: values.logstashYml,
-                });
+                // await updateLogstashConfig(currentProcess.id, {
+                //   configContent: values.configContent,
+                //   jvmOptions: values.jvmOptions,
+                //   logstashYml: values.logstashYml,
+                // });
                 messageApi.success('更新成功');
               } else {
                 const process = await createLogstashProcess(values);
@@ -856,7 +853,7 @@ function LogstashManagementPage() {
           />
         </Modal>
         <Modal
-          title={`机器任务 - ${currentMachine?.machineId || ''}`}
+          title={`实例任务 - ${currentMachine?.machineId || ''}`}
           open={machineTasksModalVisible}
           onCancel={() => setMachineTasksModalVisible(false)}
           footer={null}
@@ -893,10 +890,10 @@ function LogstashManagementPage() {
                 </Descriptions>
 
                 <h4 style={{ marginBottom: 16 }}>步骤详情</h4>
-                {Object.entries(task.machineSteps).map(([machineName, steps]) => (
+                {Object.entries(task.instanceSteps).map(([machineName, steps]) => (
                   <div key={machineName} style={{ marginBottom: 16 }}>
                     <h5>
-                      {machineName} (进度: {task.machineProgressPercentages[machineName]}%)
+                      {machineName} (进度: {task.instanceProgressPercentages[machineName]}%)
                     </h5>
                     <Table
                       size="small"
@@ -988,67 +985,69 @@ function LogstashManagementPage() {
               </Descriptions>
 
               <h4 style={{ marginBottom: 16 }}>机器步骤详情</h4>
-              {Object.entries(selectedTask.machineSteps).map(([machineName, steps]) => (
-                <div key={machineName} style={{ marginBottom: 24 }}>
-                  <h5>
-                    {machineName} (进度: {selectedTask.machineProgressPercentages[machineName]}%)
-                  </h5>
-                  <Table
-                    size="small"
-                    bordered
-                    dataSource={steps}
-                    rowKey="stepId"
-                    columns={[
-                      {
-                        title: '步骤ID',
-                        dataIndex: 'stepId',
-                        key: 'stepId',
-                      },
-                      {
-                        title: '步骤名称',
-                        dataIndex: 'stepName',
-                        key: 'stepName',
-                      },
-                      {
-                        title: '状态',
-                        dataIndex: 'status',
-                        key: 'status',
-                        render: (status: string) => (
-                          <Tag
-                            color={status === 'COMPLETED' ? 'success' : status === 'FAILED' ? 'error' : 'processing'}
-                          >
-                            {status}
-                          </Tag>
-                        ),
-                      },
-                      {
-                        title: '开始时间',
-                        dataIndex: 'startTime',
-                        key: 'startTime',
-                        render: (startTime: string) => dayjs(startTime).format('YYYY-MM-DD HH:mm:ss'),
-                      },
-                      {
-                        title: '结束时间',
-                        dataIndex: 'endTime',
-                        key: 'endTime',
-                        render: (endTime: string) => dayjs(endTime).format('YYYY-MM-DD HH:mm:ss') || '-',
-                      },
-                      {
-                        title: '持续时间',
-                        dataIndex: 'duration',
-                        key: 'duration',
-                        render: (duration: number) => `${duration}ms`,
-                      },
-                      {
-                        title: '错误信息',
-                        dataIndex: 'errorMessage',
-                        key: 'errorMessage',
-                        render: (errorMessage: string) => errorMessage || '-',
-                      },
-                    ]}
-                  />
-                </div>
-              ))}
+              {Object.entries(selectedTask.instanceSteps as Record<string, LogstashTaskStep[]>).map(
+                ([machineName, steps]) => (
+                  <div key={machineName} style={{ marginBottom: 24 }}>
+                    <h5>
+                      {machineName} (进度: {selectedTask.instanceProgressPercentages[machineName]}%)
+                    </h5>
+                    <Table
+                      size="small"
+                      bordered
+                      dataSource={steps}
+                      rowKey="stepId"
+                      columns={[
+                        {
+                          title: '步骤ID',
+                          dataIndex: 'stepId',
+                          key: 'stepId',
+                        },
+                        {
+                          title: '步骤名称',
+                          dataIndex: 'stepName',
+                          key: 'stepName',
+                        },
+                        {
+                          title: '状态',
+                          dataIndex: 'status',
+                          key: 'status',
+                          render: (status: string) => (
+                            <Tag
+                              color={status === 'COMPLETED' ? 'success' : status === 'FAILED' ? 'error' : 'processing'}
+                            >
+                              {status}
+                            </Tag>
+                          ),
+                        },
+                        {
+                          title: '开始时间',
+                          dataIndex: 'startTime',
+                          key: 'startTime',
+                          render: (startTime: string) => dayjs(startTime).format('YYYY-MM-DD HH:mm:ss'),
+                        },
+                        {
+                          title: '结束时间',
+                          dataIndex: 'endTime',
+                          key: 'endTime',
+                          render: (endTime: string) => dayjs(endTime).format('YYYY-MM-DD HH:mm:ss') || '-',
+                        },
+                        {
+                          title: '持续时间',
+                          dataIndex: 'duration',
+                          key: 'duration',
+                          render: (duration: number) => `${duration}ms`,
+                        },
+                        {
+                          title: '错误信息',
+                          dataIndex: 'errorMessage',
+                          key: 'errorMessage',
+                          render: (errorMessage: string) => errorMessage || '-',
+                        },
+                      ]}
+                    />
+                  </div>
+                ),
+              )}
             </div>
           )}
         </Modal>

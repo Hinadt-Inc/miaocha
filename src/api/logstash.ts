@@ -181,6 +181,13 @@ export function forceStopLogstashProcess(id: number): Promise<void> {
   });
 }
 
+export function getLogstashInstanceTasks(instanceId: string): Promise<LogstashTaskStatus[]> {
+  return request({
+    url: `/api/logstash/processes/instances/${instanceId}/tasks`,
+    method: 'GET',
+  });
+}
+
 export function updateLogstashProcessMetadata(
   id: number,
   data: {

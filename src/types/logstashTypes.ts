@@ -40,10 +40,10 @@ export interface LogstashTaskStatus {
   skippedCount: number;
   progressPercentage: number;
   errorMessage: string;
-  machineSteps: {
+  instanceSteps: {
     [key: string]: LogstashTaskStep[];
   };
-  machineProgressPercentages: {
+  instanceProgressPercentages: {
     [key: string]: number;
   };
 }
@@ -64,7 +64,7 @@ export interface LogstashTaskSummary {
   skippedCount: number;
   progressPercentage: number;
   errorMessage: string;
-  machineSteps: {
+  instanceSteps: {
     [key: string]: {
       stepId: string;
       stepName: string;
@@ -75,7 +75,7 @@ export interface LogstashTaskSummary {
       errorMessage: string;
     }[];
   };
-  machineProgressPercentages: {
+  instanceProgressPercentages: {
     [key: string]: number;
   };
 }
@@ -147,6 +147,7 @@ export interface LogstashProcess {
     machineIp: string;
     state: string;
     stateDescription: string;
+    logstashMachineId: number;
   }[];
   createTime: string;
   updateTime: string;
@@ -168,4 +169,28 @@ export interface LogstashProcess {
   processCreateTime: string;
   processUpdateTime: string;
   dorisSql: string;
+}
+
+export interface LogstashTaskStatusV2 {
+  taskId: string;
+  businessId: number;
+  name: string;
+  description: string;
+  status: string;
+  operationType: string;
+  startTime: string;
+  endTime: string;
+  duration: number;
+  totalSteps: number;
+  successCount: number;
+  failedCount: number;
+  skippedCount: number;
+  progressPercentage: number;
+  errorMessage: string;
+  instanceSteps: {
+    [key: string]: LogstashTaskStep[];
+  };
+  instanceProgressPercentages: {
+    [key: string]: number;
+  };
 }
