@@ -14,25 +14,6 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
     private final String jvmOptions; // JVM配置文件内容
     private final String logstashYml; // 系统配置文件内容
 
-    /** 创建仅更新主配置文件的命令（向后兼容构造函数） */
-    public UpdateConfigCommand(
-            SshClient sshClient,
-            String deployBaseDir,
-            Long logstashMachineId,
-            String configContent,
-            LogstashMachineMapper logstashMachineMapper,
-            LogstashDeployPathManager deployPathManager) {
-        this(
-                sshClient,
-                deployBaseDir,
-                logstashMachineId,
-                configContent,
-                null,
-                null,
-                logstashMachineMapper,
-                deployPathManager);
-    }
-
     /**
      * 创建可同时更新多种配置文件的命令
      *

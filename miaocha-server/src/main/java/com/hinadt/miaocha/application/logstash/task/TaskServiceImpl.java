@@ -1,12 +1,12 @@
 package com.hinadt.miaocha.application.logstash.task;
 
+import com.hinadt.miaocha.application.logstash.enums.LogstashMachineStep;
 import com.hinadt.miaocha.application.logstash.enums.StepStatus;
 import com.hinadt.miaocha.application.logstash.enums.TaskOperationType;
 import com.hinadt.miaocha.application.logstash.enums.TaskStatus;
 import com.hinadt.miaocha.domain.converter.TaskDetailConverter;
 import com.hinadt.miaocha.domain.converter.TaskMachineStepConverter;
 import com.hinadt.miaocha.domain.dto.logstash.TaskDetailDTO;
-import com.hinadt.miaocha.domain.dto.logstash.TaskStepsGroupDTO;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.LogstashTask;
 import com.hinadt.miaocha.domain.entity.LogstashTaskMachineStep;
@@ -213,56 +213,6 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public List<String> getAllInstanceTaskIdsByProcessAndMachine(Long processId, Long machineId) {
-        logger.debug("获取进程[{}]在机器[{}]上所有实例的任务ID", processId, machineId);
-
-        // 获取该进程在指定机器上的所有LogstashMachine实例
-        List<LogstashMachine> allInstances =
-                logstashMachineMapper.selectByLogstashProcessId(processId);
-        List<LogstashMachine> logstashMachines =
-                allInstances.stream()
-                        .filter(instance -> machineId.equals(instance.getMachineId()))
-                        .toList();
-
-        // 收集所有实例的任务ID
-        List<String> allTaskIds = new ArrayList<>();
-        for (LogstashMachine logstashMachine : logstashMachines) {
-            List<String> instanceTaskIds =
-                    taskMapper.findTaskIdsByLogstashMachineId(logstashMachine.getId());
-            allTaskIds.addAll(instanceTaskIds);
-        }
-
-        return allTaskIds;
-    }
-
-    @Override
-    public Optional<TaskDetailDTO> getLatestInstanceTaskDetailByProcessAndMachine(
-            Long processId, Long machineId) {
-        logger.debug("获取进程[{}]在机器[{}]上最新的实例任务详情", processId, machineId);
-
-        // 获取所有相关任务ID
-        List<String> taskIds = getAllInstanceTaskIdsByProcessAndMachine(processId, machineId);
-
-        if (taskIds.isEmpty()) {
-            return Optional.empty();
-        }
-
-        // 获取所有任务详情并找到最新的
-        Optional<TaskDetailDTO> latestTask =
-                taskIds.stream()
-                        .map(taskId -> getTaskDetail(taskId).orElse(null))
-                        .filter(Objects::nonNull)
-                        .max(
-                                Comparator.comparing(
-                                        task ->
-                                                task.getCreateTime() != null
-                                                        ? task.getCreateTime()
-                                                        : LocalDateTime.MIN));
-
-        return latestTask;
-    }
-
-    @Override
     @Transactional
     public void updateTaskStatus(String taskId, TaskStatus status) {
         taskMapper.updateStatus(taskId, status.name());
@@ -376,134 +326,6 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public Map<String, Map<String, Integer>> getTaskInstanceStepStatusStats(String taskId) {
-        List<LogstashTaskMachineStep> steps = stepMapper.findByTaskId(taskId);
-
-        // 按LogstashMachine实例ID分组统计
-        Map<String, Map<String, Integer>> instanceStats = new HashMap<>();
-
-        Map<Long, List<LogstashTaskMachineStep>> instanceStepsMap =
-                steps.stream()
-                        .filter(step -> step.getLogstashMachineId() != null)
-                        .collect(
-                                Collectors.groupingBy(
-                                        LogstashTaskMachineStep::getLogstashMachineId));
-
-        for (Map.Entry<Long, List<LogstashTaskMachineStep>> entry : instanceStepsMap.entrySet()) {
-            Long logstashMachineId = entry.getKey();
-            List<LogstashTaskMachineStep> instanceSteps = entry.getValue();
-
-            Map<String, Integer> statusStats = new HashMap<>();
-            statusStats.put("PENDING", 0);
-            statusStats.put("RUNNING", 0);
-            statusStats.put("COMPLETED", 0);
-            statusStats.put("FAILED", 0);
-            statusStats.put("SKIPPED", 0);
-
-            for (LogstashTaskMachineStep step : instanceSteps) {
-                String status = step.getStatus();
-                statusStats.put(status, statusStats.getOrDefault(status, 0) + 1);
-            }
-
-            instanceStats.put("instance-" + logstashMachineId, statusStats);
-        }
-
-        return instanceStats;
-    }
-
-    @Override
-    public List<TaskStepsGroupDTO> getTaskStepsGroupStats(String taskId) {
-        Optional<LogstashTask> taskOpt = taskMapper.findById(taskId);
-        if (!taskOpt.isPresent()) {
-            return Collections.emptyList();
-        }
-
-        LogstashTask task = taskOpt.get();
-        List<LogstashTaskMachineStep> allSteps = stepMapper.findByTaskId(taskId);
-
-        // 按步骤ID分组
-        Map<String, List<LogstashTaskMachineStep>> stepGroups =
-                allSteps.stream()
-                        .collect(Collectors.groupingBy(LogstashTaskMachineStep::getStepId));
-
-        // 获取所有相关的LogstashMachine信息
-        Set<Long> logstashMachineIds =
-                allSteps.stream()
-                        .map(LogstashTaskMachineStep::getLogstashMachineId)
-                        .filter(Objects::nonNull)
-                        .collect(Collectors.toSet());
-
-        Map<Long, LogstashMachine> logstashMachineMap = new HashMap<>();
-        if (!logstashMachineIds.isEmpty()) {
-            List<LogstashMachine> logstashMachines =
-                    logstashMachineMapper.selectByIds(new ArrayList<>(logstashMachineIds));
-            logstashMachineMap =
-                    logstashMachines.stream()
-                            .collect(Collectors.toMap(LogstashMachine::getId, m -> m));
-        }
-
-        // 获取所有机器信息
-        Set<Long> machineIds =
-                allSteps.stream()
-                        .map(LogstashTaskMachineStep::getMachineId)
-                        .collect(Collectors.toSet());
-
-        Map<Long, MachineInfo> machineMap = new HashMap<>();
-        if (!machineIds.isEmpty()) {
-            List<MachineInfo> machineInfos = machineMapper.selectByIds(new ArrayList<>(machineIds));
-            machineMap =
-                    machineInfos.stream().collect(Collectors.toMap(MachineInfo::getId, m -> m));
-        }
-
-        // 构建步骤组列表
-        List<TaskStepsGroupDTO> stepGroupList = new ArrayList<>();
-        for (Map.Entry<String, List<LogstashTaskMachineStep>> entry : stepGroups.entrySet()) {
-            String stepId = entry.getKey();
-            List<LogstashTaskMachineStep> stepList = entry.getValue();
-
-            TaskStepsGroupDTO stepGroup = new TaskStepsGroupDTO();
-            stepGroup.setTaskId(task.getId());
-            stepGroup.setTaskName(task.getName());
-            stepGroup.setTaskStatus(task.getStatus());
-            stepGroup.setStepId(stepId);
-            stepGroup.setStepName(getStepName(stepId));
-
-            // 构建实例步骤列表
-            List<TaskStepsGroupDTO.InstanceStepDTO> instanceSteps = new ArrayList<>();
-            for (LogstashTaskMachineStep step : stepList) {
-                TaskStepsGroupDTO.InstanceStepDTO instanceStep =
-                        new TaskStepsGroupDTO.InstanceStepDTO();
-                instanceStep.setLogstashMachineId(step.getLogstashMachineId());
-                instanceStep.setMachineId(step.getMachineId());
-
-                // 设置机器名称
-                MachineInfo machineInfo = machineMap.get(step.getMachineId());
-                instanceStep.setMachineName(machineInfo != null ? machineInfo.getName() : "未知机器");
-
-                // 设置实例信息
-                LogstashMachine logstashMachine =
-                        logstashMachineMap.get(step.getLogstashMachineId());
-                if (logstashMachine != null) {
-                    instanceStep.setInstanceName("实例-" + logstashMachine.getId());
-                    instanceStep.setDeployPath(logstashMachine.getDeployPath());
-                }
-
-                instanceStep.setStatus(step.getStatus());
-                instanceStep.setStartTime(step.getStartTime());
-                instanceStep.setEndTime(step.getEndTime());
-                instanceStep.setErrorMessage(step.getErrorMessage());
-
-                instanceSteps.add(instanceStep);
-            }
-
-            stepGroup.setInstanceSteps(instanceSteps);
-            stepGroupList.add(stepGroup);
-        }
-
-        return stepGroupList;
-    }
-
-    @Override
     @Transactional
     public void resetStepStatuses(String taskId, StepStatus newStatus) {
         if (taskId == null || newStatus == null) {
@@ -527,21 +349,6 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
-    @Override
-    @Transactional
-    public void deleteInstanceTasks(Long logstashMachineId) {
-        try {
-            List<String> taskIds = getAllInstanceTaskIds(logstashMachineId);
-            for (String taskId : taskIds) {
-                deleteTask(taskId);
-            }
-            logger.info("删除实例相关的所有任务，实例ID: {}, 删除任务数: {}", logstashMachineId, taskIds.size());
-        } catch (Exception e) {
-            logger.error("删除实例任务失败，实例ID: {}", logstashMachineId, e);
-            throw new RuntimeException("删除实例任务失败: " + e.getMessage(), e);
-        }
-    }
-
     /** 统计步骤状态 */
     private int[] countStepStatus(List<LogstashTaskMachineStep> steps) {
         int[] counts = new int[3]; // [成功, 失败, 跳过]
@@ -559,32 +366,15 @@ public class TaskServiceImpl implements TaskService {
         return counts;
     }
 
-    /** 根据步骤ID获取步骤名称 */
-    private String getStepName(String stepId) {
-        // 这里可以扩展为从配置或枚举中获取步骤名称
-        switch (stepId) {
-            case "createDirectory":
-                return "创建目录";
-            case "uploadPackage":
-                return "上传安装包";
-            case "extractPackage":
-                return "解压安装包";
-            case "createConfig":
-                return "创建配置";
-            case "modifyConfig":
-                return "修改配置";
-            case "startProcess":
-                return "启动进程";
-            case "verifyProcess":
-                return "验证进程";
-            case "stopProcess":
-                return "停止进程";
-            case "deleteProcessDirectory":
-                return "删除目录";
-            case "refreshConfig":
-                return "刷新配置";
-            default:
-                return stepId;
+    /** 根据步骤枚举名称获取步骤显示名称 */
+    private String getStepName(String stepEnumName) {
+        try {
+            LogstashMachineStep step = LogstashMachineStep.valueOf(stepEnumName);
+            return step.getName();
+        } catch (IllegalArgumentException e) {
+            // 如果枚举不存在，返回原始名称
+            logger.warn("未找到对应的步骤枚举: {}", stepEnumName);
+            return stepEnumName;
         }
     }
 }

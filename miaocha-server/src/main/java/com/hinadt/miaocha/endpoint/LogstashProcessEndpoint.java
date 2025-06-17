@@ -165,7 +165,7 @@ public class LogstashProcessEndpoint {
      * @return 强制停止后的Logstash进程
      */
     @PostMapping("/{id}/force-stop")
-    @Operation(summary = "全局强制停止Logstash进程", description = "强制停止指定Logstash进程在所有关联机器上的实例，用于应急情况")
+    @Operation(summary = "全局强制停止Logstash进程", description = "强制停止指定Logstash进程关联的所有实例，用于应急情况")
     public ApiResponse<LogstashProcessResponseDTO> forceStopLogstashProcess(
             @Parameter(description = "Logstash进程数据库ID", required = true) @PathVariable("id")
                     Long id) {

@@ -38,25 +38,6 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
                 deployPathManager);
     }
 
-    /** 创建刷新单个配置文件的命令（向后兼容构造函数） */
-    public RefreshConfigCommand(
-            SshClient sshClient,
-            String deployBaseDir,
-            Long logstashMachineId,
-            LogstashProcessMapper logstashProcessMapper,
-            String configContent) {
-        this(
-                sshClient,
-                deployBaseDir,
-                logstashMachineId,
-                logstashProcessMapper,
-                null,
-                configContent,
-                null,
-                null,
-                null);
-    }
-
     /**
      * 创建可同时刷新多种配置文件的命令
      *

@@ -14,24 +14,6 @@ public class ModifySystemConfigCommand extends AbstractLogstashCommand {
     private final String jvmOptions; // JVM配置文件内容
     private final String logstashYml; // 系统配置文件内容
 
-    /** 创建仅修改JVM配置的命令（向后兼容构造函数） */
-    public ModifySystemConfigCommand(
-            SshClient sshClient,
-            String deployBaseDir,
-            Long logstashMachineId,
-            String jvmOptions,
-            LogstashMachineMapper logstashMachineMapper,
-            LogstashDeployPathManager deployPathManager) {
-        this(
-                sshClient,
-                deployBaseDir,
-                logstashMachineId,
-                jvmOptions,
-                null,
-                logstashMachineMapper,
-                deployPathManager);
-    }
-
     /**
      * 创建可同时修改JVM配置和系统配置的命令
      *

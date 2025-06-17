@@ -94,7 +94,7 @@ public interface LogstashProcessService {
     LogstashProcessResponseDTO forceStopLogstashProcess(Long id);
 
     /**
-     * 伸缩Logstash进程 支持扩容（添加机器）和缩容（删除机器）
+     * 伸缩Logstash进程 支持扩容（添加机器）和缩容（删除实例）
      *
      * @param id Logstash进程ID
      * @param dto 伸缩请求DTO

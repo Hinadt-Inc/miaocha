@@ -4,7 +4,6 @@ import com.hinadt.miaocha.application.logstash.enums.StepStatus;
 import com.hinadt.miaocha.application.logstash.enums.TaskOperationType;
 import com.hinadt.miaocha.application.logstash.enums.TaskStatus;
 import com.hinadt.miaocha.domain.dto.logstash.TaskDetailDTO;
-import com.hinadt.miaocha.domain.dto.logstash.TaskStepsGroupDTO;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import java.util.List;
 import java.util.Map;
@@ -89,25 +88,6 @@ public interface TaskService {
     List<String> getAllInstanceTaskIds(Long logstashMachineId);
 
     /**
-     * 根据进程ID和机器ID获取所有相关LogstashMachine实例的任务ID列表
-     *
-     * @param processId 进程ID
-     * @param machineId 机器ID
-     * @return 任务ID列表
-     */
-    List<String> getAllInstanceTaskIdsByProcessAndMachine(Long processId, Long machineId);
-
-    /**
-     * 根据进程ID和机器ID获取最新的实例任务详情
-     *
-     * @param processId 进程ID
-     * @param machineId 机器ID
-     * @return 最新任务详情，如果没有找到则返回空
-     */
-    Optional<TaskDetailDTO> getLatestInstanceTaskDetailByProcessAndMachine(
-            Long processId, Long machineId);
-
-    /**
      * 更新任务状态
      *
      * @param taskId 任务ID
@@ -151,22 +131,6 @@ public interface TaskService {
     void executeAsync(String taskId, Runnable action, Runnable callback);
 
     /**
-     * 获取任务实例步骤执行状态统计
-     *
-     * @param taskId 任务ID
-     * @return 各实例步骤执行状态统计 (实例ID -> 状态统计)
-     */
-    Map<String, Map<String, Integer>> getTaskInstanceStepStatusStats(String taskId);
-
-    /**
-     * 获取任务执行状态按步骤分组
-     *
-     * @param taskId 任务ID
-     * @return 任务步骤执行状态分组统计
-     */
-    List<TaskStepsGroupDTO> getTaskStepsGroupStats(String taskId);
-
-    /**
      * 重置任务所有步骤状态
      *
      * @param taskId 任务ID
@@ -180,11 +144,4 @@ public interface TaskService {
      * @param taskId 任务ID
      */
     void deleteTask(String taskId);
-
-    /**
-     * 删除实例相关的所有任务
-     *
-     * @param logstashMachineId LogstashMachine实例ID
-     */
-    void deleteInstanceTasks(Long logstashMachineId);
 }
