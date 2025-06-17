@@ -9,6 +9,7 @@ import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.converter.ModuleInfoConverter;
+import com.hinadt.miaocha.domain.dto.SqlQueryResultDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoCreateDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
@@ -17,9 +18,7 @@ import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
 import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
 import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
 import io.qameta.allure.*;
-import java.sql.Connection;
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -200,13 +199,13 @@ class ModuleInfoServiceTest {
         moduleWithoutSql.setDatasourceId(1L);
         moduleWithoutSql.setDorisSql(null); // 还没有执行过SQL
 
-        Connection mockConnection = mock(Connection.class);
+        SqlQueryResultDTO mockResult = new SqlQueryResultDTO();
+        mockResult.setAffectedRows(0); // CREATE TABLE 语句影响行数为0
 
         // Mock 行为
         when(moduleInfoMapper.selectById(1L)).thenReturn(moduleWithoutSql);
         when(datasourceMapper.selectById(1L)).thenReturn(sampleDatasourceInfo);
-        when(jdbcQueryExecutor.getConnection(sampleDatasourceInfo)).thenReturn(mockConnection);
-        when(jdbcQueryExecutor.executeRawQuery(mockConnection, sql)).thenReturn(new HashMap<>());
+        when(jdbcQueryExecutor.executeQuery(sampleDatasourceInfo, sql)).thenReturn(mockResult);
         when(moduleInfoMapper.update(any(ModuleInfo.class))).thenReturn(1);
         when(moduleInfoConverter.toDto(any(ModuleInfo.class), eq(sampleDatasourceInfo)))
                 .thenReturn(sampleModuleInfoDTO);
@@ -220,8 +219,7 @@ class ModuleInfoServiceTest {
         // 验证调用
         verify(moduleInfoMapper).selectById(1L);
         verify(datasourceMapper).selectById(1L);
-        verify(jdbcQueryExecutor).getConnection(sampleDatasourceInfo);
-        verify(jdbcQueryExecutor).executeRawQuery(mockConnection, sql);
+        verify(jdbcQueryExecutor).executeQuery(sampleDatasourceInfo, sql);
         verify(moduleInfoMapper).update(any(ModuleInfo.class));
     }
 }

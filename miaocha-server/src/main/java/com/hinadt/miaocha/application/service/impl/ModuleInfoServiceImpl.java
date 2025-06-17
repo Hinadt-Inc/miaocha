@@ -20,8 +20,6 @@ import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
 import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
 import com.hinadt.miaocha.domain.mapper.UserMapper;
 import com.hinadt.miaocha.domain.mapper.UserModulePermissionMapper;
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -257,9 +255,9 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
         }
 
         // 执行SQL
-        try (Connection connection = jdbcQueryExecutor.getConnection(datasourceInfo)) {
-            jdbcQueryExecutor.executeRawQuery(connection, sql);
-        } catch (SQLException e) {
+        try {
+            jdbcQueryExecutor.executeQuery(datasourceInfo, sql);
+        } catch (Exception e) {
             throw new RuntimeException("SQL执行失败: " + e.getMessage(), e);
         }
 

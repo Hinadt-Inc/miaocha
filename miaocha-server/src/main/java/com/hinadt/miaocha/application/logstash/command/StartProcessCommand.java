@@ -1,6 +1,7 @@
 package com.hinadt.miaocha.application.logstash.command;
 
 import com.hinadt.miaocha.application.logstash.path.LogstashDeployPathManager;
+import com.hinadt.miaocha.application.logstash.path.LogstashPathUtils;
 import com.hinadt.miaocha.common.exception.SshOperationException;
 import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
@@ -31,7 +32,7 @@ public class StartProcessCommand extends AbstractLogstashCommand {
                     try {
                         String processDir = getProcessDirectory(machineInfo);
                         String pidFile =
-                                processDir + "/logs/logstash-" + logstashMachineId + ".pid";
+                                LogstashPathUtils.buildPidFilePath(processDir, logstashMachineId);
 
                         // 检查PID文件是否存在且进程正在运行
                         String checkCommand =
@@ -70,11 +71,12 @@ public class StartProcessCommand extends AbstractLogstashCommand {
 
         try {
             String processDir = getProcessDirectory(machineInfo);
-            String configDir = processDir + "/config";
-            String logDir = processDir + "/logs";
-            String configPath = configDir + "/logstash-" + logstashMachineId + ".conf";
-            String pidFile = logDir + "/logstash-" + logstashMachineId + ".pid";
-            String logFile = logDir + "/logstash-" + logstashMachineId + ".log";
+            String configDir = LogstashPathUtils.buildConfigDirPath(processDir);
+            String logDir = LogstashPathUtils.buildLogDirPath(processDir);
+            String configPath =
+                    LogstashPathUtils.buildConfigFilePath(processDir, logstashMachineId);
+            String pidFile = LogstashPathUtils.buildPidFilePath(processDir, logstashMachineId);
+            String logFile = LogstashPathUtils.buildLogFilePath(processDir, logstashMachineId);
 
             // 确保日志目录存在
             String createLogDirCommand = String.format("mkdir -p %s", logDir);

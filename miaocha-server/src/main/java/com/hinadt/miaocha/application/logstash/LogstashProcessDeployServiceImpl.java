@@ -6,12 +6,9 @@ import com.hinadt.miaocha.application.logstash.path.LogstashDeployPathManager;
 import com.hinadt.miaocha.application.logstash.state.LogstashMachineStateManager;
 import com.hinadt.miaocha.application.logstash.task.TaskService;
 import com.hinadt.miaocha.common.util.FutureUtils;
-import com.hinadt.miaocha.config.LogstashProperties;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.LogstashProcess;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
-import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
-import com.hinadt.miaocha.domain.mapper.MachineMapper;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -31,13 +28,9 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
     private final LogstashDeployPathManager deployPathManager;
 
     public LogstashProcessDeployServiceImpl(
-            LogstashMachineMapper logstashMachineMapper,
-            MachineMapper machineMapper,
             TaskService taskService,
             LogstashMachineStateManager machineStateManager,
             LogstashProcessConfigService configService,
-            LogstashProperties logstashProperties,
-            LogstashMachineConnectionValidator connectionValidator,
             LogstashDeployPathManager deployPathManager) {
         this.taskService = taskService;
         this.machineStateManager = machineStateManager;
@@ -190,9 +183,7 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
     public CompletableFuture<Boolean> deleteInstancesDirectory(
             List<LogstashMachine> logstashMachines) {
         if (logstashMachines == null || logstashMachines.isEmpty()) {
-            log.warn(
-                    "批量删除实例目录参数无效: logstashMachines是否为空={}",
-                    logstashMachines == null || logstashMachines.isEmpty());
+            log.warn("批量删除实例目录参数无效: logstashMachines为空");
             return CompletableFuture.completedFuture(false);
         }
 
@@ -231,10 +222,7 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
     /** 验证实例列表有效性 */
     private boolean validateInstances(List<LogstashMachine> logstashMachines, String operation) {
         if (logstashMachines == null || logstashMachines.isEmpty()) {
-            log.error(
-                    "{}参数无效: logstashMachines是否为空={}",
-                    operation,
-                    logstashMachines == null || logstashMachines.isEmpty());
+            log.error("{}参数无效: logstashMachines为空", operation);
             return false;
         }
         return true;
@@ -284,10 +272,7 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
                     taskService.executeAsync(
                             taskId,
                             FutureUtils.toSyncRunnable(
-                                    () -> {
-                                        operation.execute(logstashMachine, taskId).join();
-                                        return null;
-                                    },
+                                    () -> operation.execute(logstashMachine, taskId),
                                     "实例",
                                     operationDescription,
                                     logstashMachine.getId()),

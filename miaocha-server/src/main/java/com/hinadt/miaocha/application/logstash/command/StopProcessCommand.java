@@ -1,6 +1,7 @@
 package com.hinadt.miaocha.application.logstash.command;
 
 import com.hinadt.miaocha.application.logstash.path.LogstashDeployPathManager;
+import com.hinadt.miaocha.application.logstash.path.LogstashPathUtils;
 import com.hinadt.miaocha.common.exception.SshOperationException;
 import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
@@ -31,7 +32,7 @@ public class StopProcessCommand extends AbstractLogstashCommand {
                     try {
                         String processDir = getProcessDirectory(machineInfo);
                         String pidFile =
-                                processDir + "/logs/logstash-" + logstashMachineId + ".pid";
+                                LogstashPathUtils.buildPidFilePath(processDir, logstashMachineId);
 
                         // 检查PID文件是否存在
                         String checkPidFileCommand =
@@ -83,7 +84,7 @@ public class StopProcessCommand extends AbstractLogstashCommand {
 
         try {
             String processDir = getProcessDirectory(machineInfo);
-            String pidFile = processDir + "/logs/logstash-" + logstashMachineId + ".pid";
+            String pidFile = LogstashPathUtils.buildPidFilePath(processDir, logstashMachineId);
 
             // 检查PID文件是否存在
             String checkPidCommand =

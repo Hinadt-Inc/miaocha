@@ -1,6 +1,7 @@
 package com.hinadt.miaocha.application.logstash.command;
 
 import com.hinadt.miaocha.application.logstash.path.LogstashDeployPathManager;
+import com.hinadt.miaocha.application.logstash.path.LogstashPathUtils;
 import com.hinadt.miaocha.common.exception.SshOperationException;
 import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
@@ -30,9 +31,9 @@ public class VerifyProcessCommand extends AbstractLogstashCommand {
 
         try {
             String processDir = getProcessDirectory(machineInfo);
-            String logDir = processDir + "/logs";
-            String pidFile = processDir + "/logs/logstash-" + logstashMachineId + ".pid";
-            String logFile = processDir + "/logs/logstash-" + logstashMachineId + ".log";
+            String logDir = LogstashPathUtils.buildLogDirPath(processDir);
+            String pidFile = LogstashPathUtils.buildPidFilePath(processDir, logstashMachineId);
+            String logFile = LogstashPathUtils.buildLogFilePath(processDir, logstashMachineId);
 
             // 尝试多次验证，最多尝试5次，每次间隔3秒
             verifyProcessWithRetry(machineInfo, processDir, pidFile, logFile, 5, future);
