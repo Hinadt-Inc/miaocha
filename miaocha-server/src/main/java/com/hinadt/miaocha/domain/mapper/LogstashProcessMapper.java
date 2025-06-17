@@ -14,7 +14,10 @@ public interface LogstashProcessMapper {
     int update(LogstashProcess logstashProcess);
 
     int updateMetadataOnly(
-            @Param("id") Long id, @Param("name") String name, @Param("moduleId") Long moduleId);
+            @Param("id") Long id,
+            @Param("name") String name,
+            @Param("moduleId") Long moduleId,
+            @Param("updateUser") String updateUser);
 
     int updateConfigOnly(
             @Param("id") Long id,

@@ -64,6 +64,7 @@ public enum ErrorCode {
     MODULE_NOT_FOUND("7012", "未找到指定的模块"),
     LOGSTASH_MODULE_EXISTS("7013", "Logstash模块名称已存在"),
     LOGSTASH_MACHINE_ALREADY_ASSOCIATED("7014", "LogstashMachine实例已关联"),
+    LOGSTASH_MACHINE_NOT_FOUND("7017", "LogstashMachine实例不存在"),
     LOGSTASH_CANNOT_SCALE_TO_ZERO("7015", "不能将进程缩容到零个实例"),
     LOGSTASH_MACHINE_RUNNING_CANNOT_REMOVE("7016", "运行中的LogstashMachine实例不能被移除"),
 

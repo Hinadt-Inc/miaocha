@@ -9,6 +9,7 @@ import com.hinadt.miaocha.application.logstash.task.TaskService;
 import com.hinadt.miaocha.application.service.LogstashProcessService;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
+import com.hinadt.miaocha.common.util.UserContextUtil;
 import com.hinadt.miaocha.domain.converter.LogstashMachineConverter;
 import com.hinadt.miaocha.domain.converter.LogstashProcessConverter;
 import com.hinadt.miaocha.domain.dto.logstash.*;
@@ -218,8 +219,12 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         validateProcessExists(id);
         validateModuleExists(dto.getModuleId());
 
+        // 通过上下文获取当前用户
+        String currentUser = UserContextUtil.getCurrentUserEmail();
+
         int updateResult =
-                logstashProcessMapper.updateMetadataOnly(id, dto.getName(), dto.getModuleId());
+                logstashProcessMapper.updateMetadataOnly(
+                        id, dto.getName(), dto.getModuleId(), currentUser);
         if (updateResult == 0) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "更新进程信息失败");
         }
@@ -722,6 +727,86 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                     logstashMachineMapper.deleteById(instance.getId());
                     log.info("已删除LogstashMachine实例[{}]", instance.getId());
                 });
+    }
+
+    // ==================== 单个LogstashMachine实例操作方法实现 ====================
+
+    @Override
+    @Transactional
+    public void startLogstashInstance(Long instanceId) {
+        LogstashMachine instance = validateInstanceExists(instanceId);
+        LogstashProcess process = validateProcessExists(instance.getLogstashProcessId());
+        validateProcessConfig(process);
+
+        List<LogstashMachine> instances = List.of(instance);
+        validateInstancesNotEmpty(instances, "实例不存在或状态不允许启动");
+
+        logstashDeployService.startInstances(instances, process);
+        log.info("成功启动LogstashMachine实例[{}]", instanceId);
+    }
+
+    @Override
+    @Transactional
+    public void stopLogstashInstance(Long instanceId) {
+        LogstashMachine instance = validateInstanceExists(instanceId);
+
+        List<LogstashMachine> instances = List.of(instance);
+        validateInstancesNotEmpty(instances, "实例不存在或状态不允许停止");
+
+        logstashDeployService.stopInstances(instances);
+        log.info("成功停止LogstashMachine实例[{}]", instanceId);
+    }
+
+    @Override
+    @Transactional
+    public void forceStopLogstashInstance(Long instanceId) {
+        LogstashMachine instance = validateInstanceExists(instanceId);
+
+        List<LogstashMachine> instances = List.of(instance);
+        logstashDeployService.forceStopInstances(instances);
+        log.info("成功强制停止LogstashMachine实例[{}]", instanceId);
+    }
+
+    @Override
+    @Transactional
+    public void reinitializeLogstashInstance(Long instanceId) {
+        LogstashMachine instance = validateInstanceExists(instanceId);
+        LogstashProcess process = validateProcessExists(instance.getLogstashProcessId());
+
+        // 验证实例状态是否允许重新初始化
+        LogstashMachineState currentState = LogstashMachineState.valueOf(instance.getState());
+        if (currentState != LogstashMachineState.INITIALIZE_FAILED
+                && currentState != LogstashMachineState.NOT_STARTED) {
+            throw new BusinessException(
+                    ErrorCode.VALIDATION_ERROR,
+                    String.format(
+                            "实例[%s]当前状态[%s]不允许重新初始化，只有初始化失败或未启动状态的实例才能重新初始化",
+                            instanceId, currentState.getDescription()));
+        }
+
+        List<LogstashMachine> instances = List.of(instance);
+        logstashDeployService.initializeInstances(instances, process);
+        log.info("成功重新初始化LogstashMachine实例[{}]", instanceId);
+    }
+
+    /**
+     * 验证LogstashMachine实例是否存在
+     *
+     * @param instanceId LogstashMachine实例ID
+     * @return LogstashMachine实例
+     */
+    private LogstashMachine validateInstanceExists(Long instanceId) {
+        if (instanceId == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "LogstashMachine实例ID不能为空");
+        }
+
+        LogstashMachine instance = logstashMachineMapper.selectById(instanceId);
+        if (instance == null) {
+            throw new BusinessException(
+                    ErrorCode.LOGSTASH_MACHINE_NOT_FOUND, "LogstashMachine实例不存在: ID=" + instanceId);
+        }
+
+        return instance;
     }
 
     /** 进程配置更新记录 */

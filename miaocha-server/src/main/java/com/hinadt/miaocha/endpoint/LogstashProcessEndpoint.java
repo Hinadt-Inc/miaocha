@@ -55,7 +55,9 @@ public class LogstashProcessEndpoint {
      * @return Logstash进程详情
      */
     @GetMapping("/{id}")
-    @Operation(summary = "获取Logstash进程详情", description = "根据ID获取Logstash进程的详细信息，包括各个机器上的状态")
+    @Operation(
+            summary = "获取Logstash进程详情",
+            description = "根据ID获取Logstash进程的详细信息，包括各个LogstashMachine实例的状态")
     public ApiResponse<LogstashProcessResponseDTO> getLogstashProcess(
             @Parameter(description = "Logstash进程数据库ID", required = true) @PathVariable("id")
                     Long id) {
@@ -83,7 +85,8 @@ public class LogstashProcessEndpoint {
     @PutMapping("/{id}/config")
     @Operation(
             summary = "更新Logstash配置",
-            description = "更新Logstash进程的配置信息。可以同时更新任意组合的：主配置文件、JVM配置、Logstash系统配置。可以针对全部机器或指定机器。")
+            description =
+                    "更新Logstash进程的配置信息。可以同时更新任意组合的：主配置文件、JVM配置、Logstash系统配置。可以针对全部LogstashMachine实例或指定LogstashMachine实例。")
     public ApiResponse<LogstashProcessResponseDTO> updateLogstashConfig(
             @Parameter(description = "Logstash进程数据库ID", required = true) @PathVariable("id")
                     Long id,
@@ -102,13 +105,14 @@ public class LogstashProcessEndpoint {
     @PostMapping("/{id}/config/refresh")
     @Operation(
             summary = "刷新Logstash配置",
-            description = "手动将数据库中的配置刷新到目标机器（不更改配置内容）。可以指定要刷新的机器ID，若不指定则刷新所有机器。")
+            description =
+                    "手动将数据库中的配置刷新到目标机器（不更改配置内容）。可以指定要刷新的LogstashMachine实例ID，若不指定则刷新所有LogstashMachine实例。")
     public ApiResponse<LogstashProcessResponseDTO> refreshLogstashConfig(
             @Parameter(description = "Logstash进程数据库ID", required = true) @PathVariable("id")
                     Long id,
             @Parameter(description = "配置刷新请求", required = false) @RequestBody(required = false)
                     LogstashProcessConfigUpdateRequestDTO dto) {
-        // 如果dto为null，创建一个空的dto，表示刷新所有机器
+        // 如果dto为null，创建一个空的dto，表示刷新所有LogstashMachine实例
         if (dto == null) {
             dto = new LogstashProcessConfigUpdateRequestDTO();
         }
@@ -122,7 +126,7 @@ public class LogstashProcessEndpoint {
      * @return 操作结果
      */
     @DeleteMapping("/{id}")
-    @Operation(summary = "删除Logstash进程", description = "根据ID删除Logstash进程及其相关联的所有LogstashMachine")
+    @Operation(summary = "删除Logstash进程", description = "根据ID删除Logstash进程及其相关联的所有LogstashMachine实例")
     public ApiResponse<Void> deleteLogstashProcess(
             @Parameter(description = "Logstash进程数据库ID", required = true) @PathVariable("id")
                     Long id) {
@@ -137,7 +141,7 @@ public class LogstashProcessEndpoint {
      * @return 启动后的Logstash进程
      */
     @PostMapping("/{id}/start")
-    @Operation(summary = "全局启动Logstash进程", description = "启动指定Logstash进程在所有关联机器上的实例")
+    @Operation(summary = "全局启动Logstash进程", description = "启动指定Logstash进程下所有关联的LogstashMachine实例")
     public ApiResponse<LogstashProcessResponseDTO> startLogstashProcess(
             @Parameter(description = "Logstash进程数据库ID", required = true) @PathVariable("id")
                     Long id) {
@@ -151,7 +155,7 @@ public class LogstashProcessEndpoint {
      * @return 停止后的Logstash进程
      */
     @PostMapping("/{id}/stop")
-    @Operation(summary = "全局停止Logstash进程", description = "停止指定Logstash进程在所有关联机器上的实例")
+    @Operation(summary = "全局停止Logstash进程", description = "停止指定Logstash进程下所有关联的LogstashMachine实例")
     public ApiResponse<LogstashProcessResponseDTO> stopLogstashProcess(
             @Parameter(description = "Logstash进程数据库ID", required = true) @PathVariable("id")
                     Long id) {
@@ -165,7 +169,9 @@ public class LogstashProcessEndpoint {
      * @return 强制停止后的Logstash进程
      */
     @PostMapping("/{id}/force-stop")
-    @Operation(summary = "全局强制停止Logstash进程", description = "强制停止指定Logstash进程关联的所有实例，用于应急情况")
+    @Operation(
+            summary = "全局强制停止Logstash进程",
+            description = "强制停止指定Logstash进程关联的所有LogstashMachine实例，用于应急情况")
     public ApiResponse<LogstashProcessResponseDTO> forceStopLogstashProcess(
             @Parameter(description = "Logstash进程数据库ID", required = true) @PathVariable("id")
                     Long id) {
@@ -266,12 +272,78 @@ public class LogstashProcessEndpoint {
     @PostMapping("/{id}/scale")
     @Operation(
             summary = "Logstash进程扩容/缩容",
-            description = "对Logstash进程进行扩容或缩容操作。扩容：添加新机器并初始化；缩容：移除指定机器并清理资源。")
+            description = "对Logstash进程进行扩容或缩容操作。扩容：添加新机器并初始化；缩容：移除指定LogstashMachine实例并清理资源。")
     public ApiResponse<LogstashProcessResponseDTO> scaleLogstashProcess(
             @Parameter(description = "Logstash进程数据库ID", required = true) @PathVariable("id")
                     Long id,
             @Parameter(description = "扩容/缩容请求", required = true) @Valid @RequestBody
                     LogstashProcessScaleRequestDTO dto) {
         return ApiResponse.success(logstashProcessService.scaleLogstashProcess(id, dto));
+    }
+
+    // ==================== 单个LogstashMachine实例操作接口 ====================
+
+    /**
+     * 启动单个LogstashMachine实例
+     *
+     * @param instanceId LogstashMachine实例ID
+     * @return 操作结果
+     */
+    @PostMapping("/instances/{instanceId}/start")
+    @Operation(summary = "启动单个LogstashMachine实例", description = "启动指定的LogstashMachine实例")
+    public ApiResponse<Void> startLogstashInstance(
+            @Parameter(description = "LogstashMachine实例ID", required = true)
+                    @PathVariable("instanceId")
+                    Long instanceId) {
+        logstashProcessService.startLogstashInstance(instanceId);
+        return ApiResponse.success();
+    }
+
+    /**
+     * 停止单个LogstashMachine实例
+     *
+     * @param instanceId LogstashMachine实例ID
+     * @return 操作结果
+     */
+    @PostMapping("/instances/{instanceId}/stop")
+    @Operation(summary = "停止单个LogstashMachine实例", description = "停止指定的LogstashMachine实例")
+    public ApiResponse<Void> stopLogstashInstance(
+            @Parameter(description = "LogstashMachine实例ID", required = true)
+                    @PathVariable("instanceId")
+                    Long instanceId) {
+        logstashProcessService.stopLogstashInstance(instanceId);
+        return ApiResponse.success();
+    }
+
+    /**
+     * 强制停止单个LogstashMachine实例
+     *
+     * @param instanceId LogstashMachine实例ID
+     * @return 操作结果
+     */
+    @PostMapping("/instances/{instanceId}/force-stop")
+    @Operation(summary = "强制停止单个LogstashMachine实例", description = "强制停止指定的LogstashMachine实例，用于应急情况")
+    public ApiResponse<Void> forceStopLogstashInstance(
+            @Parameter(description = "LogstashMachine实例ID", required = true)
+                    @PathVariable("instanceId")
+                    Long instanceId) {
+        logstashProcessService.forceStopLogstashInstance(instanceId);
+        return ApiResponse.success();
+    }
+
+    /**
+     * 重新初始化单个LogstashMachine实例
+     *
+     * @param instanceId LogstashMachine实例ID
+     * @return 操作结果
+     */
+    @PostMapping("/instances/{instanceId}/reinitialize")
+    @Operation(summary = "重新初始化LogstashMachine实例", description = "重新初始化指定的LogstashMachine实例环境")
+    public ApiResponse<Void> reinitializeLogstashInstance(
+            @Parameter(description = "LogstashMachine实例ID", required = true)
+                    @PathVariable("instanceId")
+                    Long instanceId) {
+        logstashProcessService.reinitializeLogstashInstance(instanceId);
+        return ApiResponse.success();
     }
 }

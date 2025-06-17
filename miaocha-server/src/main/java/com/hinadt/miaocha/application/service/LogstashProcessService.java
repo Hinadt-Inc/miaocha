@@ -101,4 +101,34 @@ public interface LogstashProcessService {
      * @return 伸缩后的Logstash进程信息
      */
     LogstashProcessResponseDTO scaleLogstashProcess(Long id, LogstashProcessScaleRequestDTO dto);
+
+    // ==================== 单个LogstashMachine实例操作方法 ====================
+
+    /**
+     * 启动单个LogstashMachine实例
+     *
+     * @param instanceId LogstashMachine实例ID
+     */
+    void startLogstashInstance(Long instanceId);
+
+    /**
+     * 停止单个LogstashMachine实例
+     *
+     * @param instanceId LogstashMachine实例ID
+     */
+    void stopLogstashInstance(Long instanceId);
+
+    /**
+     * 强制停止单个LogstashMachine实例 应急停止功能：执行原有的停止逻辑，但无论命令成功与否，都强制将状态更改为未启动
+     *
+     * @param instanceId LogstashMachine实例ID
+     */
+    void forceStopLogstashInstance(Long instanceId);
+
+    /**
+     * 重新初始化单个LogstashMachine实例 用于初始化失败或需要重新部署的实例
+     *
+     * @param instanceId LogstashMachine实例ID
+     */
+    void reinitializeLogstashInstance(Long instanceId);
 }

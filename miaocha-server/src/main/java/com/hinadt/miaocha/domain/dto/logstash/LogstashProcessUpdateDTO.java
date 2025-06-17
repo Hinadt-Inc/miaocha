@@ -16,7 +16,4 @@ public class LogstashProcessUpdateDTO {
 
     @Schema(description = "关联的模块ID", example = "1")
     @NotNull(message = "模块ID不能为空") private Long moduleId;
-
-    @Schema(description = "修改人", example = "admin")
-    private String updateUser;
 }
