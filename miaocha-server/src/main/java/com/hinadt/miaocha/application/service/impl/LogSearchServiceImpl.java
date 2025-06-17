@@ -37,6 +37,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class LogSearchServiceImpl implements LogSearchService {
     private static final Logger logger = LoggerFactory.getLogger(LogSearchServiceImpl.class);
 
+    /** 分页查询的最大页面大小限制 */
+    private static final int MAX_PAGE_SIZE = 5000;
+
     @Autowired private DatasourceMapper datasourceMapper;
 
     @Autowired private UserMapper userMapper;
@@ -61,6 +64,9 @@ public class LogSearchServiceImpl implements LogSearchService {
     @Override
     @Transactional
     public LogDetailResultDTO searchDetails(Long userId, LogSearchDTO dto) {
+        // 验证分页参数
+        validatePaginationParams(dto);
+
         // 获取数据源和用户信息
         DatasourceInfo datasourceInfo = validateAndGetDatasource(dto.getDatasourceId());
         validateUser(userId);
@@ -441,6 +447,24 @@ public class LogSearchServiceImpl implements LogSearchService {
         User user = userMapper.selectById(userId);
         if (user == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+    }
+
+    /**
+     * 验证分页参数，防止过大的分页查询导致系统性能问题
+     *
+     * @param dto 日志检索请求参数
+     */
+    private void validatePaginationParams(LogSearchDTO dto) {
+        if (dto.getPageSize() != null && dto.getPageSize() > MAX_PAGE_SIZE) {
+            logger.warn("分页大小超出限制，请求大小: {}, 最大限制: {}", dto.getPageSize(), MAX_PAGE_SIZE);
+            throw new BusinessException(
+                    ErrorCode.VALIDATION_ERROR,
+                    String.format("分页大小不能超过 %d 条，当前请求: %d 条", MAX_PAGE_SIZE, dto.getPageSize()));
+        }
+
+        if (dto.getOffset() != null && dto.getOffset() < 0) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "分页偏移量不能小于0");
         }
     }
 

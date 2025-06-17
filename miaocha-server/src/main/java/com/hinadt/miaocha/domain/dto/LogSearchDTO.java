@@ -1,6 +1,8 @@
 package com.hinadt.miaocha.domain.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
@@ -66,9 +68,12 @@ public class LogSearchDTO {
     private Integer targetBuckets;
 
     @Schema(description = "分页大小", example = "50")
+    @Max(value = 5000, message = "分页大小不能超过 5000 条")
+    @Min(value = 1, message = "分页大小不能小于1")
     private Integer pageSize = 50;
 
     @Schema(description = "分页偏移量", example = "0")
+    @Min(value = 0, message = "分页偏移量不能小于0")
     private Integer offset = 0;
 
     @Schema(description = "查询字段列表，为空则查询全部", example = "['log_time', 'level', 'message']")
