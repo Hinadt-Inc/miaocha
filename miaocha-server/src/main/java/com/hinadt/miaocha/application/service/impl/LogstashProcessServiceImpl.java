@@ -738,9 +738,18 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         LogstashProcess process = validateProcessExists(instance.getLogstashProcessId());
         validateProcessConfig(process);
 
-        List<LogstashMachine> instances = List.of(instance);
-        validateInstancesNotEmpty(instances, "实例不存在或状态不允许启动");
+        // 检查实例状态是否允许启动
+        LogstashMachineState currentState = LogstashMachineState.valueOf(instance.getState());
+        if (currentState != LogstashMachineState.NOT_STARTED
+                && currentState != LogstashMachineState.START_FAILED) {
+            throw new BusinessException(
+                    ErrorCode.VALIDATION_ERROR,
+                    String.format(
+                            "实例[%s]当前状态[%s]不允许启动，只有未启动或启动失败状态的实例才能启动",
+                            instanceId, currentState.getDescription()));
+        }
 
+        List<LogstashMachine> instances = List.of(instance);
         logstashDeployService.startInstances(instances, process);
         log.info("成功启动LogstashMachine实例[{}]", instanceId);
     }
@@ -750,9 +759,19 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
     public void stopLogstashInstance(Long instanceId) {
         LogstashMachine instance = validateInstanceExists(instanceId);
 
-        List<LogstashMachine> instances = List.of(instance);
-        validateInstancesNotEmpty(instances, "实例不存在或状态不允许停止");
+        // 检查实例状态是否允许停止
+        LogstashMachineState currentState = LogstashMachineState.valueOf(instance.getState());
+        if (currentState != LogstashMachineState.RUNNING
+                && currentState != LogstashMachineState.STARTING
+                && currentState != LogstashMachineState.STOP_FAILED) {
+            throw new BusinessException(
+                    ErrorCode.VALIDATION_ERROR,
+                    String.format(
+                            "实例[%s]当前状态[%s]不允许停止，只有运行中、启动中或停止失败状态的实例才能停止",
+                            instanceId, currentState.getDescription()));
+        }
 
+        List<LogstashMachine> instances = List.of(instance);
         logstashDeployService.stopInstances(instances);
         log.info("成功停止LogstashMachine实例[{}]", instanceId);
     }
@@ -762,6 +781,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
     public void forceStopLogstashInstance(Long instanceId) {
         LogstashMachine instance = validateInstanceExists(instanceId);
 
+        // 强制停止不需要状态检查，任何状态都可以强制停止
         List<LogstashMachine> instances = List.of(instance);
         logstashDeployService.forceStopInstances(instances);
         log.info("成功强制停止LogstashMachine实例[{}]", instanceId);
@@ -773,7 +793,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         LogstashMachine instance = validateInstanceExists(instanceId);
         LogstashProcess process = validateProcessExists(instance.getLogstashProcessId());
 
-        // 验证实例状态是否允许重新初始化
+        // 检查实例状态是否允许重新初始化
         LogstashMachineState currentState = LogstashMachineState.valueOf(instance.getState());
         if (currentState != LogstashMachineState.INITIALIZE_FAILED
                 && currentState != LogstashMachineState.NOT_STARTED) {
