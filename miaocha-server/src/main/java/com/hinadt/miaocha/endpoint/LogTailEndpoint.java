@@ -47,13 +47,19 @@ public class LogTailEndpoint {
      * 获取日志跟踪SSE流
      *
      * @param logstashMachineId Logstash实例ID
+     * @param token JWT令牌（可选，用于支持EventSource API）
      * @return SSE数据流
      */
     @GetMapping(value = "/stream/{logstashMachineId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    @Operation(summary = "获取日志流", description = "获取指定Logstash实例的实时日志SSE流")
+    @Operation(
+            summary = "获取日志流",
+            description = "获取指定Logstash实例的实时日志SSE流。支持通过Authorization头或token查询参数传递JWT令牌")
     public SseEmitter getLogStream(
             @Parameter(description = "Logstash实例ID", required = true) @PathVariable
-                    Long logstashMachineId) {
+                    Long logstashMachineId,
+            @Parameter(description = "JWT令牌（用于支持EventSource API）", required = false)
+                    @RequestParam(required = false)
+                    String token) {
         log.info("获取日志流: logstashMachineId={}", logstashMachineId);
         return logTailService.getLogStream(logstashMachineId);
     }
