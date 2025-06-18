@@ -112,13 +112,15 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
 
   // 组件卸载时确保关闭连接
   useEffect(() => {
-    return () => {
-      if ((window as any).currentEventSource) {
-        // (window as any).currentEventSource.close();
-        (window as any).currentEventSource = null;
+    if (!visible) {
+      // 如果弹窗不可见且正在跟踪，自动停止跟踪
+      if (isTailing) {
+        stopTail().catch((error) => {
+          console.error('组件卸载时自动停止跟踪失败:', error);
+        });
       }
-    };
-  }, []);
+    }
+  }, [visible]);
 
   // 监视visible属性，当弹窗关闭时自动停止跟踪
   useEffect(() => {
@@ -138,6 +140,8 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
         open={visible}
         width={800}
         onCancel={handleModalCancel}
+        // 点击遮罩层不会关闭弹窗
+        maskClosable={false}
         footer={[
           <Button key="stop" danger onClick={stopTail}>
             停止跟踪
