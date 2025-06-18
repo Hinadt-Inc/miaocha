@@ -656,6 +656,8 @@ const UserManagementPage = () => {
             messageApi.error('加载用户数据失败');
           });
         }}
+        nickname={selectedUserForDrawer?.nickname || ''}
+        email={selectedUserForDrawer?.email || ''}
       />
     </div>
   );

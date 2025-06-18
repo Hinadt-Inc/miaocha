@@ -29,10 +29,8 @@ import {
   stopLogstashProcess,
   updateLogstashConfig,
   getLogstashTaskSummaries,
-  getMachineTasks,
   reinitializeFailedMachines,
   reinitializeMachine,
-  getLogstashMachineDetail,
   scaleProcess,
   forceStopLogstashMachine,
   updateLogstashProcessMetadata,
@@ -50,6 +48,7 @@ import LogstashMachineConfigModal from './components/LogstashMachineConfigModal'
 import LogstashMachineDetailModal from './components/LogstashMachineDetailModal';
 import LogstashScaleModal from './components/LogstashScaleModal';
 import LogstashLogTailModal from './components/LogstashLogTailModal';
+import { safeCopy } from '@/utils/clipboard';
 
 function LogstashManagementPage() {
   const checkSubTableStatus = (record: LogstashProcess, action: 'start' | 'stop') => {
@@ -315,12 +314,11 @@ function LogstashManagementPage() {
   };
 
   const handleCopy = async (text: string, label: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
+    const success = await safeCopy(text);
+    if (success) {
       messageApi.success(`${label}已复制到剪贴板`);
-    } catch (err) {
-      messageApi.error(`${label}复制失败`);
-      console.error('复制失败:', err);
+    } else {
+      messageApi.error(`复制${label}失败`);
     }
   };
 

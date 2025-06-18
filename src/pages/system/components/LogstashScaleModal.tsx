@@ -38,14 +38,17 @@ export default function LogstashScaleModal({
   const [loading, setLoading] = useState(false);
   const [operationType, setOperationType] = useState<'scale-out' | 'scale-in' | null>(null);
 
-  // 获取当前进程已使用的机器ID
-  const currentMachineIds = currentProcess?.logstashMachineStatusInfo?.map((m) => m.machineId) || [];
-
-  // 可添加的机器（排除当前已使用的机器）
-  const availableMachines = machines.filter((machine) => !currentMachineIds.includes(machine.id));
+  // 可添加的机器（允许选择所有机器）
+  const availableMachines = machines;
 
   // 可移除的机器（当前进程使用的机器）
-  const removableMachines = machines.filter((machine) => currentMachineIds.includes(machine.id));
+  const removableMachines =
+    currentProcess?.logstashMachineStatusInfo?.map((m) => ({
+      id: m.machineId,
+      name: m.machineName,
+      ip: m.machineIp,
+      logstashMachineId: m.logstashMachineId,
+    })) || [];
 
   useEffect(() => {
     const fetchMachines = async () => {
@@ -139,7 +142,7 @@ export default function LogstashScaleModal({
           <Text>{currentProcess?.moduleName}</Text>
           <br />
           <Text strong>当前机器数量: </Text>
-          <Text>{currentMachineIds.length}</Text>
+          <Text>{removableMachines.length}</Text>
           <br />
           <Text strong>部署路径: </Text>
           <Text>{currentProcess?.customDeployPath || '默认路径'}</Text>
@@ -168,7 +171,7 @@ export default function LogstashScaleModal({
         {operationType === 'scale-out' && (
           <>
             <Title level={5}>扩容操作</Title>
-            <Form.Item name="addMachineIds" label="添加机器" help={`可添加 ${availableMachines.length} 台机器`}>
+            <Form.Item name="addMachineIds" label="添加机器" help={`共 ${machines.length} 台机器可选`}>
               <Select
                 mode="multiple"
                 placeholder="选择要添加的机器"
@@ -179,7 +182,7 @@ export default function LogstashScaleModal({
                   return label?.toLowerCase().includes(input.toLowerCase());
                 }}
               >
-                {availableMachines.map((machine) => (
+                {machines.map((machine) => (
                   <Option key={machine.id} value={machine.logstashMachineId}>
                     {machine.name} ({machine.ip})
                   </Option>
@@ -208,7 +211,7 @@ export default function LogstashScaleModal({
                 }}
               >
                 {removableMachines.map((machine) => (
-                  <Option key={machine.id} value={machine.id}>
+                  <Option key={machine.id} value={machine.logstashMachineId}>
                     {machine.name} ({machine.ip})
                   </Option>
                 ))}

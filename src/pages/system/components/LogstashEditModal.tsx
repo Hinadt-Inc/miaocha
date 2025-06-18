@@ -26,6 +26,7 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
   const [loading, setLoading] = useState(false);
   const [moduleData, setModuleData] = useState<Module[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
+  const [messageApi, contextHolder] = message.useMessage();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -96,8 +97,9 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
 
       const success = await safeCopy(textToCopy);
       if (!success) {
-        message.error('复制失败，请手动选择文本后复制');
+        messageApi.error('复制失败，请手动选择文本后复制');
       }
+      messageApi.success('内容已复制到剪贴板');
       return;
     }
     switch (type) {
@@ -115,6 +117,7 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
 
   return (
     <Spin spinning={loading}>
+      {contextHolder}
       <Modal
         title={initialValues ? '编辑Logstash进程' : '新增Logstash进程'}
         open={visible}
@@ -188,7 +191,7 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
             label={
               <Space>
                 <span>JVM参数</span>
-                <Tooltip title="应用JVM参数模板">
+                <Tooltip title={initialValues ? '复制' : '应用JVM参数模板'}>
                   <Button
                     size="small"
                     onClick={() => applyTemplate('jvm')}
@@ -212,7 +215,7 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
             label={
               <Space>
                 <span>Logstash配置</span>
-                <Tooltip title="应用基础配置模板">
+                <Tooltip title={initialValues ? '复制' : '应用基础配置模板'}>
                   <Button
                     size="small"
                     onClick={() => applyTemplate('base')}

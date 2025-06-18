@@ -3,7 +3,7 @@ import { getMachines, createMachine, deleteMachine, updateMachine, testMachineCo
 import type { Machine, CreateMachineParams } from '../../types/machineTypes';
 import { SimpleTable } from '../../components/common/SimpleTable';
 import type { TableColumnsType } from 'antd';
-import { Breadcrumb, Button, Form, Input, InputNumber, Modal, message } from 'antd';
+import { Breadcrumb, Button, Form, Input, InputNumber, Modal, message, Row, Col } from 'antd';
 import { PlusOutlined, HomeOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -201,24 +201,42 @@ const MachineManagementPage = () => {
           ]}
         >
           <Form form={form} layout="vertical" onFinish={handleCreate}>
-            <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入机器名称' }]}>
-              <Input placeholder="测试服务器" />
-            </Form.Item>
-            <Form.Item name="ip" label="IP地址" rules={[{ required: true, message: '请输入IP地址' }]}>
-              <Input placeholder="192.168.1.100" />
-            </Form.Item>
-            <Form.Item name="port" label="端口" rules={[{ required: true, message: '请输入端口号' }]}>
-              <InputNumber min={1} max={65535} style={{ width: '100%' }} />
-            </Form.Item>
-            <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入用户名' }]}>
-              <Input placeholder="root" />
-            </Form.Item>
-            <Form.Item name="password" label="密码">
-              <Input.Password placeholder="可选" />
-            </Form.Item>
-            <Form.Item name="sshKey" label="SSH密钥">
-              <Input.TextArea placeholder="可选" rows={4} />
-            </Form.Item>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入机器名称' }]}>
+                  <Input placeholder="测试服务器" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="ip" label="IP地址" rules={[{ required: true, message: '请输入IP地址' }]}>
+                  <Input placeholder="192.168.1.100" />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item name="port" label="端口" rules={[{ required: true, message: '请输入端口号' }]}>
+                  <InputNumber min={1} max={65535} style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入用户名' }]}>
+                  <Input placeholder="root" />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item name="password" label="密码">
+                  <Input.Password placeholder="可选" />
+                </Form.Item>
+              </Col>
+              <Col span={24}>
+                <Form.Item name="sshKey" label="SSH密钥">
+                  <Input.TextArea placeholder="可选" rows={4} />
+                </Form.Item>
+              </Col>
+            </Row>
           </Form>
         </Modal>
 
@@ -239,24 +257,42 @@ const MachineManagementPage = () => {
           ]}
         >
           <Form form={form} layout="vertical" onFinish={handleEdit}>
-            <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入机器名称' }]}>
-              <Input placeholder="测试服务器" />
-            </Form.Item>
-            <Form.Item name="ip" label="IP地址" rules={[{ required: true, message: '请输入IP地址' }]}>
-              <Input placeholder="192.168.1.100" />
-            </Form.Item>
-            <Form.Item name="port" label="端口" rules={[{ required: true, message: '请输入端口号' }]}>
-              <InputNumber min={1} max={65535} style={{ width: '100%' }} />
-            </Form.Item>
-            <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入用户名' }]}>
-              <Input placeholder="root" />
-            </Form.Item>
-            <Form.Item name="password" label="密码">
-              <Input.Password placeholder="可选" />
-            </Form.Item>
-            <Form.Item name="sshKey" label="SSH密钥">
-              <Input.TextArea placeholder="可选" rows={4} />
-            </Form.Item>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入机器名称' }]}>
+                  <Input placeholder="测试服务器" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="ip" label="IP地址" rules={[{ required: true, message: '请输入IP地址' }]}>
+                  <Input placeholder="192.168.1.100" />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item name="port" label="端口" rules={[{ required: true, message: '请输入端口号' }]}>
+                  <InputNumber min={1} max={65535} style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入用户名' }]}>
+                  <Input placeholder="root" />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item name="password" label="密码">
+                  <Input.Password placeholder="可选" />
+                </Form.Item>
+              </Col>
+              <Col span={24}>
+                <Form.Item name="sshKey" label="SSH密钥">
+                  <Input.TextArea placeholder="可选" rows={4} />
+                </Form.Item>
+              </Col>
+            </Row>
           </Form>
         </Modal>
 

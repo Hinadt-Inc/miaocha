@@ -8,9 +8,9 @@ export function getLogstashProcesses(): Promise<LogstashProcess[]> {
   });
 }
 
-export function getLogstashProcess(id: number): Promise<LogstashProcess> {
+export function getLogstashProcess(instanceId: number): Promise<LogstashProcess> {
   return request({
-    url: `/api/logstash/processes/${id}`,
+    url: `/api/logstash/processes/instances/${instanceId}`,
     method: 'GET',
   });
 }

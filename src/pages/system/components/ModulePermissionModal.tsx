@@ -1,4 +1,5 @@
-import { Modal, Table, Space, Button, Input, Tag, message } from 'antd';
+import { Modal, Table, Space, Button, Input, Tag, message, Descriptions } from 'antd';
+import styles from './ModulePermissionModal.module.less';
 import { batchRevokeModules, authorizeModule, revokeModule } from '../../../api/modules';
 import { SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -10,6 +11,8 @@ interface ModulePermissionModalProps {
   open: boolean;
   onClose: () => void;
   userId: string;
+  nickname: string;
+  email: string;
   modules: ModulePermission[];
   userModulePermissions: Array<{ moduleName: string }>;
   allModules: Array<{ value: string; label: string }>;
@@ -21,6 +24,8 @@ const ModulePermissionModal = ({
   open,
   onClose,
   userId,
+  nickname,
+  email,
   modules,
   userModulePermissions,
   allModules,
@@ -147,6 +152,7 @@ const ModulePermissionModal = ({
         open={open}
         onCancel={onClose}
         width={800}
+        style={{ top: 20 }}
         footer={[
           <Space key="footer-buttons">
             <Button onClick={() => handleBatchOperation(false)} disabled={selectedModules.length === 0}>
@@ -159,15 +165,21 @@ const ModulePermissionModal = ({
           </Space>,
         ]}
       >
-        <div style={{ marginBottom: 16 }}>
-          <Input
-            placeholder="搜索模块名称"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            style={{ width: 200 }}
-            allowClear
-            suffix={<SearchOutlined />}
-          />
+        <div className={styles.header}>
+          <Descriptions size="small" column={2}>
+            <Descriptions.Item label="用户">{nickname}</Descriptions.Item>
+            <Descriptions.Item label="邮箱">{email}</Descriptions.Item>
+          </Descriptions>
+          <div>
+            <Input
+              placeholder="搜索模块名称"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              style={{ width: 200 }}
+              allowClear
+              suffix={<SearchOutlined />}
+            />
+          </div>
         </div>
         <Table
           rowKey="moduleId"
