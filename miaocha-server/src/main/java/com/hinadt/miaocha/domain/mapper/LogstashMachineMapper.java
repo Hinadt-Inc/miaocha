@@ -23,6 +23,14 @@ public interface LogstashMachineMapper {
 
     List<LogstashMachine> selectByMachineId(Long machineId);
 
+    /**
+     * 统计机器被Logstash实例使用的数量
+     *
+     * @param machineId 机器ID
+     * @return 使用数量
+     */
+    int countByMachineId(Long machineId);
+
     List<LogstashMachine> selectAll();
 
     List<LogstashMachine> selectAllWithProcessPid();

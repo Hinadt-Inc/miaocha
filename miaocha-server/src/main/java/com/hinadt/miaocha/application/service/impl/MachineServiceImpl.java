@@ -8,6 +8,7 @@ import com.hinadt.miaocha.domain.converter.MachineConverter;
 import com.hinadt.miaocha.domain.dto.MachineCreateDTO;
 import com.hinadt.miaocha.domain.dto.MachineDTO;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
+import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
 import com.hinadt.miaocha.domain.mapper.MachineMapper;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,6 +24,7 @@ public class MachineServiceImpl implements MachineService {
     private final MachineMapper machineMapper;
     private final SshClient sshClient;
     private final MachineConverter machineConverter;
+    private final LogstashMachineMapper logstashMachineMapper;
 
     @Override
     @Transactional
@@ -68,6 +70,11 @@ public class MachineServiceImpl implements MachineService {
         // 检查机器是否存在
         if (machineMapper.selectById(id) == null) {
             throw new BusinessException(ErrorCode.MACHINE_NOT_FOUND);
+        }
+
+        // 检查机器是否被Logstash实例引用
+        if (logstashMachineMapper.countByMachineId(id) > 0) {
+            throw new BusinessException(ErrorCode.MACHINE_IN_USE);
         }
 
         // 删除机器记录

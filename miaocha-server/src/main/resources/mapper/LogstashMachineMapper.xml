@@ -113,6 +113,11 @@
         FROM logstash_machine WHERE machine_id=#{machineId}
     </select>
 
+    <!-- 统计机器被Logstash实例使用的数量 -->
+    <select id="countByMachineId" resultType="int">
+        SELECT COUNT(1) FROM logstash_machine WHERE machine_id = #{machineId}
+    </select>
+
     <!-- 查询所有 Logstash 机器记录 -->
     <select id="selectAll" resultType="com.hinadt.miaocha.domain.entity.LogstashMachine">
         SELECT

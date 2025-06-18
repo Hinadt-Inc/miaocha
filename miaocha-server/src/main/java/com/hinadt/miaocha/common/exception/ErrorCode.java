@@ -40,6 +40,7 @@ public enum ErrorCode {
     MACHINE_NOT_FOUND("6001", "机器不存在"),
     MACHINE_NAME_EXISTS("6002", "机器名称已存在"),
     MACHINE_CONNECTION_FAILED("6003", "机器连接失败"),
+    MACHINE_IN_USE("6004", "机器正在被Logstash实例使用，无法删除"),
 
     // SSH相关错误码
     SSH_OPERATION_FAILED("6101", "SSH操作失败"),
