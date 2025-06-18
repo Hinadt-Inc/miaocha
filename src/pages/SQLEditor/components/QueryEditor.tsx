@@ -34,10 +34,16 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
 
   useEffect(() => {
     setIsCollapsed(collapsed);
-    // 初始化monaco编辑器
-    initMonacoEditor().catch((error: Error) => {
-      console.error('Monaco编辑器初始化失败:', error);
-    });
+    // 初始化monaco编辑器并处理初始化失败
+    initMonacoEditor()
+      .then((monacoInstance) => {
+        if (monacoInstance) {
+          console.log('Monaco编辑器初始化成功');
+        }
+      })
+      .catch((error: Error) => {
+        console.error('Monaco编辑器初始化失败:', error);
+      });
   }, [collapsed]);
 
   // 处理编辑器挂载

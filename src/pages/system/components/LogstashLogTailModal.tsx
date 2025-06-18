@@ -102,14 +102,7 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
 
   const stopTail = async () => {
     try {
-      // 关闭EventSource连接
-      if ((window as any).currentEventSource) {
-        (window as any).currentEventSource.close();
-        (window as any).currentEventSource = null;
-      }
-
       await stopLogTail(logstashMachineId);
-
       setIsTailing(false);
       messageApi.success('日志跟踪已停止');
     } catch (error) {

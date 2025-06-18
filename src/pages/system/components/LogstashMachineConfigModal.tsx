@@ -7,8 +7,8 @@ import { getLogstashMachineDetail, updateLogstashMachineConfig } from '../../../
 interface LogstashMachineConfigModalProps {
   visible: boolean;
   onCancel: () => void;
+  logstashMachineId: number;
   processId: number;
-  machineId: number;
   initialConfig?: {
     configContent?: string;
     jvmOptions?: string;
@@ -19,9 +19,9 @@ interface LogstashMachineConfigModalProps {
 export default function LogstashMachineConfigModal({
   visible,
   onCancel,
-  processId,
-  machineId,
   initialConfig,
+  logstashMachineId,
+  processId,
 }: LogstashMachineConfigModalProps) {
   const [form] = Form.useForm();
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -34,21 +34,9 @@ export default function LogstashMachineConfigModal({
 
   useEffect(() => {
     if (visible) {
-      const fetchDetail = async () => {
-        try {
-          const detail = await getLogstashMachineDetail(processId, machineId);
-          form.setFieldsValue({
-            configContent: detail.configContent,
-            jvmOptions: detail.jvmOptions,
-            logstashYml: detail.logstashYml,
-          });
-        } catch (error) {
-          messageApi.error('获取机器配置详情失败');
-        }
-      };
-      fetchDetail();
+      console.log('LogstashMachineConfigModal visible:', logstashMachineId);
     }
-  }, [visible, processId, machineId, form]);
+  }, [visible, form]);
 
   const handleOk = async () => {
     try {
@@ -79,7 +67,7 @@ export default function LogstashMachineConfigModal({
         messageApi.warning('请至少修改一项配置');
         return;
       }
-      await updateLogstashMachineConfig(processId, machineId, data);
+      await updateLogstashMachineConfig(processId, logstashMachineId, data);
       messageApi.success('机器配置更新成功');
       onCancel();
     } finally {
@@ -89,7 +77,7 @@ export default function LogstashMachineConfigModal({
 
   return (
     <Modal
-      title={<span>编辑机器配置 (机器ID: {machineId})</span>}
+      title={<span>编辑机器配置 (实例ID: {logstashMachineId})</span>}
       open={visible}
       onOk={handleOk}
       confirmLoading={confirmLoading}

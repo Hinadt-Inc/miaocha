@@ -129,19 +129,20 @@ export function getMachineTasks(processId: number, machineId: number): Promise<M
 
 export function updateLogstashMachineConfig(
   processId: number,
-  machineId: number,
+  logstashMachineId: number,
   data: {
+    logstashMachineIds?: number[];
     configContent?: string;
     jvmOptions?: string;
     logstashYml?: string;
   },
 ): Promise<void> {
   return request({
-    url: `/api/logstash/processes/${processId}/machines/${machineId}/config`,
+    url: `/api/logstash/processes/${processId}/config`,
     method: 'PUT',
     data: {
       ...data,
-      machineIds: [machineId],
+      logstashMachineIds: [logstashMachineId],
     },
   });
 }
