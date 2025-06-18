@@ -155,12 +155,16 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         // 解析并准备配置
         ProcessConfigUpdate configUpdate = prepareConfigUpdate(dto);
 
+        // 通过上下文获取当前用户
+        String currentUser = UserContextUtil.getCurrentUserEmail();
+
         // 更新数据库配置
         logstashProcessMapper.updateConfigOnly(
                 id,
                 configUpdate.configContent(),
                 configUpdate.jvmOptions(),
-                configUpdate.logstashYml());
+                configUpdate.logstashYml(),
+                currentUser);
 
         // 同步配置到实例
         configSyncService.updateConfigForAllInstances(

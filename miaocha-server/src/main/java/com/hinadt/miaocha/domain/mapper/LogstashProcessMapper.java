@@ -23,7 +23,8 @@ public interface LogstashProcessMapper {
             @Param("id") Long id,
             @Param("configContent") String configContent,
             @Param("jvmOptions") String jvmOptions,
-            @Param("logstashYml") String logstashYml);
+            @Param("logstashYml") String logstashYml,
+            @Param("updateUser") String updateUser);
 
     int deleteById(Long id);
 
