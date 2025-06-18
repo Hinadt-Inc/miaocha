@@ -131,7 +131,7 @@ function LogstashManagementPage() {
     setStepsModalVisible(true);
   };
 
-  const showMachineTasks = async (processId, logstashMachineId: number) => {
+  const showMachineTasks = async (processId: number, logstashMachineId: number) => {
     setCurrentMachine({ logstashMachineId, processId });
     setMachineTasksModalVisible(true);
     setMachineTasksLoading(true);
