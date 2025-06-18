@@ -3,6 +3,7 @@ package com.hinadt.miaocha.domain.dto.logstash;
 import com.hinadt.miaocha.domain.entity.enums.LogTailResponseStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,7 +22,8 @@ public class LogTailResponseDTO {
     private Long logstashMachineId;
 
     @Schema(description = "日志内容列表（批量发送）")
-    private List<String> logLines;
+    @Builder.Default
+    private List<String> logLines = new ArrayList<>();
 
     @Schema(description = "数据生成时间")
     private LocalDateTime timestamp;

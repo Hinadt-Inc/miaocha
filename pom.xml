@@ -12,7 +12,7 @@
     <url>http://www.example.com</url>
     <modules>
         <module>miaocha-server</module>
-        <!-- <module>miaocha-ui</module> -->
+        <module>miaocha-ui</module>
         <module>miaocha-assembly</module>
     </modules>
 
@@ -646,7 +646,7 @@
             </properties>
         </profile>
 
-        <!-- 生产环境 -->
+                <!-- 生产环境 -->
         <profile>
             <id>prod</id>
             <properties>

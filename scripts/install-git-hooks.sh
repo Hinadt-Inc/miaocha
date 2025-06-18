@@ -27,25 +27,25 @@ STAGED_JAVA_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\
 
 if [[ -n "$STAGED_JAVA_FILES" ]]; then
     echo "Formatting Java files..."
-    
+
     # Apply Spotless formatting
     mvn spotless:apply -q
-    
+
     # Re-stage the formatted files
     for file in $STAGED_JAVA_FILES; do
         if [[ -f "$file" ]]; then
             git add "$file"
         fi
     done
-    
+
     echo "Code formatting applied to staged Java files."
 else
     echo "No Java files to format."
 fi
 
 # Quick compilation check
-echo "Running quick compilation check..."
-mvn clean compile -q
+echo "Running quick compilation check... excluding miaocha-ui module"
+mvn clean compile -q -pl '!miaocha-ui'
 
 if [[ $? -ne 0 ]]; then
     echo "Error: Code compilation failed. Please fix the issues before committing."
@@ -65,4 +65,4 @@ echo "  1. Format Java code using Spotless"
 echo "  2. Re-stage formatted files"
 echo "  3. Run a quick compilation check"
 echo ""
-echo "To bypass the hook (not recommended), use: git commit --no-verify" 
+echo "To bypass the hook (not recommended), use: git commit --no-verify"

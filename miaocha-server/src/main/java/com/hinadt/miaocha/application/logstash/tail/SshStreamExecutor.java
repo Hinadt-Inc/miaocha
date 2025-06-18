@@ -120,12 +120,12 @@ public class SshStreamExecutor {
         // 创建命令通道
         ClientChannel channel = session.createChannel(Channel.CHANNEL_EXEC, command);
 
-        // 获取输入输出流
-        InputStream outputStream = channel.getInvertedOut();
-        InputStream errorStream = channel.getInvertedErr();
-
         // 打开通道
         channel.open().verify(sshConfig.getConnectTimeout(), TimeUnit.SECONDS);
+
+        // 获取输入输出流（必须在通道打开后获取）
+        InputStream outputStream = channel.getInvertedOut();
+        InputStream errorStream = channel.getInvertedErr();
 
         // 创建任务对象
         StreamCommandTask task = new StreamCommandTask(session, channel);
@@ -158,22 +158,28 @@ public class SshStreamExecutor {
             Consumer<String> consumer,
             StreamCommandTask task,
             String streamType) {
+        log.debug("开始处理{}流", streamType);
         try (BufferedReader reader =
                 new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
 
             String line;
+            int lineCount = 0;
             while (!task.isStopped()
                     && !Thread.currentThread().isInterrupted()
                     && (line = reader.readLine()) != null) {
+                lineCount++;
+                log.debug("{}流读取到第{}行: {}", streamType, lineCount, line);
                 consumer.accept(line);
             }
 
-            log.debug("{}流处理完成", streamType);
+            log.debug("{}流处理完成，共读取{}行", streamType, lineCount);
 
         } catch (IOException e) {
             if (!task.isStopped() && !Thread.currentThread().isInterrupted()) {
                 log.error("读取{}流时发生错误", streamType, e);
                 consumer.accept(String.format("[%s] 读取流时发生错误: %s", streamType, e.getMessage()));
+            } else {
+                log.debug("{}流处理被停止或中断", streamType);
             }
         }
     }

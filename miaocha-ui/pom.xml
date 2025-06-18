@@ -11,11 +11,13 @@
     <packaging>jar</packaging>
 
     <properties>
+        <frontend.maven.plugin.version>1.15.0</frontend.maven.plugin.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        <node.version>v18.16.0</node.version>
-        <npm.version>9.5.1</npm.version>
+        <node.version>v22.11.0</node.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <skipTests>true</skipTests>
+        <yarn.version>v1.22.22</yarn.version>
     </properties>
 
     <build>
@@ -24,39 +26,83 @@
             <plugin>
                 <groupId>com.github.eirslett</groupId>
                 <artifactId>frontend-maven-plugin</artifactId>
-                <version>1.14.0</version>
+                <version>${frontend.maven.plugin.version}</version>
                 <configuration>
-                    <workingDirectory>src/main/frontend</workingDirectory>
+                    <workingDirectory>frontend</workingDirectory>
                     <installDirectory>target</installDirectory>
                 </configuration>
                 <executions>
+                    <!-- 安装 Node.js 和 Yarn -->
                     <execution>
-                        <id>install-node-and-npm</id>
+                        <id>install-node-and-yarn</id>
                         <goals>
-                            <goal>install-node-and-npm</goal>
+                            <goal>install-node-and-yarn</goal>
                         </goals>
                         <configuration>
                             <nodeVersion>${node.version}</nodeVersion>
-                            <npmVersion>${npm.version}</npmVersion>
+                            <yarnVersion>${yarn.version}</yarnVersion>
                         </configuration>
                     </execution>
+
+                    <!-- 安装依赖 -->
                     <execution>
-                        <id>npm-install</id>
+                        <id>yarn-install</id>
                         <goals>
-                            <goal>npm</goal>
+                            <goal>yarn</goal>
                         </goals>
                         <configuration>
-                            <arguments>install</arguments>
+                            <arguments>install --frozen-lockfile</arguments>
                         </configuration>
                     </execution>
+
+                    <!-- 代码检查 -->
                     <execution>
-                        <id>npm-build</id>
+                        <id>yarn-lint</id>
                         <goals>
-                            <goal>npm</goal>
+                            <goal>yarn</goal>
+                        </goals>
+                        <phase>validate</phase>
+                        <configuration>
+                            <arguments>lint</arguments>
+                            <skip>${skipTests}</skip>
+                        </configuration>
+                    </execution>
+
+                    <!-- TypeScript 类型检查 -->
+                    <execution>
+                        <id>yarn-type-check</id>
+                        <goals>
+                            <goal>yarn</goal>
+                        </goals>
+                        <phase>validate</phase>
+                        <configuration>
+                            <arguments>tsc --noEmit</arguments>
+                            <skip>${skipTests}</skip>
+                        </configuration>
+                    </execution>
+
+                    <!-- 运行测试 -->
+                    <execution>
+                        <id>yarn-test</id>
+                        <goals>
+                            <goal>yarn</goal>
+                        </goals>
+                        <phase>test</phase>
+                        <configuration>
+                            <arguments>test --run</arguments>
+                            <skip>${skipTests}</skip>
+                        </configuration>
+                    </execution>
+
+                    <!-- 构建项目 -->
+                    <execution>
+                        <id>yarn-build</id>
+                        <goals>
+                            <goal>yarn</goal>
                         </goals>
                         <phase>compile</phase>
                         <configuration>
-                            <arguments>run build</arguments>
+                            <arguments>build</arguments>
                         </configuration>
                     </execution>
                 </executions>
@@ -91,7 +137,7 @@
                             <outputDirectory>${project.build.directory}/classes/static</outputDirectory>
                             <resources>
                                 <resource>
-                                    <directory>src/main/frontend/dist</directory>
+                                    <directory>frontend/dist</directory>
                                     <filtering>false</filtering>
                                 </resource>
                             </resources>
@@ -99,6 +145,46 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- 跳过单元测试 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
+
+    <!-- 开发环境配置 -->
+    <profiles>
+        <profile>
+            <id>dev</id>
+            <properties>
+                <skipTests>false</skipTests>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.github.eirslett</groupId>
+                        <artifactId>frontend-maven-plugin</artifactId>
+                        <executions>
+                            <!-- 开发环境启动 -->
+                            <execution>
+                                <id>yarn-dev</id>
+                                <goals>
+                                    <goal>yarn</goal>
+                                </goals>
+                                <phase>pre-integration-test</phase>
+                                <configuration>
+                                    <arguments>dev</arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
