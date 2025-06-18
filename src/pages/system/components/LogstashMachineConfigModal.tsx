@@ -1,4 +1,4 @@
-import { Form, Input, Modal, message, Switch, Space, Button, Tooltip } from 'antd';
+import { Form, Input, Modal, message, Switch, Button, Tooltip } from 'antd';
 import { LOGSTASH_CONFIG_TEMPLATE, JVM_CONFIG_TEMPLATE } from '../../../utils/logstashTemplates';
 import { CopyOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
