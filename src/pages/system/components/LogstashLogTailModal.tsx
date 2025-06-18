@@ -14,7 +14,6 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
   const [logs, setLogs] = useState<string[]>([]);
   const [isTailing, setIsTailing] = useState(false);
   const [status, setStatus] = useState<any>(null);
-  const [taskId, setTaskId] = useState<string>('');
   const logsEndRef = useRef<HTMLDivElement>(null);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [messageApi, contextHolder] = message.useMessage();
@@ -103,14 +102,7 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
 
   const stopTail = async () => {
     try {
-      // 关闭EventSource连接
-      if ((window as any).currentEventSource) {
-        (window as any).currentEventSource.close();
-        (window as any).currentEventSource = null;
-      }
-
       await stopLogTail(logstashMachineId);
-
       setIsTailing(false);
       messageApi.success('日志跟踪已停止');
     } catch (error) {
@@ -157,7 +149,6 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
       >
         <div style={{ marginBottom: 16 }}>
           <h4>跟踪状态: {isTailing ? '运行中' : '已停止'}</h4>
-          {taskId && <p>任务ID: {taskId}</p>}
           {status && <pre>{JSON.stringify(status, null, 2)}</pre>}
         </div>
         <div

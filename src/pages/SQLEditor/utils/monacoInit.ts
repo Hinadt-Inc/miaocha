@@ -6,6 +6,11 @@ declare global {
   interface Window {
     monaco: typeof import('monaco-editor');
   }
+
+  // 声明全局MonacoEnvironment接口
+  interface MonacoEnvironment {
+    getWorker(moduleId: string, label: string): Worker;
+  }
 }
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
@@ -55,9 +60,9 @@ const WORKER_CONFIG = {
 let retryCount = 0;
 const MAX_RETRIES = 3;
 
-const initMonacoEditor = async (): Promise<void> => {
+const initMonacoEditor = async (): Promise<typeof monaco | undefined> => {
   // 获取对应语言的worker
-  const getWorker = (label: string): Worker => {
+  const getWorker = (_moduleId: string, label: string): Worker => {
     const WorkerClass = WORKER_CONFIG[label as keyof typeof WORKER_CONFIG] || WORKER_CONFIG.default;
     return new WorkerClass();
   };
@@ -78,7 +83,7 @@ const initMonacoEditor = async (): Promise<void> => {
     },
     useCDN: false,
     disableWorker: false,
-    workerPath: '/monaco-workers',
+    // workerPath可能与getWorker函数冲突，这里移除
   };
   // 精确类型声明
   loader.config(config);
@@ -89,7 +94,7 @@ const initMonacoEditor = async (): Promise<void> => {
   );
 
   // 初始化编辑器并确保加载顺序
-  Promise.race([loader.init(), timeoutPromise])
+  return Promise.race([loader.init(), timeoutPromise])
     .then((monacoInstance) => {
       if (!monacoInstance) {
         throw new Error('Monaco实例未正确加载');
@@ -101,11 +106,13 @@ const initMonacoEditor = async (): Promise<void> => {
       if (window.monaco) {
         window.monaco.editor.defineTheme('sqlTheme', THEME_CONFIG);
       }
+
+      return window.monaco; // 返回monaco实例
     })
     .catch((error) => {
       console.error('Monaco editor 初始化失败:', error);
-      // 即使初始化失败，也确保 MonacoEnvironment 被全局设置
-      window.MonacoEnvironment = self.MonacoEnvironment;
+      // 即使初始化失败，也确保全局环境变量被设置
+      // 注意：MonacoEnvironment 不应该作为window的属性，而是作为全局变量
       // 添加重试机制
       if (retryCount < MAX_RETRIES) {
         console.log(`正在重试Monaco初始化(第${retryCount + 1}次)...`);

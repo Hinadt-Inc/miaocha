@@ -81,11 +81,11 @@ function LogstashManagementPage() {
   const [machineTasksModalVisible, setMachineTasksModalVisible] = useState(false);
   const [machineTasksLoading, setMachineTasksLoading] = useState(false);
   const [currentMachine, setCurrentMachine] = useState<{
-    processId: number;
-    machineId: number;
     configContent?: string;
     jvmOptions?: string;
     logstashYml?: string;
+    logstashMachineId?: number;
+    processId?: number;
   } | null>(null);
   const [machineConfigModalVisible, setMachineConfigModalVisible] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
@@ -131,13 +131,13 @@ function LogstashManagementPage() {
     setStepsModalVisible(true);
   };
 
-  const showMachineTasks = async (processId: number, machineId: number) => {
-    setCurrentMachine({ processId, machineId });
+  const showMachineTasks = async (processId: number, logstashMachineId: number) => {
+    setCurrentMachine({ logstashMachineId, processId });
     setMachineTasksModalVisible(true);
     setMachineTasksLoading(true);
 
     try {
-      const tasks = await getLogstashInstanceTasks(machineId.toString());
+      const tasks = await getLogstashInstanceTasks(logstashMachineId.toString());
       setMachineTasks(tasks);
     } catch (err) {
       messageApi.error('获取实例任务失败');
@@ -472,7 +472,7 @@ function LogstashManagementPage() {
               刷新配置
             </Button>
           </Popconfirm>
-          {/* {hasInitializeFailedMachines(record) && (
+          {hasInitializeFailedMachines(record) && (
             <Popconfirm
               title="确认重新初始化"
               description="确定要重新初始化所有初始化失败的机器吗？"
@@ -486,7 +486,7 @@ function LogstashManagementPage() {
                 重新初始化失败机器
               </Button>
             </Popconfirm>
-          )} */}
+          )}
           {allMachinesStopFailed(record) && (
             <Popconfirm
               title="确认强制停止"
@@ -642,7 +642,7 @@ function LogstashManagementPage() {
                             >
                               <Button
                                 type="link"
-                                disabled={['RUNNING', 'STARTING'].includes(machine.state)}
+                                disabled={['RUNNING', 'STARTING', 'STOPPING'].includes(machine.state)}
                                 style={{ padding: '0 4px' }}
                               >
                                 启动
@@ -679,8 +679,8 @@ function LogstashManagementPage() {
                               onClick={() => {
                                 const process = data.find((p) => p.id === record.id);
                                 setCurrentMachine({
+                                  logstashMachineId: machine.logstashMachineId,
                                   processId: record.id,
-                                  machineId: machine.machineId,
                                   configContent: process?.configContent,
                                   jvmOptions: process?.jvmOptions,
                                   logstashYml: process?.logstashYml,
@@ -862,7 +862,7 @@ function LogstashManagementPage() {
           />
         </Modal>
         <Modal
-          title={`实例任务 - ${currentMachine?.machineId || ''}`}
+          title={`实例任务 - ${currentMachine?.logstashMachineId || ''}`}
           open={machineTasksModalVisible}
           onCancel={() => setMachineTasksModalVisible(false)}
           footer={null}
@@ -1231,7 +1231,7 @@ function LogstashManagementPage() {
           visible={machineConfigModalVisible}
           onCancel={() => setMachineConfigModalVisible(false)}
           processId={currentMachine?.processId || 0}
-          machineId={currentMachine?.machineId || 0}
+          logstashMachineId={currentMachine?.logstashMachineId || 0}
           initialConfig={{
             configContent: currentMachine?.configContent,
             jvmOptions: currentMachine?.jvmOptions,
@@ -1288,4 +1288,5 @@ function LogstashManagementPage() {
 
 import withSystemAccess from '@/utils/withSystemAccess';
 import dayjs from 'dayjs';
+import { c } from 'vite/dist/node/moduleRunnerTransport.d-DJ_mE5sf';
 export default withSystemAccess(LogstashManagementPage);
