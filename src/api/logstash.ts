@@ -219,50 +219,18 @@ export async function scaleProcess(
   });
 }
 
-export async function startLogTail(logstashMachineId: number, tailLines: number = 100): Promise<EventSource> {
-  try {
-    // 首先发送POST请求启动日志跟踪
-    await request({
-      url: '/api/logstash/log-tail/start',
-      method: 'POST',
-      data: { logstashMachineId, tailLines },
-    });
-
-    // 然后创建 EventSource 来监听日志流
-    console.log('Creating EventSource for machine ID:', logstashMachineId);
-
-    // 构建 EventSource URL，包含认证信息
-    const token = localStorage.getItem('accessToken');
-    const url = new URL('/api/logstash/log-tail/stream', window.location.origin);
-    url.searchParams.append('logstashMachineId', logstashMachineId.toString());
-    url.searchParams.append('tailLines', tailLines.toString());
-    if (token) {
-      url.searchParams.append('token', token);
-    }
-
-    // 创建 EventSource 对象
-    const eventSource = new EventSource(url.toString(), {
+export async function startLogTail(logstashMachineId: number) {
+  const accessToken = localStorage.getItem('accessToken') || '';
+  const eventSource = new EventSource(
+    `/api/logstash/log-tail/stream/${logstashMachineId}?token=${encodeURIComponent(accessToken)}`,
+    {
       withCredentials: true,
-    });
-
-    // 添加通用的错误处理
-    eventSource.onerror = (err) => {
-      console.error('EventSource error in startLogTail:', err);
-    };
-
-    console.log('Created EventSource:', eventSource);
-    return eventSource;
-  } catch (error) {
-    console.error('Error starting log tail:', error);
-    throw error;
-  }
-}
-
-export function getLogTailStatus(): Promise<any> {
-  return request({
-    url: '/api/logstash/log-tail/status',
-    method: 'GET',
-  });
+    },
+  );
+  eventSource.close = () => {
+    stopLogTail(logstashMachineId);
+  };
+  return eventSource;
 }
 
 export function stopLogTail(logstashMachineId: number): Promise<void> {
@@ -277,5 +245,13 @@ export function getLogTailContent(lastLogId?: string): Promise<{ logs: string[];
     url: '/api/logstash/log-tail/content',
     method: 'GET',
     params: { lastLogId },
+  });
+}
+
+export function createLogTailTask(logstashMachineId: number, tailLines: number = 100): Promise<{ taskId: string }> {
+  return request({
+    url: '/api/logstash/log-tail/create',
+    method: 'POST',
+    data: { logstashMachineId, tailLines },
   });
 }

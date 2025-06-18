@@ -742,7 +742,7 @@ function LogstashManagementPage() {
                             setBottomLogTailModalVisible(true);
                           }}
                         >
-                          底部日志跟踪
+                          日志跟踪
                         </Button>
                       </Space>
                     ),
