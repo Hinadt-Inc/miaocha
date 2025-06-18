@@ -3,14 +3,13 @@ import { AutoComplete, Button, Space, Tag, Popover, Statistic, Tooltip } from 'a
 import CountUp from 'react-countup';
 import SpinIndicator from '@/components/SpinIndicator';
 import styles from './SearchBar.module.less';
-import { QUICK_RANGES, TIME_GROUP, getLatestTime, DATE_FORMAT_THOUSOND } from './utils.ts';
+import { QUICK_RANGES, TIME_GROUP, getLatestTime, DATE_FORMAT_THOUSOND } from './utils';
 import dayjs from 'dayjs';
 const TimePicker = lazy(() => import('./TimePicker.tsx'));
 
 interface IProps {
   searchParams: ILogSearchParams; // 搜索参数
   totalCount?: number; // 记录总数
-  loading?: boolean; // 是否加载中
   onSearch: (params: ILogSearchParams) => void; // 搜索回调函数
   setWhereSqlsFromSider: any; // 设置whereSqlsFromSider
   columns?: ILogColumnsResponse[]; // 字段列表数据
@@ -24,7 +23,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   const {
     searchParams,
     totalCount = 0,
-    loading,
     onSearch,
     setWhereSqlsFromSider,
     columns,
@@ -41,8 +39,9 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     const saved = localStorage.getItem('keywordHistory');
     return saved ? JSON.parse(saved) : [];
   });
-  const [sql, setSql] = useState<string>(''); // sql
+
   const [sqls, setSqls] = useState<string[]>([]); // sql列表
+  const [sql, setSql] = useState<string>(''); // sql字符串
 
   const [sqlHistory, setSqlHistory] = useState<string[]>(() => {
     const saved = localStorage.getItem('sqlHistory');
@@ -252,12 +251,12 @@ const SearchBar = forwardRef((props: IProps, ref) => {
           </Suspense>
         }
       >
-        <Button color="primary" variant="link" size="small" disabled={loading}>
+        <Button color="primary" variant="link" size="small">
           {timeOption.label}
         </Button>
       </Popover>
     );
-  }, [openTimeRange, timeOption, loading, activeTab]);
+  }, [openTimeRange, timeOption.label, activeTab]);
 
   // 渲染关键词搜索输入框，包含历史搜索记录自动补全功能
   const keywordRender = useMemo(() => {
@@ -378,12 +377,12 @@ const SearchBar = forwardRef((props: IProps, ref) => {
           </>
         }
       >
-        <Button color="primary" variant="link" size="small" disabled={loading}>
+        <Button color="primary" variant="link" size="small">
           按{TIME_GROUP[timeGrouping]}分组
         </Button>
       </Popover>
     );
-  }, [searchParams, openTimeGroup, loading, timeOption]);
+  }, [searchParams.timeGrouping, openTimeGroup, timeOption]);
 
   return (
     <div className={styles.searchBar} ref={searchBarRef}>
@@ -398,7 +397,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
         <div className={styles.item}>{keywordRender}</div>
         <div className={styles.item}>{sqlRender}</div>
         <div className={styles.item}>
-          <Button size="small" type="primary" onClick={handleSubmit} loading={loading}>
+          <Button size="small" type="primary" onClick={handleSubmit}>
             搜索
           </Button>
         </div>

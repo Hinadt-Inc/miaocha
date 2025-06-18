@@ -1,11 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Spin, Splitter } from 'antd';
+import { Splitter } from 'antd';
 import HistogramChart from './HistogramChart';
 import styles from './Log.module.less';
 import VirtualTable from './VirtualTable';
 interface IProps {
   histogramData: ILogHistogramData[]; // 直方图数据
-  histogramDataLoading: boolean; // 直方图数据是否正在加载
   getDetailData: any; // 加载日志数据的函数
   detailData: ILogDetailsResponse; // 日志数据;
   searchParams: ILogSearchParams; // 搜索参数
@@ -19,7 +18,6 @@ interface IProps {
 const Log = (props: IProps) => {
   const {
     histogramData,
-    histogramDataLoading,
     detailData,
     getDetailData,
     dynamicColumns = [],
@@ -94,9 +92,7 @@ const Log = (props: IProps) => {
     <Splitter layout="vertical" className={styles.logContainer}>
       <Splitter.Panel collapsible defaultSize={170} min={170} max={170}>
         <div className={styles.chart}>
-          <Spin size="small" spinning={histogramDataLoading}>
-            <HistogramChart data={histogramData as any} searchParams={searchParams} onSearch={onSearch} />
-          </Spin>
+          <HistogramChart data={histogramData as any} searchParams={searchParams} onSearch={onSearch} />
         </div>
       </Splitter.Panel>
       <Splitter.Panel>

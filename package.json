@@ -1,5 +1,5 @@
 {
-  "name": "log-manage-web",
+  "name": "miaocha-ui",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -47,6 +47,7 @@
     "isSameOrBefore": "link:dayjs/plugin/isSameOrBefore",
     "lodash": "^4.17.21",
     "monaco-sql-languages": "^0.13.1",
+    "nprogress": "^0.2.0",
     "pinyin-match": "^1.2.8",
     "rc-resize-observer": "^1.4.3",
     "rc-virtual-list": "^3.18.5",
@@ -73,6 +74,7 @@
     "@types/less": "^3.0.8",
     "@types/lodash": "^4.17.16",
     "@types/node": "^22.15.19",
+    "@types/nprogress": "^0.2.3",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@types/react-window": "^1.8.8",

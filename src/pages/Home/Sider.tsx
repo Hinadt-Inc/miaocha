@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react';
-import { Collapse, Select, Spin, Input, Space } from 'antd';
+import { useState, useEffect, useMemo, forwardRef, useImperativeHandle, useRef } from 'react';
+import { Collapse, Select, Input } from 'antd';
 import { StarOutlined, StarFilled } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
 import * as api from '@/api/logs';
@@ -10,8 +10,6 @@ import FieldListItem from './FieldListItem';
 interface IProps {
   searchParams: ILogSearchParams; // 搜索参数
   modules: IStatus[]; // 模块名称列表
-  moduleLoading: boolean; // 模块名称是否正在加载
-  detailLoading: boolean; // 日志数据是否正在加载
   onSearch: (params: ILogSearchParams) => void; // 搜索回调函数
   onChangeColumns?: (params: ILogColumnsResponse[]) => void; // 列变化回调函数
   setWhereSqlsFromSider: any; // 设置where条件
@@ -19,16 +17,7 @@ interface IProps {
 }
 
 const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((props, ref) => {
-  const {
-    detailLoading,
-    modules,
-    moduleLoading,
-    onChangeColumns,
-    onSearch,
-    searchParams,
-    setWhereSqlsFromSider,
-    onActiveColumnsChange,
-  } = props;
+  const { modules, onChangeColumns, onSearch, searchParams, setWhereSqlsFromSider, onActiveColumnsChange } = props;
   const [columns, setColumns] = useState<ILogColumnsResponse[]>([]); // 日志表字段
   const [selectedModule, setSelectedModule] = useState<string>(''); // 已选模块
   const [distributions, setDistributions] = useState<Record<string, IFieldDistributions>>({}); // 字段值分布列表
@@ -36,6 +25,7 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
   const [searchText, setSearchText] = useState<string>(''); // 字段搜索文本
   const [favoriteModule, setFavoriteModule] = useState<string>(''); // 收藏的模块
   const [_searchParams, _setSearchParams] = useState<ILogSearchParams>(searchParams); // 临时查询参数，供searchBar查询调用
+  const abortRef = useRef<AbortController | null>(null);
 
   // 获取日志字段
   const getColumns = useRequest(api.fetchColumns, {
@@ -61,21 +51,27 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
   });
 
   // 获取指定字段的TOP5分布数据
-  const queryDistribution = useRequest(api.fetchDistributions, {
-    manual: true,
-    onSuccess: (res) => {
-      const { fieldDistributions = [], sampleSize } = res;
-      const target: any = {};
-      fieldDistributions.forEach((item) => {
-        const { fieldName } = item;
-        target[fieldName] = { ...item, sampleSize };
-      });
-      setDistributions(target);
+  const queryDistribution = useRequest(
+    async (params: ILogSearchParams & { signal?: AbortSignal }) => {
+      // 传 signal 给 api
+      return api.fetchDistributions(params, { signal: params.signal });
     },
-    onError: () => {
-      setDistributions({});
+    {
+      manual: true,
+      onSuccess: (res) => {
+        const { fieldDistributions = [], sampleSize } = res;
+        const target: any = {};
+        fieldDistributions.forEach((item) => {
+          const { fieldName } = item;
+          target[fieldName] = { ...item, sampleSize };
+        });
+        setDistributions(target);
+      },
+      onError: () => {
+        setDistributions({});
+      },
     },
-  });
+  );
 
   // 获取收藏的模块
   const getFavoriteModule = () => {
@@ -198,7 +194,9 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
   const getDistributionWithSearchBar = () => {
     // 有字段的时候调用
     if (_searchParams?.fields?.length) {
-      queryDistribution.run(_searchParams);
+      if (abortRef.current) abortRef.current.abort(); // 取消上一次
+      abortRef.current = new AbortController();
+      queryDistribution.run({ ..._searchParams, signal: abortRef.current.signal });
     }
   };
 
@@ -221,7 +219,10 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
       params.whereSqls = [...(searchParams?.whereSqls || []), sql];
     }
     _setSearchParams(params);
-    queryDistribution.run(params);
+
+    if (abortRef.current) abortRef.current.abort(); // 取消上一次
+    abortRef.current = new AbortController();
+    queryDistribution.run({ ...params, signal: abortRef.current.signal });
   };
 
   const fieldListProps = useMemo(() => {
@@ -270,8 +271,6 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
         style={{ width: '100%' }}
         value={selectedModule}
         onChange={changeModules}
-        loading={moduleLoading}
-        disabled={moduleLoading || detailLoading}
         optionLabelProp="title"
         options={modules?.map((item) => ({
           ...item,
@@ -294,56 +293,54 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
         }))}
       />
 
-      <Spin spinning={getColumns.loading || queryDistribution.loading} size="small">
-        <Collapse
-          ghost
-          size="small"
-          className={styles.collapse}
-          defaultActiveKey={['selected', 'available']}
-          items={[
-            {
-              key: 'selected',
-              label: '已选字段',
-              children: columns
-                ?.filter((item) => item.selected)
-                ?.sort((a, b) => (a._createTime || 0) - (b._createTime || 0))
-                ?.map((item, index) => (
-                  <FieldListItem
-                    key={item.columnName}
-                    isSelected
-                    column={item}
-                    columnIndex={index}
-                    fieldData={fieldListProps}
-                  />
-                )),
-            },
-            {
-              key: 'available',
-              label: '可用字段',
-              children: [
-                <Input.Search
-                  key="search"
-                  placeholder="搜索字段"
-                  allowClear
-                  variant="filled"
-                  style={{ width: '100%', marginBottom: 8 }}
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                />,
-                ...(filteredAvailableColumns?.map((item, index) => (
-                  <FieldListItem
-                    key={item.columnName}
-                    isSelected={false}
-                    column={item}
-                    columnIndex={index}
-                    fieldData={fieldListProps}
-                  />
-                )) || []),
-              ],
-            },
-          ]}
-        />
-      </Spin>
+      <Collapse
+        ghost
+        size="small"
+        className={styles.collapse}
+        defaultActiveKey={['selected', 'available']}
+        items={[
+          {
+            key: 'selected',
+            label: '已选字段',
+            children: columns
+              ?.filter((item) => item.selected)
+              ?.sort((a, b) => (a._createTime || 0) - (b._createTime || 0))
+              ?.map((item, index) => (
+                <FieldListItem
+                  key={item.columnName}
+                  isSelected
+                  column={item}
+                  columnIndex={index}
+                  fieldData={fieldListProps}
+                />
+              )),
+          },
+          {
+            key: 'available',
+            label: '可用字段',
+            children: [
+              <Input.Search
+                key="search"
+                placeholder="搜索字段"
+                allowClear
+                variant="filled"
+                style={{ width: '100%', marginBottom: 8 }}
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+              />,
+              ...(filteredAvailableColumns?.map((item, index) => (
+                <FieldListItem
+                  key={item.columnName}
+                  isSelected={false}
+                  column={item}
+                  columnIndex={index}
+                  fieldData={fieldListProps}
+                />
+              )) || []),
+            ],
+          },
+        ]}
+      />
     </div>
   );
 });
