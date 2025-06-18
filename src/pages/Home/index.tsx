@@ -24,7 +24,7 @@ const HomePage = () => {
   // 默认的搜索参数
   const defaultSearchParams: ILogSearchParams = {
     offset: 0,
-    pageSize: 20,
+    pageSize: 1000,
     datasourceId: null,
     module: null,
     startTime: QUICK_RANGES.last_15m.from().format(DATE_FORMAT_THOUSOND),
@@ -189,6 +189,7 @@ const HomePage = () => {
     (searchBarRef?.current as any)?.setTimeOption(timeOption);
   };
 
+  // 处理列变化
   const handleChangeColumnsByLog = (col: any) => {
     const index = logTableColumns.findIndex((item) => item.columnName === col.title);
     if (index === -1) return;

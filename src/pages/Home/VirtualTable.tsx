@@ -126,6 +126,7 @@ const VirtualTable = (props: IProps) => {
     whereSqlsFromSider = [],
     sqls,
   } = props;
+  console.log(1111, dynamicColumns);
   const containerRef = useRef<HTMLDivElement>(null);
   const tblRef: Parameters<typeof Table>[0]['ref'] = useRef(null);
   const [containerHeight, setContainerHeight] = useState<number>(0);
