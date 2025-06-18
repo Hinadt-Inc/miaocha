@@ -804,6 +804,15 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         logstashDeployService.initializeInstances(instances, process);
     }
 
+    @Override
+    public LogstashMachineDetailDTO getLogstashMachineDetail(Long logstashMachineId) {
+        LogstashMachine logstashMachine = validateInstanceExists(logstashMachineId);
+        LogstashProcess process = validateProcessExists(logstashMachine.getLogstashProcessId());
+        MachineInfo machineInfo = validateAndGetMachine(logstashMachine.getMachineId());
+
+        return logstashMachineConverter.toDetailDTO(logstashMachine, process, machineInfo);
+    }
+
     /**
      * 验证LogstashMachine实例是否存在
      *

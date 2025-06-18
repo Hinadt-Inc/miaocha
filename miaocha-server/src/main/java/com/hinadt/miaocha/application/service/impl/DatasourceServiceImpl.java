@@ -8,6 +8,7 @@ import com.hinadt.miaocha.domain.dto.DatasourceCreateDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
+import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.util.List;
@@ -23,6 +24,8 @@ public class DatasourceServiceImpl implements DatasourceService {
     @Autowired private DatasourceMapper datasourceMapper;
 
     @Autowired private DatasourceConverter datasourceConverter;
+
+    @Autowired private ModuleInfoMapper moduleInfoMapper;
 
     @Override
     @Transactional
@@ -81,6 +84,12 @@ public class DatasourceServiceImpl implements DatasourceService {
         if (datasourceMapper.selectById(id) == null) {
             throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
         }
+
+        // 检查数据源是否被模块引用
+        if (moduleInfoMapper.existsByDatasourceId(id)) {
+            throw new BusinessException(ErrorCode.DATASOURCE_IN_USE);
+        }
+
         datasourceMapper.deleteById(id);
     }
 

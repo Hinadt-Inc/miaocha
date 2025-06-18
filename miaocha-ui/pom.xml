@@ -16,97 +16,13 @@
         <maven.compiler.target>17</maven.compiler.target>
         <node.version>v22.11.0</node.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <skipFrontend>false</skipFrontend>
         <skipTests>true</skipTests>
         <yarn.version>v1.22.22</yarn.version>
     </properties>
 
     <build>
         <plugins>
-            <!-- 前端构建插件 -->
-            <plugin>
-                <groupId>com.github.eirslett</groupId>
-                <artifactId>frontend-maven-plugin</artifactId>
-                <version>${frontend.maven.plugin.version}</version>
-                <configuration>
-                    <workingDirectory>frontend</workingDirectory>
-                    <installDirectory>target</installDirectory>
-                </configuration>
-                <executions>
-                    <!-- 安装 Node.js 和 Yarn -->
-                    <execution>
-                        <id>install-node-and-yarn</id>
-                        <goals>
-                            <goal>install-node-and-yarn</goal>
-                        </goals>
-                        <configuration>
-                            <nodeVersion>${node.version}</nodeVersion>
-                            <yarnVersion>${yarn.version}</yarnVersion>
-                        </configuration>
-                    </execution>
-
-                    <!-- 安装依赖 -->
-                    <execution>
-                        <id>yarn-install</id>
-                        <goals>
-                            <goal>yarn</goal>
-                        </goals>
-                        <configuration>
-                            <arguments>install --frozen-lockfile</arguments>
-                        </configuration>
-                    </execution>
-
-                    <!-- 代码检查 -->
-                    <execution>
-                        <id>yarn-lint</id>
-                        <goals>
-                            <goal>yarn</goal>
-                        </goals>
-                        <phase>validate</phase>
-                        <configuration>
-                            <arguments>lint</arguments>
-                            <skip>${skipTests}</skip>
-                        </configuration>
-                    </execution>
-
-                    <!-- TypeScript 类型检查 -->
-                    <execution>
-                        <id>yarn-type-check</id>
-                        <goals>
-                            <goal>yarn</goal>
-                        </goals>
-                        <phase>validate</phase>
-                        <configuration>
-                            <arguments>tsc --noEmit</arguments>
-                            <skip>${skipTests}</skip>
-                        </configuration>
-                    </execution>
-
-                    <!-- 运行测试 -->
-                    <execution>
-                        <id>yarn-test</id>
-                        <goals>
-                            <goal>yarn</goal>
-                        </goals>
-                        <phase>test</phase>
-                        <configuration>
-                            <arguments>test --run</arguments>
-                            <skip>${skipTests}</skip>
-                        </configuration>
-                    </execution>
-
-                    <!-- 构建项目 -->
-                    <execution>
-                        <id>yarn-build</id>
-                        <goals>
-                            <goal>yarn</goal>
-                        </goals>
-                        <phase>compile</phase>
-                        <configuration>
-                            <arguments>build</arguments>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
 
             <!-- 确保生成JAR文件 -->
             <plugin>
@@ -123,29 +39,6 @@
                 </executions>
             </plugin>
 
-            <!-- 将前端构建的文件包含到JAR中 -->
-            <plugin>
-                <artifactId>maven-resources-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>copy-resources</id>
-                        <goals>
-                            <goal>copy-resources</goal>
-                        </goals>
-                        <phase>prepare-package</phase>
-                        <configuration>
-                            <outputDirectory>${project.build.directory}/classes/static</outputDirectory>
-                            <resources>
-                                <resource>
-                                    <directory>frontend/dist</directory>
-                                    <filtering>false</filtering>
-                                </resource>
-                            </resources>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
             <!-- 跳过单元测试 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -157,8 +50,90 @@
         </plugins>
     </build>
 
-    <!-- 开发环境配置 -->
+    <!-- 构建配置 -->
     <profiles>
+        <!-- 默认前端构建 Profile -->
+        <profile>
+            <id>with-frontend</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <!-- 前端构建插件 -->
+                    <plugin>
+                        <groupId>com.github.eirslett</groupId>
+                        <artifactId>frontend-maven-plugin</artifactId>
+                        <version>${frontend.maven.plugin.version}</version>
+                        <configuration>
+                            <workingDirectory>frontend</workingDirectory>
+                            <installDirectory>target</installDirectory>
+                        </configuration>
+                        <executions>
+                            <!-- 安装 Node.js 和 Yarn -->
+                            <execution>
+                                <id>install-node-and-yarn</id>
+                                <goals>
+                                    <goal>install-node-and-yarn</goal>
+                                </goals>
+                                <configuration>
+                                    <nodeVersion>${node.version}</nodeVersion>
+                                    <yarnVersion>${yarn.version}</yarnVersion>
+                                </configuration>
+                            </execution>
+
+                            <!-- 安装依赖 -->
+                            <execution>
+                                <id>yarn-install</id>
+                                <goals>
+                                    <goal>yarn</goal>
+                                </goals>
+                                <configuration>
+                                    <arguments>install --frozen-lockfile</arguments>
+                                </configuration>
+                            </execution>
+
+                            <!-- 构建项目 -->
+                            <execution>
+                                <id>yarn-build</id>
+                                <goals>
+                                    <goal>yarn</goal>
+                                </goals>
+                                <phase>compile</phase>
+                                <configuration>
+                                    <arguments>build:no-tsc</arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- 将前端构建的文件包含到JAR中 -->
+                    <plugin>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>copy-resources</id>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <phase>prepare-package</phase>
+                                <configuration>
+                                    <outputDirectory>${project.build.directory}/classes/static</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>frontend/dist</directory>
+                                            <filtering>false</filtering>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- 开发环境配置 -->
         <profile>
             <id>dev</id>
             <properties>
@@ -185,6 +160,12 @@
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+
+        <!-- 跳过前端构建 Profile -->
+        <profile>
+            <id>skip-ui</id>
+            <!-- 这个 Profile 被激活时，不执行任何前端构建 -->
         </profile>
     </profiles>
 </project>

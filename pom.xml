@@ -526,6 +526,9 @@
                                     <include>*.xml</include>
                                     <include>src/**/*.xml</include>
                                 </includes>
+                                <excludes>
+                                    <exclude>**/target/**</exclude>
+                                </excludes>
                                 <!-- Apply consistent indentation and end with newline -->
                                 <trimTrailingWhitespace/>
                                 <endWithNewline/>
@@ -558,6 +561,9 @@
                             <includes>
                                 <include>**/*.md</include>
                             </includes>
+                            <excludes>
+                                <exclude>**/target/**</exclude>
+                            </excludes>
                             <flexmark/>
                         </markdown>
                     </configuration>
@@ -646,7 +652,7 @@
             </properties>
         </profile>
 
-                <!-- 生产环境 -->
+        <!-- 生产环境 -->
         <profile>
             <id>prod</id>
             <properties>
@@ -662,6 +668,14 @@
                 <spotless.check.skip>true</spotless.check.skip>
                 <checkstyle.skip>true</checkstyle.skip>
                 <maven.test.skip>true</maven.test.skip>
+            </properties>
+        </profile>
+
+        <!-- 跳过前端构建 -->
+        <profile>
+            <id>skip-ui</id>
+            <properties>
+                <skipFrontend>true</skipFrontend>
             </properties>
         </profile>
 

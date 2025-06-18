@@ -4,6 +4,7 @@ import com.hinadt.miaocha.application.logstash.task.TaskService;
 import com.hinadt.miaocha.application.service.LogstashProcessService;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.dto.ApiResponse;
+import com.hinadt.miaocha.domain.dto.logstash.LogstashMachineDetailDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessConfigUpdateRequestDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessCreateDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessResponseDTO;
@@ -345,5 +346,22 @@ public class LogstashProcessEndpoint {
                     Long instanceId) {
         logstashProcessService.reinitializeLogstashInstance(instanceId);
         return ApiResponse.success();
+    }
+
+    /**
+     * 获取LogstashMachine实例详细信息
+     *
+     * @param instanceId LogstashMachine实例ID
+     * @return LogstashMachine实例详细信息
+     */
+    @GetMapping("/instances/{instanceId}")
+    @Operation(
+            summary = "获取LogstashMachine实例详情",
+            description = "根据LogstashMachine实例ID获取详细的实例信息，包括关联的进程和机器信息")
+    public ApiResponse<LogstashMachineDetailDTO> getLogstashMachineDetail(
+            @Parameter(description = "LogstashMachine实例ID", required = true)
+                    @PathVariable("instanceId")
+                    Long instanceId) {
+        return ApiResponse.success(logstashProcessService.getLogstashMachineDetail(instanceId));
     }
 }

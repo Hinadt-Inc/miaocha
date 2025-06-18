@@ -1,5 +1,6 @@
 package com.hinadt.miaocha.application.service;
 
+import com.hinadt.miaocha.domain.dto.logstash.LogstashMachineDetailDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessConfigUpdateRequestDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessCreateDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessResponseDTO;
@@ -131,4 +132,12 @@ public interface LogstashProcessService {
      * @param instanceId LogstashMachine实例ID
      */
     void reinitializeLogstashInstance(Long instanceId);
+
+    /**
+     * 根据LogstashMachine实例ID获取详细信息
+     *
+     * @param logstashMachineId LogstashMachine实例ID
+     * @return LogstashMachine实例详细信息
+     */
+    LogstashMachineDetailDTO getLogstashMachineDetail(Long logstashMachineId);
 }

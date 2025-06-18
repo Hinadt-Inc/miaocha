@@ -25,6 +25,9 @@ public class DatasourceDTO {
             example = "jdbc:mysql://192.168.1.100:9030/logs_db?connectTimeout=3000")
     private String jdbcUrl;
 
+    @Schema(description = "数据源用户名", example = "admin")
+    private String username;
+
     @Schema(description = "创建时间", example = "2023-06-01T10:30:00")
     private LocalDateTime createTime;
 

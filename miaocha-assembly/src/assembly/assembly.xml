@@ -71,7 +71,7 @@
 
         <!-- UI Files - Copy from frontend build -->
         <fileSet>
-            <directory>../miaocha-ui/src/main/frontend/dist</directory>
+            <directory>../miaocha-ui/frontend/dist</directory>
             <outputDirectory>static</outputDirectory>
             <includes>
                 <include>**/*</include>

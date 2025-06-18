@@ -44,8 +44,8 @@ else
 fi
 
 # Quick compilation check
-echo "Running quick compilation check... excluding miaocha-ui module"
-mvn clean compile -q -pl '!miaocha-ui'
+echo "Running quick compilation check..."
+mvn clean compile  -q -Pskip-ui
 
 if [[ $? -ne 0 ]]; then
     echo "Error: Code compilation failed. Please fix the issues before committing."

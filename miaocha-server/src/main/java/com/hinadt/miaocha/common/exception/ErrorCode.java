@@ -16,6 +16,7 @@ public enum ErrorCode {
     DATASOURCE_NAME_EXISTS("2002", "数据源名称已存在"),
     DATASOURCE_CONNECTION_FAILED("2003", "数据源连接失败"),
     DATASOURCE_TYPE_NOT_SUPPORTED("2004", "不支持的数据源类型"),
+    DATASOURCE_IN_USE("2005", "数据源正在被模块使用，无法删除"),
 
     // 用户相关错误码
     USER_NOT_FOUND("3001", "用户不存在"),

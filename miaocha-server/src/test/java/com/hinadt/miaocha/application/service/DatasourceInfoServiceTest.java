@@ -6,11 +6,13 @@ import static org.mockito.Mockito.*;
 
 import com.hinadt.miaocha.application.service.impl.DatasourceServiceImpl;
 import com.hinadt.miaocha.common.exception.BusinessException;
+import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.converter.DatasourceConverter;
 import com.hinadt.miaocha.domain.dto.DatasourceCreateDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
+import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
 import io.qameta.allure.*;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -42,6 +44,8 @@ class DatasourceInfoServiceTest {
     @Mock private DatasourceMapper datasourceMapper;
 
     @Mock private DatasourceConverter datasourceConverter;
+
+    @Mock private ModuleInfoMapper moduleInfoMapper;
 
     @Spy @InjectMocks private DatasourceServiceImpl datasourceService;
 
@@ -230,6 +234,8 @@ class DatasourceInfoServiceTest {
     void testDeleteDatasource_Success() {
         // 模拟数据源存在
         when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasourceInfo);
+        // 模拟数据源未被模块引用
+        when(moduleInfoMapper.existsByDatasourceId(anyLong())).thenReturn(false);
         // 模拟删除成功
         when(datasourceMapper.deleteById(anyLong())).thenReturn(1);
 
@@ -239,6 +245,7 @@ class DatasourceInfoServiceTest {
                 });
 
         verify(datasourceMapper, times(1)).selectById(anyLong());
+        verify(moduleInfoMapper, times(1)).existsByDatasourceId(anyLong());
         verify(datasourceMapper, times(1)).deleteById(anyLong());
     }
 
@@ -254,6 +261,27 @@ class DatasourceInfoServiceTest {
                 });
 
         verify(datasourceMapper, times(1)).selectById(anyLong());
+        verify(moduleInfoMapper, never()).existsByDatasourceId(anyLong());
+        verify(datasourceMapper, never()).deleteById(anyLong());
+    }
+
+    @Test
+    void testDeleteDatasource_InUse() {
+        // 模拟数据源存在
+        when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasourceInfo);
+        // 模拟数据源被模块引用
+        when(moduleInfoMapper.existsByDatasourceId(anyLong())).thenReturn(true);
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            datasourceService.deleteDatasource(1L);
+                        });
+
+        assertEquals(ErrorCode.DATASOURCE_IN_USE, exception.getErrorCode());
+        verify(datasourceMapper, times(1)).selectById(anyLong());
+        verify(moduleInfoMapper, times(1)).existsByDatasourceId(anyLong());
         verify(datasourceMapper, never()).deleteById(anyLong());
     }
 

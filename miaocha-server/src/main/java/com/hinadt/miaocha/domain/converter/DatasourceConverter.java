@@ -69,6 +69,7 @@ public class DatasourceConverter implements Converter<DatasourceInfo, Datasource
         dto.setName(entity.getName());
         dto.setType(entity.getType());
         dto.setJdbcUrl(entity.getJdbcUrl());
+        dto.setUsername(entity.getUsername());
         dto.setDescription(entity.getDescription());
         dto.setCreateTime(entity.getCreateTime());
         dto.setUpdateTime(entity.getUpdateTime());

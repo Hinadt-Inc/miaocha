@@ -23,13 +23,11 @@
             <artifactId>miaocha-server</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!--
         <dependency>
             <groupId>com.hinadt.miaocha</groupId>
             <artifactId>miaocha-ui</artifactId>
             <version>${project.version}</version>
         </dependency>
-        -->
     </dependencies>
 
     <build>
