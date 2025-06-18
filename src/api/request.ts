@@ -63,6 +63,7 @@ service.interceptors.response.use(
     const message = errorMessage || res.message || '操作失败';
     // 根据后端接口返回结构调整
     if (isBizError || isCodeError) {
+      console.log('isError', response);
       window.dispatchEvent(
         new CustomEvent('unhandledrejection', {
           detail: {
@@ -80,6 +81,25 @@ service.interceptors.response.use(
     const res = error.response?.data || {};
     const status = error.response?.status;
     let errorMessage = error.response?.data?.message || error.message || '请求失败';
+
+    // 常见HTTP状态码友好提示
+    const statusMessageMap: Record<number, string> = {
+      400: '请求参数错误',
+      401: '未授权或登录已过期',
+      403: '没有权限访问',
+      404: '请求地址不存在',
+      408: '请求超时',
+      413: '请求实体过大',
+      415: '请求类型不支持',
+      429: '请求过于频繁',
+      500: '服务器异常',
+      502: '网关错误',
+      503: '服务不可用',
+      504: '网关超时',
+    };
+    if (status && statusMessageMap[status]) {
+      errorMessage = statusMessageMap[status];
+    }
 
     if (error.code === 'ERR_CANCELED') return Promise.reject(new Error('请求已取消'));
 
@@ -140,6 +160,7 @@ service.interceptors.response.use(
         isRefreshing = false;
       }
     }
+    console.log('isError3', errorMessage);
     window.dispatchEvent(
       new CustomEvent('unhandledrejection', {
         detail: {
