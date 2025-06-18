@@ -27,16 +27,19 @@
 ## 快速开始
 
 1. 安装依赖:
+
 ```bash
 npm install
 ```
 
 2. 开发模式:
+
 ```bash
 npm run dev
 ```
 
 3. 构建生产版本:
+
 ```bash
 npm run build
 ```
@@ -68,14 +71,19 @@ log-manage-web/
 
 1. 确保Node.js版本 >= 16
 2. 安装依赖:
+
 ```bash
 npm install
 ```
+
 3. 启动开发服务器:
+
 ```bash
 npm run dev
 ```
+
 4. 运行测试:
+
 ```bash
 npm test
 ```
@@ -83,6 +91,7 @@ npm test
 ## 代码质量
 
 项目配置了ESLint和Prettier确保代码风格一致:
+
 ```bash
 npm run lint   # 检查代码风格
 npm run format # 格式化代码
