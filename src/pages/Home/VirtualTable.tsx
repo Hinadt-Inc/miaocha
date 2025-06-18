@@ -356,7 +356,7 @@ const VirtualTable = (props: IProps) => {
     let extra = 0;
     dynamicCols.forEach((col: any) => {
       const titleStr = typeof col.title === 'string' ? col.title : col.dataIndex || '';
-      extra += (titleStr.length || 0) * 15 + 100;
+      extra += (titleStr.length || 0) * 2;
     });
     setScrollX(Math.max(1300, 1300 + extra));
   }, [columns]);
@@ -421,7 +421,6 @@ const VirtualTable = (props: IProps) => {
         dataSource={data}
         pagination={false}
         columns={enhancedColumns}
-        loading={{ spinning: loading, size: 'small' }}
         scroll={{ x: data.length > 0 ? scrollX : 0, y: containerHeight - headerHeight - 1 }}
         expandable={{
           columnWidth: 26,

@@ -1,11 +1,16 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import NProgress from 'nprogress';
 import { setTokens } from '../store/userSlice';
 import { store } from '../store/store';
+import 'nprogress/nprogress.css';
+
+NProgress.configure({
+  showSpinner: false, // 是否显示右上角的转圈加载图标
+});
 
 // 创建axios实例
 const service: AxiosInstance = axios.create({
-  timeout: 100000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -13,6 +18,7 @@ const service: AxiosInstance = axios.create({
 
 // 请求拦截器
 service.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  NProgress.start(); // 开始进度条
   const token = localStorage.getItem('accessToken');
   if (token) {
     config.headers['Authorization'] = `Bearer ${token}`;
@@ -28,6 +34,7 @@ let retryQueue: Array<() => void> = [];
 // 响应拦截器
 service.interceptors.response.use(
   (response: AxiosResponse) => {
+    NProgress.done(); // 结束进度条
     // 如果是blob类型，直接返回原始响应
     if (response.config.responseType === 'blob') {
       return response;
@@ -52,10 +59,13 @@ service.interceptors.response.use(
     return res.data;
   },
   async (error) => {
+    NProgress.done(); // 结束进度条
     const originalRequest = error.config;
     const res = error.response?.data || {};
     const status = error.response?.status;
     let errorMessage = error.response?.data?.message || error.message || '请求失败';
+
+    if (error.code === 'ERR_CANCELED') return Promise.reject(new Error('请求已取消'));
 
     // 如果是401错误且不是刷新token请求
     if (status === 401 && !originalRequest._retry) {

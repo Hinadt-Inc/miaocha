@@ -19,6 +19,7 @@ const HomePage = () => {
   const [activeColumns, setActiveColumns] = useState<string[]>([]); // 激活的字段列表
   const searchBarRef = useRef<any>(null);
   const siderRef = useRef<any>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   // 默认的搜索参数
   const defaultSearchParams: ILogSearchParams = {
@@ -48,7 +49,7 @@ const HomePage = () => {
   };
 
   // 获取模块列表
-  const getMyModules = useRequest(api.fetchMyModules, {
+  useRequest(api.fetchMyModules, {
     onSuccess: (res) => {
       const moduleOptions = generateModuleOptions(res);
       // 设置默认数据源和模块
@@ -64,38 +65,52 @@ const HomePage = () => {
   });
 
   // 执行日志明细查询
-  const getDetailData = useRequest(api.fetchLogDetails, {
-    manual: true,
-    onSuccess: (res) => {
-      const { rows } = res;
-      // 为每条记录添加唯一ID
-      (rows || []).map((item, index) => {
-        item._key = `${Date.now()}_${index}`;
-        item['log_time'] = item['log_time'] ? dayjs(item['log_time'] as string).format(DATE_FORMAT_THOUSOND) : '';
-      });
-      setDetailData(res);
+  const getDetailData = useRequest(
+    async (params: ILogSearchParams & { signal?: AbortSignal }) => {
+      // 传 signal 给 api
+      return api.fetchLogDetails(params, { signal: params.signal });
     },
-    onError: () => {
-      setDetailData(null);
+    {
+      manual: true,
+      onSuccess: (res) => {
+        const { rows } = res;
+        // 为每条记录添加唯一ID
+        (rows || []).map((item, index) => {
+          item._key = `${Date.now()}_${index}`;
+          item['log_time'] = item['log_time'] ? dayjs(item['log_time'] as string).format(DATE_FORMAT_THOUSOND) : '';
+        });
+        setDetailData(res);
+      },
+      onError: () => {
+        setDetailData(null);
+      },
     },
-  });
+  );
 
   // 执行日志时间分布查询
-  const getHistogramData = useRequest(api.fetchLogHistogram, {
-    manual: true,
-    onSuccess: (res: any) => {
-      setHistogramData(res);
+  const getHistogramData = useRequest(
+    async (params: ILogSearchParams & { signal?: AbortSignal }) => {
+      // 传 signal 给 api
+      return api.fetchLogHistogram(params, { signal: params.signal });
     },
-    onError: () => {
-      setHistogramData(null);
+    {
+      manual: true,
+      onSuccess: (res: any) => {
+        setHistogramData(res);
+      },
+      onError: () => {
+        setHistogramData(null);
+      },
     },
-  });
+  );
 
   useEffect(() => {
     // 只判断 datasourceId和module，因为这是查询的必要参数
     if (searchParams.datasourceId && searchParams.module) {
-      getDetailData.run(searchParams);
-      getHistogramData.run(searchParams);
+      if (abortRef.current) abortRef.current.abort(); // 取消上一次
+      abortRef.current = new AbortController();
+      getDetailData.run({ ...searchParams, signal: abortRef.current.signal });
+      getHistogramData.run({ ...searchParams, signal: abortRef.current.signal });
     }
   }, [searchParams]);
 
@@ -143,8 +158,6 @@ const HomePage = () => {
   const siderProps = {
     searchParams,
     modules: moduleOptions,
-    moduleLoading: getMyModules.loading,
-    detailLoading: getDetailData.loading,
     setWhereSqlsFromSider: handleSetWhereSqlsFromSider,
     onSearch: setSearchParams,
     onChangeColumns: handleChangeColumns,
@@ -188,7 +201,6 @@ const HomePage = () => {
   const logProps: any = useMemo(
     () => ({
       histogramData,
-      histogramDataLoading: getHistogramData.loading,
       detailData,
       getDetailData,
       searchParams,
@@ -198,16 +210,7 @@ const HomePage = () => {
       onSearch: onSearchFromLog,
       onChangeColumns: handleChangeColumnsByLog,
     }),
-    [
-      histogramData,
-      getHistogramData.loading,
-      detailData,
-      getDetailData,
-      logTableColumns,
-      searchParams,
-      whereSqlsFromSider,
-      sqls,
-    ],
+    [histogramData, detailData, getDetailData, logTableColumns, searchParams, whereSqlsFromSider, sqls],
   );
 
   // 搜索栏组件props
@@ -215,7 +218,6 @@ const HomePage = () => {
     () => ({
       searchParams,
       totalCount: detailData?.totalCount,
-      loading: getDetailData?.loading || getHistogramData.loading,
       onSearch: setSearchParams,
       setWhereSqlsFromSider,
       columns: logTableColumns,
@@ -226,8 +228,6 @@ const HomePage = () => {
     [
       searchParams,
       detailData?.totalCount,
-      getDetailData?.loading,
-      getHistogramData.loading,
       setSearchParams,
       setWhereSqlsFromSider,
       logTableColumns,
