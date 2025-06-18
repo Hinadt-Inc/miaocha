@@ -161,7 +161,10 @@ rem 创建启动批处理
 set "STARTUP_BAT=%TEMP%\start_%RANDOM%.bat"
 echo @echo off > "%STARTUP_BAT%"
 echo cd /d "%APP_HOME%" >> "%STARTUP_BAT%"
-echo start "秒查系统" /b java %JAVA_OPTS% -jar "%JAR_FILE%" ^> "%LOG_DIR%\startup.log" 2^>^&1 >> "%STARTUP_BAT%"
+rem 构建完整的类路径：config目录 + static目录 + 主JAR + lib目录的所有JAR
+set "CLASSPATH=%CONFIG_DIR%;%APP_HOME%\static;%JAR_FILE%;%LIB_DIR%\*"
+rem 使用主类启动，因为这不是fat jar
+echo start "秒查系统" /b java %JAVA_OPTS% -cp "%CLASSPATH%" com.hinadt.miaocha.MiaoChaApp ^> "%LOG_DIR%\startup.log" 2^>^&1 >> "%STARTUP_BAT%"
 echo for /f "tokens=2" %%%%p in ('tasklist /fi "IMAGENAME eq java.exe" /fi "WINDOWTITLE eq 秒查系统" /fo list ^| find "PID:"') do echo %%%%p ^> "%PID_FILE%" >> "%STARTUP_BAT%"
 
 rem 执行启动批处理

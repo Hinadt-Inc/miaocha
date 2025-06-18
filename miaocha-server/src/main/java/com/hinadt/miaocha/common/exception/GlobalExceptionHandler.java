@@ -4,6 +4,7 @@ import com.hinadt.miaocha.domain.dto.ApiResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -14,11 +15,11 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /** 全局异常处理 */
 @Slf4j
 @RestControllerAdvice
+@Order(2) // 较低优先级，在NoResourceFoundExceptionHandler之后处理
 public class GlobalExceptionHandler {
 
     /** 创建带有UTF-8编码的ResponseEntity */
@@ -107,16 +108,6 @@ public class GlobalExceptionHandler {
         ApiResponse<Void> response =
                 ApiResponse.error(ErrorCode.SSH_COMMAND_FAILED.getCode(), e.getMessage());
         return createResponseEntityWithUtf8(response, HttpStatus.SERVICE_UNAVAILABLE);
-    }
-
-    /** 资源未找到异常处理 (404) */
-    @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<ApiResponse<Void>> handleNoResourceFoundException(
-            NoResourceFoundException e) {
-        log.warn("资源未找到: {}", e.getMessage());
-        ApiResponse<Void> response =
-                ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND.getCode(), "请求的资源不存在，请检查URL路径是否正确");
-        return createResponseEntityWithUtf8(response, HttpStatus.NOT_FOUND);
     }
 
     /** 通用异常处理 */

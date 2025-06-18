@@ -17,39 +17,31 @@ public class WebMvcConfig implements WebMvcConfigurer {
     private final CurrentUserMethodArgumentResolver currentUserMethodArgumentResolver;
 
     @Override
-    public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
-        resolvers.add(currentUserMethodArgumentResolver);
+    public void addArgumentResolvers(List<HandlerMethodArgumentResolver> argumentResolvers) {
+        argumentResolvers.add(currentUserMethodArgumentResolver);
     }
 
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**")
-                .allowedOrigins("*")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("*")
-                .maxAge(3600);
-    }
-
-    /** 添加静态资源处理器 注意：顺序很重要，要确保Swagger相关资源先被处理 */
+    /** 配置静态资源处理器 */
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // 特别处理/swagger-ui路径 - 必须放在最前面
-        // 其他Swagger相关资源
+        // 配置前端静态资源 - assets目录
+        registry.addResourceHandler("/assets/**")
+                .addResourceLocations("classpath:assets/")
+                .setCachePeriod(86400); // 24小时缓存
+
+        // 配置Monaco Editor资源
+        registry.addResourceHandler("/monaco-editor/**")
+                .addResourceLocations("classpath:monaco-editor/")
+                .setCachePeriod(86400);
+
+        // 配置根目录资源（favicon.ico, logo.png等）
+        registry.addResourceHandler("/*.ico", "/*.png", "/*.jpg", "/*.svg", "/*.json")
+                .addResourceLocations("classpath:")
+                .setCachePeriod(86400);
+
+        // 配置Swagger资源
         registry.addResourceHandler("/swagger-ui/**")
-                .addResourceLocations("classpath:/META-INF/resources/swagger-ui/")
-                .setCachePeriod(3600);
-
-        registry.addResourceHandler("/v3/**")
-                .addResourceLocations("classpath:/META-INF/resources/")
-                .setCachePeriod(3600);
-
-        registry.addResourceHandler("/webjars/**")
-                .addResourceLocations("classpath:/META-INF/resources/webjars/")
-                .setCachePeriod(3600);
-
-        // 应用的静态资源
-        registry.addResourceHandler("/static/**")
-                .addResourceLocations("classpath:/static/")
+                .addResourceLocations("classpath:/META-INF/resources/webjars/swagger-ui/")
                 .setCachePeriod(3600);
     }
 
@@ -59,8 +51,24 @@ public class WebMvcConfig implements WebMvcConfigurer {
         // 根路径映射到index.html
         registry.addViewController("/").setViewName("forward:/index.html");
 
-        // 注意：这里使用正则排除api和带点的路径，但不使用否定前瞻(?!)，避免捕获组问题
-        // 匹配所有不带点(.)的路径，并且不以api、swagger-ui等开头的路径
-        registry.addViewController("/{path:[^.]*}").setViewName("forward:/index.html");
+        // 注意：不在这里配置SPA路由回退
+        // 因为Spring Boot会按照以下优先级处理请求：
+        // 1. Controller (@RequestMapping)
+        // 2. 静态资源处理器 (addResourceHandlers)
+        // 3. 视图控制器 (addViewControllers)
+        // 4. 默认处理 (FallbackController)
+        //
+        // 对于SPA路由如 /system/logstash：
+    }
+
+    /** 配置CORS跨域 */
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/api/**")
+                .allowedOriginPatterns("*")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedHeaders("*")
+                .allowCredentials(true)
+                .maxAge(3600);
     }
 }

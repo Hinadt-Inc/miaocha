@@ -41,8 +41,12 @@ fi
 
 # 使用exec确保Java进程接收容器的信号
 echo "[INFO] 正在启动应用..."
+# 构建完整的类路径：config目录 + static目录 + 主JAR + lib目录的所有JAR
+CLASSPATH="$CONFIG_DIR:$APP_HOME/static:$JAR_FILE:$APP_HOME/lib/*"
+# 使用主类启动，因为这不是fat jar
 exec java ${JAVA_OPTS:--Xms1g -Xmx2g -Dfile.encoding=UTF-8} \
   -Dspring.profiles.active=$ACTIVE_PROFILE \
   -Dspring.config.location=file:$CONFIG_DIR/ \
   -Dlogging.config=$CONFIG_DIR/logback-spring.xml \
-  -jar $JAR_FILE
+  -cp "$CLASSPATH" \
+  com.hinadt.miaocha.MiaoChaApp

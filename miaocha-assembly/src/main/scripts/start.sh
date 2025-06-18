@@ -90,7 +90,10 @@ print_info "JVM参数: $JAVA_OPTS"
 
 # 启动应用
 print_info "正在启动应用..."
-nohup java $JAVA_OPTS -jar "$JAR_FILE" > "$LOG_DIR/startup.log" 2>&1 & APP_PID=$!
+# 构建完整的类路径：config目录 + static目录 + 主JAR + lib目录的所有JAR
+CLASSPATH="$CONFIG_DIR:$APP_HOME/static:$JAR_FILE:$LIB_DIR/*"
+# 使用主类启动，因为这不是fat jar
+nohup java $JAVA_OPTS -cp "$CLASSPATH" com.hinadt.miaocha.MiaoChaApp > "$LOG_DIR/startup.log" 2>&1 & APP_PID=$!
 
 # 保存PID
 echo $APP_PID > "$PID_FILE"

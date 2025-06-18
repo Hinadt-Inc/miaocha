@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>秒查 - 前端资源未找到</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 48px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 600px;
+            margin: 20px;
+        }
+
+        .icon {
+            font-size: 80px;
+            margin-bottom: 24px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            20%,
+            50%,
+            80%,
+            100% {
+                transform: translateY(0);
+            }
+
+            40% {
+                transform: translateY(-10px);
+            }
+
+            60% {
+                transform: translateY(-5px);
+            }
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .message {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 32px;
+        }
+
+        .steps {
+            text-align: left;
+            background: #f8fafc;
+            padding: 24px;
+            border-radius: 12px;
+            margin: 32px 0;
+            border: 1px solid #e2e8f0;
+        }
+
+        .steps h3 {
+            font-size: 18px;
+            color: #2d3748;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+        }
+
+        .steps ol {
+            margin: 0;
+            padding-left: 24px;
+        }
+
+        .steps li {
+            margin: 12px 0;
+            color: #4a5568;
+            font-size: 16px;
+        }
+
+        .code {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .links {
+            margin-top: 32px;
+        }
+
+        .api-link {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 8px;
+            margin: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .api-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+        }
+
+        .status {
+            display: inline-block;
+            background: #48bb78;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+    <div class="status">✅ 服务正常运行</div>
+    <div class="icon">🚀</div>
+    <h1>秒查日志管理系统</h1>
+    <div class="message">
+        <p>前端UI资源尚未集成，但系统核心服务已启动并正常运行。</p>
+    </div>
+
+    <div class="steps">
+        <h3>🔧 部署前端资源</h3>
+        <ol>
+            <li>构建前端项目：<span class="code">cd miaocha-ui/frontend && npm run build:no-tsc</span></li>
+            <li>重新打包应用：<span class="code">mvn clean package</span></li>
+            <li>重启应用服务即可完成前端集成</li>
+        </ol>
+    </div>
+
+    <div class="links">
+        <h3>📖 可用服务</h3>
+        <a href="/swagger-ui/index.html" class="api-link">📚 API 文档</a>
+        <a href="/api" class="api-link">🔗 REST API</a>
+    </div>
+</div>
+</body>
+
+</html>
