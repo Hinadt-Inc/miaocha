@@ -119,6 +119,10 @@ public class SecurityConfig {
                                         .requestMatchers("/api/logs/**", "/api/sql/**")
                                         .authenticated()
 
+                                        // LogTail接口 - 对SSE相关的异步处理使用更宽松的权限
+                                        .requestMatchers("/api/logstash/log-tail/**")
+                                        .permitAll() // 临时设为permitAll避免异步线程认证问题
+
                                         // 所有其他API接口需要认证
                                         .requestMatchers("/api/**")
                                         .authenticated()

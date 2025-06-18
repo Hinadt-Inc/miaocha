@@ -1,6 +1,8 @@
 package com.hinadt.miaocha.endpoint;
 
 import com.hinadt.miaocha.application.logstash.LogTailService;
+import com.hinadt.miaocha.common.exception.BusinessException;
+import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.dto.ApiResponse;
 import com.hinadt.miaocha.domain.dto.logstash.LogTailRequestDTO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -9,6 +11,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -25,6 +29,16 @@ public class LogTailEndpoint {
         this.logTailService = logTailService;
     }
 
+    /** 手动检查用户认证状态 */
+    private void checkAuthentication() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getPrincipal())) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+    }
+
     /**
      * 创建日志跟踪任务
      *
@@ -34,6 +48,8 @@ public class LogTailEndpoint {
     @PostMapping("/create")
     @Operation(summary = "创建日志跟踪任务", description = "为指定Logstash实例创建日志跟踪任务")
     public ApiResponse<Void> createTailing(@Valid @RequestBody LogTailRequestDTO request) {
+        checkAuthentication();
+
         log.info(
                 "创建日志跟踪任务: logstashMachineId={}, tailLines={}",
                 request.getLogstashMachineId(),
@@ -60,6 +76,8 @@ public class LogTailEndpoint {
             @Parameter(description = "JWT令牌（用于支持EventSource API）", required = false)
                     @RequestParam(required = false)
                     String token) {
+        checkAuthentication();
+
         log.info("获取日志流: logstashMachineId={}", logstashMachineId);
         return logTailService.getLogStream(logstashMachineId);
     }
@@ -75,6 +93,8 @@ public class LogTailEndpoint {
     public ApiResponse<Void> stopTailing(
             @Parameter(description = "Logstash实例ID", required = true) @PathVariable
                     Long logstashMachineId) {
+        checkAuthentication();
+
         log.info("停止日志跟踪: logstashMachineId={}", logstashMachineId);
 
         logTailService.stopTailing(logstashMachineId);
@@ -89,6 +109,8 @@ public class LogTailEndpoint {
     @DeleteMapping("/stop-all")
     @Operation(summary = "停止所有日志跟踪", description = "停止当前所有活跃的日志跟踪任务")
     public ApiResponse<Void> stopAllTailing() {
+        checkAuthentication();
+
         log.info("停止所有日志跟踪");
 
         logTailService.stopAllTailing();

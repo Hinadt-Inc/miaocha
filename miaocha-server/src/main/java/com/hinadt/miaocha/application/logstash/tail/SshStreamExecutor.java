@@ -34,12 +34,16 @@ public class SshStreamExecutor {
     private final SshClient sshClient;
 
     public SshStreamExecutor() {
-        // 创建专用的线程池
+        // 创建专用的线程池，使用清晰的命名规则
         this.streamProcessorPool =
                 Executors.newCachedThreadPool(
                         r -> {
                             Thread thread = new Thread(r);
-                            thread.setName("ssh-stream-processor-" + thread.getId());
+                            thread.setName(
+                                    "ssh-stream-processor-"
+                                            + System.currentTimeMillis()
+                                            + "-"
+                                            + thread.getId());
                             thread.setDaemon(true);
                             return thread;
                         });
@@ -49,7 +53,11 @@ public class SshStreamExecutor {
                         2,
                         r -> {
                             Thread thread = new Thread(r);
-                            thread.setName("ssh-connection-manager-" + thread.getId());
+                            thread.setName(
+                                    "ssh-connection-manager-"
+                                            + System.currentTimeMillis()
+                                            + "-"
+                                            + thread.getId());
                             thread.setDaemon(true);
                             return thread;
                         });
@@ -59,7 +67,8 @@ public class SshStreamExecutor {
         this.sshClient.start();
 
         log.info(
-                "SSH流式命令执行器已初始化，线程池大小: stream={}, connection=2",
+                "SSH流式命令执行器已初始化 | 线程池: ssh-stream-processor-*, ssh-connection-manager-* | 处理器={},"
+                        + " 连接管理=2",
                 Runtime.getRuntime().availableProcessors());
     }
 
@@ -168,7 +177,7 @@ public class SshStreamExecutor {
                     && !Thread.currentThread().isInterrupted()
                     && (line = reader.readLine()) != null) {
                 lineCount++;
-                log.debug("{}流读取到第{}行: {}", streamType, lineCount, line);
+                log.trace("{}流读取到第{}行: {}", streamType, lineCount, line);
                 consumer.accept(line);
             }
 

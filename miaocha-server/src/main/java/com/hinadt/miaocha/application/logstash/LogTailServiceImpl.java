@@ -25,7 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-/** 日志尾部跟踪服务实现 使用SSE技术实现实时日志推送，支持批量发送以提高性能 */
+/** 日志跟踪服务实现 */
 @Slf4j
 @Service
 public class LogTailServiceImpl implements LogTailService {
@@ -35,16 +35,16 @@ public class LogTailServiceImpl implements LogTailService {
     private final LogstashDeployPathManager deployPathManager;
     private final SshStreamExecutor sshStreamExecutor;
 
-    /** 活跃的日志跟踪任务 Key: logstashMachineId, Value: 任务信息 */
+    /** 活跃的跟踪任务 */
     private final ConcurrentHashMap<Long, LogTailTask> activeTasks = new ConcurrentHashMap<>();
 
-    /** 定时任务执行器，用于批量发送日志数据 */
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
+    /** 定时任务调度器 */
+    private final ScheduledExecutorService scheduler;
 
-    /** 批量发送间隔（秒） */
+    /** 批量发送间隔(秒) */
     private static final int BATCH_SEND_INTERVAL = 2;
 
-    /** 最大批量大小 */
+    /** 单次发送的最大行数 */
     private static final int MAX_BATCH_SIZE = 50;
 
     public LogTailServiceImpl(
@@ -56,6 +56,19 @@ public class LogTailServiceImpl implements LogTailService {
         this.machineMapper = machineMapper;
         this.deployPathManager = deployPathManager;
         this.sshStreamExecutor = sshStreamExecutor;
+
+        // 创建简单的调度器
+        this.scheduler =
+                Executors.newScheduledThreadPool(
+                        5,
+                        r -> {
+                            Thread thread = new Thread(r);
+                            thread.setName("logtail-scheduler-" + thread.getId());
+                            thread.setDaemon(true);
+                            return thread;
+                        });
+
+        log.info("LogTailService已初始化");
     }
 
     @Override
@@ -143,29 +156,10 @@ public class LogTailServiceImpl implements LogTailService {
         SseEmitter emitter = new SseEmitter(30 * 60 * 1000L); // 30分钟超时
         task.setEmitter(emitter);
 
-        // 设置SSE回调
-        emitter.onCompletion(
-                () -> {
-                    log.info("SSE连接完成: logstashMachineId={}", logstashMachineId);
-                    task.setEmitter(null);
-                });
-
-        emitter.onTimeout(
-                () -> {
-                    log.warn("SSE连接超时: logstashMachineId={}", logstashMachineId);
-                    task.setEmitter(null);
-                });
-
-        emitter.onError(
-                (throwable) -> {
-                    log.error("SSE连接发生错误: logstashMachineId={}", logstashMachineId, throwable);
-                    task.setEmitter(null);
-                });
-
         // 启动SSH流式命令（如果还没启动）
         if (task.getStreamTask() == null) {
             try {
-                log.info(
+                log.debug(
                         "准备启动SSH流式命令，实例ID: {}, 命令: {}, SSH配置: {}:{}@{}",
                         logstashMachineId,
                         task.getTailCommand(),
@@ -178,11 +172,11 @@ public class LogTailServiceImpl implements LogTailService {
                                 task.getSshConfig(),
                                 task.getTailCommand(),
                                 line -> {
-                                    log.debug("接收到日志行，实例ID: {}, 内容: {}", logstashMachineId, line);
+                                    log.trace("接收到日志行，实例ID: {}, 内容: {}", logstashMachineId, line);
                                     task.addLogLine(line);
                                 },
                                 error -> {
-                                    log.error("SSH流错误，实例ID: {}, 错误: {}", logstashMachineId, error);
+                                    log.warn("SSH流错误，实例ID: {}, 错误: {}", logstashMachineId, error);
                                     task.addLogLine("[ERROR] " + error);
                                 });
 
@@ -232,20 +226,23 @@ public class LogTailServiceImpl implements LogTailService {
     public void stopTailing(Long logstashMachineId) {
         LogTailTask task = activeTasks.get(logstashMachineId);
         if (task != null) {
-            log.info("停止日志跟踪任务[{}]", logstashMachineId);
+            log.debug("开始停止日志跟踪任务[{}]", logstashMachineId);
 
-            // 先停止任务，等待资源完全清理
+            // 先从活跃任务中移除，防止新的异步操作
+            activeTasks.remove(logstashMachineId);
+
+            // 停止任务并等待资源完全清理
             task.stop();
 
-            // 等待一小段时间确保所有异步操作完成
+            // 等待更长时间确保所有异步操作完成
             try {
-                Thread.sleep(100);
+                Thread.sleep(200); // 增加等待时间
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+                log.warn("停止任务[{}]时等待被中断", logstashMachineId);
             }
 
-            // 最后移除任务
-            activeTasks.remove(logstashMachineId);
+            log.info("日志跟踪任务[{}]已停止", logstashMachineId);
         } else {
             log.debug("日志跟踪任务[{}]不存在或已停止", logstashMachineId);
         }
@@ -264,72 +261,78 @@ public class LogTailServiceImpl implements LogTailService {
 
     /** 批量发送日志数据 */
     private void sendBatchData(LogTailTask task) {
+        log.trace("开始批量发送数据 | 任务[{}]", task.getLogstashMachineId());
+
         // 检查任务是否仍然活跃
         if (!activeTasks.containsKey(task.getLogstashMachineId())) {
-            return; // 任务已被移除，跳过发送
+            log.trace("任务[{}]已移除，跳过批量发送", task.getLogstashMachineId());
+            return;
         }
 
         SseEmitter emitter = task.getEmitter();
         if (emitter == null) {
-            return; // 没有活跃的SSE连接，跳过发送
+            log.trace("任务[{}]无活跃SSE连接，跳过批量发送", task.getLogstashMachineId());
+            return;
         }
 
         List<String> batch = task.getBatchLogLines();
         if (!batch.isEmpty()) {
-            log.debug("准备发送批量日志数据，实例ID: {}, 行数: {}", task.getLogstashMachineId(), batch.size());
+            log.trace("准备发送批量日志数据 | 任务[{}] | 行数: {}", task.getLogstashMachineId(), batch.size());
+
+            LogTailResponseDTO response =
+                    LogTailResponseDTO.builder()
+                            .logstashMachineId(task.getLogstashMachineId())
+                            .logLines(batch)
+                            .timestamp(LocalDateTime.now())
+                            .status(LogTailResponseStatus.CONNECTED)
+                            .build();
+
+            // 直接发送，不需要复杂的安全发送方法
             try {
-                LogTailResponseDTO response =
-                        LogTailResponseDTO.builder()
-                                .logstashMachineId(task.getLogstashMachineId())
-                                .logLines(batch)
-                                .timestamp(LocalDateTime.now())
-                                .status(LogTailResponseStatus.CONNECTED)
-                                .build();
-
                 emitter.send(SseEmitter.event().name("log-data").data(response));
-                log.debug("成功发送批量日志数据，实例ID: {}, 行数: {}", task.getLogstashMachineId(), batch.size());
-
-            } catch (IOException e) {
-                log.error("发送日志数据失败，停止任务[{}]", task.getLogstashMachineId(), e);
-                task.setEmitter(null);
+                log.trace("成功发送批量日志数据 | 任务[{}]", task.getLogstashMachineId());
             } catch (Exception e) {
-                log.error("发送日志数据时发生未知错误，任务[{}]", task.getLogstashMachineId(), e);
+                log.warn(
+                        "批量日志数据发送失败 | 任务[{}] | 错误: {}",
+                        task.getLogstashMachineId(),
+                        e.getMessage());
                 task.setEmitter(null);
             }
         } else {
-            log.trace("缓冲区为空，跳过发送，实例ID: {}", task.getLogstashMachineId());
+            log.trace("缓冲区为空，跳过发送 | 任务[{}]", task.getLogstashMachineId());
         }
     }
 
     /** 发送心跳包，用于保持连接活跃 */
     private void sendHeartbeat(LogTailTask task) {
+        log.trace("开始发送心跳包 | 任务[{}]", task.getLogstashMachineId());
+
         // 检查任务是否仍然活跃
         if (!activeTasks.containsKey(task.getLogstashMachineId())) {
-            return; // 任务已被移除，跳过心跳
+            log.trace("任务[{}]已移除，跳过心跳发送", task.getLogstashMachineId());
+            return;
         }
 
         SseEmitter emitter = task.getEmitter();
         if (emitter == null) {
-            return; // 没有活跃的SSE连接，跳过心跳
+            log.trace("任务[{}]无活跃SSE连接，跳过心跳发送", task.getLogstashMachineId());
+            return;
         }
 
+        LogTailResponseDTO heartbeat =
+                LogTailResponseDTO.builder()
+                        .logstashMachineId(task.getLogstashMachineId())
+                        .logLines(new ArrayList<>()) // 心跳包设置空的logLines列表
+                        .timestamp(LocalDateTime.now())
+                        .status(LogTailResponseStatus.HEARTBEAT)
+                        .build();
+
+        // 直接发送心跳包
         try {
-            LogTailResponseDTO heartbeat =
-                    LogTailResponseDTO.builder()
-                            .logstashMachineId(task.getLogstashMachineId())
-                            .logLines(new ArrayList<>()) // 心跳包设置空的logLines列表
-                            .timestamp(LocalDateTime.now())
-                            .status(LogTailResponseStatus.HEARTBEAT)
-                            .build();
-
             emitter.send(SseEmitter.event().name("heartbeat").data(heartbeat));
-            log.debug("发送心跳包给任务[{}]", task.getLogstashMachineId());
-
-        } catch (IOException e) {
-            log.error("发送心跳包失败，停止任务[{}]", task.getLogstashMachineId(), e);
-            task.setEmitter(null);
+            log.trace("成功发送心跳包 | 任务[{}]", task.getLogstashMachineId());
         } catch (Exception e) {
-            log.error("发送心跳包时发生未知错误，任务[{}]", task.getLogstashMachineId(), e);
+            log.warn("心跳包发送失败 | 任务[{}] | 错误: {}", task.getLogstashMachineId(), e.getMessage());
             task.setEmitter(null);
         }
     }
