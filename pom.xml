@@ -556,7 +556,8 @@
                             </sortPom>
                         </pom>
 
-                        <!-- Markdown files formatting -->
+                        <!-- Markdown files formatting - DISABLED -->
+                        <!-- markdown formatting has been disabled to exclude all markdown files
                         <markdown>
                             <includes>
                                 <include>**/*.md</include>
@@ -566,6 +567,7 @@
                             </excludes>
                             <flexmark/>
                         </markdown>
+                        -->
                     </configuration>
                     <executions>
                         <execution>
