@@ -100,6 +100,8 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
                 statusInfo.setMachineIp(machineInfo.getIp());
                 statusInfo.setState(LogstashMachineState.valueOf(relation.getState()));
                 statusInfo.setStateDescription(getStateDescription(relation));
+                statusInfo.setProcessPid(relation.getProcessPid());
+                statusInfo.setDeployPath(relation.getDeployPath());
 
                 machineStatuses.add(statusInfo);
             }

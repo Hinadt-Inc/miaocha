@@ -81,5 +81,11 @@ public class LogstashProcessResponseDTO {
 
         @Schema(description = "Logstash在该机器上的状态描述")
         private String stateDescription;
+
+        @Schema(description = "目标机器上的进程PID")
+        private String processPid;
+
+        @Schema(description = "部署目录路径")
+        private String deployPath;
     }
 }
