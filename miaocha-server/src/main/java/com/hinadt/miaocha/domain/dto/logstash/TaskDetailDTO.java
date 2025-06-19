@@ -58,6 +58,18 @@ public class TaskDetailDTO {
     @Schema(description = "错误信息")
     private String errorMessage;
 
+    @Schema(description = "机器ID")
+    private Long machineId;
+
+    @Schema(description = "机器名称")
+    private String machineName;
+
+    @Schema(description = "机器IP")
+    private String machineIp;
+
+    @Schema(description = "Logstash进程名称")
+    private String processName;
+
     @Schema(description = "实例步骤详情")
     private Map<String, List<InstanceStepDTO>> instanceSteps;
 

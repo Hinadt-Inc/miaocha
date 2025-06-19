@@ -1,8 +1,10 @@
 package com.hinadt.miaocha.domain.converter;
 
 import com.hinadt.miaocha.domain.dto.logstash.TaskDetailDTO;
+import com.hinadt.miaocha.domain.entity.LogstashProcess;
 import com.hinadt.miaocha.domain.entity.LogstashTask;
 import com.hinadt.miaocha.domain.entity.LogstashTaskMachineStep;
+import com.hinadt.miaocha.domain.entity.MachineInfo;
 import java.time.Duration;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +19,19 @@ public class TaskDetailConverter {
      * @return 任务详情DTO
      */
     public TaskDetailDTO convertToTaskDetail(LogstashTask task) {
+        return convertToTaskDetail(task, null, null);
+    }
+
+    /**
+     * 将任务实体转换为任务详情DTO (包含机器和进程信息)
+     *
+     * @param task 任务实体
+     * @param machineInfo 机器信息（可为null）
+     * @param logstashProcess Logstash进程信息（可为null）
+     * @return 任务详情DTO
+     */
+    public TaskDetailDTO convertToTaskDetail(
+            LogstashTask task, MachineInfo machineInfo, LogstashProcess logstashProcess) {
         if (task == null) {
             return null;
         }
@@ -30,7 +45,23 @@ public class TaskDetailConverter {
         dto.setOperationType(task.getOperationType());
         dto.setStartTime(task.getStartTime());
         dto.setEndTime(task.getEndTime());
+        dto.setCreateTime(task.getCreateTime());
         dto.setErrorMessage(task.getErrorMessage());
+
+        // 设置机器信息
+        if (machineInfo != null) {
+            dto.setMachineId(machineInfo.getId());
+            dto.setMachineName(machineInfo.getName());
+            dto.setMachineIp(machineInfo.getIp());
+        } else if (task.getMachineId() != null) {
+            // 如果没有传入机器信息但任务有机器ID，至少设置机器ID
+            dto.setMachineId(task.getMachineId());
+        }
+
+        // 设置进程名称
+        if (logstashProcess != null) {
+            dto.setProcessName(logstashProcess.getName());
+        }
 
         // 计算持续时间
         if (task.getStartTime() != null && task.getEndTime() != null) {

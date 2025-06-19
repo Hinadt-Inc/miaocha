@@ -8,10 +8,12 @@ import com.hinadt.miaocha.domain.converter.TaskDetailConverter;
 import com.hinadt.miaocha.domain.converter.TaskMachineStepConverter;
 import com.hinadt.miaocha.domain.dto.logstash.TaskDetailDTO;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
+import com.hinadt.miaocha.domain.entity.LogstashProcess;
 import com.hinadt.miaocha.domain.entity.LogstashTask;
 import com.hinadt.miaocha.domain.entity.LogstashTaskMachineStep;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
+import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
 import com.hinadt.miaocha.domain.mapper.LogstashTaskMachineStepMapper;
 import com.hinadt.miaocha.domain.mapper.LogstashTaskMapper;
 import com.hinadt.miaocha.domain.mapper.MachineMapper;
@@ -34,6 +36,7 @@ public class TaskServiceImpl implements TaskService {
     private final LogstashTaskMachineStepMapper stepMapper;
     private final MachineMapper machineMapper;
     private final LogstashMachineMapper logstashMachineMapper;
+    private final LogstashProcessMapper logstashProcessMapper;
     private final Executor taskExecutor;
     private final TaskDetailConverter taskDetailConverter;
     private final TaskMachineStepConverter taskMachineStepConverter;
@@ -43,6 +46,7 @@ public class TaskServiceImpl implements TaskService {
             LogstashTaskMachineStepMapper stepMapper,
             MachineMapper machineMapper,
             LogstashMachineMapper logstashMachineMapper,
+            LogstashProcessMapper logstashProcessMapper,
             @Qualifier("logstashTaskExecutor") Executor taskExecutor,
             TaskDetailConverter taskDetailConverter,
             TaskMachineStepConverter taskMachineStepConverter) {
@@ -50,6 +54,7 @@ public class TaskServiceImpl implements TaskService {
         this.stepMapper = stepMapper;
         this.machineMapper = machineMapper;
         this.logstashMachineMapper = logstashMachineMapper;
+        this.logstashProcessMapper = logstashProcessMapper;
         this.taskExecutor = taskExecutor;
         this.taskDetailConverter = taskDetailConverter;
         this.taskMachineStepConverter = taskMachineStepConverter;
@@ -173,7 +178,30 @@ public class TaskServiceImpl implements TaskService {
 
         // 获取任务信息
         LogstashTask task = taskOpt.get();
-        TaskDetailDTO dto = taskDetailConverter.convertToTaskDetail(task);
+
+        // 获取机器信息和进程信息
+        MachineInfo machineInfo = null;
+        LogstashProcess logstashProcess = null;
+
+        // 如果任务有关联的机器ID，获取机器信息
+        if (task.getMachineId() != null) {
+            machineInfo = machineMapper.selectById(task.getMachineId());
+        } else if (task.getLogstashMachineId() != null) {
+            // 如果任务关联LogstashMachine实例，通过实例获取机器信息
+            LogstashMachine logstashMachine =
+                    logstashMachineMapper.selectById(task.getLogstashMachineId());
+            if (logstashMachine != null) {
+                machineInfo = machineMapper.selectById(logstashMachine.getMachineId());
+            }
+        }
+
+        // 获取进程信息
+        if (task.getProcessId() != null) {
+            logstashProcess = logstashProcessMapper.selectById(task.getProcessId());
+        }
+
+        TaskDetailDTO dto =
+                taskDetailConverter.convertToTaskDetail(task, machineInfo, logstashProcess);
 
         // 获取所有步骤信息
         List<LogstashTaskMachineStep> steps = stepMapper.findByTaskId(taskId);
