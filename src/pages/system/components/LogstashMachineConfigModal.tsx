@@ -3,6 +3,7 @@ import { LOGSTASH_CONFIG_TEMPLATE, JVM_CONFIG_TEMPLATE } from '../../../utils/lo
 import { CopyOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { getLogstashMachineDetail, updateLogstashMachineConfig } from '../../../api/logstash';
+import { safeCopy } from '@/utils/clipboard';
 
 interface LogstashMachineConfigModalProps {
   visible: boolean;
@@ -75,6 +76,16 @@ export default function LogstashMachineConfigModal({
     }
   };
 
+  // 复制
+  const copyConfigTemplate = async (text: string) => {
+    try {
+      await safeCopy(text);
+      messageApi.success('已复制到剪贴板');
+    } catch (error) {
+      messageApi.error('复制失败，请手动复制');
+    }
+  };
+
   return (
     <Modal
       title={<span>编辑机器配置 (实例ID: {logstashMachineId})</span>}
@@ -98,17 +109,11 @@ export default function LogstashMachineConfigModal({
                 unCheckedChildren="锁定"
                 size="small"
               />
-              <Tooltip title="复制配置内容模板">
+              <Tooltip title="复制">
                 <Button
                   size="small"
                   icon={<CopyOutlined />}
-                  onClick={() => {
-                    const template = `${LOGSTASH_CONFIG_TEMPLATE}`;
-                    navigator.clipboard
-                      .writeText(template)
-                      .then(() => messageApi.success('配置已复制到剪贴板'))
-                      .catch(() => messageApi.error('复制失败'));
-                  }}
+                  onClick={() => copyConfigTemplate(initialConfig?.configContent ?? LOGSTASH_CONFIG_TEMPLATE)}
                   title="复制配置模板"
                 />
               </Tooltip>
@@ -135,16 +140,11 @@ export default function LogstashMachineConfigModal({
                 unCheckedChildren="锁定"
                 size="small"
               />
-              <Tooltip title="复制JVM参数模板">
+              <Tooltip title="复制">
                 <Button
                   size="small"
                   icon={<CopyOutlined />}
-                  onClick={() => {
-                    navigator.clipboard
-                      .writeText(JVM_CONFIG_TEMPLATE)
-                      .then(() => messageApi.success('JVM参数已复制到剪贴板'))
-                      .catch(() => messageApi.error('复制失败'));
-                  }}
+                  onClick={() => copyConfigTemplate(initialConfig?.jvmOptions ?? JVM_CONFIG_TEMPLATE)}
                   title="复制JVM参数模板"
                 />
               </Tooltip>
@@ -171,6 +171,14 @@ export default function LogstashMachineConfigModal({
                 unCheckedChildren="锁定"
                 size="small"
               />
+              <Tooltip title="复制">
+                <Button
+                  size="small"
+                  icon={<CopyOutlined />}
+                  onClick={() => copyConfigTemplate(initialConfig?.logstashYml ?? '')}
+                  title="复制"
+                />
+              </Tooltip>
             </div>
           }
         >
