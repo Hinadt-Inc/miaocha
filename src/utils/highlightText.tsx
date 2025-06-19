@@ -5,37 +5,37 @@
   @returns {React.ReactNode} - 高亮文本
 */
 export const highlightText = (text: string, keywords: string[]) => {
-  // 处理keywords，将每项中的中英文字符提取出来
-  const extractWords = (expr: string) => {
-    // 匹配所有连续的中英文字符串
-    return expr.match(/[\u4e00-\u9fa5a-zA-Z0-9]+/g) || [];
-  };
-
-  // 扁平化所有关键词
-  let flatKeywords: string[] = [];
-  if (keywords && keywords.length) {
-    keywords.forEach((expr) => {
-      flatKeywords.push(...extractWords(expr));
-    });
-  }
-  // 去重
-  flatKeywords = Array.from(new Set(flatKeywords)).filter(Boolean);
+  // 过滤掉空值并去重
+  const validKeywords = Array.from(new Set(keywords.filter(Boolean)));
 
   // 按长度降序排列，先匹配长的关键词，避免短关键词干扰长关键词的匹配
-  flatKeywords.sort((a, b) => b.length - a.length);
+  validKeywords.sort((a, b) => b.length - a.length);
 
-  if (!flatKeywords.length) return <span title={text}>{text}</span>;
+  if (!validKeywords.length) return <span title={text}>{text}</span>;
 
   let str = String(text);
-  flatKeywords.forEach((kwStr) => {
-    // 中文单字匹配
-    if (/^[\u4e00-\u9fa5]$/.test(kwStr)) {
-      str = str.replace(new RegExp(kwStr, 'g'), `<mark>${kwStr}</mark>`);
-    } else {
-      // 英文匹配，不区分大小写，但保持原始字符串格式
-      const escapedKeyword = kwStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      str = str.replace(new RegExp(`(${escapedKeyword})`, 'gi'), '<mark>$1</mark>');
-    }
+  const placeholders: string[] = [];
+  let placeholderIndex = 0;
+
+  validKeywords.forEach((keyword) => {
+    // 转义特殊正则字符
+    const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // 不区分大小写匹配，但保持原始字符串格式
+    const regex = new RegExp(`(${escapedKeyword})`, 'gi');
+
+    str = str.replace(regex, (match) => {
+      const placeholder = `__PLACEHOLDER_${placeholderIndex}__`;
+      placeholders[placeholderIndex] = `<mark>${match}</mark>`;
+      placeholderIndex++;
+      return placeholder;
+    });
   });
+
+  // 恢复占位符为实际的高亮标签
+  placeholders.forEach((replacement, index) => {
+    str = str.replace(`__PLACEHOLDER_${index}__`, replacement);
+  });
+
   return <span dangerouslySetInnerHTML={{ __html: ['null', 'undefined'].includes(str) ? '' : str }} title={text} />;
 };

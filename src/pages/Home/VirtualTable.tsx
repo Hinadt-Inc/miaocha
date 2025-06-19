@@ -15,6 +15,7 @@ interface IProps {
   whereSqlsFromSider: IStatus[];
   onChangeColumns: (params: ILogColumnsResponse[]) => void; // 列变化回调函数
   sqls?: string[]; // SQL语句列表
+  onSearch?: (params: ILogSearchParams) => void; // 搜索回调函数
 }
 
 interface ColumnHeaderProps {
@@ -125,8 +126,8 @@ const VirtualTable = (props: IProps) => {
     onChangeColumns,
     whereSqlsFromSider = [],
     sqls,
+    onSearch,
   } = props;
-  console.log(1111, dynamicColumns);
   const containerRef = useRef<HTMLDivElement>(null);
   const tblRef: Parameters<typeof Table>[0]['ref'] = useRef(null);
   const [containerHeight, setContainerHeight] = useState<number>(0);
@@ -135,20 +136,43 @@ const VirtualTable = (props: IProps) => {
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [scrollX, setScrollX] = useState(1300);
 
-  // 处理sqls数据，过滤特殊字符并提取关键词
+  // 处理sqls数据，根据SQL语法提取字段名和值
   const sqlFilterValue = useMemo(() => {
     if (!sqls || sqls.length === 0) return [];
+
+    const extractKeywords = (sql: string): string[] => {
+      const keywords: string[] = [];
+
+      // 匹配字段 = 值的模式，支持单引号、双引号或无引号
+      const patterns = [
+        // 字段名 = '值' 或 字段名='值'
+        /([a-zA-Z_][a-zA-Z0-9_.]*)\s*=\s*'([^']*)'/g,
+        // 字段名 = "值" 或 字段名="值"
+        /([a-zA-Z_][a-zA-Z0-9_.]*)\s*=\s*"([^"]*)"/g,
+        // 字段名 = 值 (无引号，匹配到空格、AND、OR或结尾)
+        /([a-zA-Z_][a-zA-Z0-9_.]*)\s*=\s*([^\s'"\(\)]+)(?=\s|$|and|AND|or|OR|\))/g,
+      ];
+
+      patterns.forEach((pattern) => {
+        let match;
+        while ((match = pattern.exec(sql)) !== null) {
+          const fieldName = match[1].trim();
+          const value = match[2].trim();
+
+          if (fieldName) keywords.push(fieldName);
+          if (value) keywords.push(value);
+        }
+      });
+
+      return keywords;
+    };
 
     return Array.from(
       new Set(
         sqls
-          .map((sql) =>
-            // 过滤掉特殊字符，保留字母、数字、中文、空格
-            sql.replace(/[@#￥%……&*（）()=+'".,;:!?<>\[\]{}|\\\/~`-]/g, ' '),
-          )
-          .map((sql) => sql.split(/\s+/)) // 以空格分割
-          .flat() // 扁平化为一维数组
-          .filter((word) => word.trim()?.length > 0), // 过滤空字符串
+          .map((sql) => extractKeywords(sql))
+          .flat()
+          .filter((keyword) => keyword.length > 0),
       ),
     );
   }, [sqls]);
@@ -371,7 +395,15 @@ const VirtualTable = (props: IProps) => {
     const newCols = columns.filter((_, idx) => idx !== colIndex);
     setColumns(newCols);
     onChangeColumns(col);
-    // 这里如果有 onChangeColumns 也要同步
+    // 当删除列后，计算剩余的选中字段
+    const _fields = newCols?.filter((item) => !['log_time', '_source'].includes(item.title)) || [];
+    if (_fields.length === 0 && onSearch) {
+      const params = {
+        ...searchParams,
+        fields: [],
+      };
+      onSearch(params);
+    }
   };
   // 左移
   const handleMoveLeft = (colIndex: number) => {

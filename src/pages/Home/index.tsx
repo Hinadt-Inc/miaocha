@@ -210,6 +210,7 @@ const HomePage = () => {
       sqls,
       onSearch: onSearchFromLog,
       onChangeColumns: handleChangeColumnsByLog,
+      onSearchFromTable: setSearchParams,
     }),
     [histogramData, detailData, getDetailData, logTableColumns, searchParams, whereSqlsFromSider, sqls],
   );
