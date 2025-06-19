@@ -228,9 +228,6 @@ export async function startLogTail(logstashMachineId: number) {
       withCredentials: true,
     },
   );
-  eventSource.close = () => {
-    stopLogTail(logstashMachineId);
-  };
   return eventSource;
 }
 

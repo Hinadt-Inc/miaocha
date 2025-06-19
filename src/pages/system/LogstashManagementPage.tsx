@@ -577,10 +577,10 @@ function LogstashManagementPage() {
                 rowKey="machineId"
                 columns={[
                   {
-                    title: '机器ID',
-                    dataIndex: 'machineId',
-                    key: 'machineId',
-                    render: (machineId: number, machine: any) => (
+                    title: '实例ID',
+                    dataIndex: 'logstashMachineId',
+                    key: 'logstashMachineId',
+                    render: (logstashMachineId: number, machine: any) => (
                       <Button
                         type="link"
                         onClick={async () => {
@@ -594,17 +594,12 @@ function LogstashManagementPage() {
                           }
                         }}
                       >
-                        {machineId}
+                        {logstashMachineId}
                       </Button>
                     ),
                   },
                   {
-                    title: '实例ID',
-                    dataIndex: 'logstashMachineId',
-                    key: 'logstashMachineId',
-                  },
-                  {
-                    title: '名称',
+                    title: '机器名称',
                     dataIndex: 'machineName',
                     key: 'machineName',
                   },
@@ -745,7 +740,7 @@ function LogstashManagementPage() {
                             setBottomLogTailModalVisible(true);
                           }}
                         >
-                          日志跟踪
+                          日志
                         </Button>
                       </Space>
                     ),
