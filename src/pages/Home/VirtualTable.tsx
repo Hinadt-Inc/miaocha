@@ -15,6 +15,7 @@ interface IProps {
   whereSqlsFromSider: IStatus[];
   onChangeColumns: (params: ILogColumnsResponse[]) => void; // 列变化回调函数
   sqls?: string[]; // SQL语句列表
+  onSearch?: (params: ILogSearchParams) => void; // 搜索回调函数
 }
 
 interface ColumnHeaderProps {
@@ -125,8 +126,8 @@ const VirtualTable = (props: IProps) => {
     onChangeColumns,
     whereSqlsFromSider = [],
     sqls,
+    onSearch,
   } = props;
-  console.log(1111, dynamicColumns);
   const containerRef = useRef<HTMLDivElement>(null);
   const tblRef: Parameters<typeof Table>[0]['ref'] = useRef(null);
   const [containerHeight, setContainerHeight] = useState<number>(0);
@@ -371,7 +372,15 @@ const VirtualTable = (props: IProps) => {
     const newCols = columns.filter((_, idx) => idx !== colIndex);
     setColumns(newCols);
     onChangeColumns(col);
-    // 这里如果有 onChangeColumns 也要同步
+    // 当删除列后，计算剩余的选中字段
+    const _fields = newCols?.filter((item) => !['log_time', '_source'].includes(item.title)) || [];
+    if (_fields.length === 0 && onSearch) {
+      const params = {
+        ...searchParams,
+        fields: [],
+      };
+      onSearch(params);
+    }
   };
   // 左移
   const handleMoveLeft = (colIndex: number) => {

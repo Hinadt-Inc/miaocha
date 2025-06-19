@@ -5,6 +5,7 @@ import styles from './Log.module.less';
 import VirtualTable from './VirtualTable';
 interface IProps {
   histogramData: ILogHistogramData[]; // 直方图数据
+  histogramDataLoading: boolean; // 直方图数据是否正在加载
   getDetailData: any; // 加载日志数据的函数
   detailData: ILogDetailsResponse; // 日志数据;
   searchParams: ILogSearchParams; // 搜索参数
@@ -13,6 +14,7 @@ interface IProps {
   sqls?: string[]; // SQL语句列表
   onSearch: (params: ILogSearchParams) => void; // 搜索回调函数
   onChangeColumns: (params: ILogColumnsResponse[]) => void; // 列变化回调函数
+  onSearchFromTable?: (params: ILogSearchParams) => void; // 来自表格的搜索回调
 }
 
 const Log = (props: IProps) => {
@@ -26,6 +28,7 @@ const Log = (props: IProps) => {
     sqls,
     onSearch,
     onChangeColumns,
+    onSearchFromTable,
   } = props || {};
   const { rows = [], totalCount } = detailData || {};
   const [allRows, setAllRows] = useState<any[]>([]); // 用于存储所有历史数据的状态
@@ -75,6 +78,7 @@ const Log = (props: IProps) => {
       hasMore: totalCount ? allRows.length < totalCount : false,
       dynamicColumns,
       sqls,
+      onSearch: onSearchFromTable,
     }),
     [
       allRows,
@@ -85,6 +89,7 @@ const Log = (props: IProps) => {
       searchParams,
       whereSqlsFromSider,
       sqls,
+      onSearchFromTable,
     ],
   );
 
