@@ -70,3 +70,22 @@ config.reload.automatic: false
 http.host: 0.0.0.0
 http.port: 9600
 `;
+
+export const DORIS_TEMPLATE = `CREATE TABLE \`log_table\` (
+  \`log_time\` datetime(3) NOT NULL COMMENT "日志时间",
+  \`host\` text NULL COMMENT "主机名或IP",
+  \`path\` text NULL COMMENT "日志文件路径",
+  -- 添加其他字段
+  INDEX idx_host (\`host\`) USING INVERTED, -- 主机名索引
+  INDEX idx_path (\`path\`) USING INVERTED -- 路径索引
+) ENGINE=OLAP
+DUPLICATE KEY(\`log_time\`) -- 去重键
+COMMENT '日志存储表'
+AUTO PARTITION BY RANGE (date_trunc(\`log_time\`, 'day')) -- 按天分区
+()
+DISTRIBUTED BY RANDOM BUCKETS 30 -- 随机分桶
+PROPERTIES (
+"dynamic_partition.enable" = "true", -- 启用动态分区
+"dynamic_partition.time_unit" = "day", -- 分区单位：天
+"dynamic_partition.time_zone" = "Asia/Shanghai" -- 时区
+);`;

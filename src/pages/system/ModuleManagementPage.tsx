@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import ExecuteConfirmationModal from '@/pages/SQLEditor/components/ExecuteConfirmationModal';
 import {
   Button,
   Input,
@@ -30,6 +31,7 @@ import {
   type CreateModuleParams,
   type UpdateModuleParams,
 } from '@/api/modules';
+import { DORIS_TEMPLATE } from '@/utils/logstashTemplates';
 
 interface Module extends BaseModule {}
 
@@ -69,6 +71,10 @@ const ModuleManagementPage = () => {
   const [isDetailVisible, setIsDetailVisible] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<ModuleData | null>(null);
   const [moduleDetail, setModuleDetail] = useState<Module | null>(null);
+  const [executeModalVisible, setExecuteModalVisible] = useState(false);
+  const [executeSql, setExecuteSql] = useState('');
+  const [currentRecord, setCurrentRecord] = useState<ModuleData | null>(null);
+  const [executing, setExecuting] = useState(false);
   const [form] = Form.useForm();
   const searchTimeoutRef = useRef<number | null>(null);
   const originalDataRef = useRef<ModuleData[]>([]);
@@ -239,35 +245,32 @@ const ModuleManagementPage = () => {
 
   const { modal } = App.useApp();
   const handleExecuteDorisSql = async (record: ModuleData) => {
-    modal.confirm({
-      title: '执行Doris SQL',
-      width: 600,
-      content: (
-        <Input.TextArea
-          placeholder={`输入要执行的Doris SQL，例如: CREATE TABLE IF NOT EXISTS ${record.tableName} (...)`}
-          rows={6}
-        />
-      ),
-      okText: '执行',
-      cancelText: '取消',
-      onOk: async (close) => {
-        try {
-          const input = document.querySelector('.ant-modal-body textarea') as HTMLTextAreaElement;
-          const sql = input.value.trim();
-          if (!sql) {
-            messageApi.warning('请输入有效的SQL语句');
-            return;
-          }
+    setCurrentRecord(record);
+    setExecuteSql('');
+    setExecuteModalVisible(true);
+  };
 
-          await executeDorisSql(Number(record.key), sql);
-          messageApi.success('SQL执行成功');
-          close();
-        } catch (error) {
-          messageApi.error('SQL执行失败');
-          console.error('执行Doris SQL失败:', error);
-        }
-      },
-    });
+  const handleApplyTemplate = () => {
+    if (currentRecord) {
+      const templateValue = DORIS_TEMPLATE.replace('${tableName}', currentRecord.tableName || '');
+      setExecuteSql(templateValue);
+    }
+  };
+
+  const handleExecuteConfirm = async () => {
+    if (!currentRecord || !executeSql.trim()) {
+      messageApi.warning('请输入有效的SQL语句');
+      return;
+    }
+
+    try {
+      setExecuting(true);
+      await executeDorisSql(Number(currentRecord.key), executeSql.trim());
+      messageApi.success('SQL执行成功');
+      setExecuteModalVisible(false);
+    } finally {
+      setExecuting(false);
+    }
   };
 
   const columns: ColumnsType<ModuleData> = [
@@ -474,6 +477,24 @@ const ModuleManagementPage = () => {
           </Descriptions>
         )}
       </Modal>
+
+      <ExecuteConfirmationModal
+        visible={executeModalVisible}
+        sql={executeSql}
+        onConfirm={handleExecuteConfirm}
+        onCancel={() => setExecuteModalVisible(false)}
+        loading={executing}
+        title={
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span>
+              执行Doris SQL - <strong>{currentRecord?.name}</strong>
+            </span>
+            <Tooltip title="应用模板的Doris SQL语句">
+              <Button type="text" icon={<DatabaseOutlined />} style={{ marginLeft: 8 }} onClick={handleApplyTemplate} />
+            </Tooltip>
+          </div>
+        }
+      />
     </div>
   );
 };
