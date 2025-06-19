@@ -62,12 +62,12 @@ export default defineConfig({
     // 自定义底层的Rollup打包配置
     rollupOptions: {
       output: {
-        // 入口文件配置
-        entryFileNames: 'js/[name].[hash].js',
-        // 块文件配置
-        chunkFileNames: 'js/[name].[hash].js',
-        // 资源文件配置
-        assetFileNames: 'assets/[name].[hash].[ext]',
+        // 入口文件配置 - 统一放在assets目录下
+        entryFileNames: 'assets/js/[name].[hash].js',
+        // 块文件配置 - 统一放在assets目录下
+        chunkFileNames: 'assets/js/[name].[hash].js',
+        // 资源文件配置 - 统一放在assets目录下
+        assetFileNames: 'assets/[ext]/[name].[hash].[ext]',
         // 优化分块策略
         manualChunks: {
           'react-core': ['react', 'react-dom'],
