@@ -2,6 +2,7 @@ package com.hinadt.miaocha.endpoint;
 
 import com.hinadt.miaocha.application.service.DatasourceService;
 import com.hinadt.miaocha.domain.dto.ApiResponse;
+import com.hinadt.miaocha.domain.dto.DatasourceConnectionTestResultDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceCreateDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceDTO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -97,7 +98,7 @@ public class DatasourceEndpoint {
      */
     @PostMapping("/test-connection")
     @Operation(summary = "测试数据源连接", description = "测试新的数据源连接是否可用，但不保存")
-    public ApiResponse<Boolean> testConnection(
+    public ApiResponse<DatasourceConnectionTestResultDTO> testConnection(
             @Parameter(description = "数据源连接信息", required = true) @Valid @RequestBody
                     DatasourceCreateDTO dto) {
         return ApiResponse.success(datasourceService.testConnection(dto));
@@ -111,7 +112,7 @@ public class DatasourceEndpoint {
      */
     @PostMapping("/{id}/test-connection")
     @Operation(summary = "测试现有的数据源连接", description = "测试已保存的数据源连接是否可用")
-    public ApiResponse<Boolean> testConnection(
+    public ApiResponse<DatasourceConnectionTestResultDTO> testConnection(
             @Parameter(description = "数据源ID", required = true) @PathVariable("id") Long id) {
         return ApiResponse.success(datasourceService.testExistingConnection(id));
     }

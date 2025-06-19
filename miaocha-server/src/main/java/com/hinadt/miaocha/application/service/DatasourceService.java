@@ -1,5 +1,6 @@
 package com.hinadt.miaocha.application.service;
 
+import com.hinadt.miaocha.domain.dto.DatasourceConnectionTestResultDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceCreateDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceDTO;
 import java.util.List;
@@ -23,8 +24,8 @@ public interface DatasourceService {
     List<DatasourceDTO> getAllDatasources();
 
     /** 测试数据源连接 */
-    boolean testConnection(DatasourceCreateDTO dto);
+    DatasourceConnectionTestResultDTO testConnection(DatasourceCreateDTO dto);
 
     /** 测试已保存数据源的连接 */
-    boolean testExistingConnection(Long id);
+    DatasourceConnectionTestResultDTO testExistingConnection(Long id);
 }

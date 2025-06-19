@@ -8,6 +8,7 @@ import com.hinadt.miaocha.application.service.impl.DatasourceServiceImpl;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.converter.DatasourceConverter;
+import com.hinadt.miaocha.domain.dto.DatasourceConnectionTestResultDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceCreateDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
@@ -106,11 +107,10 @@ class DatasourceInfoServiceTest {
                 "模拟外部依赖",
                 () -> {
                     // 模拟数据源不存在
-                    when(datasourceMapper.selectByName(anyString())).thenReturn(null);
-                    // 模拟插入成功
+                    when(datasourceMapper.selectByName(anyString())).thenReturn(null); // 模拟插入成功
                     when(datasourceMapper.insert(any(DatasourceInfo.class))).thenReturn(1);
                     // 模拟连接测试成功
-                    doReturn(true)
+                    doReturn(DatasourceConnectionTestResultDTO.success())
                             .when(datasourceService)
                             .testConnection(any(DatasourceCreateDTO.class));
                 });
@@ -142,7 +142,9 @@ class DatasourceInfoServiceTest {
         // 模拟数据源不存在
         when(datasourceMapper.selectByName(anyString())).thenReturn(null);
         // 模拟连接测试失败
-        doReturn(false).when(datasourceService).testConnection(any(DatasourceCreateDTO.class));
+        doReturn(DatasourceConnectionTestResultDTO.failure("连接失败"))
+                .when(datasourceService)
+                .testConnection(any(DatasourceCreateDTO.class));
 
         assertThrows(
                 BusinessException.class,
@@ -178,7 +180,9 @@ class DatasourceInfoServiceTest {
         // 模拟名称不重复
         when(datasourceMapper.selectByName(anyString())).thenReturn(null);
         // 模拟连接测试成功
-        doReturn(true).when(datasourceService).testConnection(any(DatasourceCreateDTO.class));
+        doReturn(DatasourceConnectionTestResultDTO.success())
+                .when(datasourceService)
+                .testConnection(any(DatasourceCreateDTO.class));
         // 模拟更新成功
         when(datasourceMapper.update(any(DatasourceInfo.class))).thenReturn(1);
 
@@ -199,7 +203,9 @@ class DatasourceInfoServiceTest {
         // 模拟名称不重复
         when(datasourceMapper.selectByName(anyString())).thenReturn(null);
         // 模拟连接测试失败
-        doReturn(false).when(datasourceService).testConnection(any(DatasourceCreateDTO.class));
+        doReturn(DatasourceConnectionTestResultDTO.failure("连接失败"))
+                .when(datasourceService)
+                .testConnection(any(DatasourceCreateDTO.class));
 
         assertThrows(
                 BusinessException.class,
@@ -328,11 +334,30 @@ class DatasourceInfoServiceTest {
     @Test
     void testTestConnection() {
         // 使用Spy对象模拟testConnection方法返回成功
-        doReturn(true).when(datasourceService).testConnection(any(DatasourceCreateDTO.class));
+        doReturn(DatasourceConnectionTestResultDTO.success())
+                .when(datasourceService)
+                .testConnection(any(DatasourceCreateDTO.class));
 
-        boolean result = datasourceService.testConnection(createDTO);
+        DatasourceConnectionTestResultDTO result = datasourceService.testConnection(createDTO);
 
-        assertTrue(result);
+        assertNotNull(result);
+        assertTrue(result.isSuccess());
+        assertNull(result.getErrorMessage());
+        verify(datasourceService, times(1)).testConnection(any(DatasourceCreateDTO.class));
+    }
+
+    @Test
+    void testTestConnection_Failed() {
+        // 使用Spy对象模拟testConnection方法返回失败
+        doReturn(DatasourceConnectionTestResultDTO.failure("连接失败"))
+                .when(datasourceService)
+                .testConnection(any(DatasourceCreateDTO.class));
+
+        DatasourceConnectionTestResultDTO result = datasourceService.testConnection(createDTO);
+
+        assertNotNull(result);
+        assertFalse(result.isSuccess());
+        assertEquals("连接失败", result.getErrorMessage());
         verify(datasourceService, times(1)).testConnection(any(DatasourceCreateDTO.class));
     }
 
@@ -341,11 +366,14 @@ class DatasourceInfoServiceTest {
         // 模拟数据源存在
         when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasourceInfo);
         // 模拟连接测试成功
-        doReturn(true).when(datasourceService).testConnection(any(DatasourceCreateDTO.class));
+        doReturn(DatasourceConnectionTestResultDTO.success())
+                .when(datasourceService)
+                .testConnection(any(DatasourceCreateDTO.class));
 
-        boolean result = datasourceService.testExistingConnection(1L);
+        DatasourceConnectionTestResultDTO result = datasourceService.testExistingConnection(1L);
 
-        assertTrue(result);
+        assertNotNull(result);
+        assertTrue(result.isSuccess());
         verify(datasourceMapper, times(1)).selectById(anyLong());
         verify(datasourceService, times(1)).testConnection(any(DatasourceCreateDTO.class));
     }
