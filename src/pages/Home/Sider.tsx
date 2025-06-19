@@ -173,6 +173,20 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
       .filter((item) => item.selected)
       .map((item) => item.columnName)
       .filter(Boolean) as string[];
+
+    // 更新本地搜索参数
+    const _savedSearchParams = localStorage.getItem('searchBarParams');
+    if (_savedSearchParams) {
+      const savedSearchParams = JSON.parse(_savedSearchParams);
+      localStorage.setItem(
+        'searchBarParams',
+        JSON.stringify({
+          ...savedSearchParams,
+          fields: newActiveColumns,
+        }),
+      );
+    }
+
     // 通知父组件激活字段变化;
     if (onActiveColumnsChange) {
       onActiveColumnsChange(newActiveColumns);
