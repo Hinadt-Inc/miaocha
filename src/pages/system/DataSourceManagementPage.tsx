@@ -48,7 +48,7 @@ const DataSourceManagementPage = () => {
   const setTestExistingLoading = (id: string, loading: boolean) => {
     setLoading((prev) => ({
       ...prev,
-      testExisting: { ...prev.testExisting, [id]: loading }
+      testExisting: { ...prev.testExisting, [id]: loading },
     }));
   };
   const actionRef = useRef<ActionType>(null);
@@ -116,7 +116,7 @@ const DataSourceManagementPage = () => {
       // 直接刷新表格数据
       actionRef.current?.reload();
     } catch {
-      messageApi.error('删除数据源失败');
+      // messageApi.error('删除数据源失败');
     }
   };
 
@@ -158,7 +158,6 @@ const DataSourceManagementPage = () => {
       void actionRef.current!.reload();
       return true;
     } catch {
-      messageApi.error(currentDataSource ? '更新数据源失败' : '创建数据源失败');
       return false;
     } finally {
       setSubmitLoading(false);
@@ -202,15 +201,15 @@ const DataSourceManagementPage = () => {
 
     await testDataSourceConnection(testParams);
     messageApi.success('连接测试成功！数据库连接正常');
+    setTestLoading(false);
   };
 
   // 测试现有数据源连接
   const handleTestExistingConnection = async (id: string, name: string) => {
     setTestExistingLoading(id, true);
-
     await testExistingDataSourceConnection(id);
     messageApi.success(`数据源 "${name}" 连接测试成功！`);
-
+    setTestExistingLoading(id, false);
   };
 
   const columns: ProColumns<DataSourceItem>[] = [
@@ -328,7 +327,7 @@ const DataSourceManagementPage = () => {
     <div className={styles.container}>
       {contextHolder}
       <ProTable<DataSourceItem>
-        loading={loading.table || loading.submit || loading.test}
+        loading={loading.table}
         className={styles.tableContainer}
         bordered
         size="small"
@@ -414,9 +413,8 @@ const DataSourceManagementPage = () => {
                 onClick={() => {
                   // 获取当前表单的值，并测试连接
                   const values = props.form?.getFieldsValue() as TestConnectionParams;
-                  void handleTestConnection(values).catch(() => {
-                    messageApi.error('连接测试失败');
-                  });
+                  void handleTestConnection(values);
+                  setTestLoading(false);
                 }}
               >
                 测试连接
