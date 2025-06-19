@@ -69,7 +69,7 @@ export function refreshLogstashMachineConfig(processId: number, machineId: numbe
 export function refreshLogstashConfig(
   processId: number,
   data: {
-    machineIds?: number[];
+    logstashMachineIds?: number[];
     configContent?: string;
     jvmOptions?: string;
     logstashYml?: string;
