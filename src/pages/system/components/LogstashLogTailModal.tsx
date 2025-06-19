@@ -41,11 +41,8 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
     try {
       // 首先创建日志跟踪任务
       await createLogTailTask(logstashMachineId);
-
-      console.log('准备调用startLogTail...');
       // 调用异步startLogTail函数并等待返回EventSource对象
       const eventSource = startLogTail(logstashMachineId);
-      console.log('startLogTail返回:', eventSource);
       if (!eventSource) {
         throw new Error('无法创建EventSource连接');
       }
@@ -55,25 +52,20 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
         eventSource
       ).onopen = () => {
         console.log('日志跟踪连接已打开');
-        messageApi.success('日志跟踪连接已打开');
       };
 
       (await eventSource).addEventListener('log-data', (event) => {
         const data = JSON.parse(event.data);
-        console.log('收到日志:', data.logLines);
         // 只提取logLines数组内容
-        setLogs((prev) => [...prev, ...data.logLines]);
+        setLogs((prev) => [...prev, ...data.logLines, `---------------分隔线---------------`]);
         scrollToBottom();
       });
 
       (await eventSource).addEventListener('heartbeat', (event) => {
-        console.log('收到心跳');
         const data = JSON.parse(event.data);
         setStatus(data.status);
       });
-      console.log('日志跟踪已启动', eventSource);
       (await eventSource).onmessage = (event) => {
-        console.log('收到日志消息:', event.data);
         const newLog = event.data;
         setLogs((prev) => [...prev, newLog, `---------------分隔线---------------`]);
         scrollToBottom();
@@ -81,7 +73,6 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
 
       (await eventSource).onerror = async (err) => {
         console.error('EventSource错误:', err);
-        messageApi.error('日志跟踪连接出错');
         setIsTailing(false);
         (await eventSource).close();
       };
@@ -121,16 +112,6 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
       }
     }
   }, [visible]);
-
-  // 监视visible属性，当弹窗关闭时自动停止跟踪
-  useEffect(() => {
-    // 当弹窗变为不可见且仍在跟踪时，停止跟踪
-    if (!visible && isTailing) {
-      stopTail().catch((error) => {
-        console.error('自动停止跟踪失败:', error);
-      });
-    }
-  }, [visible, isTailing]);
 
   return (
     <>

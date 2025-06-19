@@ -69,7 +69,7 @@ export function refreshLogstashMachineConfig(processId: number, machineId: numbe
 export function refreshLogstashConfig(
   processId: number,
   data: {
-    machineIds?: number[];
+    logstashMachineIds?: number[];
     configContent?: string;
     jvmOptions?: string;
     logstashYml?: string;
@@ -228,9 +228,6 @@ export async function startLogTail(logstashMachineId: number) {
       withCredentials: true,
     },
   );
-  eventSource.close = () => {
-    stopLogTail(logstashMachineId);
-  };
   return eventSource;
 }
 

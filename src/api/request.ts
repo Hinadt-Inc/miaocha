@@ -97,7 +97,7 @@ service.interceptors.response.use(
       503: '服务不可用',
       504: '网关超时',
     };
-    if (status && statusMessageMap[status]) {
+    if (status && statusMessageMap[status] && !errorMessage) {
       errorMessage = statusMessageMap[status];
     }
 
