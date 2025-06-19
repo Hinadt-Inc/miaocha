@@ -36,4 +36,8 @@ __snapshots__
 
 # 环境文件
 .env*
-!.env.example 
+!.env.example
+
+# Markdown 文件
+*.md
+**/*.md 
