@@ -1,9 +1,10 @@
 import { request } from './request';
-import type { 
+import type {
   DataSource,
   CreateDataSourceParams,
   UpdateDataSourceParams,
-  TestConnectionParams
+  TestConnectionParams,
+  DatasourceConnectionTestResult
 } from '../types/datasourceTypes';
 
 // 获取数据源列表
@@ -57,10 +58,18 @@ export function createDataSource(data: CreateDataSourceParams): Promise<DataSour
 }
 
 // 测试数据源连接
-export function testDataSourceConnection(data: TestConnectionParams): Promise<boolean> {
+export function testDataSourceConnection(data: TestConnectionParams): Promise<DatasourceConnectionTestResult> {
   return request({
     url: '/api/datasources/test-connection',
     method: 'POST',
     data
+  });
+}
+
+// 测试现有数据源连接
+export function testExistingDataSourceConnection(id: string): Promise<DatasourceConnectionTestResult> {
+  return request({
+    url: `/api/datasources/${id}/test-connection`,
+    method: 'POST'
   });
 }

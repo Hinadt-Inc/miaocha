@@ -1,11 +1,12 @@
 import styles from './DataSourceManagementPage.module.less';
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
 import {
   getAllDataSources,
   createDataSource,
   updateDataSource,
   deleteDataSource,
   testDataSourceConnection,
+  testExistingDataSourceConnection,
 } from '../../api/datasource';
 import type { DataSource, CreateDataSourceParams, TestConnectionParams } from '../../types/datasourceTypes';
 import dayjs from 'dayjs';
@@ -33,11 +34,8 @@ const DataSourceManagementPage = () => {
     table: false,
     submit: false,
     test: false,
+    testExisting: {} as Record<string, boolean>, // 为每个数据源维护测试状态
   });
-
-  const setTableLoading: (isLoading: boolean) => void = (isLoading) => {
-    setLoading((prev) => ({ ...prev, table: isLoading }));
-  };
 
   const setSubmitLoading = (loading: boolean) => {
     setLoading((prev) => ({ ...prev, submit: loading }));
@@ -45,6 +43,13 @@ const DataSourceManagementPage = () => {
 
   const setTestLoading = (loading: boolean) => {
     setLoading((prev) => ({ ...prev, test: loading }));
+  };
+
+  const setTestExistingLoading = (id: string, loading: boolean) => {
+    setLoading((prev) => ({
+      ...prev,
+      testExisting: { ...prev.testExisting, [id]: loading }
+    }));
   };
   const actionRef = useRef<ActionType>(null);
 
@@ -186,30 +191,26 @@ const DataSourceManagementPage = () => {
     }
 
     setTestLoading(true);
-    try {
-      // 准备测试连接参数
-      const testParams = {
-        name: values.name, // 添加数据源名称
-        type: values.type,
-        jdbcUrl: values.jdbcUrl,
-        username: values.username,
-        password: values.password,
-      } as TestConnectionParams;
+    // 准备测试连接参数
+    const testParams = {
+      name: values.name, // 添加数据源名称
+      type: values.type,
+      jdbcUrl: values.jdbcUrl,
+      username: values.username,
+      password: values.password,
+    } as TestConnectionParams;
 
-      const success = await testDataSourceConnection(testParams);
+    await testDataSourceConnection(testParams);
+    messageApi.success('连接测试成功！数据库连接正常');
+  };
 
-      if (success) {
-        messageApi.success('连接测试成功！数据库连接正常');
-      } else {
-        messageApi.error(
-          '连接测试失败，请检查以下信息：\n1. 主机地址是否正确\n2. 端口是否开放\n3. 用户名密码是否正确\n4. 数据库是否存在',
-        );
-      }
-    } catch (error) {
-      messageApi.error(`连接测试失败: ${error instanceof Error ? error.message : '未知错误'}`);
-    } finally {
-      setTestLoading(false);
-    }
+  // 测试现有数据源连接
+  const handleTestExistingConnection = async (id: string, name: string) => {
+    setTestExistingLoading(id, true);
+
+    await testExistingDataSourceConnection(id);
+    messageApi.success(`数据源 "${name}" 连接测试成功！`);
+
   };
 
   const columns: ProColumns<DataSourceItem>[] = [
@@ -278,18 +279,29 @@ const DataSourceManagementPage = () => {
     },
     {
       title: '操作',
-      width: '8%',
+      width: '12%',
       align: 'center',
       valueType: 'option',
       fixed: 'right',
       render: (_, record) => (
-        <Space size={4}>
+        <Space size={4} wrap>
+          <Button
+            key="testConnection"
+            type="link"
+            size="small"
+            icon={<LinkOutlined />}
+            loading={loading.testExisting[record.id] || false}
+            onClick={() => handleTestExistingConnection(record.id, record.name)}
+            style={{ padding: '0 4px' }}
+          >
+            测试连接
+          </Button>
           <Button
             key="edit"
             type="link"
             size="small"
             onClick={() => openEditModal(record)}
-            style={{ padding: '0 8px' }}
+            style={{ padding: '0 4px' }}
           >
             编辑
           </Button>
@@ -303,7 +315,7 @@ const DataSourceManagementPage = () => {
               void handleDelete(record.id);
             }}
           >
-            <Button type="link" size="small" danger style={{ padding: '0 8px' }}>
+            <Button type="link" size="small" danger style={{ padding: '0 4px' }}>
               删除
             </Button>
           </Popconfirm>

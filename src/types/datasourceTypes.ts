@@ -3,16 +3,11 @@ export interface DataSource {
   id: string;
   name: string;
   type:
-    | 'mysql'
-    | 'postgresql'
-    | 'sqlserver'
-    | 'oracle'
-    | 'mongodb'
-    | 'redis'
-    | 'elasticsearch'
-    | 'clickhouse'
-    | 'hive'
-    | 'DORIS';
+  | 'mysql'
+  | 'postgresql'
+  | 'sqlserver'
+  | 'oracle'
+  | 'DORIS';
   ip: string;
   port: number;
   username: string;
@@ -49,4 +44,10 @@ export interface TestConnectionParams {
   jdbcUrl: string;
   username: string;
   password: string;
+}
+
+// 数据源连接测试结果
+export interface DatasourceConnectionTestResult {
+  success: boolean;
+  errorMessage?: string;
 }
