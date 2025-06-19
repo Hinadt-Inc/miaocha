@@ -3,6 +3,7 @@ package com.hinadt.miaocha.application.logstash;
 import com.hinadt.miaocha.application.service.MachineService;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
+import com.hinadt.miaocha.domain.dto.MachineConnectionTestResultDTO;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,12 +37,15 @@ public class LogstashMachineConnectionValidator {
         logger.debug("开始验证机器 [{}] ({}) 的连接", machineId, machineInfo.getIp());
 
         try {
-            boolean connected = machineService.testConnection(machineId);
-            if (!connected) {
+            MachineConnectionTestResultDTO result = machineService.testConnection(machineId);
+            if (!result.isSuccess()) {
                 String errorMessage =
                         String.format(
-                                "无法连接到机器 [%s] (%s:%d)，请检查机器状态和网络连接",
-                                machineInfo.getName(), machineInfo.getIp(), machineInfo.getPort());
+                                "无法连接到机器 [%s] (%s:%d)，错误原因: %s",
+                                machineInfo.getName(),
+                                machineInfo.getIp(),
+                                machineInfo.getPort(),
+                                result.getErrorMessage());
                 logger.error(errorMessage);
                 throw new BusinessException(ErrorCode.MACHINE_CONNECTION_FAILED, errorMessage);
             }
@@ -76,9 +80,11 @@ public class LogstashMachineConnectionValidator {
         }
 
         try {
-            boolean connected = machineService.testConnection(machineId);
-            if (!connected) {
-                String errorMessage = String.format("无法连接到机器 [ID:%d]，请检查机器状态和网络连接", machineId);
+            MachineConnectionTestResultDTO result = machineService.testConnection(machineId);
+            if (!result.isSuccess()) {
+                String errorMessage =
+                        String.format(
+                                "无法连接到机器 [ID:%d]，错误原因: %s", machineId, result.getErrorMessage());
                 logger.error(errorMessage);
                 throw new BusinessException(ErrorCode.MACHINE_CONNECTION_FAILED, errorMessage);
             }

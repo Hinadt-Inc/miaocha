@@ -1,6 +1,7 @@
 package com.hinadt.miaocha.common.ssh;
 
 import com.hinadt.miaocha.common.exception.SshException;
+import com.hinadt.miaocha.domain.dto.MachineConnectionTestResultDTO;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -61,17 +62,99 @@ public class SshClient {
      * 测试SSH连接
      *
      * @param machineInfo 机器信息
-     * @return 是否连接成功
+     * @return 连接测试结果
      */
-    public boolean testConnection(MachineInfo machineInfo) {
+    public MachineConnectionTestResultDTO testConnection(MachineInfo machineInfo) {
         try {
             SshConfig config = createConfig(machineInfo);
             executeCommand(config, "echo 'Connection test successful'");
-            return true;
+            return MachineConnectionTestResultDTO.success();
         } catch (Exception e) {
             logger.error("测试SSH连接到 {} 失败: {}", machineInfo.getIp(), e.getMessage());
-            return false;
+            return handleConnectionException(e);
         }
+    }
+
+    /** 处理连接异常，提供用户友好的错误信息 */
+    private MachineConnectionTestResultDTO handleConnectionException(Exception e) {
+        String errorMessage = e.getMessage().toLowerCase();
+
+        // 连接超时或网络相关错误
+        if (errorMessage.contains("timeout") || errorMessage.contains("timed out")) {
+            return MachineConnectionTestResultDTO.failure("连接超时，请检查机器IP地址和端口是否正确，以及网络连通性");
+        }
+
+        // 认证失败
+        if (errorMessage.contains("authentication")
+                || errorMessage.contains("auth")
+                || errorMessage.contains("password")
+                || errorMessage.contains("permission denied")
+                || errorMessage.contains("access denied")
+                || errorMessage.contains("login failed")) {
+            return MachineConnectionTestResultDTO.failure("认证失败，请检查用户名、密码或SSH密钥是否正确");
+        }
+
+        // 连接被拒绝
+        if (errorMessage.contains("connection refused")
+                || errorMessage.contains("connect failed")) {
+            return MachineConnectionTestResultDTO.failure("连接被拒绝，请检查目标机器的SSH服务是否启动，端口是否正确");
+        }
+
+        // 主机无法到达
+        if (errorMessage.contains("no route to host")
+                || errorMessage.contains("host is unreachable")
+                || errorMessage.contains("unknown host")
+                || errorMessage.contains("name resolution failed")) {
+            return MachineConnectionTestResultDTO.failure("无法连接到目标主机，请检查IP地址是否正确，网络是否通畅");
+        }
+
+        // 端口相关错误
+        if (errorMessage.contains("connection reset")
+                || errorMessage.contains("network unreachable")) {
+            return MachineConnectionTestResultDTO.failure("网络连接异常，请检查端口是否被防火墙阻止");
+        }
+
+        // SSH协议相关错误
+        if (errorMessage.contains("protocol")
+                || errorMessage.contains("ssh")
+                || errorMessage.contains("handshake")
+                || errorMessage.contains("negotiation")) {
+            return MachineConnectionTestResultDTO.failure("SSH协议错误，请检查目标机器的SSH服务配置");
+        }
+
+        // 密钥相关错误
+        if (errorMessage.contains("key")
+                || errorMessage.contains("identity")
+                || errorMessage.contains("publickey")) {
+            return MachineConnectionTestResultDTO.failure("SSH密钥错误，请检查密钥格式是否正确");
+        }
+
+        // 权限相关错误
+        if (errorMessage.contains("permission") || errorMessage.contains("denied")) {
+            return MachineConnectionTestResultDTO.failure("权限不足，请检查用户账号是否有SSH登录权限");
+        }
+
+        // 通用错误
+        return MachineConnectionTestResultDTO.failure("SSH连接失败: " + getSimpleErrorMessage(e));
+    }
+
+    /** 获取简化的错误信息 */
+    private String getSimpleErrorMessage(Exception e) {
+        String message = e.getMessage();
+        if (message == null) {
+            return e.getClass().getSimpleName();
+        }
+
+        // 截取第一行错误信息，避免过长的堆栈信息
+        String[] lines = message.split("\n");
+        String firstLine = lines[0];
+
+        // 限制错误信息长度
+        if (firstLine.length() > 200) {
+            firstLine = firstLine.substring(0, 200) + "...";
+        }
+
+        return firstLine;
     }
 
     /**

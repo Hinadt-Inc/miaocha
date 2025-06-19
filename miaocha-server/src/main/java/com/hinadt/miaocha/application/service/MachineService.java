@@ -1,5 +1,6 @@
 package com.hinadt.miaocha.application.service;
 
+import com.hinadt.miaocha.domain.dto.MachineConnectionTestResultDTO;
 import com.hinadt.miaocha.domain.dto.MachineCreateDTO;
 import com.hinadt.miaocha.domain.dto.MachineDTO;
 import java.util.List;
@@ -52,7 +53,7 @@ public interface MachineService {
      * @param id 机器ID
      * @return 连接测试结果
      */
-    boolean testConnection(Long id);
+    MachineConnectionTestResultDTO testConnection(Long id);
 
     /**
      * 测试机器连接 (使用参数)
@@ -60,5 +61,5 @@ public interface MachineService {
      * @param dto 机器连接参数
      * @return 连接测试结果
      */
-    boolean testConnectionWithParams(MachineCreateDTO dto);
+    MachineConnectionTestResultDTO testConnectionWithParams(MachineCreateDTO dto);
 }

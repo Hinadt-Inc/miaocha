@@ -2,6 +2,7 @@ package com.hinadt.miaocha.endpoint;
 
 import com.hinadt.miaocha.application.service.MachineService;
 import com.hinadt.miaocha.domain.dto.ApiResponse;
+import com.hinadt.miaocha.domain.dto.MachineConnectionTestResultDTO;
 import com.hinadt.miaocha.domain.dto.MachineCreateDTO;
 import com.hinadt.miaocha.domain.dto.MachineDTO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -90,14 +91,14 @@ public class MachineEndpoint {
     }
 
     /**
-     * 测试机器连接
+     * 测试现有机器连接
      *
      * @param id 机器ID
      * @return 连接测试结果
      */
     @PostMapping("/{id}/test-connection")
-    @Operation(summary = "测试机器连接", description = "测试与指定机器的SSH连接")
-    public ApiResponse<Boolean> testConnection(
+    @Operation(summary = "测试现有机器连接", description = "测试已保存机器的SSH连接是否可用")
+    public ApiResponse<MachineConnectionTestResultDTO> testConnection(
             @Parameter(description = "机器ID", required = true) @PathVariable("id") Long id) {
         return ApiResponse.success(machineService.testConnection(id));
     }
@@ -110,7 +111,7 @@ public class MachineEndpoint {
      */
     @PostMapping("/test-connection")
     @Operation(summary = "测试机器连接", description = "使用机器连接参数测试SSH连接，无需保存机器")
-    public ApiResponse<Boolean> testConnectionWithParams(
+    public ApiResponse<MachineConnectionTestResultDTO> testConnectionWithParams(
             @Parameter(description = "机器连接参数", required = true) @Valid @RequestBody
                     MachineCreateDTO dto) {
         return ApiResponse.success(machineService.testConnectionWithParams(dto));

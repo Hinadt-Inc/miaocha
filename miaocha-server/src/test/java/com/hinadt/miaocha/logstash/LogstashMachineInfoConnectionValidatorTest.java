@@ -8,6 +8,7 @@ import com.hinadt.miaocha.application.logstash.LogstashMachineConnectionValidato
 import com.hinadt.miaocha.application.service.MachineService;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
+import com.hinadt.miaocha.domain.dto.MachineConnectionTestResultDTO;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,7 +41,8 @@ public class LogstashMachineInfoConnectionValidatorTest {
     @Test
     void testValidateSingleMachineConnection_Success() {
         // Mock successful connection
-        when(machineService.testConnection(1L)).thenReturn(true);
+        when(machineService.testConnection(1L))
+                .thenReturn(MachineConnectionTestResultDTO.success());
 
         // Should not throw exception
         assertDoesNotThrow(
@@ -52,7 +54,8 @@ public class LogstashMachineInfoConnectionValidatorTest {
     @Test
     void testValidateSingleMachineConnection_Failed() {
         // Mock failed connection
-        when(machineService.testConnection(1L)).thenReturn(false);
+        when(machineService.testConnection(1L))
+                .thenReturn(MachineConnectionTestResultDTO.failure("认证失败，请检查用户名、密码或SSH密钥是否正确"));
 
         // Should throw BusinessException
         BusinessException exception =
@@ -63,6 +66,7 @@ public class LogstashMachineInfoConnectionValidatorTest {
         assertEquals(ErrorCode.MACHINE_CONNECTION_FAILED, exception.getErrorCode());
         assertTrue(exception.getMessage().contains("无法连接到机器"));
         assertTrue(exception.getMessage().contains("192.168.1.100"));
+        assertTrue(exception.getMessage().contains("认证失败"));
 
         verify(machineService, times(1)).testConnection(1L);
     }
@@ -102,7 +106,8 @@ public class LogstashMachineInfoConnectionValidatorTest {
     @Test
     void testValidateMachineConnectionById_Success() {
         // Mock successful connection
-        when(machineService.testConnection(1L)).thenReturn(true);
+        when(machineService.testConnection(1L))
+                .thenReturn(MachineConnectionTestResultDTO.success());
 
         // Should not throw exception
         assertDoesNotThrow(() -> connectionValidator.validateMachineConnectionById(1L));
@@ -113,7 +118,9 @@ public class LogstashMachineInfoConnectionValidatorTest {
     @Test
     void testValidateMachineConnectionById_Failed() {
         // Mock failed connection
-        when(machineService.testConnection(1L)).thenReturn(false);
+        when(machineService.testConnection(1L))
+                .thenReturn(
+                        MachineConnectionTestResultDTO.failure("连接超时，请检查机器IP地址和端口是否正确，以及网络连通性"));
 
         // Should throw BusinessException
         BusinessException exception =
@@ -123,6 +130,7 @@ public class LogstashMachineInfoConnectionValidatorTest {
 
         assertEquals(ErrorCode.MACHINE_CONNECTION_FAILED, exception.getErrorCode());
         assertTrue(exception.getMessage().contains("无法连接到机器"));
+        assertTrue(exception.getMessage().contains("连接超时"));
 
         verify(machineService, times(1)).testConnection(1L);
     }

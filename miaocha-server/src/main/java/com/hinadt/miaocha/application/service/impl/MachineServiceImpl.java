@@ -5,6 +5,7 @@ import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.converter.MachineConverter;
+import com.hinadt.miaocha.domain.dto.MachineConnectionTestResultDTO;
 import com.hinadt.miaocha.domain.dto.MachineCreateDTO;
 import com.hinadt.miaocha.domain.dto.MachineDTO;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
@@ -98,7 +99,7 @@ public class MachineServiceImpl implements MachineService {
     }
 
     @Override
-    public boolean testConnection(Long id) {
+    public MachineConnectionTestResultDTO testConnection(Long id) {
         // 检查机器是否存在
         MachineInfo machineInfo = machineMapper.selectById(id);
         if (machineInfo == null) {
@@ -110,7 +111,7 @@ public class MachineServiceImpl implements MachineService {
     }
 
     @Override
-    public boolean testConnectionWithParams(MachineCreateDTO dto) {
+    public MachineConnectionTestResultDTO testConnectionWithParams(MachineCreateDTO dto) {
         // 创建临时的机器信息对象用于测试连接
         MachineInfo machineInfo = machineConverter.toEntity(dto);
 
