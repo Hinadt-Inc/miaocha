@@ -48,6 +48,50 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // 添加查询条件恢复功能
+  const [initialized, setInitialized] = useState(false);
+
+  // 在组件初始化时恢复之前的查询条件
+  useEffect(() => {
+    if (!initialized) {
+      const savedSearchParams = localStorage.getItem('searchBarParams');
+      if (savedSearchParams) {
+        try {
+          const params = JSON.parse(savedSearchParams);
+
+          // 恢复关键词
+          if (params.keywords && Array.isArray(params.keywords)) {
+            setKeywords(params.keywords);
+          }
+
+          // 恢复SQL条件
+          if (params.whereSqls && Array.isArray(params.whereSqls)) {
+            setSqls(params.whereSqls);
+          }
+
+          // 恢复时间分组
+          if (params.timeGrouping) {
+            setTimeGroup(params.timeGrouping);
+          }
+
+          // 恢复时间范围
+          if (params.startTime && params.endTime && params.timeRange) {
+            const timeOption = {
+              value: params.timeRange,
+              range: [params.startTime, params.endTime],
+              label: QUICK_RANGES[params.timeRange]?.label || '自定义时间',
+              type: QUICK_RANGES[params.timeRange] ? ('quick' as const) : ('absolute' as const),
+            };
+            setTimeOption(timeOption);
+          }
+        } catch (error) {
+          console.error('恢复查询条件失败:', error);
+        }
+      }
+      setInitialized(true);
+    }
+  }, [initialized]);
+
   // 暴露给父组件的方法
   useImperativeHandle(ref, () => ({
     // 渲染sql
@@ -151,6 +195,9 @@ const SearchBar = forwardRef((props: IProps, ref) => {
 
   // 当keywords或sqls或时间变化时触发搜索
   useEffect(() => {
+    // 只有在组件初始化完成后才执行搜索和保存逻辑
+    if (!initialized) return;
+
     const _fields = activeColumns?.length === 1 && activeColumns[0] === 'log_time' ? [] : activeColumns || [];
     const params = {
       ...searchParams,
@@ -169,6 +216,23 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     if (sqls.length === 0) {
       delete params.whereSqls;
     }
+
+    // 保存查询条件到本地存储
+    try {
+      const searchParamsToSave = {
+        keywords: params.keywords || [],
+        whereSqls: params.whereSqls || [],
+        startTime: params.startTime,
+        endTime: params.endTime,
+        timeRange: params.timeRange,
+        timeGrouping: params.timeGrouping,
+        fields: params.fields,
+      };
+      localStorage.setItem('searchBarParams', JSON.stringify(searchParamsToSave));
+    } catch (error) {
+      console.error('保存查询条件失败:', error);
+    }
+
     onSearch(params as ILogSearchParams);
 
     // 通知父组件sqls数据变化
@@ -180,7 +244,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     if (getDistributionWithSearchBar) {
       getDistributionWithSearchBar();
     }
-  }, [keywords, sqls, timeOption, timeGroup, activeColumns, onSqlsChange]);
+  }, [keywords, sqls, timeOption, timeGroup, activeColumns, onSqlsChange, initialized]);
 
   // 处理关键词搜索
   const handleSubmit = () => {
