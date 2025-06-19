@@ -21,6 +21,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -42,10 +45,10 @@ public class LogTailServiceImpl implements LogTailService {
     private final ScheduledExecutorService scheduler;
 
     /** 批量发送间隔(秒) */
-    private static final int BATCH_SEND_INTERVAL = 2;
+    private static final int BATCH_SEND_INTERVAL = 1;
 
     /** 单次发送的最大行数 */
-    private static final int MAX_BATCH_SIZE = 50;
+    private static final int MAX_BATCH_SIZE = 300;
 
     public LogTailServiceImpl(
             LogstashMachineMapper logstashMachineMapper,
@@ -63,7 +66,7 @@ public class LogTailServiceImpl implements LogTailService {
                         5,
                         r -> {
                             Thread thread = new Thread(r);
-                            thread.setName("logtail-scheduler-" + thread.getId());
+                            thread.setName("log-tail-scheduler-" + thread.getId());
                             thread.setDaemon(true);
                             return thread;
                         });
@@ -143,18 +146,18 @@ public class LogTailServiceImpl implements LogTailService {
                     "Logstash实例[" + logstashMachineId + "]的日志跟踪任务不存在，请先创建任务");
         }
 
-        // 如果已经有SSE流在运行，关闭旧的
-        if (task.getEmitter() != null) {
+        // 创建新的SSE发射器
+        SseEmitter emitter = new SseEmitter(30 * 60 * 1000L); // 30分钟超时
+
+        // 使用AtomicReference的原子操作，如果已经有SSE流在运行，关闭旧的
+        SseEmitter oldEmitter = task.swapEmitter(emitter);
+        if (oldEmitter != null) {
             try {
-                task.getEmitter().complete();
+                oldEmitter.complete();
             } catch (Exception e) {
                 log.warn("关闭旧的SSE流时发生错误", e);
             }
         }
-
-        // 创建新的SSE发射器
-        SseEmitter emitter = new SseEmitter(30 * 60 * 1000L); // 30分钟超时
-        task.setEmitter(emitter);
 
         // 启动SSH流式命令（如果还没启动）
         if (task.getStreamTask() == null) {
@@ -269,12 +272,6 @@ public class LogTailServiceImpl implements LogTailService {
             return;
         }
 
-        SseEmitter emitter = task.getEmitter();
-        if (emitter == null) {
-            log.trace("任务[{}]无活跃SSE连接，跳过批量发送", task.getLogstashMachineId());
-            return;
-        }
-
         List<String> batch = task.getBatchLogLines();
         if (!batch.isEmpty()) {
             log.trace("准备发送批量日志数据 | 任务[{}] | 行数: {}", task.getLogstashMachineId(), batch.size());
@@ -287,17 +284,8 @@ public class LogTailServiceImpl implements LogTailService {
                             .status(LogTailResponseStatus.CONNECTED)
                             .build();
 
-            // 直接发送，不需要复杂的安全发送方法
-            try {
-                emitter.send(SseEmitter.event().name("log-data").data(response));
-                log.trace("成功发送批量日志数据 | 任务[{}]", task.getLogstashMachineId());
-            } catch (Exception e) {
-                log.warn(
-                        "批量日志数据发送失败 | 任务[{}] | 错误: {}",
-                        task.getLogstashMachineId(),
-                        e.getMessage());
-                task.setEmitter(null);
-            }
+            // 使用AtomicReference原子操作安全发送
+            task.sendSafely(response, "log-data", "批量日志数据");
         } else {
             log.trace("缓冲区为空，跳过发送 | 任务[{}]", task.getLogstashMachineId());
         }
@@ -313,12 +301,6 @@ public class LogTailServiceImpl implements LogTailService {
             return;
         }
 
-        SseEmitter emitter = task.getEmitter();
-        if (emitter == null) {
-            log.trace("任务[{}]无活跃SSE连接，跳过心跳发送", task.getLogstashMachineId());
-            return;
-        }
-
         LogTailResponseDTO heartbeat =
                 LogTailResponseDTO.builder()
                         .logstashMachineId(task.getLogstashMachineId())
@@ -327,33 +309,28 @@ public class LogTailServiceImpl implements LogTailService {
                         .status(LogTailResponseStatus.HEARTBEAT)
                         .build();
 
-        // 直接发送心跳包
-        try {
-            emitter.send(SseEmitter.event().name("heartbeat").data(heartbeat));
-            log.trace("成功发送心跳包 | 任务[{}]", task.getLogstashMachineId());
-        } catch (Exception e) {
-            log.warn("心跳包发送失败 | 任务[{}] | 错误: {}", task.getLogstashMachineId(), e.getMessage());
-            task.setEmitter(null);
-        }
+        // 使用AtomicReference原子操作安全发送心跳包
+        task.sendSafely(heartbeat, "heartbeat", "心跳包");
     }
 
     /** 日志跟踪任务内部类 */
     private static class LogTailTask {
-        private final Long logstashMachineId;
-        private SseEmitter emitter;
+        // Getters and Setters
+        @Getter private final Long logstashMachineId;
+        private final AtomicReference<SseEmitter> emitter = new AtomicReference<>();
         private final List<String> logBuffer = new ArrayList<>();
 
-        private StreamCommandTask streamTask;
-        private java.util.concurrent.ScheduledFuture<?> batchSendFuture;
-        private java.util.concurrent.ScheduledFuture<?> heartbeatFuture;
+        @Getter @Setter private StreamCommandTask streamTask;
+        @Setter private java.util.concurrent.ScheduledFuture<?> batchSendFuture;
+        @Setter private java.util.concurrent.ScheduledFuture<?> heartbeatFuture;
 
-        private SshConfig sshConfig;
-        private String tailCommand;
-        private String logFilePath;
+        @Setter @Getter private SshConfig sshConfig;
+        @Setter @Getter private String tailCommand;
+        @Setter @Getter private String logFilePath;
 
         public LogTailTask(Long logstashMachineId, SseEmitter emitter) {
             this.logstashMachineId = logstashMachineId;
-            this.emitter = emitter;
+            this.emitter.set(emitter);
         }
 
         /** 添加日志行到缓冲区 */
@@ -365,11 +342,30 @@ public class LogTailServiceImpl implements LogTailService {
                     logBuffer.size(),
                     line);
 
-            // 如果缓冲区满了，立即发送
+            // 如果缓冲区满了，立即发送，避免数据丢失
             if (logBuffer.size() >= MAX_BATCH_SIZE) {
-                // 这里不直接发送，而是由定时任务处理，避免频繁发送
-                log.debug("缓冲区已满，实例ID: {}, 大小: {}", logstashMachineId, logBuffer.size());
+                log.debug("缓冲区已满，立即发送数据，实例ID: {}, 大小: {}", logstashMachineId, logBuffer.size());
+                sendImmediately();
             }
+        }
+
+        /** 立即发送缓冲区数据 */
+        private void sendImmediately() {
+            List<String> batch = getBatchLogLines();
+            if (batch.isEmpty()) {
+                return;
+            }
+
+            LogTailResponseDTO response =
+                    LogTailResponseDTO.builder()
+                            .logstashMachineId(logstashMachineId)
+                            .logLines(batch)
+                            .timestamp(LocalDateTime.now())
+                            .status(LogTailResponseStatus.CONNECTED)
+                            .build();
+
+            // 使用AtomicReference原子操作安全发送
+            sendSafely(response, "log-data", "立即批量日志数据");
         }
 
         /** 获取批量日志数据并清空缓冲区 */
@@ -385,9 +381,8 @@ public class LogTailServiceImpl implements LogTailService {
 
         /** 停止任务并清理资源 */
         public void stop() {
-            // 标记为停止状态，防止新的操作
-            SseEmitter currentEmitter = emitter;
-            emitter = null; // 立即置空，防止其他线程继续使用
+            // 获取并清空emitter引用，防止新的操作
+            SseEmitter currentEmitter = emitter.getAndSet(null);
 
             // 停止定时任务
             if (batchSendFuture != null) {
@@ -433,57 +428,36 @@ public class LogTailServiceImpl implements LogTailService {
             }
         }
 
-        // Getters and Setters
-        public Long getLogstashMachineId() {
-            return logstashMachineId;
-        }
-
         public SseEmitter getEmitter() {
-            return emitter;
-        }
-
-        public void setStreamTask(StreamCommandTask streamTask) {
-            this.streamTask = streamTask;
-        }
-
-        public void setBatchSendFuture(java.util.concurrent.ScheduledFuture<?> batchSendFuture) {
-            this.batchSendFuture = batchSendFuture;
-        }
-
-        public void setHeartbeatFuture(java.util.concurrent.ScheduledFuture<?> heartbeatFuture) {
-            this.heartbeatFuture = heartbeatFuture;
-        }
-
-        public SshConfig getSshConfig() {
-            return sshConfig;
-        }
-
-        public void setSshConfig(SshConfig sshConfig) {
-            this.sshConfig = sshConfig;
-        }
-
-        public String getTailCommand() {
-            return tailCommand;
-        }
-
-        public void setTailCommand(String tailCommand) {
-            this.tailCommand = tailCommand;
-        }
-
-        public String getLogFilePath() {
-            return logFilePath;
-        }
-
-        public void setLogFilePath(String logFilePath) {
-            this.logFilePath = logFilePath;
-        }
-
-        public StreamCommandTask getStreamTask() {
-            return streamTask;
+            return emitter.get();
         }
 
         public void setEmitter(SseEmitter emitter) {
-            this.emitter = emitter;
+            this.emitter.set(emitter);
+        }
+
+        /** 原子地交换emitter，返回旧的emitter */
+        public SseEmitter swapEmitter(SseEmitter newEmitter) {
+            return this.emitter.getAndSet(newEmitter);
+        }
+
+        /** 使用AtomicReference原子操作安全发送数据 */
+        public void sendSafely(LogTailResponseDTO data, String eventName, String description) {
+            SseEmitter currentEmitter = emitter.get();
+            if (currentEmitter == null) {
+                log.trace("任务[{}]无活跃SSE连接，跳过{}发送", logstashMachineId, description);
+                return;
+            }
+
+            try {
+                currentEmitter.send(SseEmitter.event().name(eventName).data(data));
+                log.trace("成功发送{} | 任务[{}]", description, logstashMachineId);
+            } catch (Exception e) {
+                log.warn(
+                        "{}发送失败 | 任务[{}] | 错误: {}", description, logstashMachineId, e.getMessage());
+                // 使用compareAndSet确保只有当前emitter才会被置空，避免覆盖其他线程设置的新emitter
+                emitter.compareAndSet(currentEmitter, null);
+            }
         }
     }
 }

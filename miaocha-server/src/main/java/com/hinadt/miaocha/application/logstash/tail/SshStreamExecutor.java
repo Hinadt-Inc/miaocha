@@ -224,19 +224,6 @@ public class SshStreamExecutor {
         }
     }
 
-    /** 获取线程池状态信息 */
-    public String getPoolStatus() {
-        if (streamProcessorPool instanceof ThreadPoolExecutor) {
-            ThreadPoolExecutor executor = (ThreadPoolExecutor) streamProcessorPool;
-            return String.format(
-                    "StreamProcessor - 活跃线程: %d, 队列任务: %d, 完成任务: %d",
-                    executor.getActiveCount(),
-                    executor.getQueue().size(),
-                    executor.getCompletedTaskCount());
-        }
-        return "StreamProcessor - 状态未知";
-    }
-
     /** 应用关闭时清理资源 */
     @PreDestroy
     public void destroy() {

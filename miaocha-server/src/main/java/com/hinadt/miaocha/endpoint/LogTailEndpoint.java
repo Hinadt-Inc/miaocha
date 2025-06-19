@@ -29,12 +29,14 @@ public class LogTailEndpoint {
         this.logTailService = logTailService;
     }
 
-    /** 手动检查用户认证状态 */
+    /**
+     * 手动检查用户认证状态 Q：为什么需要手动检查认证？ A：SSE 的接口如果依赖Spring Security的自动认证，会出现 AuthorizationException
+     * 异常，怀疑应该是SSE 的 SseEmitter 在异步环境下丢失了 SpringSecurity 的认证信息，在停止日志跟踪接口时日志中总会出现一连串的异常，具
+     * 体原因不明，后续分析解决 TODO 分析SSE认证问题
+     */
     private void checkAuthentication() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null
-                || !authentication.isAuthenticated()
-                || "anonymousUser".equals(authentication.getPrincipal())) {
+        if (authentication == null || !authentication.isAuthenticated()) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
     }
