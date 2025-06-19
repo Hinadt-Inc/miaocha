@@ -231,8 +231,9 @@ function LogstashManagementPage() {
 
   const handleRefreshConfig = async (processId: number, machineId: number) => {
     try {
-      messageApi.loading(`正在刷新机器 ${machineId} 的配置...`);
-      await refreshLogstashMachineConfig(processId, machineId);
+      await refreshLogstashConfig(processId, {
+        logstashMachineIds: [machineId],
+      });
       messageApi.success('配置刷新命令已发送');
       await fetchData();
     } catch (err) {
@@ -241,10 +242,14 @@ function LogstashManagementPage() {
     }
   };
 
-  const handleRefreshAllConfig = async (processId: number) => {
+  const handleRefreshAllConfig = async (record: LogstashProcess) => {
     try {
-      messageApi.loading('正在刷新所有机器配置...');
-      await refreshLogstashConfig(processId, {});
+      const logstashMachineIds = record.logstashMachineStatusInfo
+        .filter((machine) => machine.state !== 'RUNNING')
+        .map((machine) => machine.logstashMachineId);
+      await refreshLogstashConfig(record.id, {
+        logstashMachineIds,
+      });
       messageApi.success('配置刷新命令已发送');
       await fetchData();
     } catch (err) {
@@ -461,9 +466,9 @@ function LogstashManagementPage() {
           </Button>
           <Popconfirm
             title="确认刷新配置"
-            description="确定要刷新所有机器的配置吗？"
+            description="确定要刷新非运行状态下所有机器的配置吗？"
             onConfirm={() => {
-              void handleRefreshAllConfig(record.id);
+              void handleRefreshAllConfig(record);
             }}
             okText="确认"
             cancelText="取消"
