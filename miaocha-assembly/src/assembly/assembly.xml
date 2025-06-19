@@ -69,15 +69,6 @@
             </includes>
         </fileSet>
 
-        <!-- UI Files - Copy from frontend build -->
-        <fileSet>
-            <directory>../miaocha-ui/frontend/dist</directory>
-            <outputDirectory>static</outputDirectory>
-            <includes>
-                <include>**/*</include>
-            </includes>
-        </fileSet>
-
         <!-- Scripts -->
         <fileSet>
             <directory>src/main/scripts</directory>

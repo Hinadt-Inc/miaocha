@@ -74,7 +74,7 @@ public class NoResourceFoundExceptionHandler {
     /** 加载index.html */
     private String loadIndexHtml() {
         try {
-            ClassPathResource indexResource = new ClassPathResource("index.html");
+            ClassPathResource indexResource = new ClassPathResource("static/index.html");
             if (indexResource.exists()) {
                 return new String(
                         indexResource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);

@@ -26,17 +26,17 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         // 配置前端静态资源 - assets目录
         registry.addResourceHandler("/assets/**")
-                .addResourceLocations("classpath:assets/")
+                .addResourceLocations("classpath:static/assets/")
                 .setCachePeriod(86400); // 24小时缓存
 
         // 配置Monaco Editor资源
         registry.addResourceHandler("/monaco-editor/**")
-                .addResourceLocations("classpath:monaco-editor/")
+                .addResourceLocations("classpath:static/monaco-editor/")
                 .setCachePeriod(86400);
 
         // 配置根目录资源（favicon.ico, logo.png等）
         registry.addResourceHandler("/*.ico", "/*.png", "/*.jpg", "/*.svg", "/*.json")
-                .addResourceLocations("classpath:")
+                .addResourceLocations("classpath:static/")
                 .setCachePeriod(86400);
 
         // 配置Swagger资源
