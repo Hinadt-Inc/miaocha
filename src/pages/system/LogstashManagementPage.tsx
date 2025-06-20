@@ -684,16 +684,32 @@ function LogstashManagementPage() {
                             </Popconfirm>
                             <Button
                               type="link"
-                              onClick={() => {
-                                const process = data.find((p) => p.id === record.id);
-                                setCurrentMachine({
-                                  logstashMachineId: machine.logstashMachineId,
-                                  processId: record.id,
-                                  configContent: process?.configContent,
-                                  jvmOptions: process?.jvmOptions,
-                                  logstashYml: process?.logstashYml,
-                                });
-                                setMachineConfigModalVisible(true);
+                              onClick={async () => {
+                                try {
+                                  // 使用与点击实例ID相同的接口获取机器详细配置信息
+                                  const machineDetail = await getLogstashProcess(machine.logstashMachineId);
+                                  setCurrentMachine({
+                                    logstashMachineId: machine.logstashMachineId,
+                                    processId: record.id,
+                                    configContent: machineDetail.configContent,
+                                    jvmOptions: machineDetail.jvmOptions,
+                                    logstashYml: machineDetail.logstashYml,
+                                  });
+                                  setMachineConfigModalVisible(true);
+                                } catch (err) {
+                                  // 如果获取机器详情失败，使用进程级别的配置作为备选
+                                  messageApi.warning('获取机器配置失败，使用进程级别配置');
+                                  const process = data.find((p) => p.id === record.id);
+                                  setCurrentMachine({
+                                    logstashMachineId: machine.logstashMachineId,
+                                    processId: record.id,
+                                    configContent: process?.configContent,
+                                    jvmOptions: process?.jvmOptions,
+                                    logstashYml: process?.logstashYml,
+                                  });
+                                  setMachineConfigModalVisible(true);
+                                  console.error('获取机器详情失败:', err);
+                                }
                               }}
                               disabled={machine.state === 'RUNNING'}
                               style={{ padding: '0 4px' }}
@@ -1244,6 +1260,10 @@ function LogstashManagementPage() {
             configContent: currentMachine?.configContent,
             jvmOptions: currentMachine?.jvmOptions,
             logstashYml: currentMachine?.logstashYml,
+          }}
+          onSuccess={() => {
+            // 配置更新成功后刷新数据
+            fetchData();
           }}
         />
         <LogstashMachineDetailModal
