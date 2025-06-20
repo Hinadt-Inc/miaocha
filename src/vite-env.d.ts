@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+/// <reference types="vite-plugin-monaco-editor/client" />
 
 declare module 'vite-plugin-static-copy' {
   import { PluginOption } from 'vite';

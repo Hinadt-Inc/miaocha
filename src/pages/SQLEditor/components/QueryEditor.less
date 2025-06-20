@@ -22,33 +22,7 @@
     &.collapsed {
       height: 0;
     }
-    
-    .custom-editor {
-      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-    }
-    
-    // 覆盖 CodeMirror 的一些默认样式
-    .cm-editor {
-      height: 100%;
-    }
-    
-    .cm-gutters {
-      border-right: 1px solid #e8e8e8;
-    }
-    
-    // 增强文本选择的视觉效果
-    .cm-selectionBackground, .cm-selectionBackground.cm-selectionMatch {
-      background-color: rgba(65, 105, 225, 0.3) !important;
-    }
-    
-    .cm-focused .cm-selectionBackground {
-      background-color: rgba(65, 105, 225, 0.5) !important;
-    }
-    
-    // 增强单行选择效果
-    .cm-line:has(.cm-selectionBackground) {
-      background-color: rgba(240, 240, 255, 0.8);
-    }
+  
   }
 
   .editor-collapse-button {

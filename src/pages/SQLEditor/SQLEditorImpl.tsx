@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import initMonacoEditor from './utils/monacoInit';
 import { useDataSources } from './hooks/useDataSources';
 import { useQueryExecution } from './hooks/useQueryExecution';
 import { useEditorSettings } from './hooks/useEditorSettings';
 import { useQueryHistory } from './hooks/useQueryHistory';
 import { useDatabaseSchema } from './hooks/useDatabaseSchema';
-import { Alert, Button, Card, Layout, message, Space, Tabs, Tooltip, Splitter } from 'antd';
+import { Alert, Button, Card, Layout, message, Space, Tabs, Tooltip, Splitter, Dropdown, Menu } from 'antd';
 import { CopyOutlined } from '@ant-design/icons';
-import { EditorView } from '@codemirror/view';
+import * as monaco from 'monaco-editor';
 import copy from 'copy-to-clipboard';
 import { debounce } from 'lodash';
-import { getEditorText } from './utils/selectionUtils';
 
 // 组件导入
 import SchemaTree from './components/SchemaTree';
@@ -19,12 +19,17 @@ import VisualizationPanel from './components/VisualizationPanel';
 import HistoryDrawer from './components/HistoryDrawer';
 import SettingsDrawer from './components/SettingsDrawer';
 import EditorHeader from './components/EditorHeader';
-import SnippetSelector from './components/SnippetSelector';
 
 // 工具和类型导入
-import { downloadAsCSV, insertTextToEditor } from './utils/editorUtils';
+import {
+  downloadAsCSV,
+  insertTextToEditor,
+  insertFormattedSQL,
+  getSQLContext,
+  generateColumnList,
+} from './utils/editorUtils';
 import formatTableCell from './utils/formatters';
-import { ChartType, QueryResult } from './types';
+import { ChartType, QueryResult, SchemaResult } from './types';
 
 // 样式导入
 import './SQLEditorPage.less';
@@ -37,8 +42,9 @@ const { Content, Sider } = Layout;
  */
 const SQLEditorImpl: React.FC = () => {
   // 使用编辑器引用，添加类型标注
-  const editorRef = useRef<EditorView | null>(null);
-  // 这里使用 editorView 来存储 CodeMirror 的视图引用
+  const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+  const monacoRef = useRef<typeof monaco | null>(null);
+  // 这里使用 _monaco 作为前缀，表示此变量仅用于类型注解
 
   // 使用自定义hooks管理状态
   const { dataSources, selectedSource, setSelectedSource, loading: loadingDataSources } = useDataSources();
@@ -65,8 +71,7 @@ const SQLEditorImpl: React.FC = () => {
   const [fullscreen, setFullscreen] = useState<boolean>(false);
   const [historyDrawerVisible, setHistoryDrawerVisible] = useState(false);
   const [settingsDrawerVisible, setSettingsDrawerVisible] = useState(false);
-  // 动态计算高度，设置合理的初始值与父元素保持一致
-  const [editorHeight, setEditorHeight] = useState<number>(Math.floor(window.innerHeight / 2) - 110);
+  const [editorHeight, setEditorHeight] = useState<number>(0); // 动态计算高度
 
   // 计算并设置编辑器高度
   useEffect(() => {
@@ -77,35 +82,15 @@ const SQLEditorImpl: React.FC = () => {
       setEditorHeight(newHeight);
     };
 
+    // 初始计算
+    calculateHeight();
+
     // 监听窗口大小变化
     window.addEventListener('resize', calculateHeight);
 
     return () => {
       window.removeEventListener('resize', calculateHeight);
     };
-  }, []);
-
-  // 在DOM更新后立即计算高度，确保Splitter面板大小可用
-  useLayoutEffect(() => {
-    // 使用requestAnimationFrame确保DOM完全渲染后再获取高度
-    const calculateInitialHeight = () => {
-      const splitterPanel = document.querySelector('.ant-splitter-panel:first-child');
-      if (splitterPanel) {
-        const panelHeight = splitterPanel.clientHeight;
-        if (panelHeight > 0) {
-          // 减去编辑器Card的标题和内部padding高度
-          const calculatedHeight = Math.max(panelHeight - 102, 100);
-          console.log('初始编辑器高度:', calculatedHeight);
-          setEditorHeight(calculatedHeight);
-        } else {
-          // 如果还没有高度，可能是因为还未完全渲染，稍后再试
-          requestAnimationFrame(calculateInitialHeight);
-        }
-      }
-    };
-
-    // 在下一帧计算
-    requestAnimationFrame(calculateInitialHeight);
   }, []);
 
   // 添加侧边栏收起状态
@@ -133,16 +118,21 @@ const SQLEditorImpl: React.FC = () => {
           return;
         }
 
-        // 直接使用 getEditorText 函数获取已清理的文本
-        // 该函数会自动判断是否有选中的文本，并会清理首尾空格和换行符
-        let queryToExecute = getEditorText(editorRef.current);
-        console.log('准备执行SQL:', queryToExecute);
+        // 优先使用选中文本，没有选中则使用全部内容
+        let queryToExecute = '';
+        if (editorRef.current) {
+          const selection = editorRef.current.getSelection();
+          const model = editorRef.current.getModel();
+          if (model) {
+            queryToExecute = selection && !selection.isEmpty() ? model.getValueInRange(selection) : model.getValue();
+          }
+        }
 
         // 验证SQL非空
         if (!validateSQL(queryToExecute)) return;
 
         // 自动添加分号(如果不存在)但保留原始查询格式
-        if (queryToExecute && !queryToExecute.endsWith(';')) {
+        if (queryToExecute.trim() && !queryToExecute.trim().endsWith(';')) {
           queryToExecute = queryToExecute + ';';
         }
 
@@ -197,6 +187,9 @@ const SQLEditorImpl: React.FC = () => {
 
   // 初始化
   useEffect(() => {
+    // 初始化Monaco编辑器
+    initMonacoEditor();
+
     // 全屏模式快捷键
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'F11') {
@@ -227,19 +220,18 @@ const SQLEditorImpl: React.FC = () => {
       return;
     }
 
-    if (!selectedSource || !sqlQuery) {
-      message.warning('缺少必要参数');
-      return;
-    }
+    try {
+      if (!selectedSource || !sqlQuery) {
+        message.warning('缺少必要参数');
+        return;
+      }
 
-    downloadAsCSV(selectedSource, sqlQuery, 'csv')
-      .then(() => {
-        message.success('下载已开始');
-      })
-      .catch((error) => {
-        console.error('下载失败:', error);
-        message.error('下载失败');
-      });
+      downloadAsCSV(selectedSource, sqlQuery, 'csv');
+      message.success('下载已开始');
+    } catch (error) {
+      console.error('下载失败:', error);
+      message.error('下载失败');
+    }
   };
 
   // 从历史记录加载查询
@@ -270,19 +262,68 @@ const SQLEditorImpl: React.FC = () => {
     // 可扩展更多模板...
   ];
 
-  // 自动完成在CodeMirror配置中处理
+  // SQL函数补全
+  const sqlFunctions = [
+    { label: 'COUNT', insertText: 'COUNT($1)', detail: '计数函数' },
+    { label: 'SUM', insertText: 'SUM($1)', detail: '求和函数' },
+    { label: 'AVG', insertText: 'AVG($1)', detail: '平均值函数' },
+    { label: 'MAX', insertText: 'MAX($1)', detail: '最大值函数' },
+    { label: 'MIN', insertText: 'MIN($1)', detail: '最小值函数' },
+    { label: 'CONCAT', insertText: 'CONCAT($1, $2)', detail: '字符串连接' },
+  ];
+
+  // SQL关键字上下文补全
+  const getSqlKeywords = (context: any) => {
+    const baseKeywords = ['SELECT', 'FROM', 'WHERE', 'GROUP BY', 'ORDER BY', 'LIMIT'];
+    if (context?.isInSelectClause) {
+      return ['DISTINCT', 'AS', ...baseKeywords];
+    }
+    if (context?.isInFromClause) {
+      return ['JOIN', 'LEFT JOIN', 'RIGHT JOIN', 'INNER JOIN', 'CROSS JOIN', ...baseKeywords];
+    }
+    if (context?.isInWhereClause) {
+      return ['AND', 'OR', 'IN', 'EXISTS', 'LIKE', 'BETWEEN', 'IS NULL', 'IS NOT NULL', ...baseKeywords];
+    }
+    return baseKeywords;
+  };
 
   // SQL片段插入
   const insertSnippet = useCallback((snippet: string) => {
     if (editorRef.current) {
-      // 使用CodeMirror的insertTextToEditor工具函数
-      insertTextToEditor(editorRef.current, snippet);
-      // 插入后聚焦编辑器
       editorRef.current.focus();
+      const selection = editorRef.current.getSelection();
+      const model = editorRef.current.getModel();
+
+      if (model && selection) {
+        // 使用executeEdits方法直接插入文本
+        editorRef.current.executeEdits('insert-snippet', [{ range: selection, text: snippet }]);
+
+        // 插入后将光标定位到合适位置
+        const position = editorRef.current.getPosition();
+        if (position) {
+          editorRef.current.setPosition(position);
+        }
+      }
     }
   }, []);
 
-  // 使用外部SnippetSelector组件
+  // 将SnippetSelector移到组件外部并传递props
+  const SnippetSelector: React.FC<{ onSelect: (snippet: string) => void }> = ({ onSelect }) => (
+    <Dropdown
+      menu={{
+        items: sqlSnippets.map((snippet) => ({
+          key: snippet.label,
+          label: snippet.label,
+          onClick: () => onSelect(snippet.insertText),
+        })),
+      }}
+      placement="bottomLeft"
+    >
+      <Button size="small" style={{ marginLeft: 8 }}>
+        插入SQL模板
+      </Button>
+    </Dropdown>
+  );
 
   // 用useCallback包裹回调，减少不必要的重渲染
   const handleTreeNodeDoubleClick = useCallback((tableName: string) => {
@@ -304,22 +345,234 @@ const SQLEditorImpl: React.FC = () => {
     ) => {
       if (!editorRef.current) return;
       const editor = editorRef.current;
-      const safeTableName = tableName.replace(/\W/g, '');
-
-      // 简化逻辑，直接插入表名或生成基础查询语句
-      if (columns && columns.length > 0) {
-        // 生成字段列表字符串
-        const columnNames = columns.map((col) => col.columnName).join(', ');
-        insertTextToEditor(editor, `SELECT ${columnNames} FROM ${safeTableName};`);
-      } else {
-        insertTextToEditor(editor, `SELECT * FROM ${safeTableName};`);
+      const safeTableName = tableName.replace(/[^\w\d_]/g, '');
+      const sqlContext = getSQLContext(editor);
+      try {
+        if (!sqlContext.isSelectQuery || editor.getModel()?.getValue().trim() === '') {
+          if (columns.length > 0) {
+            const fieldList = generateColumnList(columns, {
+              addComments: true,
+              indentSize: 4,
+              multiline: true,
+            });
+            insertTextToEditor(editor, `SELECT\n${fieldList}\nFROM ${safeTableName};`);
+          } else {
+            insertTextToEditor(editor, `SELECT * FROM ${safeTableName};`);
+          }
+          return;
+        }
+        if (sqlContext.isInSelectClause) {
+          const fieldList =
+            columns.length > 0 ? generateColumnList(columns, { multiline: false, addComments: false }) : '*';
+          const model = editor.getModel();
+          const selection = editor.getSelection();
+          if (model && selection) {
+            const textBeforeCursor = model.getValueInRange({
+              startLineNumber: 1,
+              startColumn: 1,
+              endLineNumber: selection.startLineNumber,
+              endColumn: selection.startColumn,
+            });
+            const needsComma = !/,\s*$/.test(textBeforeCursor) && textBeforeCursor.trim() !== 'SELECT';
+            const prefix = needsComma ? ', ' : '';
+            insertFormattedSQL(editor, `${prefix}${fieldList}`, { addComma: false });
+          } else {
+            insertFormattedSQL(editor, fieldList, { addComma: false });
+          }
+          return;
+        }
+        if (sqlContext.isSelectQuery && !sqlContext.hasFromClause) {
+          const model = editor.getModel();
+          if (model) {
+            const lastLine = model.getLineCount();
+            const lastColumn = model.getLineMaxColumn(lastLine);
+            const position = { lineNumber: lastLine, column: lastColumn };
+            const text = model.getValue();
+            const needsSpace = /[^\s,]$/m.test(text);
+            const prefix = needsSpace ? ' ' : '';
+            editor.executeEdits('insert-from-clause', [
+              {
+                range: monaco.Range.fromPositions(position, position),
+                text: `${prefix}FROM ${safeTableName};`,
+              },
+            ]);
+          }
+          return;
+        }
+        if (sqlContext.isInFromClause) {
+          const model = editor.getModel();
+          const selection = editor.getSelection();
+          if (model && selection) {
+            const textBeforeCursor = model.getValueInRange({
+              startLineNumber: 1,
+              startColumn: 1,
+              endLineNumber: selection.startLineNumber,
+              endColumn: selection.startColumn,
+            });
+            if (/FROM\s+[\w\d_]+(\s*,\s*[\w\d_]+)*\s*$/i.test(textBeforeCursor)) {
+              const needsComma = !/,\s*$/.test(textBeforeCursor);
+              const prefix = needsComma ? ', ' : '';
+              insertTextToEditor(editor, `${prefix}${safeTableName}`);
+            } else if (/FROM\s*$/i.test(textBeforeCursor)) {
+              insertTextToEditor(editor, ` ${safeTableName}`);
+            } else {
+              insertTextToEditor(editor, ` ${safeTableName}`);
+            }
+          } else {
+            insertTextToEditor(editor, safeTableName);
+          }
+          return;
+        }
+        if (sqlContext.isSelectQuery && sqlContext.hasFromClause && !sqlContext.isInWhereClause) {
+          const model = editor.getModel();
+          if (model) {
+            const text = model.getValue();
+            const fromIndex = text.toUpperCase().indexOf('FROM');
+            const whereIndex = text.toUpperCase().indexOf('WHERE');
+            const groupByIndex = text.toUpperCase().indexOf('GROUP BY');
+            const orderByIndex = text.toUpperCase().indexOf('ORDER BY');
+            const limitIndex = text.toUpperCase().indexOf('LIMIT');
+            let insertPos = -1;
+            if (whereIndex > fromIndex) insertPos = whereIndex;
+            else if (groupByIndex > fromIndex) insertPos = groupByIndex;
+            else if (orderByIndex > fromIndex) insertPos = orderByIndex;
+            else if (limitIndex > fromIndex) insertPos = limitIndex;
+            if (insertPos > -1) {
+              const positionInModel = model.getPositionAt(insertPos);
+              const position = {
+                lineNumber: positionInModel.lineNumber,
+                column: positionInModel.column,
+              };
+              editor.executeEdits('insert-join-clause', [
+                {
+                  range: monaco.Range.fromPositions(position, position),
+                  text: `\nJOIN ${safeTableName} ON \n`,
+                },
+              ]);
+            } else {
+              const lastLine = model.getLineCount();
+              const lastColumn = model.getLineMaxColumn(lastLine);
+              const position = { lineNumber: lastLine, column: lastColumn };
+              const lastChar = text.trim().charAt(text.trim().length - 1);
+              const removeSemicolon = lastChar === ';';
+              let joinText = `\nJOIN ${safeTableName} ON `;
+              if (removeSemicolon) {
+                const textWithoutSemicolon = text.trim().slice(0, -1);
+                joinText = textWithoutSemicolon + joinText;
+              }
+              editor.executeEdits('insert-join-clause', [
+                { range: monaco.Range.fromPositions(position, position), text: joinText },
+              ]);
+            }
+          }
+          return;
+        }
+        insertTextToEditor(editor, safeTableName);
+      } catch (error) {
+        console.error('SQL插入错误:', error);
+        insertTextToEditor(editor, safeTableName);
       }
     },
     [],
   );
 
-  // CodeMirror使用自己的补全机制，在codeMirrorInit.ts中配置
-  // 此处移除Monaco编辑器的补全配置
+  // 补全建议函数用useCallback包裹
+  const createCompletionSuggestions = useCallback(
+    (
+      model: monaco.editor.ITextModel,
+      position: monaco.Position,
+      schema: SchemaResult | { error: string },
+      monaco: typeof import('monaco-editor'),
+    ) => {
+      const word = model.getWordUntilPosition(position);
+      const range = {
+        startLineNumber: position.lineNumber,
+        endLineNumber: position.lineNumber,
+        startColumn: word.startColumn,
+        endColumn: word.endColumn,
+      };
+      const suggestions: monaco.languages.CompletionItem[] = [];
+      const isSchemaResult = (s: unknown): s is SchemaResult => {
+        return (
+          !!s &&
+          typeof s === 'object' &&
+          'tables' in s &&
+          Array.isArray((s as any).tables) &&
+          (s as any).tables.every(
+            (table: unknown) =>
+              table &&
+              typeof table === 'object' &&
+              'tableName' in table &&
+              'tableComment' in table &&
+              'columns' in table,
+          )
+        );
+      };
+      // 表和字段补全
+      if (isSchemaResult(schema)) {
+        schema.tables.forEach((table) => {
+          suggestions.push({
+            label: table.tableName,
+            kind: monaco.languages.CompletionItemKind.Class,
+            insertText: table.tableName,
+            detail: `表: ${table.tableComment ?? table.tableName}`,
+            range,
+          });
+          if (table.columns && Array.isArray(table.columns)) {
+            table.columns.forEach((column) => {
+              suggestions.push({
+                label: column.columnName,
+                kind: monaco.languages.CompletionItemKind.Field,
+                insertText: column.columnName,
+                detail: `字段: ${column.columnComment ?? column.columnName} (${column.dataType})`,
+                range,
+              });
+            });
+          }
+        });
+      }
+      // SQL函数补全
+      sqlFunctions.forEach((func) => {
+        suggestions.push({
+          label: func.label,
+          kind: monaco.languages.CompletionItemKind.Function,
+          insertText: func.insertText,
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: func.detail,
+          range,
+        });
+      });
+      // SQL关键字补全（根据上下文）
+      const context = getSQLContext(editorRef.current!);
+      getSqlKeywords(context).forEach((keyword) => {
+        suggestions.push({
+          label: keyword,
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: keyword,
+          detail: 'SQL关键字',
+          range,
+        });
+      });
+      return suggestions;
+    },
+    [editorRef],
+  );
+
+  // 注册编辑器自动完成
+  useEffect(() => {
+    if (monacoRef.current && databaseSchema) {
+      const completionDisposable = monacoRef.current.languages.registerCompletionItemProvider('sql', {
+        provideCompletionItems: (model, position) => {
+          if (!monacoRef.current) return { suggestions: [] };
+          const suggestions = createCompletionSuggestions(model, position, databaseSchema, monacoRef.current);
+          return { suggestions };
+        },
+      });
+      return () => {
+        completionDisposable.dispose();
+      };
+    }
+  }, [databaseSchema, createCompletionSuggestions]);
 
   // 修改为自定义封装函数，解决类型问题
   const handleSetChartType = (type: 'bar' | 'line' | 'pie') => {
@@ -333,44 +586,15 @@ const SQLEditorImpl: React.FC = () => {
 
   // 处理Splitter拖动事件
   const handleSplitterDrag = useCallback((sizes: number[]) => {
-    if (!sizes || !sizes.length) return;
-
-    // 更新编辑器高度，减去编辑器Card的标题和内部padding高度
-    // Card标题高度 + Card内部padding + Card顶部edge
-    const titleAndPadding = 102;
-    const newHeight = sizes[0] - titleAndPadding;
-
-    // 设置最小高度为100px，确保编辑器始终有可用空间
-    setEditorHeight(Math.max(newHeight, 100));
-
-    console.log('更新编辑器高度:', newHeight);
+    setEditorHeight(sizes[0] - 102); // 更新编辑器高度
   }, []);
 
   // 编辑器挂载事件
-  const handleEditorDidMount = (view: EditorView) => {
-    console.log('编辑器挂载成功', view);
-    editorRef.current = view;
-
-    // 使用增强选择支持功能
-    import('./utils/selectionHelper').then(({ enhanceSelectionSupport }) => {
-      enhanceSelectionSupport(view);
-
-      // 在文档加载完成后确保选择功能可用
-      setTimeout(() => {
-        console.log('编辑器初始化完成，选择功能已就绪');
-      }, 500);
-    });
-
-    // 为运行按钮添加鼠标进入事件，在执行前确保选择状态正确
-    const runButton = document.querySelector('button[aria-label="执行SQL"]');
-    if (runButton) {
-      runButton.addEventListener('mouseenter', () => {
-        // 在即将执行前优化选择状态
-        import('./utils/selectionHelper').then(({ finalizeSelection }) => {
-          finalizeSelection(view);
-        });
-      });
-    }
+  const handleEditorDidMount = (editor: monaco.editor.IStandaloneCodeEditor, monacoInstance: typeof monaco) => {
+    editorRef.current = editor;
+    monacoRef.current = monacoInstance;
+    // 添加快捷键：Ctrl+Enter 执行查询
+    editor.addCommand(monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.Enter, executeQueryDebounced);
   };
 
   return (
@@ -419,7 +643,7 @@ const SQLEditorImpl: React.FC = () => {
                             aria-label="复制SQL语句"
                           />
                         </Tooltip>
-                        <SnippetSelector onSelect={insertSnippet} snippets={sqlSnippets} />
+                        <SnippetSelector onSelect={insertSnippet} />
                       </Space>
                       <EditorHeader
                         dataSources={dataSources}

@@ -2,15 +2,14 @@ import { useState, useCallback } from 'react';
 import { message } from 'antd';
 import { executeSQL } from '@/api/sql';
 import type { QueryResult } from '@/pages/SQLEditor/types';
-import { EditorView } from '@codemirror/view';
-import { getSQLContext } from '../utils/codeMirrorUtils';
-import { isCompleteSQLStatement } from '../utils/editorUtils';
+import * as monaco from 'monaco-editor';
+import { getSelectedSQLStatement, isCompleteSQLStatement } from '../utils/editorUtils';
 
 export interface ExecuteQueryOptions {
   datasourceId: string;
   sql: string;
   selectedText?: string;
-  editor?: EditorView | null;
+  editor?: monaco.editor.IStandaloneCodeEditor | null;
 }
 
 export const useQueryExecution = (
@@ -37,8 +36,8 @@ export const useQueryExecution = (
 
       let queryToExecute = options?.sql || sqlQuery;
       if (options?.selectedText && options.editor) {
-        // 使用 CodeMirror 工具获取 SQL 上下文
-        const selectedSQL = getSQLContext(options.editor);
+        // 使用编辑器工具提取选中的完整SQL语句
+        const selectedSQL = getSelectedSQLStatement(options.editor);
         if (selectedSQL.trim()) {
           queryToExecute = selectedSQL;
         }
