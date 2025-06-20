@@ -56,7 +56,7 @@ function LogstashManagementPage() {
 
     return record.logstashMachineStatusInfo.every((machine) =>
       action === 'start'
-        ? !['RUNNING', 'STARTING', 'STOPPING'].includes(machine.state)
+        ? ['RUNNING', 'STARTING', 'STOPPING'].includes(machine.state)
         : ['STOPPED', 'STOPPING', 'NOT_STARTED'].includes(machine.state),
     );
   };

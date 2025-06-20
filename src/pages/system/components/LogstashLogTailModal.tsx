@@ -1,5 +1,6 @@
 import { Modal, Button, message } from 'antd';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { VirtualList } from '../../../components/common/VirtualList';
 import { startLogTail, stopLogTail, createLogTailTask } from '../../../api/logstash';
 
 interface LogTailModalProps {
@@ -11,21 +12,29 @@ interface LogTailModalProps {
 }
 
 export default function LogTailModal({ visible, logstashMachineId, onCancel, style, bodyStyle }: LogTailModalProps) {
-  const [logs, setLogs] = useState<string[]>([]);
+  interface LogEntry {
+    id: string;
+    timestamp: number;
+    content: string;
+    groupId?: string;
+  }
+
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isTailing, setIsTailing] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [status, setStatus] = useState<any>(null);
+  const [maxLogs] = useState(1000);
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [messageApi, contextHolder] = message.useMessage();
 
-  const scrollToBottom = () => {
-    if (shouldAutoScroll) {
-      logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
+  const handleMouseEnter = () => {
+    setShouldAutoScroll(false);
   };
-
-  const handleMouseEnter = () => setShouldAutoScroll(false);
-  const handleMouseLeave = () => setShouldAutoScroll(true);
+  const handleMouseLeave = () => {
+    setShouldAutoScroll(true);
+  };
 
   // 自定义弹窗关闭处理函数，会自动停止日志跟踪
   const handleModalCancel = async () => {
@@ -54,31 +63,42 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
         console.log('日志跟踪连接已打开');
       };
 
-      (await eventSource).addEventListener('log-data', (event) => {
-        const data = JSON.parse(event.data);
-        // 只提取logLines数组内容
-        setLogs((prev) => [...prev, ...data.logLines, `---------------分隔线---------------`]);
-        scrollToBottom();
+      eventSourceRef.current = await eventSource;
+      eventSourceRef.current.addEventListener('log-data', (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (!isPaused) {
+            setLogs((prev) => {
+              const newEntries = (data.logLines || [data]).map((log: string, i: number) => ({
+                id: `${Date.now()}-${i}`,
+                key: `${Date.now()}-${i}`, // 添加key属性供VirtualList使用
+                timestamp: Date.now(),
+                content: typeof log === 'string' ? log : JSON.stringify(log),
+              }));
+              const newLogs = [...prev, ...newEntries];
+              return newLogs;
+            });
+          }
+        } catch (error) {
+          console.error('日志解析错误:', error);
+        }
       });
 
       (await eventSource).addEventListener('heartbeat', (event) => {
-        const data = JSON.parse(event.data);
-        setStatus(data.status);
+        try {
+          const data = JSON.parse(event.data);
+          setStatus(data.status);
+        } catch (error) {
+          console.error('心跳数据解析错误:', error);
+        }
       });
-      (await eventSource).onmessage = (event) => {
-        const newLog = event.data;
-        setLogs((prev) => [...prev, newLog, `---------------分隔线---------------`]);
-        scrollToBottom();
-      };
 
-      (await eventSource).onerror = async (err) => {
+      eventSourceRef.current.onerror = (err) => {
         console.error('EventSource错误:', err);
         setIsTailing(false);
-        (await eventSource).close();
+        eventSourceRef.current?.close();
+        eventSourceRef.current = null;
       };
-
-      // 存储EventSource实例以便之后关闭
-      (window as any).currentEventSource = eventSource;
 
       setIsTailing(true);
       setLogs([]);
@@ -103,6 +123,16 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
 
   // 组件卸载时确保关闭连接
   useEffect(() => {
+    return () => {
+      // 组件卸载时确保关闭连接
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (!visible) {
       // 如果弹窗不可见且正在跟踪，自动停止跟踪
       if (isTailing) {
@@ -119,10 +149,21 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
       <Modal
         title={`日志跟踪 (机器ID: ${logstashMachineId})`}
         open={visible}
-        width={800}
+        width="100%"
+        style={{
+          top: 0,
+          maxWidth: '100vw',
+          margin: 0,
+        }}
         onCancel={handleModalCancel}
         // 点击遮罩层不会关闭弹窗
         maskClosable={false}
+        bodyStyle={{
+          height: 'calc(100vh - 150px)',
+          padding: 0,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
         footer={[
           <Button key="stop" danger onClick={stopTail}>
             停止跟踪
@@ -134,30 +175,24 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
       >
         <div style={{ marginBottom: 16 }}>
           <h4>跟踪状态: {isTailing ? '运行中' : '已停止'}</h4>
-          {status && <pre>{JSON.stringify(status, null, 2)}</pre>}
         </div>
         <div
           style={{
-            height: 500,
+            height: '100%',
             overflow: 'auto',
             background: '#000',
             color: '#fff',
             padding: 8,
-            fontFamily: 'monospace',
-            fontSize: 12,
           }}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
           {logs.length > 0 ? (
-            <>
-              {logs.map((log, i) => (
-                <div key={i} style={{ whiteSpace: 'pre-wrap' }}>
-                  {typeof log === 'object' ? JSON.stringify(log) : log}
-                </div>
-              ))}
-              <div ref={logsEndRef} />
-            </>
+            <VirtualList
+              data={logs}
+              itemHeight={20}
+              renderItem={(log: LogEntry) => <div style={{ whiteSpace: 'pre-wrap' }}>{log.content}</div>}
+            />
           ) : (
             <div>暂无日志数据</div>
           )}
