@@ -20,6 +20,7 @@ import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
 import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
 import com.hinadt.miaocha.domain.mapper.MachineMapper;
 import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -158,23 +159,35 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         // 通过上下文获取当前用户
         String currentUser = UserContextUtil.getCurrentUserEmail();
 
-        // 更新数据库配置
-        logstashProcessMapper.updateConfigOnly(
-                id,
-                configUpdate.configContent(),
-                configUpdate.jvmOptions(),
-                configUpdate.logstashYml(),
-                currentUser);
+        // 只有在特定条件下才更新数据库中进程本身的配置
+        // 条件：logstashMachineIds 为空、null，或者指定了全部的 logstashMachineId
+        boolean shouldUpdateProcessConfig =
+                shouldUpdateProcessConfig(id, dto.getLogstashMachineIds());
+        if (shouldUpdateProcessConfig) {
+            // 更新数据库配置
+            logstashProcessMapper.updateConfigOnly(
+                    id,
+                    configUpdate.configContent(),
+                    configUpdate.jvmOptions(),
+                    configUpdate.logstashYml(),
+                    currentUser);
+        }
 
-        // 同步配置到实例
-        configSyncService.updateConfigForAllInstances(
-                id,
-                configUpdate.configContent(),
-                configUpdate.jvmOptions(),
-                configUpdate.logstashYml());
+        // 获取目标实例
+        List<LogstashMachine> targetInstances = getTargetInstances(id, dto.getLogstashMachineIds());
+
+        // 同步配置到指定的目标实例（而不是所有实例）
+        if (!targetInstances.isEmpty()) {
+            for (LogstashMachine instance : targetInstances) {
+                configSyncService.updateConfigForSingleInstance(
+                        instance.getId(),
+                        configUpdate.configContent(),
+                        configUpdate.jvmOptions(),
+                        configUpdate.logstashYml());
+            }
+        }
 
         // 部署配置到目标实例
-        List<LogstashMachine> targetInstances = getTargetInstances(id, dto.getLogstashMachineIds());
         if (!targetInstances.isEmpty()) {
             logstashDeployService.updateInstancesConfig(
                     targetInstances,
@@ -504,6 +517,31 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                 StringUtils.hasText(dto.getLogstashYml()) ? dto.getLogstashYml() : null;
 
         return new ProcessConfigUpdate(configContent, jvmOptions, logstashYml);
+    }
+
+    /**
+     * 判断是否应该更新进程本身的配置 只有在以下条件下才更新： 1. logstashMachineIds 为 null 或空（表示全局更新） 2. logstashMachineIds
+     * 包含了该进程的所有 logstash machine 实例
+     *
+     * @param processId 进程ID
+     * @param logstashMachineIds 请求中指定的实例ID列表
+     * @return 是否应该更新进程配置
+     */
+    private boolean shouldUpdateProcessConfig(Long processId, List<Long> logstashMachineIds) {
+        // 如果没有指定实例ID或为空，表示全局更新，应该更新进程配置
+        if (logstashMachineIds == null || logstashMachineIds.isEmpty()) {
+            return true;
+        }
+
+        // 获取该进程的所有实例
+        List<LogstashMachine> allInstances =
+                logstashMachineMapper.selectByLogstashProcessId(processId);
+        Set<Long> allInstanceIds =
+                allInstances.stream().map(LogstashMachine::getId).collect(Collectors.toSet());
+
+        // 检查指定的实例ID是否包含了所有实例
+        Set<Long> requestInstanceIds = new HashSet<>(logstashMachineIds);
+        return allInstanceIds.equals(requestInstanceIds);
     }
 
     private List<LogstashMachine> getTargetInstances(Long processId, List<Long> instanceIds) {

@@ -33,32 +33,6 @@
         WHERE id = #{id}
     </update>
 
-    <!-- 基于实例ID更新配置内容 -->
-    <update id="updateConfigContentById">
-        UPDATE logstash_machine
-        SET config_content = #{configContent},
-            update_time    = NOW(),
-            update_user    = #{updateUser}
-        WHERE id = #{id}
-    </update>
-
-    <!-- 基于实例ID更新 JVM 选项 -->
-    <update id="updateJvmOptionsById">
-        UPDATE logstash_machine
-        SET jvm_options = #{jvmOptions},
-            update_time = NOW(),
-            update_user = #{updateUser}
-        WHERE id = #{id}
-    </update>
-
-    <!-- 基于实例ID更新 logstash.yml -->
-    <update id="updateLogstashYmlById">
-        UPDATE logstash_machine
-        SET logstash_yml = #{logstashYml},
-            update_time  = NOW(),
-            update_user  = #{updateUser}
-        WHERE id = #{id}
-    </update>
 
     <!-- 更新 Logstash 机器记录 -->
     <update id="update">
@@ -115,7 +89,9 @@
 
     <!-- 统计机器被Logstash实例使用的数量 -->
     <select id="countByMachineId" resultType="int">
-        SELECT COUNT(1) FROM logstash_machine WHERE machine_id = #{machineId}
+        SELECT COUNT(1)
+        FROM logstash_machine
+        WHERE machine_id = #{machineId}
     </select>
 
     <!-- 查询所有 Logstash 机器记录 -->

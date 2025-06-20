@@ -74,11 +74,6 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
                             success = updateLogstashYml(machineInfo, configDir) && success;
                         }
 
-                        // 4. 更新数据库中的配置内容
-                        if (success) {
-                            updateDatabaseConfig();
-                        }
-
                         return success;
                     } catch (Exception e) {
                         logger.error(
@@ -205,24 +200,6 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
         } catch (Exception e) {
             logger.error("更新系统配置文件时发生错误，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage(), e);
             return false;
-        }
-    }
-
-    /** 更新数据库中的配置内容 */
-    private void updateDatabaseConfig() {
-        try {
-            if (StringUtils.hasText(configContent)) {
-                logstashMachineMapper.updateConfigContentById(logstashMachineId, configContent);
-            }
-            if (StringUtils.hasText(jvmOptions)) {
-                logstashMachineMapper.updateJvmOptionsById(logstashMachineId, jvmOptions);
-            }
-            if (StringUtils.hasText(logstashYml)) {
-                logstashMachineMapper.updateLogstashYmlById(logstashMachineId, logstashYml);
-            }
-            logger.info("成功更新数据库中的配置内容，实例ID: {}", logstashMachineId);
-        } catch (Exception e) {
-            logger.error("更新数据库配置时发生错误，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage(), e);
         }
     }
 
