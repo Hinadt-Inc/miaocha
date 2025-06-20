@@ -358,6 +358,11 @@ function LogstashManagementPage() {
       ),
     },
     {
+      title: '进程ID',
+      dataIndex: 'id',
+      key: 'id',
+    },
+    {
       title: '模块',
       dataIndex: 'moduleName',
       key: 'moduleName',
