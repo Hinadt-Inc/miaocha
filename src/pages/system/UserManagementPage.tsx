@@ -651,10 +651,13 @@ const UserManagementPage = () => {
         userModulePermissions={selectedUserForDrawer?.modulePermissions?.map((m) => ({ moduleName: m.module })) || []}
         allModules={moduleList}
         onSave={handleSaveModules}
-        onRefresh={() => {
-          fetchUsers().catch(() => {
-            messageApi.error('加载用户数据失败');
-          });
+        onRefresh={async () => {
+          await fetchUsers();
+          // 刷新抽屉用户数据，保证弹窗内容同步
+          if (selectedUserForDrawer) {
+            const latest = originalDataRef.current.find((u) => u.key === selectedUserForDrawer.key);
+            if (latest) setSelectedUserForDrawer(latest);
+          }
         }}
         nickname={selectedUserForDrawer?.nickname || ''}
         email={selectedUserForDrawer?.email || ''}
