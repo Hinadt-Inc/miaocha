@@ -1,6 +1,6 @@
 import { Modal, Button, message } from 'antd';
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { VirtualList } from '../../../components/common/VirtualList';
+import { useEffect, useState, useRef } from 'react';
+import { VirtualList, VirtualListRef } from '../../../components/common/VirtualList';
 import { startLogTail, stopLogTail, createLogTailTask } from '../../../api/logstash';
 
 interface LogTailModalProps {
@@ -26,6 +26,7 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
   const [maxLogs] = useState(1000);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const virtualListRef = useRef<VirtualListRef>(null);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [messageApi, contextHolder] = message.useMessage();
 
@@ -143,6 +144,12 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
     }
   }, [visible]);
 
+  useEffect(() => {
+    if (shouldAutoScroll && virtualListRef.current) {
+      virtualListRef.current.scrollToBottom();
+    }
+  }, [logs, shouldAutoScroll]);
+
   return (
     <>
       {contextHolder}
@@ -177,6 +184,7 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
           <h4>跟踪状态: {isTailing ? '运行中' : '已停止'}</h4>
         </div>
         <div
+          ref={logsEndRef}
           style={{
             height: '100%',
             overflow: 'auto',
@@ -189,9 +197,12 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
         >
           {logs.length > 0 ? (
             <VirtualList
+              ref={virtualListRef}
               data={logs}
               itemHeight={20}
-              renderItem={(log: LogEntry) => <div style={{ whiteSpace: 'pre-wrap' }}>{log.content}</div>}
+              renderItem={(log: Record<string, any>) => (
+                <div style={{ whiteSpace: 'pre-wrap' }}>{(log as LogEntry).content}</div>
+              )}
             />
           ) : (
             <div>暂无日志数据</div>
