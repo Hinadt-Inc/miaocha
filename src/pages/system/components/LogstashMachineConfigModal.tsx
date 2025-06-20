@@ -86,13 +86,24 @@ export default function LogstashMachineConfigModal({
     }
   };
 
+  // 关闭并重置状态
+  const handleCancel = () => {
+    setEnableEdit({
+      configContent: false,
+      jvmOptions: false,
+      logstashYml: false,
+    });
+    form.resetFields();
+    onCancel();
+  };
+
   return (
     <Modal
       title={<span>编辑机器配置 (实例ID: {logstashMachineId})</span>}
       open={visible}
       onOk={handleOk}
       confirmLoading={confirmLoading}
-      onCancel={onCancel}
+      onCancel={handleCancel}
       width={800}
     >
       {contextHolder}
