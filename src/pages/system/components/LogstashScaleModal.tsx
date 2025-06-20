@@ -141,7 +141,7 @@ export default function LogstashScaleModal({
           <Text strong>模块: </Text>
           <Text>{currentProcess?.moduleName}</Text>
           <br />
-          <Text strong>当前机器数量: </Text>
+          <Text strong>当前实例数量: </Text>
           <Text>{removableMachines.length}</Text>
           <br />
           <Text strong>部署路径: </Text>
@@ -165,7 +165,7 @@ export default function LogstashScaleModal({
           style={{ marginBottom: 16 }}
         >
           <Radio value="scale-out">扩容（添加机器）</Radio>
-          <Radio value="scale-in">缩容（移除机器）</Radio>
+          <Radio value="scale-in">缩容（移除实例）</Radio>
         </Radio.Group>
 
         {operationType === 'scale-out' && (
@@ -197,7 +197,7 @@ export default function LogstashScaleModal({
             <Title level={5}>缩容操作</Title>
             <Form.Item
               name="removeLogstashMachineIds"
-              label="移除机器"
+              label="移除实例"
               help={`当前有 ${removableMachines.length} 台机器可移除`}
             >
               <Select
