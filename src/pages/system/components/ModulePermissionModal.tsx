@@ -3,7 +3,7 @@ import styles from './ModulePermissionModal.module.less';
 import { batchRevokeModules, authorizeModule, revokeModule } from '../../../api/modules';
 import { SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 import type { ModulePermission } from '@/types/permissionTypes';
 
@@ -36,28 +36,26 @@ const ModulePermissionModal = ({
   const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
-
-  // 转换所有模块数据
-  const allModuleData = allModules.map((m) => ({
-    moduleId: m.value,
-    moduleName: m.label,
-  }));
-  // 合并当前用户已有模块和所有模块
-  const mergedModules = allModuleData.map((module) => {
-    const hasUserPermission = userModulePermissions.some((p) => p.moduleName === module.moduleName);
-    const modulePermission = modules.find((m) => m.module === module.moduleName);
-    return {
-      ...module,
-      authorized: hasUserPermission,
-      modulePermission,
-    };
-  });
-  console.log('Merged Modules:', mergedModules);
+  // 直接计算表格数据，不维护本地状态
+  const mergedModules = useMemo(() => {
+    console.log('Recalculating modules:', { modules, userModulePermissions, allModules });
+    return allModules.map((m) => {
+      const hasUserPermission = userModulePermissions.some((p) => p.moduleName === m.label);
+      const modulePermission = modules.find((mod) => mod.module === m.label);
+      return {
+        moduleId: m.value,
+        moduleName: m.label,
+        authorized: hasUserPermission,
+        modulePermission,
+      };
+    });
+  }, [modules, userModulePermissions, allModules]);
 
   // 处理搜索
-  const filteredModules = mergedModules.filter((module) =>
-    module.moduleName.toLowerCase().includes(searchText.toLowerCase()),
-  );
+  const filteredModules = useMemo(() => {
+    console.log('Filtering modules with search:', searchText);
+    return mergedModules.filter((module) => module.moduleName.toLowerCase().includes(searchText.toLowerCase()));
+  }, [mergedModules, searchText]);
 
   // 处理模块选择变化
   const handleSelectChange = (selectedRowKeys: React.Key[]) => {
@@ -75,8 +73,7 @@ const ModulePermissionModal = ({
         await authorizeModule(userId, moduleName);
       }
       messageApi.success(!isAuthorized ? '授权成功' : '撤销成功');
-      // 成功后改变状态
-      onClose();
+      // 完全依赖props更新，不再维护本地状态
       onRefresh();
     } catch (error) {
       messageApi.error('操作失败');
@@ -101,13 +98,14 @@ const ModulePermissionModal = ({
           moduleName: allModules.find((m) => m.value === moduleId)?.label || moduleId,
         }));
         await onSave(userId, modulesToUpdate);
-        onClose();
+        messageApi.success('批量授权成功');
       } else {
         await batchRevokeModules(userId, selectedModules);
         messageApi.success('批量撤销成功');
-        onClose();
+        // 完全依赖props更新
       }
       setSelectedModules([]);
+      onRefresh();
     } catch {
       messageApi.error('操作失败');
     } finally {

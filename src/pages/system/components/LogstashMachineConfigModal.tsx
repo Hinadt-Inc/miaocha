@@ -15,6 +15,7 @@ interface LogstashMachineConfigModalProps {
     jvmOptions?: string;
     logstashYml?: string;
   };
+  onSuccess?: () => void; // 添加成功回调
 }
 
 export default function LogstashMachineConfigModal({
@@ -23,6 +24,7 @@ export default function LogstashMachineConfigModal({
   initialConfig,
   logstashMachineId,
   processId,
+  onSuccess,
 }: LogstashMachineConfigModalProps) {
   const [form] = Form.useForm();
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -36,8 +38,12 @@ export default function LogstashMachineConfigModal({
   useEffect(() => {
     if (visible) {
       console.log('LogstashMachineConfigModal visible:', logstashMachineId);
+      // 当模态框打开时，设置表单的初始值
+      if (initialConfig) {
+        form.setFieldsValue(initialConfig);
+      }
     }
-  }, [visible, form]);
+  }, [visible, form, initialConfig]);
 
   const handleOk = async () => {
     try {
@@ -71,6 +77,10 @@ export default function LogstashMachineConfigModal({
       await updateLogstashMachineConfig(processId, logstashMachineId, data);
       messageApi.success('机器配置更新成功');
       onCancel();
+      // 调用成功回调，刷新父组件数据
+      if (onSuccess) {
+        onSuccess();
+      }
     } finally {
       setConfirmLoading(false);
     }
@@ -86,13 +96,28 @@ export default function LogstashMachineConfigModal({
     }
   };
 
+  // 关闭并重置状态
+  const handleCancel = () => {
+    setEnableEdit({
+      configContent: false,
+      jvmOptions: false,
+      logstashYml: false,
+    });
+    form.resetFields();
+    onCancel();
+  };
+
   return (
     <Modal
-      title={<span>编辑机器配置 (实例ID: {logstashMachineId})</span>}
+      title={
+        <span>
+          编辑机器配置 (进程ID: {processId}, 实例ID: {logstashMachineId})
+        </span>
+      }
       open={visible}
       onOk={handleOk}
       confirmLoading={confirmLoading}
-      onCancel={onCancel}
+      onCancel={handleCancel}
       width={800}
     >
       {contextHolder}

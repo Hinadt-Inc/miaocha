@@ -395,7 +395,7 @@ function LogstashManagementPage() {
       title: '更新时间',
       dataIndex: 'updateTime',
       key: 'updateTime',
-      render: (updateTime: string) => dayjs(updateTime).format('YYYY-MM-DD HH:mm:ss'),
+      render: (updateTime: string) => (updateTime ? dayjs(updateTime).format('YYYY-MM-DD HH:mm:ss') : '-'),
     },
     {
       title: '更新人',
@@ -684,16 +684,32 @@ function LogstashManagementPage() {
                             </Popconfirm>
                             <Button
                               type="link"
-                              onClick={() => {
-                                const process = data.find((p) => p.id === record.id);
-                                setCurrentMachine({
-                                  logstashMachineId: machine.logstashMachineId,
-                                  processId: record.id,
-                                  configContent: process?.configContent,
-                                  jvmOptions: process?.jvmOptions,
-                                  logstashYml: process?.logstashYml,
-                                });
-                                setMachineConfigModalVisible(true);
+                              onClick={async () => {
+                                try {
+                                  // 使用与点击实例ID相同的接口获取机器详细配置信息
+                                  const machineDetail = await getLogstashProcess(machine.logstashMachineId);
+                                  setCurrentMachine({
+                                    logstashMachineId: machine.logstashMachineId,
+                                    processId: record.id,
+                                    configContent: machineDetail.configContent,
+                                    jvmOptions: machineDetail.jvmOptions,
+                                    logstashYml: machineDetail.logstashYml,
+                                  });
+                                  setMachineConfigModalVisible(true);
+                                } catch (err) {
+                                  // 如果获取机器详情失败，使用进程级别的配置作为备选
+                                  messageApi.warning('获取机器配置失败，使用进程级别配置');
+                                  const process = data.find((p) => p.id === record.id);
+                                  setCurrentMachine({
+                                    logstashMachineId: machine.logstashMachineId,
+                                    processId: record.id,
+                                    configContent: process?.configContent,
+                                    jvmOptions: process?.jvmOptions,
+                                    logstashYml: process?.logstashYml,
+                                  });
+                                  setMachineConfigModalVisible(true);
+                                  console.error('获取机器详情失败:', err);
+                                }
                               }}
                               disabled={machine.state === 'RUNNING'}
                               style={{ padding: '0 4px' }}
@@ -854,7 +870,7 @@ function LogstashManagementPage() {
                 title: '开始时间',
                 dataIndex: 'startTime',
                 key: 'startTime',
-                render: (startTime: string) => dayjs(startTime).format('YYYY-MM-DD HH:mm:ss'),
+                render: (startTime: string) => (startTime ? dayjs(startTime).format('YYYY-MM-DD HH:mm:ss') : '-'),
                 width: 200,
               },
               {
@@ -895,12 +911,14 @@ function LogstashManagementPage() {
                     </Tag>
                   </Descriptions.Item>
                   <Descriptions.Item label="开始时间">
-                    {dayjs(task.startTime).format('YYYY-MM-DD HH:mm:ss')}
+                    {task.startTime ? dayjs(task.startTime).format('YYYY-MM-DD HH:mm:ss') : '-'}
                   </Descriptions.Item>
                   <Descriptions.Item label="结束时间">
-                    {dayjs(task.endTime).format('YYYY-MM-DD HH:mm:ss') || '-'}
+                    {task.endTime ? dayjs(task.endTime).format('YYYY-MM-DD HH:mm:ss') : '-'}
                   </Descriptions.Item>
-                  <Descriptions.Item label="持续时间">{task.duration}ms</Descriptions.Item>
+                  <Descriptions.Item label="持续时间">
+                    {task.duration != null ? `${task.duration}ms` : '-'}
+                  </Descriptions.Item>
                   <Descriptions.Item label="错误信息" span={2}>
                     {task.errorMessage || '无'}
                   </Descriptions.Item>
@@ -936,19 +954,20 @@ function LogstashManagementPage() {
                           title: '开始时间',
                           dataIndex: 'startTime',
                           key: 'startTime',
-                          render: (startTime: string) => dayjs(startTime).format('YYYY-MM-DD HH:mm:ss'),
+                          render: (startTime: string) =>
+                            startTime ? dayjs(startTime).format('YYYY-MM-DD HH:mm:ss') : '-',
                         },
                         {
                           title: '结束时间',
                           dataIndex: 'endTime',
                           key: 'endTime',
-                          render: (endTime: string) => dayjs(endTime).format('YYYY-MM-DD HH:mm:ss') || '-',
+                          render: (endTime: string) => (endTime ? dayjs(endTime).format('YYYY-MM-DD HH:mm:ss') : '-'),
                         },
                         {
                           title: '持续时间',
                           dataIndex: 'duration',
                           key: 'duration',
-                          render: (duration: number) => `${duration}ms`,
+                          render: (duration: number) => (duration != null ? `${duration}ms` : '-'),
                         },
                         {
                           title: '错误信息',
@@ -990,12 +1009,14 @@ function LogstashManagementPage() {
                   </Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="开始时间">
-                  {dayjs(selectedTask.startTime).format('YYYY-MM-DD HH:mm:ss')}
+                  {selectedTask.startTime ? dayjs(selectedTask.startTime).format('YYYY-MM-DD HH:mm:ss') : '-'}
                 </Descriptions.Item>
                 <Descriptions.Item label="结束时间">
-                  {dayjs(selectedTask.endTime).format('YYYY-MM-DD HH:mm:ss') || '-'}
+                  {selectedTask.endTime ? dayjs(selectedTask.endTime).format('YYYY-MM-DD HH:mm:ss') : '-'}
                 </Descriptions.Item>
-                <Descriptions.Item label="持续时间">{selectedTask.duration}ms</Descriptions.Item>
+                <Descriptions.Item label="持续时间">
+                  {selectedTask.duration != null ? `${selectedTask.duration}ms` : '-'}
+                </Descriptions.Item>
                 <Descriptions.Item label="错误信息" span={2}>
                   {selectedTask.errorMessage || '无'}
                 </Descriptions.Item>
@@ -1040,19 +1061,20 @@ function LogstashManagementPage() {
                           title: '开始时间',
                           dataIndex: 'startTime',
                           key: 'startTime',
-                          render: (startTime: string) => dayjs(startTime).format('YYYY-MM-DD HH:mm:ss'),
+                          render: (startTime: string) =>
+                            startTime ? dayjs(startTime).format('YYYY-MM-DD HH:mm:ss') : '-',
                         },
                         {
                           title: '结束时间',
                           dataIndex: 'endTime',
                           key: 'endTime',
-                          render: (endTime: string) => dayjs(endTime).format('YYYY-MM-DD HH:mm:ss') || '-',
+                          render: (endTime: string) => (endTime ? dayjs(endTime).format('YYYY-MM-DD HH:mm:ss') : '-'),
                         },
                         {
                           title: '持续时间',
                           dataIndex: 'duration',
                           key: 'duration',
-                          render: (duration: number) => `${duration}ms`,
+                          render: (duration: number) => (duration != null ? `${duration}ms` : '-'),
                         },
                         {
                           title: '错误信息',
@@ -1095,10 +1117,10 @@ function LogstashManagementPage() {
                   {currentDetail.tableName || '未设置'}
                 </Descriptions.Item>
                 <Descriptions.Item label="创建时间" span={1}>
-                  {dayjs(currentDetail.createTime).format('YYYY-MM-DD HH:mm:ss')}
+                  {currentDetail.createTime ? dayjs(currentDetail.createTime).format('YYYY-MM-DD HH:mm:ss') : '-'}
                 </Descriptions.Item>
                 <Descriptions.Item label="更新时间" span={1}>
-                  {dayjs(currentDetail.updateTime).format('YYYY-MM-DD HH:mm:ss')}
+                  {currentDetail.updateTime ? dayjs(currentDetail.updateTime).format('YYYY-MM-DD HH:mm:ss') : '-'}
                 </Descriptions.Item>
                 <Descriptions.Item label="创建人" span={1}>
                   {currentDetail.createUserName || '未知'}
@@ -1245,6 +1267,10 @@ function LogstashManagementPage() {
             jvmOptions: currentMachine?.jvmOptions,
             logstashYml: currentMachine?.logstashYml,
           }}
+          onSuccess={() => {
+            // 配置更新成功后刷新数据
+            fetchData();
+          }}
         />
         <LogstashMachineDetailModal
           visible={machineDetailModalVisible}
@@ -1296,5 +1322,4 @@ function LogstashManagementPage() {
 
 import withSystemAccess from '@/utils/withSystemAccess';
 import dayjs from 'dayjs';
-import { c } from 'vite/dist/node/moduleRunnerTransport.d-DJ_mE5sf';
 export default withSystemAccess(LogstashManagementPage);

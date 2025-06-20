@@ -246,7 +246,7 @@ export function getLogTailContent(lastLogId?: string): Promise<{ logs: string[];
   });
 }
 
-export function createLogTailTask(logstashMachineId: number, tailLines: number = 100): Promise<{ taskId: string }> {
+export function createLogTailTask(logstashMachineId: number, tailLines: number = 500): Promise<{ taskId: string }> {
   return request({
     url: '/api/logstash/log-tail/create',
     method: 'POST',
