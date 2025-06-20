@@ -195,7 +195,7 @@ const MachineManagementPage = () => {
             <Button key="test" loading={testingConnection} onClick={handleTestConnection}>
               测试连接
             </Button>,
-            <Button key="submit" type="primary" loading={testingConnection} onClick={() => form.submit()}>
+            <Button key="submit" type="primary" loading={loading} onClick={() => form.submit()}>
               确定
             </Button>,
           ]}
