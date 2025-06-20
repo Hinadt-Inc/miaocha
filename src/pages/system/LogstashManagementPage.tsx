@@ -24,7 +24,6 @@ import {
   startLogstashProcess,
   startLogstashMachine,
   stopLogstashMachine,
-  refreshLogstashMachineConfig,
   refreshLogstashConfig,
   stopLogstashProcess,
   updateLogstashConfig,
@@ -478,7 +477,11 @@ function LogstashManagementPage() {
             okText="确认"
             cancelText="取消"
           >
-            <Button type="link" disabled={record.state === 'RUNNING'} style={{ padding: '0 4px' }}>
+            <Button
+              type="link"
+              disabled={record.logstashMachineStatusInfo.every((el) => el.state === 'RUNNING')}
+              style={{ padding: '0 4px' }}
+            >
               刷新配置
             </Button>
           </Popconfirm>
