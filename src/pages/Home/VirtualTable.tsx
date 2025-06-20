@@ -177,6 +177,43 @@ const VirtualTable = (props: IProps) => {
     );
   }, [sqls]);
 
+  const keyWordsFormat = useMemo(() => {
+    const { keywords = [] } = searchParams;
+    if (!keywords || keywords.length === 0) return [];
+
+    /**
+     * 关键词转换规则函数
+     * @param {string} input - 输入的字符串
+     * @returns {string[]} 转换后的关键词数组
+     */
+    function convertKeywords(input: string) {
+      // 移除首尾空格
+      const trimmed = input.trim();
+
+      // 如果输入为空，返回空数组
+      if (!trimmed) {
+        return [];
+      }
+
+      // 定义所有支持的分隔符，按优先级排序
+      const separators = ['&&', '||', ' and ', ' AND ', ' or ', ' OR '];
+
+      // 查找第一个匹配的分隔符
+      for (const separator of separators) {
+        if (trimmed.includes(separator)) {
+          return trimmed
+            .split(separator)
+            .map((item) => item.trim().replace(/^['"]|['"]$/g, '')) // 移除首尾的单引号或双引号
+            .filter((item) => item.length > 0);
+        }
+      }
+
+      // 单个关键词的情况，移除引号
+      return [trimmed.replace(/^['"]|['"]$/g, '')];
+    }
+    return Array.from(new Set(convertKeywords(keywords?.slice(-1)[0])));
+  }, [searchParams]);
+
   const handleResize = (index: number) => (width: number) => {
     const column = columns[index];
     if (!column?.dataIndex) return;
@@ -221,16 +258,21 @@ const VirtualTable = (props: IProps) => {
         ellipsis: false,
         hidden: _columns.length > 0,
         render: (_: any, record: ILogColumnsResponse) => {
-          const { keywords = [] } = searchParams;
+          // const { keywords = [] } = searchParams;
           // 1. 提取所有 whereSqlsFromSider 的字段和值
-          const whereFields = new Set(whereSqlsFromSider.map((item) => item.field));
+          // const whereFields = new Set(whereSqlsFromSider.map((item) => item.field));
           const whereValues = whereSqlsFromSider.map((item) => String(item.value)).filter(Boolean);
 
           // 2. 合并所有 keywords
-          const allKeywords = Array.from(new Set([...keywords, ...whereValues])).filter(Boolean);
+          const allKeywords = Array.from(new Set([...keyWordsFormat, ...whereValues])).filter(Boolean);
 
           // 3. 合并所有关键词（包含SQL过滤后的关键词）
-          const finalKeywords = Array.from(new Set([...allKeywords, ...sqlFilterValue])).filter(Boolean);
+          const finalKeywords = Array.from(
+            new Set([...(keyWordsFormat?.length ? allKeywords : sqlFilterValue)]),
+          ).filter(Boolean);
+
+          console.log('匹配高亮关键词', finalKeywords);
+
           // 预处理每个字段的优先级
           const entries = Object.entries(record).map(([key, value]) => {
             let priority = 2; // 默认最低
