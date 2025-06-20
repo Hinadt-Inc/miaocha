@@ -7,7 +7,9 @@ import dynamicImport from 'vite-plugin-dynamic-import';
 // https://vite.dev/config/
 export default defineConfig({
   base: '/',
+  publicDir: 'public',
   plugins: [
+    // Removed monacoEditorPlugin due to version compatibility issues
     dynamicImport(),
     react({
       babel: {
@@ -18,30 +20,6 @@ export default defineConfig({
       },
     }),
   ],
-  optimizeDeps: {
-    include: ['monaco-editor', 'monaco-editor/esm/vs/basic-languages/sql/sql', 'monaco-sql-languages'],
-    exclude: [
-      // 这些worker文件需要作为Web Worker加载，不应该被优化
-      'monaco-editor/esm/vs/editor/editor.worker',
-      'monaco-editor/esm/vs/language/json/json.worker',
-      'monaco-editor/esm/vs/language/css/css.worker',
-      'monaco-editor/esm/vs/language/html/html.worker',
-      'monaco-editor/esm/vs/language/typescript/ts.worker',
-    ],
-  },
-  worker: {
-    format: 'es',
-    plugins: () => [
-      viteStaticCopy({
-        targets: [
-          {
-            src: 'node_modules/monaco-editor/esm/vs/**/*.worker.js',
-            dest: 'monaco-workers',
-          },
-        ],
-      }),
-    ],
-  },
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),

@@ -113,6 +113,8 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  
+  /* 结果卡片样式 */
   .results-card {
     padding-top: 10px;
     display: flex;
@@ -125,8 +127,37 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      min-height: 0;
       padding: 0;
+    }
+  }
+  
+  /* Splitter组件样式 */
+  .ant-splitter {
+    height: 100%;
+    
+    &[data-layout="vertical"] {
+      flex-direction: column;
+      
+      .ant-splitter-panel {
+        width: 100% !important;
+        overflow: hidden;
+        min-height: 100px;
+      }
+      
+      .ant-splitter-bar {
+        width: 100%;
+        height: 5px;
+        
+        &:hover {
+          background: rgba(5, 145, 255, 0.1);
+        }
+      }
+    }
+    
+    .ant-splitter-panel {
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
   }
 }
@@ -141,7 +172,7 @@
 /* 查询编辑器卡片 */
 .query-editor-card {
   .ant-card-head {
-    min-height: auto;
+    min-height: 20px; /* 替换auto为具体值以解决Firefox兼容性问题 */
     padding: 0 12px;
     
     .ant-card-head-title {
@@ -152,8 +183,14 @@
 
 /* 编辑器卡片 */
 .editor-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  
   .ant-card-body {
     padding: 10px;
+    flex: 1;
+    overflow: hidden;
   }
 }
 
@@ -320,9 +357,11 @@
 .query-editor {
   height: 100%;
   
-  .monaco-editor {
-    .margin,
-    .monaco-editor-background {
+  .cm-editor {
+    height: 100%;
+    
+    .cm-gutters,
+    .cm-scroller {
       background-color: #fafafa;
     }
   }

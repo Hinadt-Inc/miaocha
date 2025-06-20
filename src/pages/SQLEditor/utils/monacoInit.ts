@@ -1,26 +1,13 @@
-import { loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
-
-// 声明全局monaco类型
-declare global {
-  interface Window {
-    monaco: typeof import('monaco-editor');
-  }
-
-  // 声明全局MonacoEnvironment接口
-  interface MonacoEnvironment {
-    getWorker(moduleId: string, label: string): Worker;
-  }
-}
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
 import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
 
-// 主题配置常量
+// 主题配置
 export const THEME_CONFIG: monaco.editor.IStandaloneThemeData = {
-  base: 'vs' as monaco.editor.BuiltinTheme,
+  base: 'vs',
   inherit: true,
   rules: [
     { token: 'keyword', foreground: '0000ff', fontStyle: 'bold' },
@@ -39,7 +26,7 @@ export const THEME_CONFIG: monaco.editor.IStandaloneThemeData = {
   },
 };
 
-// Worker配置常量
+// Worker 配置
 const WORKER_CONFIG = {
   json: jsonWorker,
   css: cssWorker,
@@ -54,75 +41,55 @@ const WORKER_CONFIG = {
 };
 
 /**
- * 初始化 Monaco 编辑器
- * 设置必要的配置并加载本地编辑器资源
+ * 初始化 Monaco 编辑器，确保使用本地资源
+ * @returns Monaco 实例
  */
-let retryCount = 0;
-const MAX_RETRIES = 3;
-
-const initMonacoEditor = async (): Promise<typeof monaco | undefined> => {
-  // 获取对应语言的worker
-  const getWorker = (_moduleId: string, label: string): Worker => {
-    const WorkerClass = WORKER_CONFIG[label as keyof typeof WORKER_CONFIG] || WORKER_CONFIG.default;
-    return new WorkerClass();
+const initMonacoEditor = async (): Promise<typeof monaco> => {
+  // 设置 MonacoEnvironment 用于本地 Worker
+  self.MonacoEnvironment = {
+    getWorker: (_moduleId: string, label: string): Worker => {
+      const WorkerClass = WORKER_CONFIG[label as keyof typeof WORKER_CONFIG] || WORKER_CONFIG.default;
+      return new WorkerClass();
+    },
+    // 强制指定本地路径，覆盖默认 CDN
+    baseUrl: '/monaco-editor/min/vs',
   };
 
-  // 本地化配置 Monaco workers
-  self.MonacoEnvironment = { getWorker };
+  // 注册 SQL 语言支持（避免加载 basic-languages/sql/sql.js）
+  monaco.languages.register({
+    id: 'sql',
+    extensions: ['.sql'],
+    aliases: ['SQL', 'sql'],
+  });
 
-  // 强制使用本地配置(使用相对路径)
-  const config = {
-    monaco,
-    paths: {
-      vs: '/monaco-editor/min/vs',
+  // 定义 SQL 语言的简单 tokenizer（可选，防止请求 sql.js）
+  monaco.languages.setMonarchTokensProvider('sql', {
+    tokenizer: {
+      root: [
+        [/\b(SELECT|FROM|WHERE|INSERT|UPDATE|DELETE|INTO|VALUES|AND|OR|NOT)\b/i, 'keyword'],
+        [/"[^"]*"|'[^']*'/, 'string'],
+        [/--.*$/, 'comment'],
+        [/[a-zA-Z_][a-zA-Z0-9_]*/, 'identifier'],
+      ],
     },
-    'vs/nls': {
-      availableLanguages: {
-        '*': 'zh-cn',
-      },
-    },
-    useCDN: false,
-    disableWorker: false,
-    // workerPath可能与getWorker函数冲突，这里移除
-  };
-  // 精确类型声明
-  loader.config(config);
+  });
 
-  // 设置超时来处理加载时间过长的情况
-  const timeoutPromise = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('Monaco editor 加载超时')), 30000),
-  );
+  // 定义自定义主题
+  monaco.editor.defineTheme('sqlTheme', THEME_CONFIG);
 
-  // 初始化编辑器并确保加载顺序
-  return Promise.race([loader.init(), timeoutPromise])
-    .then((monacoInstance) => {
-      if (!monacoInstance) {
-        throw new Error('Monaco实例未正确加载');
-      }
-      window.monaco = monacoInstance as typeof import('monaco-editor');
-      console.log('Monaco editor 本地加载成功', window.monaco === monacoInstance);
+  // 加载 CSS（使用URL方式加载public目录下的资源）
+  const cssUrl = '/monaco-editor/min/vs/editor/editor.main.css';
+  const loaderUrl = '/monaco-editor/min/vs/load.js';
+  const response = await fetch(cssUrl);
+  const loaderResponse = await fetch(loaderUrl);
+  if (response.ok) {
+    const cssText = await response.text();
+    const style = document.createElement('style');
+    style.textContent = cssText;
+    document.head.appendChild(style);
+  }
 
-      // 为 SQL 设置自定义主题
-      if (window.monaco) {
-        window.monaco.editor.defineTheme('sqlTheme', THEME_CONFIG);
-      }
-
-      return window.monaco; // 返回monaco实例
-    })
-    .catch((error) => {
-      console.error('Monaco editor 初始化失败:', error);
-      // 即使初始化失败，也确保全局环境变量被设置
-      // 注意：MonacoEnvironment 不应该作为window的属性，而是作为全局变量
-      // 添加重试机制
-      if (retryCount < MAX_RETRIES) {
-        console.log(`正在重试Monaco初始化(第${retryCount + 1}次)...`);
-        retryCount++;
-        return initMonacoEditor();
-      } else {
-        retryCount = 0; // 重置计数器
-      }
-      throw error;
-    });
+  return monaco;
 };
 
 export default initMonacoEditor;

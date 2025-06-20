@@ -15,7 +15,7 @@ export default defineConfig({
     deps: {
       optimizer: {
         web: {
-          include: ['monaco-editor'],
+          include: ['@codemirror/state', '@codemirror/view', '@codemirror/lang-sql'],
         },
       },
     },
@@ -24,7 +24,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
-      'monaco-editor': resolve(__dirname, 'node_modules/monaco-editor'),
     },
   },
 });
