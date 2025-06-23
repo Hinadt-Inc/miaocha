@@ -64,13 +64,6 @@ service.interceptors.response.use(
     // 根据后端接口返回结构调整
     if (isBizError || isCodeError) {
       console.log('isError', response);
-      window.dispatchEvent(
-        new CustomEvent('unhandledrejection', {
-          detail: {
-            reason: new Error(message),
-          },
-        }),
-      );
       return Promise.reject(new Error(message));
     }
     return res.data;
@@ -160,14 +153,6 @@ service.interceptors.response.use(
         isRefreshing = false;
       }
     }
-    // console.log('isError3', errorMessage);
-    // window.dispatchEvent(
-    //   new CustomEvent('unhandledrejection', {
-    //     detail: {
-    //       reason: new Error(errorMessage),
-    //     },
-    //   }),
-    // );
     return Promise.reject(new Error(errorMessage));
   },
 );
