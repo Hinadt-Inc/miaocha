@@ -62,7 +62,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("Logstash Story 4: 配置管理集成测试")
-@Order(4)
 public class LogstashConfigurationManagementIntegrationTest {
 
     // Mock配置解析器以避免依赖真实解析逻辑

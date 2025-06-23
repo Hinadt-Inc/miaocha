@@ -5,7 +5,7 @@ server:
 
 spring:
   application:
-    name: log-manage-system
+    name: miaocha
     version: '@project.version@'
   profiles:
     active: '@spring.profiles.active@'
@@ -61,4 +61,3 @@ logstash:
     # 监控间隔时间（毫秒），默认10分钟
     interval: 600000
 
-    

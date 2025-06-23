@@ -57,7 +57,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("Logstash Story 2: Logstash实例基础生命周期测试")
-@Order(2)
 public class LogstashBasicLifecycleIntegrationTest {
 
     /** 测试配置类 - 使用Mock替代真实的LogstashConfigParser 这样集成测试可以专注于进程生命周期管理，而不受配置验证逻辑影响 */

@@ -215,6 +215,15 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.2.5</version>
                     <configuration>
+                        <!-- ========== 并行测试配置 ========== -->
+                        <parallel>classesAndMethods</parallel>
+                        <threadCount>16</threadCount>
+                        <perCoreThreadCount>false</perCoreThreadCount>
+                        <threadCountSuites>2</threadCountSuites>
+                        <threadCountClasses>8</threadCountClasses>
+                        <threadCountMethods>8</threadCountMethods>
+
+                        <!-- ========== 现有配置保持不变 ========== -->
                         <systemPropertyVariables>
                             <allure.results.directory>${project.build.directory}/allure-results
                             </allure.results.directory>
@@ -300,6 +309,13 @@
                     <artifactId>maven-failsafe-plugin</artifactId>
                     <version>${maven.failsafe.plugin.version}</version>
                     <configuration>
+                        <!-- ========== 集成测试并行配置 ========== -->
+                        <!-- 集成测试使用较低的并行度，避免Testcontainers冲突 -->
+                        <parallel>classes</parallel>
+                        <threadCount>8</threadCount>
+                        <perCoreThreadCount>false</perCoreThreadCount>
+
+                        <!-- ========== 现有配置保持不变 ========== -->
                         <systemPropertyVariables>
                             <allure.results.directory>${project.build.directory}/allure-results
                             </allure.results.directory>

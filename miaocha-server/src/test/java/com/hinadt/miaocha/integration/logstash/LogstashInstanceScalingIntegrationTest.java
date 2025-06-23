@@ -60,7 +60,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("Logstash Story 3: 多实例扩缩容管理集成测试")
-@Order(3)
 public class LogstashInstanceScalingIntegrationTest {
 
     /** 测试配置类 - Mock配置解析器 */
