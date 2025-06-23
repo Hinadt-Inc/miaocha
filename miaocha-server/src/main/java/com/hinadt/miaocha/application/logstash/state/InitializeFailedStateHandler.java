@@ -368,4 +368,50 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
         }
         return getState(); // 默认保持当前状态
     }
+
+    @Override
+    public CompletableFuture<Boolean> handleDelete(
+            LogstashMachine logstashMachine, MachineInfo machineInfo) {
+        Long logstashMachineId = logstashMachine.getId();
+        Long machineId = machineInfo.getId();
+
+        logger.info(
+                "删除机器 [{}] 上的LogstashMachine实例 [{}] 目录 (初始化失败状态)", machineId, logstashMachineId);
+
+        LogstashCommand deleteCommand =
+                commandFactory.deleteProcessDirectoryCommand(logstashMachineId);
+
+        return deleteCommand
+                .execute(machineInfo)
+                .thenApply(
+                        success -> {
+                            if (success) {
+                                logger.info(
+                                        "成功删除机器 [{}] 上的LogstashMachine实例 [{}] 目录",
+                                        machineId,
+                                        logstashMachineId);
+                            } else {
+                                logger.error(
+                                        "删除机器 [{}] 上的LogstashMachine实例 [{}] 目录失败",
+                                        machineId,
+                                        logstashMachineId);
+                            }
+                            return success;
+                        })
+                .exceptionally(
+                        ex -> {
+                            logger.error(
+                                    "删除机器 [{}] 上的LogstashMachine实例 [{}] 目录时发生异常: {}",
+                                    machineId,
+                                    logstashMachineId,
+                                    ex.getMessage(),
+                                    ex);
+                            return false;
+                        });
+    }
+
+    @Override
+    public boolean canDelete() {
+        return true;
+    }
 }

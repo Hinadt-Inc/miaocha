@@ -9,13 +9,11 @@ import com.hinadt.miaocha.common.util.FutureUtils;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.LogstashProcess;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 /** Logstash进程部署服务实现类 - 基于LogstashMachine实例级操作 */
 @Slf4j
@@ -136,12 +134,17 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
         if (!validateInstances(logstashMachines, "批量更新实例配置")) {
             return;
         }
+        var stepIds = new ArrayList<String>();
 
-        var stepIds =
-                Arrays.asList(
-                        LogstashMachineStep.UPDATE_MAIN_CONFIG.getId(),
-                        LogstashMachineStep.UPDATE_JVM_CONFIG.getId(),
-                        LogstashMachineStep.UPDATE_SYSTEM_CONFIG.getId());
+        if (StringUtils.hasText(configContent)) {
+            stepIds.add(LogstashMachineStep.UPDATE_MAIN_CONFIG.getId());
+        }
+        if (StringUtils.hasText(jvmOptions)) {
+            stepIds.add(LogstashMachineStep.UPDATE_JVM_CONFIG.getId());
+        }
+        if (StringUtils.hasText(logstashYml)) {
+            stepIds.add(LogstashMachineStep.UPDATE_SYSTEM_CONFIG.getId());
+        }
 
         executeInstancesOperation(
                 logstashMachines,
@@ -283,14 +286,6 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
     /** 异步删除单个实例目录 */
     private CompletableFuture<Boolean> deleteInstanceDirectoryAsync(
             LogstashMachine logstashMachine) {
-        return CompletableFuture.supplyAsync(
-                () -> {
-                    try {
-                        return machineStateManager.deleteInstance(logstashMachine.getId()).join();
-                    } catch (Exception e) {
-                        log.error("删除实例目录失败，实例ID: {}", logstashMachine.getId(), e);
-                        return false;
-                    }
-                });
+        return machineStateManager.deleteInstance(logstashMachine.getId());
     }
 }

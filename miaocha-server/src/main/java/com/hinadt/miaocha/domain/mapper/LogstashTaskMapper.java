@@ -42,4 +42,7 @@ public interface LogstashTaskMapper {
 
     /** 删除任务 */
     void deleteById(String id);
+
+    /** 删除所有任务 */
+    void deleteAll();
 }

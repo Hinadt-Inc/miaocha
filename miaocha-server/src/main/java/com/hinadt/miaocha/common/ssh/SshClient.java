@@ -399,7 +399,7 @@ public class SshClient {
                 sftpClient.mkdir(remoteDir);
             } catch (IOException e) {
                 // 目录可能已经存在，忽略错误
-                logger.debug("创建远程目录失败(可能已存在): {}", e.getMessage());
+                logger.debug("创建远程目录 {} 失败(可能已存在): {}", remoteDir, e.getMessage());
             }
         }
 

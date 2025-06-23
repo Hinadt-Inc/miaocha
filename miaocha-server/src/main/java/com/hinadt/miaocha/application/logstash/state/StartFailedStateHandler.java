@@ -337,6 +337,46 @@ public class StartFailedStateHandler extends AbstractLogstashMachineStateHandler
     }
 
     @Override
+    public CompletableFuture<Boolean> handleDelete(
+            LogstashMachine logstashMachine, MachineInfo machineInfo) {
+        Long logstashMachineId = logstashMachine.getId();
+        Long machineId = machineInfo.getId();
+
+        logger.info("删除机器 [{}] 上的LogstashMachine实例 [{}] 目录 (启动失败状态)", machineId, logstashMachineId);
+
+        LogstashCommand deleteCommand =
+                commandFactory.deleteProcessDirectoryCommand(logstashMachineId);
+
+        return deleteCommand
+                .execute(machineInfo)
+                .thenApply(
+                        success -> {
+                            if (success) {
+                                logger.info(
+                                        "成功删除机器 [{}] 上的LogstashMachine实例 [{}] 目录",
+                                        machineId,
+                                        logstashMachineId);
+                            } else {
+                                logger.error(
+                                        "删除机器 [{}] 上的LogstashMachine实例 [{}] 目录失败",
+                                        machineId,
+                                        logstashMachineId);
+                            }
+                            return success;
+                        })
+                .exceptionally(
+                        ex -> {
+                            logger.error(
+                                    "删除机器 [{}] 上的LogstashMachine实例 [{}] 目录时发生异常: {}",
+                                    machineId,
+                                    logstashMachineId,
+                                    ex.getMessage(),
+                                    ex);
+                            return false;
+                        });
+    }
+
+    @Override
     public boolean canStart() {
         return true;
     }
@@ -348,6 +388,11 @@ public class StartFailedStateHandler extends AbstractLogstashMachineStateHandler
 
     @Override
     public boolean canRefreshConfig() {
+        return true;
+    }
+
+    @Override
+    public boolean canDelete() {
         return true;
     }
 

@@ -85,6 +85,11 @@
         DELETE FROM module_info WHERE id = #{id}
     </delete>
 
+    <!-- 删除所有模块信息 -->
+    <delete id="deleteAll">
+        DELETE FROM module_info
+    </delete>
+
     <!-- 检查模块名称是否存在 -->
     <select id="existsByName" resultType="boolean">
         SELECT COUNT(1) > 0 FROM module_info

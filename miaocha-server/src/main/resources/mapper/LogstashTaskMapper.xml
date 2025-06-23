@@ -80,10 +80,12 @@
 
     <!-- 删除任务 -->
     <delete id="deleteById">
-        DELETE
-        FROM logstash_task
-        WHERE id = #{id}
+        DELETE FROM logstash_task WHERE id = #{id}
     </delete>
 
+    <!-- 删除所有任务 -->
+    <delete id="deleteAll">
+        DELETE FROM logstash_task
+    </delete>
 
 </mapper>

@@ -55,4 +55,34 @@ public class LogstashPathUtils {
     public static String buildConfigDirPath(String deployPath) {
         return deployPath + "/config";
     }
+
+    /**
+     * 构建Logstash二进制文件路径
+     *
+     * @param deployPath 部署路径
+     * @return Logstash二进制文件完整路径
+     */
+    public static String buildLogstashBinPath(String deployPath) {
+        return deployPath + "/bin/logstash";
+    }
+
+    /**
+     * 构建JVM配置文件路径
+     *
+     * @param deployPath 部署路径
+     * @return JVM配置文件完整路径
+     */
+    public static String buildJvmOptionsPath(String deployPath) {
+        return deployPath + "/config/jvm.options";
+    }
+
+    /**
+     * 构建Logstash系统配置文件路径
+     *
+     * @param deployPath 部署路径
+     * @return Logstash系统配置文件完整路径
+     */
+    public static String buildLogstashYmlPath(String deployPath) {
+        return deployPath + "/config/logstash.yml";
+    }
 }

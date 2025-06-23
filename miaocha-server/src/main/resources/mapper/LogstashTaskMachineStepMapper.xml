@@ -116,10 +116,12 @@
 
     <!-- 删除任务所有步骤 -->
     <delete id="deleteByTaskId">
-        DELETE
-        FROM logstash_task_machine_step
-        WHERE task_id = #{taskId}
+        DELETE FROM logstash_task_machine_step WHERE task_id = #{taskId}
     </delete>
 
+    <!-- 删除所有任务步骤 -->
+    <delete id="deleteAll">
+        DELETE FROM logstash_task_machine_step
+    </delete>
 
 </mapper>

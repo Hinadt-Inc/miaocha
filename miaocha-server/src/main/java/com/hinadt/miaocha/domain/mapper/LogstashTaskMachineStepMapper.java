@@ -78,4 +78,7 @@ public interface LogstashTaskMachineStepMapper {
      * @param taskId 任务ID
      */
     void deleteByTaskId(String taskId);
+
+    /** 删除所有任务步骤 */
+    void deleteAll();
 }

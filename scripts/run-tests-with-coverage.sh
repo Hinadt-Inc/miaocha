@@ -91,7 +91,7 @@ run_tests() {
     print_header "运行测试套件"
 
     print_info "编译项目..."
-    mvn compile test-compile -q
+    mvn compile test-compile -q -Pskip-ui
 
     print_info "运行单元测试（带JaCoCo覆盖率）..."
     mvn test -q
@@ -421,7 +421,7 @@ main() {
             # JaCoCo专用模式：只运行测试和生成覆盖率，不生成Allure
             print_header "🎯 JaCoCo专用模式 - 仅生成覆盖率报告（跳过Allure）"
             print_info "⚡ 编译项目..."
-            mvn compile test-compile -q
+            mvn compile test-compile -q -Pskip-ui
             print_info "🧪 运行单元测试（带JaCoCo覆盖率）..."
             mvn test jacoco:report -q
             if [ "$skip_integration" = false ]; then
@@ -447,9 +447,9 @@ main() {
         if [ "$jacoco_only" = false ]; then
             generate_allure_report
         fi
-        
+
         organize_coverage_reports
-        
+
         if [ "$jacoco_only" = false ]; then
             generate_summary
         else

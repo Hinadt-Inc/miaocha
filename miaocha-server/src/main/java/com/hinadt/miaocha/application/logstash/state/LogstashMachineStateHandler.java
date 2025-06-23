@@ -91,6 +91,16 @@ public interface LogstashMachineStateHandler {
             LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId);
 
     /**
+     * 处理删除操作
+     *
+     * @param logstashMachine LogstashMachine实例
+     * @param machineInfo 目标机器
+     * @return 异步操作结果
+     */
+    CompletableFuture<Boolean> handleDelete(
+            LogstashMachine logstashMachine, MachineInfo machineInfo);
+
+    /**
      * 判断当前状态是否可以执行初始化操作
      *
      * @return 是否可以初始化
@@ -135,6 +145,13 @@ public interface LogstashMachineStateHandler {
     boolean canRefreshConfig();
 
     /**
+     * 判断当前状态是否可以执行删除操作
+     *
+     * @return 是否可以删除
+     */
+    boolean canDelete();
+
+    /**
      * 获取任务服务实例
      *
      * @return 任务服务实例
@@ -159,6 +176,7 @@ public interface LogstashMachineStateHandler {
         UPDATE_CONFIG,
         REFRESH_CONFIG,
         UPDATE_JVM_OPTIONS,
-        UPDATE_LOGSTASH_YML
+        UPDATE_LOGSTASH_YML,
+        DELETE
     }
 }

@@ -49,6 +49,9 @@
         <aspectj.version>1.9.22</aspectj.version>
         <maven.failsafe.plugin.version>3.2.5</maven.failsafe.plugin.version>
 
+        <!-- Testcontainers 版本 -->
+        <testcontainers.version>1.19.8</testcontainers.version>
+
         <!-- Coverage thresholds - 设为0以仅生成报告，不进行限制检查 -->
         <jacoco.line.coverage.minimum>0.50</jacoco.line.coverage.minimum>
         <jacoco.branch.coverage.minimum>0.50</jacoco.branch.coverage.minimum>
@@ -157,20 +160,6 @@
                 <version>${bouncycastle.version}</version>
             </dependency>
 
-            <!-- 测试依赖 -->
-            <dependency>
-                <groupId>org.junit.jupiter</groupId>
-                <artifactId>junit-jupiter</artifactId>
-                <version>${junit.version}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.mockito</groupId>
-                <artifactId>mockito-core</artifactId>
-                <version>${mockito.version}</version>
-                <scope>test</scope>
-            </dependency>
-
             <!-- Allure测试报告 -->
             <dependency>
                 <groupId>io.qameta.allure</groupId>
@@ -182,6 +171,20 @@
                 <groupId>io.qameta.allure</groupId>
                 <artifactId>allure-java-commons</artifactId>
                 <version>${allure.junit5.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- Testcontainers 依赖 -->
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>${testcontainers.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>mysql</artifactId>
+                <version>${testcontainers.version}</version>
                 <scope>test</scope>
             </dependency>
         </dependencies>

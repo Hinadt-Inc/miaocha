@@ -6,10 +6,14 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 /** 创建Logstash进程DTO */
 @Data
 @Schema(description = "创建Logstash进程对象")
+@SuperBuilder
+@NoArgsConstructor
 public class LogstashProcessCreateDTO {
     @Schema(description = "进程名称", example = "Nginx日志收集")
     @NotBlank(message = "进程名称不能为空")

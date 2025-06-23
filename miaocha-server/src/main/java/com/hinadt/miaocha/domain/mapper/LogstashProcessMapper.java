@@ -28,6 +28,8 @@ public interface LogstashProcessMapper {
 
     int deleteById(Long id);
 
+    int deleteAll();
+
     LogstashProcess selectById(Long id);
 
     LogstashProcess selectByName(String name);

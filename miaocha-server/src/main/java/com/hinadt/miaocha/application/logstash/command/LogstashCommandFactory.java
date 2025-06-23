@@ -74,17 +74,6 @@ public class LogstashCommandFactory {
                 deployPathManager);
     }
 
-    /** 创建创建配置文件命令 - 基于logstashMachineId和配置内容 */
-    public LogstashCommand createConfigCommand(Long logstashMachineId, String configContent) {
-        return new CreateConfigCommand(
-                sshClient,
-                logstashProperties.getDeployDir(),
-                logstashMachineId,
-                configContent,
-                logstashMachineMapper,
-                deployPathManager);
-    }
-
     /** 创建更新多种配置文件命令 - 基于logstashMachineId */
     public LogstashCommand updateConfigCommand(
             Long logstashMachineId, String configContent, String jvmOptions, String logstashYml) {

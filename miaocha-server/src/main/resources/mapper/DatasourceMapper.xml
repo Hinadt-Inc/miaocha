@@ -26,9 +26,14 @@
         WHERE id = #{id}
     </update>
 
-    <!-- 删除数据源 -->
+    <!-- 根据ID删除数据源 -->
     <delete id="deleteById">
         DELETE FROM datasource_info WHERE id = #{id}
+    </delete>
+
+    <!-- 删除所有数据源 -->
+    <delete id="deleteAll">
+        DELETE FROM datasource_info
     </delete>
 
     <!-- 根据ID查询数据源 -->

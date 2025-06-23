@@ -55,6 +55,11 @@
         WHERE id = #{id}
     </delete>
 
+    <!-- 删除所有Logstash机器实例 -->
+    <delete id="deleteAll">
+        DELETE FROM logstash_machine
+    </delete>
+
     <!-- 根据 ID 查询 Logstash 机器记录 -->
     <select id="selectById" resultType="com.hinadt.miaocha.domain.entity.LogstashMachine">
         SELECT

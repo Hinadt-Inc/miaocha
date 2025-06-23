@@ -3,9 +3,13 @@ package com.hinadt.miaocha.domain.dto.logstash;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 @Data
 @Schema(description = "Logstash配置更新请求DTO")
+@SuperBuilder
+@NoArgsConstructor
 public class LogstashProcessConfigUpdateRequestDTO {
 
     @Schema(description = "要更新配置的LogstashMachine实例ID列表。如果为空或不传，则表示全局更新（更新所有关联的实例）。")

@@ -1,0 +1,23 @@
+# 集成测试配置文件
+# 该配置会覆盖默认配置，专门用于 Testcontainers 集成测试
+
+# 集成测试专用配置
+spring:
+  # 数据库配置（由 Testcontainers 动态注入）
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # url, username, password 由 TestContainersBaseConfiguration 动态配置
+
+
+  # Flyway 数据库迁移配置
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration/v1,classpath:db/migration/v2
+    # locations 由 TestContainersBaseConfiguration 动态配置
+
+# Logstash配置
+logstash:
+  # Logstash压缩包路径
+  deploy-dir: logstash
+

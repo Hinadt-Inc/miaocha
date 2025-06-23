@@ -15,6 +15,8 @@ public interface MachineMapper {
 
     int deleteById(Long id);
 
+    int deleteAll();
+
     MachineInfo selectById(Long id);
 
     MachineInfo selectByName(String name);

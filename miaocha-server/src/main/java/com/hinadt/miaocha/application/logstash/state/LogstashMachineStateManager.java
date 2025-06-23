@@ -118,24 +118,7 @@ public class LogstashMachineStateManager {
     public CompletableFuture<Boolean> deleteInstance(Long logstashMachineId) {
         log.info("开始删除LogstashMachine实例: {}", logstashMachineId);
         LogstashMachineContext context = getInstanceContext(logstashMachineId);
-
-        // 先停止实例，然后删除目录和数据库记录
-        return context.stop(null)
-                .thenCompose(
-                        stopSuccess -> {
-                            // 无论停止是否成功，都尝试删除目录
-                            // TODO: 添加删除目录的逻辑
-                            return CompletableFuture.completedFuture(true);
-                        })
-                .thenApply(
-                        deleteSuccess -> {
-                            if (deleteSuccess) {
-                                // 删除数据库记录
-                                logstashMachineMapper.deleteById(logstashMachineId);
-                                log.info("成功删除LogstashMachine实例: {}", logstashMachineId);
-                            }
-                            return deleteSuccess;
-                        });
+        return context.delete();
     }
 
     /** 更新LogstashMachine实例配置（直接写入配置内容） */
@@ -398,6 +381,38 @@ public class LogstashMachineStateManager {
                                         "LogstashMachine实例 [{}] 配置刷新操作异常，状态保持为 [{}]",
                                         logstashMachine.getId(),
                                         currentState.name());
+                                throw new CompletionException(e);
+                            });
+        }
+
+        /** 删除LogstashMachine实例 */
+        public CompletableFuture<Boolean> delete() {
+            validateOperation(currentHandler::canDelete, "删除");
+
+            log.info(
+                    "LogstashMachine实例 [{}] 开始删除操作，当前状态: [{}]",
+                    logstashMachine.getId(),
+                    currentState.name());
+
+            return currentHandler
+                    .handleDelete(logstashMachine, machineInfo)
+                    .thenApply(
+                            success -> {
+                                log.info(
+                                        "LogstashMachine实例 [{}] 删除操作完成，结果: {}",
+                                        logstashMachine.getId(),
+                                        success ? "成功" : "失败");
+                                // 回调删除
+                                logstashMachineMapper.deleteById(logstashMachine.getId());
+                                return success;
+                            })
+                    .exceptionally(
+                            e -> {
+                                log.error(
+                                        "LogstashMachine实例 [{}] 删除操作异常: {}",
+                                        logstashMachine.getId(),
+                                        e.getMessage(),
+                                        e);
                                 throw new CompletionException(e);
                             });
         }

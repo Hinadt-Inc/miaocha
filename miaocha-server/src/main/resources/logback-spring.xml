@@ -171,6 +171,18 @@
         </root>
     </springProfile>
 
+    <!-- 集成测试环境配置：只有控制台输出 -->
+    <springProfile name="integration-test">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+        <!-- 应用特定日志级别 -->
+        <logger name="com.hinadt.miaocha" level="DEBUG"/>
+        <!-- 集成测试相关日志 -->
+        <logger name="org.testcontainers" level="INFO"/>
+        <logger name="org.springframework.test" level="INFO"/>
+    </springProfile>
+
     <!-- 生产环境配置：只有JSON格式文件 -->
     <springProfile name="prod">
         <root level="INFO">

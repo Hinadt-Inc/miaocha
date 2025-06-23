@@ -413,7 +413,6 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
     private void cleanupProcessResources(Long processId) {
         deleteProcessDirectories(processId);
         deleteProcessTasks(processId);
-        deleteProcessInstances(processId);
     }
 
     private void deleteProcessDirectories(Long processId) {
@@ -456,12 +455,6 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         } catch (Exception e) {
             log.error("删除任务失败: {}, 错误: {}", taskId, e.getMessage());
         }
-    }
-
-    private void deleteProcessInstances(Long processId) {
-        List<LogstashMachine> instances =
-                logstashMachineMapper.selectByLogstashProcessId(processId);
-        instances.forEach(instance -> logstashMachineMapper.deleteById(instance.getId()));
     }
 
     private void validateConfigUpdateRequest(LogstashProcessConfigUpdateRequestDTO dto) {
@@ -710,8 +703,8 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         if (!runningInstances.isEmpty()) {
             log.info("强制缩容模式：停止{}个运行中的LogstashMachine实例", runningInstances.size());
             try {
-                logstashDeployService.stopInstances(runningInstances);
-                Thread.sleep(5000); // 等待停止完成
+                logstashDeployService.forceStopInstances(runningInstances);
+                Thread.sleep(10000); // 等待停止完成
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 log.warn("等待停止操作被中断");
@@ -733,8 +726,9 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
 
     private void cleanupScaleInResources(List<Long> instanceIds, List<LogstashMachine> instances) {
         deleteTasksForInstances(instanceIds);
+
+        // 在异步删除logstash进程实例完成时会删除logstash进程实例数据库记录
         deleteDirectoriesForInstances(instances);
-        deleteInstanceRecords(instances);
     }
 
     private void deleteTasksForInstances(List<Long> instanceIds) {
@@ -756,19 +750,11 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
 
     private void deleteDirectoriesForInstances(List<LogstashMachine> instances) {
         try {
-            logstashDeployService.deleteInstancesDirectory(instances);
+            logstashDeployService.deleteInstancesDirectory(instances).join();
             log.info("已删除{}个LogstashMachine实例的目录", instances.size());
         } catch (Exception e) {
             log.error("批量删除LogstashMachine实例目录时发生错误: {}", e.getMessage(), e);
         }
-    }
-
-    private void deleteInstanceRecords(List<LogstashMachine> instances) {
-        instances.forEach(
-                instance -> {
-                    logstashMachineMapper.deleteById(instance.getId());
-                    log.info("已删除LogstashMachine实例[{}]", instance.getId());
-                });
     }
 
     // ==================== 单个LogstashMachine实例操作方法实现 ====================

@@ -57,16 +57,41 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
                                     .execute(machineInfo)
                                     .thenApply(
                                             startSuccess -> {
-                                                StepStatus stepStatus =
+                                                StepStatus status =
                                                         startSuccess
                                                                 ? StepStatus.COMPLETED
                                                                 : StepStatus.FAILED;
+                                                String errorMessage =
+                                                        startSuccess ? null : "启动Logstash进程失败";
                                                 taskService.updateStepStatus(
                                                         taskId,
                                                         logstashMachineId,
                                                         LogstashMachineStep.START_PROCESS.getId(),
-                                                        stepStatus);
+                                                        status,
+                                                        errorMessage);
+
+                                                if (!startSuccess) {
+                                                    throw new RuntimeException("启动Logstash进程失败");
+                                                }
+
                                                 return startSuccess;
+                                            })
+                                    .exceptionally(
+                                            ex -> {
+                                                // 更新任务状态为失败，不记录详细日志（由外层处理）
+                                                taskService.updateStepStatus(
+                                                        taskId,
+                                                        logstashMachineId,
+                                                        LogstashMachineStep.START_PROCESS.getId(),
+                                                        StepStatus.FAILED,
+                                                        ex.getMessage());
+
+                                                // 重新抛出异常，确保异常传递到外层
+                                                if (ex instanceof RuntimeException) {
+                                                    throw (RuntimeException) ex;
+                                                } else {
+                                                    throw new RuntimeException(ex.getMessage(), ex);
+                                                }
                                             });
                         });
 
@@ -89,16 +114,44 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
                                     .execute(machineInfo)
                                     .thenApply(
                                             verifySuccess -> {
-                                                StepStatus stepStatus =
+                                                StepStatus status =
                                                         verifySuccess
                                                                 ? StepStatus.COMPLETED
                                                                 : StepStatus.FAILED;
+                                                String errorMessage =
+                                                        verifySuccess
+                                                                ? null
+                                                                : "验证Logstash进程失败，进程可能未正常运行";
                                                 taskService.updateStepStatus(
                                                         taskId,
                                                         logstashMachineId,
                                                         LogstashMachineStep.VERIFY_PROCESS.getId(),
-                                                        stepStatus);
+                                                        status,
+                                                        errorMessage);
+
+                                                if (!verifySuccess) {
+                                                    throw new RuntimeException(
+                                                            "验证Logstash进程失败，进程可能未正常运行");
+                                                }
+
                                                 return verifySuccess;
+                                            })
+                                    .exceptionally(
+                                            ex -> {
+                                                // 更新任务状态为失败，不记录详细日志（由外层处理）
+                                                taskService.updateStepStatus(
+                                                        taskId,
+                                                        logstashMachineId,
+                                                        LogstashMachineStep.VERIFY_PROCESS.getId(),
+                                                        StepStatus.FAILED,
+                                                        ex.getMessage());
+
+                                                // 重新抛出异常，确保异常传递到外层
+                                                if (ex instanceof RuntimeException) {
+                                                    throw (RuntimeException) ex;
+                                                } else {
+                                                    throw new RuntimeException(ex.getMessage(), ex);
+                                                }
                                             });
                         });
 
@@ -283,6 +336,46 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
     }
 
     @Override
+    public CompletableFuture<Boolean> handleDelete(
+            LogstashMachine logstashMachine, MachineInfo machineInfo) {
+        Long logstashMachineId = logstashMachine.getId();
+        Long machineId = machineInfo.getId();
+
+        logger.info("删除机器 [{}] 上的LogstashMachine实例 [{}] 目录", machineId, logstashMachineId);
+
+        LogstashCommand deleteCommand =
+                commandFactory.deleteProcessDirectoryCommand(logstashMachineId);
+
+        return deleteCommand
+                .execute(machineInfo)
+                .thenApply(
+                        success -> {
+                            if (success) {
+                                logger.info(
+                                        "成功删除机器 [{}] 上的LogstashMachine实例 [{}] 目录",
+                                        machineId,
+                                        logstashMachineId);
+                            } else {
+                                logger.error(
+                                        "删除机器 [{}] 上的LogstashMachine实例 [{}] 目录失败",
+                                        machineId,
+                                        logstashMachineId);
+                            }
+                            return success;
+                        })
+                .exceptionally(
+                        ex -> {
+                            logger.error(
+                                    "删除机器 [{}] 上的LogstashMachine实例 [{}] 目录时发生异常: {}",
+                                    machineId,
+                                    logstashMachineId,
+                                    ex.getMessage(),
+                                    ex);
+                            return false;
+                        });
+    }
+
+    @Override
     public boolean canStart() {
         return true;
     }
@@ -294,6 +387,11 @@ public class NotStartedStateHandler extends AbstractLogstashMachineStateHandler 
 
     @Override
     public boolean canRefreshConfig() {
+        return true;
+    }
+
+    @Override
+    public boolean canDelete() {
         return true;
     }
 

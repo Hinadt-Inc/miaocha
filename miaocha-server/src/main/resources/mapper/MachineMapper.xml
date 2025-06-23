@@ -31,6 +31,11 @@
         DELETE FROM machine_info WHERE id = #{id}
     </delete>
 
+    <!-- 删除所有机器信息 -->
+    <delete id="deleteAll">
+        DELETE FROM machine_info
+    </delete>
+
     <!-- 根据ID查询机器信息 -->
     <select id="selectById" resultType="com.hinadt.miaocha.domain.entity.MachineInfo">
         SELECT

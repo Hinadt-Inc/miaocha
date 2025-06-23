@@ -69,6 +69,11 @@
         WHERE id = #{id}
     </delete>
 
+    <!-- 删除所有进程 -->
+    <delete id="deleteAll">
+        DELETE FROM logstash_process
+    </delete>
+
     <!-- 根据ID查询 -->
     <select id="selectById" resultType="com.hinadt.miaocha.domain.entity.LogstashProcess">
         SELECT

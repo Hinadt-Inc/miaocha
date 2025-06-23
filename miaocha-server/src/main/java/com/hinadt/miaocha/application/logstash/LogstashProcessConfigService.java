@@ -100,7 +100,8 @@ public class LogstashProcessConfigService {
                 Set.of(
                         LogstashMachineState.RUNNING,
                         LogstashMachineState.STARTING,
-                        LogstashMachineState.STOPPING);
+                        LogstashMachineState.STOPPING,
+                        LogstashMachineState.STOP_FAILED);
 
         for (LogstashMachine instance : instances) {
             LogstashMachineState state = LogstashMachineState.valueOf(instance.getState());

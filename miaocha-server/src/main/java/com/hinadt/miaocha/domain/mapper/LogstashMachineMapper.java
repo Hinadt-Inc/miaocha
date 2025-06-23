@@ -15,6 +15,8 @@ public interface LogstashMachineMapper {
 
     int deleteById(Long id);
 
+    int deleteAll();
+
     LogstashMachine selectById(Long id);
 
     List<LogstashMachine> selectByIds(List<Long> ids);

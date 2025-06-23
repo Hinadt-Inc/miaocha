@@ -80,6 +80,13 @@ public interface ModuleInfoMapper {
     int deleteById(Long id);
 
     /**
+     * 删除所有模块信息
+     *
+     * @return 影响行数
+     */
+    int deleteAll();
+
+    /**
      * 检查模块名称是否存在
      *
      * @param name 模块名称

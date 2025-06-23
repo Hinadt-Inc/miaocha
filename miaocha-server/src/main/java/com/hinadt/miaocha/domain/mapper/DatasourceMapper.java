@@ -15,6 +15,8 @@ public interface DatasourceMapper {
 
     int deleteById(Long id);
 
+    int deleteAll();
+
     DatasourceInfo selectById(Long id);
 
     DatasourceInfo selectByName(String name);

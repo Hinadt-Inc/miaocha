@@ -69,6 +69,13 @@ public abstract class AbstractLogstashMachineStateHandler implements LogstashMac
     }
 
     @Override
+    public CompletableFuture<Boolean> handleDelete(
+            LogstashMachine logstashMachine, MachineInfo machineInfo) {
+        logger.warn("状态 [{}] 不支持删除操作", getState().name());
+        return CompletableFuture.completedFuture(false);
+    }
+
+    @Override
     public boolean canInitialize() {
         return false;
     }
@@ -90,6 +97,11 @@ public abstract class AbstractLogstashMachineStateHandler implements LogstashMac
 
     @Override
     public boolean canRefreshConfig() {
+        return false;
+    }
+
+    @Override
+    public boolean canDelete() {
         return false;
     }
 
