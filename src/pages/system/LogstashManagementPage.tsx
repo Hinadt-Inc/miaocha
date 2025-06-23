@@ -1348,10 +1348,19 @@ function LogstashManagementPage() {
         <LogstashScaleModal
           visible={scaleModalVisible}
           onCancel={() => setScaleModalVisible(false)}
-          onOk={async (params) => {
+          onOk={async (params: {
+            addMachineIds: number[];
+            removeLogstashMachineIds?: number[];
+            customDeployPath: string;
+            forceScale: boolean;
+          }) => {
             if (currentProcess) {
-              setScaleParams(params);
-              await handleScale(currentProcess.id, params);
+              const validParams = {
+                ...params,
+                removeLogstashMachineIds: params.removeLogstashMachineIds || [],
+              };
+              setScaleParams(validParams);
+              await handleScale(currentProcess.id, validParams);
             }
           }}
           currentProcess={currentProcess}
