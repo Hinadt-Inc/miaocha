@@ -75,6 +75,11 @@ public enum ErrorCode {
     TASK_EXECUTION_FAILED("8001", "任务执行失败"),
     TASK_NOT_FOUND("8002", "任务不存在"),
 
+    // SQL执行相关错误码
+    SQL_EXECUTION_FAILED("9001", "SQL执行失败"),
+    SQL_NOT_CREATE_TABLE("9002", "只允许执行CREATE TABLE语句"),
+    SQL_TABLE_NAME_MISMATCH("9003", "SQL中的表名与模块配置的表名不一致"),
+
     // 表结构校验相关错误码
     TABLE_MESSAGE_FIELD_MISSING("7015", "表结构中缺少必需的message字段，无法进行关键字搜索"),
     TABLE_FIELD_VALIDATION_FAILED("7016", "表结构字段校验失败");

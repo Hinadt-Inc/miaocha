@@ -1,6 +1,7 @@
 package com.hinadt.miaocha.application.service.impl;
 
 import com.hinadt.miaocha.application.service.ModuleInfoService;
+import com.hinadt.miaocha.application.service.TableValidationService;
 import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
@@ -49,6 +50,8 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
     @Autowired private UserMapper userMapper;
 
     @Autowired private ModulePermissionConverter modulePermissionConverter;
+
+    @Autowired private TableValidationService tableValidationService;
 
     @Override
     @Transactional
@@ -237,16 +240,13 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "SQL语句不能为空");
         }
 
-        // 检查SQL是否包含DROP语句
-        String sqlLower = sql.toLowerCase().trim();
-        if (sqlLower.contains("drop ")) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "不允许执行DROP语句");
-        }
-
         // 检查dorisSql字段是否已有值
         if (StringUtils.hasText(moduleInfo.getDorisSql())) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "该模块已经执行过Doris SQL，不能重复执行");
         }
+
+        // 校验Doris SQL语句
+        tableValidationService.validateDorisSql(moduleInfo, sql);
 
         // 获取数据源
         DatasourceInfo datasourceInfo = datasourceMapper.selectById(moduleInfo.getDatasourceId());
@@ -258,14 +258,15 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
         try {
             jdbcQueryExecutor.executeQuery(datasourceInfo, sql);
         } catch (Exception e) {
-            throw new RuntimeException("SQL执行失败: " + e.getMessage(), e);
+            throw new BusinessException(
+                    ErrorCode.SQL_EXECUTION_FAILED, "SQL执行失败: " + e.getMessage(), e);
         }
 
         // 更新模块的dorisSql字段 - 更新时间和更新人由MyBatis拦截器自动设置
         moduleInfo.setDorisSql(sql);
         int result = moduleInfoMapper.update(moduleInfo);
         if (result == 0) {
-            throw new RuntimeException("更新模块Doris SQL失败");
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "更新模块Doris SQL失败");
         }
 
         return moduleInfoConverter.toDto(moduleInfo, datasourceInfo);

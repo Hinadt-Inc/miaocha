@@ -1,23 +1,16 @@
 package com.hinadt.miaocha.application.service;
 
-/** 表验证服务接口 用于验证数据源中表是否存在 */
+import com.hinadt.miaocha.domain.entity.ModuleInfo;
+
+/** 表验证服务接口 用于验证SQL语句和表相关操作 */
 public interface TableValidationService {
 
     /**
-     * 检查指定数据源中是否存在指定的表
+     * 验证Doris SQL语句 校验规则： 1. 只能执行CREATE TABLE语句 2. 表名必须与模块配置的表名一致
      *
-     * @param datasourceId 数据源ID
-     * @param tableName 表名
-     * @return 表是否存在
+     * @param moduleInfo 模块信息
+     * @param sql SQL语句
+     * @throws BusinessException 如果SQL不符合要求
      */
-    boolean isTableExists(Long datasourceId, String tableName);
-
-    /**
-     * 验证表结构，检查是否包含必需的message字段 用于logstash管理模块的建表校验
-     *
-     * @param datasourceId 数据源ID
-     * @param tableName 表名
-     * @throws BusinessException 如果表不存在或缺少message字段
-     */
-    void validateTableStructure(Long datasourceId, String tableName);
+    void validateDorisSql(ModuleInfo moduleInfo, String sql);
 }
