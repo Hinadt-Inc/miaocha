@@ -36,7 +36,7 @@ export default function LogstashScaleModal({
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [machines, setMachines] = useState<Machine[]>([]);
   const [loading, setLoading] = useState(false);
-  const [operationType, setOperationType] = useState<'scale-out' | 'scale-in' | null>(null);
+  const [operationType, setOperationType] = useState<'scale-out' | 'scale-in' | null>('scale-in');
 
   // 可添加的机器（允许选择所有机器）
   const availableMachines = machines;

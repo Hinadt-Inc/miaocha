@@ -417,32 +417,36 @@ function LogstashManagementPage() {
           >
             编辑
           </Button>
-          <Popconfirm
-            title="确认启动"
-            description="确定要启动这个Logstash进程吗？"
-            onConfirm={() => {
-              void handleStart(record.id);
-            }}
-            okText="确认"
-            cancelText="取消"
-          >
-            <Button type="link" disabled={checkSubTableStatus(record, 'start')} style={{ padding: '0 4px' }}>
-              启动
-            </Button>
-          </Popconfirm>
-          <Popconfirm
-            title="确认停止"
-            description="确定要停止这个Logstash进程吗？"
-            onConfirm={() => {
-              void handleStop(record.id);
-            }}
-            okText="确认"
-            cancelText="取消"
-          >
-            <Button type="link" disabled={checkSubTableStatus(record, 'stop')} style={{ padding: '0 4px' }}>
-              停止
-            </Button>
-          </Popconfirm>
+          {!checkSubTableStatus(record, 'start') && (
+            <Popconfirm
+              title="确认启动"
+              description="确定要启动这个Logstash进程吗？"
+              onConfirm={() => {
+                void handleStart(record.id);
+              }}
+              okText="确认"
+              cancelText="取消"
+            >
+              <Button type="link" disabled={checkSubTableStatus(record, 'start')} style={{ padding: '0 4px' }}>
+                启动
+              </Button>
+            </Popconfirm>
+          )}
+          {!checkSubTableStatus(record, 'stop') && (
+            <Popconfirm
+              title="确认停止"
+              description="确定要停止这个Logstash进程吗？"
+              onConfirm={() => {
+                void handleStop(record.id);
+              }}
+              okText="确认"
+              cancelText="取消"
+            >
+              <Button type="link" disabled={checkSubTableStatus(record, 'stop')} style={{ padding: '0 4px' }}>
+                停止
+              </Button>
+            </Popconfirm>
+          )}
           <Button
             type="link"
             onClick={() => {
@@ -468,23 +472,26 @@ function LogstashManagementPage() {
           >
             扩容/缩容
           </Button>
-          <Popconfirm
-            title="确认刷新配置"
-            description="确定要刷新非运行状态下所有机器的配置吗？"
-            onConfirm={() => {
-              void handleRefreshAllConfig(record);
-            }}
-            okText="确认"
-            cancelText="取消"
-          >
-            <Button
-              type="link"
-              disabled={record.logstashMachineStatusInfo.every((el) => el.state === 'RUNNING')}
-              style={{ padding: '0 4px' }}
+          {!record.logstashMachineStatusInfo.every((el) => el.state === 'RUNNING') && (
+            <Popconfirm
+              title="确认刷新配置"
+              description="确定要刷新非运行状态下所有机器的配置吗？"
+              onConfirm={() => {
+                void handleRefreshAllConfig(record);
+              }}
+              okText="确认"
+              cancelText="取消"
             >
-              刷新配置
-            </Button>
-          </Popconfirm>
+              <Button
+                type="link"
+                disabled={record.logstashMachineStatusInfo.every((el) => el.state === 'RUNNING')}
+                style={{ padding: '0 4px' }}
+              >
+                刷新配置
+              </Button>
+            </Popconfirm>
+          )}
+
           {hasInitializeFailedMachines(record) && (
             <Popconfirm
               title="确认重新初始化"
@@ -651,81 +658,89 @@ function LogstashManagementPage() {
                       <Space size="small">
                         {machine.state !== 'INITIALIZE_FAILED' && (
                           <>
-                            <Popconfirm
-                              title="确认启动"
-                              description="确定要启动这台机器吗？"
-                              onConfirm={() => handleStartMachine(machine.logstashMachineId)}
-                              okText="确认"
-                              cancelText="取消"
-                            >
+                            {!['RUNNING', 'STARTING', 'STOPPING'].includes(machine.state) && (
+                              <Popconfirm
+                                title="确认启动"
+                                description="确定要启动这台机器吗？"
+                                onConfirm={() => handleStartMachine(machine.logstashMachineId)}
+                                okText="确认"
+                                cancelText="取消"
+                              >
+                                <Button
+                                  type="link"
+                                  disabled={['RUNNING', 'STARTING', 'STOPPING'].includes(machine.state)}
+                                  style={{ padding: '0 4px' }}
+                                >
+                                  启动
+                                </Button>
+                              </Popconfirm>
+                            )}
+                            {!['STOPPED', 'STOPPING', 'NOT_STARTED'].includes(machine.state) && (
+                              <Popconfirm
+                                title="确认停止"
+                                description="确定要停止这台机器吗？"
+                                onConfirm={() => handleStopMachine(machine.logstashMachineId)}
+                                okText="确认"
+                                cancelText="取消"
+                              >
+                                <Button
+                                  type="link"
+                                  disabled={['STOPPED', 'STOPPING', 'NOT_STARTED'].includes(machine.state)}
+                                  style={{ padding: '0 4px' }}
+                                >
+                                  停止
+                                </Button>
+                              </Popconfirm>
+                            )}
+                            {machine.state !== 'RUNNING' && (
+                              <Popconfirm
+                                title="确认刷新配置"
+                                description="确定要刷新这台机器的配置吗？"
+                                onConfirm={() => handleRefreshConfig(record.id, machine.logstashMachineId)}
+                                okText="确认"
+                                cancelText="取消"
+                              >
+                                <Button type="link" disabled={machine.state === 'RUNNING'} style={{ padding: '0 4px' }}>
+                                  刷新配置
+                                </Button>
+                              </Popconfirm>
+                            )}
+                            {machine.state !== 'RUNNING' && (
                               <Button
                                 type="link"
-                                disabled={['RUNNING', 'STARTING', 'STOPPING'].includes(machine.state)}
+                                onClick={async () => {
+                                  try {
+                                    // 使用与点击实例ID相同的接口获取机器详细配置信息
+                                    const machineDetail = await getLogstashProcess(machine.logstashMachineId);
+                                    setCurrentMachine({
+                                      logstashMachineId: machine.logstashMachineId,
+                                      processId: record.id,
+                                      configContent: machineDetail.configContent,
+                                      jvmOptions: machineDetail.jvmOptions,
+                                      logstashYml: machineDetail.logstashYml,
+                                    });
+                                    setMachineConfigModalVisible(true);
+                                  } catch (err) {
+                                    // 如果获取机器详情失败，使用进程级别的配置作为备选
+                                    messageApi.warning('获取机器配置失败，使用进程级别配置');
+                                    const process = data.find((p) => p.id === record.id);
+                                    setCurrentMachine({
+                                      logstashMachineId: machine.logstashMachineId,
+                                      processId: record.id,
+                                      configContent: process?.configContent,
+                                      jvmOptions: process?.jvmOptions,
+                                      logstashYml: process?.logstashYml,
+                                    });
+                                    setMachineConfigModalVisible(true);
+                                    console.error('获取机器详情失败:', err);
+                                  }
+                                }}
+                                disabled={machine.state === 'RUNNING'}
                                 style={{ padding: '0 4px' }}
                               >
-                                启动
+                                编辑配置
                               </Button>
-                            </Popconfirm>
-                            <Popconfirm
-                              title="确认停止"
-                              description="确定要停止这台机器吗？"
-                              onConfirm={() => handleStopMachine(machine.logstashMachineId)}
-                              okText="确认"
-                              cancelText="取消"
-                            >
-                              <Button
-                                type="link"
-                                disabled={['STOPPED', 'STOPPING', 'NOT_STARTED'].includes(machine.state)}
-                                style={{ padding: '0 4px' }}
-                              >
-                                停止
-                              </Button>
-                            </Popconfirm>
-                            <Popconfirm
-                              title="确认刷新配置"
-                              description="确定要刷新这台机器的配置吗？"
-                              onConfirm={() => handleRefreshConfig(record.id, machine.logstashMachineId)}
-                              okText="确认"
-                              cancelText="取消"
-                            >
-                              <Button type="link" disabled={machine.state === 'RUNNING'} style={{ padding: '0 4px' }}>
-                                刷新配置
-                              </Button>
-                            </Popconfirm>
-                            <Button
-                              type="link"
-                              onClick={async () => {
-                                try {
-                                  // 使用与点击实例ID相同的接口获取机器详细配置信息
-                                  const machineDetail = await getLogstashProcess(machine.logstashMachineId);
-                                  setCurrentMachine({
-                                    logstashMachineId: machine.logstashMachineId,
-                                    processId: record.id,
-                                    configContent: machineDetail.configContent,
-                                    jvmOptions: machineDetail.jvmOptions,
-                                    logstashYml: machineDetail.logstashYml,
-                                  });
-                                  setMachineConfigModalVisible(true);
-                                } catch (err) {
-                                  // 如果获取机器详情失败，使用进程级别的配置作为备选
-                                  messageApi.warning('获取机器配置失败，使用进程级别配置');
-                                  const process = data.find((p) => p.id === record.id);
-                                  setCurrentMachine({
-                                    logstashMachineId: machine.logstashMachineId,
-                                    processId: record.id,
-                                    configContent: process?.configContent,
-                                    jvmOptions: process?.jvmOptions,
-                                    logstashYml: process?.logstashYml,
-                                  });
-                                  setMachineConfigModalVisible(true);
-                                  console.error('获取机器详情失败:', err);
-                                }
-                              }}
-                              disabled={machine.state === 'RUNNING'}
-                              style={{ padding: '0 4px' }}
-                            >
-                              编辑配置
-                            </Button>
+                            )}
                           </>
                         )}
                         {machine.state === 'INITIALIZE_FAILED' && (
@@ -852,6 +867,11 @@ function LogstashManagementPage() {
                 title: '操作类型',
                 dataIndex: 'operationType',
                 key: 'operationType',
+              },
+              {
+                title: 'IP',
+                dataIndex: 'machineIp',
+                key: 'machineIp',
               },
               {
                 title: '状态',

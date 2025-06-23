@@ -38,7 +38,6 @@ const MachineManagementPage = () => {
   const handleCreate = async (values: CreateMachineParams) => {
     setTestingConnection(true);
     const testResult = await testMachineConnection(values);
-    console.log('Test connection result:', testResult);
     if (!testResult) {
       messageApi.error('连接测试失败，请检查配置');
       return;
@@ -54,9 +53,8 @@ const MachineManagementPage = () => {
 
   const handleEdit = async (values: CreateMachineParams) => {
     if (!editingMachine) return;
-
     try {
-      setTestingConnection(true);
+      setLoading(true);
       const testResult = await testMachineConnection(values);
       if (!testResult) {
         messageApi.error('连接测试失败，请检查配置');
@@ -71,24 +69,18 @@ const MachineManagementPage = () => {
       setEditModalVisible(false);
       form.resetFields();
       fetchMachines();
-    } catch {
-      messageApi.error('机器更新失败');
     } finally {
-      setTestingConnection(false);
+      setLoading(false);
     }
   };
 
   const handleDelete = async () => {
     if (!deletingId) return;
 
-    try {
-      await deleteMachine(deletingId);
-      messageApi.success('删除成功');
-      setDeleteConfirmVisible(false);
-      fetchMachines();
-    } catch {
-      messageApi.error('删除失败');
-    }
+    await deleteMachine(deletingId);
+    messageApi.success('删除成功');
+    setDeleteConfirmVisible(false);
+    fetchMachines();
   };
 
   const handleTestConnection = async () => {
@@ -101,8 +93,6 @@ const MachineManagementPage = () => {
       } else {
         messageApi.error('连接测试失败');
       }
-    } catch (err) {
-      messageApi.error('连接测试失败');
     } finally {
       setTestingConnection(false);
     }
@@ -251,7 +241,7 @@ const MachineManagementPage = () => {
             <Button key="test" loading={testingConnection} onClick={handleTestConnection}>
               测试连接
             </Button>,
-            <Button key="submit" type="primary" loading={testingConnection} onClick={() => form.submit()}>
+            <Button key="submit" type="primary" loading={loading} onClick={() => form.submit()}>
               确定
             </Button>,
           ]}
