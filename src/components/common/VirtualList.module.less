@@ -1,18 +1,25 @@
-.virtual-list-container {
+.virtualListContainer {
   // 确保容器形成新的层叠上下文
   isolation: isolate;
-  
-  .virtual-list-content {
-    // 优化渲染性能
-    transform-style: preserve-3d;
-  }
+  height: 100%;
+  overflow: visible; // 改为visible，让外层容器处理滚动
+  position: relative;
+}
 
-  .virtual-list-item {
-    // 防止子元素margin影响定位
-    overflow: hidden;
-  }
+.virtualListSpacer {
+  position: relative;
+  /* height will be set via style attribute for dynamic content */
+}
 
-.virtual-table {
+.virtualListVisible {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* transform will be set via style attribute for dynamic positioning */
+}
+
+.virtualTable {
   // 防止表格单元格内容溢出
   table-layout: fixed;
   width: 100%;
@@ -43,9 +50,8 @@
   background: rgba(255, 255, 255, 0.5);
 }
 
-  .virtual-list-error {
-    color: red;
-    padding: 16px;
-    text-align: center;
-  }
+.virtualListError {
+  color: red;
+  padding: 16px;
+  text-align: center;
 }

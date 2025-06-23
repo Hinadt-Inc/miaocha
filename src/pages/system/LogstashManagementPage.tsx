@@ -607,6 +607,16 @@ function LogstashManagementPage() {
                     ),
                   },
                   {
+                    title: 'pid',
+                    dataIndex: 'processPid',
+                    key: 'processPid',
+                  },
+                  {
+                    title: '部署路径',
+                    dataIndex: 'deployPath',
+                    key: 'deployPath',
+                  },
+                  {
                     title: '机器名称',
                     dataIndex: 'machineName',
                     key: 'machineName',

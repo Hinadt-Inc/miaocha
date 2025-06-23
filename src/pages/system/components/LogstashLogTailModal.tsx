@@ -1,7 +1,7 @@
 import { Modal, Button, message } from 'antd';
 import { useEffect, useState, useRef } from 'react';
-import { VirtualList, VirtualListRef } from '../../../components/common/VirtualList';
 import { startLogTail, stopLogTail, createLogTailTask } from '../../../api/logstash';
+import styles from './LogstashLogTailModal.module.less';
 
 interface LogTailModalProps {
   visible: boolean;
@@ -26,7 +26,7 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
   const [maxLogs] = useState(1000);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
-  const virtualListRef = useRef<VirtualListRef>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null); // 替换 virtualListRef
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [messageApi, contextHolder] = message.useMessage();
 
@@ -77,6 +77,12 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
                 content: typeof log === 'string' ? log : JSON.stringify(log),
               }));
               const newLogs = [...prev, ...newEntries];
+
+              // 限制日志数量，避免内存溢出和性能问题
+              if (newLogs.length > maxLogs) {
+                return newLogs.slice(-maxLogs); // 保留最新的maxLogs条记录
+              }
+
               return newLogs;
             });
           }
@@ -145,8 +151,8 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
   }, [visible]);
 
   useEffect(() => {
-    if (shouldAutoScroll && virtualListRef.current) {
-      virtualListRef.current.scrollToBottom();
+    if (shouldAutoScroll && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
     }
   }, [logs, shouldAutoScroll]);
 
@@ -180,32 +186,35 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
           </Button>,
         ]}
       >
-        <div style={{ marginBottom: 16 }}>
+        <div className={styles.statusContainer}>
           <h4>跟踪状态: {isTailing ? '运行中' : '已停止'}</h4>
         </div>
         <div
           ref={logsEndRef}
-          style={{
-            height: '100%',
-            overflow: 'auto',
-            background: '#000',
-            color: '#fff',
-            padding: 8,
-          }}
+          className={styles.logContainer}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
           {logs.length > 0 ? (
-            <VirtualList
-              ref={virtualListRef}
-              data={logs}
-              itemHeight={20}
-              renderItem={(log: Record<string, any>) => (
-                <div style={{ whiteSpace: 'pre-wrap' }}>{(log as LogEntry).content}</div>
-              )}
-            />
+            <div ref={scrollContainerRef} className={styles.scrollableWrapper}>
+              {/* 
+                直接渲染所有日志项，适合日志显示场景
+                优势：
+                1. 支持可变高度的日志内容（多行文本、换行等）
+                2. 滚动条显示正常
+                3. 实现简单，性能足够（通过maxLogs限制数量）
+                
+                注意：如果需要处理超大量数据（>10000条），
+                可以考虑重新启用虚拟列表并修复itemHeight问题
+              */}
+              {logs.map((log, index) => (
+                <div key={log.id || index} className={styles.logItem}>
+                  {log.content}
+                </div>
+              ))}
+            </div>
           ) : (
-            <div>暂无日志数据</div>
+            <div className={styles.noData}>暂无日志数据</div>
           )}
         </div>
       </Modal>
