@@ -8,9 +8,8 @@ import {
   Modal,
   Form,
   Select,
-  Popconfirm,
+  Radio,
   message,
-  App,
   Row,
   Col,
   Breadcrumb,
@@ -72,6 +71,9 @@ const ModuleManagementPage = () => {
   const [selectedRecord, setSelectedRecord] = useState<ModuleData | null>(null);
   const [moduleDetail, setModuleDetail] = useState<Module | null>(null);
   const [executeModalVisible, setExecuteModalVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deleteRecord, setDeleteRecord] = useState<ModuleData | null>(null);
+  const [deleteDorisTable, setDeleteDorisTable] = useState(false);
   const [executeSql, setExecuteSql] = useState('');
   const [currentRecord, setCurrentRecord] = useState<ModuleData | null>(null);
   const [executing, setExecuting] = useState(false);
@@ -153,7 +155,7 @@ const ModuleManagementPage = () => {
         return;
       }
 
-      const cleanValue = value.replace(/[''"]/g, '');
+      const cleanValue = value.replace(/['"]/g, '');
       const searchTerms = cleanValue
         .toLowerCase()
         .split(/\s+/)
@@ -189,14 +191,20 @@ const ModuleManagementPage = () => {
     setIsModalVisible(true);
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteModule(Number(id));
-      setData(data.filter((item) => item.key !== id));
-      messageApi.success('模块已删除');
-    } catch {
-      messageApi.error('删除模块失败');
-    }
+  const handleDelete = (record: ModuleData) => {
+    setDeleteRecord(record);
+    setDeleteDorisTable(false);
+    setDeleteModalVisible(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteRecord) return;
+
+    await deleteModule(Number(deleteRecord.key), deleteDorisTable);
+    setData(data.filter((item) => item.key !== deleteRecord.key));
+    messageApi.success('模块已删除');
+    setDeleteModalVisible(false);
+    setDeleteRecord(null);
   };
 
   const handleSubmit = async () => {
@@ -236,14 +244,13 @@ const ModuleManagementPage = () => {
         })),
       });
       setIsDetailVisible(true);
-    } catch (error) {
+    } catch {
       messageApi.error('获取模块详情失败');
     } finally {
       setLoading(false);
     }
   };
 
-  const { modal } = App.useApp();
   const handleExecuteDorisSql = async (record: ModuleData) => {
     setCurrentRecord(record);
     setExecuteSql('');
@@ -337,17 +344,9 @@ const ModuleManagementPage = () => {
           <Button type="link" onClick={() => handleExecuteDorisSql(record)} style={{ padding: '0 8px' }}>
             执行SQL
           </Button>
-          <Popconfirm
-            title="确定要删除此模块吗？"
-            description="此操作不可撤销"
-            onConfirm={() => handleDelete(record.key)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Button type="link" danger style={{ padding: '0 8px' }}>
-              删除
-            </Button>
-          </Popconfirm>
+          <Button type="link" danger style={{ padding: '0 8px' }} onClick={() => handleDelete(record)}>
+            删除
+          </Button>
         </Space>
       ),
     },
@@ -476,6 +475,30 @@ const ModuleManagementPage = () => {
             </Descriptions.Item>
           </Descriptions>
         )}
+      </Modal>
+
+      {/* 删除确认模态框 */}
+      <Modal
+        title="删除模块"
+        open={deleteModalVisible}
+        onOk={handleDeleteConfirm}
+        onCancel={() => setDeleteModalVisible(false)}
+        okText="确定删除"
+        cancelText="取消"
+        okButtonProps={{ danger: true }}
+      >
+        <div>
+          <p>
+            确定要删除模块 <strong>{deleteRecord?.name}</strong> 吗？
+          </p>
+          <Radio.Group value={deleteDorisTable} onChange={(e) => setDeleteDorisTable(e.target.value)}>
+            <Radio value={false}>仅删除模块，保留Doris表数据</Radio>
+            <Radio value={true}>同时删除底层Doris表数据</Radio>
+          </Radio.Group>
+          <div style={{ marginTop: 16, color: '#ff4d4f' }}>
+            <strong>警告：</strong>此操作不可撤销，请谨慎选择！
+          </div>
+        </div>
       </Modal>
 
       <ExecuteConfirmationModal

@@ -57,10 +57,13 @@ export const updateModule = async (params: UpdateModuleParams) => {
   });
 };
 
-export const deleteModule = async (id: number) => {
+export const deleteModule = async (id: number, deleteDorisTable?: boolean) => {
   return request({
     url: `/api/modules/${id}`,
     method: 'DELETE',
+    params: {
+      deleteDorisTable: deleteDorisTable === true ? 'true' : 'false',
+    },
   });
 };
 
