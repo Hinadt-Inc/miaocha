@@ -23,7 +23,7 @@ const ExecuteConfirmationModal: React.FC<ExecuteConfirmationModalProps> = ({
   return (
     <Modal
       title={title || '确认执行SQL'}
-      visible={visible}
+      open={visible}
       width={800}
       onCancel={onCancel}
       footer={
