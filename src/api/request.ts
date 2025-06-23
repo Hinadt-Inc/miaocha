@@ -160,14 +160,14 @@ service.interceptors.response.use(
         isRefreshing = false;
       }
     }
-    console.log('isError3', errorMessage);
-    window.dispatchEvent(
-      new CustomEvent('unhandledrejection', {
-        detail: {
-          reason: new Error(errorMessage),
-        },
-      }),
-    );
+    // console.log('isError3', errorMessage);
+    // window.dispatchEvent(
+    //   new CustomEvent('unhandledrejection', {
+    //     detail: {
+    //       reason: new Error(errorMessage),
+    //     },
+    //   }),
+    // );
     return Promise.reject(new Error(errorMessage));
   },
 );
