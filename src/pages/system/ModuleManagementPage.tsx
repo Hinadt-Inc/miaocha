@@ -433,16 +433,6 @@ const ModuleManagementPage = () => {
               </Form.Item>
             </Col>
           </Row>
-
-          {!selectedRecord && (
-            <Row gutter={16}>
-              <Col span={24}>
-                <Form.Item name="dorisSql" label="Doris SQL" rules={[{ required: false, message: '请输入Doris SQL' }]}>
-                  <Input.TextArea placeholder="请输入Doris SQL" rows={4} />
-                </Form.Item>
-              </Col>
-            </Row>
-          )}
         </Form>
       </Modal>
 
