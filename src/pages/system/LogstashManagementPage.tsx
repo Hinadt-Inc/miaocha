@@ -113,15 +113,31 @@ function LogstashManagementPage() {
     },
   ) => {
     try {
-      messageApi.loading('正在执行扩容/缩容操作...');
+      messageApi.loading('正在执行扩容操作...');
       const scaleParameters = params || scaleParams;
       await scaleProcess(processId, scaleParameters);
       messageApi.success('操作成功');
       setScaleModalVisible(false);
       await fetchData();
     } catch (err) {
-      messageApi.error('操作失败');
-      console.error('扩容/缩容操作失败:', err);
+      console.error('扩容操作失败:', err);
+    }
+  };
+
+  const handleDeleteMachine = async (processId: number, logstashMachineId: number) => {
+    try {
+      // 使用缩容接口删除单台机器
+      await scaleProcess(processId, {
+        addMachineIds: [],
+        removeLogstashMachineIds: [logstashMachineId],
+        customDeployPath: '',
+        forceScale: false,
+      });
+      messageApi.success('机器删除成功');
+      await fetchData();
+    } catch (err) {
+      messageApi.error('删除机器失败');
+      console.error('删除机器失败:', err);
     }
   };
 
@@ -470,7 +486,7 @@ function LogstashManagementPage() {
             }}
             style={{ padding: '0 4px' }}
           >
-            扩容/缩容
+            扩容
           </Button>
           {!record.logstashMachineStatusInfo.every((el) => el.state === 'RUNNING') && (
             <Popconfirm
@@ -658,7 +674,7 @@ function LogstashManagementPage() {
                       <Space size="small">
                         {machine.state !== 'INITIALIZE_FAILED' && (
                           <>
-                            {!['RUNNING', 'STARTING', 'STOPPING'].includes(machine.state) && (
+                            {!['RUNNING', 'STARTING', 'STOPPING', 'INITIALIZING'].includes(machine.state) && (
                               <Popconfirm
                                 title="确认启动"
                                 description="确定要启动这台机器吗？"
@@ -675,7 +691,7 @@ function LogstashManagementPage() {
                                 </Button>
                               </Popconfirm>
                             )}
-                            {!['STOPPED', 'STOPPING', 'NOT_STARTED'].includes(machine.state) && (
+                            {!['STOPPED', 'STOPPING', 'NOT_STARTED', 'INITIALIZING'].includes(machine.state) && (
                               <Popconfirm
                                 title="确认停止"
                                 description="确定要停止这台机器吗？"
@@ -791,6 +807,25 @@ function LogstashManagementPage() {
                         >
                           日志
                         </Button>
+                        {!['RUNNING', 'STOPPING', 'STARTING', 'STOPPING_FAILED'].includes(machine.state) && (
+                          <Popconfirm
+                            title="确认删除"
+                            description="确定要删除这台机器吗？此操作将执行缩容操作。"
+                            onConfirm={() => handleDeleteMachine(record.id, machine.logstashMachineId)}
+                            okText="确认"
+                            cancelText="取消"
+                            okType="danger"
+                          >
+                            <Button
+                              type="link"
+                              danger
+                              style={{ padding: '0 4px' }}
+                              disabled={machine.state === 'RUNNING'}
+                            >
+                              删除
+                            </Button>
+                          </Popconfirm>
+                        )}
                       </Space>
                     ),
                   },
