@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +34,7 @@ import org.springframework.util.StringUtils;
 
 /** 模块信息服务实现类 */
 @Service
+@Slf4j
 public class ModuleInfoServiceImpl implements ModuleInfoService {
 
     @Autowired private ModuleInfoMapper moduleInfoMapper;
@@ -209,7 +211,7 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
 
     @Override
     @Transactional
-    public void deleteModule(Long id) {
+    public void deleteModule(Long id, Boolean deleteDorisTable) {
         ModuleInfo moduleInfo = moduleInfoMapper.selectById(id);
         if (moduleInfo == null) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块不存在");
@@ -222,9 +224,46 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
                     ErrorCode.VALIDATION_ERROR, "该模块正在被 " + processCount + " 个进程使用，无法删除");
         }
 
-        int result = moduleInfoMapper.deleteById(id);
-        if (result == 0) {
-            throw new RuntimeException("删除模块失败");
+        // 根据参数决定是否删除关联的Doris表数据
+        if (deleteDorisTable
+                && StringUtils.hasText(moduleInfo.getTableName())
+                && StringUtils.hasText(moduleInfo.getDorisSql())) {
+            deleteDorisTable(moduleInfo);
+        }
+
+        moduleInfoMapper.deleteById(id);
+    }
+
+    /**
+     * 删除Doris表数据
+     *
+     * @param moduleInfo 模块信息
+     */
+    private void deleteDorisTable(ModuleInfo moduleInfo) {
+        // 获取数据源信息
+        DatasourceInfo datasourceInfo = datasourceMapper.selectById(moduleInfo.getDatasourceId());
+        if (datasourceInfo == null) {
+            throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
+        }
+
+        String tableName = moduleInfo.getTableName();
+
+        // 1. 先清空表数据
+        String truncateSQL = "TRUNCATE TABLE " + tableName;
+        try {
+            jdbcQueryExecutor.executeQuery(datasourceInfo, truncateSQL);
+        } catch (Exception e) {
+            // 如果TRUNCATE失败，可能是表不存在，记录日志但不抛出异常
+            log.error("清空表数据失败，表可能不存在: {}, 错误: {}", tableName, e.getMessage());
+        }
+
+        // 2. 删除表
+        String dropSQL = "DROP TABLE IF EXISTS " + tableName;
+        try {
+            jdbcQueryExecutor.executeQuery(datasourceInfo, dropSQL);
+        } catch (Exception e) {
+            // 如果DROP失败，记录日志但不抛出异常，允许删除模块继续进行
+            log.error("删除表失败，表可能不存在: {}, 错误: {}", tableName, e.getMessage());
         }
     }
 

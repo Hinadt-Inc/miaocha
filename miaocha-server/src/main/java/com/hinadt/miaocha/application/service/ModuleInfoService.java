@@ -51,8 +51,9 @@ public interface ModuleInfoService {
      * 删除模块信息
      *
      * @param id 模块ID
+     * @param deleteDorisTable 是否删除底层Doris表数据
      */
-    void deleteModule(Long id);
+    void deleteModule(Long id, Boolean deleteDorisTable);
 
     /**
      * 执行模块的Doris SQL

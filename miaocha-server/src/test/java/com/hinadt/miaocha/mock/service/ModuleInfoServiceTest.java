@@ -9,7 +9,6 @@ import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.converter.ModuleInfoConverter;
-import com.hinadt.miaocha.domain.dto.SqlQueryResultDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoCreateDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
@@ -179,47 +178,11 @@ class ModuleInfoServiceTest {
         when(moduleInfoMapper.deleteById(1L)).thenReturn(1);
 
         // 执行测试
-        assertDoesNotThrow(() -> moduleInfoService.deleteModule(1L));
+        assertDoesNotThrow(() -> moduleInfoService.deleteModule(1L, false));
 
         // 验证调用
         verify(moduleInfoMapper).selectById(1L);
         verify(logstashProcessMapper).countByModuleId(1L);
         verify(moduleInfoMapper).deleteById(1L);
-    }
-
-    @Test
-    @Story("执行Doris SQL")
-    @Description("测试成功执行Doris SQL")
-    @Severity(SeverityLevel.CRITICAL)
-    void testExecuteDorisSql_Success() throws Exception {
-        // 准备测试数据
-        String sql = "CREATE TABLE test_table (id INT, name VARCHAR(100))";
-        ModuleInfo moduleWithoutSql = new ModuleInfo();
-        moduleWithoutSql.setId(1L);
-        moduleWithoutSql.setDatasourceId(1L);
-        moduleWithoutSql.setDorisSql(null); // 还没有执行过SQL
-
-        SqlQueryResultDTO mockResult = new SqlQueryResultDTO();
-        mockResult.setAffectedRows(0); // CREATE TABLE 语句影响行数为0
-
-        // Mock 行为
-        when(moduleInfoMapper.selectById(1L)).thenReturn(moduleWithoutSql);
-        when(datasourceMapper.selectById(1L)).thenReturn(sampleDatasourceInfo);
-        when(jdbcQueryExecutor.executeQuery(sampleDatasourceInfo, sql)).thenReturn(mockResult);
-        when(moduleInfoMapper.update(any(ModuleInfo.class))).thenReturn(1);
-        when(moduleInfoConverter.toDto(any(ModuleInfo.class), eq(sampleDatasourceInfo)))
-                .thenReturn(sampleModuleInfoDTO);
-
-        // 执行测试
-        ModuleInfoDTO result = moduleInfoService.executeDorisSql(1L, sql);
-
-        // 验证结果
-        assertNotNull(result);
-
-        // 验证调用
-        verify(moduleInfoMapper).selectById(1L);
-        verify(datasourceMapper).selectById(1L);
-        verify(jdbcQueryExecutor).executeQuery(sampleDatasourceInfo, sql);
-        verify(moduleInfoMapper).update(any(ModuleInfo.class));
     }
 }

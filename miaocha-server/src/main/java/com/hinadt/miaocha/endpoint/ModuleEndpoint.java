@@ -63,10 +63,13 @@ public class ModuleEndpoint {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "删除模块", description = "根据模块ID删除模块")
+    @Operation(summary = "删除模块", description = "根据模块ID删除模块，可选择是否同时删除底层Doris表数据")
     public ApiResponse<Void> deleteModule(
-            @Parameter(description = "模块ID", required = true) @PathVariable Long id) {
-        moduleInfoService.deleteModule(id);
+            @Parameter(description = "模块ID", required = true) @PathVariable Long id,
+            @Parameter(description = "是否删除底层Doris表数据", required = false)
+                    @RequestParam(defaultValue = "false")
+                    Boolean deleteDorisTable) {
+        moduleInfoService.deleteModule(id, deleteDorisTable);
         return ApiResponse.success();
     }
 
