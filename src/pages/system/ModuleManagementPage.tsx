@@ -18,7 +18,7 @@ import {
   Tooltip,
 } from 'antd';
 import { getModuleDetail } from '@/api/modules';
-import type { ColumnsType } from 'antd/es/table';
+import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import { SearchOutlined, PlusOutlined, ReloadOutlined, HomeOutlined, DatabaseOutlined } from '@ant-design/icons';
 import {
   getModules,
@@ -82,6 +82,14 @@ const ModuleManagementPage = () => {
   const searchTimeoutRef = useRef<number | null>(null);
   const originalDataRef = useRef<ModuleData[]>([]);
   const [messageApi, contextHolder] = message.useMessage();
+  const [pagination, setPagination] = useState<TablePaginationConfig>({
+    current: 1,
+    pageSize: 10,
+    showSizeChanger: true,
+    showQuickJumper: true,
+    showTotal: (total) => `共 ${total} 条`,
+    pageSizeOptions: ['10', '20', '50', '100'],
+  });
 
   useEffect(() => {
     return () => {
@@ -137,6 +145,15 @@ const ModuleManagementPage = () => {
     });
   };
 
+  // 处理表格变更（分页、排序、筛选）
+  const handleTableChange = (pagination: TablePaginationConfig) => {
+    setPagination((prev) => ({
+      ...prev,
+      current: pagination.current,
+      pageSize: pagination.pageSize,
+    }));
+  };
+
   const handleSearch = (value: string) => {
     setSearchText(value);
 
@@ -153,6 +170,8 @@ const ModuleManagementPage = () => {
             messageApi.error('加载模块数据失败');
           });
         }
+        // 重置分页到第一页
+        setPagination((prev) => ({ ...prev, current: 1 }));
         return;
       }
 
@@ -173,11 +192,15 @@ const ModuleManagementPage = () => {
       const currentDataFiltered = data.filter(matchesSearchTerms);
       if (currentDataFiltered.length > 0) {
         setData(currentDataFiltered);
+        // 重置分页到第一页
+        setPagination((prev) => ({ ...prev, current: 1 }));
         return;
       }
 
       const originalDataFiltered = originalDataRef.current.filter(matchesSearchTerms);
       setData(originalDataFiltered);
+      // 重置分页到第一页
+      setPagination((prev) => ({ ...prev, current: 1 }));
     }, 300);
   };
 
@@ -405,6 +428,11 @@ const ModuleManagementPage = () => {
           scroll={{ x: 1300 }}
           size="small"
           bordered
+          pagination={{
+            ...pagination,
+            total: data.length,
+          }}
+          onChange={handleTableChange}
         />
       </div>
 

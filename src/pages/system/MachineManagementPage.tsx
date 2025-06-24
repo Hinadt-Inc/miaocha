@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { getMachines, createMachine, deleteMachine, updateMachine, testMachineConnection } from '../../api/machine';
 import type { Machine, CreateMachineParams } from '../../types/machineTypes';
-import { SimpleTable } from '../../components/common/SimpleTable';
-import type { TableColumnsType } from 'antd';
-import { Breadcrumb, Button, Form, Input, InputNumber, Modal, message, Row, Col } from 'antd';
+import type { TableColumnsType, TablePaginationConfig } from 'antd';
+import { Breadcrumb, Button, Form, Input, InputNumber, Modal, message, Row, Col, Table } from 'antd';
 import { PlusOutlined, HomeOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -20,6 +19,14 @@ const MachineManagementPage = () => {
   const [testingConnection, setTestingConnection] = useState(false);
   const [form] = Form.useForm<CreateMachineParams>();
   const [messageApi, contextHolder] = message.useMessage();
+  const [pagination, setPagination] = useState<TablePaginationConfig>({
+    current: 1,
+    pageSize: 10,
+    showSizeChanger: true,
+    showQuickJumper: true,
+    showTotal: (total) => `共 ${total} 条`,
+    pageSizeOptions: ['10', '20', '50', '100'],
+  });
 
   useEffect(() => {
     fetchMachines();
@@ -33,6 +40,15 @@ const MachineManagementPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // 处理表格变更（分页、排序、筛选）
+  const handleTableChange = (pagination: TablePaginationConfig) => {
+    setPagination((prev) => ({
+      ...prev,
+      current: pagination.current,
+      pageSize: pagination.pageSize,
+    }));
   };
 
   const handleCreate = async (values: CreateMachineParams) => {
@@ -174,7 +190,19 @@ const MachineManagementPage = () => {
         </div>
 
         <div className={styles.tableContainer}>
-          <SimpleTable dataSource={machines} columns={columns} loading={loading} size="small" rowKey="id" />
+          <Table
+            dataSource={machines}
+            columns={columns}
+            loading={loading}
+            size="small"
+            rowKey="id"
+            pagination={{
+              ...pagination,
+              total: machines.length,
+            }}
+            onChange={handleTableChange}
+            bordered
+          />
         </div>
 
         <Modal

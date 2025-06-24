@@ -143,6 +143,9 @@ const UserManagementPage = () => {
   const [pagination, setPagination] = useState<TablePaginationConfig>({
     current: 1,
     pageSize: 10,
+    showSizeChanger: true,
+    showTotal: (total) => `共 ${total} 条`,
+    pageSizeOptions: ['10', '20', '50', '100'],
   });
   const [filteredInfo, setFilteredInfo] = useState<Record<string, FilterValue | null>>({});
   const [sortedInfo, setSortedInfo] = useState<SorterResult<UserData>>({});
@@ -160,7 +163,11 @@ const UserManagementPage = () => {
     filters: Record<string, FilterValue | null>,
     sorter: SorterResult<UserData> | SorterResult<UserData>[],
   ) => {
-    setPagination(pagination);
+    setPagination((prev) => ({
+      ...prev,
+      current: pagination.current,
+      pageSize: pagination.pageSize,
+    }));
     setFilteredInfo(filters);
     setSortedInfo(Array.isArray(sorter) ? sorter[0] : sorter);
   };
@@ -187,6 +194,8 @@ const UserManagementPage = () => {
             messageApi.error('加载用户数据失败');
           });
         }
+        // 重置分页到第一页
+        setPagination((prev) => ({ ...prev, current: 1 }));
         return;
       }
 
@@ -222,6 +231,8 @@ const UserManagementPage = () => {
       // 如果当前数据中有匹配项，直接返回
       if (currentDataFiltered.length > 0) {
         setData(currentDataFiltered);
+        // 重置分页到第一页
+        setPagination((prev) => ({ ...prev, current: 1 }));
         return;
       }
 
@@ -230,6 +241,8 @@ const UserManagementPage = () => {
 
       // 设置搜索结果
       setData(originalDataFiltered);
+      // 重置分页到第一页
+      setPagination((prev) => ({ ...prev, current: 1 }));
     }, 300); // 300ms防抖延迟
   };
 
@@ -511,7 +524,10 @@ const UserManagementPage = () => {
           columns={columns}
           dataSource={data}
           rowKey="key"
-          pagination={pagination}
+          pagination={{
+            ...pagination,
+            total: data.length,
+          }}
           loading={loading}
           scroll={{ x: 1300 }}
           onChange={handleTableChange}

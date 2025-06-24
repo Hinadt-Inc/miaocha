@@ -17,6 +17,7 @@ interface SchemaTreeProps {
   refreshSchema: () => void;
   handleTreeNodeDoubleClick: (tableName: string) => void;
   handleInsertTable: (tableName: string, columns: SchemaResult['tables'][0]['columns']) => void;
+  handleInsertField?: (fieldName: string) => void;
   fullscreen: boolean;
   collapsed?: boolean;
   toggleSider?: () => void;
@@ -28,6 +29,7 @@ const SchemaTree: React.FC<SchemaTreeProps> = ({
   refreshSchema,
   handleTreeNodeDoubleClick,
   handleInsertTable,
+  handleInsertField,
   fullscreen,
   collapsed = false,
   toggleSider,
@@ -79,13 +81,15 @@ const SchemaTree: React.FC<SchemaTreeProps> = ({
       }
 
       const isTable = !node.key.includes('-');
+      const fieldName = !isTable ? node.key.split('-')[1] : '';
+
       return (
         <div className="tree-node-wrapper" onDoubleClick={() => isTable && handleTreeNodeDoubleClick(node.key)}>
           {isTable ? <TableOutlined className="tree-table-icon" /> : <span className="tree-spacer"></span>}
           <Tooltip title={node.content}>
             <span className="tree-node-title">{node.title}</span>
           </Tooltip>
-          {isTable && (
+          {isTable ? (
             <Tooltip title="插入表和字段">
               <CopyOutlined
                 className="tree-copy-icon"
@@ -98,11 +102,23 @@ const SchemaTree: React.FC<SchemaTreeProps> = ({
                 }}
               />
             </Tooltip>
+          ) : (
+            handleInsertField && (
+              <Tooltip title="插入字段">
+                <CopyOutlined
+                  className="tree-copy-icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleInsertField(fieldName);
+                  }}
+                />
+              </Tooltip>
+            )
           )}
         </div>
       );
     },
-    [collapsed, databaseSchema, handleInsertTable, handleTreeNodeDoubleClick],
+    [collapsed, databaseSchema, handleInsertTable, handleTreeNodeDoubleClick, handleInsertField],
   );
 
   // 延迟加载树节点

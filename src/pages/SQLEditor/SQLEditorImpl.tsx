@@ -334,6 +334,13 @@ const SQLEditorImpl: React.FC = () => {
     }
   }, []);
 
+  // 插入字段的回调函数
+  const handleInsertField = useCallback((fieldName: string) => {
+    if (editorRef.current) {
+      insertTextToEditor(editorRef.current, fieldName);
+    }
+  }, []);
+
   const handleInsertTable = useCallback(
     (
       tableName: string,
@@ -347,7 +354,7 @@ const SQLEditorImpl: React.FC = () => {
     ) => {
       if (!editorRef.current) return;
       const editor = editorRef.current;
-      const safeTableName = tableName.replace(/[^\w\d_]/g, '');
+      const safeTableName = tableName.replace(/[^\w]/g, '');
       const sqlContext = getSQLContext(editor);
       try {
         if (!sqlContext.isSelectQuery || editor.getModel()?.getValue().trim() === '') {
@@ -392,10 +399,11 @@ const SQLEditorImpl: React.FC = () => {
             const text = model.getValue();
             const needsSpace = /[^\s,]$/m.test(text);
             const prefix = needsSpace ? ' ' : '';
+            const insertText = `${prefix}FROM ${safeTableName};`;
             editor.executeEdits('insert-from-clause', [
               {
                 range: monaco.Range.fromPositions(position, position),
-                text: `${prefix}FROM ${safeTableName};`,
+                text: insertText,
               },
             ]);
           }
@@ -411,7 +419,7 @@ const SQLEditorImpl: React.FC = () => {
               endLineNumber: selection.startLineNumber,
               endColumn: selection.startColumn,
             });
-            if (/FROM\s+[\w\d_]+(\s*,\s*[\w\d_]+)*\s*$/i.test(textBeforeCursor)) {
+            if (/FROM\s+\w+(\s*,\s*\w+)*\s*$/i.test(textBeforeCursor)) {
               const needsComma = !/,\s*$/.test(textBeforeCursor);
               const prefix = needsComma ? ', ' : '';
               insertTextToEditor(editor, `${prefix}${safeTableName}`);
@@ -603,8 +611,17 @@ const SQLEditorImpl: React.FC = () => {
   const handleEditorDidMount = (editor: monaco.editor.IStandaloneCodeEditor, monacoInstance: typeof monaco) => {
     editorRef.current = editor;
     monacoRef.current = monacoInstance;
+
     // 添加快捷键：Ctrl+Enter 执行查询
     editor.addCommand(monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.Enter, executeQueryDebounced);
+
+    // 监听编辑器内容变化，自动同步状态（包括executeEdits操作）
+    const model = editor.getModel();
+    if (model) {
+      model.onDidChangeContent(() => {
+        setSqlQuery(model.getValue());
+      });
+    }
   };
 
   return (
@@ -628,6 +645,7 @@ const SQLEditorImpl: React.FC = () => {
             }}
             handleTreeNodeDoubleClick={handleTreeNodeDoubleClick}
             handleInsertTable={handleInsertTable}
+            handleInsertField={handleInsertField}
             fullscreen={fullscreen}
             collapsed={siderCollapsed}
             toggleSider={toggleSider}

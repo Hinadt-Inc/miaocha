@@ -13,6 +13,7 @@ import {
   Skeleton,
   Tooltip,
 } from 'antd';
+import type { TablePaginationConfig } from 'antd';
 import styles from './LogstashManagementPage.module.less';
 import { Link } from 'react-router-dom';
 import { ReactNode, useEffect, useState } from 'react';
@@ -101,6 +102,14 @@ function LogstashManagementPage() {
     removeLogstashMachineIds: [] as number[],
     customDeployPath: '',
     forceScale: false,
+  });
+  const [pagination, setPagination] = useState<TablePaginationConfig>({
+    current: 1,
+    pageSize: 10,
+    showSizeChanger: true,
+    showQuickJumper: true,
+    showTotal: (total) => `共 ${total} 条`,
+    pageSizeOptions: ['10', '20', '50', '100'],
   });
 
   const handleScale = async (
@@ -354,6 +363,15 @@ function LogstashManagementPage() {
     }
   };
 
+  // 处理表格变更（分页、排序、筛选）
+  const handleTableChange = (pagination: TablePaginationConfig) => {
+    setPagination((prev) => ({
+      ...prev,
+      current: pagination.current,
+      pageSize: pagination.pageSize,
+    }));
+  };
+
   const columns = [
     {
       title: '名称',
@@ -599,6 +617,11 @@ function LogstashManagementPage() {
           loading={loading}
           bordered
           scroll={{ x: 'max-content' }}
+          pagination={{
+            ...pagination,
+            total: data.length,
+          }}
+          onChange={handleTableChange}
           expandable={{
             expandedRowRender: (record) => (
               <Table
