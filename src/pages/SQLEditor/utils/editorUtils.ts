@@ -328,11 +328,26 @@ export const saveToLocalStorage = <T>(key: string, data: T[], maxCount: number) 
  */
 export const isCompleteSQLStatement = (sql: string): boolean => {
   const trimmed = sql.trim();
-  // 简单检查：以分号结尾或包含完整SELECT/FROM结构
-  return (
-    trimmed.endsWith(';') ||
-    (/SELECT\s+.+\s+FROM\s+.+/i.test(trimmed) && !/SELECT\s+.+\s+FROM\s+.+\s+WHERE\s*$/i.test(trimmed))
+
+  // 空语句不完整
+  if (!trimmed) return false;
+
+  // 以分号结尾的语句认为是完整的
+  if (trimmed.endsWith(';')) return true;
+
+  // 包含基本SQL关键字的语句也认为是完整的
+  const hasBasicSQLKeywords = /^(SELECT|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|SHOW|DESC|DESCRIBE|EXPLAIN)\s+/i.test(
+    trimmed,
   );
+
+  console.log('isCompleteSQLStatement 检查:', {
+    sql: trimmed,
+    endsWithSemicolon: trimmed.endsWith(';'),
+    hasBasicSQLKeywords: hasBasicSQLKeywords,
+    result: hasBasicSQLKeywords,
+  });
+
+  return hasBasicSQLKeywords;
 };
 
 /**

@@ -98,6 +98,39 @@ const SQLEditorImpl: React.FC = () => {
   // 添加侧边栏宽度设置 - 收起时宽度变小
   const siderWidth = siderCollapsed ? 80 : 250;
 
+  // 计算SQL语句数量的辅助函数
+  const countSQLStatements = useCallback((text: string): number => {
+    if (!text.trim()) return 0;
+
+    // 移除注释和字符串中的分号，避免误判
+    let cleanText = text;
+
+    // 移除单行注释
+    cleanText = cleanText.replace(/--.*$/gm, '');
+
+    // 移除多行注释
+    cleanText = cleanText.replace(/\/\*[\s\S]*?\*\//g, '');
+
+    // 移除字符串中的分号（简单处理，可能需要更复杂的逻辑处理嵌套引号）
+    cleanText = cleanText.replace(/'[^']*'/g, '');
+    cleanText = cleanText.replace(/"[^"]*"/g, '');
+
+    // 按分号分割并计算有效语句
+    const statements = cleanText
+      .split(';')
+      .map((stmt) => stmt.trim())
+      .filter((stmt) => stmt.length > 0);
+
+    console.log('SQL语句计数调试:', {
+      originalText: text,
+      cleanText: cleanText,
+      statements: statements,
+      count: statements.length,
+    });
+
+    return statements.length;
+  }, []);
+
   // 检查SQL语法有效性
   const validateSQL = (query: string): boolean => {
     if (!query.trim()) {
@@ -118,13 +151,45 @@ const SQLEditorImpl: React.FC = () => {
           return;
         }
 
-        // 优先使用选中文本，没有选中则使用全部内容
+        // 获取要执行的SQL语句
+        // 新逻辑：
+        // 1. 如果有选中文本，执行选中的内容
+        // 2. 如果没有选中文本：
+        //    - 只有一条SQL语句：直接执行整个内容
+        //    - 多条SQL语句：提示用户选中要执行的语句
+        //    - 没有有效语句：执行整个内容（会在后续验证中失败）
         let queryToExecute = '';
         if (editorRef.current) {
           const selection = editorRef.current.getSelection();
           const model = editorRef.current.getModel();
           if (model) {
-            queryToExecute = selection && !selection.isEmpty() ? model.getValueInRange(selection) : model.getValue();
+            const fullText = model.getValue();
+
+            // 检查是否有选中文本
+            if (selection && !selection.isEmpty()) {
+              // 有选中文本，使用选中的内容
+              queryToExecute = model.getValueInRange(selection);
+              console.log('使用选中文本:', queryToExecute);
+            } else {
+              // 没有选中文本，检查是否只有一条SQL语句
+              const statementCount = countSQLStatements(fullText);
+              console.log('没有选中文本，语句计数:', statementCount);
+
+              if (statementCount === 1) {
+                // 只有一条SQL语句，直接执行
+                queryToExecute = fullText;
+                console.log('单条语句，直接执行全部内容');
+              } else if (statementCount > 1) {
+                // 多条SQL语句，提示用户选中要执行的语句
+                console.log('多条语句，需要选中');
+                message.warning('检测到多条SQL语句，请选中要执行的语句');
+                return;
+              } else {
+                // 没有有效的SQL语句
+                queryToExecute = fullText;
+                console.log('没有有效语句，尝试执行全部内容');
+              }
+            }
           }
         }
 
@@ -134,11 +199,13 @@ const SQLEditorImpl: React.FC = () => {
         }
 
         // 验证SQL非空
+        console.log('验证SQL:', { queryToExecute: queryToExecute });
         if (!validateSQL(queryToExecute)) return;
 
         // 自动添加分号(如果不存在)但保留原始查询格式
         if (queryToExecute.trim() && !queryToExecute.trim().endsWith(';')) {
           queryToExecute = queryToExecute + ';';
+          console.log('添加分号后的SQL:', queryToExecute);
         }
 
         console.log('准备执行SQL:', {
@@ -184,7 +251,7 @@ const SQLEditorImpl: React.FC = () => {
         message.error('执行查询时发生未知错误');
       }
     }, 300),
-    [executeQueryOriginal, selectedSource, sqlQuery, setActiveTab, setXField, setYField],
+    [executeQueryOriginal, selectedSource, sqlQuery, setActiveTab, setXField, setYField, countSQLStatements],
   );
 
   // 初始化
