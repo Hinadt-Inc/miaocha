@@ -1,5 +1,5 @@
 import React, { memo, useState, useRef, useEffect, useCallback } from 'react';
-import Editor, { OnMount } from '@monaco-editor/react';
+import Editor, { OnMount, OnChange } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import { Spin } from 'antd';
 import { EditorSettings } from '../types';
@@ -59,6 +59,15 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
     [onEditorMount],
   );
 
+  // 优化onChange处理，确保及时更新状态
+  const handleEditorChange: OnChange = useCallback(
+    (value) => {
+      // 立即更新状态，不使用防抖
+      onChange(value);
+    },
+    [onChange],
+  );
+
   // 如果折叠，则返回一个简单的视图
   if (isCollapsed) {
     return (
@@ -75,7 +84,7 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
           height={height || 'auto'}
           language="sql"
           value={sqlQuery}
-          onChange={onChange}
+          onChange={handleEditorChange}
           onMount={handleEditorDidMount}
           loading={
             <div className="editor-loading">

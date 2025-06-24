@@ -77,6 +77,7 @@ const ModuleManagementPage = () => {
   const [executeSql, setExecuteSql] = useState('');
   const [currentRecord, setCurrentRecord] = useState<ModuleData | null>(null);
   const [executing, setExecuting] = useState(false);
+  const [isReadOnlyMode, setIsReadOnlyMode] = useState(false); // 新增只读模式状态
   const [form] = Form.useForm();
   const searchTimeoutRef = useRef<number | null>(null);
   const originalDataRef = useRef<ModuleData[]>([]);
@@ -253,7 +254,12 @@ const ModuleManagementPage = () => {
 
   const handleExecuteDorisSql = async (record: ModuleData) => {
     setCurrentRecord(record);
-    setExecuteSql('');
+    // 检查dorisSql是否已存在，决定是否为只读模式
+    const hasExistingSql = record.dorisSql?.trim();
+    setIsReadOnlyMode(!!hasExistingSql);
+    // 如果dorisSql不为null且不为空，则设置为已有的SQL（只读模式）
+    // 如果dorisSql为null或空，则设置为空字符串（可编辑模式）
+    setExecuteSql(hasExistingSql ? record.dorisSql : '');
     setExecuteModalVisible(true);
   };
 
@@ -262,6 +268,10 @@ const ModuleManagementPage = () => {
       const templateValue = DORIS_TEMPLATE.replace('${tableName}', currentRecord.tableName || '');
       setExecuteSql(templateValue);
     }
+  };
+
+  const handleExecuteSqlChange = (value: string) => {
+    setExecuteSql(value);
   };
 
   const handleExecuteConfirm = async () => {
@@ -342,7 +352,7 @@ const ModuleManagementPage = () => {
             编辑
           </Button>
           <Button type="link" onClick={() => handleExecuteDorisSql(record)} style={{ padding: '0 8px' }}>
-            执行SQL
+            {record.dorisSql?.trim() ? '查看SQL' : '执行SQL'}
           </Button>
           <Button type="link" danger style={{ padding: '0 8px' }} onClick={() => handleDelete(record)}>
             删除
@@ -496,15 +506,24 @@ const ModuleManagementPage = () => {
         sql={executeSql}
         onConfirm={handleExecuteConfirm}
         onCancel={() => setExecuteModalVisible(false)}
+        onSqlChange={handleExecuteSqlChange}
         loading={executing}
+        readonly={isReadOnlyMode}
         title={
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <span>
-              执行Doris SQL - <strong>{currentRecord?.name}</strong>
+              {isReadOnlyMode ? '查看' : '执行'}Doris SQL - <strong>{currentRecord?.name}</strong>
             </span>
-            <Tooltip title="应用模板的Doris SQL语句">
-              <Button type="text" icon={<DatabaseOutlined />} style={{ marginLeft: 8 }} onClick={handleApplyTemplate} />
-            </Tooltip>
+            {!isReadOnlyMode && (
+              <Tooltip title="应用模板的Doris SQL语句">
+                <Button
+                  type="text"
+                  icon={<DatabaseOutlined />}
+                  style={{ marginLeft: 8 }}
+                  onClick={handleApplyTemplate}
+                />
+              </Tooltip>
+            )}
           </div>
         }
       />

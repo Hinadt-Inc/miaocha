@@ -5,7 +5,7 @@ import { useQueryExecution } from './hooks/useQueryExecution';
 import { useEditorSettings } from './hooks/useEditorSettings';
 import { useQueryHistory } from './hooks/useQueryHistory';
 import { useDatabaseSchema } from './hooks/useDatabaseSchema';
-import { Alert, Button, Card, Layout, message, Space, Tabs, Tooltip, Splitter, Dropdown, Menu } from 'antd';
+import { Alert, Button, Card, Layout, message, Space, Tabs, Tooltip, Splitter, Dropdown } from 'antd';
 import { CopyOutlined } from '@ant-design/icons';
 import * as monaco from 'monaco-editor';
 import copy from 'copy-to-clipboard';
@@ -128,6 +128,11 @@ const SQLEditorImpl: React.FC = () => {
           }
         }
 
+        // 如果编辑器获取不到内容，则使用状态中的 sqlQuery（降级处理）
+        if (!queryToExecute.trim()) {
+          queryToExecute = sqlQuery;
+        }
+
         // 验证SQL非空
         if (!validateSQL(queryToExecute)) return;
 
@@ -140,14 +145,11 @@ const SQLEditorImpl: React.FC = () => {
           datasourceId: selectedSource,
           sql: queryToExecute,
           selectedText: queryToExecute,
+          fromEditor: !!editorRef.current?.getModel()?.getValue().trim(),
+          fromState: !editorRef.current?.getModel()?.getValue().trim() && !!sqlQuery.trim(),
         });
 
         setActiveTab('results');
-        console.log('执行SQL参数:', {
-          datasourceId: selectedSource,
-          sql: queryToExecute,
-          selectedText: queryToExecute,
-        });
 
         executeQueryOriginal({
           datasourceId: selectedSource,
@@ -589,6 +591,14 @@ const SQLEditorImpl: React.FC = () => {
     setEditorHeight(sizes[0] - 102); // 更新编辑器高度
   }, []);
 
+  // 优化SQL查询状态更新回调
+  const handleSqlQueryChange = useCallback(
+    (value: string | undefined) => {
+      setSqlQuery(value ?? '');
+    },
+    [setSqlQuery],
+  );
+
   // 编辑器挂载事件
   const handleEditorDidMount = (editor: monaco.editor.IStandaloneCodeEditor, monacoInstance: typeof monaco) => {
     editorRef.current = editor;
@@ -663,7 +673,7 @@ const SQLEditorImpl: React.FC = () => {
                 >
                   <QueryEditor
                     sqlQuery={sqlQuery}
-                    onChange={(value) => setSqlQuery(value ?? '')}
+                    onChange={handleSqlQueryChange}
                     onEditorMount={handleEditorDidMount}
                     editorSettings={editorSettings}
                     height={editorHeight}

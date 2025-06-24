@@ -34,16 +34,24 @@ export const useQueryExecution = (
         throw new Error('未选择数据源');
       }
 
-      let queryToExecute = options?.sql || sqlQuery;
+      let queryToExecute = '';
+
+      // 优先级：1. 选中文本（通过编辑器获取） 2. 传入的SQL 3. 状态中的SQL
       if (options?.selectedText && options.editor) {
         // 使用编辑器工具提取选中的完整SQL语句
         const selectedSQL = getSelectedSQLStatement(options.editor);
         if (selectedSQL.trim()) {
           queryToExecute = selectedSQL;
         }
-      } else if (options?.selectedText) {
+      } else if (options?.sql?.trim()) {
+        // 使用传入的SQL
+        queryToExecute = options.sql;
+      } else if (options?.selectedText?.trim()) {
         // 如果没有编辑器实例，使用原始逻辑
         queryToExecute = options.selectedText;
+      } else {
+        // 最后降级到状态中的SQL
+        queryToExecute = sqlQuery;
       }
 
       if (!queryToExecute.trim()) {
