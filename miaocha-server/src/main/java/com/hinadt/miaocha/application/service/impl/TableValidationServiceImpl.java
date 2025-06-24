@@ -1,13 +1,26 @@
 package com.hinadt.miaocha.application.service.impl;
 
 import com.hinadt.miaocha.application.service.TableValidationService;
+import com.hinadt.miaocha.application.service.database.DatabaseMetadataService;
+import com.hinadt.miaocha.application.service.database.DatabaseMetadataServiceFactory;
+import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
+import com.hinadt.miaocha.common.exception.QueryFieldNotExistsException;
+import com.hinadt.miaocha.domain.dto.SchemaInfoDTO;
+import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.entity.ModuleInfo;
+import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
+import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
+import java.sql.Connection;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -27,6 +40,20 @@ public class TableValidationServiceImpl implements TableValidationService {
             Pattern.compile(
                     "^\\s*CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?",
                     Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+
+    /** 字段定义的正则表达式 - 匹配字段名、类型等 */
+    private static final Pattern FIELD_DEFINITION_PATTERN =
+            Pattern.compile(
+                    "\\s*(?:`([^`]+)`|([a-zA-Z_][a-zA-Z0-9_]*))\\s+([a-zA-Z0-9_()\\s,]+?)(?:,|\\s*\\)|$)",
+                    Pattern.CASE_INSENSITIVE);
+
+    @Autowired private ModuleInfoMapper moduleInfoMapper;
+
+    @Autowired private DatasourceMapper datasourceMapper;
+
+    @Autowired private JdbcQueryExecutor jdbcQueryExecutor;
+
+    @Autowired private DatabaseMetadataServiceFactory metadataServiceFactory;
 
     @Override
     public void validateDorisSql(ModuleInfo moduleInfo, String sql) {
@@ -171,5 +198,308 @@ public class TableValidationServiceImpl implements TableValidationService {
 
         // 去掉反引号
         return tablePart.replaceAll("`", "").trim();
+    }
+
+    @Override
+    public boolean isTableExists(ModuleInfo moduleInfo) {
+        if (moduleInfo == null) {
+            return false;
+        }
+
+        // 检查数据库中是否存在表
+        if (!StringUtils.hasText(moduleInfo.getTableName())) {
+            logger.debug("模块 {} 未配置表名", moduleInfo.getName());
+            return false;
+        }
+
+        try {
+            DatasourceInfo datasourceInfo =
+                    datasourceMapper.selectById(moduleInfo.getDatasourceId());
+            if (datasourceInfo == null) {
+                logger.warn("模块 {} 对应的数据源不存在", moduleInfo.getName());
+                return false;
+            }
+
+            try (Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo)) {
+                DatabaseMetadataService metadataService =
+                        metadataServiceFactory.getService(datasourceInfo.getType());
+
+                List<String> allTables = metadataService.getAllTables(conn);
+                boolean tableExists = allTables.contains(moduleInfo.getTableName());
+
+                logger.debug(
+                        "模块 {} 的表 {} 在数据库中{}存在",
+                        moduleInfo.getName(),
+                        moduleInfo.getTableName(),
+                        tableExists ? "" : "不");
+                return tableExists;
+            }
+        } catch (Exception e) {
+            logger.error("检查模块 {} 的表是否存在时发生错误: {}", moduleInfo.getName(), e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    public List<String> parseFieldNamesFromCreateTableSql(String sql) {
+        List<String> fieldNames = new ArrayList<>();
+
+        if (!StringUtils.hasText(sql)) {
+            return fieldNames;
+        }
+
+        try {
+            // 提取字段定义部分
+            String fieldsSection = extractFieldsSection(sql);
+            if (fieldsSection == null) {
+                logger.warn("无法从SQL中提取字段定义部分: {}", sql);
+                return fieldNames;
+            }
+
+            // 解析字段名
+            fieldNames = parseFieldNames(fieldsSection);
+
+            logger.debug("从建表SQL中解析出 {} 个字段: {}", fieldNames.size(), fieldNames);
+            return fieldNames;
+
+        } catch (Exception e) {
+            logger.error("解析建表SQL字段名时发生错误: {}", e.getMessage());
+            return fieldNames;
+        }
+    }
+
+    @Override
+    public List<String> getTableFieldNames(Long moduleId) {
+        if (moduleId == null) {
+            return new ArrayList<>();
+        }
+
+        ModuleInfo moduleInfo = moduleInfoMapper.selectById(moduleId);
+        if (moduleInfo == null) {
+            logger.warn("模块不存在: {}", moduleId);
+            return new ArrayList<>();
+        }
+
+        // 优先从建表SQL解析字段名
+        if (StringUtils.hasText(moduleInfo.getDorisSql())) {
+            List<String> fieldsFromSql =
+                    parseFieldNamesFromCreateTableSql(moduleInfo.getDorisSql());
+            if (!fieldsFromSql.isEmpty()) {
+                return fieldsFromSql;
+            }
+        }
+
+        // 如果SQL解析失败或没有SQL，从数据库元数据获取
+        if (StringUtils.hasText(moduleInfo.getTableName())) {
+            try {
+                DatasourceInfo datasourceInfo =
+                        datasourceMapper.selectById(moduleInfo.getDatasourceId());
+                if (datasourceInfo != null) {
+                    try (Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo)) {
+                        DatabaseMetadataService metadataService =
+                                metadataServiceFactory.getService(datasourceInfo.getType());
+
+                        List<SchemaInfoDTO.ColumnInfoDTO> columns =
+                                metadataService.getColumnInfo(conn, moduleInfo.getTableName());
+
+                        return columns.stream()
+                                .map(SchemaInfoDTO.ColumnInfoDTO::getColumnName)
+                                .collect(Collectors.toList());
+                    }
+                }
+            } catch (Exception e) {
+                logger.error("从数据库获取模块 {} 字段信息时发生错误: {}", moduleId, e.getMessage());
+            }
+        }
+
+        return new ArrayList<>();
+    }
+
+    @Override
+    public void validateQueryConfigFields(ModuleInfo moduleInfo, List<String> configuredFields) {
+        if (moduleInfo == null || configuredFields == null || configuredFields.isEmpty()) {
+            return;
+        }
+
+        // 如果没有建表SQL，跳过验证
+        if (!StringUtils.hasText(moduleInfo.getDorisSql())) {
+            logger.debug("模块 {} 没有建表SQL，跳过字段验证", moduleInfo.getName());
+            return;
+        }
+
+        // 获取表的所有字段名
+        List<String> tableFields = getTableFieldNames(moduleInfo.getId());
+        if (tableFields.isEmpty()) {
+            logger.warn("无法获取模块 {} 的字段列表，跳过验证", moduleInfo.getName());
+            return;
+        }
+
+        // 查找不存在的字段
+        List<String> nonExistentFields =
+                configuredFields.stream()
+                        .filter(field -> !tableFields.contains(field))
+                        .collect(Collectors.toList());
+
+        if (!nonExistentFields.isEmpty()) {
+            throw new QueryFieldNotExistsException(
+                    moduleInfo.getName(), moduleInfo.getTableName(), nonExistentFields);
+        }
+
+        logger.debug("模块 {} 的查询配置字段验证通过", moduleInfo.getName());
+    }
+
+    /** 提取CREATE TABLE语句中的字段定义部分 */
+    private String extractFieldsSection(String sql) {
+        // 标准化SQL
+        String normalizedSql = sql.replaceAll("\\s+", " ").trim();
+
+        // 查找第一个左括号
+        int startIndex = normalizedSql.indexOf('(');
+        if (startIndex == -1) {
+            return null;
+        }
+
+        // 查找匹配的右括号
+        int bracketCount = 0;
+        int endIndex = -1;
+
+        for (int i = startIndex; i < normalizedSql.length(); i++) {
+            char c = normalizedSql.charAt(i);
+            if (c == '(') {
+                bracketCount++;
+            } else if (c == ')') {
+                bracketCount--;
+                if (bracketCount == 0) {
+                    endIndex = i;
+                    break;
+                }
+            }
+        }
+
+        if (endIndex == -1) {
+            return null;
+        }
+
+        return normalizedSql.substring(startIndex + 1, endIndex);
+    }
+
+    /** 从字段定义部分解析字段名 */
+    private List<String> parseFieldNames(String fieldsSection) {
+        List<String> fieldNames = new ArrayList<>();
+
+        // 移除所有索引、约束、外键定义等非字段定义的行
+        String cleanedFieldsSection = removeNonFieldDefinitions(fieldsSection);
+
+        // 智能分割字段定义（考虑括号内的逗号）
+        List<String> fieldDefinitions = smartSplitFieldDefinitions(cleanedFieldsSection);
+
+        for (String fieldDef : fieldDefinitions) {
+            String fieldName = extractFieldName(fieldDef.trim());
+            if (fieldName != null && !fieldName.isEmpty()) {
+                fieldNames.add(fieldName);
+            }
+        }
+
+        return fieldNames;
+    }
+
+    /** 移除非字段定义（INDEX、PRIMARY KEY、FOREIGN KEY等） */
+    private String removeNonFieldDefinitions(String fieldsSection) {
+        String[] lines = fieldsSection.split("\\n");
+        StringBuilder cleaned = new StringBuilder();
+
+        for (String line : lines) {
+            String trimmedLine = line.trim();
+
+            // 跳过各种非字段定义
+            if (trimmedLine.isEmpty()
+                    || trimmedLine.matches(
+                            "(?i)^(PRIMARY\\s+KEY|UNIQUE\\s+KEY|KEY|INDEX|FOREIGN\\s+KEY|CONSTRAINT)\\b.*")
+                    || trimmedLine.matches(
+                            "(?i)^\\)\\s*(ENGINE|DUPLICATE|AUTO|DISTRIBUTED|PROPERTIES)\\b.*")) {
+                continue;
+            }
+
+            cleaned.append(line).append("\\n");
+        }
+
+        return cleaned.toString();
+    }
+
+    /** 智能分割字段定义，考虑括号内的逗号 */
+    private List<String> smartSplitFieldDefinitions(String fieldsSection) {
+        List<String> definitions = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        int parenthesisDepth = 0;
+        boolean inQuotes = false;
+        char lastChar = ' ';
+
+        for (char c : fieldsSection.toCharArray()) {
+            if (c == '\'' || c == '"') {
+                if (lastChar != '\\') {
+                    inQuotes = !inQuotes;
+                }
+            } else if (!inQuotes) {
+                if (c == '(') {
+                    parenthesisDepth++;
+                } else if (c == ')') {
+                    parenthesisDepth--;
+                } else if (c == ',' && parenthesisDepth == 0) {
+                    // 只有在括号外且不在引号内的逗号才是字段分隔符
+                    String def = current.toString().trim();
+                    if (!def.isEmpty()) {
+                        definitions.add(def);
+                    }
+                    current = new StringBuilder();
+                    lastChar = c;
+                    continue;
+                }
+            }
+            current.append(c);
+            lastChar = c;
+        }
+
+        // 添加最后一个字段定义
+        String def = current.toString().trim();
+        if (!def.isEmpty()) {
+            definitions.add(def);
+        }
+
+        return definitions;
+    }
+
+    /** 从单个字段定义中提取字段名 */
+    private String extractFieldName(String fieldDefinition) {
+        if (fieldDefinition == null || fieldDefinition.trim().isEmpty()) {
+            return null;
+        }
+
+        String trimmed = fieldDefinition.trim();
+
+        // 跳过非字段定义
+        if (trimmed.matches(
+                "(?i)^(PRIMARY\\s+KEY|UNIQUE\\s+KEY|KEY|INDEX|FOREIGN\\s+KEY|CONSTRAINT)\\b.*")) {
+            return null;
+        }
+
+        // 提取字段名（第一个单词，可能被反引号包围）
+        String[] parts = trimmed.split("\\s+", 2);
+        if (parts.length == 0) {
+            return null;
+        }
+
+        String fieldName = parts[0];
+
+        // 移除反引号
+        if (fieldName.startsWith("`") && fieldName.endsWith("`") && fieldName.length() > 2) {
+            fieldName = fieldName.substring(1, fieldName.length() - 1);
+        }
+
+        // 验证字段名是否有效（包含字母、数字、下划线，支持数字开头的字段名）
+        if (fieldName.matches("^[a-zA-Z0-9_]+$")) {
+            return fieldName;
+        }
+
+        return null;
     }
 }

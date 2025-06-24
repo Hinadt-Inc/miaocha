@@ -1,5 +1,7 @@
 package com.hinadt.miaocha.application.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hinadt.miaocha.application.service.ModuleInfoService;
 import com.hinadt.miaocha.application.service.TableValidationService;
 import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
@@ -11,6 +13,7 @@ import com.hinadt.miaocha.domain.dto.module.ModuleInfoCreateDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoUpdateDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoWithPermissionsDTO;
+import com.hinadt.miaocha.domain.dto.module.QueryConfigDTO;
 import com.hinadt.miaocha.domain.dto.permission.ModuleUsersPermissionDTO.UserPermissionInfoDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.entity.ModuleInfo;
@@ -54,6 +57,8 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
     @Autowired private ModulePermissionConverter modulePermissionConverter;
 
     @Autowired private TableValidationService tableValidationService;
+
+    @Autowired private ObjectMapper objectMapper;
 
     @Override
     @Transactional
@@ -309,5 +314,78 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
         }
 
         return moduleInfoConverter.toDto(moduleInfo, datasourceInfo);
+    }
+
+    @Override
+    @Transactional
+    public ModuleInfoDTO configureQueryConfig(Long moduleId, QueryConfigDTO queryConfig) {
+        // 检查模块是否存在
+        ModuleInfo moduleInfo = moduleInfoMapper.selectById(moduleId);
+        if (moduleInfo == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块不存在");
+        }
+
+        // 检查表是否已经准备好（建表SQL配置或数据库中存在表）
+        if (!StringUtils.hasText(moduleInfo.getDorisSql())
+                && !tableValidationService.isTableExists(moduleInfo)) {
+            throw new BusinessException(ErrorCode.MODULE_DORIS_SQL_NOT_CONFIGURED);
+        }
+
+        // 验证查询配置中的字段是否存在
+        if (queryConfig != null && queryConfig.getKeywordFields() != null) {
+            List<String> configuredFields =
+                    queryConfig.getKeywordFields().stream()
+                            .map(QueryConfigDTO.KeywordFieldConfigDTO::getFieldName)
+                            .collect(Collectors.toList());
+
+            // 如果配置了时间字段，也要验证
+            if (StringUtils.hasText(queryConfig.getTimeField())) {
+                configuredFields.add(queryConfig.getTimeField());
+            }
+
+            // 验证字段是否存在
+            tableValidationService.validateQueryConfigFields(moduleInfo, configuredFields);
+        }
+
+        // 将QueryConfigDTO转换为JSON字符串
+        String queryConfigJson;
+        try {
+            if (queryConfig == null) {
+                // 如果queryConfig为null，设置为空JSON对象
+                queryConfigJson = "{}";
+            } else {
+                queryConfigJson = objectMapper.writeValueAsString(queryConfig);
+            }
+        } catch (JsonProcessingException e) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "查询配置序列化失败: " + e.getMessage());
+        }
+
+        // 更新模块的查询配置 - 更新时间和更新人由MyBatis拦截器自动设置
+        moduleInfo.setQueryConfig(queryConfigJson);
+        moduleInfoMapper.update(moduleInfo);
+
+        // 获取数据源信息
+        DatasourceInfo datasourceInfo = datasourceMapper.selectById(moduleInfo.getDatasourceId());
+        return moduleInfoConverter.toDto(moduleInfo, datasourceInfo);
+    }
+
+    @Override
+    public String getTableNameByModule(String module) {
+        if (!StringUtils.hasText(module)) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块名称不能为空");
+        }
+
+        // 通过模块名称查询模块信息
+        ModuleInfo moduleInfo = moduleInfoMapper.selectByName(module);
+        if (moduleInfo == null) {
+            throw new BusinessException(ErrorCode.MODULE_NOT_FOUND, "未找到模块: " + module);
+        }
+
+        String tableName = moduleInfo.getTableName();
+        if (!StringUtils.hasText(tableName)) {
+            throw new RuntimeException("模块 " + module + " 对应的表名未配置");
+        }
+
+        return tableName;
     }
 }

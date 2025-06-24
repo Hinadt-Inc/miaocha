@@ -1,12 +1,14 @@
 package com.hinadt.miaocha.endpoint;
 
 import com.hinadt.miaocha.application.service.ModuleInfoService;
+import com.hinadt.miaocha.application.service.TableValidationService;
 import com.hinadt.miaocha.domain.dto.ApiResponse;
 import com.hinadt.miaocha.domain.dto.module.ModuleExecuteDorisSqlDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoCreateDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoUpdateDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoWithPermissionsDTO;
+import com.hinadt.miaocha.domain.dto.module.ModuleQueryConfigDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,6 +24,8 @@ import org.springframework.web.bind.annotation.*;
 public class ModuleEndpoint {
 
     @Autowired private ModuleInfoService moduleInfoService;
+
+    @Autowired private TableValidationService tableValidationService;
 
     @PostMapping
     @Operation(summary = "创建模块", description = "创建一个新的日志模块")
@@ -80,5 +84,25 @@ public class ModuleEndpoint {
             @Valid @RequestBody ModuleExecuteDorisSqlDTO sqlDTO) {
         ModuleInfoDTO response = moduleInfoService.executeDorisSql(id, sqlDTO.getSql());
         return ApiResponse.success(response);
+    }
+
+    @PutMapping("/query-config")
+    @Operation(summary = "配置模块查询配置", description = "配置模块的查询相关设置，包括时间字段和关键词检索字段。需要先完成建表操作。")
+    public ApiResponse<ModuleInfoDTO> configureQueryConfig(
+            @Valid @RequestBody ModuleQueryConfigDTO queryConfigDTO) {
+        ModuleInfoDTO response =
+                moduleInfoService.configureQueryConfig(
+                        queryConfigDTO.getModuleId(), queryConfigDTO.getQueryConfig());
+        return ApiResponse.success(response);
+    }
+
+    @GetMapping("/{id}/field-names")
+    @Operation(
+            summary = "获取模块表字段名列表",
+            description = "获取指定模块的表字段名列表，用于查询配置时的字段提示。优先从建表SQL解析，如解析失败则从数据库元数据获取。")
+    public ApiResponse<List<String>> getModuleFieldNames(
+            @Parameter(description = "模块ID", required = true) @PathVariable Long id) {
+        List<String> fieldNames = tableValidationService.getTableFieldNames(id);
+        return ApiResponse.success(fieldNames);
     }
 }

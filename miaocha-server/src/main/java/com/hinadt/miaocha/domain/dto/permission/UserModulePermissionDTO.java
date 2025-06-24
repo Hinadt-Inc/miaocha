@@ -1,5 +1,6 @@
 package com.hinadt.miaocha.domain.dto.permission;
 
+import com.hinadt.miaocha.domain.dto.module.QueryConfigDTO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -25,6 +26,9 @@ public class UserModulePermissionDTO {
 
     @Schema(description = "模块名称")
     private String module;
+
+    @Schema(description = "模块查询配置")
+    private QueryConfigDTO queryConfig;
 
     @Schema(description = "创建时间")
     private String createTime;

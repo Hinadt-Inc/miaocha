@@ -4,6 +4,7 @@ import com.hinadt.miaocha.domain.dto.module.ModuleInfoCreateDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoUpdateDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoWithPermissionsDTO;
+import com.hinadt.miaocha.domain.dto.module.QueryConfigDTO;
 import java.util.List;
 
 /** 模块信息服务接口 */
@@ -63,4 +64,21 @@ public interface ModuleInfoService {
      * @return 模块信息响应
      */
     ModuleInfoDTO executeDorisSql(Long id, String sql);
+
+    /**
+     * 配置模块的查询配置
+     *
+     * @param moduleId 模块ID
+     * @param queryConfig 查询配置
+     * @return 模块信息响应
+     */
+    ModuleInfoDTO configureQueryConfig(Long moduleId, QueryConfigDTO queryConfig);
+
+    /**
+     * 根据模块名称获取对应的表名
+     *
+     * @param module 模块名称
+     * @return 表名
+     */
+    String getTableNameByModule(String module);
 }

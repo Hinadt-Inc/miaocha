@@ -1,5 +1,8 @@
 package com.hinadt.miaocha.domain.converter;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hinadt.miaocha.domain.dto.module.QueryConfigDTO;
 import com.hinadt.miaocha.domain.dto.permission.ModuleUsersPermissionDTO;
 import com.hinadt.miaocha.domain.dto.permission.ModuleUsersPermissionDTO.UserPermissionInfoDTO;
 import com.hinadt.miaocha.domain.dto.permission.UserModulePermissionDTO;
@@ -8,6 +11,7 @@ import com.hinadt.miaocha.domain.entity.User;
 import com.hinadt.miaocha.domain.entity.UserModulePermission;
 import com.hinadt.miaocha.domain.entity.enums.DatasourceType;
 import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
+import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
 import com.hinadt.miaocha.domain.mapper.UserMapper;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -16,16 +20,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /** 模块权限转换器 */
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class ModulePermissionConverter
         implements Converter<UserModulePermission, UserModulePermissionDTO> {
 
     private final UserMapper userMapper;
     private final DatasourceMapper datasourceMapper;
+    private final ModuleInfoMapper moduleInfoMapper;
+    private final ObjectMapper objectMapper;
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -87,6 +95,26 @@ public class ModulePermissionConverter
         if (entity.getUpdateUser() != null) {
             String updateUserName = userMapper.selectNicknameByEmail(entity.getUpdateUser());
             dto.setUpdateUserName(updateUserName);
+        }
+
+        // 查询模块的查询配置
+        if (entity.getModule() != null) {
+            com.hinadt.miaocha.domain.entity.ModuleInfo moduleInfo =
+                    moduleInfoMapper.selectByName(entity.getModule());
+            if (moduleInfo != null
+                    && moduleInfo.getQueryConfig() != null
+                    && !moduleInfo.getQueryConfig().trim().isEmpty()) {
+                try {
+                    QueryConfigDTO queryConfigDTO =
+                            objectMapper.readValue(
+                                    moduleInfo.getQueryConfig(), QueryConfigDTO.class);
+                    dto.setQueryConfig(queryConfigDTO);
+                } catch (JsonProcessingException e) {
+                    // 如果JSON解析失败，记录日志但不抛出异常，返回null
+                    log.warn("解析查询配置JSON字符串为DTO对象失败: {}", e.getMessage());
+                    dto.setQueryConfig(null);
+                }
+            }
         }
 
         return dto;
@@ -242,6 +270,26 @@ public class ModulePermissionConverter
         if (datasource != null) {
             dto.setDatasourceName(datasource.getName());
             dto.setDatabaseName(DatasourceType.extractDatabaseName(datasource.getJdbcUrl()));
+        }
+
+        // 查询模块的查询配置
+        if (module != null) {
+            com.hinadt.miaocha.domain.entity.ModuleInfo moduleInfo =
+                    moduleInfoMapper.selectByName(module);
+            if (moduleInfo != null
+                    && moduleInfo.getQueryConfig() != null
+                    && !moduleInfo.getQueryConfig().trim().isEmpty()) {
+                try {
+                    QueryConfigDTO queryConfigDTO =
+                            objectMapper.readValue(
+                                    moduleInfo.getQueryConfig(), QueryConfigDTO.class);
+                    dto.setQueryConfig(queryConfigDTO);
+                } catch (JsonProcessingException e) {
+                    // 如果JSON解析失败，记录日志但不抛出异常，返回null
+                    log.warn("解析查询配置JSON字符串为DTO对象失败: {}", e.getMessage());
+                    dto.setQueryConfig(null);
+                }
+            }
         }
 
         return dto;

@@ -1,7 +1,7 @@
 package com.hinadt.miaocha.common.exception;
 
 /** 任务执行相关异常 */
-public class TaskExecutionException extends LogManageException {
+public class TaskExecutionException extends MiaoChaException {
 
     public TaskExecutionException(String message) {
         super(message);

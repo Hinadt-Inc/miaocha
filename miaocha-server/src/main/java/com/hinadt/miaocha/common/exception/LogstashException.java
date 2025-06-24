@@ -1,7 +1,7 @@
 package com.hinadt.miaocha.common.exception;
 
 /** Logstash相关操作异常 */
-public class LogstashException extends LogManageException {
+public class LogstashException extends MiaoChaException {
 
     public LogstashException(String message) {
         super(message);

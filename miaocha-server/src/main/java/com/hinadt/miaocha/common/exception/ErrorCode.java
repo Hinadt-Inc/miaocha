@@ -82,7 +82,11 @@ public enum ErrorCode {
 
     // 表结构校验相关错误码
     TABLE_MESSAGE_FIELD_MISSING("7015", "表结构中缺少必需的message字段，无法进行关键字搜索"),
-    TABLE_FIELD_VALIDATION_FAILED("7016", "表结构字段校验失败");
+    TABLE_FIELD_VALIDATION_FAILED("7016", "表结构字段校验失败"),
+
+    // 模块查询配置相关错误码
+    MODULE_DORIS_SQL_NOT_CONFIGURED("7018", "模块尚未配置建表SQL语句，请先执行建表操作"),
+    MODULE_QUERY_FIELD_NOT_EXISTS("7019", "配置的查询字段不存在于表结构中");
 
     private final String code;
     private final String message;

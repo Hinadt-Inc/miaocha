@@ -215,6 +215,9 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.2.5</version>
                     <configuration>
+
+                        <forkCount>3</forkCount>
+
                         <!-- ========== 并行测试配置 ========== -->
                         <parallel>classesAndMethods</parallel>
                         <threadCount>16</threadCount>

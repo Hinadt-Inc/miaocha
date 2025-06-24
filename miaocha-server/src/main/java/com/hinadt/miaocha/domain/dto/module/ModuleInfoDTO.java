@@ -28,6 +28,9 @@ public class ModuleInfoDTO {
     @Schema(description = "Doris SQL语句")
     private String dorisSql;
 
+    @Schema(description = "查询配置")
+    private QueryConfigDTO queryConfig;
+
     @Schema(description = "创建时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;

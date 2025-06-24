@@ -1,24 +1,31 @@
 package com.hinadt.miaocha.domain.converter;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoCreateDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoUpdateDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoWithPermissionsDTO;
+import com.hinadt.miaocha.domain.dto.module.QueryConfigDTO;
 import com.hinadt.miaocha.domain.dto.permission.ModuleUsersPermissionDTO.UserPermissionInfoDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.entity.ModuleInfo;
 import com.hinadt.miaocha.domain.mapper.UserMapper;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /** 模块信息实体与DTO转换器 */
 @Component
+@Slf4j
 public class ModuleInfoConverter implements Converter<ModuleInfo, ModuleInfoDTO> {
 
     private final UserMapper userMapper;
+    private final ObjectMapper objectMapper;
 
-    public ModuleInfoConverter(UserMapper userMapper) {
+    public ModuleInfoConverter(UserMapper userMapper, ObjectMapper objectMapper) {
         this.userMapper = userMapper;
+        this.objectMapper = objectMapper;
     }
 
     /** 将创建请求DTO转换为实体 */
@@ -89,6 +96,20 @@ public class ModuleInfoConverter implements Converter<ModuleInfo, ModuleInfoDTO>
         dto.setUpdateTime(entity.getUpdateTime());
         dto.setCreateUser(entity.getCreateUser());
         dto.setUpdateUser(entity.getUpdateUser());
+
+        // 转换查询配置JSON字符串为DTO对象
+        if (entity.getQueryConfig() != null && !entity.getQueryConfig().trim().isEmpty()) {
+            try {
+                QueryConfigDTO queryConfigDTO =
+                        objectMapper.readValue(entity.getQueryConfig(), QueryConfigDTO.class);
+                dto.setQueryConfig(queryConfigDTO);
+            } catch (JsonProcessingException e) {
+                // 如果JSON解析失败，记录日志但不抛出异常，返回null
+                // 这样可以保证在queryConfig字段有问题时仍能正常显示其他信息
+                log.warn("解析查询配置JSON字符串为DTO对象失败: {}", e.getMessage());
+                dto.setQueryConfig(null);
+            }
+        }
 
         // 查询用户昵称
         if (entity.getCreateUser() != null) {
@@ -174,6 +195,19 @@ public class ModuleInfoConverter implements Converter<ModuleInfo, ModuleInfoDTO>
         dto.setUpdateTime(entity.getUpdateTime());
         dto.setCreateUser(entity.getCreateUser());
         dto.setUpdateUser(entity.getUpdateUser());
+
+        // 转换查询配置JSON字符串为DTO对象
+        if (entity.getQueryConfig() != null && !entity.getQueryConfig().trim().isEmpty()) {
+            try {
+                QueryConfigDTO queryConfigDTO =
+                        objectMapper.readValue(entity.getQueryConfig(), QueryConfigDTO.class);
+                dto.setQueryConfig(queryConfigDTO);
+            } catch (JsonProcessingException e) {
+                // 如果JSON解析失败，记录日志但不抛出异常，返回null
+                log.warn("解析查询配置JSON字符串为DTO对象失败: {}", e.getMessage());
+                dto.setQueryConfig(null);
+            }
+        }
 
         // 设置数据源名称
         if (datasourceInfo != null) {

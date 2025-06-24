@@ -11,7 +11,7 @@
     <springProperty scope="context" name="DISCARDING-THRESHOLD" source="log-config.discarding-threshold"
                     defaultValue="0"/>
 
-    <property name="FILE_NAME" value="log-manage-system"/>
+    <property name="FILE_NAME" value="miaocha"/>
 
     <!-- 日志输出格式 -->
     <property name="CONSOLE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
@@ -70,7 +70,7 @@
                     <omitEmptyFields>true</omitEmptyFields>
                     <pattern>
                         {
-                        "service": "log-manage-system",
+                        "service": "miaocha",
                         "time": "%d{yyyy-MM-dd HH:mm:ss.SSS}",
                         "level": "%p",
                         "logger": "%logger{39}",
@@ -105,7 +105,7 @@
                     <omitEmptyFields>true</omitEmptyFields>
                     <pattern>
                         {
-                        "service": "log-manage-system",
+                        "service": "miaocha",
                         "time": "%d{yyyy-MM-dd HH:mm:ss.SSS}",
                         "level": "%p",
                         "logger": "%logger{39}",

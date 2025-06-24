@@ -3,7 +3,7 @@ package com.hinadt.miaocha.application.service.impl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hinadt.miaocha.application.service.LogSearchService;
-import com.hinadt.miaocha.application.service.ModuleTableMappingService;
+import com.hinadt.miaocha.application.service.ModuleInfoService;
 import com.hinadt.miaocha.application.service.database.DatabaseMetadataService;
 import com.hinadt.miaocha.application.service.database.DatabaseMetadataServiceFactory;
 import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
@@ -54,7 +54,7 @@ public class LogSearchServiceImpl implements LogSearchService {
 
     @Autowired private DatabaseMetadataServiceFactory metadataServiceFactory;
 
-    @Autowired private ModuleTableMappingService moduleTableMappingService;
+    @Autowired private ModuleInfoService moduleInfoService;
 
     @Autowired private LogSearchDTOConverter dtoConverter;
 
@@ -146,7 +146,7 @@ public class LogSearchServiceImpl implements LogSearchService {
         result.setSuccess(true);
 
         // 获取模块对应的表名
-        String tableName = moduleTableMappingService.getTableNameByModule(dto.getModule());
+        String tableName = moduleInfoService.getTableNameByModule(dto.getModule());
 
         try (Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo)) {
             // 转换DTO中的variant字段语法
@@ -211,7 +211,7 @@ public class LogSearchServiceImpl implements LogSearchService {
         result.setSuccess(true);
 
         // 获取模块对应的表名
-        String tableName = moduleTableMappingService.getTableNameByModule(dto.getModule());
+        String tableName = moduleInfoService.getTableNameByModule(dto.getModule());
 
         try (Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo)) {
             // 转换DTO中的variant字段语法
@@ -266,7 +266,7 @@ public class LogSearchServiceImpl implements LogSearchService {
         result.setSuccess(true);
 
         // 获取模块对应的表名
-        String tableName = moduleTableMappingService.getTableNameByModule(dto.getModule());
+        String tableName = moduleInfoService.getTableNameByModule(dto.getModule());
 
         try (Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo)) {
             // 转换DTO中的variant字段语法
@@ -478,7 +478,7 @@ public class LogSearchServiceImpl implements LogSearchService {
         validateUser(userId);
 
         // 获取模块对应的表名
-        String tableName = moduleTableMappingService.getTableNameByModule(module);
+        String tableName = moduleInfoService.getTableNameByModule(module);
 
         try (Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo)) {
             // 获取对应数据库类型的元数据服务

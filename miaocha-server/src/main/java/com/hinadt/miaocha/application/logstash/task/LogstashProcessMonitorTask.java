@@ -109,9 +109,10 @@ public class LogstashProcessMonitorTask {
         }
 
         // 只检查运行中的机器
-        if (!LogstashMachineState.RUNNING.name().equals(logstashMachine.getState())) {
+        if (!LogstashMachineState.RUNNING.name().equals(logstashMachine.getState())
+                && !LogstashMachineState.STOP_FAILED.name().equals(logstashMachine.getState())) {
             logger.debug(
-                    "Logstash进程[{}]在机器[{}]上状态为{}，不是运行中状态，跳过检查",
+                    "Logstash进程[{}]在机器[{}]上状态为{}，不处于运行状态，跳过检查",
                     processId,
                     logstashMachine.getMachineId(),
                     logstashMachine.getState());

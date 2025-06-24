@@ -24,6 +24,17 @@ public class ModuleInfo implements UserAuditable {
     @Schema(description = "Doris SQL语句")
     private String dorisSql;
 
+    /**
+     * 查询配置JSON字符串 用于配置模块的查询相关设置，包括： 1. timeField: 指定用于时间分析的字段名 2. keywordFields: 配置关键词检索字段及其检索方法
+     *
+     * <p>JSON格式示例： { "timeField": "log_time", "keywordFields": [ { "fieldName": "message",
+     * "searchMethod": "LIKE" }, { "fieldName": "level", "searchMethod": "MATCH_ALL" } ] }
+     *
+     * <p>searchMethod支持的值： - LIKE: 模糊匹配 - MATCH_ALL: 全词匹配 - MATCH_ANY: 任意词匹配 - MATCH_PHRASE: 短语匹配
+     */
+    @Schema(description = "查询配置JSON，包含时间字段和关键词检索字段配置")
+    private String queryConfig;
+
     @Schema(description = "创建时间")
     private LocalDateTime createTime;
 

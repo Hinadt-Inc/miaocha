@@ -48,6 +48,16 @@ public class GlobalExceptionHandler {
         return createResponseEntityWithUtf8(response, HttpStatus.BAD_REQUEST);
     }
 
+    /** 查询字段不存在异常处理 */
+    @ExceptionHandler(QueryFieldNotExistsException.class)
+    public ResponseEntity<ApiResponse<Void>> handleQueryFieldNotExistsException(
+            QueryFieldNotExistsException e) {
+        ApiResponse<Void> response =
+                ApiResponse.error(
+                        ErrorCode.MODULE_QUERY_FIELD_NOT_EXISTS.getCode(), e.getMessage());
+        return createResponseEntityWithUtf8(response, HttpStatus.BAD_REQUEST);
+    }
+
     /** 参数校验异常处理 */
     @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
     public ResponseEntity<ApiResponse<Void>> handleValidationException(Exception e) {
@@ -81,8 +91,8 @@ public class GlobalExceptionHandler {
     }
 
     /** 日志管理系统异常处理 */
-    @ExceptionHandler(LogManageException.class)
-    public ResponseEntity<ApiResponse<Void>> handleLogManageException(LogManageException e) {
+    @ExceptionHandler(MiaoChaException.class)
+    public ResponseEntity<ApiResponse<Void>> handleLogManageException(MiaoChaException e) {
         log.error("日志管理异常: ", e);
 
         ApiResponse<Void> response;

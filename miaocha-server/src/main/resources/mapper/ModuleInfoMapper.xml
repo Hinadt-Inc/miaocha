@@ -4,12 +4,12 @@
 
     <!-- 模块信息表所有字段 -->
     <sql id="moduleInfoColumns">
-        id, name, datasource_id, table_name, doris_sql, create_time, update_time, create_user, update_user
+        id, name, datasource_id, table_name, doris_sql, query_config, create_time, update_time, create_user, update_user
     </sql>
 
     <!-- 模块信息表带用户信息的字段 -->
     <sql id="moduleInfoWithUserColumns">
-        m.id, m.name, m.datasource_id, m.table_name, m.doris_sql,
+        m.id, m.name, m.datasource_id, m.table_name, m.doris_sql, m.query_config,
         m.create_time, m.update_time, m.create_user, m.update_user,
         cu.nickname as create_user_name,
         uu.nickname as update_user_name
@@ -76,6 +76,7 @@
             datasource_id = #{datasourceId},
             table_name = #{tableName},
             doris_sql = #{dorisSql},
+            query_config = #{queryConfig},
             update_user = #{updateUser}
         WHERE id = #{id}
     </update>
