@@ -36,19 +36,25 @@ export const useQueryExecution = (
 
       let queryToExecute = '';
 
-      // 优先级：1. 选中文本（通过编辑器获取） 2. 传入的SQL 3. 状态中的SQL
-      if (options?.selectedText && options.editor) {
-        // 使用编辑器工具提取选中的完整SQL语句
+      // 优先级：1. 传入的SQL 2. 选中文本 3. 状态中的SQL
+      if (options?.sql?.trim()) {
+        // 使用传入的SQL (最高优先级)
+        queryToExecute = options.sql;
+      } else if (options?.selectedText?.trim()) {
+        // 使用传入的selectedText
+        queryToExecute = options.selectedText;
+      } else if (options?.editor) {
+        // 尝试从编辑器获取选中的完整SQL语句
         const selectedSQL = getSelectedSQLStatement(options.editor);
         if (selectedSQL.trim()) {
           queryToExecute = selectedSQL;
+        } else {
+          // 如果没有选中内容，获取整个编辑器内容
+          const model = options.editor.getModel();
+          if (model) {
+            queryToExecute = model.getValue();
+          }
         }
-      } else if (options?.sql?.trim()) {
-        // 使用传入的SQL
-        queryToExecute = options.sql;
-      } else if (options?.selectedText?.trim()) {
-        // 如果没有编辑器实例，使用原始逻辑
-        queryToExecute = options.selectedText;
       } else {
         // 最后降级到状态中的SQL
         queryToExecute = sqlQuery;

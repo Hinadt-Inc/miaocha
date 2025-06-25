@@ -152,18 +152,22 @@ const SQLEditorImpl: React.FC = () => {
         }
 
         // 获取要执行的SQL语句
-        // 新逻辑：
-        // 1. 如果有选中文本，执行选中的内容
-        // 2. 如果没有选中文本：
-        //    - 只有一条SQL语句：直接执行整个内容
-        //    - 多条SQL语句：提示用户选中要执行的语句
-        //    - 没有有效语句：执行整个内容（会在后续验证中失败）
+        // 优先级：
+        // 1. 编辑器中的选中文本
+        // 2. 编辑器中的完整内容
+        // 3. 状态中的sqlQuery（降级处理）
         let queryToExecute = '';
+
         if (editorRef.current) {
           const selection = editorRef.current.getSelection();
           const model = editorRef.current.getModel();
           if (model) {
             const fullText = model.getValue();
+
+            // 先同步状态确保一致性
+            if (fullText !== sqlQuery) {
+              setSqlQuery(fullText);
+            }
 
             // 检查是否有选中文本
             if (selection && !selection.isEmpty()) {
@@ -196,6 +200,7 @@ const SQLEditorImpl: React.FC = () => {
         // 如果编辑器获取不到内容，则使用状态中的 sqlQuery（降级处理）
         if (!queryToExecute.trim()) {
           queryToExecute = sqlQuery;
+          console.log('降级使用状态中的SQL:', sqlQuery);
         }
 
         // 验证SQL非空
@@ -251,7 +256,16 @@ const SQLEditorImpl: React.FC = () => {
         message.error('执行查询时发生未知错误');
       }
     }, 300),
-    [executeQueryOriginal, selectedSource, sqlQuery, setActiveTab, setXField, setYField, countSQLStatements],
+    [
+      executeQueryOriginal,
+      selectedSource,
+      sqlQuery,
+      setSqlQuery,
+      setActiveTab,
+      setXField,
+      setYField,
+      countSQLStatements,
+    ],
   );
 
   // 初始化
@@ -357,24 +371,30 @@ const SQLEditorImpl: React.FC = () => {
   };
 
   // SQL片段插入
-  const insertSnippet = useCallback((snippet: string) => {
-    if (editorRef.current) {
-      editorRef.current.focus();
-      const selection = editorRef.current.getSelection();
-      const model = editorRef.current.getModel();
+  const insertSnippet = useCallback(
+    (snippet: string) => {
+      if (editorRef.current) {
+        editorRef.current.focus();
+        const selection = editorRef.current.getSelection();
+        const model = editorRef.current.getModel();
 
-      if (model && selection) {
-        // 使用executeEdits方法直接插入文本
-        editorRef.current.executeEdits('insert-snippet', [{ range: selection, text: snippet }]);
+        if (model && selection) {
+          // 使用executeEdits方法直接插入文本
+          editorRef.current.executeEdits('insert-snippet', [{ range: selection, text: snippet }]);
 
-        // 插入后将光标定位到合适位置
-        const position = editorRef.current.getPosition();
-        if (position) {
-          editorRef.current.setPosition(position);
+          // 插入后将光标定位到合适位置
+          const position = editorRef.current.getPosition();
+          if (position) {
+            editorRef.current.setPosition(position);
+          }
+
+          // 同步状态
+          setSqlQuery(model.getValue());
         }
       }
-    }
-  }, []);
+    },
+    [setSqlQuery],
+  );
 
   // 将SnippetSelector移到组件外部并传递props
   const SnippetSelector: React.FC<{ onSelect: (snippet: string) => void }> = ({ onSelect }) => (
@@ -395,18 +415,34 @@ const SQLEditorImpl: React.FC = () => {
   );
 
   // 用useCallback包裹回调，减少不必要的重渲染
-  const handleTreeNodeDoubleClick = useCallback((tableName: string) => {
-    if (editorRef.current) {
-      insertTextToEditor(editorRef.current, tableName);
-    }
-  }, []);
+  const handleTreeNodeDoubleClick = useCallback(
+    (tableName: string) => {
+      if (editorRef.current) {
+        insertTextToEditor(editorRef.current, tableName);
+        // 强制同步状态
+        const model = editorRef.current.getModel();
+        if (model) {
+          setSqlQuery(model.getValue());
+        }
+      }
+    },
+    [setSqlQuery],
+  );
 
   // 插入字段的回调函数
-  const handleInsertField = useCallback((fieldName: string) => {
-    if (editorRef.current) {
-      insertTextToEditor(editorRef.current, fieldName);
-    }
-  }, []);
+  const handleInsertField = useCallback(
+    (fieldName: string) => {
+      if (editorRef.current) {
+        insertTextToEditor(editorRef.current, fieldName);
+        // 强制同步状态
+        const model = editorRef.current.getModel();
+        if (model) {
+          setSqlQuery(model.getValue());
+        }
+      }
+    },
+    [setSqlQuery],
+  );
 
   const handleInsertTable = useCallback(
     (
@@ -548,9 +584,15 @@ const SQLEditorImpl: React.FC = () => {
       } catch (error) {
         console.error('SQL插入错误:', error);
         insertTextToEditor(editor, safeTableName);
+      } finally {
+        // 无论如何都要同步状态
+        const model = editor.getModel();
+        if (model) {
+          setSqlQuery(model.getValue());
+        }
       }
     },
-    [],
+    [setSqlQuery],
   );
 
   // 补全建议函数用useCallback包裹
@@ -685,8 +727,11 @@ const SQLEditorImpl: React.FC = () => {
     // 监听编辑器内容变化，自动同步状态（包括executeEdits操作）
     const model = editor.getModel();
     if (model) {
+      // 使用 onDidChangeContent 监听所有内容变化，包括 executeEdits
       model.onDidChangeContent(() => {
-        setSqlQuery(model.getValue());
+        const currentValue = model.getValue();
+        // 确保状态与编辑器内容同步
+        setSqlQuery(currentValue);
       });
     }
   };
