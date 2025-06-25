@@ -160,7 +160,7 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
     <>
       {contextHolder}
       <Modal
-        title={`日志跟踪 (机器ID: ${logstashMachineId})`}
+        title={`日志跟踪 (实例ID: ${logstashMachineId})`}
         open={visible}
         width="100%"
         style={{

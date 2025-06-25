@@ -12,6 +12,7 @@ import {
   Descriptions,
   Skeleton,
   Tooltip,
+  Divider,
 } from 'antd';
 import type { TablePaginationConfig } from 'antd';
 import styles from './LogstashManagementPage.module.less';
@@ -971,6 +972,11 @@ function LogstashManagementPage() {
                 ),
               },
             ]}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showTotal: (total) => `共 ${total} 条`,
+            }}
           />
         </Modal>
         <Modal
@@ -1013,58 +1019,64 @@ function LogstashManagementPage() {
                 </Descriptions>
 
                 <h4 style={{ marginBottom: 16 }}>步骤详情</h4>
-                {Object.entries(task.instanceSteps).map(([machineName, steps]) => (
-                  <div key={machineName} style={{ marginBottom: 16 }}>
-                    <h5>
-                      {machineName} (进度: {task.instanceProgressPercentages[machineName]}%)
-                    </h5>
-                    <Table
-                      size="small"
-                      bordered
-                      dataSource={steps}
-                      rowKey="stepId"
-                      columns={[
-                        { title: '步骤ID', dataIndex: 'stepId', key: 'stepId' },
-                        { title: '步骤名称', dataIndex: 'stepName', key: 'stepName' },
-                        {
-                          title: '状态',
-                          dataIndex: 'status',
-                          key: 'status',
-                          render: (status: string) => (
-                            <Tag
-                              color={status === 'COMPLETED' ? 'success' : status === 'FAILED' ? 'error' : 'processing'}
-                            >
-                              {status}
-                            </Tag>
-                          ),
-                        },
-                        {
-                          title: '开始时间',
-                          dataIndex: 'startTime',
-                          key: 'startTime',
-                          render: (startTime: string) =>
-                            startTime ? dayjs(startTime).format('YYYY-MM-DD HH:mm:ss') : '-',
-                        },
-                        {
-                          title: '结束时间',
-                          dataIndex: 'endTime',
-                          key: 'endTime',
-                          render: (endTime: string) => (endTime ? dayjs(endTime).format('YYYY-MM-DD HH:mm:ss') : '-'),
-                        },
-                        {
-                          title: '持续时间',
-                          dataIndex: 'duration',
-                          key: 'duration',
-                          render: (duration: number) => (duration != null ? `${duration}ms` : '-'),
-                        },
-                        {
-                          title: '错误信息',
-                          dataIndex: 'errorMessage',
-                          key: 'errorMessage',
-                          render: (errorMessage: string) => errorMessage || '-',
-                        },
-                      ]}
-                    />
+                {Object.entries(task.instanceSteps).map(([machineName, steps], index) => (
+                  <div key={machineName}>
+                    {index > 0 && <Divider />}
+                    <div style={{ marginBottom: 12 }}>
+                      <h5>
+                        {machineName} (进度: {task.instanceProgressPercentages[machineName]}%)
+                      </h5>
+                      <Table
+                        size="small"
+                        bordered
+                        dataSource={steps}
+                        rowKey="stepId"
+                        pagination={false}
+                        columns={[
+                          { title: '步骤ID', dataIndex: 'stepId', key: 'stepId' },
+                          { title: '步骤名称', dataIndex: 'stepName', key: 'stepName' },
+                          {
+                            title: '状态',
+                            dataIndex: 'status',
+                            key: 'status',
+                            render: (status: string) => (
+                              <Tag
+                                color={
+                                  status === 'COMPLETED' ? 'success' : status === 'FAILED' ? 'error' : 'processing'
+                                }
+                              >
+                                {status}
+                              </Tag>
+                            ),
+                          },
+                          {
+                            title: '开始时间',
+                            dataIndex: 'startTime',
+                            key: 'startTime',
+                            render: (startTime: string) =>
+                              startTime ? dayjs(startTime).format('YYYY-MM-DD HH:mm:ss') : '-',
+                          },
+                          {
+                            title: '结束时间',
+                            dataIndex: 'endTime',
+                            key: 'endTime',
+                            render: (endTime: string) => (endTime ? dayjs(endTime).format('YYYY-MM-DD HH:mm:ss') : '-'),
+                          },
+                          {
+                            title: '持续时间',
+                            dataIndex: 'duration',
+                            key: 'duration',
+                            render: (duration: number) => (duration != null ? `${duration}ms` : '-'),
+                          },
+                          {
+                            title: '错误信息',
+                            dataIndex: 'errorMessage',
+                            key: 'errorMessage',
+                            render: (errorMessage: string) => errorMessage || '-',
+                          },
+                        ]}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1112,66 +1124,72 @@ function LogstashManagementPage() {
 
               <h4 style={{ marginBottom: 16 }}>机器步骤详情</h4>
               {Object.entries(selectedTask.instanceSteps as Record<string, LogstashTaskStep[]>).map(
-                ([machineName, steps]) => (
-                  <div key={machineName} style={{ marginBottom: 24 }}>
-                    <h5>
-                      {machineName} (进度: {selectedTask.instanceProgressPercentages[machineName]}%)
-                    </h5>
-                    <Table
-                      size="small"
-                      bordered
-                      dataSource={steps}
-                      rowKey="stepId"
-                      columns={[
-                        {
-                          title: '步骤ID',
-                          dataIndex: 'stepId',
-                          key: 'stepId',
-                        },
-                        {
-                          title: '步骤名称',
-                          dataIndex: 'stepName',
-                          key: 'stepName',
-                        },
-                        {
-                          title: '状态',
-                          dataIndex: 'status',
-                          key: 'status',
-                          render: (status: string) => (
-                            <Tag
-                              color={status === 'COMPLETED' ? 'success' : status === 'FAILED' ? 'error' : 'processing'}
-                            >
-                              {status}
-                            </Tag>
-                          ),
-                        },
-                        {
-                          title: '开始时间',
-                          dataIndex: 'startTime',
-                          key: 'startTime',
-                          render: (startTime: string) =>
-                            startTime ? dayjs(startTime).format('YYYY-MM-DD HH:mm:ss') : '-',
-                        },
-                        {
-                          title: '结束时间',
-                          dataIndex: 'endTime',
-                          key: 'endTime',
-                          render: (endTime: string) => (endTime ? dayjs(endTime).format('YYYY-MM-DD HH:mm:ss') : '-'),
-                        },
-                        {
-                          title: '持续时间',
-                          dataIndex: 'duration',
-                          key: 'duration',
-                          render: (duration: number) => (duration != null ? `${duration}ms` : '-'),
-                        },
-                        {
-                          title: '错误信息',
-                          dataIndex: 'errorMessage',
-                          key: 'errorMessage',
-                          render: (errorMessage: string) => errorMessage || '-',
-                        },
-                      ]}
-                    />
+                ([machineName, steps], index) => (
+                  <div key={machineName}>
+                    {index > 0 && <Divider />}
+                    <div style={{ marginBottom: 12 }}>
+                      <h5>
+                        {machineName} (进度: {selectedTask.instanceProgressPercentages[machineName]}%)
+                      </h5>
+                      <Table
+                        size="small"
+                        bordered
+                        dataSource={steps}
+                        rowKey="stepId"
+                        columns={[
+                          {
+                            title: '步骤ID',
+                            dataIndex: 'stepId',
+                            key: 'stepId',
+                          },
+                          {
+                            title: '步骤名称',
+                            dataIndex: 'stepName',
+                            key: 'stepName',
+                          },
+                          {
+                            title: '状态',
+                            dataIndex: 'status',
+                            key: 'status',
+                            render: (status: string) => (
+                              <Tag
+                                color={
+                                  status === 'COMPLETED' ? 'success' : status === 'FAILED' ? 'error' : 'processing'
+                                }
+                              >
+                                {status}
+                              </Tag>
+                            ),
+                          },
+                          {
+                            title: '开始时间',
+                            dataIndex: 'startTime',
+                            key: 'startTime',
+                            render: (startTime: string) =>
+                              startTime ? dayjs(startTime).format('YYYY-MM-DD HH:mm:ss') : '-',
+                          },
+                          {
+                            title: '结束时间',
+                            dataIndex: 'endTime',
+                            key: 'endTime',
+                            render: (endTime: string) => (endTime ? dayjs(endTime).format('YYYY-MM-DD HH:mm:ss') : '-'),
+                          },
+                          {
+                            title: '持续时间',
+                            dataIndex: 'duration',
+                            key: 'duration',
+                            render: (duration: number) => (duration != null ? `${duration}ms` : '-'),
+                          },
+                          {
+                            title: '错误信息',
+                            dataIndex: 'errorMessage',
+                            key: 'errorMessage',
+                            render: (errorMessage: string) => errorMessage || '-',
+                          },
+                        ]}
+                        pagination={false}
+                      />
+                    </div>
                   </div>
                 ),
               )}
