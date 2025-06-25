@@ -11,6 +11,12 @@ import java.util.concurrent.CompletableFuture;
 /** 停止Logstash进程命令 - 重构支持多实例，基于logstashMachineId */
 public class StopProcessCommand extends AbstractLogstashCommand {
 
+    /** 停止进程的重试超时时间（秒） */
+    private static final int STOP_TIMEOUT_SECONDS = 60;
+
+    /** 每次轮询的间隔时间（秒） */
+    private static final int POLL_INTERVAL_SECONDS = 3;
+
     public StopProcessCommand(
             SshClient sshClient,
             String deployBaseDir,
@@ -115,39 +121,14 @@ public class StopProcessCommand extends AbstractLogstashCommand {
                 return future;
             }
 
-            logger.info("开始停止Logstash进程，实例ID: {}, PID: {}", logstashMachineId, pid);
+            logger.info("停止Logstash进程，实例ID: {}, PID: {}", logstashMachineId, pid);
 
-            // 尝试优雅停止（发送TERM信号）
-            String stopCommand = String.format("kill %s", pid);
-            sshClient.executeCommand(machineInfo, stopCommand);
+            // 直接使用 kill -9 强制停止进程
+            String forceStopCommand = String.format("kill -9 %s", pid);
+            sshClient.executeCommand(machineInfo, forceStopCommand);
 
-            // 等待进程停止
-            Thread.sleep(5000);
-
-            // 检查进程是否已停止
-            String checkProcessCommand =
-                    String.format(
-                            "if ps -p %s > /dev/null 2>&1; then echo \"running\"; else echo"
-                                    + " \"stopped\"; fi",
-                            pid);
-            String checkResult = sshClient.executeCommand(machineInfo, checkProcessCommand);
-
-            boolean stopped = "stopped".equals(checkResult.trim());
-
-            if (!stopped) {
-                // 如果优雅停止失败，尝试强制停止
-                logger.warn("优雅停止失败，尝试强制停止，实例ID: {}, PID: {}", logstashMachineId, pid);
-                String forceStopCommand = String.format("kill -9 %s", pid);
-                sshClient.executeCommand(machineInfo, forceStopCommand);
-
-                // 再次等待
-                Thread.sleep(2000);
-
-                // 再次检查
-                String finalCheckResult =
-                        sshClient.executeCommand(machineInfo, checkProcessCommand);
-                stopped = "stopped".equals(finalCheckResult.trim());
-            }
+            // 重试等待进程停止，最多等待60秒，每3秒检查一次
+            boolean stopped = waitForProcessToStop(machineInfo, pid);
 
             if (stopped) {
                 // 删除PID文件并清理数据库
@@ -157,7 +138,7 @@ public class StopProcessCommand extends AbstractLogstashCommand {
 
                 logger.info("成功停止Logstash进程，实例ID: {}, PID: {}", logstashMachineId, pid);
             } else {
-                logger.error("停止Logstash进程失败，实例ID: {}, PID: {}", logstashMachineId, pid);
+                logger.error("停止Logstash进程失败，超时等待未停止，实例ID: {}, PID: {}", logstashMachineId, pid);
             }
 
             future.complete(stopped);
@@ -168,6 +149,69 @@ public class StopProcessCommand extends AbstractLogstashCommand {
         }
 
         return future;
+    }
+
+    /**
+     * 等待进程停止，使用轮询方式检查进程是否已停止
+     *
+     * @param machineInfo 机器信息
+     * @param pid 进程ID
+     * @return true 如果进程已停止，false 如果超时仍未停止
+     */
+    private boolean waitForProcessToStop(MachineInfo machineInfo, String pid) {
+        String checkProcessCommand =
+                String.format(
+                        "if ps -p %s > /dev/null 2>&1; then echo \"running\"; else echo"
+                                + " \"stopped\"; fi",
+                        pid);
+
+        long startTime = System.currentTimeMillis();
+        long timeoutMillis = STOP_TIMEOUT_SECONDS * 1000L;
+        long pollIntervalMillis = POLL_INTERVAL_SECONDS * 1000L;
+
+        while (System.currentTimeMillis() - startTime < timeoutMillis) {
+            try {
+                String checkResult = sshClient.executeCommand(machineInfo, checkProcessCommand);
+                boolean stopped = "stopped".equals(checkResult.trim());
+
+                if (stopped) {
+                    logger.info(
+                            "进程已停止，实例ID: {}, PID: {}, 耗时: {}ms",
+                            logstashMachineId,
+                            pid,
+                            System.currentTimeMillis() - startTime);
+                    return true;
+                }
+
+                // 等待下一次轮询
+                Thread.sleep(pollIntervalMillis);
+
+                logger.debug(
+                        "等待进程停止中，实例ID: {}, PID: {}, 已等待: {}ms",
+                        logstashMachineId,
+                        pid,
+                        System.currentTimeMillis() - startTime);
+
+            } catch (InterruptedException e) {
+                logger.warn("等待进程停止被中断，实例ID: {}, PID: {}", logstashMachineId, pid);
+                Thread.currentThread().interrupt();
+                return false;
+            } catch (Exception e) {
+                logger.warn(
+                        "检查进程状态时出错，实例ID: {}, PID: {}, 错误: {}",
+                        logstashMachineId,
+                        pid,
+                        e.getMessage());
+                // 发生异常时继续等待，可能是临时网络问题
+            }
+        }
+
+        logger.warn(
+                "等待进程停止超时，实例ID: {}, PID: {}, 超时时间: {}秒",
+                logstashMachineId,
+                pid,
+                STOP_TIMEOUT_SECONDS);
+        return false;
     }
 
     @Override
