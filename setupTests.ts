@@ -58,17 +58,16 @@ vi.mock('monaco-editor', () => ({
   },
 }));
 
-// Mock @monaco-editor/react
-vi.mock('@monaco-editor/react', () => ({
-  default: vi.fn((props) => {
-    return {
-      $$typeof: Symbol.for('react.element'),
-      type: 'div',
-      props: {
-        'data-testid': 'monaco-mock',
-        children: props.value,
-        onChange: props.onChange,
-      },
-    };
-  }),
+// Monaco Editor 已经完全本地化，不再需要 @monaco-editor/react 的 mock
+// 如果有需要，可以 mock monaco-editor 本身
+vi.mock('monaco-editor', () => ({
+  editor: {
+    create: vi.fn(() => ({
+      setValue: vi.fn(),
+      getValue: vi.fn(() => ''),
+      dispose: vi.fn(),
+      onDidChangeModelContent: vi.fn(),
+    })),
+    defineTheme: vi.fn(),
+  },
 }));

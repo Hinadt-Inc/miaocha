@@ -1,4 +1,3 @@
-import { loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 
 // 声明全局monaco类型
@@ -12,6 +11,7 @@ declare global {
     getWorker(moduleId: string, label: string): Worker;
   }
 }
+
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
@@ -54,8 +54,8 @@ const WORKER_CONFIG = {
 };
 
 /**
- * 初始化 Monaco 编辑器
- * 设置必要的配置并加载本地编辑器资源
+ * ✅ 100% 本地化的 Monaco 编辑器初始化
+ * 完全不依赖 CDN 和 @monaco-editor/react 的 loader
  */
 let retryCount = 0;
 const MAX_RETRIES = 3;
@@ -63,7 +63,7 @@ const MAX_RETRIES = 3;
 const initMonacoEditor = async (): Promise<typeof monaco | undefined> => {
   // 如果已经初始化过，直接返回
   if (window.monaco) {
-    console.log('Monaco editor 已经初始化，直接返回');
+    console.log('✅ Monaco editor 已经初始化，直接返回');
     return window.monaco;
   }
 
@@ -73,33 +73,27 @@ const initMonacoEditor = async (): Promise<typeof monaco | undefined> => {
     return new WorkerClass();
   };
 
-  // 本地化配置 Monaco workers
+  // 🎯 完全本地化配置 Monaco workers
   self.MonacoEnvironment = { getWorker };
 
   try {
-    // 强制禁用CDN，只使用本地资源
-    loader.config({
-      paths: {
-        vs: '/monaco-editor/min/vs',
-      },
-    });
-
-    // 直接使用本地monaco实例，跳过loader的CDN加载
+    // 🎯 直接使用本地monaco实例，完全跳过CDN加载
     window.monaco = monaco;
-    console.log('Monaco editor 直接本地加载成功');
+    console.log('✅ Monaco editor 100% 本地加载成功！');
 
     // 为 SQL 设置自定义主题
     if (window.monaco) {
       window.monaco.editor.defineTheme('sqlTheme', THEME_CONFIG);
+      console.log('✅ SQL 自定义主题已设置');
     }
 
     retryCount = 0; // 重置计数器
     return window.monaco;
   } catch (error) {
-    console.error('Monaco editor 初始化失败:', error);
+    console.error('❌ Monaco editor 初始化失败:', error);
     // 添加重试机制
     if (retryCount < MAX_RETRIES) {
-      console.log(`正在重试Monaco初始化(第${retryCount + 1}次)...`);
+      console.log(`🔄 正在重试Monaco初始化(第${retryCount + 1}次)...`);
       retryCount++;
       return initMonacoEditor();
     } else {
