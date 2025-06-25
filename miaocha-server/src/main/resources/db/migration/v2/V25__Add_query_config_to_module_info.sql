@@ -23,7 +23,15 @@ ADD COLUMN query_config JSON COMMENT '查询配置JSON，包含时间字段和�
 --   ]
 -- }
 
--- 3. 设置默认值为空JSON对象（对于现有数据）
+-- 3. 为现有数据设置默认查询配置（兼容现有数据）
 UPDATE module_info 
-SET query_config = JSON_OBJECT() 
+SET query_config = JSON_OBJECT(
+    'timeField', 'log_time',
+    'keywordFields', JSON_ARRAY(
+        JSON_OBJECT(
+            'fieldName', 'message',
+            'searchMethod', 'MATCH_PHRASE'
+        )
+    )
+) 
 WHERE query_config IS NULL; 
