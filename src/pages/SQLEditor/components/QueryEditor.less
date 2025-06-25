@@ -36,4 +36,27 @@
     padding: 20px;
     text-align: center;
   }
+
+  .monaco-editor-container {
+    width: 100%;
+    display: block;
+    height: 300px; // 默认高度
+    
+    &.loading {
+      display: none;
+    }
+
+    // 根据data-height属性设置高度
+    &[data-height="400"] {
+      height: 400px;
+    }
+
+    &[data-height="500"] {
+      height: 500px;
+    }
+
+    &[data-height="600"] {
+      height: 600px;
+    }
+  }
 }

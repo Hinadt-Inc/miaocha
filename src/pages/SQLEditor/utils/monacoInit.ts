@@ -61,6 +61,12 @@ let retryCount = 0;
 const MAX_RETRIES = 3;
 
 const initMonacoEditor = async (): Promise<typeof monaco | undefined> => {
+  // 如果已经初始化过，直接返回
+  if (window.monaco) {
+    console.log('Monaco editor 已经初始化，直接返回');
+    return window.monaco;
+  }
+
   // 获取对应语言的worker
   const getWorker = (_moduleId: string, label: string): Worker => {
     const WorkerClass = WORKER_CONFIG[label as keyof typeof WORKER_CONFIG] || WORKER_CONFIG.default;
@@ -70,59 +76,37 @@ const initMonacoEditor = async (): Promise<typeof monaco | undefined> => {
   // 本地化配置 Monaco workers
   self.MonacoEnvironment = { getWorker };
 
-  // 强制使用本地配置(使用相对路径)
-  const config = {
-    monaco,
-    paths: {
-      vs: '/monaco-editor/min/vs',
-    },
-    'vs/nls': {
-      availableLanguages: {
-        '*': 'zh-cn',
+  try {
+    // 强制禁用CDN，只使用本地资源
+    loader.config({
+      paths: {
+        vs: '/monaco-editor/min/vs',
       },
-    },
-    useCDN: false,
-    disableWorker: false,
-    // workerPath可能与getWorker函数冲突，这里移除
-  };
-  // 精确类型声明
-  loader.config(config);
-
-  // 设置超时来处理加载时间过长的情况
-  const timeoutPromise = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('Monaco editor 加载超时')), 30000),
-  );
-
-  // 初始化编辑器并确保加载顺序
-  return Promise.race([loader.init(), timeoutPromise])
-    .then((monacoInstance) => {
-      if (!monacoInstance) {
-        throw new Error('Monaco实例未正确加载');
-      }
-      window.monaco = monacoInstance as typeof import('monaco-editor');
-      console.log('Monaco editor 本地加载成功', window.monaco === monacoInstance);
-
-      // 为 SQL 设置自定义主题
-      if (window.monaco) {
-        window.monaco.editor.defineTheme('sqlTheme', THEME_CONFIG);
-      }
-
-      return window.monaco; // 返回monaco实例
-    })
-    .catch((error) => {
-      console.error('Monaco editor 初始化失败:', error);
-      // 即使初始化失败，也确保全局环境变量被设置
-      // 注意：MonacoEnvironment 不应该作为window的属性，而是作为全局变量
-      // 添加重试机制
-      if (retryCount < MAX_RETRIES) {
-        console.log(`正在重试Monaco初始化(第${retryCount + 1}次)...`);
-        retryCount++;
-        return initMonacoEditor();
-      } else {
-        retryCount = 0; // 重置计数器
-      }
-      throw error;
     });
+
+    // 直接使用本地monaco实例，跳过loader的CDN加载
+    window.monaco = monaco;
+    console.log('Monaco editor 直接本地加载成功');
+
+    // 为 SQL 设置自定义主题
+    if (window.monaco) {
+      window.monaco.editor.defineTheme('sqlTheme', THEME_CONFIG);
+    }
+
+    retryCount = 0; // 重置计数器
+    return window.monaco;
+  } catch (error) {
+    console.error('Monaco editor 初始化失败:', error);
+    // 添加重试机制
+    if (retryCount < MAX_RETRIES) {
+      console.log(`正在重试Monaco初始化(第${retryCount + 1}次)...`);
+      retryCount++;
+      return initMonacoEditor();
+    } else {
+      retryCount = 0; // 重置计数器
+    }
+    throw error;
+  }
 };
 
 export default initMonacoEditor;
