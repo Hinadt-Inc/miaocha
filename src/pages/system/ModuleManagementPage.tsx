@@ -499,7 +499,25 @@ const ModuleManagementPage = () => {
               {moduleDetail.updateUserName || moduleDetail.updateUser}
             </Descriptions.Item>
             <Descriptions.Item label="Doris SQL" span={2}>
-              <pre style={{ margin: 0 }}>{moduleDetail.dorisSql}</pre>
+              <div
+                style={{
+                  maxHeight: '300px',
+                  overflow: 'auto',
+                  fontSize: '12px',
+                  lineHeight: '1.4',
+                }}
+              >
+                <pre
+                  style={{
+                    margin: 0,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    overflowWrap: 'break-word',
+                  }}
+                >
+                  {moduleDetail.dorisSql || '暂无SQL语句'}
+                </pre>
+              </div>
             </Descriptions.Item>
           </Descriptions>
         )}
