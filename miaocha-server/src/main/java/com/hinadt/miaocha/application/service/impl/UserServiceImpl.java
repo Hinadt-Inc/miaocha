@@ -43,8 +43,12 @@ public class UserServiceImpl implements UserService {
     @Override
     public LoginResponseDTO login(LoginRequestDTO loginRequest) {
         User user = userMapper.selectByEmail(loginRequest.getEmail());
-        if (user == null || user.getStatus() == 0) {
-            throw new BusinessException(ErrorCode.USER_PASSWORD_ERROR);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        if (user.getStatus() == 0) {
+            throw new BusinessException(ErrorCode.USER_FORBIDDEN);
         }
 
         if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {

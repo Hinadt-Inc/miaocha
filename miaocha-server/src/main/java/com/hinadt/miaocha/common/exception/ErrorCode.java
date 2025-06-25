@@ -22,6 +22,7 @@ public enum ErrorCode {
     USER_NOT_FOUND("3001", "用户不存在"),
     USER_NAME_EXISTS("3002", "用户名已存在"),
     USER_PASSWORD_ERROR("3003", "用户名或密码错误"),
+    USER_FORBIDDEN("3004", "用户被禁用，无法登录"),
 
     // 认证相关错误码
     INVALID_TOKEN("3101", "无效的令牌"),

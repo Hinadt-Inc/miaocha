@@ -172,7 +172,7 @@ public class UserServiceTest {
                             userService.login(loginRequestDTO);
                         });
 
-        assertEquals(ErrorCode.USER_PASSWORD_ERROR, exception.getErrorCode());
+        assertEquals(ErrorCode.USER_NOT_FOUND, exception.getErrorCode());
         verify(userMapper).selectByEmail("test@example.com");
         verify(passwordEncoder, never()).matches(anyString(), anyString());
         verify(jwtUtils, never()).generateToken(anyString());
