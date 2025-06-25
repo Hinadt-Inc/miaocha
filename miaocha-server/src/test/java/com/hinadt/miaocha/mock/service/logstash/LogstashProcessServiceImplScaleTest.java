@@ -228,9 +228,6 @@ class LogstashProcessServiceImplScaleTest {
         when(logstashDeployService.deleteInstancesDirectory(anyList()))
                 .thenReturn(deleteDirectoryFuture);
 
-        // Mock taskService返回空的任务ID列表
-        when(taskService.getAllInstanceTaskIds(2L)).thenReturn(Arrays.asList());
-
         // 执行测试
         LogstashProcessResponseDTO result =
                 logstashProcessService.scaleLogstashProcess(processId, dto);
@@ -242,8 +239,7 @@ class LogstashProcessServiceImplScaleTest {
         // 验证调用了删除目录服务（异步删除实例目录和数据库记录）
         verify(logstashDeployService).deleteInstancesDirectory(anyList());
 
-        // 验证调用了任务查询服务，但没有任务需要删除
-        verify(taskService).getAllInstanceTaskIds(2L);
+        // 注意：新的缩容逻辑保留任务记录，不再调用 taskService.getAllInstanceTaskIds
     }
 
     @Test
@@ -337,9 +333,6 @@ class LogstashProcessServiceImplScaleTest {
         when(logstashDeployService.deleteInstancesDirectory(anyList()))
                 .thenReturn(deleteDirectoryFuture);
 
-        // Mock taskService返回空的任务ID列表
-        when(taskService.getAllInstanceTaskIds(2L)).thenReturn(Arrays.asList());
-
         // 执行测试
         LogstashProcessResponseDTO result =
                 logstashProcessService.scaleLogstashProcess(processId, dto);
@@ -352,8 +345,7 @@ class LogstashProcessServiceImplScaleTest {
         verify(logstashDeployService).forceStopInstances(anyList());
         // 验证调用了删除目录服务
         verify(logstashDeployService).deleteInstancesDirectory(anyList());
-        // 删除任务验证
-        verify(taskService).getAllInstanceTaskIds(2L);
+        // 注意：新的缩容逻辑保留任务记录，不再调用 taskService.getAllInstanceTaskIds
     }
 
     @Test

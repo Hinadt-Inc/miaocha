@@ -500,13 +500,15 @@ public class LogstashInstanceScalingIntegrationTest {
         assertThat(remainingInstance.getDeployPath()).isEqualTo("/opt/logstash/scaling-base");
         assertThat(remainingInstance.getState()).isEqualTo(LogstashMachineState.NOT_STARTED.name());
 
-        // 验证被删除实例的任务和步骤记录被清理
-        boolean instance1RecordsCleanedUp =
-                databaseVerifier.verifyTaskAndStepRecordsCleanedUp(scaleOutInstance1Id);
-        boolean instance2RecordsCleanedUp =
-                databaseVerifier.verifyTaskAndStepRecordsCleanedUp(scaleOutInstance2Id);
-        assertThat(instance1RecordsCleanedUp).isTrue();
-        assertThat(instance2RecordsCleanedUp).isTrue();
+        // 验证被删除实例的任务记录保持不变（新行为：缩容时保留任务记录）
+        boolean instance1TasksPreserved =
+                databaseVerifier.verifyTaskAndStepRecordsPreserved(scaleOutInstance1Id);
+        boolean instance2TasksPreserved =
+                databaseVerifier.verifyTaskAndStepRecordsPreserved(scaleOutInstance2Id);
+        assertThat(instance1TasksPreserved).isTrue();
+        assertThat(instance2TasksPreserved).isTrue();
+
+        log.info("✅ 被删除实例的任务记录已保留（缩容新行为）");
 
         // 2. 文件系统层面验证 - 验证被删除实例的目录清理
         LogstashMachine deletedInstance1ForCheck = new LogstashMachine();

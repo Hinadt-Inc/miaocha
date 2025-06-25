@@ -652,7 +652,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             stopRunningInstancesForScaleIn(removeInstances);
         }
 
-        cleanupScaleInResources(dto.getRemoveLogstashMachineIds(), removeInstances);
+        cleanupScaleInResourcesWithoutTasks(dto.getRemoveLogstashMachineIds(), removeInstances);
 
         log.info("Logstash进程[{}]缩容完成，成功移除{}个实例", process.getId(), removeInstances.size());
         return toResponseDTO(process.getId());
@@ -724,6 +724,29 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 清理缩容资源，但保留任务记录 这个方法不会删除实例的任务记录，只清理目录资源
+     *
+     * @param instanceIds 实例ID列表
+     * @param instances 实例对象列表
+     */
+    private void cleanupScaleInResourcesWithoutTasks(
+            List<Long> instanceIds, List<LogstashMachine> instances) {
+        // 只删除目录，不删除任务记录
+        // 在异步删除logstash进程实例完成时会删除logstash进程实例数据库记录
+        deleteDirectoriesForInstances(instances);
+
+        log.info("已清理{}个LogstashMachine实例的目录资源，保留任务记录", instances.size());
+    }
+
+    /**
+     * 清理缩容资源（包含任务记录）
+     *
+     * @deprecated 使用 {@link #cleanupScaleInResourcesWithoutTasks(List, List)} 代替，新方法保留任务记录
+     * @param instanceIds 实例ID列表
+     * @param instances 实例对象列表
+     */
+    @Deprecated
     private void cleanupScaleInResources(List<Long> instanceIds, List<LogstashMachine> instances) {
         deleteTasksForInstances(instanceIds);
 

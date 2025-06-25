@@ -305,6 +305,28 @@ public class LogstashDatabaseVerifier {
         return true;
     }
 
+    /** 验证任务和步骤记录被正确保留 */
+    public boolean verifyTaskAndStepRecordsPreserved(Long instanceId) {
+        List<String> taskIds = logstashTaskMapper.findTaskIdsByLogstashMachineId(instanceId);
+        if (taskIds.isEmpty()) {
+            log.error("实例 {} 的任务记录被意外清理，预期应该保留", instanceId);
+            return false;
+        }
+
+        List<LogstashTaskMachineStep> steps = stepMapper.findByLogstashMachineId(instanceId);
+        if (steps.isEmpty()) {
+            log.error("实例 {} 的步骤记录被意外清理，预期应该保留", instanceId);
+            return false;
+        }
+
+        log.info(
+                "✅ 实例 {} 的任务和步骤记录已被正确保留 - 任务数: {}, 步骤数: {}",
+                instanceId,
+                taskIds.size(),
+                steps.size());
+        return true;
+    }
+
     /** 获取实例的详细任务和步骤信息（用于调试和故障排查） */
     public void logInstanceTasksAndStepsDetails(Long instanceId) {
         log.info("=== 实例 {} 的任务和步骤详情 ===", instanceId);
