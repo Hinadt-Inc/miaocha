@@ -180,7 +180,7 @@ const ModulePermissionModal = ({
           </div>
         </div>
         <Table
-          rowKey="moduleId"
+          rowKey="moduleName"
           bordered
           columns={columns}
           dataSource={filteredModules}
@@ -188,9 +188,6 @@ const ModulePermissionModal = ({
           rowSelection={{
             selectedRowKeys: selectedModules,
             onChange: handleSelectChange,
-            getCheckboxProps: (record) => ({
-              disabled: record.authorized,
-            }),
           }}
           pagination={{ pageSize: 10 }}
         />
