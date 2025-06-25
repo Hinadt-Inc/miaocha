@@ -1,34 +1,42 @@
-.visualization-container {
+.visualization-panel {
   margin-top: 16px;
   padding: 24px;
   background-color: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(104, 89, 89, 0.06);
+  overflow: hidden;
+  min-height: 500px;
   
   .chart-controls {
-    padding-bottom: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
     background-color: #fafafa;
     border-radius: 6px;
+    overflow: visible;
     
     .ant-form {
       display: flex;
       flex-wrap: wrap;
       gap: 16px;
+      align-items: center;
       
       .ant-form-item {
         margin: 0;
         flex-shrink: 0;
         
+        .ant-form-item-label {
+          white-space: nowrap;
+        }
+        
         .ant-select {
           min-width: 160px;
-          height: calc(100% - 2px);
+          height: 32px;
         }
       }
     }
   }
-  .visualization-panel {
-    padding: 10px;
-    .chart-container {
+  
+  .chart-container {
     position: relative;
     min-height: 400px;
     border-radius: 6px;
@@ -46,8 +54,6 @@
       height: calc(100vh - 180px);
     }
   }
-  }
-  
 }
 
 // 图表样式优化
@@ -103,5 +109,43 @@
   .echarts-axis-label {
     fill: #666;
     font-size: 12px;
+  }
+}
+
+// 响应式布局
+@media (max-width: 768px) {
+  .visualization-panel {
+    padding: 16px;
+    
+    .chart-controls {
+      .ant-form {
+        flex-direction: column;
+        gap: 12px;
+        
+        .ant-form-item {
+          width: 100%;
+          
+          .ant-select {
+            width: 100%;
+            min-width: auto;
+          }
+        }
+      }
+    }
+    
+    .chart-container {
+      min-height: 300px;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .visualization-panel {
+    padding: 12px;
+    margin-top: 8px;
+    
+    .chart-controls {
+      padding: 12px;
+    }
   }
 }

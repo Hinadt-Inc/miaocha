@@ -2,6 +2,7 @@ import { useRef, useMemo } from 'react';
 import { Empty, Form, Select } from 'antd';
 import ReactECharts from 'echarts-for-react';
 import { QueryResult } from '../types';
+import { colorPrimary } from '@/utils/utils';
 import './VisualizationPanel.less';
 
 const { Option } = Select;
@@ -124,7 +125,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
               borderWidth: 2,
             },
             label: {
-              show: true,
+              show: false,
               position: 'outside',
               formatter: '{b}: {d}%',
             },
@@ -214,7 +215,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
           type: chartType,
           data: yData,
           itemStyle: {
-            color: colors[0],
+            color: colorPrimary,
             borderRadius: chartType === 'bar' ? 4 : 0,
           },
           lineStyle:
@@ -227,7 +228,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
               : undefined,
           smooth: chartType === 'line',
           label: {
-            show: true,
+            show: false,
             position: 'top',
             distance: 10,
             color: '#666',
