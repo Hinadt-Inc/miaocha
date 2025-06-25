@@ -20,24 +20,21 @@ public class LogSearchDTO {
     private String module;
 
     @Schema(
-            description =
-                    "搜索关键字列表，每个关键字支持多种格式：\n"
-                            + "1. 单个关键字: error\n"
-                            + "2. 多个关键字OR关系: 'error' || 'timeout'\n"
-                            + "3. 多个关键字AND关系: 'error' && 'timeout'\n"
-                            + "4. 复杂表达式: ('error' || 'warning') && ('timeout' || 'failure')",
-            example = "['error', '('error' || 'warning') && 'timeout'']")
-    private List<String> keywords;
+            description = "结构化关键字查询条件列表，支持配置驱动的字段和搜索方法",
+            example =
+                    "[{\"fieldName\": \"message\", \"searchValue\": \"error\"}, "
+                            + "{\"fieldName\": \"level\", \"searchValue\": \"ERROR\"}]")
+    private List<KeywordConditionDTO> keywordConditions;
 
     @Schema(
             description = "WHERE 条件SQL列表，每个条件直接拼接到SQL语句中，多个条件之间使用AND连接",
             example = "['level = \'ERROR\'', 'service_name = \'user-service\'']")
     private List<String> whereSqls;
 
-    @Schema(description = "开始时间", example = "2023-06-01 10:00:00")
+    @Schema(description = "开始时间", example = "2023-06-01 10:00:00.000")
     private String startTime;
 
-    @Schema(description = "结束时间", example = "2023-06-01 11:00:00")
+    @Schema(description = "结束时间", example = "2023-06-01 11:00:00.000")
     private String endTime;
 
     @Schema(

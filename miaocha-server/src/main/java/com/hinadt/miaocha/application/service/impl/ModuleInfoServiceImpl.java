@@ -388,4 +388,30 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
 
         return tableName;
     }
+
+    @Override
+    public QueryConfigDTO getQueryConfigByModule(String module) {
+        if (!StringUtils.hasText(module)) {
+            return null;
+        }
+
+        // 通过模块名称查询模块信息
+        ModuleInfo moduleInfo = moduleInfoMapper.selectByName(module);
+        if (moduleInfo == null) {
+            return null;
+        }
+
+        // 解析查询配置JSON字符串
+        String queryConfigJson = moduleInfo.getQueryConfig();
+        if (!StringUtils.hasText(queryConfigJson)) {
+            return null;
+        }
+
+        try {
+            return objectMapper.readValue(queryConfigJson, QueryConfigDTO.class);
+        } catch (JsonProcessingException e) {
+            log.warn("解析模块 {} 的查询配置JSON失败: {}", module, e.getMessage());
+            return null;
+        }
+    }
 }

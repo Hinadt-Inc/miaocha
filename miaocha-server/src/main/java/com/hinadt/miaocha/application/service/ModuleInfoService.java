@@ -81,4 +81,12 @@ public interface ModuleInfoService {
      * @return 表名
      */
     String getTableNameByModule(String module);
+
+    /**
+     * 根据模块名称获取查询配置
+     *
+     * @param module 模块名称
+     * @return 查询配置DTO，如果模块不存在或未配置则返回null
+     */
+    QueryConfigDTO getQueryConfigByModule(String module);
 }

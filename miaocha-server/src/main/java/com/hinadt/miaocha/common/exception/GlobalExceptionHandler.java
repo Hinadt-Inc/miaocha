@@ -44,7 +44,8 @@ public class GlobalExceptionHandler {
         log.warn("关键字语法异常: {}, 表达式: {}", e.getMessage(), e.getExpression());
         ApiResponse<Void> response =
                 ApiResponse.error(
-                        ErrorCode.VALIDATION_ERROR.getCode(), "关键字表达式语法错误: " + e.getMessage());
+                        ErrorCode.KEY_WORD_QUERY_SYNTAX_ERROR.getCode(),
+                        "关键字表达式语法错误: " + e.getMessage());
         return createResponseEntityWithUtf8(response, HttpStatus.BAD_REQUEST);
     }
 
@@ -125,7 +126,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
         log.error("系统异常: ", e);
         ApiResponse<Void> response =
-                ApiResponse.error(ErrorCode.INTERNAL_ERROR.getCode(), "系统异常，请联系管理员");
+                ApiResponse.error(
+                        ErrorCode.INTERNAL_ERROR.getCode(), "系统异常，请联系管理员, " + e.getMessage());
         return createResponseEntityWithUtf8(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

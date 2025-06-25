@@ -1,6 +1,6 @@
 package com.hinadt.miaocha.config.mybatis;
 
-import com.hinadt.miaocha.common.audit.UserAuditable;
+import com.hinadt.miaocha.common.annotation.UserAuditable;
 import com.hinadt.miaocha.common.util.UserContextUtil;
 import java.util.Properties;
 import org.apache.ibatis.executor.Executor;

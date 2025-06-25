@@ -80,13 +80,24 @@ public enum ErrorCode {
     SQL_NOT_CREATE_TABLE("9002", "只允许执行CREATE TABLE语句"),
     SQL_TABLE_NAME_MISMATCH("9003", "SQL中的表名与模块配置的表名不一致"),
 
+    // 日志查询相关错误码
+    KEY_WORD_QUERY_SYNTAX_ERROR("9100", "关键字查询语法错误"),
+    LOG_DETAIL_QUERY_FAILED("9101", "日志详情查询失败"),
+    LOG_COUNT_QUERY_FAILED("9102", "日志总数查询失败"),
+    LOG_HISTOGRAM_QUERY_FAILED("9103", "日志时间分布查询失败"),
+    LOG_FIELD_DISTRIBUTION_QUERY_FAILED("9104", "日志字段分布查询失败"),
+
     // 表结构校验相关错误码
     TABLE_MESSAGE_FIELD_MISSING("7015", "表结构中缺少必需的message字段，无法进行关键字搜索"),
     TABLE_FIELD_VALIDATION_FAILED("7016", "表结构字段校验失败"),
 
     // 模块查询配置相关错误码
     MODULE_DORIS_SQL_NOT_CONFIGURED("7018", "模块尚未配置建表SQL语句，请先执行建表操作"),
-    MODULE_QUERY_FIELD_NOT_EXISTS("7019", "配置的查询字段不存在于表结构中");
+    MODULE_QUERY_FIELD_NOT_EXISTS("7019", "配置的查询字段不存在于表结构中"),
+    MODULE_QUERY_CONFIG_NOT_FOUND("7020", "模块未配置查询信息"),
+    TIME_FIELD_NOT_CONFIGURED("7021", "模块未配置时间字段"),
+    KEYWORD_FIELDS_NOT_CONFIGURED("7022", "模块未配置关键字查询字段"),
+    KEYWORD_FIELD_NOT_ALLOWED("7023", "字段不允许进行关键字查询");
 
     private final String code;
     private final String message;

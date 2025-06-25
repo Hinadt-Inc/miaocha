@@ -197,7 +197,7 @@ public class LogTailServiceImpl implements LogTailService {
                 // 启动心跳任务
                 task.setHeartbeatFuture(
                         scheduler.scheduleAtFixedRate(
-                                () -> sendHeartbeat(task), 30, 30, TimeUnit.SECONDS));
+                                () -> sendHeartbeat(task), 30, 10, TimeUnit.SECONDS));
 
             } catch (Exception e) {
                 log.error("启动SSH流式命令失败，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage(), e);

@@ -1,6 +1,6 @@
 package com.hinadt.miaocha.domain.entity;
 
-import com.hinadt.miaocha.common.audit.UserAuditable;
+import com.hinadt.miaocha.common.annotation.UserAuditable;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import lombok.Data;

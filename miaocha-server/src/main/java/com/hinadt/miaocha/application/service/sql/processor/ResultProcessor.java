@@ -1,5 +1,7 @@
 package com.hinadt.miaocha.application.service.sql.processor;
 
+import static com.hinadt.miaocha.application.service.sql.builder.SqlFragment.TIME_ALIAS;
+
 import com.hinadt.miaocha.domain.dto.LogDetailResultDTO;
 import com.hinadt.miaocha.domain.dto.LogHistogramResultDTO;
 import java.time.Instant;
@@ -20,29 +22,24 @@ public class ResultProcessor {
     /**
      * 处理日志分布统计查询结果 注意：保持从数据库查询结果中获取的时间倒序排序（即从最新日期到最旧日期）
      *
-     * @param queryResult 查询返回的原始结果
+     * @param queryResult 结构化查询结果
      * @param result 日志时间分布结果DTO，用于填充分布数据
      */
-    public void processDistributionResult(
-            Map<String, Object> queryResult, LogHistogramResultDTO result) {
+    public void processDistributionResult(QueryResult queryResult, LogHistogramResultDTO result) {
         List<LogHistogramResultDTO.LogDistributionData> distributionData = new ArrayList<>();
 
-        List<Map<String, Object>> rows = (List<Map<String, Object>>) queryResult.get("rows");
-
-        if (rows != null) {
-            // 直接使用数据库返回的顺序，因为SQL已经按log_time_升序排序
-            for (Map<String, Object> row : rows) {
+        if (queryResult.hasData()) {
+            // 直接使用数据库返回的顺序，因为SQL已经按TIME_ALIAS升序排序
+            for (Map<String, Object> row : queryResult.getRows()) {
                 LogHistogramResultDTO.LogDistributionData data =
                         new LogHistogramResultDTO.LogDistributionData();
-                if (row.containsKey("log_time_")) {
-                    String timePoint = formatTimePoint(row.get("log_time_"));
+
+                if (row.containsKey(TIME_ALIAS)) {
+                    String timePoint = formatTimePoint(row.get(TIME_ALIAS));
                     data.setTimePoint(timePoint);
                 }
-                if (row.containsKey("count")) {
-                    Object countObj = row.get("count");
-                    data.setCount(
-                            countObj instanceof Number ? ((Number) countObj).longValue() : 0L);
-                }
+
+                data.setCount(getCountValue(row));
                 distributionData.add(data);
             }
         }
@@ -53,30 +50,29 @@ public class ResultProcessor {
     /**
      * 处理详细日志查询结果
      *
-     * @param queryResult 查询返回的原始结果
+     * @param queryResult 结构化查询结果
      * @param result 日志明细结果DTO，用于填充列名和数据行
      */
-    public void processDetailResult(Map<String, Object> queryResult, LogDetailResultDTO result) {
+    public void processDetailResult(QueryResult queryResult, LogDetailResultDTO result) {
         if (queryResult != null) {
-            result.setColumns((List<String>) queryResult.get("columns"));
-            result.setRows((List<Map<String, Object>>) queryResult.get("rows"));
+            result.setColumns(queryResult.getColumns());
+            result.setRows(queryResult.getRows());
         }
     }
 
     /**
      * 处理总数查询结果
      *
-     * @param queryResult 查询返回的原始结果
+     * @param queryResult 结构化查询结果
      * @return 总数值
      */
-    public int processTotalCountResult(Map<String, Object> queryResult) {
+    public int processTotalCountResult(QueryResult queryResult) {
         int totalCount = 0;
 
-        if (queryResult != null) {
-            List<Map<String, Object>> rows = (List<Map<String, Object>>) queryResult.get("rows");
-
-            if (rows != null && !rows.isEmpty() && rows.get(0).containsKey("total")) {
-                Object totalObj = rows.get(0).get("total");
+        if (queryResult != null && queryResult.hasData()) {
+            Map<String, Object> firstRow = queryResult.getFirstRow();
+            if (firstRow.containsKey("total")) {
+                Object totalObj = firstRow.get("total");
                 if (totalObj instanceof Number) {
                     totalCount = ((Number) totalObj).intValue();
                 }
@@ -123,5 +119,15 @@ public class ResultProcessor {
 
         // 非数字字符串，直接返回（已经是时间格式）
         return timeStr;
+    }
+
+    private long getCountValue(Map<String, Object> row) {
+        if (row.containsKey("count")) {
+            Object countObj = row.get("count");
+            if (countObj instanceof Number) {
+                return ((Number) countObj).longValue();
+            }
+        }
+        return 0L;
     }
 }

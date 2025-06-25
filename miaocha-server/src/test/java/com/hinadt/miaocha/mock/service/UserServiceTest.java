@@ -5,11 +5,11 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.reset;
 
-import com.hinadt.miaocha.application.security.JwtUtils;
 import com.hinadt.miaocha.application.service.ModulePermissionService;
 import com.hinadt.miaocha.application.service.impl.UserServiceImpl;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
+import com.hinadt.miaocha.config.security.JwtUtils;
 import com.hinadt.miaocha.domain.converter.UserConverter;
 import com.hinadt.miaocha.domain.dto.auth.LoginRequestDTO;
 import com.hinadt.miaocha.domain.dto.auth.LoginResponseDTO;

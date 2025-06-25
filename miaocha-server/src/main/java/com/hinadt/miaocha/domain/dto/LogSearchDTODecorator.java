@@ -43,8 +43,8 @@ public class LogSearchDTODecorator extends LogSearchDTO {
     }
 
     @Override
-    public List<String> getKeywords() {
-        return delegate.getKeywords();
+    public List<KeywordConditionDTO> getKeywordConditions() {
+        return delegate.getKeywordConditions();
     }
 
     @Override
@@ -88,8 +88,8 @@ public class LogSearchDTODecorator extends LogSearchDTO {
     }
 
     @Override
-    public void setKeywords(List<String> keywords) {
-        delegate.setKeywords(keywords);
+    public void setKeywordConditions(List<KeywordConditionDTO> keywordConditions) {
+        delegate.setKeywordConditions(keywordConditions);
     }
 
     @Override

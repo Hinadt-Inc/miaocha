@@ -1,5 +1,6 @@
 package com.hinadt.miaocha.application.service.sql;
 
+import com.hinadt.miaocha.application.service.sql.processor.QueryResult;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.dto.SqlQueryResultDTO;
@@ -33,15 +34,15 @@ public class JdbcQueryExecutor {
     }
 
     /**
-     * 执行原始SQL查询并返回结果
+     * 执行结构化查询并返回结构化结果
      *
      * @param conn 数据库连接
      * @param sql SQL语句
-     * @return 查询结果，包含列名和行数据
+     * @return 结构化查询结果
      * @throws SQLException 如果SQL执行出错
      */
-    public Map<String, Object> executeRawQuery(Connection conn, String sql) throws SQLException {
-        Map<String, Object> result = new HashMap<>();
+    public QueryResult executeStructuredQuery(Connection conn, String sql) throws SQLException {
+        QueryResult result = new QueryResult();
         List<Map<String, Object>> rows = new ArrayList<>();
         List<String> columns = new ArrayList<>();
 
@@ -68,8 +69,8 @@ public class JdbcQueryExecutor {
             }
         }
 
-        result.put("columns", columns);
-        result.put("rows", rows);
+        result.setColumns(columns);
+        result.setRows(rows);
         return result;
     }
 

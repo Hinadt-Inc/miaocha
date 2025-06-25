@@ -1,10 +1,10 @@
 package com.hinadt.miaocha.config;
 
-import com.hinadt.miaocha.application.security.CustomAccessDeniedHandler;
-import com.hinadt.miaocha.application.security.CustomAuthenticationEntryPoint;
-import com.hinadt.miaocha.application.security.JwtAuthenticationFilter;
-import com.hinadt.miaocha.application.security.JwtUtils;
 import com.hinadt.miaocha.application.service.UserService;
+import com.hinadt.miaocha.config.security.CustomAccessDeniedHandler;
+import com.hinadt.miaocha.config.security.CustomAuthenticationEntryPoint;
+import com.hinadt.miaocha.config.security.JwtAuthenticationFilter;
+import com.hinadt.miaocha.config.security.JwtUtils;
 import java.util.Arrays;
 import java.util.List;
 import org.springframework.context.annotation.Bean;

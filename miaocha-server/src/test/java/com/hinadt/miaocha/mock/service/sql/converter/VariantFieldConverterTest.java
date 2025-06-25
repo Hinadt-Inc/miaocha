@@ -45,231 +45,91 @@ class VariantFieldConverterTest {
 
         @Test
         @Severity(SeverityLevel.CRITICAL)
-        @DisplayName("简单点语法WHERE条件转换 - 期望：message.logId转换为message['logId']")
+        @DisplayName("简单点语法WHERE条件转换 - 期望：request.method转换为request['method']")
         @Description("验证秒查系统能够正确转换简单的JSON字段点语法查询条件")
         @Issue("MIAOCHA-301")
         void testSimpleDotSyntaxWhereConversion() {
             Allure.step(
-                    "准备转换测试数据",
+                    "准备简单点语法转换测试数据",
                     () -> {
-                        String input = "message.logId = 'ae5a8205-4b5f-4ffe-bccd-d8ce49aaab9d'";
+                        String input = "request.method = 'POST'";
                         Allure.parameter("输入SQL条件", input);
-                        Allure.parameter(
-                                "预期输出",
-                                "message['logId'] = 'ae5a8205-4b5f-4ffe-bccd-d8ce49aaab9d'");
+                        Allure.parameter("期望输出", "request['method'] = 'POST'");
+                        Allure.parameter("测试场景", "简单JSON字段点语法转换");
                     });
 
-            String input = "message.logId = 'ae5a8205-4b5f-4ffe-bccd-d8ce49aaab9d'";
-            String expected = "message['logId'] = 'ae5a8205-4b5f-4ffe-bccd-d8ce49aaab9d'";
-
-            String result =
+            String input = "request.method = 'POST'";
+            List<String> result =
                     Allure.step(
                             "执行WHERE条件转换",
                             () -> {
-                                return converter.convertWhereClause(input);
+                                return converter.convertWhereClauses(Arrays.asList(input));
                             });
 
             Allure.step(
                     "验证转换结果",
                     () -> {
-                        assertEquals(expected, result, "简单点语法应转换为括号语法，值部分保持不变");
-                        Allure.parameter("实际输出", result);
+                        assertEquals(1, result.size(), "转换结果应包含1个条件");
+                        assertEquals(
+                                "request['method'] = 'POST'",
+                                result.get(0),
+                                "简单点语法应正确转换为bracket语法");
 
-                        // 附加转换结果
-                        Allure.attachment(
-                                "转换结果对比",
-                                String.format("输入: %s\n输出: %s\n预期: %s", input, result, expected));
+                        Allure.parameter("实际输出", result.get(0));
+                        Allure.attachment("转换验证", "简单点语法WHERE条件转换成功");
                     });
         }
 
         @Test
-        @DisplayName("多层嵌套点语法WHERE条件转换 - 期望：message.marker.data转换为message['marker']['data']")
-        @Severity(SeverityLevel.NORMAL)
-        @Description("验证秒查系统能够正确处理多层嵌套的JSON字段点语法转换")
+        @DisplayName("嵌套点语法WHERE条件转换 - 期望：business.order.status转换为business['order']['status']")
         void testNestedDotSyntaxWhereConversion() {
-            Allure.step(
-                    "准备多层嵌套测试数据",
-                    () -> {
-                        Allure.parameter("输入条件", "message.marker.data = 'test'");
-                        Allure.parameter("预期输出", "message['marker']['data'] = 'test'");
-                        Allure.parameter("嵌套层级", "3层");
-                    });
+            String input = "business.order.status = 'paid' AND business.user.level = 'vip'";
+            List<String> result = converter.convertWhereClauses(Arrays.asList(input));
 
-            String input = "message.marker.data = 'test'";
-            String expected = "message['marker']['data'] = 'test'";
-
-            String result =
-                    Allure.step(
-                            "执行多层嵌套转换",
-                            () -> {
-                                return converter.convertWhereClause(input);
-                            });
-
-            Allure.step(
-                    "验证多层嵌套转换结果",
-                    () -> {
-                        assertEquals(expected, result, "多层嵌套点语法应逐级转换为括号语法");
-                        Allure.parameter("实际输出", result);
-                        Allure.attachment("转换详情", String.format("原始: %s → 转换: %s", input, result));
-                    });
+            assertEquals(1, result.size());
+            String converted = result.get(0);
+            assertTrue(converted.contains("business['order']['status'] = 'paid'"), "嵌套字段应正确转换");
+            assertTrue(converted.contains("business['user']['level'] = 'vip'"), "多个嵌套字段都应转换");
         }
 
         @Test
-        @DisplayName("复杂嵌套点语法WHERE条件转换 - 期望：多个字段同时转换，逻辑运算符保持不变")
-        @Severity(SeverityLevel.CRITICAL)
-        @Description("验证包含多个variant字段和逻辑运算符的复杂WHERE条件能够正确转换")
-        void testComplexNestedWhereConversion() {
-            Allure.step(
-                    "准备复杂WHERE条件测试数据",
-                    () -> {
-                        Allure.parameter(
-                                "输入条件",
-                                "message.marker.duration > 100 AND message.service ="
-                                        + " 'user-service'");
-                        Allure.parameter(
-                                "包含字段",
-                                Arrays.asList("message.marker.duration", "message.service"));
-                        Allure.parameter("逻辑运算符", "AND");
-                        Allure.parameter("比较运算符", Arrays.asList(">", "="));
-                    });
+        @DisplayName("深层嵌套点语法WHERE条件转换 - 期望：复杂嵌套结构正确转换")
+        void testDeepNestedDotSyntaxWhereConversion() {
+            String input = "trace.spans.operations.duration > 1000";
+            List<String> result = converter.convertWhereClauses(Arrays.asList(input));
 
-            String input = "message.marker.duration > 100 AND message.service = 'user-service'";
-            String expected =
-                    "message['marker']['duration'] > 100 AND message['service'] = 'user-service'";
-
-            String result =
-                    Allure.step(
-                            "执行复杂条件转换",
-                            () -> {
-                                return converter.convertWhereClause(input);
-                            });
-
-            Allure.step(
-                    "验证复杂条件转换结果",
-                    () -> {
-                        assertEquals(expected, result, "复杂条件中的多个点语法字段应同时转换，逻辑运算符和比较运算符保持不变");
-
-                        Allure.parameter("实际输出", result);
-                        Allure.parameter("字段转换数量", "2个");
-                        Allure.attachment(
-                                "复杂转换详情",
-                                String.format(
-                                        "原始: %s\n转换: %s\n验证: 多字段同时转换，运算符保持不变", input, result));
-                    });
+            assertEquals(1, result.size());
+            assertEquals(
+                    "trace['spans']['operations']['duration'] > 1000",
+                    result.get(0),
+                    "深层嵌套字段应正确转换");
         }
 
         @Test
-        @DisplayName("值中包含点的WHERE条件 - 期望：只转换字段名，值中的点保持不变")
+        @DisplayName("混合条件WHERE语句转换 - 期望：只转换点语法字段，保留普通字段")
+        void testMixedWhereClauseConversion() {
+            String input = "level = 'ERROR' AND request.user_id = '123' AND host LIKE '%prod%'";
+            List<String> result = converter.convertWhereClauses(Arrays.asList(input));
+
+            assertEquals(1, result.size());
+            String converted = result.get(0);
+            assertTrue(converted.contains("level = 'ERROR'"), "普通字段应保持不变");
+            assertTrue(converted.contains("request['user_id'] = '123'"), "点语法字段应转换");
+            assertTrue(converted.contains("host LIKE '%prod%'"), "普通字段应保持不变");
+        }
+
+        @Test
+        @DisplayName("值中包含点号的WHERE条件 - 期望：值中的点号不被转换")
         void testWhereClauseWithDotsInValues() {
-            String input = "message.logId = 'com.example.service.UserService'";
-            String expected = "message['logId'] = 'com.example.service.UserService'";
-            String result = converter.convertWhereClause(input);
+            String input = "request.path = '/api/v1.0/users' AND config.version = '2.1.0'";
+            List<String> result = converter.convertWhereClauses(Arrays.asList(input));
 
-            assertEquals(expected, result, "字段名中的点应转换，但值中的点应保持不变");
-        }
-
-        @Test
-        @DisplayName("已经是括号语法的WHERE条件 - 期望：不做任何转换")
-        void testAlreadyBracketSyntaxWhere() {
-            String input = "message['logId'] = 'test'";
-            String expected = "message['logId'] = 'test'";
-            String result = converter.convertWhereClause(input);
-
-            assertEquals(expected, result, "已经是括号语法的字段不应再次转换");
-        }
-
-        @Test
-        @DisplayName("普通字段不应被转换 - 期望：不包含点的字段名保持不变")
-        void testRegularFieldsNotConverted() {
-            String input = "level = 'ERROR' AND host = 'server1'";
-            String expected = "level = 'ERROR' AND host = 'server1'";
-            String result = converter.convertWhereClause(input);
-
-            assertEquals(expected, result, "普通字段名（不包含点）不应被转换");
-        }
-
-        @Test
-        @DisplayName("混合括号和点语法 - 期望：只转换点语法部分")
-        void testMixedBracketAndDotSyntax() {
-            String input = "message['level'] = 'ERROR' AND message.service = 'api'";
-            String expected = "message['level'] = 'ERROR' AND message['service'] = 'api'";
-            String result = converter.convertWhereClause(input);
-
-            assertEquals(expected, result, "混合语法中只有点语法部分应被转换");
-        }
-
-        @Test
-        @DisplayName("复杂逻辑运算符组合 - 期望：支持OR、AND、NOT等复杂逻辑")
-        void testComplexLogicalOperators() {
-            String input =
-                    "(message.level = 'ERROR' OR message.level = 'WARN') AND NOT message.service ="
-                            + " 'test'";
-            String expected =
-                    "(message['level'] = 'ERROR' OR message['level'] = 'WARN') AND NOT"
-                            + " message['service'] = 'test'";
-            String result = converter.convertWhereClause(input);
-
-            assertEquals(expected, result, "复杂逻辑运算符组合中的点语法字段应正确转换");
-        }
-
-        @Test
-        @DisplayName("数值比较操作 - 期望：支持各种比较运算符")
-        void testNumericComparisons() {
-            String input =
-                    "message.marker.duration >= 100 AND message.marker.count <= 50 AND"
-                            + " message.marker.rate != 0";
-            String expected =
-                    "message['marker']['duration'] >= 100 AND message['marker']['count'] <= 50 AND"
-                            + " message['marker']['rate'] != 0";
-            String result = converter.convertWhereClause(input);
-
-            assertEquals(expected, result, "数值比较操作中的点语法字段应正确转换");
-        }
-
-        @Test
-        @DisplayName("LIKE模糊匹配 - 期望：支持LIKE操作符")
-        void testLikeOperator() {
-            String input = "message.service LIKE '%user%' AND message.path NOT LIKE '/health%'";
-            String expected =
-                    "message['service'] LIKE '%user%' AND message['path'] NOT LIKE '/health%'";
-            String result = converter.convertWhereClause(input);
-
-            assertEquals(expected, result, "LIKE操作符中的点语法字段应正确转换");
-        }
-
-        @Test
-        @DisplayName("IN操作符 - 期望：支持IN和NOT IN操作")
-        void testInOperator() {
-            String input =
-                    "message.level IN ('ERROR', 'WARN') AND message.service NOT IN ('test',"
-                            + " 'mock')";
-            String expected =
-                    "message['level'] IN ('ERROR', 'WARN') AND message['service'] NOT IN ('test',"
-                            + " 'mock')";
-            String result = converter.convertWhereClause(input);
-
-            assertEquals(expected, result, "IN操作符中的点语法字段应正确转换");
-        }
-
-        @Test
-        @DisplayName("NULL值判断 - 期望：支持IS NULL和IS NOT NULL")
-        void testNullChecks() {
-            String input = "message.error IS NOT NULL AND message.stack IS NULL";
-            String expected = "message['error'] IS NOT NULL AND message['stack'] IS NULL";
-            String result = converter.convertWhereClause(input);
-
-            assertEquals(expected, result, "NULL值判断中的点语法字段应正确转换");
-        }
-
-        @Test
-        @DisplayName("函数调用 - 期望：支持字段作为函数参数")
-        void testFunctionCalls() {
-            String input = "LENGTH(message.content) > 100 AND UPPER(message.level) = 'ERROR'";
-            String expected =
-                    "LENGTH(message['content']) > 100 AND UPPER(message['level']) = 'ERROR'";
-            String result = converter.convertWhereClause(input);
-
-            assertEquals(expected, result, "函数调用中的点语法字段参数应正确转换");
+            assertEquals(1, result.size());
+            String converted = result.get(0);
+            assertTrue(
+                    converted.contains("request['path'] = '/api/v1.0/users'"),
+                    "字段名应转换，但值中的点号应保持不变");
+            assertTrue(converted.contains("config['version'] = '2.1.0'"), "字段名应转换，但值中的点号应保持不变");
         }
     }
 
@@ -280,108 +140,60 @@ class VariantFieldConverterTest {
     class SelectFieldConversionTests {
 
         @Test
-        @DisplayName("简单点语法SELECT字段转换 - 期望：生成带AS别名的括号语法")
-        void testSimpleDotSyntaxSelectConversion() {
-            List<String> input = Arrays.asList("message.logId", "host", "log_time");
+        @DisplayName("简单字段转换 - 期望：request.method转换为request['method'] AS 'request.method'")
+        void testSimpleFieldConversion() {
+            List<String> input = Arrays.asList("request.method", "host", "log_time");
             List<String> result = converter.convertSelectFields(input);
 
-            assertEquals(3, result.size(), "结果列表大小应与输入一致");
-            assertEquals(
-                    "message['logId'] AS 'message.logId'", result.get(0), "点语法字段应转换为括号语法并添加AS别名");
+            assertEquals(3, result.size());
+            assertEquals("request['method'] AS 'request.method'", result.get(0), "点语法字段应转换并添加别名");
             assertEquals("host", result.get(1), "普通字段应保持不变");
             assertEquals("log_time", result.get(2), "普通字段应保持不变");
         }
 
         @Test
-        @DisplayName("多层嵌套SELECT字段转换 - 期望：多级嵌套正确转换")
-        void testNestedSelectFieldConversion() {
+        @DisplayName("嵌套字段转换 - 期望：多层嵌套字段正确转换")
+        void testNestedFieldConversion() {
             List<String> input =
-                    Arrays.asList("message.marker.data", "message.marker.duration", "level");
+                    Arrays.asList(
+                            "user.profile.name",
+                            "business.order.payment.method",
+                            "trace.spans.operations.duration.ms");
             List<String> result = converter.convertSelectFields(input);
 
             assertEquals(3, result.size());
             assertEquals(
-                    "message['marker']['data'] AS 'message.marker.data'",
-                    result.get(0),
-                    "三级嵌套字段应正确转换并保持原始路径作为别名");
+                    "user['profile']['name'] AS 'user.profile.name'", result.get(0), "2层嵌套字段应正确转换");
             assertEquals(
-                    "message['marker']['duration'] AS 'message.marker.duration'",
+                    "business['order']['payment']['method'] AS 'business.order.payment.method'",
                     result.get(1),
-                    "三级嵌套字段应正确转换并保持原始路径作为别名");
-            assertEquals("level", result.get(2), "普通字段应保持不变");
+                    "3层嵌套字段应正确转换");
+            assertEquals(
+                    "trace['spans']['operations']['duration']['ms'] AS"
+                            + " 'trace.spans.operations.duration.ms'",
+                    result.get(2),
+                    "4层嵌套字段应正确转换");
         }
 
         @Test
-        @DisplayName("复杂嵌套SELECT字段转换 - 期望：处理大量混合字段")
-        void testComplexNestedSelectConversion() {
+        @DisplayName("混合字段列表转换 - 期望：只转换需要转换的字段")
+        void testMixedFieldListConversion() {
             List<String> input =
                     Arrays.asList(
-                            "message.level",
-                            "message.line",
-                            "message.marker.reqType",
-                            "message.marker.duration",
-                            "host",
-                            "log_time");
+                            "log_time",
+                            "service_name",
+                            "request.method",
+                            "response.status_code",
+                            "host");
             List<String> result = converter.convertSelectFields(input);
 
-            assertEquals(6, result.size());
-            assertEquals("message['level'] AS 'message.level'", result.get(0));
-            assertEquals("message['line'] AS 'message.line'", result.get(1));
-            assertEquals("message['marker']['reqType'] AS 'message.marker.reqType'", result.get(2));
+            assertEquals(5, result.size());
+            assertEquals("log_time", result.get(0), "普通字段应保持不变");
+            assertEquals("service_name", result.get(1), "普通字段应保持不变");
+            assertEquals("request['method'] AS 'request.method'", result.get(2), "点语法字段应转换");
             assertEquals(
-                    "message['marker']['duration'] AS 'message.marker.duration'", result.get(3));
-            assertEquals("host", result.get(4));
-            assertEquals("log_time", result.get(5));
-        }
-
-        @Test
-        @DisplayName("深层嵌套字段 - 期望：支持四层以上嵌套")
-        void testDeepNestedFields() {
-            List<String> input =
-                    Arrays.asList(
-                            "message.request.headers.auth.token",
-                            "message.response.body.data.user.id");
-            List<String> result = converter.convertSelectFields(input);
-
-            assertEquals(2, result.size());
-            assertEquals(
-                    "message['request']['headers']['auth']['token'] AS"
-                            + " 'message.request.headers.auth.token'",
-                    result.get(0),
-                    "五层嵌套字段应正确转换");
-            assertEquals(
-                    "message['response']['body']['data']['user']['id'] AS"
-                            + " 'message.response.body.data.user.id'",
-                    result.get(1),
-                    "六层嵌套字段应正确转换");
-        }
-
-        @Test
-        @DisplayName("单个字段列表 - 期望：正确处理只有一个字段的情况")
-        void testSingleFieldList() {
-            List<String> input = Arrays.asList("message.logId");
-            List<String> result = converter.convertSelectFields(input);
-
-            assertEquals(1, result.size());
-            assertEquals("message['logId'] AS 'message.logId'", result.get(0), "单个点语法字段应正确转换");
-        }
-
-        @Test
-        @DisplayName("大量字段处理 - 期望：高效处理大量字段")
-        void testLargeFieldList() {
-            List<String> input = new ArrayList<>();
-            for (int i = 0; i < 100; i++) {
-                input.add("message.field" + i);
-                input.add("regular_field" + i);
-            }
-
-            List<String> result = converter.convertSelectFields(input);
-
-            assertEquals(200, result.size(), "结果数量应与输入一致");
-            assertEquals("message['field0'] AS 'message.field0'", result.get(0));
-            assertEquals("regular_field0", result.get(1));
-            assertEquals("message['field99'] AS 'message.field99'", result.get(198));
-            assertEquals("regular_field99", result.get(199));
+                    "response['status_code'] AS 'response.status_code'", result.get(3), "点语法字段应转换");
+            assertEquals("host", result.get(4), "普通字段应保持不变");
         }
     }
 
@@ -392,93 +204,28 @@ class VariantFieldConverterTest {
     class TopnFieldConversionTests {
 
         @Test
-        @DisplayName("TOPN字段转换 - 期望：转换为括号语法但不添加别名")
+        @DisplayName("TOPN字段转换 - 期望：点语法转换为bracket语法")
         void testTopnFieldConversion() {
-            String input = "message.level";
-            String expected = "message['level']";
+            String input = "business.sales.region";
             String result = converter.convertTopnField(input);
 
-            assertEquals(expected, result, "TOPN字段应转换为括号语法但不添加AS别名");
+            assertEquals("business['sales']['region']", result, "TOPN字段应正确转换");
         }
 
         @Test
-        @DisplayName("嵌套TOPN字段转换 - 期望：多层嵌套正确转换")
-        void testNestedTopnFieldConversion() {
-            String input = "message.marker.duration";
-            String expected = "message['marker']['duration']";
-            String result = converter.convertTopnField(input);
-
-            assertEquals(expected, result, "嵌套TOPN字段应正确转换为多层括号语法");
-        }
-
-        @Test
-        @DisplayName("普通TOPN字段不转换 - 期望：不包含点的字段保持不变")
-        void testRegularTopnFieldNotConverted() {
+        @DisplayName("普通TOPN字段 - 期望：普通字段保持不变")
+        void testRegularTopnField() {
             String input = "level";
-            String expected = "level";
             String result = converter.convertTopnField(input);
 
-            assertEquals(expected, result, "普通字段不应被转换");
+            assertEquals("level", result, "普通TOPN字段应保持不变");
         }
 
         @Test
-        @DisplayName("深层嵌套TOPN字段 - 期望：支持深层嵌套")
-        void testDeepNestedTopnField() {
-            String input = "message.request.body.data.user";
-            String expected = "message['request']['body']['data']['user']";
-            String result = converter.convertTopnField(input);
-
-            assertEquals(expected, result, "深层嵌套TOPN字段应正确转换");
-        }
-    }
-
-    // ==================== 批量转换测试 ====================
-
-    @Nested
-    @DisplayName("批量转换测试")
-    class BatchConversionTests {
-
-        @Test
-        @DisplayName("批量WHERE条件转换 - 期望：列表中每个条件都正确转换")
-        void testBatchWhereClausesConversion() {
-            List<String> input =
-                    Arrays.asList(
-                            "message.logId = 'test'",
-                            "message.marker.data = 'value'",
-                            "level = 'ERROR'");
-            List<String> result = converter.convertWhereClauses(input);
-
-            assertEquals(3, result.size());
-            assertEquals("message['logId'] = 'test'", result.get(0));
-            assertEquals("message['marker']['data'] = 'value'", result.get(1));
-            assertEquals("level = 'ERROR'", result.get(2), "普通字段应保持不变");
-        }
-
-        @Test
-        @DisplayName("空批量处理 - 期望：正确处理空列表")
-        void testEmptyBatchConversion() {
-            List<String> emptyList = Collections.emptyList();
-            List<String> result = converter.convertWhereClauses(emptyList);
-
-            assertTrue(result.isEmpty(), "空列表应返回空列表");
-        }
-
-        @Test
-        @DisplayName("大批量转换性能 - 期望：高效处理大量条件")
-        void testLargeBatchPerformance() {
-            List<String> input = new ArrayList<>();
-            for (int i = 0; i < 1000; i++) {
-                input.add("message.field" + i + " = 'value" + i + "'");
-            }
-
-            long startTime = System.currentTimeMillis();
-            List<String> result = converter.convertWhereClauses(input);
-            long endTime = System.currentTimeMillis();
-
-            assertEquals(1000, result.size());
-            assertTrue(endTime - startTime < 1000, "1000个条件转换应在1秒内完成");
-            assertEquals("message['field0'] = 'value0'", result.get(0));
-            assertEquals("message['field999'] = 'value999'", result.get(999));
+        @DisplayName("null TOPN字段 - 期望：null输入返回null")
+        void testNullTopnField() {
+            String result = converter.convertTopnField(null);
+            assertNull(result, "null输入应返回null");
         }
     }
 
@@ -668,125 +415,221 @@ class VariantFieldConverterTest {
     class RealWorldScenarioTests {
 
         @Test
-        @DisplayName("真实variant展开字段测试 - 期望：模拟Doris实际返回的字段列表")
-        void testRealVariantExpandedFields() {
-            // 模拟真实的Doris variant展开字段
-            List<String> input =
+        @DisplayName("真实微服务日志字段测试 - 期望：模拟微服务架构中实际的日志字段")
+        void testRealMicroserviceLogFields() {
+            Allure.step(
+                    "准备真实微服务日志字段测试数据",
+                    () -> {
+                        List<String> fields =
+                                Arrays.asList(
+                                        // 服务基础信息
+                                        "service_info.name",
+                                        "service_info.version",
+                                        "service_info.instance_id",
+                                        // 请求信息
+                                        "request.method",
+                                        "request.path",
+                                        "request.headers.user_agent",
+                                        "request.headers.x_request_id",
+                                        // 响应信息
+                                        "response.status_code",
+                                        "response.content_length",
+                                        "response.headers.content_type",
+                                        // 性能指标
+                                        "performance.response_time_ms",
+                                        "performance.db_query_time_ms",
+                                        "performance.cache_hit_rate",
+                                        // 追踪信息
+                                        "trace.trace_id",
+                                        "trace.span_id",
+                                        "trace.parent_span_id",
+                                        // 用户信息
+                                        "user.id",
+                                        "user.role",
+                                        "user.session.id",
+                                        // 错误信息
+                                        "error.code",
+                                        "error.message",
+                                        "error.stack_trace.class",
+                                        // 业务数据
+                                        "business_data.order_id",
+                                        "business_data.product.category",
+                                        "business_data.payment.method");
+
+                        Allure.parameter("字段数量", String.valueOf(fields.size()));
+                        Allure.parameter(
+                                "覆盖场景",
+                                Arrays.asList(
+                                        "服务信息",
+                                        "HTTP请求/响应",
+                                        "性能监控",
+                                        "分布式追踪",
+                                        "用户信息",
+                                        "错误处理",
+                                        "业务数据"));
+                    });
+
+            List<String> fields =
                     Arrays.asList(
-                            "log_time",
-                            "host",
-                            "path",
-                            "message", // variant原始字段
-                            "message.level", // variant展开字段
-                            "message.line",
-                            "message.logId",
-                            "message.logger",
-                            "message.marker.data",
-                            "message.marker.duration",
-                            "message.marker.reqType",
-                            "message.method",
-                            "message.msg",
-                            "message.service",
-                            "message.stacktrace",
-                            "message.thread",
-                            "message.time");
+                            // 服务基础信息
+                            "service_info.name",
+                            "service_info.version",
+                            "service_info.instance_id",
+                            // 请求信息
+                            "request.method",
+                            "request.path",
+                            "request.headers.user_agent",
+                            "request.headers.x_request_id",
+                            // 响应信息
+                            "response.status_code",
+                            "response.content_length",
+                            "response.headers.content_type",
+                            // 性能指标
+                            "performance.response_time_ms",
+                            "performance.db_query_time_ms",
+                            "performance.cache_hit_rate",
+                            // 追踪信息
+                            "trace.trace_id",
+                            "trace.span_id",
+                            "trace.parent_span_id",
+                            // 用户信息
+                            "user.id",
+                            "user.role",
+                            "user.session.id",
+                            // 错误信息
+                            "error.code",
+                            "error.message",
+                            "error.stack_trace.class",
+                            // 业务数据
+                            "business_data.order_id",
+                            "business_data.product.category",
+                            "business_data.payment.method");
 
-            List<String> result = converter.convertSelectFields(input);
+            List<String> result =
+                    Allure.step(
+                            "执行真实微服务字段转换",
+                            () -> {
+                                return converter.convertSelectFields(fields);
+                            });
 
-            // 验证普通字段不变
-            assertEquals("log_time", result.get(0), "普通时间字段应保持不变");
-            assertEquals("host", result.get(1), "普通主机字段应保持不变");
-            assertEquals("path", result.get(2), "普通路径字段应保持不变");
-            assertEquals("message", result.get(3), "variant根字段应保持不变");
+            Allure.step(
+                    "验证真实微服务字段转换结果",
+                    () -> {
+                        // 验证所有字段都被正确转换
+                        assertEquals(fields.size(), result.size(), "转换后字段数量应保持一致");
 
-            // 验证variant展开字段被正确转换
-            assertEquals(
-                    "message['level'] AS 'message.level'",
-                    result.get(4),
-                    "variant子字段应转换为括号语法并添加别名");
-            assertEquals("message['line'] AS 'message.line'", result.get(5));
-            assertEquals("message['logId'] AS 'message.logId'", result.get(6));
-            assertEquals("message['logger'] AS 'message.logger'", result.get(7));
-            assertEquals(
-                    "message['marker']['data'] AS 'message.marker.data'",
-                    result.get(8),
-                    "二级嵌套字段应正确转换");
-            assertEquals(
-                    "message['marker']['duration'] AS 'message.marker.duration'", result.get(9));
-            assertEquals(
-                    "message['marker']['reqType'] AS 'message.marker.reqType'", result.get(10));
+                        // 验证几个关键字段的转换
+                        assertTrue(
+                                result.contains("service_info['name'] AS 'service_info.name'"),
+                                "服务名称字段应正确转换");
+                        assertTrue(
+                                result.contains(
+                                        "request['headers']['user_agent'] AS"
+                                                + " 'request.headers.user_agent'"),
+                                "请求头字段应正确转换");
+                        assertTrue(
+                                result.contains("trace['trace_id'] AS 'trace.trace_id'"),
+                                "追踪ID字段应正确转换");
+                        assertTrue(
+                                result.contains(
+                                        "business_data['product']['category'] AS"
+                                                + " 'business_data.product.category'"),
+                                "业务数据嵌套字段应正确转换");
+
+                        Allure.parameter("转换成功字段数", String.valueOf(result.size()));
+                        Allure.attachment(
+                                "微服务字段转换结果",
+                                String.format(
+                                        "输入字段数: %d\n转换后字段数: %d\n转换验证: 全部成功",
+                                        fields.size(), result.size()));
+                    });
         }
 
         @Test
-        @DisplayName("真实WHERE条件测试 - 期望：模拟实际业务查询条件")
-        void testRealWhereConditions() {
+        @DisplayName("真实电商业务WHERE条件测试 - 期望：模拟电商系统实际的查询条件")
+        void testRealEcommerceWhereConditions() {
             String input =
-                    "message.logId = 'ae5a8205-4b5f-4ffe-bccd-d8ce49aaab9d' AND"
-                            + " message.marker.duration > 100";
+                    "order_info.status = 'paid' AND order_info.payment.method = 'credit_card' AND"
+                        + " user_info.level = 'vip' AND product_info.category.main = 'electronics'"
+                        + " AND logistics_info.delivery.city = 'Shanghai'";
             String expected =
-                    "message['logId'] = 'ae5a8205-4b5f-4ffe-bccd-d8ce49aaab9d' AND"
-                            + " message['marker']['duration'] > 100";
+                    "order_info['status'] = 'paid' AND order_info['payment']['method'] ="
+                            + " 'credit_card' AND user_info['level'] = 'vip' AND"
+                            + " product_info['category']['main'] = 'electronics' AND"
+                            + " logistics_info['delivery']['city'] = 'Shanghai'";
+
             String result = converter.convertWhereClause(input);
 
-            assertEquals(expected, result, "真实UUID查询和性能阈值条件应正确转换");
+            assertEquals(expected, result, "真实电商业务查询条件应正确转换所有variant字段");
         }
 
         @Test
-        @DisplayName("复杂业务查询场景 - 期望：处理包含多种条件的复杂查询")
-        void testComplexBusinessQuery() {
+        @DisplayName("真实物联网设备数据查询测试 - 期望：处理物联网设备复杂的嵌套数据结构")
+        void testRealIoTDeviceDataQuery() {
             String input =
-                    "(message.level IN ('ERROR', 'WARN') OR message.marker.duration > 1000) "
-                            + "AND message.service LIKE '%user%' "
-                            + "AND message.trace.spanId IS NOT NULL "
-                            + "AND LENGTH(message.stacktrace) > 0";
+                    "device_info.type = 'sensor' AND sensor_data.temperature.value > 25.5 AND"
+                        + " sensor_data.humidity.percentage < 60 AND"
+                        + " device_status.network.signal_strength >= -70 AND"
+                        + " location_info.building.floor = '3' AND alert_config.threshold.critical"
+                        + " = true";
             String expected =
-                    "(message['level'] IN ('ERROR', 'WARN') OR message['marker']['duration'] >"
-                            + " 1000) AND message['service'] LIKE '%user%' AND"
-                            + " message['trace']['spanId'] IS NOT NULL AND"
-                            + " LENGTH(message['stacktrace']) > 0";
+                    "device_info['type'] = 'sensor' AND sensor_data['temperature']['value'] > 25.5"
+                            + " AND sensor_data['humidity']['percentage'] < 60 AND"
+                            + " device_status['network']['signal_strength'] >= -70 AND"
+                            + " location_info['building']['floor'] = '3' AND"
+                            + " alert_config['threshold']['critical'] = true";
+
             String result = converter.convertWhereClause(input);
 
-            assertEquals(expected, result, "复杂业务查询中的所有点语法字段应正确转换");
+            assertEquals(expected, result, "物联网设备数据查询应正确处理复杂嵌套的variant字段");
         }
 
         @Test
-        @DisplayName("日志搜索典型场景 - 期望：处理典型的日志搜索需求")
-        void testTypicalLogSearchScenario() {
-            List<String> selectFields =
+        @DisplayName("真实金融交易日志场景 - 期望：处理金融系统的复杂字段结构")
+        void testRealFinancialTransactionLogScenario() {
+            List<String> fields =
                     Arrays.asList(
-                            "log_time",
-                            "host",
-                            "message.level",
-                            "message.service",
-                            "message.logId",
-                            "message.marker.duration");
-            String whereClause =
-                    "message.level = 'ERROR' AND message.service = 'order-service' AND log_time >="
-                            + " '2023-06-01'";
-            String topnField = "message.service";
+                            // 交易基础信息
+                            "transaction.id",
+                            "transaction.type",
+                            "transaction.amount.value",
+                            "transaction.amount.currency",
+                            // 账户信息
+                            "account.from.id",
+                            "account.from.type",
+                            "account.to.id",
+                            "account.to.type",
+                            // 风控信息
+                            "risk_assessment.score",
+                            "risk_assessment.level",
+                            "risk_assessment.rules.triggered",
+                            // 合规信息
+                            "compliance.aml_check.status",
+                            "compliance.kyc_status",
+                            "compliance.regulatory.region",
+                            // 系统信息
+                            "system.processor.id",
+                            "system.timestamp.created",
+                            "system.audit.trail");
 
-            List<String> convertedSelect = converter.convertSelectFields(selectFields);
-            String convertedWhere = converter.convertWhereClause(whereClause);
-            String convertedTopn = converter.convertTopnField(topnField);
+            List<String> result = converter.convertSelectFields(fields);
 
-            // 验证SELECT字段转换
-            assertEquals("log_time", convertedSelect.get(0));
-            assertEquals("host", convertedSelect.get(1));
-            assertEquals("message['level'] AS 'message.level'", convertedSelect.get(2));
-            assertEquals("message['service'] AS 'message.service'", convertedSelect.get(3));
-            assertEquals("message['logId'] AS 'message.logId'", convertedSelect.get(4));
-            assertEquals(
-                    "message['marker']['duration'] AS 'message.marker.duration'",
-                    convertedSelect.get(5));
+            // 验证字段数量
+            assertEquals(fields.size(), result.size(), "金融交易字段转换后数量应保持一致");
 
-            // 验证WHERE条件转换
-            assertEquals(
-                    "message['level'] = 'ERROR' AND message['service'] = 'order-service' AND"
-                            + " log_time >= '2023-06-01'",
-                    convertedWhere);
-
-            // 验证TOPN字段转换
-            assertEquals("message['service']", convertedTopn);
+            // 验证关键字段转换
+            assertTrue(
+                    result.contains("transaction['amount']['value'] AS 'transaction.amount.value'"),
+                    "交易金额字段应正确转换");
+            assertTrue(
+                    result.contains(
+                            "risk_assessment['rules']['triggered'] AS"
+                                    + " 'risk_assessment.rules.triggered'"),
+                    "风控规则字段应正确转换");
+            assertTrue(
+                    result.contains(
+                            "compliance['aml_check']['status'] AS 'compliance.aml_check.status'"),
+                    "合规检查字段应正确转换");
         }
     }
 

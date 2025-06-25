@@ -50,6 +50,7 @@ sql:
       export:
         dir: /tmp/sql-exports
 
+        
 # Logstash配置
 logstash:
   # Logstash压缩包路径

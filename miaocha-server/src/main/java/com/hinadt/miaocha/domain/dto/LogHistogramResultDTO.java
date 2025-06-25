@@ -7,15 +7,7 @@ import lombok.Data;
 /** 日志时间分布查询结果DTO */
 @Data
 @Schema(description = "日志时间分布查询结果对象")
-public class LogHistogramResultDTO {
-    @Schema(description = "是否成功", example = "true")
-    private Boolean success = true;
-
-    @Schema(description = "错误信息，仅当success=false时有值", example = "关键字表达式语法错误: 括号不匹配")
-    private String errorMessage;
-
-    @Schema(description = "查询耗时（毫秒）", example = "123")
-    private Long executionTimeMs;
+public class LogHistogramResultDTO extends LogSearchResultDTO {
 
     @Schema(description = "日志时间分布数据，用于生成时间分布图")
     private List<LogDistributionData> distributionData;

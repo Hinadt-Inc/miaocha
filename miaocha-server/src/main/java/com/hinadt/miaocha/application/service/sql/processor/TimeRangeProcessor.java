@@ -13,8 +13,9 @@ import org.springframework.stereotype.Component;
 /** 时间范围处理器 */
 @Component
 public class TimeRangeProcessor {
+    // 支持毫秒精度的时间格式化器
     private static final DateTimeFormatter DATETIME_FORMATTER =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
     @Autowired private TimeGranularityCalculator timeGranularityCalculator;
 
