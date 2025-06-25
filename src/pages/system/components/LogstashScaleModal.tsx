@@ -34,6 +34,12 @@ export default function LogstashScaleModal({
   // 当前进程使用的机器数量
   const currentMachineCount = currentProcess?.logstashMachineStatusInfo?.length || 0;
 
+  // 获取当前进程中每个机器的实例数量
+  const getCurrentProcessMachineInstanceCount = (machineIp: string): number => {
+    if (!currentProcess?.logstashMachineStatusInfo) return 0;
+    return currentProcess.logstashMachineStatusInfo.filter((info) => info.machineIp === machineIp).length;
+  };
+
   useEffect(() => {
     const fetchMachines = async () => {
       if (visible) {
@@ -128,11 +134,14 @@ export default function LogstashScaleModal({
               return label?.toLowerCase().includes(input.toLowerCase());
             }}
           >
-            {machines.map((machine) => (
-              <Option key={machine.id} value={machine.logstashMachineId}>
-                {machine.name} ({machine.ip})
-              </Option>
-            ))}
+            {machines.map((machine) => {
+              const instanceCount = getCurrentProcessMachineInstanceCount(machine.ip);
+              return (
+                <Option key={machine.id} value={machine.logstashMachineId}>
+                  {machine.name} ({machine.ip}) {instanceCount > 0 ? `- 当前 ${instanceCount} 个实例` : ''}
+                </Option>
+              );
+            })}
           </Select>
         </Form.Item>
 
