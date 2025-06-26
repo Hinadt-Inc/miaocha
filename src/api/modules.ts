@@ -33,6 +33,21 @@ export interface UpdateModuleParams {
   tableName?: string;
 }
 
+export interface QueryConfigKeywordField {
+  fieldName: string;
+  searchMethod: 'LIKE' | 'MATCH_ALL' | 'EXACT';
+}
+
+export interface QueryConfig {
+  timeField: string;
+  keywordFields: QueryConfigKeywordField[];
+}
+
+export interface ModuleQueryConfigParams {
+  moduleId: number;
+  queryConfig: QueryConfig;
+}
+
 export const getModules = async (config?: any) => {
   return request<Module[]>({
     url: '/api/modules',
@@ -130,6 +145,23 @@ export const batchRevokeModules = async (userId: string, moduleNames: string[]) 
     url: `/api/permissions/modules/user/${userId}/batch-revoke`,
     method: 'DELETE',
     data: { userId, modules: moduleNames },
+  });
+};
+
+// 配置模块查询设置
+export const updateModuleQueryConfig = async (params: ModuleQueryConfigParams) => {
+  return request({
+    url: '/api/modules/query-config',
+    method: 'PUT',
+    data: params,
+  });
+};
+
+// 获取模块查询配置
+export const getModuleQueryConfig = async (moduleId: number) => {
+  return request<QueryConfig>({
+    url: `/api/modules/${moduleId}/query-config`,
+    method: 'GET',
   });
 };
 
