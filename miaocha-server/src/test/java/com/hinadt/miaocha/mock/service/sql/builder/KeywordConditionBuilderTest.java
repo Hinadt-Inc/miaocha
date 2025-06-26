@@ -424,14 +424,145 @@ class KeywordConditionBuilderTest {
             KeywordConditionDTO condition = createKeywordCondition("message", "error");
             dto.setKeywordConditions(Arrays.asList(condition));
 
-            IllegalArgumentException exception =
+            BusinessException exception =
                     assertThrows(
-                            IllegalArgumentException.class,
+                            BusinessException.class,
                             () -> {
                                 keywordConditionBuilder.buildKeywordConditions(dto);
                             });
 
-            assertTrue(exception.getMessage().contains("不支持的搜索方法: INVALID_METHOD"));
+            assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
+        }
+    }
+
+    @Nested
+    @DisplayName("搜索方法优先级测试")
+    class SearchMethodPriorityTests {
+
+        @Test
+        @DisplayName("请求指定搜索方法优先级测试 - 验证覆盖配置中的默认方法")
+        void testRequestSearchMethodOverridesConfig() {
+            // Mock配置：message字段配置为LIKE
+            when(queryConfigValidationService.getFieldSearchMethodMap("test"))
+                    .thenReturn(Map.of("message", "LIKE"));
+
+            LogSearchDTO dto = createLogSearchDTO("test");
+            KeywordConditionDTO condition = createKeywordCondition("message", "error");
+            // 在请求中指定使用MATCH_PHRASE，应该覆盖配置中的LIKE
+            condition.setSearchMethod("MATCH_PHRASE");
+            dto.setKeywordConditions(Arrays.asList(condition));
+
+            String result = keywordConditionBuilder.buildKeywordConditions(dto);
+
+            // 验证使用了请求中指定的MATCH_PHRASE而不是配置中的LIKE
+            assertEquals("(message MATCH_PHRASE 'error')", result);
+        }
+
+        @Test
+        @DisplayName("使用配置默认方法测试 - 验证未指定时使用配置中的方法")
+        void testUseConfigDefaultMethod() {
+            // Mock配置：message字段配置为MATCH_ALL
+            when(queryConfigValidationService.getFieldSearchMethodMap("test"))
+                    .thenReturn(Map.of("message", "MATCH_ALL"));
+
+            LogSearchDTO dto = createLogSearchDTO("test");
+            KeywordConditionDTO condition = createKeywordCondition("message", "error");
+            // 不指定searchMethod，应该使用配置中的默认方法
+            dto.setKeywordConditions(Arrays.asList(condition));
+
+            String result = keywordConditionBuilder.buildKeywordConditions(dto);
+
+            // 验证使用了配置中的MATCH_ALL方法
+            assertEquals("(message MATCH_ALL 'error')", result);
+        }
+
+        @Test
+        @DisplayName("字段未配置且请求未指定搜索方法测试 - 验证异常抛出")
+        void testFieldNotConfiguredAndNoRequestMethod() {
+            // Mock配置：不包含message字段的配置
+            when(queryConfigValidationService.getFieldSearchMethodMap("test")).thenReturn(Map.of());
+
+            LogSearchDTO dto = createLogSearchDTO("test");
+            KeywordConditionDTO condition = createKeywordCondition("message", "error");
+            // 既没有配置也没有在请求中指定，应该抛出异常
+            dto.setKeywordConditions(Arrays.asList(condition));
+
+            BusinessException exception =
+                    assertThrows(
+                            BusinessException.class,
+                            () -> {
+                                keywordConditionBuilder.buildKeywordConditions(dto);
+                            });
+
+            assertEquals(ErrorCode.KEYWORD_FIELD_NOT_ALLOWED, exception.getErrorCode());
+            assertTrue(exception.getMessage().contains("未配置默认搜索方法"));
+        }
+
+        @Test
+        @DisplayName("字段未配置但请求指定搜索方法测试 - 验证可以正常工作")
+        void testFieldNotConfiguredButRequestSpecified() {
+            // Mock配置：不包含message字段的配置
+            when(queryConfigValidationService.getFieldSearchMethodMap("test")).thenReturn(Map.of());
+
+            LogSearchDTO dto = createLogSearchDTO("test");
+            KeywordConditionDTO condition = createKeywordCondition("message", "error");
+            // 在请求中指定搜索方法，即使配置中没有也应该可以工作
+            condition.setSearchMethod("LIKE");
+            dto.setKeywordConditions(Arrays.asList(condition));
+
+            String result = keywordConditionBuilder.buildKeywordConditions(dto);
+
+            // 验证使用了请求中指定的LIKE方法
+            assertEquals("(message LIKE '%error%')", result);
+        }
+
+        @Test
+        @DisplayName("混合优先级测试 - 验证多字段不同优先级处理")
+        void testMixedPriorityHandling() {
+            // Mock配置：只配置了message字段
+            when(queryConfigValidationService.getFieldSearchMethodMap("test"))
+                    .thenReturn(Map.of("message", "LIKE", "level", "MATCH_PHRASE"));
+
+            LogSearchDTO dto = createLogSearchDTO("test");
+
+            // 第一个条件：使用配置中的默认方法
+            KeywordConditionDTO condition1 = createKeywordCondition("message", "error");
+
+            // 第二个条件：覆盖配置中的方法
+            KeywordConditionDTO condition2 = createKeywordCondition("level", "ERROR");
+            condition2.setSearchMethod("MATCH_ALL"); // 覆盖配置中的MATCH_PHRASE
+
+            dto.setKeywordConditions(Arrays.asList(condition1, condition2));
+
+            String result = keywordConditionBuilder.buildKeywordConditions(dto);
+
+            // 验证第一个使用配置默认，第二个使用请求指定
+            assertEquals("((message LIKE '%error%') AND (level MATCH_ALL 'ERROR'))", result);
+        }
+
+        @Test
+        @DisplayName("空白搜索方法处理测试 - 验证空格和null处理")
+        void testBlankSearchMethodHandling() {
+            // Mock配置
+            when(queryConfigValidationService.getFieldSearchMethodMap("test"))
+                    .thenReturn(Map.of("message", "LIKE"));
+
+            LogSearchDTO dto = createLogSearchDTO("test");
+
+            // 测试空字符串
+            KeywordConditionDTO condition1 = createKeywordCondition("message", "error");
+            condition1.setSearchMethod("");
+
+            // 测试只有空格
+            KeywordConditionDTO condition2 = createKeywordCondition("message", "warning");
+            condition2.setSearchMethod("   ");
+
+            dto.setKeywordConditions(Arrays.asList(condition1, condition2));
+
+            String result = keywordConditionBuilder.buildKeywordConditions(dto);
+
+            // 验证都使用了配置中的默认方法LIKE
+            assertEquals("((message LIKE '%error%') AND (message LIKE '%warning%'))", result);
         }
     }
 
@@ -486,6 +617,16 @@ class KeywordConditionBuilderTest {
         KeywordConditionDTO condition = new KeywordConditionDTO();
         condition.setFieldName(fieldName);
         condition.setSearchValue(searchValue);
+        return condition;
+    }
+
+    /** 创建带搜索方法的关键字条件DTO对象 */
+    private KeywordConditionDTO createKeywordCondition(
+            String fieldName, String searchValue, String searchMethod) {
+        KeywordConditionDTO condition = new KeywordConditionDTO();
+        condition.setFieldName(fieldName);
+        condition.setSearchValue(searchValue);
+        condition.setSearchMethod(searchMethod);
         return condition;
     }
 }

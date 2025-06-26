@@ -2,6 +2,8 @@ package com.hinadt.miaocha.application.service.sql.builder;
 
 import com.hinadt.miaocha.application.service.impl.logsearch.validator.QueryConfigValidationService;
 import com.hinadt.miaocha.application.service.sql.search.SearchMethod;
+import com.hinadt.miaocha.common.exception.BusinessException;
+import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.dto.KeywordConditionDTO;
 import com.hinadt.miaocha.domain.dto.LogSearchDTO;
 import java.util.List;
@@ -48,11 +50,23 @@ public class KeywordConditionBuilder {
                 String fieldName = keywordCondition.getFieldName().trim();
                 String searchValue = keywordCondition.getSearchValue().trim();
 
-                // 获取配置的搜索方法
-                String configuredSearchMethod = fieldSearchMethodMap.get(fieldName);
+                // 优先使用 KeywordConditionDTO 中指定的搜索方法，如果没有指定则使用配置中的默认方法
+                String searchMethodToUse;
+                if (StringUtils.isNotBlank(keywordCondition.getSearchMethod())) {
+                    // 使用请求中指定的搜索方法
+                    searchMethodToUse = keywordCondition.getSearchMethod().trim();
+                } else {
+                    // 使用配置中的默认搜索方法
+                    searchMethodToUse = fieldSearchMethodMap.get(fieldName);
+                    if (StringUtils.isBlank(searchMethodToUse)) {
+                        throw new BusinessException(
+                                ErrorCode.KEYWORD_FIELD_NOT_ALLOWED,
+                                "字段 '" + fieldName + "' 未配置默认搜索方法，请在请求中指定或在模块配置中设置");
+                    }
+                }
 
                 // 获取对应的搜索方法枚举
-                SearchMethod searchMethod = SearchMethod.fromString(configuredSearchMethod);
+                SearchMethod searchMethod = SearchMethod.fromString(searchMethodToUse);
 
                 // 使用搜索方法枚举解析表达式
                 String parsedCondition = searchMethod.parseExpression(fieldName, searchValue);

@@ -1,6 +1,8 @@
 package com.hinadt.miaocha.application.service.sql.search;
 
 import com.hinadt.miaocha.application.service.sql.builder.FieldExpressionParser;
+import com.hinadt.miaocha.common.exception.BusinessException;
+import com.hinadt.miaocha.common.exception.ErrorCode;
 import lombok.Getter;
 
 /**
@@ -75,6 +77,6 @@ public enum SearchMethod implements SearchMethodHandler {
                 return method;
             }
         }
-        throw new IllegalArgumentException("不支持的搜索方法: " + searchMethod);
+        throw new BusinessException(ErrorCode.VALIDATION_ERROR, "不支持的搜索方法: " + searchMethod);
     }
 }

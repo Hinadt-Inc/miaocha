@@ -3,6 +3,8 @@ package com.hinadt.miaocha.mock.service.sql.builder;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.hinadt.miaocha.application.service.sql.search.SearchMethod;
+import com.hinadt.miaocha.common.exception.BusinessException;
+import com.hinadt.miaocha.common.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -34,11 +36,9 @@ class SearchMethodTest {
     @Test
     @DisplayName("不支持的搜索方法测试 - 验证异常抛出")
     void testUnsupportedSearchMethod() {
-        IllegalArgumentException exception =
-                assertThrows(
-                        IllegalArgumentException.class,
-                        () -> SearchMethod.fromString("UNSUPPORTED"));
-        assertTrue(exception.getMessage().contains("不支持的搜索方法"));
+        BusinessException exception =
+                assertThrows(BusinessException.class, () -> SearchMethod.fromString("UNSUPPORTED"));
+        assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
     }
 
     @ParameterizedTest
