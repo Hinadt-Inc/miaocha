@@ -1,11 +1,11 @@
 package com.hinadt.miaocha.application.service.impl.logsearch.validator;
 
+import com.hinadt.miaocha.application.service.DatasourceService;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.dto.LogSearchDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.entity.User;
-import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
 import com.hinadt.miaocha.domain.mapper.UserMapper;
 import org.springframework.stereotype.Component;
 
@@ -20,21 +20,17 @@ public class LogSearchValidator {
     /** 分页查询的最大页面大小限制 */
     private static final int MAX_PAGE_SIZE = 5000;
 
-    private final DatasourceMapper datasourceMapper;
     private final UserMapper userMapper;
+    private final DatasourceService datasourceService;
 
-    public LogSearchValidator(DatasourceMapper datasourceMapper, UserMapper userMapper) {
-        this.datasourceMapper = datasourceMapper;
+    public LogSearchValidator(UserMapper userMapper, DatasourceService datasourceService) {
         this.userMapper = userMapper;
+        this.datasourceService = datasourceService;
     }
 
-    /** 验证并获取数据源 */
-    public DatasourceInfo validateAndGetDatasource(Long datasourceId) {
-        DatasourceInfo datasourceInfo = datasourceMapper.selectById(datasourceId);
-        if (datasourceInfo == null) {
-            throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
-        }
-        return datasourceInfo;
+    /** 验证并获取数据源（通过模块名称） */
+    public DatasourceInfo validateAndGetDatasource(String module) {
+        return datasourceService.getDatasourceInfoByModule(module);
     }
 
     /** 验证用户 */

@@ -3,6 +3,7 @@ package com.hinadt.miaocha.application.service;
 import com.hinadt.miaocha.domain.dto.DatasourceConnectionTestResultDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceCreateDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceDTO;
+import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import java.util.List;
 
 /** 数据源服务接口 */
@@ -22,6 +23,12 @@ public interface DatasourceService {
 
     /** 获取所有数据源 */
     List<DatasourceDTO> getAllDatasources();
+
+    /** 根据模块名称获取数据源 */
+    DatasourceDTO getDatasourceByModule(String module);
+
+    /** 根据模块名称获取数据源详细信息（包含敏感信息，仅供内部使用） */
+    DatasourceInfo getDatasourceInfoByModule(String module);
 
     /** 测试数据源连接 */
     DatasourceConnectionTestResultDTO testConnection(DatasourceCreateDTO dto);

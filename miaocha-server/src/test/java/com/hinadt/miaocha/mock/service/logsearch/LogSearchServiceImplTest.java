@@ -76,7 +76,6 @@ class LogSearchServiceImplTest {
                         jdbcQueryExecutor);
 
         testDto = new LogSearchDTO();
-        testDto.setDatasourceId(1L);
         testDto.setModule("test-module");
         testDto.setOffset(0);
         testDto.setPageSize(20);
@@ -98,7 +97,7 @@ class LogSearchServiceImplTest {
 
         doNothing().when(validator).validateUser(TEST_USER_ID);
         doNothing().when(validator).validatePaginationParams(testDto);
-        when(validator.validateAndGetDatasource(1L)).thenReturn(testDatasource);
+        when(validator.validateAndGetDatasource("test-module")).thenReturn(testDatasource);
         when(searchTemplate.execute(eq(testDatasource), eq(testDto), eq(detailExecutor)))
                 .thenReturn(expectedResult);
 
@@ -111,7 +110,7 @@ class LogSearchServiceImplTest {
         // 验证调用顺序和参数
         verify(validator).validateUser(TEST_USER_ID);
         verify(validator).validatePaginationParams(testDto);
-        verify(validator).validateAndGetDatasource(1L);
+        verify(validator).validateAndGetDatasource("test-module");
         verify(searchTemplate).execute(testDatasource, testDto, detailExecutor);
     }
 
@@ -157,7 +156,7 @@ class LogSearchServiceImplTest {
 
         verify(validator).validateUser(TEST_USER_ID);
         verify(validator).validatePaginationParams(testDto);
-        verify(validator, never()).validateAndGetDatasource(anyLong());
+        verify(validator, never()).validateAndGetDatasource(anyString());
         verifyNoInteractions(searchTemplate);
     }
 
@@ -170,7 +169,7 @@ class LogSearchServiceImplTest {
 
         doNothing().when(validator).validateUser(TEST_USER_ID);
         doNothing().when(validator).validatePaginationParams(testDto);
-        when(validator.validateAndGetDatasource(1L)).thenThrow(expectedException);
+        when(validator.validateAndGetDatasource("test-module")).thenThrow(expectedException);
 
         // Act & Assert
         BusinessException thrownException =
@@ -182,7 +181,7 @@ class LogSearchServiceImplTest {
 
         verify(validator).validateUser(TEST_USER_ID);
         verify(validator).validatePaginationParams(testDto);
-        verify(validator).validateAndGetDatasource(1L);
+        verify(validator).validateAndGetDatasource("test-module");
         verifyNoInteractions(searchTemplate);
     }
 
@@ -195,7 +194,7 @@ class LogSearchServiceImplTest {
 
         doNothing().when(validator).validateUser(TEST_USER_ID);
         doNothing().when(validator).validatePaginationParams(testDto);
-        when(validator.validateAndGetDatasource(1L)).thenReturn(testDatasource);
+        when(validator.validateAndGetDatasource("test-module")).thenReturn(testDatasource);
         when(searchTemplate.execute(testDatasource, testDto, detailExecutor))
                 .thenThrow(expectedException);
 
@@ -210,7 +209,7 @@ class LogSearchServiceImplTest {
         // 验证所有验证步骤都执行了
         verify(validator).validateUser(TEST_USER_ID);
         verify(validator).validatePaginationParams(testDto);
-        verify(validator).validateAndGetDatasource(1L);
+        verify(validator).validateAndGetDatasource("test-module");
         verify(searchTemplate).execute(testDatasource, testDto, detailExecutor);
     }
 
@@ -223,7 +222,7 @@ class LogSearchServiceImplTest {
         LogHistogramResultDTO expectedResult = new LogHistogramResultDTO();
 
         doNothing().when(validator).validateUser(TEST_USER_ID);
-        when(validator.validateAndGetDatasource(1L)).thenReturn(testDatasource);
+        when(validator.validateAndGetDatasource("test-module")).thenReturn(testDatasource);
         when(searchTemplate.execute(eq(testDatasource), eq(testDto), eq(histogramExecutor)))
                 .thenReturn(expectedResult);
 
@@ -235,7 +234,7 @@ class LogSearchServiceImplTest {
 
         // 验证调用顺序（注意柱状图查询不需要分页验证）
         verify(validator).validateUser(TEST_USER_ID);
-        verify(validator).validateAndGetDatasource(1L);
+        verify(validator).validateAndGetDatasource("test-module");
         verify(validator, never()).validatePaginationParams(any()); // 不应该调用分页验证
         verify(searchTemplate).execute(testDatasource, testDto, histogramExecutor);
     }
@@ -270,7 +269,7 @@ class LogSearchServiceImplTest {
 
         doNothing().when(validator).validateUser(TEST_USER_ID);
         doNothing().when(validator).validateFields(testDto);
-        when(validator.validateAndGetDatasource(1L)).thenReturn(testDatasource);
+        when(validator.validateAndGetDatasource("test-module")).thenReturn(testDatasource);
         when(searchTemplate.execute(eq(testDatasource), eq(testDto), eq(fieldDistributionExecutor)))
                 .thenReturn(expectedResult);
 
@@ -284,7 +283,7 @@ class LogSearchServiceImplTest {
         // 验证调用顺序（包含字段验证）
         verify(validator).validateUser(TEST_USER_ID);
         verify(validator).validateFields(testDto);
-        verify(validator).validateAndGetDatasource(1L);
+        verify(validator).validateAndGetDatasource("test-module");
         verify(searchTemplate).execute(testDatasource, testDto, fieldDistributionExecutor);
     }
 
@@ -308,7 +307,7 @@ class LogSearchServiceImplTest {
 
         verify(validator).validateUser(TEST_USER_ID);
         verify(validator).validateFields(testDto);
-        verify(validator, never()).validateAndGetDatasource(anyLong());
+        verify(validator, never()).validateAndGetDatasource(anyString());
         verifyNoInteractions(searchTemplate);
     }
 
@@ -342,23 +341,20 @@ class LogSearchServiceImplTest {
         List<SchemaInfoDTO.ColumnInfoDTO> expectedColumns =
                 Arrays.asList(column1, column2, column3);
 
-        doNothing().when(validator).validateUser(TEST_USER_ID);
-        when(validator.validateAndGetDatasource(1L)).thenReturn(testDatasource);
+        when(validator.validateAndGetDatasource(module)).thenReturn(testDatasource);
         when(moduleInfoService.getTableNameByModule(module)).thenReturn(tableName);
         when(jdbcQueryExecutor.getConnection(testDatasource)).thenReturn(connection);
         when(metadataServiceFactory.getService("doris")).thenReturn(metadataService);
         when(metadataService.getColumnInfo(connection, tableName)).thenReturn(expectedColumns);
 
         // Act
-        List<SchemaInfoDTO.ColumnInfoDTO> result =
-                logSearchService.getTableColumns(TEST_USER_ID, 1L, module);
+        List<SchemaInfoDTO.ColumnInfoDTO> result = logSearchService.getTableColumns(module);
 
         // Assert
         assertEquals(expectedColumns, result);
 
         // 验证调用顺序
-        verify(validator).validateUser(TEST_USER_ID);
-        verify(validator).validateAndGetDatasource(1L);
+        verify(validator).validateAndGetDatasource(module);
         verify(moduleInfoService).getTableNameByModule(module);
         verify(jdbcQueryExecutor).getConnection(testDatasource);
         verify(metadataServiceFactory).getService("doris");
@@ -374,22 +370,19 @@ class LogSearchServiceImplTest {
         String tableName = "test_table";
         SQLException sqlException = new SQLException("连接失败");
 
-        doNothing().when(validator).validateUser(TEST_USER_ID);
-        when(validator.validateAndGetDatasource(1L)).thenReturn(testDatasource);
+        when(validator.validateAndGetDatasource(module)).thenReturn(testDatasource);
         when(moduleInfoService.getTableNameByModule(module)).thenReturn(tableName);
         when(jdbcQueryExecutor.getConnection(testDatasource)).thenThrow(sqlException);
 
         // Act & Assert
         BusinessException thrownException =
                 assertThrows(
-                        BusinessException.class,
-                        () -> logSearchService.getTableColumns(TEST_USER_ID, 1L, module));
+                        BusinessException.class, () -> logSearchService.getTableColumns(module));
 
         assertEquals(ErrorCode.INTERNAL_ERROR, thrownException.getErrorCode());
 
         // 验证前置步骤正常执行
-        verify(validator).validateUser(TEST_USER_ID);
-        verify(validator).validateAndGetDatasource(1L);
+        verify(validator).validateAndGetDatasource(module);
         verify(moduleInfoService).getTableNameByModule(module);
         verify(jdbcQueryExecutor).getConnection(testDatasource);
 
@@ -405,8 +398,7 @@ class LogSearchServiceImplTest {
         String tableName = "test_table";
         SQLException queryException = new SQLException("查询元数据失败");
 
-        doNothing().when(validator).validateUser(TEST_USER_ID);
-        when(validator.validateAndGetDatasource(1L)).thenReturn(testDatasource);
+        when(validator.validateAndGetDatasource(module)).thenReturn(testDatasource);
         when(moduleInfoService.getTableNameByModule(module)).thenReturn(tableName);
         when(jdbcQueryExecutor.getConnection(testDatasource)).thenReturn(connection);
         when(metadataServiceFactory.getService("doris")).thenReturn(metadataService);
@@ -415,14 +407,12 @@ class LogSearchServiceImplTest {
         // Act & Assert
         BusinessException thrownException =
                 assertThrows(
-                        BusinessException.class,
-                        () -> logSearchService.getTableColumns(TEST_USER_ID, 1L, module));
+                        BusinessException.class, () -> logSearchService.getTableColumns(module));
 
         assertEquals(ErrorCode.INTERNAL_ERROR, thrownException.getErrorCode());
 
         // 验证所有步骤都执行了
-        verify(validator).validateUser(TEST_USER_ID);
-        verify(validator).validateAndGetDatasource(1L);
+        verify(validator).validateAndGetDatasource(module);
         verify(moduleInfoService).getTableNameByModule(module);
         verify(jdbcQueryExecutor).getConnection(testDatasource);
         verify(metadataServiceFactory).getService("doris");
@@ -439,21 +429,18 @@ class LogSearchServiceImplTest {
         String module = "invalid-module";
         RuntimeException moduleException = new RuntimeException("模块配置未找到");
 
-        doNothing().when(validator).validateUser(TEST_USER_ID);
-        when(validator.validateAndGetDatasource(1L)).thenReturn(testDatasource);
+        when(validator.validateAndGetDatasource(module)).thenReturn(testDatasource);
         when(moduleInfoService.getTableNameByModule(module)).thenThrow(moduleException);
 
         // Act & Assert
         RuntimeException thrownException =
                 assertThrows(
-                        RuntimeException.class,
-                        () -> logSearchService.getTableColumns(TEST_USER_ID, 1L, module));
+                        RuntimeException.class, () -> logSearchService.getTableColumns(module));
 
         assertEquals(moduleException, thrownException);
 
         // 验证前置验证步骤执行了
-        verify(validator).validateUser(TEST_USER_ID);
-        verify(validator).validateAndGetDatasource(1L);
+        verify(validator).validateAndGetDatasource(module);
         verify(moduleInfoService).getTableNameByModule(module);
 
         // 验证没有尝试连接数据库
@@ -470,7 +457,7 @@ class LogSearchServiceImplTest {
 
         doNothing().when(validator).validateUser(TEST_USER_ID);
         doNothing().when(validator).validatePaginationParams(testDto);
-        when(validator.validateAndGetDatasource(1L)).thenReturn(testDatasource);
+        when(validator.validateAndGetDatasource("test-module")).thenReturn(testDatasource);
         when(searchTemplate.execute(testDatasource, testDto, detailExecutor))
                 .thenReturn(expectedResult);
 
@@ -480,14 +467,14 @@ class LogSearchServiceImplTest {
         // Assert - 验证传递给验证器的参数是正确的
         ArgumentCaptor<Long> userIdCaptor = ArgumentCaptor.forClass(Long.class);
         ArgumentCaptor<LogSearchDTO> dtoCaptor = ArgumentCaptor.forClass(LogSearchDTO.class);
-        ArgumentCaptor<Long> datasourceIdCaptor = ArgumentCaptor.forClass(Long.class);
+        ArgumentCaptor<String> moduleCaptor = ArgumentCaptor.forClass(String.class);
 
         verify(validator).validateUser(userIdCaptor.capture());
         verify(validator).validatePaginationParams(dtoCaptor.capture());
-        verify(validator).validateAndGetDatasource(datasourceIdCaptor.capture());
+        verify(validator).validateAndGetDatasource(moduleCaptor.capture());
 
         assertEquals(TEST_USER_ID, userIdCaptor.getValue());
         assertEquals(testDto, dtoCaptor.getValue());
-        assertEquals(1L, datasourceIdCaptor.getValue());
+        assertEquals("test-module", moduleCaptor.getValue());
     }
 }

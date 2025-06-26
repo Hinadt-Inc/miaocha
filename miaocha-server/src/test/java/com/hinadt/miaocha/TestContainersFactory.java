@@ -37,6 +37,9 @@ public class TestContainersFactory {
     private static final String SSH_PASSWORD = "ubuntu";
     private static final int SSH_CONTAINER_PORT = 22;
 
+    // Doris 容器配置
+    private static final String DORIS_IMAGE = "apache/doris:2.1.9-all";
+
     /** MySQL 测试容器 - 全局唯一 提供真实的 MySQL 环境，存储机器信息、进程配置等数据 */
     public static MySQLContainer<?> mysqlContainer() {
         return new MySQLContainer<>(MYSQL_IMAGE)
@@ -46,6 +49,15 @@ public class TestContainersFactory {
                 .withNetwork(SHARED_NETWORK)
                 .withNetworkAliases("mysql-db")
                 .withStartupTimeout(Duration.ofMinutes(2));
+    }
+
+    public static GenericContainer<?> dorisContainer() {
+        return new GenericContainer<>(DORIS_IMAGE)
+                .withNetwork(SHARED_NETWORK)
+                .withNetworkAliases("doris")
+                .withExposedPorts(9030)
+                .withStartupTimeout(Duration.ofMinutes(5))
+                .waitingFor(Wait.forListeningPorts(9030));
     }
 
     /** SSH 机器容器管理器 根据测试场景动态创建所需数量的机器容器 */

@@ -40,11 +40,8 @@ public interface LogSearchService {
     /**
      * 获取日志检索表结构信息
      *
-     * @param userId 用户ID
-     * @param datasourceId 数据源ID
      * @param module 模块名称
      * @return 表结构信息（包含列名、数据类型、是否主键等详细信息）
      */
-    List<SchemaInfoDTO.ColumnInfoDTO> getTableColumns(
-            Long userId, Long datasourceId, String module);
+    List<SchemaInfoDTO.ColumnInfoDTO> getTableColumns(String module);
 }

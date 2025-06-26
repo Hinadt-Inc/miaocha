@@ -8,6 +8,7 @@ import com.hinadt.miaocha.domain.dto.DatasourceConnectionTestResultDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceCreateDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
+import com.hinadt.miaocha.domain.entity.ModuleInfo;
 import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
 import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
 import java.sql.Connection;
@@ -113,6 +114,50 @@ public class DatasourceServiceImpl implements DatasourceService {
         return datasourceMapper.selectAll().stream()
                 .map(datasourceConverter::toDto)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public DatasourceDTO getDatasourceByModule(String module) {
+        // 参数验证
+        if (module == null || module.trim().isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块名称不能为空");
+        }
+
+        // 根据模块名称查询模块信息
+        ModuleInfo moduleInfo = moduleInfoMapper.selectByName(module.trim());
+        if (moduleInfo == null) {
+            throw new BusinessException(ErrorCode.MODULE_NOT_FOUND, "未找到模块: " + module);
+        }
+
+        // 获取数据源信息
+        DatasourceInfo datasourceInfo = datasourceMapper.selectById(moduleInfo.getDatasourceId());
+        if (datasourceInfo == null) {
+            throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND, "模块关联的数据源不存在");
+        }
+
+        return datasourceConverter.toDto(datasourceInfo);
+    }
+
+    @Override
+    public DatasourceInfo getDatasourceInfoByModule(String module) {
+        // 参数验证
+        if (module == null || module.trim().isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块名称不能为空");
+        }
+
+        // 根据模块名称查询模块信息
+        ModuleInfo moduleInfo = moduleInfoMapper.selectByName(module.trim());
+        if (moduleInfo == null) {
+            throw new BusinessException(ErrorCode.MODULE_NOT_FOUND, "未找到模块: " + module);
+        }
+
+        // 获取数据源信息
+        DatasourceInfo datasourceInfo = datasourceMapper.selectById(moduleInfo.getDatasourceId());
+        if (datasourceInfo == null) {
+            throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND, "模块关联的数据源不存在");
+        }
+
+        return datasourceInfo;
     }
 
     @Override

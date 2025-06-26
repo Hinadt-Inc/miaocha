@@ -55,11 +55,6 @@ public class DatasourceConverter implements Converter<DatasourceInfo, Datasource
     /** 将实体转换为DTO */
     @Override
     public DatasourceDTO toDto(DatasourceInfo entity) {
-        return toDto(entity, false); // 默认不包含敏感信息
-    }
-
-    /** 将实体转换为DTO，可控制是否包含敏感信息 */
-    public DatasourceDTO toDto(DatasourceInfo entity, boolean includeSensitiveData) {
         if (entity == null) {
             return null;
         }

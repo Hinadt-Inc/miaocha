@@ -19,7 +19,7 @@ import com.hinadt.miaocha.domain.entity.ModuleInfo;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
 import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
 import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
-import com.hinadt.miaocha.integration.IntegrationTestDataInitializer;
+import com.hinadt.miaocha.integration.data.IntegrationMySQLTestDataInitializer;
 import com.hinadt.miaocha.integration.logstash.support.LogstashDatabaseVerifier;
 import com.hinadt.miaocha.integration.logstash.support.LogstashInstanceStateVerifier;
 import com.hinadt.miaocha.integration.logstash.support.LogstashMachineTestEnvironment;
@@ -85,7 +85,7 @@ public class LogstashInstanceScalingIntegrationTest {
     @Autowired private LogstashProcessService logstashProcessService;
     @Autowired private LogstashMachineMapper logstashMachineMapper;
     @Autowired private LogstashProcessMapper logstashProcessMapper;
-    @Autowired private IntegrationTestDataInitializer dataInitializer;
+    @Autowired private IntegrationMySQLTestDataInitializer dataInitializer;
     @Autowired private ModuleInfoMapper moduleInfoMapper;
 
     // 支持类

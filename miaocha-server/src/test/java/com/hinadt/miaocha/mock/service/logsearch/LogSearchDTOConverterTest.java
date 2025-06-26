@@ -520,7 +520,6 @@ class LogSearchDTOConverterTest {
             LogSearchDTODecorator decorator = (LogSearchDTODecorator) converter.convert(original);
 
             // 测试装饰器的委托行为 - 所有getter方法应正确委托
-            assertEquals(original.getDatasourceId(), decorator.getDatasourceId(), "数据源ID应正确委托");
             assertEquals(original.getModule(), decorator.getModule(), "模块名应正确委托");
             assertEquals(
                     original.getKeywordConditions(),
@@ -1072,7 +1071,6 @@ class LogSearchDTOConverterTest {
     /** 创建基础的LogSearchDTO对象用于测试 设置常用的默认值以便测试使用 */
     private LogSearchDTO createBasicDTO() {
         LogSearchDTO dto = new LogSearchDTO();
-        dto.setDatasourceId(1L);
         dto.setModule("test-module");
 
         // 使用 KeywordConditionDTO 替换原来的 keywords

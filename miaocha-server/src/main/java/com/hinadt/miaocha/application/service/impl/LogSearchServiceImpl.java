@@ -67,7 +67,7 @@ public class LogSearchServiceImpl implements LogSearchService {
         // 验证参数
         validator.validateUser(userId);
         validator.validatePaginationParams(dto);
-        DatasourceInfo datasourceInfo = validator.validateAndGetDatasource(dto.getDatasourceId());
+        DatasourceInfo datasourceInfo = validator.validateAndGetDatasource(dto.getModule());
 
         // 执行搜索
         return searchTemplate.execute(datasourceInfo, dto, detailExecutor);
@@ -79,7 +79,7 @@ public class LogSearchServiceImpl implements LogSearchService {
     public LogHistogramResultDTO searchHistogram(Long userId, LogSearchDTO dto) {
         // 验证参数
         validator.validateUser(userId);
-        DatasourceInfo datasourceInfo = validator.validateAndGetDatasource(dto.getDatasourceId());
+        DatasourceInfo datasourceInfo = validator.validateAndGetDatasource(dto.getModule());
 
         // 执行搜索
         return searchTemplate.execute(datasourceInfo, dto, histogramExecutor);
@@ -92,7 +92,7 @@ public class LogSearchServiceImpl implements LogSearchService {
         // 验证参数
         validator.validateUser(userId);
         validator.validateFields(dto);
-        DatasourceInfo datasourceInfo = validator.validateAndGetDatasource(dto.getDatasourceId());
+        DatasourceInfo datasourceInfo = validator.validateAndGetDatasource(dto.getModule());
 
         // 执行搜索
         return searchTemplate.execute(datasourceInfo, dto, fieldDistributionExecutor);
@@ -100,11 +100,9 @@ public class LogSearchServiceImpl implements LogSearchService {
 
     /** 获取表字段信息 */
     @Override
-    public List<SchemaInfoDTO.ColumnInfoDTO> getTableColumns(
-            Long userId, Long datasourceId, String module) {
-        // 验证参数
-        validator.validateUser(userId);
-        DatasourceInfo datasourceInfo = validator.validateAndGetDatasource(datasourceId);
+    public List<SchemaInfoDTO.ColumnInfoDTO> getTableColumns(String module) {
+        // 验证并获取数据源信息
+        DatasourceInfo datasourceInfo = validator.validateAndGetDatasource(module);
 
         // 获取表名
         String tableName = moduleInfoService.getTableNameByModule(module);

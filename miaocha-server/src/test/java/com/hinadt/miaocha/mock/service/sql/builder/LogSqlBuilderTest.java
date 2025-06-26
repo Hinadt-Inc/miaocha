@@ -52,7 +52,6 @@ class LogSqlBuilderTest {
 
         testDto = new LogSearchDTO();
         testDto.setModule("test");
-        testDto.setDatasourceId(1L);
         testDto.setStartTime("2024-01-01 00:00:00.000");
         testDto.setEndTime("2024-01-01 01:00:00.000");
         testDto.setPageSize(100);

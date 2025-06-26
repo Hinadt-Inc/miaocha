@@ -1,4 +1,4 @@
-package com.hinadt.miaocha.integration;
+package com.hinadt.miaocha.integration.data;
 
 import com.hinadt.miaocha.application.logstash.enums.LogstashMachineState;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 /** 集成测试数据初始化器 在Spring Boot启动并完成Flyway迁移后，插入测试所需的基础数据 使用Mapper层进行数据操作，符合项目架构设计 */
 @Slf4j
 @Component
-public class IntegrationTestDataInitializer {
+public class IntegrationMySQLTestDataInitializer {
 
     @Autowired private UserMapper userMapper;
 

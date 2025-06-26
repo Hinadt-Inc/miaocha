@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import lombok.Data;
 
@@ -12,9 +11,6 @@ import lombok.Data;
 @Data
 @Schema(description = "日志检索请求对象")
 public class LogSearchDTO {
-    @Schema(description = "数据源ID", example = "1", required = true)
-    @NotNull(message = "数据源ID不能为空") private Long datasourceId;
-
     @Schema(description = "模块名称", example = "nginx", required = true)
     @NotBlank(message = "模块名称不能为空")
     private String module;

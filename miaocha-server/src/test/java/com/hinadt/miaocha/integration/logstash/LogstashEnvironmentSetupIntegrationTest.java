@@ -7,7 +7,7 @@ import com.hinadt.miaocha.application.logstash.command.LogstashCommandFactory;
 import com.hinadt.miaocha.common.exception.SshException;
 import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
-import com.hinadt.miaocha.integration.IntegrationTestDataInitializer;
+import com.hinadt.miaocha.integration.data.IntegrationMySQLTestDataInitializer;
 import com.hinadt.miaocha.integration.logstash.support.LogstashMachineTestEnvironment;
 import com.hinadt.miaocha.integration.logstash.support.LogstashPackageManager;
 import java.util.List;
@@ -50,7 +50,7 @@ public class LogstashEnvironmentSetupIntegrationTest {
     @Autowired private LogstashPackageManager packageManager;
     @Autowired private SshClient sshClient;
     @Autowired private LogstashCommandFactory commandFactory;
-    @Autowired private IntegrationTestDataInitializer dataInitializer;
+    @Autowired private IntegrationMySQLTestDataInitializer dataInitializer;
 
     private List<MachineInfo> testMachines;
 

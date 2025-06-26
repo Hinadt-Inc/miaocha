@@ -33,11 +33,6 @@ public class LogSearchDTODecorator extends LogSearchDTO {
 
     // 其他字段直接委托给原始对象
     @Override
-    public Long getDatasourceId() {
-        return delegate.getDatasourceId();
-    }
-
-    @Override
     public String getModule() {
         return delegate.getModule();
     }
@@ -68,6 +63,11 @@ public class LogSearchDTODecorator extends LogSearchDTO {
     }
 
     @Override
+    public Integer getTargetBuckets() {
+        return delegate.getTargetBuckets();
+    }
+
+    @Override
     public Integer getPageSize() {
         return delegate.getPageSize();
     }
@@ -75,11 +75,6 @@ public class LogSearchDTODecorator extends LogSearchDTO {
     @Override
     public Integer getOffset() {
         return delegate.getOffset();
-    }
-
-    @Override
-    public void setDatasourceId(Long datasourceId) {
-        delegate.setDatasourceId(datasourceId);
     }
 
     @Override
@@ -120,6 +115,11 @@ public class LogSearchDTODecorator extends LogSearchDTO {
     @Override
     public void setTimeGrouping(String timeGrouping) {
         delegate.setTimeGrouping(timeGrouping);
+    }
+
+    @Override
+    public void setTargetBuckets(Integer targetBuckets) {
+        delegate.setTargetBuckets(targetBuckets);
     }
 
     @Override
