@@ -31,6 +31,7 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(collapsed);
   const [loading, setLoading] = useState(true);
+  const [monacoInitialized, setMonacoInitialized] = useState(false);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -38,19 +39,42 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
     setIsCollapsed(collapsed);
   }, [collapsed]);
 
+  // 一次性初始化Monaco Editor
+  useEffect(() => {
+    if (!monacoInitialized) {
+      // 🎯 使用完全本地化的Monaco初始化 - 只初始化一次
+      initMonacoEditorLocally();
+      setMonacoInitialized(true);
+    }
+  }, []); // 空依赖数组，只在组件挂载时执行一次
+
   // 初始化编辑器 - 完全本地化
   useEffect(() => {
-    if (isCollapsed || !containerRef.current) return;
+    if (isCollapsed || !containerRef.current || !monacoInitialized) return;
 
-    const initEditor = async () => {
+    let isMounted = true;
+    let disposables: monaco.IDisposable[] = [];
+
+    const initEditor = () => {
       try {
         setLoading(true);
 
-        // 🎯 使用完全本地化的Monaco初始化
-        const monacoInstance = initMonacoEditorLocally();
+        // 🎯 直接使用已初始化的Monaco实例
+        if (!window.monaco) {
+          console.error('Monaco Editor 未初始化');
+          setLoading(false);
+          return;
+        }
 
-        // 创建编辑器实例
-        const editor = monacoInstance.editor.create(containerRef.current!, {
+        // 确保容器存在且组件未卸载
+        if (!containerRef.current || !isMounted) {
+          console.log('容器不存在或组件已卸载，跳过编辑器创建');
+          setLoading(false);
+          return;
+        }
+
+        // 创建编辑器实例 - 恢复功能但保持稳定性
+        const editor = window.monaco.editor.create(containerRef.current, {
           value: sqlQuery,
           language: 'sql',
           theme: editorSettings.theme || 'sqlTheme',
@@ -70,53 +94,117 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
           folding: true,
           lineNumbers: 'on',
           fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace',
-          // 智能提示配置
+          // 智能提示配置 - 恢复但使用更保守的设置
           quickSuggestions: editorSettings?.autoComplete ?? true,
           suggestOnTriggerCharacters: editorSettings?.autoComplete ?? true,
           acceptSuggestionOnCommitCharacter: true,
           acceptSuggestionOnEnter: 'on',
-          // 自动格式化
-          formatOnPaste: true,
-          formatOnType: true,
+          // 自动格式化 - 恢复但减少频率
+          formatOnPaste: false, // 粘贴时不格式化，避免大文本问题
+          formatOnType: false, // 输入时不格式化，减少Promise rejection
+          // Hover提示 - 恢复但设置合理的延迟
+          hover: {
+            enabled: true,
+            delay: 500, // 增加hover延迟，减少频繁触发
+          },
+          // 参数提示 - 恢复
+          parameterHints: { enabled: true },
+          // 其他有用的功能
+          suggest: {
+            showKeywords: true,
+            showSnippets: true,
+            showFunctions: true,
+          },
         });
+
+        if (!isMounted) {
+          editor.dispose();
+          return;
+        }
 
         editorRef.current = editor;
 
-        // 监听内容变化
-        const disposable = editor.onDidChangeModelContent(() => {
-          const value = editor.getValue();
-          onChange(value);
-        });
+        // 监听内容变化 - 添加防抖处理
+        let changeTimeout: NodeJS.Timeout;
+
+        const handleContentChange = () => {
+          if (changeTimeout) {
+            clearTimeout(changeTimeout);
+          }
+          changeTimeout = setTimeout(() => {
+            if (isMounted && editorRef.current) {
+              try {
+                const value = editor.getValue();
+                onChange(value);
+              } catch (error) {
+                console.warn('获取编辑器内容失败:', error);
+              }
+            }
+          }, 100); // 减少防抖时间到100ms，提高响应性
+        };
+
+        const changeDisposable = editor.onDidChangeModelContent(handleContentChange);
+
+        disposables.push(changeDisposable);
 
         // 调用挂载回调
-        if (onEditorMount) {
-          onEditorMount(editor, monacoInstance);
+        if (onEditorMount && isMounted) {
+          try {
+            onEditorMount(editor, window.monaco);
+          } catch (error) {
+            console.warn('编辑器挂载回调失败:', error);
+          }
         }
 
-        setLoading(false);
-        console.log('✅ QueryEditor 完全本地初始化成功，无CDN依赖！');
+        if (isMounted) {
+          setLoading(false);
+          console.log('✅ QueryEditor 完全本地初始化成功，无CDN依赖！');
+        }
 
         // 返回清理函数
         return () => {
-          disposable.dispose();
-          editor.dispose();
+          if (changeTimeout) {
+            clearTimeout(changeTimeout);
+          }
+          disposables.forEach((d) => {
+            try {
+              d.dispose();
+            } catch (error) {
+              console.warn('清理disposable失败:', error);
+            }
+          });
+          try {
+            editor.dispose();
+          } catch (error) {
+            console.warn('清理编辑器失败:', error);
+          }
         };
       } catch (error) {
         console.error('❌ QueryEditor 初始化失败:', error);
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
-    initEditor();
+    const cleanup = initEditor();
 
     // 清理函数
     return () => {
+      isMounted = false;
+      if (typeof cleanup === 'function') {
+        cleanup();
+      }
       if (editorRef.current) {
-        editorRef.current.dispose();
+        try {
+          editorRef.current.dispose();
+        } catch (error) {
+          console.warn('清理编辑器实例失败:', error);
+        }
         editorRef.current = null;
       }
     };
-  }, [isCollapsed, onEditorMount, editorSettings]);
+  }, [isCollapsed, monacoInitialized]); // 添加monacoInitialized依赖
 
   // 更新编辑器内容
   useEffect(() => {

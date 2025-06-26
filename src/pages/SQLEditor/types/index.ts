@@ -58,7 +58,7 @@ export interface QueryHistory {
 // 编辑器设置类型
 export interface EditorSettings {
   fontSize: number;
-  theme: 'vs' | 'vs-dark' | 'hc-black';
+  theme: 'vs' | 'vs-dark' | 'hc-black' | 'sqlTheme';
   wordWrap: boolean;
   autoComplete: boolean;
   tabSize: number;
@@ -88,8 +88,7 @@ export function isValidQueryHistory(obj: unknown): obj is QueryHistory {
     typeof (obj as Record<string, unknown>).sql === 'string' &&
     typeof (obj as Record<string, unknown>).dataSourceId === 'string' && // 确保检查dataSourceId字段
     typeof (obj as Record<string, unknown>).timestamp === 'string' &&
-    ((obj as Record<string, unknown>).status === 'success' ||
-      (obj as Record<string, unknown>).status === 'error')
+    ((obj as Record<string, unknown>).status === 'success' || (obj as Record<string, unknown>).status === 'error')
   );
 }
 

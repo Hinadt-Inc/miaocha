@@ -30,6 +30,7 @@ const LocalQueryEditor: React.FC<QueryEditorProps> = ({
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(collapsed);
   const [loading, setLoading] = useState(true);
+  const [monacoInitialized, setMonacoInitialized] = useState(false);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -37,16 +38,24 @@ const LocalQueryEditor: React.FC<QueryEditorProps> = ({
     setIsCollapsed(collapsed);
   }, [collapsed]);
 
+  // 初始化Monaco Editor（只初始化一次）
+  useEffect(() => {
+    if (!monacoInitialized) {
+      initMonacoEditorLocally();
+      setMonacoInitialized(true);
+    }
+  }, [monacoInitialized]);
+
   // 初始化编辑器
   useEffect(() => {
-    if (isCollapsed || !containerRef.current) return;
+    if (isCollapsed || !containerRef.current || !monacoInitialized || !window.monaco) return;
 
     const initEditor = async () => {
       try {
         setLoading(true);
 
-        // 初始化Monaco (100%本地)
-        const monacoInstance = initMonacoEditorLocally();
+        // 使用全局Monaco实例
+        const monacoInstance = window.monaco;
 
         // 创建编辑器实例
         const editor = monacoInstance.editor.create(containerRef.current!, {
@@ -97,7 +106,7 @@ const LocalQueryEditor: React.FC<QueryEditorProps> = ({
         editorRef.current = null;
       }
     };
-  }, [isCollapsed, onEditorMount, editorSettings]);
+  }, [isCollapsed, monacoInitialized, onEditorMount, editorSettings]);
 
   // 更新编辑器内容
   useEffect(() => {

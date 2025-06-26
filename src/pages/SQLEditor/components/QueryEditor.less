@@ -41,23 +41,21 @@
     width: 100%;
     display: block;
     height: 300px; // 默认高度
+    min-height: 200px; // 最小高度
     
     &.loading {
       display: none;
     }
 
-    // 根据data-height属性设置高度
-    &[data-height="400"] {
-      height: 400px;
-    }
-
-    &[data-height="500"] {
-      height: 500px;
-    }
-
-    &[data-height="600"] {
-      height: 600px;
-    }
+    // 支持数字格式的高度
+    &[data-height="200"] { height: 200px; }
+    &[data-height="250"] { height: 250px; }
+    &[data-height="300"] { height: 300px; }
+    &[data-height="350"] { height: 350px; }
+    &[data-height="400"] { height: 400px; }
+    &[data-height="450"] { height: 450px; }
+    &[data-height="500"] { height: 500px; }
+    &[data-height="600"] { height: 600px; }
   }
 }
 

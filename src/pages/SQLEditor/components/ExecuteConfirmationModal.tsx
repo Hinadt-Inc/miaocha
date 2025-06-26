@@ -29,22 +29,91 @@ const ExecuteConfirmationModal: React.FC<ExecuteConfirmationModalProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+  const onSqlChangeRef = useRef(onSqlChange);
   const [editorLoading, setEditorLoading] = useState(true);
+  const [monacoInitialized, setMonacoInitialized] = useState(false);
 
-  // 初始化编辑器
+  // 保持onSqlChange引用最新
   useEffect(() => {
-    if (!visible || !containerRef.current) return;
+    onSqlChangeRef.current = onSqlChange;
+  }, [onSqlChange]);
 
-    const initEditor = async () => {
+  // 一次性初始化Monaco Editor
+  useEffect(() => {
+    if (!monacoInitialized) {
+      // 🎯 使用完全本地化的Monaco初始化 - 只初始化一次
+      initMonacoEditorLocally();
+      setMonacoInitialized(true);
+
+      // 额外的Promise rejection处理器，专门处理ExecuteConfirmationModal的Monaco错误
+      const handleRejection = (event: PromiseRejectionEvent) => {
+        const reason = event.reason;
+        const reasonString = reason?.toString() || '';
+        const reasonStack = reason?.stack || '';
+
+        // 检查是否是Monaco相关的取消错误
+        if (
+          reasonString.includes('Canceled') ||
+          reasonStack.includes('Delayer.cancel') ||
+          reasonStack.includes('monaco') ||
+          reasonStack.includes('chunk-RWT5L')
+        ) {
+          event.preventDefault();
+          // 完全静默，不输出任何信息
+        }
+      };
+
+      window.addEventListener('unhandledrejection', handleRejection);
+
+      // 组件卸载时清理
+      return () => {
+        window.removeEventListener('unhandledrejection', handleRejection);
+      };
+    }
+  }, []); // 空依赖数组，只在组件挂载时执行一次
+
+  // 初始化编辑器 - 完全本地化
+  useEffect(() => {
+    if (!visible || !containerRef.current || !monacoInitialized) return;
+
+    let isMounted = true;
+    let disposables: monaco.IDisposable[] = [];
+
+    const initEditor = () => {
       try {
         setEditorLoading(true);
 
-        // 🎯 使用完全本地化的Monaco初始化
-        const monacoInstance = initMonacoEditorLocally();
+        // 如果编辑器已经存在，检查是否需要重新创建（例如readonly状态变化）
+        if (editorRef.current) {
+          const currentReadonly = editorRef.current.getOption(monaco.editor.EditorOption.readOnly);
+          if (currentReadonly === readonly) {
+            // 配置没有变化，不需要重新创建
+            setEditorLoading(false);
+            return;
+          } else {
+            // 配置变化了，清理旧编辑器
+            editorRef.current.dispose();
+            editorRef.current = null;
+          }
+        }
 
-        // 创建编辑器实例
-        const editor = monacoInstance.editor.create(containerRef.current!, {
-          value: sql,
+        // 🎯 直接使用已初始化的Monaco实例
+        if (!window.monaco) {
+          console.error('Monaco Editor 未初始化');
+          setEditorLoading(false);
+          return;
+        }
+
+        // 确保容器存在且组件未卸载
+        if (!containerRef.current || !isMounted) {
+          console.log('容器不存在或组件已卸载，跳过编辑器创建');
+          setEditorLoading(false);
+          return;
+        }
+
+        // 使用全局Monaco实例，包装在try-catch中以捕获内部错误
+        const editor = window.monaco.editor.create(containerRef.current, {
+          value: '', // 使用空字符串作为初始值，通过单独的useEffect来设置内容
           language: 'sql',
           theme: 'vs-dark',
           automaticLayout: true,
@@ -61,18 +130,40 @@ const ExecuteConfirmationModal: React.FC<ExecuteConfirmationModalProps> = ({
         editorRef.current = editor;
 
         // 监听内容变化
-        if (!readonly && onSqlChange) {
-          editor.onDidChangeModelContent(() => {
-            const value = editor.getValue();
-            onSqlChange(value);
+        if (!readonly && onSqlChangeRef.current) {
+          const changeDisposable = editor.onDidChangeModelContent(() => {
+            if (isMounted) {
+              try {
+                const value = editor.getValue();
+                onSqlChangeRef.current?.(value);
+              } catch (e) {
+                // 静默处理获取值时的错误
+                if (!e?.toString().includes('Canceled')) {
+                  console.warn('获取编辑器值时出错:', e);
+                }
+              }
+            }
           });
+          disposables.push(changeDisposable);
+        }
+
+        // 设置初始内容
+        if (sql) {
+          editor.setValue(sql);
         }
 
         setEditorLoading(false);
-        console.log('✅ ExecuteConfirmationModal 编辑器完全本地初始化成功！');
+        // 移除日志输出，避免每次都打印成功信息
       } catch (error) {
-        console.error('❌ ExecuteConfirmationModal 编辑器初始化失败:', error);
-        setEditorLoading(false);
+        // 静默处理Monaco内部的取消错误
+        const errorString = error?.toString() || '';
+        if (errorString.includes('Canceled') || errorString.includes('monaco')) {
+          // 静默处理Monaco内部错误
+          setEditorLoading(false);
+        } else {
+          console.error('❌ ExecuteConfirmationModal 编辑器初始化失败:', error);
+          setEditorLoading(false);
+        }
       }
     };
 
@@ -80,12 +171,34 @@ const ExecuteConfirmationModal: React.FC<ExecuteConfirmationModalProps> = ({
 
     // 清理函数
     return () => {
+      isMounted = false;
+
+      // 清理所有disposables - 静默处理错误
+      disposables.forEach((disposable) => {
+        try {
+          disposable.dispose();
+        } catch (e) {
+          // 静默处理disposable清理错误，特别是Canceled错误
+          if (!e?.toString().includes('Canceled')) {
+            console.warn('清理disposable时出错:', e);
+          }
+        }
+      });
+
+      // 清理编辑器 - 静默处理错误
       if (editorRef.current) {
-        editorRef.current.dispose();
-        editorRef.current = null;
+        try {
+          editorRef.current.dispose();
+          editorRef.current = null;
+        } catch (e) {
+          // 静默处理编辑器清理错误，特别是Canceled错误
+          if (!e?.toString().includes('Canceled')) {
+            console.warn('清理编辑器时出错:', e);
+          }
+        }
       }
     };
-  }, [visible, readonly, onSqlChange]);
+  }, [visible, monacoInitialized, readonly]); // 移除 onSqlChange 依赖
 
   // 更新编辑器内容
   useEffect(() => {
