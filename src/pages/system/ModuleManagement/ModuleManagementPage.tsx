@@ -139,6 +139,7 @@ const ModuleManagementPage = () => {
         visible={actions.configModalVisible}
         moduleId={actions.configRecord ? Number(actions.configRecord.key) : null}
         moduleName={actions.configRecord?.name || ''}
+        queryConfig={actions.configRecord?.queryConfig}
         onCancel={() => actions.setConfigModalVisible(false)}
         onSuccess={actions.handleConfigSuccess}
       />

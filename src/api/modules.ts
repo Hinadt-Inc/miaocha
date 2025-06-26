@@ -35,7 +35,7 @@ export interface UpdateModuleParams {
 
 export interface QueryConfigKeywordField {
   fieldName: string;
-  searchMethod: 'LIKE' | 'MATCH_ALL' | 'EXACT';
+  searchMethod: 'LIKE' | 'MATCH_ALL' | 'MATCH_ANY' | 'MATCH_PHRASE';
 }
 
 export interface QueryConfig {
@@ -46,6 +46,11 @@ export interface QueryConfig {
 export interface ModuleQueryConfigParams {
   moduleId: number;
   queryConfig: QueryConfig;
+}
+
+export interface ModuleFieldName {
+  name: string;
+  type: string;
 }
 
 export const getModules = async (config?: any) => {
@@ -157,10 +162,10 @@ export const updateModuleQueryConfig = async (params: ModuleQueryConfigParams) =
   });
 };
 
-// 获取模块查询配置
-export const getModuleQueryConfig = async (moduleId: number) => {
-  return request<QueryConfig>({
-    url: `/api/modules/${moduleId}/query-config`,
+// 获取模块字段名列表
+export const getModuleFieldNames = async (moduleId: number) => {
+  return request<string[]>({
+    url: `/api/modules/${moduleId}/field-names`,
     method: 'GET',
   });
 };

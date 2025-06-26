@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Form, Input, Button, Select, Space, message } from 'antd';
+import { Modal, Form, Button, Select, message, AutoComplete } from 'antd';
 import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
-import { updateModuleQueryConfig, getModuleQueryConfig } from '@/api/modules';
-import type { QueryConfigKeywordField } from '@/api/modules';
+import { updateModuleQueryConfig, getModuleFieldNames } from '@/api/modules';
+import type { QueryConfigKeywordField, QueryConfig } from '@/api/modules';
 import styles from './ModuleQueryConfigModal.module.less';
 
 interface ModuleQueryConfigModalProps {
   visible: boolean;
   moduleId: number | null;
   moduleName: string;
+  queryConfig?: QueryConfig;
   onCancel: () => void;
   onSuccess: () => void;
 }
@@ -18,42 +19,63 @@ const { Option } = Select;
 const searchMethodOptions = [
   { value: 'LIKE', label: '模糊匹配' },
   { value: 'MATCH_ALL', label: '全匹配' },
-  { value: 'EXACT', label: '精确匹配' },
+  { value: 'MATCH_ANY', label: '任意匹配' },
+  { value: 'MATCH_PHRASE', label: '短语匹配' },
 ];
 
 const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
   visible,
   moduleId,
   moduleName,
+  queryConfig,
   onCancel,
   onSuccess,
 }) => {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
+  const [fieldNames, setFieldNames] = useState<string[]>([]);
+  const [loadingFields, setLoadingFields] = useState(false);
 
   useEffect(() => {
     if (visible && moduleId) {
-      fetchQueryConfig();
+      initializeForm();
+      fetchFieldNames();
     }
-  }, [visible, moduleId]);
+  }, [visible, moduleId, queryConfig]);
 
-  const fetchQueryConfig = async () => {
+  const fetchFieldNames = async () => {
     if (!moduleId) return;
 
+    setLoadingFields(true);
     try {
-      const config = await getModuleQueryConfig(moduleId);
-      form.setFieldsValue({
-        timeField: config.timeField || '',
-        keywordFields: config.keywordFields || [{ fieldName: '', searchMethod: 'LIKE' }],
-      });
+      const fields = await getModuleFieldNames(moduleId);
+      setFieldNames(fields);
     } catch (error) {
-      console.error('获取查询配置失败:', error);
-      // 如果获取失败，设置默认值
-      form.setFieldsValue({
-        timeField: '',
-        keywordFields: [{ fieldName: '', searchMethod: 'LIKE' }],
-      });
+      console.error('获取字段名失败:', error);
+      message.warning('获取字段名失败，请手动输入');
+    } finally {
+      setLoadingFields(false);
     }
+  };
+
+  const initializeForm = () => {
+    // 使用传入的 queryConfig 或默认值初始化表单
+    const config = queryConfig || {
+      timeField: '',
+      keywordFields: [{ fieldName: '', searchMethod: 'LIKE' }],
+    };
+
+    const formData = {
+      timeField: config.timeField || '',
+      keywordFields:
+        config.keywordFields && config.keywordFields.length > 0
+          ? config.keywordFields
+          : [{ fieldName: '', searchMethod: 'LIKE' }],
+    };
+
+    // 先重置表单，再设置值
+    form.resetFields();
+    form.setFieldsValue(formData);
   };
 
   const handleSubmit = async () => {
@@ -84,7 +106,6 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
   };
 
   const handleCancel = () => {
-    form.resetFields();
     onCancel();
   };
 
@@ -113,22 +134,56 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
           }}
         >
           <Form.Item label="时间字段" name="timeField" rules={[{ required: true, message: '请输入时间字段名称' }]}>
-            <Input placeholder="请输入时间字段名称，如：log_time" />
+            <AutoComplete
+              placeholder="请输入时间字段名称，如：log_time"
+              options={fieldNames.map((field) => ({
+                value: field,
+                label: field,
+              }))}
+              filterOption={(inputValue, option) =>
+                option?.value.toString().toLowerCase().includes(inputValue.toLowerCase()) || false
+              }
+              notFoundContent={loadingFields ? '加载中...' : '无匹配字段'}
+              allowClear
+            />
           </Form.Item>
 
           <Form.Item label="关键词检索字段">
             <Form.List name="keywordFields">
               {(fields, { add, remove }) => (
                 <>
-                  {fields.map(({ key, name, ...restField }) => (
-                    <Space key={key} className={styles.keywordFieldRow} align="baseline">
+                  {fields.map(({ key, name, ...restField }, index) => (
+                    <div key={key} className={styles.keywordFieldRow}>
                       <Form.Item
                         {...restField}
                         name={[name, 'fieldName']}
                         rules={[{ required: true, message: '请输入字段名称' }]}
                         className={styles.fieldNameInput}
                       >
-                        <Input placeholder="字段名称，如：message" />
+                        <AutoComplete
+                          placeholder="字段名称，如：message"
+                          options={fieldNames.map((field) => ({
+                            value: field,
+                            label: field,
+                          }))}
+                          filterOption={(inputValue, option) =>
+                            option?.value.toString().toLowerCase().includes(inputValue.toLowerCase()) || false
+                          }
+                          notFoundContent={loadingFields ? '加载中...' : '无匹配字段'}
+                          allowClear
+                          onSelect={(value) => {
+                            // 确保选择的值能正确设置到表单中
+                            const currentValues = form.getFieldsValue();
+                            const newKeywordFields = [...(currentValues.keywordFields || [])];
+                            if (newKeywordFields[index]) {
+                              newKeywordFields[index].fieldName = value;
+                              form.setFieldsValue({
+                                ...currentValues,
+                                keywordFields: newKeywordFields,
+                              });
+                            }
+                          }}
+                        />
                       </Form.Item>
                       <Form.Item
                         {...restField}
@@ -147,7 +202,7 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
                       {fields.length > 1 && (
                         <MinusCircleOutlined className={styles.removeButton} onClick={() => remove(name)} />
                       )}
-                    </Space>
+                    </div>
                   ))}
                   <Form.Item>
                     <Button

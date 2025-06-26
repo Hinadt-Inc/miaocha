@@ -10,5 +10,12 @@ declare const styles: {
   readonly sqlContainer: string;
   readonly sqlPre: string;
   readonly warningText: string;
+  readonly queryConfigContainer: string;
+  readonly timeFieldSection: string;
+  readonly keywordFieldsSection: string;
+  readonly keywordFieldsList: string;
+  readonly keywordFieldItem: string;
+  readonly searchMethodLabel: string;
+  readonly noConfigText: string;
 };
 export = styles;

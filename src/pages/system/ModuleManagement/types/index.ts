@@ -1,13 +1,15 @@
-import type { Module as BaseModule } from '@/api/modules';
+import type { Module as BaseModule, QueryConfig } from '@/api/modules';
 
 export interface Module extends BaseModule {
   createUser: string;
   updateUser: string;
+  queryConfig?: QueryConfig;
 }
 
 export interface ModuleData extends Module {
   key: string;
   dorisSql: string;
+  queryConfig?: QueryConfig;
 }
 
 export interface ModuleFormData {
