@@ -3,12 +3,7 @@ package com.hinadt.miaocha.endpoint;
 import com.hinadt.miaocha.application.service.ModuleInfoService;
 import com.hinadt.miaocha.application.service.TableValidationService;
 import com.hinadt.miaocha.domain.dto.ApiResponse;
-import com.hinadt.miaocha.domain.dto.module.ModuleExecuteDorisSqlDTO;
-import com.hinadt.miaocha.domain.dto.module.ModuleInfoCreateDTO;
-import com.hinadt.miaocha.domain.dto.module.ModuleInfoDTO;
-import com.hinadt.miaocha.domain.dto.module.ModuleInfoUpdateDTO;
-import com.hinadt.miaocha.domain.dto.module.ModuleInfoWithPermissionsDTO;
-import com.hinadt.miaocha.domain.dto.module.ModuleQueryConfigDTO;
+import com.hinadt.miaocha.domain.dto.module.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -48,6 +43,14 @@ public class ModuleEndpoint {
     public ApiResponse<ModuleInfoDTO> getModuleById(
             @Parameter(description = "模块ID", required = true) @PathVariable Long id) {
         ModuleInfoDTO response = moduleInfoService.getModuleById(id);
+        return ApiResponse.success(response);
+    }
+
+    @GetMapping("/query-config")
+    @Operation(summary = "根据模块名获取模块查询配置", description = "根据模块名获取模块的查询配置，包括时间字段和关键词检索字段")
+    public ApiResponse<QueryConfigDTO> getModuleQueryConfig(
+            @Parameter(description = "模块ID", required = true) @RequestParam("name") String name) {
+        QueryConfigDTO response = moduleInfoService.getQueryConfigByModule(name);
         return ApiResponse.success(response);
     }
 
