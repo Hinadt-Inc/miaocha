@@ -807,6 +807,10 @@ const SQLEditorImpl: React.FC = () => {
                     onEditorMount={handleEditorDidMount}
                     editorSettings={editorSettings}
                     height={editorHeight}
+                    resizable={true}
+                    minHeight={200}
+                    maxHeight={800}
+                    onHeightChange={setEditorHeight}
                   />
                 </Card>
               </Splitter.Panel>

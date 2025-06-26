@@ -13,6 +13,10 @@ interface QueryEditorProps {
   editorSettings: EditorSettings;
   collapsed?: boolean;
   height?: number | string;
+  resizable?: boolean; // 是否支持拖拽调整高度
+  minHeight?: number; // 最小高度
+  maxHeight?: number; // 最大高度
+  onHeightChange?: (height: number) => void; // 高度变化回调
 }
 
 /**
@@ -28,16 +32,83 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
   editorSettings,
   collapsed = false,
   height = 300,
+  resizable = true,
+  minHeight = 200,
+  maxHeight = 800,
+  onHeightChange,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(collapsed);
   const [loading, setLoading] = useState(true);
   const [monacoInitialized, setMonacoInitialized] = useState(false);
+  const [currentHeight, setCurrentHeight] = useState<number>(typeof height === 'number' ? height : 300);
+  const [isResizing, setIsResizing] = useState(false);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const resizeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setIsCollapsed(collapsed);
   }, [collapsed]);
+
+  // 处理拖拽调整高度
+  useEffect(() => {
+    if (!resizable || !resizeRef.current) return;
+
+    const resizeHandle = resizeRef.current;
+    let startY: number;
+    let startHeight: number;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      setIsResizing(true);
+      startY = e.clientY;
+      startHeight = currentHeight;
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'row-resize';
+      document.body.style.userSelect = 'none';
+
+      e.preventDefault();
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaY = e.clientY - startY;
+      const newHeight = Math.max(minHeight, Math.min(maxHeight, startHeight + deltaY));
+
+      setCurrentHeight(newHeight);
+      onHeightChange?.(newHeight);
+
+      // 实时调整编辑器布局
+      if (editorRef.current) {
+        setTimeout(() => {
+          editorRef.current?.layout();
+        }, 0);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    resizeHandle.addEventListener('mousedown', handleMouseDown);
+
+    return () => {
+      resizeHandle.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizable, currentHeight, minHeight, maxHeight, onHeightChange]);
+
+  // 监听外部高度变化
+  useEffect(() => {
+    if (typeof height === 'number' && height !== currentHeight) {
+      setCurrentHeight(height);
+    }
+  }, [height]);
 
   // 一次性初始化Monaco Editor
   useEffect(() => {
@@ -213,6 +284,16 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
     }
   }, [sqlQuery]);
 
+  // 设置CSS变量
+  useEffect(() => {
+    if (containerRef.current?.parentElement) {
+      const wrapper = containerRef.current.parentElement.parentElement;
+      if (wrapper) {
+        wrapper.style.setProperty('--editor-height', `${currentHeight}px`);
+      }
+    }
+  }, [currentHeight]);
+
   // 如果折叠，返回简单视图
   if (isCollapsed) {
     return (
@@ -223,7 +304,7 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
   }
 
   return (
-    <div className="editor-container">
+    <div className={`editor-container ${isResizing ? 'resizing' : ''}`}>
       <div className="editor-wrapper">
         {loading && (
           <div className="editor-loading">
@@ -233,7 +314,7 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
         <div
           ref={containerRef}
           className={`monaco-editor-container ${loading ? 'loading' : ''}`}
-          data-height={height}
+          data-height={currentHeight}
         />
       </div>
     </div>
