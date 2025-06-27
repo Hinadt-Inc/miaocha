@@ -8,7 +8,7 @@ import { CompassOutlined, ConsoleSqlOutlined, SettingOutlined } from '@ant-desig
 const LoginPage = lazy(() => import('@/pages/Login'));
 const HomePage = lazy(() => import('@/pages/Home'));
 const UserManagementPage = lazy(() => import('@/pages/system/UserManagement'));
-const DataSourceManagementPage = lazy(() => import('@/pages/system/DataSourceManagementPage'));
+const DataSourceManagementPage = lazy(() => import('@/pages/system/DataSourceManagement'));
 const SQLEditorPage = lazy(() => import('@/pages/SQLEditor/SQLEditorImpl'));
 const MachineManagementPage = lazy(() => import('@/pages/system/MachineManagementPage'));
 const LogstashManagementPage = lazy(() => import('@/pages/system/LogstashManagementPage'));
