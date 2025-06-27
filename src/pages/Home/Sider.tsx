@@ -18,6 +18,7 @@ interface IProps {
   selectedQueryConfig?: string | undefined; // 选中的查询配置
   queryConfigs?: any[]; // 查询配置列表
   moduleQueryConfig?: any; // 模块查询配置
+  selectedQueryConfigs?: any[]; // 选中的查询配置列表
 }
 
 const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((props, ref) => {
@@ -32,6 +33,7 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
     selectedQueryConfig,
     queryConfigs,
     moduleQueryConfig,
+    selectedQueryConfigs,
   } = props;
   const [columns, setColumns] = useState<ILogColumnsResponse[]>([]); // 日志表字段
   const [selectedModule, setSelectedModule] = useState<string>(''); // 已选模块
@@ -75,17 +77,12 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
           timeField: moduleQueryConfig.timeField,
         };
 
-        // 如果有选中的查询配置，则添加对应的keywordFields
-        if (selectedQueryConfig && queryConfigs && queryConfigs.length > 0) {
-          const selectedConfig = queryConfigs.find((config) => config.value === selectedQueryConfig);
-          if (selectedConfig) {
-            queryConfig.keywordFields = [
-              {
-                fieldName: selectedConfig.fieldName,
-                searchMethod: selectedConfig.searchMethod,
-              },
-            ];
-          }
+        // 如果有选中的查询配置列表，则添加对应的keywordFields
+        if (selectedQueryConfigs && selectedQueryConfigs.length > 0) {
+          queryConfig.keywordFields = selectedQueryConfigs.map((config) => ({
+            fieldName: config.fieldName,
+            searchMethod: config.searchMethod,
+          }));
         }
       }
 

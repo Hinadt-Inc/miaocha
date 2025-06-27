@@ -20,6 +20,7 @@ interface IProps {
   getDistributionWithSearchBar?: () => void; // 获取字段分布回调函数
   selectedModule?: string; // 当前选中的模块
   onQueryConfigChange?: (selectedConfig: string | undefined, queryConfigs: any[], res?: any) => void; // 查询配置变化回调函数
+  onSelectedQueryConfigsChange?: (selectedQueryConfigs: any[]) => void; // 选中的查询配置列表变化回调函数
 }
 
 const SearchBar = forwardRef((props: IProps, ref) => {
@@ -35,6 +36,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     getDistributionWithSearchBar,
     selectedModule,
     onQueryConfigChange,
+    onSelectedQueryConfigsChange,
   } = props;
 
   const [timeGroup, setTimeGroup] = useState<string>('auto'); // 时间分组
@@ -60,6 +62,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   // 查询配置相关状态
   const [queryConfigs, setQueryConfigs] = useState<any[]>([]);
   const [selectedQueryConfig, setSelectedQueryConfig] = useState<string | undefined>(undefined);
+  const [selectedQueryConfigs, setSelectedQueryConfigs] = useState<any[]>([]); // 选中的查询配置列表
 
   // 获取模块查询配置
   const getQueryConfig = useRequest(modulesApi.getModuleQueryConfig, {
@@ -98,16 +101,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     },
   });
 
-  // 当selectedModule变化时，获取查询配置
-  useEffect(() => {
-    if (selectedModule) {
-      getQueryConfig.run(selectedModule);
-    } else {
-      setQueryConfigs([]);
-      setSelectedQueryConfig(undefined);
-    }
-  }, [selectedModule]);
-
   // 在组件初始化时恢复之前的查询条件
   useEffect(() => {
     if (!initialized) {
@@ -124,6 +117,11 @@ const SearchBar = forwardRef((props: IProps, ref) => {
           // 恢复SQL条件
           if (params.whereSqls && Array.isArray(params.whereSqls)) {
             setSqls(params.whereSqls);
+          }
+
+          // 恢复查询配置
+          if (params.selectedQueryConfigs && Array.isArray(params.selectedQueryConfigs)) {
+            setSelectedQueryConfigs(params.selectedQueryConfigs);
           }
 
           // 恢复时间分组
@@ -148,6 +146,24 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       setInitialized(true);
     }
   }, [initialized]);
+
+  // 当selectedModule变化时，获取查询配置
+  useEffect(() => {
+    if (selectedModule) {
+      getQueryConfig.run(selectedModule);
+    } else {
+      setQueryConfigs([]);
+      setSelectedQueryConfig(undefined);
+      setSelectedQueryConfigs([]); // 清空选中的查询配置
+    }
+  }, [selectedModule]);
+
+  // 当selectedQueryConfigs变化时，通知父组件
+  useEffect(() => {
+    if (onSelectedQueryConfigsChange) {
+      onSelectedQueryConfigsChange(selectedQueryConfigs);
+    }
+  }, [selectedQueryConfigs, onSelectedQueryConfigsChange]);
 
   // 暴露给父组件的方法
   useImperativeHandle(ref, () => ({
@@ -189,6 +205,11 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     setSql(value || '');
   };
 
+  // 处理查询配置选择变化
+  const changeQueryConfig = (value: string | undefined) => {
+    setSelectedQueryConfig(value || undefined);
+  };
+
   const handleTimeFromTag = () => {
     setOpenTimeRange(true);
   };
@@ -206,7 +227,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
   };
 
-  // 显示关键字、sql、时间的标签
+  // 显示关键字、sql、查询配置、时间的标签
   const filterRender = useMemo(() => {
     const { range = [] } = timeOption;
     return (
@@ -236,6 +257,19 @@ const SearchBar = forwardRef((props: IProps, ref) => {
               </Tag>
             </Tooltip>
           ))}
+          {selectedQueryConfigs.map((item: any) => (
+            <Tooltip placement="topLeft" title={`${item.fieldName} (${item.searchMethod})`}>
+              <Tag
+                key={item.value}
+                color="orange"
+                closable
+                onClick={() => setSelectedQueryConfig(item.value)}
+                onClose={() => handleCloseQueryConfig(item)}
+              >
+                <span className="tagContent">{item.label}</span>
+              </Tag>
+            </Tooltip>
+          ))}
 
           {/* 时间范围 */}
           {range.length === 2 && (
@@ -246,9 +280,9 @@ const SearchBar = forwardRef((props: IProps, ref) => {
         </Space>
       </div>
     );
-  }, [keywords, sqls, timeOption]);
+  }, [keywords, sqls, selectedQueryConfigs, timeOption]);
 
-  // 当keywords或sqls或时间变化时触发搜索
+  // 当keywords、sqls、查询配置或时间变化时触发搜索
   useEffect(() => {
     // 只有在组件初始化完成后才执行搜索和保存逻辑
     if (!initialized) return;
@@ -282,6 +316,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
         timeRange: params.timeRange,
         timeGrouping: params.timeGrouping,
         fields: params.fields,
+        selectedQueryConfigs: selectedQueryConfigs || [],
       };
       localStorage.setItem('searchBarParams', JSON.stringify(searchParamsToSave));
     } catch (error) {
@@ -299,7 +334,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     if (getDistributionWithSearchBar) {
       getDistributionWithSearchBar();
     }
-  }, [keywords, sqls, timeOption, timeGroup, activeColumns, onSqlsChange, initialized]);
+  }, [keywords, sqls, selectedQueryConfigs, timeOption, timeGroup, activeColumns, onSqlsChange, initialized]);
 
   // 处理关键词搜索
   const handleSubmit = () => {
@@ -328,8 +363,19 @@ const SearchBar = forwardRef((props: IProps, ref) => {
         setSqls((prev) => [...prev, sqlTrim]);
       }
     }
+
+    // 如果选择了查询配置，添加到列表中
+    if (selectedQueryConfig) {
+      const selectedConfig = queryConfigs.find((config) => config.value === selectedQueryConfig);
+      if (selectedConfig && !selectedQueryConfigs.some((config) => config.value === selectedQueryConfig)) {
+        setSelectedQueryConfigs((prev) => [...prev, selectedConfig]);
+      }
+    }
+
+    // 清空输入框
     setKeyword('');
     setSql('');
+    setSelectedQueryConfig(undefined);
 
     const latestTime = getLatestTime(timeOption);
     setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
@@ -469,15 +515,11 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     );
   }, [sql, sqlHistory, columns]);
 
-  // 处理查询配置变化
-  const handleQueryConfigChange = (value: string | undefined) => {
-    setSelectedQueryConfig(value);
-    // 通知父组件选中的查询配置变化，需要从SearchBar中获取完整的模块配置
-    if (onQueryConfigChange) {
-      // 由于这里没有完整的模块配置，只传递选中配置和配置列表
-      // 完整的模块配置在getQueryConfig的onSuccess中已经传递过
-      onQueryConfigChange(value, queryConfigs);
-    }
+  // 处理删除查询配置
+  const handleCloseQueryConfig = (item: any) => {
+    setSelectedQueryConfigs((prev) => prev.filter((config) => config.value !== item.value));
+    const latestTime = getLatestTime(timeOption);
+    setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
   };
 
   // 渲染查询配置下拉框
@@ -488,7 +530,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
         placeholder="选择查询配置"
         style={{ width: '100%' }}
         value={selectedQueryConfig}
-        onChange={handleQueryConfigChange}
+        onChange={changeQueryConfig}
         loading={getQueryConfig.loading}
         options={queryConfigs}
         disabled={!selectedModule || queryConfigs.length === 0}

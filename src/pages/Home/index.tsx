@@ -27,6 +27,7 @@ const HomePage = () => {
   const [selectedQueryConfig, setSelectedQueryConfig] = useState<string | undefined>(undefined);
   const [queryConfigs, setQueryConfigs] = useState<any[]>([]);
   const [moduleQueryConfig, setModuleQueryConfig] = useState<any>(null); // 存储完整的模块查询配置
+  const [selectedQueryConfigs, setSelectedQueryConfigs] = useState<any[]>([]); // 选中的查询配置列表
   const [isInitialized, setIsInitialized] = useState(false); // 标记是否已经初始化
   const lastCallParamsRef = useRef<string>(''); // 用于避免重复调用
 
@@ -83,17 +84,12 @@ const HomePage = () => {
           timeField: moduleQueryConfig.timeField,
         };
 
-        // 如果有选中的查询配置，则添加对应的keywordFields
-        if (selectedQueryConfig && queryConfigs.length > 0) {
-          const selectedConfig = queryConfigs.find((config) => config.value === selectedQueryConfig);
-          if (selectedConfig) {
-            queryConfig.keywordFields = [
-              {
-                fieldName: selectedConfig.fieldName,
-                searchMethod: selectedConfig.searchMethod,
-              },
-            ];
-          }
+        // 如果有选中的查询配置列表，则添加对应的keywordFields
+        if (selectedQueryConfigs && selectedQueryConfigs.length > 0) {
+          queryConfig.keywordFields = selectedQueryConfigs.map((config) => ({
+            fieldName: config.fieldName,
+            searchMethod: config.searchMethod,
+          }));
         }
       }
 
@@ -132,17 +128,12 @@ const HomePage = () => {
           timeField: moduleQueryConfig.timeField,
         };
 
-        // 如果有选中的查询配置，则添加对应的keywordFields
-        if (selectedQueryConfig && queryConfigs.length > 0) {
-          const selectedConfig = queryConfigs.find((config) => config.value === selectedQueryConfig);
-          if (selectedConfig) {
-            queryConfig.keywordFields = [
-              {
-                fieldName: selectedConfig.fieldName,
-                searchMethod: selectedConfig.searchMethod,
-              },
-            ];
-          }
+        // 如果有选中的查询配置列表，则添加对应的keywordFields
+        if (selectedQueryConfigs && selectedQueryConfigs.length > 0) {
+          queryConfig.keywordFields = selectedQueryConfigs.map((config) => ({
+            fieldName: config.fieldName,
+            searchMethod: config.searchMethod,
+          }));
         }
       }
 
@@ -182,7 +173,7 @@ const HomePage = () => {
       whereSqls: searchParams.whereSqls,
       offset: searchParams.offset,
       fields: searchParams.fields,
-      selectedQueryConfig,
+      selectedQueryConfigs: selectedQueryConfigs.map((config) => config.value),
       moduleQueryConfigTimeField: moduleQueryConfig?.timeField,
     });
 
@@ -204,7 +195,7 @@ const HomePage = () => {
     if (!isInitialized) {
       setIsInitialized(true);
     }
-  }, [searchParams, moduleQueryConfig, selectedQueryConfig]);
+  }, [searchParams, moduleQueryConfig, selectedQueryConfigs]);
 
   // 处理列变化
   const handleChangeColumns = (columns: ILogColumnsResponse[]) => {
@@ -258,6 +249,7 @@ const HomePage = () => {
     selectedQueryConfig,
     queryConfigs,
     moduleQueryConfig,
+    selectedQueryConfigs,
   };
 
   // 使用useCallback稳定getDistributionWithSearchBar函数引用
@@ -324,6 +316,11 @@ const HomePage = () => {
     [],
   );
 
+  // 处理选中的查询配置列表变化
+  const handleSelectedQueryConfigsChange = useCallback((selectedQueryConfigs: any[]) => {
+    setSelectedQueryConfigs(selectedQueryConfigs);
+  }, []);
+
   // 获取模块查询配置
   const getModuleQueryConfig = useRequest((moduleName: string) => modulesApi.getModuleQueryConfig(moduleName), {
     manual: true,
@@ -361,6 +358,7 @@ const HomePage = () => {
       getDistributionWithSearchBar,
       selectedModule,
       onQueryConfigChange: handleQueryConfigChange,
+      onSelectedQueryConfigsChange: handleSelectedQueryConfigsChange,
     }),
     [
       searchParams,
@@ -372,6 +370,7 @@ const HomePage = () => {
       getDistributionWithSearchBar,
       selectedModule,
       handleQueryConfigChange,
+      handleSelectedQueryConfigsChange,
     ],
   );
 
