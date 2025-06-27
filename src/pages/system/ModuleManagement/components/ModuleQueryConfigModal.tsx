@@ -250,6 +250,10 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
                           rules={[
                             { required: true, message: '请输入字段名称' },
                             {
+                              max: 128,
+                              message: '字段名称长度不能超过128个字符',
+                            },
+                            {
                               pattern: /^[a-zA-Z_][a-zA-Z0-9_.\[\]'"]*$/,
                               message: '字段名必须以字母或下划线开头，只能包含字母、数字、下划线、点号、方括号和引号',
                             },
