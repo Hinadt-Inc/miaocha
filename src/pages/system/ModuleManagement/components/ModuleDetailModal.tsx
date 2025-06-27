@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import type { Module } from '../types';
 import type { QueryConfig } from '@/api/modules';
 import styles from '../ModuleManagement.module.less';
+import modalStyles from './ModuleDetailModal.module.less';
 
 interface ModuleDetailModalProps {
   visible: boolean;
@@ -18,24 +19,24 @@ const ModuleDetailModal: React.FC<ModuleDetailModalProps> = ({ visible, moduleDe
     }
 
     return (
-      <div className={styles.queryConfigContainer}>
-        <div className={styles.timeFieldSection}>
-          <strong>时间字段：</strong>
+      <div className={modalStyles.queryConfigContainer}>
+        <div className={modalStyles.configRow}>
+          <span className={modalStyles.configLabel}>时间字段：</span>
           <Tag color="blue">{queryConfig.timeField || '未设置'}</Tag>
         </div>
-        <div className={styles.keywordFieldsSection}>
-          <strong>关键词检索字段：</strong>
+        <div className={`${modalStyles.configRow} ${modalStyles.fieldsRow}`}>
+          <span className={modalStyles.configLabel}>关键词检索字段：</span>
           {queryConfig.keywordFields && queryConfig.keywordFields.length > 0 ? (
-            <div className={styles.keywordFieldsList}>
+            <div className={modalStyles.keywordFieldsInline}>
               {queryConfig.keywordFields.map((field, index) => (
-                <div key={`${field.fieldName}-${field.searchMethod}-${index}`} className={styles.keywordFieldItem}>
+                <span key={`${field.fieldName}-${field.searchMethod}-${index}`} className={modalStyles.fieldTag}>
                   <Tag color="green">{field.fieldName}</Tag>
-                  <span className={styles.searchMethodLabel}>({field.searchMethod})</span>
-                </div>
+                  <span className={modalStyles.searchMethod}>({field.searchMethod})</span>
+                </span>
               ))}
             </div>
           ) : (
-            <span className={styles.noConfigText}>暂无配置</span>
+            <span className={modalStyles.noConfigText}>暂无配置</span>
           )}
         </div>
       </div>
