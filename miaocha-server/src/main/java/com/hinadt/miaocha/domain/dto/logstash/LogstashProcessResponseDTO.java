@@ -87,5 +87,8 @@ public class LogstashProcessResponseDTO {
 
         @Schema(description = "部署目录路径")
         private String deployPath;
+
+        @Schema(description = "Logstash实例状态最后更新时间")
+        private LocalDateTime lastUpdateTime;
     }
 }

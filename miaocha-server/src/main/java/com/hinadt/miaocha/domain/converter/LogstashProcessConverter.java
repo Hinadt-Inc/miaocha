@@ -102,6 +102,7 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
                 statusInfo.setStateDescription(getStateDescription(relation));
                 statusInfo.setProcessPid(relation.getProcessPid());
                 statusInfo.setDeployPath(relation.getDeployPath());
+                statusInfo.setLastUpdateTime(relation.getUpdateTime());
 
                 machineStatuses.add(statusInfo);
             }
