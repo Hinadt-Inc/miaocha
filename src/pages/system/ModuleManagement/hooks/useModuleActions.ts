@@ -137,7 +137,6 @@ export const useModuleActions = ({ messageApi, onDataChange }: UseModuleActionsP
       messageApi.success('SQL执行成功');
       setSqlModalVisible(false);
     } catch (error) {
-      messageApi.error('SQL执行失败');
       console.error('SQL执行失败:', error);
     } finally {
       setExecuting(false);

@@ -76,7 +76,6 @@ const ModulePermissionModal = ({
       // 完全依赖props更新，不再维护本地状态
       onRefresh();
     } catch (error) {
-      messageApi.error('操作失败');
       console.error('模块权限操作失败:', error);
     } finally {
       setLoading(false);
@@ -107,7 +106,7 @@ const ModulePermissionModal = ({
       setSelectedModules([]);
       onRefresh();
     } catch {
-      messageApi.error('操作失败');
+      console.error('批量操作失败');
     } finally {
       setLoading(false);
     }

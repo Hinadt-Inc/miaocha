@@ -80,15 +80,12 @@ const UserManagementPage = () => {
     const abortController = new AbortController();
     fetchUsers({ signal: abortController.signal }).catch((error: Error) => {
       if (error.name !== 'CanceledError') {
-        handleError('加载用户数据失败，请刷新页面重试', {
-          type: ErrorType.BUSINESS,
-          showType: 'notification',
-        });
+        // API 错误已由全局错误处理器处理，这里不再重复处理
       }
     });
     fetchModules();
     return () => abortController.abort();
-  }, [handleError]);
+  }, []);
 
   const fetchUsers = async (config?: AxiosRequestConfig) => {
     setLoading(true);
@@ -99,20 +96,11 @@ const UserManagementPage = () => {
       // 保存原始数据供搜索使用
       originalDataRef.current = transformedUsers;
     } catch (error) {
-      if (error instanceof Error) {
-        if (error.name !== 'CanceledError') {
-          handleError('加载用户数据失败，请检查网络连接后重试', {
-            type: ErrorType.NETWORK,
-            showType: 'notification',
-          });
-        }
-      } else {
-        console.error('Unexpected error:', error);
-        handleError('发生了未知错误，请联系管理员', {
-          type: ErrorType.SYSTEM,
-          showType: 'notification',
-        });
+      if (error instanceof Error && error.name === 'CanceledError') {
+        // 请求被取消，不需要显示错误
+        return;
       }
+      // API 错误已由全局错误处理器处理，这里不再重复处理
     } finally {
       setLoading(false);
     }
@@ -127,11 +115,8 @@ const UserManagementPage = () => {
           label: module.name,
         })),
       );
-    } catch (error) {
-      handleError('加载模块列表失败，部分功能可能受限', {
-        type: ErrorType.BUSINESS,
-        showType: 'notification',
-      });
+    } catch {
+      // API 错误已由全局错误处理器处理，这里不再重复处理
     }
   };
   const [loading, setLoading] = useState(false);
@@ -154,10 +139,7 @@ const UserManagementPage = () => {
   // 重新加载数据
   const handleReload = () => {
     fetchUsers().catch(() => {
-      handleError('刷新数据失败，请检查网络连接', {
-        type: ErrorType.NETWORK,
-        showType: 'message',
-      });
+      // API 错误已由全局错误处理器处理，这里不再重复处理
     });
   };
 
@@ -174,6 +156,23 @@ const UserManagementPage = () => {
     }));
     setFilteredInfo(filters);
     setSortedInfo(Array.isArray(sorter) ? sorter[0] : sorter);
+  };
+
+  // 搜索匹配函数
+  const matchesSearchTerms = (user: UserData, searchTerms: string[]) => {
+    if (searchTerms.length === 0) return true;
+
+    // 获取用户的各个字段以供搜索
+    const userNickname = user.nickname?.toLowerCase() || '';
+    const userName = user.name?.toLowerCase() || '';
+    const userEmail = user.email?.toLowerCase() || '';
+    const userUsername = user.username?.toLowerCase() || '';
+
+    // 普通字符串包含搜索
+    return searchTerms.every((term) => {
+      const textToSearch = `${userNickname} ${userName} ${userEmail} ${userUsername}`;
+      return textToSearch.includes(term);
+    });
   };
 
   // 处理搜索（带防抖功能）
@@ -195,10 +194,7 @@ const UserManagementPage = () => {
         } else {
           // 如果原始数据不存在，则重新加载
           fetchUsers().catch(() => {
-            handleError('加载用户数据失败', {
-              type: ErrorType.NETWORK,
-              showType: 'message',
-            });
+            // API 错误已由全局错误处理器处理，这里不再重复处理
           });
         }
         // 重置分页到第一页
@@ -207,7 +203,7 @@ const UserManagementPage = () => {
       }
 
       // 去除特殊字符（如中文输入法中的单引号等）
-      const cleanValue = value.replace(/['"']/g, '');
+      const cleanValue = value.replace(/['"]/g, '');
 
       // 分词处理，按空格拆分搜索词
       const searchTerms = cleanValue
@@ -215,25 +211,8 @@ const UserManagementPage = () => {
         .split(/\s+/)
         .filter((term) => term);
 
-      // 定义搜索匹配函数
-      const matchesSearchTerms = (user: UserData) => {
-        if (searchTerms.length === 0) return true;
-
-        // 获取用户的各个字段以供搜索
-        const userNickname = user.nickname?.toLowerCase() || '';
-        const userName = user.name?.toLowerCase() || '';
-        const userEmail = user.email?.toLowerCase() || '';
-        const userUsername = user.username?.toLowerCase() || '';
-
-        // 普通字符串包含搜索
-        return searchTerms.every((term) => {
-          const textToSearch = `${userNickname} ${userName} ${userEmail} ${userUsername}`;
-          return textToSearch.includes(term);
-        });
-      };
-
       // 先在当前数据中搜索
-      const currentDataFiltered = data.filter(matchesSearchTerms);
+      const currentDataFiltered = data.filter((user) => matchesSearchTerms(user, searchTerms));
 
       // 如果当前数据中有匹配项，直接返回
       if (currentDataFiltered.length > 0) {
@@ -244,7 +223,7 @@ const UserManagementPage = () => {
       }
 
       // 如果当前数据中没有匹配项，在原始数据中搜索
-      const originalDataFiltered = originalDataRef.current.filter(matchesSearchTerms);
+      const originalDataFiltered = originalDataRef.current.filter((user) => matchesSearchTerms(user, searchTerms));
 
       // 设置搜索结果
       setData(originalDataFiltered);
@@ -270,12 +249,9 @@ const UserManagementPage = () => {
     try {
       await deleteUser(key);
       setData(data.filter((item) => item.key !== key));
-      showSuccess('用户已删除');
-    } catch (error) {
-      handleError('删除用户失败，请稍后重试', {
-        type: ErrorType.BUSINESS,
-        showType: 'message',
-      });
+      showSuccess('用户删除成功');
+    } catch {
+      // API 错误已由全局错误处理器处理，这里不再重复处理
     }
   };
 
@@ -291,41 +267,16 @@ const UserManagementPage = () => {
     try {
       const values = await passwordForm.validateFields();
       if (selectedRecord) {
-        // 确保两次密码输入一致
-        if (values.newPassword !== values.confirmPassword) {
-          handleError('两次输入的密码不一致', {
-            type: ErrorType.VALIDATION,
-            showType: 'message',
-          });
-          return;
-        }
-
-        // 检查密码复杂度
-        if (values.newPassword.length < 6 || values.newPassword.length > 20) {
-          handleError('密码长度需在6~20个字符之间', {
-            type: ErrorType.VALIDATION,
-            showType: 'message',
-          });
-          return;
-        }
-        if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(values.newPassword)) {
-          handleError('密码必须包含字母和数字', {
-            type: ErrorType.VALIDATION,
-            showType: 'message',
-          });
-          return;
-        }
-
         await changeUserPassword(selectedRecord.key, values.newPassword);
-        showSuccess('密码修改成功');
+        showSuccess(`用户 "${selectedRecord.nickname}" 密码修改成功`);
         setIsPasswordModalVisible(false);
       }
     } catch (error) {
-      handleError('密码修改失败，请检查输入信息后重试', {
-        type: ErrorType.BUSINESS,
-        showType: 'message',
-      });
-      console.error('密码修改失败:', error);
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        // 表单验证错误，这类错误不会触发全局错误处理器
+        return;
+      }
+      // API 错误已由全局错误处理器处理，这里不再重复处理
     }
   };
 
@@ -344,11 +295,8 @@ const UserManagementPage = () => {
       await batchAuthorizeModules(userId, moduleNames);
       showSuccess('模块权限更新成功');
       fetchUsers();
-    } catch (error) {
-      handleError('模块权限更新失败，请检查网络连接后重试', {
-        type: ErrorType.BUSINESS,
-        showType: 'message',
-      });
+    } catch {
+      // API 错误已由全局错误处理器处理，这里不再重复处理
     }
   };
 
@@ -371,11 +319,11 @@ const UserManagementPage = () => {
           role: values.role,
           status: values.status,
         });
-        showSuccess('用户信息已更新');
+        showSuccess(`用户 "${values.nickname}" 信息更新成功`);
       } else {
         // 添加新用户
         if (!values.password) {
-          handleError('密码不能为空', {
+          handleError('创建新用户时密码不能为空', {
             type: ErrorType.VALIDATION,
             showType: 'message',
           });
@@ -390,18 +338,17 @@ const UserManagementPage = () => {
           role: values.role,
           status: values.status,
         });
-        showSuccess('用户已添加');
+        showSuccess(`用户 "${values.nickname}" 创建成功`);
       }
 
       setIsModalVisible(false);
       await fetchUsers(); // 刷新数据
     } catch (error) {
-      const operation = selectedRecord ? '更新用户信息' : '添加用户';
-      handleError(`${operation}失败，请检查输入信息后重试`, {
-        type: ErrorType.BUSINESS,
-        showType: 'message',
-      });
-      console.error('操作失败:', error);
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        // 表单验证错误，这类错误不会触发全局错误处理器
+        return;
+      }
+      // API 错误已由全局错误处理器处理，这里不再重复处理
     }
   };
 

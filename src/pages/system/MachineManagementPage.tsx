@@ -75,10 +75,7 @@ const MachineManagementPage = () => {
       form.resetFields();
       fetchMachines();
     } catch (error) {
-      handleError(error instanceof Error ? error : new Error('创建机器失败'), {
-        type: ErrorType.BUSINESS,
-        showType: 'message',
-      });
+      // API 错误已由全局错误处理器处理，这里不再重复处理
     } finally {
       setTestingConnection(false);
     }
@@ -106,10 +103,7 @@ const MachineManagementPage = () => {
       form.resetFields();
       fetchMachines();
     } catch (error) {
-      handleError(error instanceof Error ? error : new Error('更新机器失败'), {
-        type: ErrorType.BUSINESS,
-        showType: 'message',
-      });
+      // API 错误已由全局错误处理器处理，这里不再重复处理
     } finally {
       setLoading(false);
     }
@@ -124,10 +118,7 @@ const MachineManagementPage = () => {
       setDeleteConfirmVisible(false);
       fetchMachines();
     } catch (error) {
-      handleError(error instanceof Error ? error : new Error('删除机器失败'), {
-        type: ErrorType.BUSINESS,
-        showType: 'message',
-      });
+      // API 错误已由全局错误处理器处理，这里不再重复处理
     }
   };
 
@@ -146,18 +137,13 @@ const MachineManagementPage = () => {
       }
     } catch (error) {
       if (error && typeof error === 'object' && 'errorFields' in error) {
-        // 表单验证错误
+        // 表单验证错误 - 这类错误不会触发全局错误处理器
         handleError('请完善表单信息', {
           type: ErrorType.VALIDATION,
           showType: 'message',
         });
-      } else {
-        // 其他错误
-        handleError(error instanceof Error ? error : new Error('连接测试失败'), {
-          type: ErrorType.NETWORK,
-          showType: 'message',
-        });
       }
+      // 其他错误（如网络错误、API错误）已由全局错误处理器处理，这里不再重复处理
     } finally {
       setTestingConnection(false);
     }

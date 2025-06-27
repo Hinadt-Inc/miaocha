@@ -628,7 +628,6 @@ function LogstashManagementPage() {
                             setCurrentMachineDetail(detail);
                             setMachineDetailModalVisible(true);
                           } catch (err) {
-                            messageApi.error('获取机器详情失败');
                             console.error('获取机器详情失败:', err);
                           }
                         }}

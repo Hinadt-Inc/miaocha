@@ -112,8 +112,6 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
       messageApi.success('日志跟踪已启动');
     } catch (error: unknown) {
       console.error('启动日志跟踪失败:', error);
-      const errorMessage = error instanceof Error ? error.message : '未知错误';
-      messageApi.error(`启动日志跟踪失败: ${errorMessage}`);
       setIsTailing(false);
     }
   };
@@ -124,7 +122,7 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
       setIsTailing(false);
       messageApi.success('日志跟踪已停止');
     } catch (error) {
-      messageApi.error('停止日志跟踪失败');
+      console.error('停止日志跟踪失败:', error);
     }
   };
 
