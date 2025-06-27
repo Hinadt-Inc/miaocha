@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Space, Button, Tag } from 'antd';
-import { DatabaseOutlined, SettingOutlined } from '@ant-design/icons';
+import { DatabaseOutlined } from '@ant-design/icons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import dayjs from 'dayjs';
 import type { ModuleData } from '../types';
@@ -90,7 +90,7 @@ export const useTableConfig = ({ onViewDetail, onEdit, onExecuteSql, onDelete, o
           </Button>
           <Button
             type="link"
-            icon={<SettingOutlined />}
+            // icon={<SettingOutlined />}
             onClick={() => onConfig(record)}
             className={styles.actionButton}
           >

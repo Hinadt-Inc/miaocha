@@ -17,11 +17,18 @@ interface ModuleQueryConfigModalProps {
 const { Option } = Select;
 
 const searchMethodOptions = [
-  { value: 'LIKE', label: '模糊匹配' },
-  { value: 'MATCH_ALL', label: '全匹配' },
-  { value: 'MATCH_ANY', label: '任意匹配' },
-  { value: 'MATCH_PHRASE', label: '短语匹配' },
+  { value: 'LIKE', label: 'LIKE' },
+  { value: 'MATCH_ALL', label: 'MATCH_ALL' },
+  { value: 'MATCH_ANY', label: 'MATCH_ANY' },
+  { value: 'MATCH_PHRASE', label: 'MATCH_PHRASE' },
 ];
+
+// 预生成选项JSX元素
+const searchMethodOptionElements = searchMethodOptions.map((option) => (
+  <Option key={option.value} value={option.value}>
+    {option.label}
+  </Option>
+));
 
 const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
   visible,
@@ -35,6 +42,17 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [fieldNames, setFieldNames] = useState<string[]>([]);
   const [loadingFields, setLoadingFields] = useState(false);
+  const [disabledFields, setDisabledFields] = useState<number[]>([]);
+
+  // 检测字段名是否包含特殊格式（点号或方括号）
+  const isSpecialField = (fieldName: string): boolean => {
+    if (!fieldName) return false;
+    // 检测包含点号的格式：message.marker.reqType
+    const hasDots = fieldName.includes('.');
+    // 检测包含方括号的格式：message[marker][reqType]
+    const hasBrackets = /\[.*\]/.test(fieldName);
+    return hasDots || hasBrackets;
+  };
 
   useEffect(() => {
     if (visible && moduleId) {
@@ -132,6 +150,40 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
             timeField: '',
             keywordFields: [{ fieldName: '', searchMethod: 'LIKE' }],
           }}
+          onValuesChange={(changedValues, allValues) => {
+            // 当字段名发生变化时，检查并自动设置特殊字段的检索方法为LIKE
+            if (changedValues.keywordFields) {
+              const newKeywordFields = allValues.keywordFields.map((field: any) => {
+                if (field?.fieldName && isSpecialField(field.fieldName) && field.searchMethod !== 'LIKE') {
+                  return { ...field, searchMethod: 'LIKE' };
+                }
+                return field;
+              });
+
+              // 更新禁用字段的状态
+              const newDisabledFields: number[] = [];
+              allValues.keywordFields.forEach((field: any, index: number) => {
+                if (field?.fieldName && isSpecialField(field.fieldName)) {
+                  newDisabledFields.push(index);
+                }
+              });
+              setDisabledFields(newDisabledFields);
+
+              // 如果有变化，更新表单值
+              const hasChanges = newKeywordFields.some(
+                (field: any, index: number) => field.searchMethod !== allValues.keywordFields[index]?.searchMethod,
+              );
+
+              if (hasChanges) {
+                setTimeout(() => {
+                  form.setFieldsValue({
+                    ...allValues,
+                    keywordFields: newKeywordFields,
+                  });
+                }, 0);
+              }
+            }
+          }}
         >
           <Form.Item label="时间字段" name="timeField" rules={[{ required: true, message: '请输入时间字段名称' }]}>
             <AutoComplete
@@ -177,10 +229,32 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
                             const newKeywordFields = [...(currentValues.keywordFields || [])];
                             if (newKeywordFields[index]) {
                               newKeywordFields[index].fieldName = value;
+                              // 如果是特殊字段格式，自动设置为 LIKE
+                              if (isSpecialField(value)) {
+                                newKeywordFields[index].searchMethod = 'LIKE';
+                              }
                               form.setFieldsValue({
                                 ...currentValues,
                                 keywordFields: newKeywordFields,
                               });
+                            }
+                          }}
+                          onChange={(value) => {
+                            // 当用户手动输入时也检查是否为特殊字段
+                            if (typeof value === 'string') {
+                              const currentValues = form.getFieldsValue();
+                              const newKeywordFields = [...(currentValues.keywordFields || [])];
+                              if (newKeywordFields[index]) {
+                                newKeywordFields[index].fieldName = value;
+                                // 如果是特殊字段格式，自动设置为 LIKE
+                                if (isSpecialField(value)) {
+                                  newKeywordFields[index].searchMethod = 'LIKE';
+                                  form.setFieldsValue({
+                                    ...currentValues,
+                                    keywordFields: newKeywordFields,
+                                  });
+                                }
+                              }
                             }
                           }}
                         />
@@ -191,12 +265,25 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
                         rules={[{ required: true, message: '请选择检索方法' }]}
                         className={styles.searchMethodSelect}
                       >
-                        <Select placeholder="检索方法">
-                          {searchMethodOptions.map((option) => (
-                            <Option key={option.value} value={option.value}>
-                              {option.label}
-                            </Option>
-                          ))}
+                        <Select
+                          placeholder="检索方法"
+                          disabled={disabledFields.includes(index)}
+                          onChange={(value) => {
+                            // 手动处理onChange事件，确保表单值正确更新
+                            const formValues = form.getFieldsValue();
+                            const currentFieldName = formValues?.keywordFields?.[index]?.fieldName || '';
+
+                            // 如果是特殊字段，强制设置为LIKE
+                            if (isSpecialField(currentFieldName) && value !== 'LIKE') {
+                              form.setFieldValue(['keywordFields', index, 'searchMethod'], 'LIKE');
+                              return;
+                            }
+
+                            // 正常情况下更新值
+                            form.setFieldValue(['keywordFields', index, 'searchMethod'], value);
+                          }}
+                        >
+                          {searchMethodOptionElements}
                         </Select>
                       </Form.Item>
                       {fields.length > 1 && (
