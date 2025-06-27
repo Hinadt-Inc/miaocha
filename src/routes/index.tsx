@@ -7,13 +7,12 @@ import { CompassOutlined, ConsoleSqlOutlined, SettingOutlined } from '@ant-desig
 // 动态导入页面组件
 const LoginPage = lazy(() => import('@/pages/Login'));
 const HomePage = lazy(() => import('@/pages/Home'));
-const UserManagementPage = lazy(() => import('@/pages/system/UserManagementPage'));
+const UserManagementPage = lazy(() => import('@/pages/system/UserManagement'));
 const DataSourceManagementPage = lazy(() => import('@/pages/system/DataSourceManagementPage'));
-const PermissionManagementPage = lazy(() => import('@/pages/system/PermissionManagementPage'));
 const SQLEditorPage = lazy(() => import('@/pages/SQLEditor/SQLEditorImpl'));
 const MachineManagementPage = lazy(() => import('@/pages/system/MachineManagementPage'));
 const LogstashManagementPage = lazy(() => import('@/pages/system/LogstashManagementPage'));
-const ModuleManagementPage = lazy(() => import('@/pages/system/ModuleManagementPage'));
+const ModuleManagementPage = lazy(() => import('@/pages/system/ModuleManagement'));
 
 const withSuspense = (Component: React.ComponentType) => (
   <Suspense
@@ -57,12 +56,6 @@ export const routes: RouteConfig[] = [
     icon: <ConsoleSqlOutlined />,
     element: withSuspense(SQLEditorPage),
   },
-  // {
-  //   path: '/demo',
-  //   name: 'Demo',
-  //   icon: <ConsoleSqlOutlined />,
-  //   element: withSuspense(Demo),
-  // },
   {
     path: '/system',
     name: '系统管理',
@@ -82,12 +75,6 @@ export const routes: RouteConfig[] = [
         element: withSuspense(DataSourceManagementPage),
         access: ['ADMIN', 'SUPER_ADMIN'],
       },
-      // {
-      //   path: '/system/permission',
-      //   name: '权限管理',
-      //   element: withSuspense(PermissionManagementPage),
-      //   access: ['ADMIN', 'SUPER_ADMIN'],
-      // },
       {
         path: '/system/machine',
         name: '服务器管理',
