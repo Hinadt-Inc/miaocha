@@ -40,7 +40,6 @@ export const useModuleData = () => {
       setDataSources(sources);
     } catch (error) {
       console.error('加载数据源失败:', error);
-      messageApi.error('加载数据源失败');
     }
   };
 
@@ -57,7 +56,6 @@ export const useModuleData = () => {
         })),
       };
     } catch (error) {
-      messageApi.error('获取模块详情失败');
       throw error;
     } finally {
       setLoading(false);
@@ -86,7 +84,7 @@ export const useModuleData = () => {
   // 重新加载数据
   const handleReload = () => {
     fetchModules().catch(() => {
-      messageApi.error('加载模块数据失败');
+      console.error('加载模块数据失败');
     });
   };
 
@@ -96,12 +94,12 @@ export const useModuleData = () => {
 
     fetchModules({ signal: abortController.signal }).catch((error: { name: string }) => {
       if (error.name !== 'CanceledError') {
-        messageApi.error('加载模块数据失败');
+        console.error('加载模块数据失败');
       }
     });
 
     fetchDataSources().catch(() => {
-      messageApi.error('加载数据源失败');
+      console.error('加载数据源失败');
     });
 
     return () => {

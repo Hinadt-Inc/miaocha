@@ -102,7 +102,6 @@ export const useModuleActions = ({ messageApi, onDataChange }: UseModuleActionsP
       setDeleteRecord(null);
       onDataChange();
     } catch (error) {
-      messageApi.error('删除失败');
       console.error('删除失败:', error);
     }
   };
