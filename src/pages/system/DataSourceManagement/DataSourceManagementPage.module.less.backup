@@ -1,9 +1,0 @@
-@import './table.module.less';
-
-.dataSourceTable {
-  .systemTable();
-}
-.container {
-  padding: 0 16px;
-}
-
