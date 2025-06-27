@@ -1,6 +1,6 @@
 package com.hinadt.miaocha.application.service.impl.logsearch.template;
 
-import com.hinadt.miaocha.domain.dto.LogSearchDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import java.sql.Connection;
 import lombok.Getter;
 

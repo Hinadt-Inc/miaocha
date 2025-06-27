@@ -7,8 +7,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-import com.hinadt.miaocha.application.service.database.DatabaseMetadataService;
-import com.hinadt.miaocha.application.service.database.DatabaseMetadataServiceFactory;
+import com.hinadt.miaocha.application.service.TableValidationService;
 import com.hinadt.miaocha.application.service.export.FileExporter;
 import com.hinadt.miaocha.application.service.export.FileExporterFactory;
 import com.hinadt.miaocha.application.service.impl.QueryPermissionChecker;
@@ -69,13 +68,11 @@ public class SqlQueryServiceTest {
 
     @Mock private FileExporterFactory exporterFactory;
 
-    @Mock private DatabaseMetadataServiceFactory metadataServiceFactory;
-
     @Mock private FileExporter fileExporter;
 
-    @Mock private DatabaseMetadataService metadataService;
-
     @Mock private QueryPermissionChecker permissionChecker;
+
+    @Mock private TableValidationService tableValidationService;
 
     @InjectMocks private SqlQueryServiceImpl sqlQueryService;
 
@@ -138,6 +135,11 @@ public class SqlQueryServiceTest {
                 .when(jdbcQueryExecutor.executeQuery(any(), anyString()))
                 .thenReturn(testResultDTO);
         lenient().when(sqlQueryHistoryMapper.insert(any())).thenReturn(1);
+
+        // 设置TableValidationService的默认行为
+        lenient()
+                .when(tableValidationService.processSqlWithLimit(anyString()))
+                .thenAnswer(invocation -> invocation.getArgument(0)); // 默认返回原SQL
     }
 
     @Test
@@ -373,5 +375,35 @@ public class SqlQueryServiceTest {
 
         assertEquals(ErrorCode.EXPORT_FAILED, exception.getErrorCode());
         assertEquals("查询结果文件不存在", exception.getMessage());
+    }
+
+    // ==================== 业务逻辑测试 ====================
+
+    @Test
+    @DisplayName("SQL查询使用TableValidationService处理LIMIT")
+    @Description("测试SqlQueryService正确委托TableValidationService处理LIMIT逻辑")
+    @Severity(SeverityLevel.CRITICAL)
+    void testExecuteQuery_UsesTableValidationServiceForLimit() {
+        // 设置tableValidationService的行为
+        String originalSql = "SELECT * FROM users";
+        String processedSql = "SELECT * FROM users LIMIT 1000";
+        when(tableValidationService.processSqlWithLimit(originalSql)).thenReturn(processedSql);
+
+        testQueryDTO.setSql(originalSql);
+
+        // 执行测试
+        SqlQueryResultDTO result = sqlQueryService.executeQuery(testUser.getId(), testQueryDTO);
+
+        // 验证结果
+        assertNotNull(result);
+
+        // 验证TableValidationService被调用
+        verify(tableValidationService).processSqlWithLimit(originalSql);
+
+        // 验证SQL被正确处理
+        assertEquals(processedSql, testQueryDTO.getSql());
+
+        // 验证后续流程正常
+        verify(jdbcQueryExecutor).executeQuery(testDatasourceInfo, processedSql);
     }
 }

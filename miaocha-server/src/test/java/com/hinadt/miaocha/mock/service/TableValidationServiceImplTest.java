@@ -663,4 +663,121 @@ class TableValidationServiceImplTest {
                                     testModuleInfo, Collections.emptyList()));
         }
     }
+
+    // ==================== 新增的 SQL 处理功能测试 ====================
+
+    @Nested
+    @DisplayName("SQL语句处理功能测试")
+    class SqlProcessingTest {
+
+        @ParameterizedTest
+        @ValueSource(
+                strings = {
+                    "SELECT * FROM users",
+                    "select id, name from users where id > 100",
+                    "  SELECT COUNT(*) FROM logs  ",
+                    "SELECT u.name, l.message FROM users u JOIN logs l ON u.id = l.user_id"
+                })
+        @DisplayName("SELECT语句检测")
+        void testIsSelectStatement_SelectQueries(String sql) {
+            assertTrue(tableValidationService.isSelectStatement(sql), "应该正确识别SELECT语句: " + sql);
+        }
+
+        @ParameterizedTest
+        @ValueSource(
+                strings = {
+                    "INSERT INTO users (name) VALUES ('test')",
+                    "UPDATE users SET name = 'updated' WHERE id = 1",
+                    "DELETE FROM users WHERE id = 1",
+                    "CREATE TABLE test_table (id INT, name VARCHAR(50))",
+                    "DROP TABLE test_table",
+                    "ALTER TABLE users ADD COLUMN email VARCHAR(100)",
+                    "",
+                    "   ",
+                    "invalid sql"
+                })
+        @DisplayName("非SELECT语句检测")
+        void testIsSelectStatement_NonSelectQueries(String sql) {
+            assertFalse(tableValidationService.isSelectStatement(sql), "应该正确识别非SELECT语句: " + sql);
+        }
+
+        @Test
+        @DisplayName("LIMIT处理 - SELECT语句添加默认LIMIT")
+        void testProcessSqlWithLimit_SelectStatements() {
+            String selectSql = "SELECT * FROM users";
+            String result = tableValidationService.processSqlWithLimit(selectSql);
+
+            assertTrue(result.contains("LIMIT 1000"), "SELECT语句应该添加默认LIMIT: " + result);
+        }
+
+        @ParameterizedTest
+        @ValueSource(
+                strings = {
+                    "INSERT INTO users (name) VALUES ('test')",
+                    "UPDATE users SET name = 'updated' WHERE id = 1",
+                    "DELETE FROM users WHERE id = 1",
+                    "CREATE TABLE test_table (id INT, name VARCHAR(50))"
+                })
+        @DisplayName("LIMIT处理 - 非SELECT语句保持不变")
+        void testProcessSqlWithLimit_NonSelectStatements(String sql) {
+            String result = tableValidationService.processSqlWithLimit(sql);
+
+            assertEquals(sql, result, "非SELECT语句不应该被修改: " + result);
+        }
+
+        @Test
+        @DisplayName("LIMIT处理 - 已有合法LIMIT保持不变")
+        void testProcessSqlWithLimit_ExistingValidLimit() {
+            String sqlWithLimit = "SELECT * FROM users LIMIT 500";
+            String result = tableValidationService.processSqlWithLimit(sqlWithLimit);
+
+            assertEquals(sqlWithLimit, result, "已有合法LIMIT应该保持不变: " + result);
+        }
+
+        @Test
+        @DisplayName("LIMIT处理 - 超过最大LIMIT抛出异常")
+        void testProcessSqlWithLimit_ExceedsMaxLimit() {
+            String sqlWithLargeLimit = "SELECT * FROM users LIMIT 20000";
+
+            BusinessException exception =
+                    assertThrows(
+                            BusinessException.class,
+                            () -> {
+                                tableValidationService.processSqlWithLimit(sqlWithLargeLimit);
+                            });
+
+            assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
+            assertTrue(exception.getMessage().contains("查询结果数量限制不能超过"));
+        }
+
+        @Test
+        @DisplayName("表名提取 - FROM子句")
+        void testExtractTableNames_FromClause() {
+            String sql = "SELECT * FROM users WHERE id = 1";
+            java.util.Set<String> tableNames = tableValidationService.extractTableNames(sql);
+
+            assertEquals(1, tableNames.size());
+            assertTrue(tableNames.contains("users"));
+        }
+
+        @Test
+        @DisplayName("表名提取 - 数据库前缀")
+        void testExtractTableNames_WithDatabasePrefix() {
+            String sql = "SELECT * FROM mydb.users WHERE id = 1";
+            java.util.Set<String> tableNames = tableValidationService.extractTableNames(sql);
+
+            assertEquals(1, tableNames.size());
+            assertTrue(tableNames.contains("users"), "应该提取表名部分，忽略数据库前缀");
+        }
+
+        @Test
+        @DisplayName("表名提取 - 空SQL返回空集合")
+        void testExtractTableNames_EmptySQL() {
+            java.util.Set<String> tableNames = tableValidationService.extractTableNames("");
+            assertTrue(tableNames.isEmpty());
+
+            tableNames = tableValidationService.extractTableNames(null);
+            assertTrue(tableNames.isEmpty());
+        }
+    }
 }

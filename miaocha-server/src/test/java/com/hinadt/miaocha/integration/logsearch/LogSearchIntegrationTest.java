@@ -9,6 +9,7 @@ import com.hinadt.miaocha.application.service.LogSearchService;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.dto.*;
+import com.hinadt.miaocha.domain.dto.logsearch.*;
 import com.hinadt.miaocha.integration.data.IntegrationTestDataInitializer;
 import com.hinadt.miaocha.integration.data.LogSearchTestDataInitializer;
 import java.util.*;

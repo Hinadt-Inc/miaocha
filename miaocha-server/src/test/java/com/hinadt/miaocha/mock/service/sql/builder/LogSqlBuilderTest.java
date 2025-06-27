@@ -6,8 +6,8 @@ import static org.mockito.Mockito.*;
 
 import com.hinadt.miaocha.application.service.impl.logsearch.validator.QueryConfigValidationService;
 import com.hinadt.miaocha.application.service.sql.builder.*;
-import com.hinadt.miaocha.domain.dto.KeywordConditionDTO;
-import com.hinadt.miaocha.domain.dto.LogSearchDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.KeywordConditionDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;

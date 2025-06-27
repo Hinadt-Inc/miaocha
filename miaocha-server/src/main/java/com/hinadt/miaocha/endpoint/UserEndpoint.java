@@ -13,17 +13,19 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 /** 用户管理控制器 */
 @RestController
 @RequestMapping("/api/users")
-@RequiredArgsConstructor
 @Tag(name = "用户管理", description = "提供用户的增删改查等管理功能")
 public class UserEndpoint {
 
     private final UserService userService;
+
+    public UserEndpoint(UserService userService) {
+        this.userService = userService;
+    }
 
     /**
      * 获取当前用户信息

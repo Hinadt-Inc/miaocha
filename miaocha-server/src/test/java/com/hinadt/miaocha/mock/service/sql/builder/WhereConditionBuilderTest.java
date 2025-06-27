@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.hinadt.miaocha.application.service.sql.builder.WhereConditionBuilder;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
-import com.hinadt.miaocha.domain.dto.LogSearchDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;

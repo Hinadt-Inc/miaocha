@@ -7,8 +7,8 @@ import com.hinadt.miaocha.application.service.impl.logsearch.validator.QueryConf
 import com.hinadt.miaocha.application.service.sql.builder.KeywordConditionBuilder;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
-import com.hinadt.miaocha.domain.dto.KeywordConditionDTO;
-import com.hinadt.miaocha.domain.dto.LogSearchDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.KeywordConditionDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import java.util.Arrays;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;

@@ -1,6 +1,6 @@
 package com.hinadt.miaocha.application.service.sql.processor;
 
-import com.hinadt.miaocha.domain.dto.LogSearchDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;

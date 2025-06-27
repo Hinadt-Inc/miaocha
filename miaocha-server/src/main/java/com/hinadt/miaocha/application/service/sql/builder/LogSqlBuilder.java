@@ -1,7 +1,7 @@
 package com.hinadt.miaocha.application.service.sql.builder;
 
 import com.hinadt.miaocha.application.service.impl.logsearch.validator.QueryConfigValidationService;
-import com.hinadt.miaocha.domain.dto.LogSearchDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import java.util.List;
 import org.springframework.stereotype.Component;
 

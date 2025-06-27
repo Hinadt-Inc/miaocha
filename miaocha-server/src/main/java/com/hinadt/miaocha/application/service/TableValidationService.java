@@ -4,7 +4,7 @@ import com.hinadt.miaocha.common.exception.QueryFieldNotExistsException;
 import com.hinadt.miaocha.domain.entity.ModuleInfo;
 import java.util.List;
 
-/** 表验证服务接口 用于验证SQL语句和表相关操作 */
+/** SQL验证和处理服务接口 负责SQL语句的验证、类型检测、表名提取、LIMIT处理等功能 */
 public interface TableValidationService {
 
     /**
@@ -15,6 +15,30 @@ public interface TableValidationService {
      * @throws BusinessException 如果SQL不符合要求
      */
     void validateDorisSql(ModuleInfo moduleInfo, String sql);
+
+    /**
+     * 检查是否为SELECT语句
+     *
+     * @param sql SQL语句
+     * @return 是否为SELECT语句
+     */
+    boolean isSelectStatement(String sql);
+
+    /**
+     * 处理SQL语句的LIMIT限制 - 只对SELECT语句进行LIMIT处理 - 如果没有LIMIT，添加默认限制 - 如果有LIMIT，验证是否超过最大值
+     *
+     * @param sql 原始SQL语句
+     * @return 处理后的SQL语句
+     */
+    String processSqlWithLimit(String sql);
+
+    /**
+     * 从SQL语句中提取表名（支持各种SQL语句类型）
+     *
+     * @param sql SQL语句
+     * @return 表名集合
+     */
+    java.util.Set<String> extractTableNames(String sql);
 
     /**
      * 检查表在数据库中是否存在

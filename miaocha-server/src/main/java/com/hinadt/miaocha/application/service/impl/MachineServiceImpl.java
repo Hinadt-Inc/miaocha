@@ -13,19 +13,28 @@ import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
 import com.hinadt.miaocha.domain.mapper.MachineMapper;
 import java.util.List;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /** 机器管理服务实现类 */
 @Service
-@RequiredArgsConstructor
 public class MachineServiceImpl implements MachineService {
 
     private final MachineMapper machineMapper;
     private final SshClient sshClient;
     private final MachineConverter machineConverter;
     private final LogstashMachineMapper logstashMachineMapper;
+
+    public MachineServiceImpl(
+            MachineMapper machineMapper,
+            SshClient sshClient,
+            MachineConverter machineConverter,
+            LogstashMachineMapper logstashMachineMapper) {
+        this.machineMapper = machineMapper;
+        this.sshClient = sshClient;
+        this.machineConverter = machineConverter;
+        this.logstashMachineMapper = logstashMachineMapper;
+    }
 
     @Override
     @Transactional

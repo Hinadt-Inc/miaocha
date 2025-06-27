@@ -3,28 +3,30 @@ package com.hinadt.miaocha.endpoint;
 import com.hinadt.miaocha.application.service.LogSearchService;
 import com.hinadt.miaocha.common.annotation.CurrentUser;
 import com.hinadt.miaocha.domain.dto.ApiResponse;
-import com.hinadt.miaocha.domain.dto.LogDetailResultDTO;
-import com.hinadt.miaocha.domain.dto.LogFieldDistributionResultDTO;
-import com.hinadt.miaocha.domain.dto.LogHistogramResultDTO;
-import com.hinadt.miaocha.domain.dto.LogSearchDTO;
 import com.hinadt.miaocha.domain.dto.SchemaInfoDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogDetailResultDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogFieldDistributionResultDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogHistogramResultDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import com.hinadt.miaocha.domain.dto.user.UserDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 /** 日志检索接口控制器 */
 @RestController
 @RequestMapping("/api/logs")
 @Tag(name = "日志检索分析", description = "提供日志检索、查询")
-@RequiredArgsConstructor
 public class LogSearchEndpoint {
 
     private final LogSearchService logSearchService;
+
+    public LogSearchEndpoint(LogSearchService logSearchService) {
+        this.logSearchService = logSearchService;
+    }
 
     /**
      * 仅执行日志明细查询

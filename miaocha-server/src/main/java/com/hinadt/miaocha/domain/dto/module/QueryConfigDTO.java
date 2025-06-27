@@ -1,5 +1,6 @@
 package com.hinadt.miaocha.domain.dto.module;
 
+import com.hinadt.miaocha.domain.validator.ValidTimeField;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -31,13 +32,12 @@ import lombok.Data;
 public class QueryConfigDTO {
 
     @Size(max = 128, message = "时间字段名长度不能超过128个字符")
-    @Pattern(regexp = "^[a-zA-Z_][a-zA-Z0-9_.\\[\\]'\"]*$", message = "时间字段名格式不正确")
+    @ValidTimeField
     @Schema(
             description = "分析时间字段名，用于指定模块中哪个字段作为时间查询字段",
             example = "log_time",
             nullable = true,
-            maxLength = 128,
-            pattern = "^[a-zA-Z_][a-zA-Z0-9_.\\[\\]'\"]*$")
+            maxLength = 128)
     private String timeField;
 
     @Valid

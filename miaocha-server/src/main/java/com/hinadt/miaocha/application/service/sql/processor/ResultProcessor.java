@@ -2,8 +2,8 @@ package com.hinadt.miaocha.application.service.sql.processor;
 
 import static com.hinadt.miaocha.application.service.sql.builder.SqlFragment.TIME_ALIAS;
 
-import com.hinadt.miaocha.domain.dto.LogDetailResultDTO;
-import com.hinadt.miaocha.domain.dto.LogHistogramResultDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogDetailResultDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogHistogramResultDTO;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;

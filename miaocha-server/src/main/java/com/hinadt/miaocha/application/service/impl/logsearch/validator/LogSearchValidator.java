@@ -3,7 +3,7 @@ package com.hinadt.miaocha.application.service.impl.logsearch.validator;
 import com.hinadt.miaocha.application.service.DatasourceService;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
-import com.hinadt.miaocha.domain.dto.LogSearchDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import org.springframework.stereotype.Component;
 

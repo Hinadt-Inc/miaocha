@@ -1,10 +1,10 @@
 package com.hinadt.miaocha.application.service;
 
-import com.hinadt.miaocha.domain.dto.LogDetailResultDTO;
-import com.hinadt.miaocha.domain.dto.LogFieldDistributionResultDTO;
-import com.hinadt.miaocha.domain.dto.LogHistogramResultDTO;
-import com.hinadt.miaocha.domain.dto.LogSearchDTO;
 import com.hinadt.miaocha.domain.dto.SchemaInfoDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogDetailResultDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogFieldDistributionResultDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogHistogramResultDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import java.util.List;
 
 /** 日志检索服务接口 */

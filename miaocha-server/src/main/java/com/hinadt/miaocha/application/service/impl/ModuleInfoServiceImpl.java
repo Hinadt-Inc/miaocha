@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -40,25 +39,39 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class ModuleInfoServiceImpl implements ModuleInfoService {
 
-    @Autowired private ModuleInfoMapper moduleInfoMapper;
+    private final ModuleInfoMapper moduleInfoMapper;
+    private final DatasourceMapper datasourceMapper;
+    private final JdbcQueryExecutor jdbcQueryExecutor;
+    private final ModuleInfoConverter moduleInfoConverter;
+    private final LogstashProcessMapper logstashProcessMapper;
+    private final UserModulePermissionMapper userModulePermissionMapper;
+    private final UserMapper userMapper;
+    private final ModulePermissionConverter modulePermissionConverter;
+    private final TableValidationService tableValidationService;
+    private final ObjectMapper objectMapper;
 
-    @Autowired private DatasourceMapper datasourceMapper;
-
-    @Autowired private JdbcQueryExecutor jdbcQueryExecutor;
-
-    @Autowired private ModuleInfoConverter moduleInfoConverter;
-
-    @Autowired private LogstashProcessMapper logstashProcessMapper;
-
-    @Autowired private UserModulePermissionMapper userModulePermissionMapper;
-
-    @Autowired private UserMapper userMapper;
-
-    @Autowired private ModulePermissionConverter modulePermissionConverter;
-
-    @Autowired private TableValidationService tableValidationService;
-
-    @Autowired private ObjectMapper objectMapper;
+    public ModuleInfoServiceImpl(
+            ModuleInfoMapper moduleInfoMapper,
+            DatasourceMapper datasourceMapper,
+            JdbcQueryExecutor jdbcQueryExecutor,
+            ModuleInfoConverter moduleInfoConverter,
+            LogstashProcessMapper logstashProcessMapper,
+            UserModulePermissionMapper userModulePermissionMapper,
+            UserMapper userMapper,
+            ModulePermissionConverter modulePermissionConverter,
+            TableValidationService tableValidationService,
+            ObjectMapper objectMapper) {
+        this.moduleInfoMapper = moduleInfoMapper;
+        this.datasourceMapper = datasourceMapper;
+        this.jdbcQueryExecutor = jdbcQueryExecutor;
+        this.moduleInfoConverter = moduleInfoConverter;
+        this.logstashProcessMapper = logstashProcessMapper;
+        this.userModulePermissionMapper = userModulePermissionMapper;
+        this.userMapper = userMapper;
+        this.modulePermissionConverter = modulePermissionConverter;
+        this.tableValidationService = tableValidationService;
+        this.objectMapper = objectMapper;
+    }
 
     @Override
     @Transactional
@@ -289,7 +302,7 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "该模块已经执行过Doris SQL，不能重复执行");
         }
 
-        // 校验Doris SQL语句
+        // ��验Doris SQL语句
         tableValidationService.validateDorisSql(moduleInfo, sql);
 
         // 获取数据源
@@ -410,7 +423,7 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
         try {
             return objectMapper.readValue(queryConfigJson, QueryConfigDTO.class);
         } catch (JsonProcessingException e) {
-            log.warn("解析模块 {} 的查询配置JSON失败: {}", module, e.getMessage());
+            log.warn("解析模块 {} 的查询配置JSON失���: {}", module, e.getMessage());
             return null;
         }
     }

@@ -1,4 +1,4 @@
-package com.hinadt.miaocha.domain.dto;
+package com.hinadt.miaocha.domain.dto.logsearch;
 
 import java.util.HashMap;
 import java.util.List;

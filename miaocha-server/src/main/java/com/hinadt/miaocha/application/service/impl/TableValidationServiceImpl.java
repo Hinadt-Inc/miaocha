@@ -24,10 +24,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-/** 表验证服务实现类 用于验证SQL语句和表相关操作 */
+/** SQL验证和处理服务实现类 负责SQL语句的验证、类型检测、表名提取、LIMIT处理等功能 */
 @Service
 public class TableValidationServiceImpl implements TableValidationService {
     private static final Logger logger = LoggerFactory.getLogger(TableValidationServiceImpl.class);
+
+    // ==================== CREATE TABLE 相关常量 ====================
 
     /** CREATE TABLE 语句的正则表达式 */
     private static final Pattern CREATE_TABLE_PATTERN =
@@ -46,6 +48,26 @@ public class TableValidationServiceImpl implements TableValidationService {
             Pattern.compile(
                     "\\s*(?:`([^`]+)`|([a-zA-Z_][a-zA-Z0-9_]*))\\s+([a-zA-Z0-9_()\\s,]+?)(?:,|\\s*\\)|$)",
                     Pattern.CASE_INSENSITIVE);
+
+    // ==================== SQL 语句处理相关常量 ====================
+
+    /** SELECT 语句检测正则 */
+    private static final Pattern SELECT_PATTERN =
+            Pattern.compile("^\\s*SELECT\\s+", Pattern.CASE_INSENSITIVE);
+
+    /** LIMIT 子句检测正则 */
+    private static final Pattern LIMIT_PATTERN =
+            Pattern.compile("\\blimit\\s+\\d+(?:\\s*,\\s*\\d+)?\\s*$", Pattern.CASE_INSENSITIVE);
+
+    /** 默认查询限制条数 */
+    private static final int DEFAULT_QUERY_LIMIT = 1000;
+
+    /** 最大查询限制条数 */
+    private static final int MAX_QUERY_LIMIT = 10000;
+
+    /** 表名提取正则 - FROM 子句 */
+    private static final Pattern FROM_PATTERN =
+            Pattern.compile("\\bFROM\\s+[\"'`]?([\\w\\d_\\.]+)[\"'`]?", Pattern.CASE_INSENSITIVE);
 
     @Autowired private ModuleInfoMapper moduleInfoMapper;
 
@@ -501,5 +523,104 @@ public class TableValidationServiceImpl implements TableValidationService {
         }
 
         return null;
+    }
+
+    // ==================== 新增的 SQL 处理方法 ====================
+
+    @Override
+    public boolean isSelectStatement(String sql) {
+        if (sql == null || sql.trim().isEmpty()) {
+            return false;
+        }
+        return SELECT_PATTERN.matcher(sql.trim()).find();
+    }
+
+    @Override
+    public String processSqlWithLimit(String sql) {
+        if (sql == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "SQL语句不能为空");
+        }
+
+        // 只对SELECT语句进行LIMIT处理
+        if (!isSelectStatement(sql)) {
+            // 非SELECT语句直接返回，不做任何修改
+            return sql;
+        }
+
+        // 将SQL转为小写，用于检查LIMIT子句
+        String sqlLower = sql.trim().toLowerCase();
+
+        // 检查是否已经包含LIMIT子句
+        java.util.regex.Matcher limitMatcher = LIMIT_PATTERN.matcher(sqlLower);
+        if (limitMatcher.find()) {
+            // 提取LIMIT值
+            String limitClause = limitMatcher.group(0);
+            // 解析LIMIT子句中的数字
+            int limitValue = extractLimitValue(limitClause);
+
+            // 检查LIMIT是否超过最大允许值
+            if (limitValue > MAX_QUERY_LIMIT) {
+                throw new BusinessException(
+                        ErrorCode.VALIDATION_ERROR,
+                        "查询结果数量限制不能超过" + MAX_QUERY_LIMIT + "条，请调整您的LIMIT语句");
+            }
+
+            // LIMIT在合法范围内，直接返回原SQL
+            return sql;
+        } else {
+            // SELECT语句没有LIMIT子句，添加默认LIMIT
+            // 检查SQL是否以分号结束，如果是，在分号前添加LIMIT
+            if (sqlLower.endsWith(";")) {
+                return sql.substring(0, sql.length() - 1) + " LIMIT " + DEFAULT_QUERY_LIMIT + ";";
+            } else {
+                return sql + " LIMIT " + DEFAULT_QUERY_LIMIT;
+            }
+        }
+    }
+
+    @Override
+    public java.util.Set<String> extractTableNames(String sql) {
+        java.util.Set<String> tableNames = new java.util.HashSet<>();
+
+        if (sql == null || sql.trim().isEmpty()) {
+            return tableNames;
+        }
+
+        // 使用简单的FROM子句提取（目前先实现基本功能）
+        java.util.regex.Matcher fromMatcher = FROM_PATTERN.matcher(sql);
+        while (fromMatcher.find()) {
+            String tableName = fromMatcher.group(1);
+            if (tableName != null && !tableName.trim().isEmpty()) {
+                // 处理 schema.table 格式，只取表名部分
+                if (tableName.contains(".")) {
+                    String[] parts = tableName.split("\\.");
+                    tableName = parts[parts.length - 1]; // 取最后一部分作为表名
+                }
+                tableNames.add(tableName.trim());
+            }
+        }
+
+        return tableNames;
+    }
+
+    /**
+     * 从LIMIT子句中提取限制值 处理如下几种情况: - LIMIT X - LIMIT X, Y (MySQL语法，返回偏移X后的Y条记录)
+     *
+     * @param limitClause LIMIT子句
+     * @return 提取的限制值
+     */
+    private int extractLimitValue(String limitClause) {
+        // 移除LIMIT关键字，只保留数字部分
+        String numbers = limitClause.replaceAll("\\blimit\\s+", "").trim();
+
+        // 处理LIMIT X, Y格式
+        if (numbers.contains(",")) {
+            String[] parts = numbers.split(",");
+            // 返回第二个数字，即实际的限制条数
+            return Integer.parseInt(parts[1].trim());
+        } else {
+            // 处理LIMIT X格式
+            return Integer.parseInt(numbers.trim());
+        }
     }
 }

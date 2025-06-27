@@ -4,9 +4,9 @@ import com.hinadt.miaocha.application.service.impl.logsearch.validator.QueryConf
 import com.hinadt.miaocha.application.service.sql.search.SearchMethod;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
-import com.hinadt.miaocha.domain.dto.KeywordConditionDTO;
-import com.hinadt.miaocha.domain.dto.LogSearchDTO;
-import com.hinadt.miaocha.domain.dto.LogSearchDTODecorator;
+import com.hinadt.miaocha.domain.dto.logsearch.KeywordConditionDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTODecorator;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;

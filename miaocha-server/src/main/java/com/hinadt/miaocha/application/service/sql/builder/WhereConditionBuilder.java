@@ -2,7 +2,7 @@ package com.hinadt.miaocha.application.service.sql.builder;
 
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
-import com.hinadt.miaocha.domain.dto.LogSearchDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;

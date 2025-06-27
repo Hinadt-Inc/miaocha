@@ -11,9 +11,9 @@ import com.hinadt.miaocha.application.service.sql.converter.LogSearchDTOConverte
 import com.hinadt.miaocha.application.service.sql.processor.QueryResult;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.common.exception.LogQueryException;
-import com.hinadt.miaocha.domain.dto.FieldDistributionDTO;
-import com.hinadt.miaocha.domain.dto.LogFieldDistributionResultDTO;
-import com.hinadt.miaocha.domain.dto.LogSearchDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.FieldDistributionDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogFieldDistributionResultDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;

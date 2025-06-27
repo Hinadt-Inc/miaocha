@@ -417,6 +417,9 @@
                             <!-- ========== 排除Spring Security配置相关 ========== -->
                             <exclude>**/security/*Config*.class</exclude>
                             <exclude>**/filter/**/*.class</exclude>
+
+                            <!-- ========== 排除DataBase 相关 ========== -->
+                            <exclude>**/database/**/*.class</exclude>
                         </excludes>
                     </configuration>
                     <executions>

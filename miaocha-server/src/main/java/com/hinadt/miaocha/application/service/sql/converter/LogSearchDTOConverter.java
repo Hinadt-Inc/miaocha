@@ -1,8 +1,8 @@
 package com.hinadt.miaocha.application.service.sql.converter;
 
-import com.hinadt.miaocha.domain.dto.KeywordConditionDTO;
-import com.hinadt.miaocha.domain.dto.LogSearchDTO;
-import com.hinadt.miaocha.domain.dto.LogSearchDTODecorator;
+import com.hinadt.miaocha.domain.dto.logsearch.KeywordConditionDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTODecorator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

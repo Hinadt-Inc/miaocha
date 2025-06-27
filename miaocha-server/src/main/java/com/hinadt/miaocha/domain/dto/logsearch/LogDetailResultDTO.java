@@ -1,4 +1,4 @@
-package com.hinadt.miaocha.domain.dto;
+package com.hinadt.miaocha.domain.dto.logsearch;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;

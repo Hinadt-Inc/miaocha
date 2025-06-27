@@ -11,6 +11,7 @@ import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.entity.ModuleInfo;
 import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
 import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
+import jakarta.annotation.Generated;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -211,6 +212,7 @@ public class DatasourceServiceImpl implements DatasourceService {
     // =========== =========== 私有方法 =========== ===========
 
     /** 处理SQL异常，提供用户友好的错误信息 */
+    @Generated("处理SQL异常返回用户友好的错误信息,难以测试,不加入覆盖率统计")
     private DatasourceConnectionTestResultDTO handleSQLException(SQLException e) {
         String errorMessage = e.getMessage().toLowerCase();
         String sqlState = e.getSQLState();

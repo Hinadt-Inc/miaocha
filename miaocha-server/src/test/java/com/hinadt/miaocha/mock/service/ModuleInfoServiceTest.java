@@ -4,20 +4,32 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hinadt.miaocha.application.service.TableValidationService;
 import com.hinadt.miaocha.application.service.impl.ModuleInfoServiceImpl;
 import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.converter.ModuleInfoConverter;
+import com.hinadt.miaocha.domain.converter.ModulePermissionConverter;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoCreateDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoDTO;
+import com.hinadt.miaocha.domain.dto.module.ModuleInfoUpdateDTO;
+import com.hinadt.miaocha.domain.dto.module.ModuleInfoWithPermissionsDTO;
+import com.hinadt.miaocha.domain.dto.module.QueryConfigDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.entity.ModuleInfo;
+import com.hinadt.miaocha.domain.entity.User;
+import com.hinadt.miaocha.domain.entity.UserModulePermission;
 import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
 import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
 import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
+import com.hinadt.miaocha.domain.mapper.UserMapper;
+import com.hinadt.miaocha.domain.mapper.UserModulePermissionMapper;
 import io.qameta.allure.*;
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,8 +48,13 @@ class ModuleInfoServiceTest {
     @Mock private JdbcQueryExecutor jdbcQueryExecutor;
     @Mock private ModuleInfoConverter moduleInfoConverter;
     @Mock private LogstashProcessMapper logstashProcessMapper;
+    @Mock private UserModulePermissionMapper userModulePermissionMapper;
+    @Mock private UserMapper userMapper;
+    @Mock private ModulePermissionConverter modulePermissionConverter;
+    @Mock private TableValidationService tableValidationService;
+    @Mock private ObjectMapper objectMapper;
 
-    @org.mockito.InjectMocks private ModuleInfoServiceImpl moduleInfoService;
+    private ModuleInfoServiceImpl moduleInfoService;
 
     private ModuleInfo sampleModuleInfo;
     private ModuleInfoDTO sampleModuleInfoDTO;
@@ -45,6 +62,20 @@ class ModuleInfoServiceTest {
 
     @BeforeEach
     void setUp() {
+        // 手动创建服务实例，使用构造函数注入
+        moduleInfoService =
+                new ModuleInfoServiceImpl(
+                        moduleInfoMapper,
+                        datasourceMapper,
+                        jdbcQueryExecutor,
+                        moduleInfoConverter,
+                        logstashProcessMapper,
+                        userModulePermissionMapper,
+                        userMapper,
+                        modulePermissionConverter,
+                        tableValidationService,
+                        objectMapper);
+
         setupTestData();
     }
 
@@ -184,5 +215,374 @@ class ModuleInfoServiceTest {
         verify(moduleInfoMapper).selectById(1L);
         verify(logstashProcessMapper).countByModuleId(1L);
         verify(moduleInfoMapper).deleteById(1L);
+    }
+
+    @Test
+    @Story("创建模块")
+    @Description("测试数据源不存在时抛出异常")
+    @Severity(SeverityLevel.NORMAL)
+    void testCreateModule_DatasourceNotFound() {
+        // 准备测试数据
+        ModuleInfoCreateDTO createDTO = new ModuleInfoCreateDTO();
+        createDTO.setName("New Module");
+        createDTO.setDatasourceId(999L);
+
+        // Mock 行为
+        when(moduleInfoMapper.existsByName("New Module", null)).thenReturn(false);
+        when(datasourceMapper.selectById(999L)).thenReturn(null);
+
+        // 执行测试并验证异常
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class, () -> moduleInfoService.createModule(createDTO));
+
+        assertEquals(ErrorCode.DATASOURCE_NOT_FOUND, exception.getErrorCode());
+
+        // 验证调用顺序
+        verify(moduleInfoMapper).existsByName("New Module", null);
+        verify(datasourceMapper).selectById(999L);
+        verify(moduleInfoMapper, never()).insert(any());
+    }
+
+    @Test
+    @Story("更新模块")
+    @Description("测试成功更新模块")
+    @Severity(SeverityLevel.CRITICAL)
+    void testUpdateModule_Success() {
+        // 准备测试数据
+        ModuleInfoUpdateDTO updateDTO = new ModuleInfoUpdateDTO();
+        updateDTO.setId(1L);
+        updateDTO.setName("Updated Module");
+        updateDTO.setDatasourceId(1L);
+
+        ModuleInfo updatedModule = new ModuleInfo();
+        updatedModule.setId(1L);
+        updatedModule.setName("Updated Module");
+
+        // Mock 行为
+        when(moduleInfoMapper.selectById(1L)).thenReturn(sampleModuleInfo);
+        when(moduleInfoMapper.existsByName("Updated Module", 1L)).thenReturn(false);
+        when(datasourceMapper.selectById(1L)).thenReturn(sampleDatasourceInfo);
+        when(moduleInfoConverter.updateEntity(any(ModuleInfo.class), eq(updateDTO)))
+                .thenReturn(updatedModule);
+        when(moduleInfoMapper.update(updatedModule)).thenReturn(1);
+        when(moduleInfoMapper.selectById(1L)).thenReturn(updatedModule);
+        when(moduleInfoConverter.toDto(updatedModule, sampleDatasourceInfo))
+                .thenReturn(sampleModuleInfoDTO);
+
+        // 执行测试
+        ModuleInfoDTO result = moduleInfoService.updateModule(updateDTO);
+
+        // 验证结果
+        assertNotNull(result);
+
+        // 验证调用顺序
+        verify(moduleInfoMapper, times(2)).selectById(1L); // 检查存在性 + 重新查询
+        verify(moduleInfoMapper).existsByName("Updated Module", 1L);
+        verify(datasourceMapper).selectById(1L);
+        verify(moduleInfoMapper).update(updatedModule);
+    }
+
+    @Test
+    @Story("更新模块")
+    @Description("测试更新不存在的模块")
+    @Severity(SeverityLevel.NORMAL)
+    void testUpdateModule_ModuleNotFound() {
+        // 准备测试数据
+        ModuleInfoUpdateDTO updateDTO = new ModuleInfoUpdateDTO();
+        updateDTO.setId(999L);
+
+        // Mock 行为
+        when(moduleInfoMapper.selectById(999L)).thenReturn(null);
+
+        // 执行测试并验证异常
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class, () -> moduleInfoService.updateModule(updateDTO));
+
+        assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
+    }
+
+    @Test
+    @Story("删除模块")
+    @Description("测试删除不存在的模块")
+    @Severity(SeverityLevel.NORMAL)
+    void testDeleteModule_ModuleNotFound() {
+        // Mock 行为
+        when(moduleInfoMapper.selectById(999L)).thenReturn(null);
+
+        // 执行测试并验证异常
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class, () -> moduleInfoService.deleteModule(999L, false));
+
+        assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
+    }
+
+    @Test
+    @Story("删除模块")
+    @Description("测试删除被进程使用的模块")
+    @Severity(SeverityLevel.CRITICAL)
+    void testDeleteModule_ModuleInUse() {
+        // Mock 行为
+        when(moduleInfoMapper.selectById(1L)).thenReturn(sampleModuleInfo);
+        when(logstashProcessMapper.countByModuleId(1L)).thenReturn(2);
+
+        // 执行测试并验证异常
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class, () -> moduleInfoService.deleteModule(1L, false));
+
+        assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
+
+        // 验证不会删除
+        verify(moduleInfoMapper, never()).deleteById(any());
+    }
+
+    @Test
+    @Story("删除模块")
+    @Description("测试删除模块并删除Doris表")
+    @Severity(SeverityLevel.CRITICAL)
+    void testDeleteModule_WithDorisTable() {
+        // 准备有Doris SQL的模块
+        ModuleInfo moduleWithDoris = new ModuleInfo();
+        moduleWithDoris.setId(1L);
+        moduleWithDoris.setName("Test Module");
+        moduleWithDoris.setTableName("test_logs");
+        moduleWithDoris.setDorisSql("CREATE TABLE test_logs ...");
+        moduleWithDoris.setDatasourceId(1L);
+
+        // Mock 行为
+        when(moduleInfoMapper.selectById(1L)).thenReturn(moduleWithDoris);
+        when(logstashProcessMapper.countByModuleId(1L)).thenReturn(0);
+        when(datasourceMapper.selectById(1L)).thenReturn(sampleDatasourceInfo);
+        // jdbcQueryExecutor.executeQuery没有返回值，不需要mock
+        when(moduleInfoMapper.deleteById(1L)).thenReturn(1);
+
+        // 执行测试
+        assertDoesNotThrow(() -> moduleInfoService.deleteModule(1L, true));
+
+        // 验证SQL执行：TRUNCATE和DROP
+        verify(jdbcQueryExecutor)
+                .executeQuery(eq(sampleDatasourceInfo), eq("TRUNCATE TABLE test_logs"));
+        verify(jdbcQueryExecutor)
+                .executeQuery(eq(sampleDatasourceInfo), eq("DROP TABLE IF EXISTS test_logs"));
+        verify(moduleInfoMapper).deleteById(1L);
+    }
+
+    @Test
+    @Story("执行Doris SQL")
+    @Description("测试成功执行Doris SQL")
+    @Severity(SeverityLevel.CRITICAL)
+    void testExecuteDorisSql_Success() {
+        // 准备没有Doris SQL的模块
+        ModuleInfo moduleWithoutDoris = new ModuleInfo();
+        moduleWithoutDoris.setId(1L);
+        moduleWithoutDoris.setDorisSql(null); // 没有执行过SQL
+        moduleWithoutDoris.setDatasourceId(1L);
+
+        String sql = "CREATE TABLE test_logs ...";
+
+        // Mock 行为
+        when(moduleInfoMapper.selectById(1L)).thenReturn(moduleWithoutDoris);
+        doNothing().when(tableValidationService).validateDorisSql(moduleWithoutDoris, sql);
+        when(datasourceMapper.selectById(1L)).thenReturn(sampleDatasourceInfo);
+        // jdbcQueryExecutor.executeQuery没有返回值，不需要mock
+        when(moduleInfoMapper.update(any(ModuleInfo.class))).thenReturn(1);
+        when(moduleInfoConverter.toDto(any(ModuleInfo.class), eq(sampleDatasourceInfo)))
+                .thenReturn(sampleModuleInfoDTO);
+
+        // 执行测试
+        ModuleInfoDTO result = moduleInfoService.executeDorisSql(1L, sql);
+
+        // 验证结果
+        assertNotNull(result);
+
+        // 验证调用顺序
+        verify(moduleInfoMapper).selectById(1L);
+        verify(tableValidationService).validateDorisSql(moduleWithoutDoris, sql);
+        verify(datasourceMapper).selectById(1L);
+        verify(jdbcQueryExecutor).executeQuery(sampleDatasourceInfo, sql);
+        verify(moduleInfoMapper).update(any(ModuleInfo.class));
+    }
+
+    @Test
+    @Story("执行Doris SQL")
+    @Description("测试重复执行Doris SQL")
+    @Severity(SeverityLevel.NORMAL)
+    void testExecuteDorisSql_AlreadyExecuted() {
+        // 准备已有Doris SQL的模块
+        ModuleInfo moduleWithDoris = new ModuleInfo();
+        moduleWithDoris.setId(1L);
+        moduleWithDoris.setDorisSql("CREATE TABLE existing ...");
+
+        // Mock 行为
+        when(moduleInfoMapper.selectById(1L)).thenReturn(moduleWithDoris);
+
+        // 执行测试并验证异常
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> moduleInfoService.executeDorisSql(1L, "CREATE TABLE new ..."));
+
+        assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
+
+        // 验证不会执行SQL
+        verify(jdbcQueryExecutor, never()).executeQuery(any(), any());
+    }
+
+    @Test
+    @Story("配置查询配置")
+    @Description("测试成功配置查询配置")
+    @Severity(SeverityLevel.CRITICAL)
+    void testConfigureQueryConfig_Success() throws Exception {
+        // 准备查询配置
+        QueryConfigDTO queryConfig = new QueryConfigDTO();
+        queryConfig.setTimeField("timestamp");
+
+        String configJson = "{\"timeField\":\"timestamp\"}";
+
+        // 准备有Doris SQL的模块
+        ModuleInfo moduleWithDoris = new ModuleInfo();
+        moduleWithDoris.setId(1L);
+        moduleWithDoris.setDatasourceId(1L); // 设置datasourceId避免null
+        moduleWithDoris.setDorisSql("CREATE TABLE ...");
+
+        // Mock 行为
+        when(moduleInfoMapper.selectById(1L)).thenReturn(moduleWithDoris);
+        when(objectMapper.writeValueAsString(queryConfig)).thenReturn(configJson);
+        when(moduleInfoMapper.update(any(ModuleInfo.class))).thenReturn(1);
+        when(datasourceMapper.selectById(1L)).thenReturn(sampleDatasourceInfo);
+        when(moduleInfoConverter.toDto(any(ModuleInfo.class), eq(sampleDatasourceInfo)))
+                .thenReturn(sampleModuleInfoDTO);
+
+        // 执行测试
+        ModuleInfoDTO result = moduleInfoService.configureQueryConfig(1L, queryConfig);
+
+        // 验证结果
+        assertNotNull(result);
+
+        // 验证调用 - 验证关键的业务逻辑调用
+        verify(objectMapper).writeValueAsString(queryConfig);
+        verify(moduleInfoMapper).update(any(ModuleInfo.class));
+    }
+
+    @Test
+    @Story("根据模块名获取表名")
+    @Description("测试成功获取表名")
+    @Severity(SeverityLevel.CRITICAL)
+    void testGetTableNameByModule_Success() {
+        // Mock 行为
+        when(moduleInfoMapper.selectByName("test_module")).thenReturn(sampleModuleInfo);
+
+        // 执行测试
+        String tableName = moduleInfoService.getTableNameByModule("test_module");
+
+        // 验证结果
+        assertEquals("test_logs", tableName);
+        verify(moduleInfoMapper).selectByName("test_module");
+    }
+
+    @Test
+    @Story("根据模块名获取表名")
+    @Description("测试模块不存在")
+    @Severity(SeverityLevel.NORMAL)
+    void testGetTableNameByModule_ModuleNotFound() {
+        // Mock 行为
+        when(moduleInfoMapper.selectByName("non_exist")).thenReturn(null);
+
+        // 执行测试并验证异常
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> moduleInfoService.getTableNameByModule("non_exist"));
+
+        assertEquals(ErrorCode.MODULE_NOT_FOUND, exception.getErrorCode());
+        // 仅验证异常类型和错误码，不依赖具体错误消息
+    }
+
+    @Test
+    @Story("根据模块名获取查询配置")
+    @Description("测试成功获取查询配置")
+    @Severity(SeverityLevel.NORMAL)
+    void testGetQueryConfigByModule_Success() throws Exception {
+        // 准备模块和配置
+        ModuleInfo moduleWithConfig = new ModuleInfo();
+        moduleWithConfig.setId(1L);
+        moduleWithConfig.setQueryConfig("{\"timeField\":\"timestamp\"}");
+
+        QueryConfigDTO expectedConfig = new QueryConfigDTO();
+        expectedConfig.setTimeField("timestamp");
+
+        // Mock 行为
+        when(moduleInfoMapper.selectByName("test_module")).thenReturn(moduleWithConfig);
+        when(objectMapper.readValue("{\"timeField\":\"timestamp\"}", QueryConfigDTO.class))
+                .thenReturn(expectedConfig);
+
+        // 执行测试
+        QueryConfigDTO result = moduleInfoService.getQueryConfigByModule("test_module");
+
+        // 验证结果
+        assertNotNull(result);
+        assertEquals("timestamp", result.getTimeField());
+    }
+
+    @Test
+    @Story("获取所有模块")
+    @Description("测试获取所有模块列表")
+    @Severity(SeverityLevel.NORMAL)
+    void testGetAllModules_Success() {
+        // 准备数据
+        List<ModuleInfo> moduleList = Arrays.asList(sampleModuleInfo);
+
+        // Mock 行为
+        when(moduleInfoMapper.selectAll()).thenReturn(moduleList);
+        when(datasourceMapper.selectById(1L)).thenReturn(sampleDatasourceInfo);
+        when(moduleInfoConverter.toDto(sampleModuleInfo, sampleDatasourceInfo))
+                .thenReturn(sampleModuleInfoDTO);
+
+        // 执行测试
+        List<ModuleInfoDTO> result = moduleInfoService.getAllModules();
+
+        // 验证结果
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Test Module", result.get(0).getName());
+    }
+
+    @Test
+    @Story("获取模块权限信息")
+    @Description("测试获取所有模块及权限信息")
+    @Severity(SeverityLevel.NORMAL)
+    void testGetAllModulesWithPermissions_Success() {
+        // 准备权限数据
+        UserModulePermission permission = new UserModulePermission();
+        permission.setUserId(1L);
+        permission.setModule("Test Module");
+
+        User user = new User();
+        user.setId(1L);
+        user.setNickname("testuser");
+
+        // Mock 行为
+        when(moduleInfoMapper.selectAll()).thenReturn(Arrays.asList(sampleModuleInfo));
+        when(datasourceMapper.selectById(1L)).thenReturn(sampleDatasourceInfo);
+        when(userModulePermissionMapper.selectAll()).thenReturn(Arrays.asList(permission));
+        when(userMapper.selectByIds(Arrays.asList(1L))).thenReturn(Arrays.asList(user));
+        when(modulePermissionConverter.createUserPermissionInfoDTO(permission, user))
+                .thenReturn(
+                        new com.hinadt.miaocha.domain.dto.permission.ModuleUsersPermissionDTO
+                                .UserPermissionInfoDTO());
+        when(moduleInfoConverter.toWithPermissionsDto(
+                        eq(sampleModuleInfo), eq(sampleDatasourceInfo), any()))
+                .thenReturn(new ModuleInfoWithPermissionsDTO());
+
+        // 执行测试
+        List<ModuleInfoWithPermissionsDTO> result =
+                moduleInfoService.getAllModulesWithPermissions();
+
+        // 验证结果
+        assertNotNull(result);
+        assertEquals(1, result.size());
     }
 }

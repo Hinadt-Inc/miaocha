@@ -1,6 +1,7 @@
 package com.hinadt.miaocha.application.service.impl;
 
 import com.hinadt.miaocha.application.service.SqlQueryService;
+import com.hinadt.miaocha.application.service.TableValidationService;
 import com.hinadt.miaocha.application.service.database.DatabaseMetadataService;
 import com.hinadt.miaocha.application.service.database.DatabaseMetadataServiceFactory;
 import com.hinadt.miaocha.application.service.export.FileExporter;
@@ -69,6 +70,8 @@ public class SqlQueryServiceImpl implements SqlQueryService {
 
     @Autowired private DatabaseMetadataServiceFactory metadataServiceFactory;
 
+    @Autowired private TableValidationService tableValidationService;
+
     @Autowired(required = false)
     @Qualifier("sqlQueryExecutor") private Executor sqlQueryExecutor;
 
@@ -77,12 +80,6 @@ public class SqlQueryServiceImpl implements SqlQueryService {
 
     private static final Pattern TABLE_NAME_PATTERN =
             Pattern.compile("\\bFROM\\s+[\"'`]?([\\w\\d_\\.]+)[\"'`]?", Pattern.CASE_INSENSITIVE);
-
-    private static final Pattern LIMIT_PATTERN =
-            Pattern.compile("\\blimit\\s+\\d+(?:\\s*,\\s*\\d+)?\\s*$", Pattern.CASE_INSENSITIVE);
-
-    private static final int DEFAULT_QUERY_LIMIT = 1000;
-    private static final int MAX_QUERY_LIMIT = 10000;
 
     @Autowired private SqlQueryHistoryConverter sqlQueryHistoryConverter;
 
@@ -109,8 +106,8 @@ public class SqlQueryServiceImpl implements SqlQueryService {
         // 使用权限检查器验证用户权限
         permissionChecker.checkQueryPermission(user, dto.getDatasourceId(), dto.getSql());
 
-        // 检查并添加查询限制
-        String processedSql = processSqlWithLimit(dto.getSql());
+        // 检查并添加查询限制（委托给TableValidationService）
+        String processedSql = tableValidationService.processSqlWithLimit(dto.getSql());
         dto.setSql(processedSql);
 
         // 记录SQL历史
@@ -177,69 +174,6 @@ public class SqlQueryServiceImpl implements SqlQueryService {
         }
 
         return result;
-    }
-
-    /**
-     * 检查并处理SQL语句，确保添加适当的LIMIT限制 1. 如果用户没有指定limit，添加默认的1000条限制 2. 如果用户指定了limit，检查是否超过10000条，超过则拒绝执行
-     *
-     * @param sql 原始SQL查询
-     * @return 处理后的SQL查询
-     */
-    private String processSqlWithLimit(String sql) {
-        if (sql == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "SQL语句不能为空");
-        }
-
-        // 将SQL转为小写，用于检查是否有LIMIT子句
-        String sqlLower = sql.trim().toLowerCase();
-
-        // 检查是否已经包含LIMIT子句
-        Matcher limitMatcher = LIMIT_PATTERN.matcher(sqlLower);
-        if (limitMatcher.find()) {
-            // 提取LIMIT值
-            String limitClause = limitMatcher.group(0);
-            // 解析LIMIT子句中的数字
-            int limitValue = extractLimitValue(limitClause);
-
-            // 检查LIMIT是否超过最大允许值
-            if (limitValue > MAX_QUERY_LIMIT) {
-                throw new BusinessException(
-                        ErrorCode.VALIDATION_ERROR,
-                        "查询结果数量限制不能超过" + MAX_QUERY_LIMIT + "条，请调整您的LIMIT语句");
-            }
-
-            // LIMIT在合法范围内，直接返回原SQL
-            return sql;
-        } else {
-            // 没有LIMIT子句，添加默认LIMIT
-            // 检查SQL是否以分号结束，如果是，在分号前添加LIMIT
-            if (sqlLower.endsWith(";")) {
-                return sql.substring(0, sql.length() - 1) + " LIMIT " + DEFAULT_QUERY_LIMIT + ";";
-            } else {
-                return sql + " LIMIT " + DEFAULT_QUERY_LIMIT;
-            }
-        }
-    }
-
-    /**
-     * 从LIMIT子句中提取限制值 处理如下几种情况: - LIMIT X - LIMIT X, Y (MySQL语法，返回偏移X后的Y条记录)
-     *
-     * @param limitClause LIMIT子句
-     * @return 提取的限制值
-     */
-    private int extractLimitValue(String limitClause) {
-        // 移除LIMIT关键字，只保留数字部分
-        String numbers = limitClause.replaceAll("\\blimit\\s+", "").trim();
-
-        // 处理LIMIT X, Y格式
-        if (numbers.contains(",")) {
-            String[] parts = numbers.split(",");
-            // 返回第二个数字，即实际的限制条数
-            return Integer.parseInt(parts[1].trim());
-        } else {
-            // 处理LIMIT X格式
-            return Integer.parseInt(numbers.trim());
-        }
     }
 
     /** 执行导出结果的具体逻辑 */

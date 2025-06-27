@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +28,6 @@ import org.springframework.util.StringUtils;
 /** 模块权限服务实现类 */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ModulePermissionServiceImpl implements ModulePermissionService {
 
     private final LogstashProcessMapper logstashProcessMapper;
@@ -38,6 +36,21 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
     private final UserModulePermissionMapper userModulePermissionMapper;
     private final com.hinadt.miaocha.domain.mapper.ModuleInfoMapper moduleInfoMapper;
     private final ModulePermissionConverter modulePermissionConverter;
+
+    public ModulePermissionServiceImpl(
+            LogstashProcessMapper logstashProcessMapper,
+            UserMapper userMapper,
+            DatasourceMapper datasourceMapper,
+            UserModulePermissionMapper userModulePermissionMapper,
+            com.hinadt.miaocha.domain.mapper.ModuleInfoMapper moduleInfoMapper,
+            ModulePermissionConverter modulePermissionConverter) {
+        this.logstashProcessMapper = logstashProcessMapper;
+        this.userMapper = userMapper;
+        this.datasourceMapper = datasourceMapper;
+        this.userModulePermissionMapper = userModulePermissionMapper;
+        this.moduleInfoMapper = moduleInfoMapper;
+        this.modulePermissionConverter = modulePermissionConverter;
+    }
 
     @Override
     public boolean hasModulePermission(Long userId, String module) {

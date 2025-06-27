@@ -22,7 +22,6 @@ import com.hinadt.miaocha.domain.mapper.UserMapper;
 import io.jsonwebtoken.ExpiredJwtException;
 import java.util.List;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,7 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
 /** 用户服务实现类 */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
     private final UserMapper userMapper;
@@ -39,6 +37,19 @@ public class UserServiceImpl implements UserService {
     private final JwtUtils jwtUtils;
     private final UserConverter userConverter;
     private final ModulePermissionService modulePermissionService;
+
+    public UserServiceImpl(
+            UserMapper userMapper,
+            PasswordEncoder passwordEncoder,
+            JwtUtils jwtUtils,
+            UserConverter userConverter,
+            ModulePermissionService modulePermissionService) {
+        this.userMapper = userMapper;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtils = jwtUtils;
+        this.userConverter = userConverter;
+        this.modulePermissionService = modulePermissionService;
+    }
 
     @Override
     public LoginResponseDTO login(LoginRequestDTO loginRequest) {

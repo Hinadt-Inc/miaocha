@@ -6,9 +6,9 @@ import static org.mockito.Mockito.*;
 
 import com.hinadt.miaocha.application.service.sql.converter.LogSearchDTOConverter;
 import com.hinadt.miaocha.application.service.sql.converter.VariantFieldConverter;
-import com.hinadt.miaocha.domain.dto.KeywordConditionDTO;
-import com.hinadt.miaocha.domain.dto.LogSearchDTO;
-import com.hinadt.miaocha.domain.dto.LogSearchDTODecorator;
+import com.hinadt.miaocha.domain.dto.logsearch.KeywordConditionDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTODecorator;
 import io.qameta.allure.*;
 import java.util.ArrayList;
 import java.util.Arrays;

@@ -12,11 +12,10 @@ import com.hinadt.miaocha.application.service.impl.logsearch.validator.LogSearch
 import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
-import com.hinadt.miaocha.domain.dto.LogDetailResultDTO;
-import com.hinadt.miaocha.domain.dto.LogFieldDistributionResultDTO;
-import com.hinadt.miaocha.domain.dto.LogHistogramResultDTO;
-import com.hinadt.miaocha.domain.dto.LogSearchDTO;
 import com.hinadt.miaocha.domain.dto.SchemaInfoDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogDetailResultDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogHistogramResultDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -86,7 +85,8 @@ public class LogSearchServiceImpl implements LogSearchService {
     /** 执行字段TOP5分布查询 */
     @Override
     @Transactional
-    public LogFieldDistributionResultDTO searchFieldDistributions(LogSearchDTO dto) {
+    public com.hinadt.miaocha.domain.dto.logsearch.LogFieldDistributionResultDTO
+            searchFieldDistributions(LogSearchDTO dto) {
         // 验证参数
         validator.validateFields(dto);
         DatasourceInfo datasourceInfo = validator.validateAndGetDatasource(dto.getModule());

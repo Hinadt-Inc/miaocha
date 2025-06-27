@@ -10,8 +10,8 @@ import com.hinadt.miaocha.application.service.sql.processor.TimeGranularityCalcu
 import com.hinadt.miaocha.application.service.sql.processor.TimeRangeProcessor;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.common.exception.LogQueryException;
-import com.hinadt.miaocha.domain.dto.LogHistogramResultDTO;
-import com.hinadt.miaocha.domain.dto.LogSearchDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogHistogramResultDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import java.sql.Connection;
 import java.util.concurrent.*;
 import lombok.extern.slf4j.Slf4j;

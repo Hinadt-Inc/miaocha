@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +33,6 @@ import org.springframework.util.StringUtils;
 /** Logstash进程管理服务实现类 支持多实例部署，基于LogstashMachine架构 */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class LogstashProcessServiceImpl implements LogstashProcessService {
 
     private final LogstashProcessMapper logstashProcessMapper;
@@ -48,6 +46,31 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
     private final TaskService taskService;
     private final LogstashConfigSyncService configSyncService;
     private final LogstashMachineConnectionValidator connectionValidator;
+
+    public LogstashProcessServiceImpl(
+            LogstashProcessMapper logstashProcessMapper,
+            LogstashMachineMapper logstashMachineMapper,
+            MachineMapper machineMapper,
+            ModuleInfoMapper moduleInfoMapper,
+            LogstashProcessDeployService logstashDeployService,
+            LogstashProcessConverter logstashProcessConverter,
+            LogstashMachineConverter logstashMachineConverter,
+            LogstashConfigParser logstashConfigParser,
+            TaskService taskService,
+            LogstashConfigSyncService configSyncService,
+            LogstashMachineConnectionValidator connectionValidator) {
+        this.logstashProcessMapper = logstashProcessMapper;
+        this.logstashMachineMapper = logstashMachineMapper;
+        this.machineMapper = machineMapper;
+        this.moduleInfoMapper = moduleInfoMapper;
+        this.logstashDeployService = logstashDeployService;
+        this.logstashProcessConverter = logstashProcessConverter;
+        this.logstashMachineConverter = logstashMachineConverter;
+        this.logstashConfigParser = logstashConfigParser;
+        this.taskService = taskService;
+        this.configSyncService = configSyncService;
+        this.connectionValidator = connectionValidator;
+    }
 
     @Override
     @Transactional

@@ -10,17 +10,19 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 /** 机器管理控制器 */
 @RestController
 @RequestMapping("/api/machines")
 @Tag(name = "机器管理", description = "提供机器元信息的增删改查和连接测试等功能")
-@RequiredArgsConstructor
 public class MachineEndpoint {
 
     private final MachineService machineService;
+
+    public MachineEndpoint(MachineService machineService) {
+        this.machineService = machineService;
+    }
 
     /**
      * 创建机器
