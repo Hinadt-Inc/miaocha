@@ -111,7 +111,7 @@ export default function LogstashMachineConfigModal({
     <Modal
       title={
         <span>
-          编辑机器配置 (进程ID: {processId}, 实例ID: {logstashMachineId})
+          编辑实例配置 (进程ID: {processId}, 实例ID: {logstashMachineId})
         </span>
       }
       open={visible}
@@ -119,6 +119,7 @@ export default function LogstashMachineConfigModal({
       confirmLoading={confirmLoading}
       onCancel={handleCancel}
       width={800}
+      maskClosable={false}
     >
       {contextHolder}
       <Form form={form} layout="vertical" initialValues={initialConfig}>

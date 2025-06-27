@@ -125,11 +125,12 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
         confirmLoading={confirmLoading}
         onCancel={onCancel}
         width={800}
+        maskClosable={false}
       >
         <Form form={form} layout="vertical">
           <div>
             <div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div>
                 <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
                   <Input placeholder="请输入Logstash进程名称，例如：订单处理服务" />
                 </Form.Item>

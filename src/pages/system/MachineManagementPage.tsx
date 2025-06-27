@@ -217,6 +217,7 @@ const MachineManagementPage = () => {
               确定
             </Button>,
           ]}
+          maskClosable={false}
         >
           <Form form={form} layout="vertical" onFinish={handleCreate}>
             <Row gutter={16}>
@@ -273,6 +274,7 @@ const MachineManagementPage = () => {
               确定
             </Button>,
           ]}
+          maskClosable={false}
         >
           <Form form={form} layout="vertical" onFinish={handleEdit}>
             <Row gutter={16}>

@@ -103,6 +103,7 @@ export default function LogstashScaleModal({
       onCancel={handleCancel}
       confirmLoading={confirmLoading}
       width={600}
+      maskClosable={false}
     >
       <Form form={form} layout="vertical" initialValues={initialParams}>
         <Title level={5}>当前进程信息</Title>

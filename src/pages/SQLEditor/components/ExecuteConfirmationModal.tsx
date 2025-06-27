@@ -213,6 +213,7 @@ const ExecuteConfirmationModal: React.FC<ExecuteConfirmationModalProps> = ({
       open={visible}
       onCancel={onCancel}
       width={800}
+      maskClosable={false}
       footer={
         <Space>
           <Button onClick={onCancel}>取消</Button>

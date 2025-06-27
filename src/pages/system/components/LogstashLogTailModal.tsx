@@ -172,7 +172,7 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
         // 点击遮罩层不会关闭弹窗
         maskClosable={false}
         bodyStyle={{
-          height: 'calc(100vh - 150px)',
+          height: 'calc(100vh - 140px)',
           padding: 0,
           display: 'flex',
           flexDirection: 'column',

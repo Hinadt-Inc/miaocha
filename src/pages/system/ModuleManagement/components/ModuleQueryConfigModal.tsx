@@ -43,6 +43,7 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
   const [fieldNames, setFieldNames] = useState<string[]>([]);
   const [loadingFields, setLoadingFields] = useState(false);
   const [disabledFields, setDisabledFields] = useState<number[]>([]);
+  const [messageApi, contextHolder] = message.useMessage();
 
   // 检测字段名是否包含特殊格式（点号或方括号）
   const isSpecialField = (fieldName: string): boolean => {
@@ -52,6 +53,25 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
     // 检测包含方括号的格式：message[marker][reqType]
     const hasBrackets = /\[.*\]/.test(fieldName);
     return hasDots || hasBrackets;
+  };
+
+  // 验证字段名是否重复
+  const validateFieldNameUnique = (_: any, value: string) => {
+    if (!value) return Promise.resolve();
+
+    const formValues = form.getFieldsValue();
+    const keywordFields = formValues.keywordFields || [];
+
+    // 统计当前字段名出现的次数
+    const duplicateCount = keywordFields.filter(
+      (field: any) => field?.fieldName && field.fieldName.trim() === value.trim(),
+    ).length;
+
+    if (duplicateCount > 1) {
+      return Promise.reject(new Error('字段名不能重复'));
+    }
+
+    return Promise.resolve();
   };
 
   useEffect(() => {
@@ -70,7 +90,7 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
       setFieldNames(fields);
     } catch (error) {
       console.error('获取字段名失败:', error);
-      message.warning('获取字段名失败，请手动输入');
+      messageApi.warning('获取字段名失败，请手动输入');
     } finally {
       setLoadingFields(false);
     }
@@ -94,13 +114,25 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
     // 先重置表单，再设置值
     form.resetFields();
     form.setFieldsValue(formData);
+
+    // 初始化时也需要检查并设置禁用字段状态
+    const newDisabledFields: number[] = [];
+    formData.keywordFields.forEach((field: any, index: number) => {
+      if (field?.fieldName && isSpecialField(field.fieldName)) {
+        newDisabledFields.push(index);
+      }
+    });
+    setDisabledFields(newDisabledFields);
   };
 
   const handleSubmit = async () => {
     if (!moduleId) return;
 
     try {
+      // 先验证表单
       const values = await form.validateFields();
+
+      // 验证成功后再设置提交状态
       setSubmitting(true);
 
       const params = {
@@ -112,12 +144,19 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
       };
 
       await updateModuleQueryConfig(params);
-      message.success('查询配置保存成功');
+      messageApi.success('查询配置保存成功');
       onSuccess();
       onCancel();
     } catch (error) {
-      console.error('保存查询配置失败:', error);
-      message.error('保存查询配置失败');
+      // 处理验证失败或API调用失败
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        // 表单验证失败
+        messageApi.error('请检查表单填写是否正确');
+      } else {
+        // API调用失败
+        console.error('保存查询配置失败:', error);
+        messageApi.error('保存查询配置失败');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -128,120 +167,115 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
   };
 
   return (
-    <Modal
-      title={`配置查询设置 - ${moduleName}`}
-      open={visible}
-      onCancel={handleCancel}
-      footer={[
-        <Button key="cancel" onClick={handleCancel}>
-          取消
-        </Button>,
-        <Button key="submit" type="primary" loading={submitting} onClick={handleSubmit}>
-          保存
-        </Button>,
-      ]}
-      width={600}
-    >
-      <div className={styles.container}>
-        <Form
-          form={form}
-          layout="vertical"
-          initialValues={{
-            timeField: '',
-            keywordFields: [{ fieldName: '', searchMethod: 'LIKE' }],
-          }}
-          onValuesChange={(changedValues, allValues) => {
-            // 当字段名发生变化时，检查并自动设置特殊字段的检索方法为LIKE
-            if (changedValues.keywordFields) {
-              const newKeywordFields = allValues.keywordFields.map((field: any) => {
-                if (field?.fieldName && isSpecialField(field.fieldName) && field.searchMethod !== 'LIKE') {
-                  return { ...field, searchMethod: 'LIKE' };
+    <>
+      {contextHolder}
+      <Modal
+        title={`配置查询设置 - ${moduleName}`}
+        open={visible}
+        onCancel={handleCancel}
+        footer={[
+          <Button key="cancel" onClick={handleCancel}>
+            取消
+          </Button>,
+          <Button key="submit" type="primary" loading={submitting} onClick={handleSubmit}>
+            保存
+          </Button>,
+        ]}
+        width={600}
+        maskClosable={false}
+      >
+        <div className={styles.container}>
+          <Form
+            form={form}
+            layout="vertical"
+            initialValues={{
+              timeField: '',
+              keywordFields: [{ fieldName: '', searchMethod: 'LIKE' }],
+            }}
+            onValuesChange={(changedValues, allValues) => {
+              // 当字段名发生变化时，检查并自动设置特殊字段的检索方法为LIKE
+              if (changedValues.keywordFields) {
+                const newKeywordFields = allValues.keywordFields.map((field: any) => {
+                  if (field?.fieldName && isSpecialField(field.fieldName) && field.searchMethod !== 'LIKE') {
+                    return { ...field, searchMethod: 'LIKE' };
+                  }
+                  return field;
+                });
+
+                // 更新禁用字段的状态
+                const newDisabledFields: number[] = [];
+                allValues.keywordFields.forEach((field: any, index: number) => {
+                  if (field?.fieldName && isSpecialField(field.fieldName)) {
+                    newDisabledFields.push(index);
+                  }
+                });
+                setDisabledFields(newDisabledFields);
+
+                // 如果有变化，更新表单值
+                const hasChanges = newKeywordFields.some(
+                  (field: any, index: number) => field.searchMethod !== allValues.keywordFields[index]?.searchMethod,
+                );
+
+                if (hasChanges) {
+                  setTimeout(() => {
+                    form.setFieldsValue({
+                      ...allValues,
+                      keywordFields: newKeywordFields,
+                    });
+                  }, 0);
                 }
-                return field;
-              });
-
-              // 更新禁用字段的状态
-              const newDisabledFields: number[] = [];
-              allValues.keywordFields.forEach((field: any, index: number) => {
-                if (field?.fieldName && isSpecialField(field.fieldName)) {
-                  newDisabledFields.push(index);
+              }
+            }}
+          >
+            <Form.Item label="时间字段" name="timeField" rules={[{ required: true, message: '请输入时间字段名称' }]}>
+              <AutoComplete
+                placeholder="请输入时间字段名称，如：log_time"
+                options={fieldNames.map((field) => ({
+                  value: field,
+                  label: field,
+                }))}
+                filterOption={(inputValue, option) =>
+                  option?.value.toString().toLowerCase().includes(inputValue.toLowerCase()) || false
                 }
-              });
-              setDisabledFields(newDisabledFields);
+                notFoundContent={loadingFields ? '加载中...' : '无匹配字段'}
+                allowClear
+              />
+            </Form.Item>
 
-              // 如果有变化，更新表单值
-              const hasChanges = newKeywordFields.some(
-                (field: any, index: number) => field.searchMethod !== allValues.keywordFields[index]?.searchMethod,
-              );
-
-              if (hasChanges) {
-                setTimeout(() => {
-                  form.setFieldsValue({
-                    ...allValues,
-                    keywordFields: newKeywordFields,
-                  });
-                }, 0);
-              }
-            }
-          }}
-        >
-          <Form.Item label="时间字段" name="timeField" rules={[{ required: true, message: '请输入时间字段名称' }]}>
-            <AutoComplete
-              placeholder="请输入时间字段名称，如：log_time"
-              options={fieldNames.map((field) => ({
-                value: field,
-                label: field,
-              }))}
-              filterOption={(inputValue, option) =>
-                option?.value.toString().toLowerCase().includes(inputValue.toLowerCase()) || false
-              }
-              notFoundContent={loadingFields ? '加载中...' : '无匹配字段'}
-              allowClear
-            />
-          </Form.Item>
-
-          <Form.Item label="关键词检索字段">
-            <Form.List name="keywordFields">
-              {(fields, { add, remove }) => (
-                <>
-                  {fields.map(({ key, name, ...restField }, index) => (
-                    <div key={key} className={styles.keywordFieldRow}>
-                      <Form.Item
-                        {...restField}
-                        name={[name, 'fieldName']}
-                        rules={[{ required: true, message: '请输入字段名称' }]}
-                        className={styles.fieldNameInput}
-                      >
-                        <AutoComplete
-                          placeholder="字段名称，如：message"
-                          options={fieldNames.map((field) => ({
-                            value: field,
-                            label: field,
-                          }))}
-                          filterOption={(inputValue, option) =>
-                            option?.value.toString().toLowerCase().includes(inputValue.toLowerCase()) || false
-                          }
-                          notFoundContent={loadingFields ? '加载中...' : '无匹配字段'}
-                          allowClear
-                          onSelect={(value) => {
-                            // 确保选择的值能正确设置到表单中
-                            const currentValues = form.getFieldsValue();
-                            const newKeywordFields = [...(currentValues.keywordFields || [])];
-                            if (newKeywordFields[index]) {
-                              newKeywordFields[index].fieldName = value;
-                              // 如果是特殊字段格式，自动设置为 LIKE
-                              if (isSpecialField(value)) {
-                                newKeywordFields[index].searchMethod = 'LIKE';
-                              }
-                              form.setFieldsValue({
-                                ...currentValues,
-                                keywordFields: newKeywordFields,
-                              });
+            <Form.Item label="关键词检索字段">
+              <Form.List name="keywordFields">
+                {(fields, { add, remove }) => (
+                  <>
+                    {fields.map(({ key, name, ...restField }, index) => (
+                      <div key={key} className={styles.keywordFieldRow}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'fieldName']}
+                          rules={[
+                            { required: true, message: '请输入字段名称' },
+                            {
+                              pattern: /^[a-zA-Z_][a-zA-Z0-9_.\[\]'"]*$/,
+                              message: '字段名必须以字母或下划线开头，只能包含字母、数字、下划线、点号、方括号和引号',
+                            },
+                            {
+                              validator: validateFieldNameUnique,
+                            },
+                          ]}
+                          className={styles.fieldNameInput}
+                        >
+                          <AutoComplete
+                            placeholder="字段名称，如：message"
+                            options={fieldNames.map((field) => ({
+                              value: field,
+                              label: field,
+                            }))}
+                            filterOption={(inputValue, option) =>
+                              option?.value.toString().toLowerCase().includes(inputValue.toLowerCase()) || false
                             }
-                          }}
-                          onChange={(value) => {
-                            // 当用户手动输入时也检查是否为特殊字段
-                            if (typeof value === 'string') {
+                            notFoundContent={loadingFields ? '加载中...' : '无匹配字段'}
+                            allowClear
+                            onSelect={(value) => {
+                              // 确保选择的值能正确设置到表单中
                               const currentValues = form.getFieldsValue();
                               const newKeywordFields = [...(currentValues.keywordFields || [])];
                               if (newKeywordFields[index]) {
@@ -249,65 +283,83 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
                                 // 如果是特殊字段格式，自动设置为 LIKE
                                 if (isSpecialField(value)) {
                                   newKeywordFields[index].searchMethod = 'LIKE';
-                                  form.setFieldsValue({
-                                    ...currentValues,
-                                    keywordFields: newKeywordFields,
-                                  });
+                                }
+                                form.setFieldsValue({
+                                  ...currentValues,
+                                  keywordFields: newKeywordFields,
+                                });
+                              }
+                            }}
+                            onChange={(value) => {
+                              // 当用户手动输入时也检查是否为特殊字段
+                              if (typeof value === 'string') {
+                                const currentValues = form.getFieldsValue();
+                                const newKeywordFields = [...(currentValues.keywordFields || [])];
+                                if (newKeywordFields[index]) {
+                                  newKeywordFields[index].fieldName = value;
+                                  // 如果是特殊字段格式，自动设置为 LIKE
+                                  if (isSpecialField(value)) {
+                                    newKeywordFields[index].searchMethod = 'LIKE';
+                                    form.setFieldsValue({
+                                      ...currentValues,
+                                      keywordFields: newKeywordFields,
+                                    });
+                                  }
                                 }
                               }
-                            }
-                          }}
-                        />
-                      </Form.Item>
-                      <Form.Item
-                        {...restField}
-                        name={[name, 'searchMethod']}
-                        rules={[{ required: true, message: '请选择检索方法' }]}
-                        className={styles.searchMethodSelect}
-                      >
-                        <Select
-                          placeholder="检索方法"
-                          disabled={disabledFields.includes(index)}
-                          onChange={(value) => {
-                            // 手动处理onChange事件，确保表单值正确更新
-                            const formValues = form.getFieldsValue();
-                            const currentFieldName = formValues?.keywordFields?.[index]?.fieldName || '';
-
-                            // 如果是特殊字段，强制设置为LIKE
-                            if (isSpecialField(currentFieldName) && value !== 'LIKE') {
-                              form.setFieldValue(['keywordFields', index, 'searchMethod'], 'LIKE');
-                              return;
-                            }
-
-                            // 正常情况下更新值
-                            form.setFieldValue(['keywordFields', index, 'searchMethod'], value);
-                          }}
+                            }}
+                          />
+                        </Form.Item>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'searchMethod']}
+                          rules={[{ required: true, message: '请选择检索方法' }]}
+                          className={styles.searchMethodSelect}
                         >
-                          {searchMethodOptionElements}
-                        </Select>
-                      </Form.Item>
-                      {fields.length > 1 && (
-                        <MinusCircleOutlined className={styles.removeButton} onClick={() => remove(name)} />
-                      )}
-                    </div>
-                  ))}
-                  <Form.Item>
-                    <Button
-                      type="dashed"
-                      onClick={() => add({ fieldName: '', searchMethod: 'LIKE' })}
-                      block
-                      icon={<PlusOutlined />}
-                    >
-                      添加关键词字段
-                    </Button>
-                  </Form.Item>
-                </>
-              )}
-            </Form.List>
-          </Form.Item>
-        </Form>
-      </div>
-    </Modal>
+                          <Select
+                            placeholder="检索方法"
+                            disabled={disabledFields.includes(index)}
+                            onChange={(value) => {
+                              // 手动处理onChange事件，确保表单值正确更新
+                              const formValues = form.getFieldsValue();
+                              const currentFieldName = formValues?.keywordFields?.[index]?.fieldName || '';
+
+                              // 如果是特殊字段，强制设置为LIKE
+                              if (isSpecialField(currentFieldName) && value !== 'LIKE') {
+                                form.setFieldValue(['keywordFields', index, 'searchMethod'], 'LIKE');
+                                return;
+                              }
+
+                              // 正常情况下更新值
+                              form.setFieldValue(['keywordFields', index, 'searchMethod'], value);
+                            }}
+                          >
+                            {searchMethodOptionElements}
+                          </Select>
+                        </Form.Item>
+                        {fields.length > 1 && (
+                          <MinusCircleOutlined className={styles.removeButton} onClick={() => remove(name)} />
+                        )}
+                      </div>
+                    ))}
+                    <Form.Item>
+                      <Button
+                        type="dashed"
+                        onClick={() => add({ fieldName: '', searchMethod: 'LIKE' })}
+                        block
+                        icon={<PlusOutlined />}
+                      >
+                        添加关键词字段
+                      </Button>
+                    </Form.Item>
+                  </>
+                )}
+              </Form.List>
+            </Form.Item>
+          </Form>
+        </div>
+      </Modal>
+    </>
   );
 };
 
