@@ -1,10 +1,12 @@
 import { useState, useMemo, useEffect, Suspense, lazy, forwardRef, useImperativeHandle, useRef } from 'react';
-import { AutoComplete, Button, Space, Tag, Popover, Statistic, Tooltip } from 'antd';
+import { AutoComplete, Button, Space, Tag, Popover, Statistic, Tooltip, Select } from 'antd';
 import CountUp from 'react-countup';
 import SpinIndicator from '@/components/SpinIndicator';
 import styles from './SearchBar.module.less';
 import { QUICK_RANGES, TIME_GROUP, getLatestTime, DATE_FORMAT_THOUSOND } from './utils';
 import dayjs from 'dayjs';
+import { useRequest } from 'ahooks';
+import * as modulesApi from '@/api/modules';
 const TimePicker = lazy(() => import('./TimePicker.tsx'));
 
 interface IProps {
@@ -16,6 +18,8 @@ interface IProps {
   onSqlsChange?: (sqls: string[]) => void; // SQL列表变化回调函数
   activeColumns?: string[]; // 激活的字段列表
   getDistributionWithSearchBar?: () => void; // 获取字段分布回调函数
+  selectedModule?: string; // 当前选中的模块
+  onQueryConfigChange?: (selectedConfig: string | undefined, queryConfigs: any[], res?: any) => void; // 查询配置变化回调函数
 }
 
 const SearchBar = forwardRef((props: IProps, ref) => {
@@ -29,6 +33,8 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     onSqlsChange,
     activeColumns,
     getDistributionWithSearchBar,
+    selectedModule,
+    onQueryConfigChange,
   } = props;
 
   const [timeGroup, setTimeGroup] = useState<string>('auto'); // 时间分组
@@ -50,6 +56,57 @@ const SearchBar = forwardRef((props: IProps, ref) => {
 
   // 添加查询条件恢复功能
   const [initialized, setInitialized] = useState(false);
+
+  // 查询配置相关状态
+  const [queryConfigs, setQueryConfigs] = useState<any[]>([]);
+  const [selectedQueryConfig, setSelectedQueryConfig] = useState<string | undefined>(undefined);
+
+  // 获取模块查询配置
+  const getQueryConfig = useRequest(modulesApi.getModuleQueryConfig, {
+    manual: true,
+    onSuccess: (res) => {
+      if (res && res.keywordFields) {
+        const configs = res.keywordFields.map((field: any, index: number) => ({
+          value: `${field.fieldName}_${field.searchMethod}`,
+          label: `${field.fieldName} (${field.searchMethod})`,
+          fieldName: field.fieldName,
+          searchMethod: field.searchMethod,
+        }));
+        setQueryConfigs(configs);
+        // 重置选中状态，确保显示placeholder
+        setSelectedQueryConfig(undefined);
+        // 通知父组件查询配置已更新，传递完整的配置包括timeField
+        if (onQueryConfigChange) {
+          onQueryConfigChange(undefined, configs, res);
+        }
+      } else {
+        setQueryConfigs([]);
+        setSelectedQueryConfig(undefined);
+        // 通知父组件查询配置已清空
+        if (onQueryConfigChange) {
+          onQueryConfigChange(undefined, [], null);
+        }
+      }
+    },
+    onError: () => {
+      setQueryConfigs([]);
+      setSelectedQueryConfig(undefined);
+      // 通知父组件查询配置已清空
+      if (onQueryConfigChange) {
+        onQueryConfigChange(undefined, [], null);
+      }
+    },
+  });
+
+  // 当selectedModule变化时，获取查询配置
+  useEffect(() => {
+    if (selectedModule) {
+      getQueryConfig.run(selectedModule);
+    } else {
+      setQueryConfigs([]);
+      setSelectedQueryConfig(undefined);
+    }
+  }, [selectedModule]);
 
   // 在组件初始化时恢复之前的查询条件
   useEffect(() => {
@@ -133,8 +190,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   };
 
   const handleTimeFromTag = () => {
-    // () => setOpenTimeRange(true)
-
     setOpenTimeRange(true);
   };
 
@@ -414,6 +469,33 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     );
   }, [sql, sqlHistory, columns]);
 
+  // 处理查询配置变化
+  const handleQueryConfigChange = (value: string | undefined) => {
+    setSelectedQueryConfig(value);
+    // 通知父组件选中的查询配置变化，需要从SearchBar中获取完整的模块配置
+    if (onQueryConfigChange) {
+      // 由于这里没有完整的模块配置，只传递选中配置和配置列表
+      // 完整的模块配置在getQueryConfig的onSuccess中已经传递过
+      onQueryConfigChange(value, queryConfigs);
+    }
+  };
+
+  // 渲染查询配置下拉框
+  const queryConfigRender = useMemo(() => {
+    return (
+      <Select
+        allowClear
+        placeholder="选择查询配置"
+        style={{ width: '100%' }}
+        value={selectedQueryConfig}
+        onChange={handleQueryConfigChange}
+        loading={getQueryConfig.loading}
+        options={queryConfigs}
+        disabled={!selectedModule || queryConfigs.length === 0}
+      />
+    );
+  }, [selectedQueryConfig, queryConfigs, getQueryConfig.loading, selectedModule]);
+
   const changeTimeGroup = (text: string) => {
     const latestTime = getLatestTime(timeOption);
     setTimeGroup(text);
@@ -458,6 +540,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
         </div>
       </div>
       <div className={styles.form}>
+        <div className={styles.item}>{queryConfigRender}</div>
         <div className={styles.item}>{keywordRender}</div>
         <div className={styles.item}>{sqlRender}</div>
         <div className={styles.item}>

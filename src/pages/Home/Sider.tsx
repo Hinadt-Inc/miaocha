@@ -14,10 +14,25 @@ interface IProps {
   onChangeColumns?: (params: ILogColumnsResponse[]) => void; // 列变化回调函数
   setWhereSqlsFromSider: any; // 设置where条件
   onActiveColumnsChange?: (activeColumns: string[]) => void; // 激活字段变化回调函数
+  onSelectedModuleChange?: (selectedModule: string) => void; // 选中模块变化回调函数
+  selectedQueryConfig?: string | undefined; // 选中的查询配置
+  queryConfigs?: any[]; // 查询配置列表
+  moduleQueryConfig?: any; // 模块查询配置
 }
 
 const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((props, ref) => {
-  const { modules, onChangeColumns, onSearch, searchParams, setWhereSqlsFromSider, onActiveColumnsChange } = props;
+  const {
+    modules,
+    onChangeColumns,
+    onSearch,
+    searchParams,
+    setWhereSqlsFromSider,
+    onActiveColumnsChange,
+    onSelectedModuleChange,
+    selectedQueryConfig,
+    queryConfigs,
+    moduleQueryConfig,
+  } = props;
   const [columns, setColumns] = useState<ILogColumnsResponse[]>([]); // 日志表字段
   const [selectedModule, setSelectedModule] = useState<string>(''); // 已选模块
   const [distributions, setDistributions] = useState<Record<string, IFieldDistributions>>({}); // 字段值分布列表
@@ -53,8 +68,34 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
   // 获取指定字段的TOP5分布数据
   const queryDistribution = useRequest(
     async (params: ILogSearchParams & { signal?: AbortSignal }) => {
+      // 构造queryConfig参数
+      let queryConfig: any = undefined;
+      if (moduleQueryConfig) {
+        queryConfig = {
+          timeField: moduleQueryConfig.timeField,
+        };
+
+        // 如果有选中的查询配置，则添加对应的keywordFields
+        if (selectedQueryConfig && queryConfigs && queryConfigs.length > 0) {
+          const selectedConfig = queryConfigs.find((config) => config.value === selectedQueryConfig);
+          if (selectedConfig) {
+            queryConfig.keywordFields = [
+              {
+                fieldName: selectedConfig.fieldName,
+                searchMethod: selectedConfig.searchMethod,
+              },
+            ];
+          }
+        }
+      }
+
+      const requestParams = {
+        ...params,
+        ...(queryConfig && { queryConfig }),
+      };
+
       // 传 signal 给 api
-      return api.fetchDistributions(params, { signal: params.signal });
+      return api.fetchDistributions(requestParams, { signal: params.signal });
     },
     {
       manual: true,
@@ -111,11 +152,18 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
   const changeModules = (value: string) => {
     if (!value) {
       setSelectedModule('');
+      if (onSelectedModuleChange) {
+        onSelectedModuleChange('');
+      }
       return;
     }
     const datasourceId = modules.find((item) => item.value === value)?.datasourceId;
     // 解析value：datasourceId-module
     setSelectedModule(value);
+    // 通知父组件模块变化
+    if (onSelectedModuleChange) {
+      onSelectedModuleChange(value);
+    }
     getColumns.run({ datasourceId: Number(datasourceId), module: value });
     onSearch({
       ...searchParams,
@@ -145,6 +193,10 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
         const datasourceId = String(targetModule.datasourceId);
         const module = String(targetModule.module);
         setSelectedModule(module);
+        // 通知父组件模块变化
+        if (onSelectedModuleChange) {
+          onSelectedModuleChange(module);
+        }
         getColumns.run({ datasourceId: Number(datasourceId), module });
       }
     }

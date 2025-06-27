@@ -271,7 +271,7 @@ const VirtualTable = (props: IProps) => {
             new Set([...(keyWordsFormat?.length ? allKeywords : sqlFilterValue)]),
           ).filter(Boolean);
 
-          console.log('匹配高亮关键词', finalKeywords);
+          // console.log('匹配高亮关键词', finalKeywords);
 
           // 预处理每个字段的优先级
           const entries = Object.entries(record).map(([key, value]) => {
