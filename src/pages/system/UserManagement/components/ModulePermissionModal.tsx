@@ -1,9 +1,9 @@
 import { Modal, Table, Space, Button, Input, Tag, message, Descriptions } from 'antd';
 import styles from './ModulePermissionModal.module.less';
-import { batchRevokeModules, authorizeModule, revokeModule } from '../../../api/modules';
+import { batchRevokeModules, authorizeModule, revokeModule } from '@/api/modules';
 import { SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 
 import type { ModulePermission } from '@/types/permissionTypes';
 

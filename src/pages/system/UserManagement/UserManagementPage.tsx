@@ -1,6 +1,5 @@
 import { Table } from 'antd';
-import ModulePermissionModal from '../components/ModulePermissionModal';
-import { UserPageHeader, UserFormModal, PasswordModal } from './components';
+import { UserPageHeader, UserFormModal, PasswordModal, ModulePermissionModal } from './components';
 import { useUserData, useTableConfig, useUserActions } from './hooks';
 import styles from './UserManagement.module.less';
 
