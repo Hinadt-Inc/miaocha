@@ -1,19 +1,20 @@
 {
-  "mcpServers": {
-    "秒查API文档": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "apifox-mcp-server@latest",
-        "--oas=http://10.254.133.210:32088/v3/api-docs"
-      ]
-    },
-    "context7": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@upstash/context7-mcp@latest"
-      ]
+    "mcpServers": {
+      "context7": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@upstash/context7-mcp@latest"
+        ]
+      },
+      "秒查API文档": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "apifox-mcp-server@latest",
+          "--oas=http://10.254.133.210:32088/v3/api-docs"
+        ]
+      }
     }
   }
-}
+  

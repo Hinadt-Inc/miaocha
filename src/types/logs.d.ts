@@ -110,6 +110,22 @@ declare global {
      * 需要查询的字段列表
      */
     fields?: string[];
+    /**
+     * 查询配置
+     */
+    queryConfig?: {
+      /**
+       * 时间字段名
+       */
+      timeField?: string;
+      /**
+       * 关键词字段配置列表
+       */
+      keywordFields?: Array<{
+        fieldName: string;
+        searchMethod: string;
+      }>;
+    };
   }
 
   /**

@@ -162,6 +162,15 @@ export const updateModuleQueryConfig = async (params: ModuleQueryConfigParams) =
   });
 };
 
+// 获取模块查询配置
+export const getModuleQueryConfig = async (name: string) => {
+  return request<QueryConfig>({
+    url: '/api/modules/query-config',
+    method: 'GET',
+    params: { name },
+  });
+};
+
 // 获取模块字段名列表
 export const getModuleFieldNames = async (moduleId: number) => {
   return request<string[]>({

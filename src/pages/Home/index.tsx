@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Splitter } from 'antd';
 import { useRequest } from 'ahooks';
 import * as api from '@/api/logs';
+import * as modulesApi from '@/api/modules';
 import SearchBar from './SearchBar';
 import Log from './Log';
 import Sider from './Sider';
@@ -17,9 +18,18 @@ const HomePage = () => {
   const [whereSqlsFromSider, setWhereSqlsFromSider] = useState<IStatus[]>([]); // 侧边栏的where条件
   const [sqls, setSqls] = useState<string[]>([]); // SQL语句列表
   const [activeColumns, setActiveColumns] = useState<string[]>([]); // 激活的字段列表
+  const [selectedModule, setSelectedModule] = useState<string>(''); // 当前选中的模块
   const searchBarRef = useRef<any>(null);
   const siderRef = useRef<any>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  // 查询配置相关状态
+  const [selectedQueryConfig, setSelectedQueryConfig] = useState<string | undefined>(undefined);
+  const [queryConfigs, setQueryConfigs] = useState<any[]>([]);
+  const [moduleQueryConfig, setModuleQueryConfig] = useState<any>(null); // 存储完整的模块查询配置
+  const [selectedQueryConfigs, setSelectedQueryConfigs] = useState<any[]>([]); // 选中的查询配置列表
+  const [isInitialized, setIsInitialized] = useState(false); // 标记是否已经初始化
+  const lastCallParamsRef = useRef<string>(''); // 用于避免重复调用
 
   // 默认的搜索参数
   const defaultSearchParams: ILogSearchParams = {
@@ -67,8 +77,29 @@ const HomePage = () => {
   // 执行日志明细查询
   const getDetailData = useRequest(
     async (params: ILogSearchParams & { signal?: AbortSignal }) => {
+      // 构造queryConfig参数
+      let queryConfig: any = undefined;
+      if (moduleQueryConfig) {
+        queryConfig = {
+          timeField: moduleQueryConfig.timeField,
+        };
+
+        // 如果有选中的查询配置列表，则添加对应的keywordFields
+        if (selectedQueryConfigs && selectedQueryConfigs.length > 0) {
+          queryConfig.keywordFields = selectedQueryConfigs.map((config) => ({
+            fieldName: config.fieldName,
+            searchMethod: config.searchMethod,
+          }));
+        }
+      }
+
+      const requestParams = {
+        ...params,
+        ...(queryConfig && { queryConfig }),
+      };
+
       // 传 signal 给 api
-      return api.fetchLogDetails(params, { signal: params.signal });
+      return api.fetchLogDetails(requestParams, { signal: params.signal });
     },
     {
       manual: true,
@@ -90,8 +121,29 @@ const HomePage = () => {
   // 执行日志时间分布查询
   const getHistogramData = useRequest(
     async (params: ILogSearchParams & { signal?: AbortSignal }) => {
+      // 构造queryConfig参数
+      let queryConfig: any = undefined;
+      if (moduleQueryConfig) {
+        queryConfig = {
+          timeField: moduleQueryConfig.timeField,
+        };
+
+        // 如果有选中的查询配置列表，则添加对应的keywordFields
+        if (selectedQueryConfigs && selectedQueryConfigs.length > 0) {
+          queryConfig.keywordFields = selectedQueryConfigs.map((config) => ({
+            fieldName: config.fieldName,
+            searchMethod: config.searchMethod,
+          }));
+        }
+      }
+
+      const requestParams = {
+        ...params,
+        ...(queryConfig && { queryConfig }),
+      };
+
       // 传 signal 给 api
-      return api.fetchLogHistogram(params, { signal: params.signal });
+      return api.fetchLogHistogram(requestParams, { signal: params.signal });
     },
     {
       manual: true,
@@ -105,14 +157,45 @@ const HomePage = () => {
   );
 
   useEffect(() => {
-    // 只判断 datasourceId和module，因为这是查询的必要参数
-    if (searchParams.datasourceId && searchParams.module) {
-      if (abortRef.current) abortRef.current.abort(); // 取消上一次
-      abortRef.current = new AbortController();
-      getDetailData.run({ ...searchParams, signal: abortRef.current.signal });
-      getHistogramData.run({ ...searchParams, signal: abortRef.current.signal });
+    // 检查是否满足调用条件
+    if (!searchParams.datasourceId || !searchParams.module || !moduleQueryConfig) {
+      return;
     }
-  }, [searchParams]);
+
+    // 生成当前调用的参数标识，用于避免重复调用
+    const currentCallParams = JSON.stringify({
+      datasourceId: searchParams.datasourceId,
+      module: searchParams.module,
+      startTime: searchParams.startTime,
+      endTime: searchParams.endTime,
+      timeRange: searchParams.timeRange,
+      keywords: searchParams.keywords,
+      whereSqls: searchParams.whereSqls,
+      offset: searchParams.offset,
+      fields: searchParams.fields,
+      selectedQueryConfigs: selectedQueryConfigs.map((config) => config.value),
+      moduleQueryConfigTimeField: moduleQueryConfig?.timeField,
+    });
+
+    // 如果参数没有变化，避免重复调用
+    if (lastCallParamsRef.current === currentCallParams) {
+      return;
+    }
+
+    // 初始化调用或参数变化后的调用
+    if (abortRef.current) abortRef.current.abort(); // 取消上一次
+    abortRef.current = new AbortController();
+    getDetailData.run({ ...searchParams, signal: abortRef.current.signal });
+    getHistogramData.run({ ...searchParams, signal: abortRef.current.signal });
+
+    // 更新最后调用的参数标识
+    lastCallParamsRef.current = currentCallParams;
+
+    // 标记已初始化
+    if (!isInitialized) {
+      setIsInitialized(true);
+    }
+  }, [searchParams, moduleQueryConfig, selectedQueryConfigs]);
 
   // 处理列变化
   const handleChangeColumns = (columns: ILogColumnsResponse[]) => {
@@ -162,6 +245,11 @@ const HomePage = () => {
     onSearch: setSearchParams,
     onChangeColumns: handleChangeColumns,
     onActiveColumnsChange: setActiveColumns,
+    onSelectedModuleChange: setSelectedModule,
+    selectedQueryConfig,
+    queryConfigs,
+    moduleQueryConfig,
+    selectedQueryConfigs,
   };
 
   // 使用useCallback稳定getDistributionWithSearchBar函数引用
@@ -215,6 +303,48 @@ const HomePage = () => {
     [histogramData, detailData, getDetailData, logTableColumns, searchParams, whereSqlsFromSider, sqls],
   );
 
+  // 处理查询配置变化
+  const handleQueryConfigChange = useCallback(
+    (selectedConfig: string | undefined, configs: any[], moduleConfig?: any) => {
+      setSelectedQueryConfig(selectedConfig);
+      setQueryConfigs(configs);
+      // 如果传递了完整的模块配置，则更新moduleQueryConfig
+      if (moduleConfig !== undefined) {
+        setModuleQueryConfig(moduleConfig);
+      }
+    },
+    [],
+  );
+
+  // 处理选中的查询配置列表变化
+  const handleSelectedQueryConfigsChange = useCallback((selectedQueryConfigs: any[]) => {
+    setSelectedQueryConfigs(selectedQueryConfigs);
+  }, []);
+
+  // 获取模块查询配置
+  const getModuleQueryConfig = useRequest((moduleName: string) => modulesApi.getModuleQueryConfig(moduleName), {
+    manual: true,
+    onSuccess: (res) => {
+      setModuleQueryConfig(res);
+    },
+    onError: () => {
+      setModuleQueryConfig(null);
+    },
+  });
+
+  // 当selectedModule变化时，获取模块查询配置
+  useEffect(() => {
+    if (selectedModule) {
+      setIsInitialized(false); // 重置初始化状态
+      lastCallParamsRef.current = ''; // 重置调用参数标识
+      getModuleQueryConfig.run(selectedModule);
+    } else {
+      setModuleQueryConfig(null);
+      setIsInitialized(false);
+      lastCallParamsRef.current = ''; // 重置调用参数标识
+    }
+  }, [selectedModule]);
+
   // 搜索栏组件props
   const searchBarProps = useMemo(
     () => ({
@@ -226,6 +356,9 @@ const HomePage = () => {
       onSqlsChange: setSqls,
       activeColumns,
       getDistributionWithSearchBar,
+      selectedModule,
+      onQueryConfigChange: handleQueryConfigChange,
+      onSelectedQueryConfigsChange: handleSelectedQueryConfigsChange,
     }),
     [
       searchParams,
@@ -235,6 +368,9 @@ const HomePage = () => {
       logTableColumns,
       activeColumns,
       getDistributionWithSearchBar,
+      selectedModule,
+      handleQueryConfigChange,
+      handleSelectedQueryConfigsChange,
     ],
   );
 
