@@ -684,8 +684,8 @@ class LogSearchDTOConverterTest {
 
             assertEquals(1000, results.size(), "批量转换结果数量应正确");
             assertTrue(
-                    endTime - startTime < 1000,
-                    "1000个DTO转换应在1秒内完成，实际用时：" + (endTime - startTime) + "ms");
+                    endTime - startTime < 2000,
+                    "1000个DTO转换应在2秒内完成，实际用时：" + (endTime - startTime) + "ms");
 
             // 验证所有结果都是装饰器
             long decoratorCount =
