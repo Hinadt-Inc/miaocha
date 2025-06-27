@@ -5,6 +5,13 @@ import { setTokens } from '../store/userSlice';
 import { store } from '../store/store';
 import 'nprogress/nprogress.css';
 
+// 定义全局错误处理器
+let globalErrorHandler: ((error: Error) => void) | null = null;
+
+export function setGlobalErrorHandler(handler: (error: Error) => void) {
+  globalErrorHandler = handler;
+}
+
 NProgress.configure({
   showSpinner: false, // 是否显示右上角的转圈加载图标
 });
@@ -64,16 +71,21 @@ service.interceptors.response.use(
     // 根据后端接口返回结构调整
     if (isBizError || isCodeError) {
       console.log('isError', response);
-      return Promise.reject(new Error(message));
+      const error = new Error(message);
+      // 使用全局错误处理器
+      if (globalErrorHandler) {
+        globalErrorHandler(error);
+      }
+      return Promise.reject(error);
     }
     return res.data;
   },
-  async (error) => {
+  async (requestError) => {
     NProgress.done(); // 结束进度条
-    const originalRequest = error.config;
-    const res = error.response?.data || {};
-    const status = error.response?.status;
-    let errorMessage = error.response?.data?.message || error.message || '请求失败';
+    const originalRequest = requestError.config;
+    const res = requestError.response?.data || {};
+    const status = requestError.response?.status;
+    let errorMessage = requestError.response?.data?.message || requestError.message || '请求失败';
 
     // 常见HTTP状态码友好提示
     const statusMessageMap: Record<number, string> = {
@@ -94,7 +106,7 @@ service.interceptors.response.use(
       errorMessage = statusMessageMap[status];
     }
 
-    if (error.code === 'ERR_CANCELED') return Promise.reject(new Error('请求已取消'));
+    if (requestError.code === 'ERR_CANCELED') return Promise.reject(new Error('请求已取消'));
 
     // 如果是401错误且不是刷新token请求
     if (status === 401 && !originalRequest._retry) {
@@ -144,16 +156,33 @@ service.interceptors.response.use(
 
         // 重试原始请求
         return service(originalRequest);
-      } catch (err) {
+      } catch (refreshError) {
         // 刷新token失败，跳转到登录页
         retryQueue = [];
         window.location.href = '/login';
-        return Promise.reject(err);
+        const error = refreshError instanceof Error ? refreshError : new Error('Token refresh failed');
+        if (globalErrorHandler) {
+          globalErrorHandler(error);
+        }
+        return Promise.reject(error);
       } finally {
         isRefreshing = false;
       }
     }
-    return Promise.reject(new Error(errorMessage));
+
+    // 创建标准化的错误对象
+    const finalError = new Error(errorMessage);
+    // 添加状态码信息到错误对象
+    if (status) {
+      Object.assign(finalError, { status, code: status.toString() });
+    }
+
+    // 使用全局错误处理器
+    if (globalErrorHandler) {
+      globalErrorHandler(finalError);
+    }
+
+    return Promise.reject(finalError);
   },
 );
 

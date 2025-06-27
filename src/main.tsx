@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
-import { notification } from 'antd';
 import { createRoot } from 'react-dom/client';
 import { Provider, useDispatch } from 'react-redux';
 import { RouterProvider } from 'react-router-dom';
 import { QueryProvider } from './providers/QueryProvider';
 import { LoadingProvider } from './providers/LoadingProvider';
+import { ErrorProvider } from './providers/ErrorProvider';
 import { store, type AppDispatch } from './store/store';
 import { restoreSession } from './store/userSlice';
 import { router } from './routes';
@@ -26,65 +26,15 @@ const SessionInitializer = () => {
   return null;
 };
 
-const Error = ({ children }: any) => {
-  const [notificationApi, contextHolder] = notification.useNotification();
-  const notificationConfig: any = {
-    message: '提示',
-    showProgress: true,
-    placement: 'top',
-  };
-
-  const handleUnhandledRejection = (event: any) => {
-    event.preventDefault();
-    console.error('【全局1】======Unhandled promise rejection:', event);
-    const description = event?.detail?.reason?.message || event?.reason?.message || '业务发生未知错误，请联系开发人员';
-    notificationApi.error({
-      description,
-      ...notificationConfig,
-    });
-  };
-
-  // 未捕获的错误
-  const handleGlobalError = (event: ErrorEvent) => {
-    // 阻止默认错误处理(如控制台输出)
-    event.preventDefault();
-    console.error('【全局2】======Uncaught error:', event);
-
-    const description = event?.message || '发生未知错误，请联系开发人员';
-    notificationApi.error({
-      description,
-      ...notificationConfig,
-    });
-  };
-
-  // 添加事件监听器
-  useEffect(() => {
-    window.addEventListener('unhandledrejection', handleUnhandledRejection);
-    window.addEventListener('error', handleGlobalError);
-
-    return () => {
-      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
-      window.removeEventListener('error', handleGlobalError);
-    };
-  }, []);
-
-  return (
-    <>
-      {contextHolder}
-      {children}
-    </>
-  );
-};
-
 createRoot(document.getElementById('root')!).render(
   <Provider store={store}>
-    <Error>
+    <ErrorProvider>
       <SessionInitializer />
       <QueryProvider>
         <LoadingProvider>
           <RouterProvider router={router} />
         </LoadingProvider>
       </QueryProvider>
-    </Error>
+    </ErrorProvider>
   </Provider>,
 );

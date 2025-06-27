@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { getMachines, createMachine, deleteMachine, updateMachine, testMachineConnection } from '../../api/machine';
 import type { Machine, CreateMachineParams } from '../../types/machineTypes';
 import type { TableColumnsType, TablePaginationConfig } from 'antd';
-import { Breadcrumb, Button, Form, Input, InputNumber, Modal, message, Row, Col, Table } from 'antd';
+import { Breadcrumb, Button, Form, Input, InputNumber, Modal, Row, Col, Table } from 'antd';
 import { PlusOutlined, HomeOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import dayjs from 'dayjs';
+import { useErrorContext, ErrorType } from '../../providers/ErrorProvider';
 import styles from './MachineManagementPage.module.less';
 
 const MachineManagementPage = () => {
@@ -18,7 +19,7 @@ const MachineManagementPage = () => {
   const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
   const [testingConnection, setTestingConnection] = useState(false);
   const [form] = Form.useForm<CreateMachineParams>();
-  const [messageApi, contextHolder] = message.useMessage();
+  const { handleError, showSuccess } = useErrorContext();
   const [pagination, setPagination] = useState<TablePaginationConfig>({
     current: 1,
     pageSize: 10,
@@ -37,6 +38,11 @@ const MachineManagementPage = () => {
     try {
       const res = await getMachines();
       setMachines(res);
+    } catch (error) {
+      handleError(error instanceof Error ? error : new Error('获取机器列表失败'), {
+        type: ErrorType.BUSINESS,
+        showType: 'notification',
+      });
     } finally {
       setLoading(false);
     }
@@ -52,19 +58,30 @@ const MachineManagementPage = () => {
   };
 
   const handleCreate = async (values: CreateMachineParams) => {
-    setTestingConnection(true);
-    const testResult = await testMachineConnection(values);
-    if (!testResult) {
-      messageApi.error('连接测试失败，请检查配置');
-      return;
-    }
+    try {
+      setTestingConnection(true);
+      const testResult = await testMachineConnection(values);
+      if (!testResult) {
+        handleError('连接测试失败，请检查配置', {
+          type: ErrorType.VALIDATION,
+          showType: 'message',
+        });
+        return;
+      }
 
-    await createMachine(values);
-    messageApi.success('机器创建成功');
-    setCreateModalVisible(false);
-    form.resetFields();
-    fetchMachines();
-    setTestingConnection(false);
+      await createMachine(values);
+      showSuccess('机器创建成功');
+      setCreateModalVisible(false);
+      form.resetFields();
+      fetchMachines();
+    } catch (error) {
+      handleError(error instanceof Error ? error : new Error('创建机器失败'), {
+        type: ErrorType.BUSINESS,
+        showType: 'message',
+      });
+    } finally {
+      setTestingConnection(false);
+    }
   };
 
   const handleEdit = async (values: CreateMachineParams) => {
@@ -73,7 +90,10 @@ const MachineManagementPage = () => {
       setLoading(true);
       const testResult = await testMachineConnection(values);
       if (!testResult) {
-        messageApi.error('连接测试失败，请检查配置');
+        handleError('连接测试失败，请检查配置', {
+          type: ErrorType.VALIDATION,
+          showType: 'message',
+        });
         return;
       }
 
@@ -81,10 +101,15 @@ const MachineManagementPage = () => {
         ...values,
         id: editingMachine.id,
       });
-      messageApi.success('机器更新成功');
+      showSuccess('机器更新成功');
       setEditModalVisible(false);
       form.resetFields();
       fetchMachines();
+    } catch (error) {
+      handleError(error instanceof Error ? error : new Error('更新机器失败'), {
+        type: ErrorType.BUSINESS,
+        showType: 'message',
+      });
     } finally {
       setLoading(false);
     }
@@ -93,10 +118,17 @@ const MachineManagementPage = () => {
   const handleDelete = async () => {
     if (!deletingId) return;
 
-    await deleteMachine(deletingId);
-    messageApi.success('删除成功');
-    setDeleteConfirmVisible(false);
-    fetchMachines();
+    try {
+      await deleteMachine(deletingId);
+      showSuccess('删除成功');
+      setDeleteConfirmVisible(false);
+      fetchMachines();
+    } catch (error) {
+      handleError(error instanceof Error ? error : new Error('删除机器失败'), {
+        type: ErrorType.BUSINESS,
+        showType: 'message',
+      });
+    }
   };
 
   const handleTestConnection = async () => {
@@ -105,9 +137,26 @@ const MachineManagementPage = () => {
       setTestingConnection(true);
       const success = await testMachineConnection(values);
       if (success) {
-        messageApi.success('连接测试成功');
+        showSuccess('连接测试成功');
       } else {
-        messageApi.error('连接测试失败');
+        handleError('连接测试失败', {
+          type: ErrorType.VALIDATION,
+          showType: 'message',
+        });
+      }
+    } catch (error) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        // 表单验证错误
+        handleError('请完善表单信息', {
+          type: ErrorType.VALIDATION,
+          showType: 'message',
+        });
+      } else {
+        // 其他错误
+        handleError(error instanceof Error ? error : new Error('连接测试失败'), {
+          type: ErrorType.NETWORK,
+          showType: 'message',
+        });
       }
     } finally {
       setTestingConnection(false);
@@ -166,167 +215,164 @@ const MachineManagementPage = () => {
   ];
 
   return (
-    <>
-      {contextHolder}
-      <div className={styles.container}>
-        <div className={styles.header}>
-          <Breadcrumb
-            items={[
-              {
-                title: (
-                  <Link to="/">
-                    <HomeOutlined />
-                  </Link>
-                ),
-              },
-              { title: '服务器管理' },
-            ]}
-          />
-          <div className={styles.actions}>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateModalVisible(true)}>
-              新增机器
-            </Button>
-          </div>
-        </div>
-
-        <div className={styles.tableContainer}>
-          <Table
-            dataSource={machines}
-            columns={columns}
-            loading={loading}
-            size="small"
-            rowKey="id"
-            pagination={{
-              ...pagination,
-              total: machines.length,
-            }}
-            onChange={handleTableChange}
-            bordered
-          />
-        </div>
-
-        <Modal
-          title="新增机器"
-          open={createModalVisible}
-          onCancel={() => setCreateModalVisible(false)}
-          footer={[
-            <Button key="test" loading={testingConnection} onClick={handleTestConnection}>
-              测试连接
-            </Button>,
-            <Button key="submit" type="primary" loading={loading} onClick={() => form.submit()}>
-              确定
-            </Button>,
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <Breadcrumb
+          items={[
+            {
+              title: (
+                <Link to="/">
+                  <HomeOutlined />
+                </Link>
+              ),
+            },
+            { title: '服务器管理' },
           ]}
-          maskClosable={false}
-        >
-          <Form form={form} layout="vertical" onFinish={handleCreate}>
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入机器名称' }]}>
-                  <Input placeholder="测试服务器" />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item name="ip" label="IP地址" rules={[{ required: true, message: '请输入IP地址' }]}>
-                  <Input placeholder="192.168.1.100" />
-                </Form.Item>
-              </Col>
-            </Row>
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item name="port" label="端口" rules={[{ required: true, message: '请输入端口号' }]}>
-                  <InputNumber min={1} max={65535} style={{ width: '100%' }} />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入用户名' }]}>
-                  <Input placeholder="root" />
-                </Form.Item>
-              </Col>
-            </Row>
-            <Row gutter={16}>
-              <Col span={24}>
-                <Form.Item name="password" label="密码">
-                  <Input.Password placeholder="可选" />
-                </Form.Item>
-              </Col>
-              <Col span={24}>
-                <Form.Item name="sshKey" label="SSH密钥">
-                  <Input.TextArea placeholder="可选" rows={4} />
-                </Form.Item>
-              </Col>
-            </Row>
-          </Form>
-        </Modal>
-
-        <Modal
-          title="编辑机器"
-          open={editModalVisible}
-          onCancel={() => {
-            setEditModalVisible(false);
-            form.resetFields();
-          }}
-          footer={[
-            <Button key="test" loading={testingConnection} onClick={handleTestConnection}>
-              测试连接
-            </Button>,
-            <Button key="submit" type="primary" loading={loading} onClick={() => form.submit()}>
-              确定
-            </Button>,
-          ]}
-          maskClosable={false}
-        >
-          <Form form={form} layout="vertical" onFinish={handleEdit}>
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入机器名称' }]}>
-                  <Input placeholder="测试服务器" />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item name="ip" label="IP地址" rules={[{ required: true, message: '请输入IP地址' }]}>
-                  <Input placeholder="192.168.1.100" />
-                </Form.Item>
-              </Col>
-            </Row>
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item name="port" label="端口" rules={[{ required: true, message: '请输入端口号' }]}>
-                  <InputNumber min={1} max={65535} style={{ width: '100%' }} />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入用户名' }]}>
-                  <Input placeholder="root" />
-                </Form.Item>
-              </Col>
-            </Row>
-            <Row gutter={16}>
-              <Col span={24}>
-                <Form.Item name="password" label="密码">
-                  <Input.Password placeholder="可选" />
-                </Form.Item>
-              </Col>
-              <Col span={24}>
-                <Form.Item name="sshKey" label="SSH密钥">
-                  <Input.TextArea placeholder="可选" rows={4} />
-                </Form.Item>
-              </Col>
-            </Row>
-          </Form>
-        </Modal>
-
-        <Modal
-          title="确认删除"
-          open={deleteConfirmVisible}
-          onOk={handleDelete}
-          onCancel={() => setDeleteConfirmVisible(false)}
-          confirmLoading={loading}
-        >
-          <p>确定要删除这台机器吗？</p>
-        </Modal>
+        />
+        <div className={styles.actions}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateModalVisible(true)}>
+            新增机器
+          </Button>
+        </div>
       </div>
-    </>
+
+      <div className={styles.tableContainer}>
+        <Table
+          dataSource={machines}
+          columns={columns}
+          loading={loading}
+          size="small"
+          rowKey="id"
+          pagination={{
+            ...pagination,
+            total: machines.length,
+          }}
+          onChange={handleTableChange}
+          bordered
+        />
+      </div>
+
+      <Modal
+        title="新增机器"
+        open={createModalVisible}
+        onCancel={() => setCreateModalVisible(false)}
+        footer={[
+          <Button key="test" loading={testingConnection} onClick={handleTestConnection}>
+            测试连接
+          </Button>,
+          <Button key="submit" type="primary" loading={loading} onClick={() => form.submit()}>
+            确定
+          </Button>,
+        ]}
+        maskClosable={false}
+      >
+        <Form form={form} layout="vertical" onFinish={handleCreate}>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入机器名称' }]}>
+                <Input placeholder="测试服务器" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="ip" label="IP地址" rules={[{ required: true, message: '请输入IP地址' }]}>
+                <Input placeholder="192.168.1.100" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="port" label="端口" rules={[{ required: true, message: '请输入端口号' }]}>
+                <InputNumber min={1} max={65535} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入用户名' }]}>
+                <Input placeholder="root" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item name="password" label="密码">
+                <Input.Password placeholder="可选" />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item name="sshKey" label="SSH密钥">
+                <Input.TextArea placeholder="可选" rows={4} />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="编辑机器"
+        open={editModalVisible}
+        onCancel={() => {
+          setEditModalVisible(false);
+          form.resetFields();
+        }}
+        footer={[
+          <Button key="test" loading={testingConnection} onClick={handleTestConnection}>
+            测试连接
+          </Button>,
+          <Button key="submit" type="primary" loading={loading} onClick={() => form.submit()}>
+            确定
+          </Button>,
+        ]}
+        maskClosable={false}
+      >
+        <Form form={form} layout="vertical" onFinish={handleEdit}>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入机器名称' }]}>
+                <Input placeholder="测试服务器" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="ip" label="IP地址" rules={[{ required: true, message: '请输入IP地址' }]}>
+                <Input placeholder="192.168.1.100" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="port" label="端口" rules={[{ required: true, message: '请输入端口号' }]}>
+                <InputNumber min={1} max={65535} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入用户名' }]}>
+                <Input placeholder="root" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item name="password" label="密码">
+                <Input.Password placeholder="可选" />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item name="sshKey" label="SSH密钥">
+                <Input.TextArea placeholder="可选" rows={4} />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="确认删除"
+        open={deleteConfirmVisible}
+        onOk={handleDelete}
+        onCancel={() => setDeleteConfirmVisible(false)}
+        confirmLoading={loading}
+      >
+        <p>确定要删除这台机器吗？</p>
+      </Modal>
+    </div>
   );
 };
 

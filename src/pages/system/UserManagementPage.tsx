@@ -3,22 +3,8 @@ import { useState, useEffect, useRef } from 'react';
 import { getUsers, createUser, updateUser, deleteUser, changeUserPassword, type User } from '../../api/user';
 import { getModules, batchAuthorizeModules } from '../../api/modules';
 import ModulePermissionModal from './components/ModulePermissionModal';
-import {
-  Button,
-  Input,
-  Table,
-  Space,
-  Tag,
-  Modal,
-  Form,
-  Select,
-  Popconfirm,
-  message,
-  Avatar,
-  Row,
-  Col,
-  Breadcrumb,
-} from 'antd';
+import { useErrorContext, ErrorType } from '../../providers/ErrorProvider';
+import { Button, Input, Table, Space, Tag, Modal, Form, Select, Popconfirm, Avatar, Row, Col, Breadcrumb } from 'antd';
 import { SearchOutlined, PlusOutlined, UserOutlined, ReloadOutlined, HomeOutlined } from '@ant-design/icons';
 import type { AxiosRequestConfig } from 'axios';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
@@ -76,7 +62,9 @@ const UserManagementPage = () => {
   const [selectedUserForDrawer, setSelectedUserForDrawer] = useState<UserData | null>(null);
   const searchTimeoutRef = useRef<number | null>(null);
   const originalDataRef = useRef<UserData[]>([]);
-  const [messageApi, contextHolder] = message.useMessage();
+
+  // 使用新的错误处理系统
+  const { handleError, showSuccess } = useErrorContext();
 
   // 清理定时器
   useEffect(() => {
@@ -90,14 +78,17 @@ const UserManagementPage = () => {
   // 加载用户数据和模块列表
   useEffect(() => {
     const abortController = new AbortController();
-    fetchUsers({ signal: abortController.signal }).catch((error: { name: string }) => {
+    fetchUsers({ signal: abortController.signal }).catch((error: Error) => {
       if (error.name !== 'CanceledError') {
-        messageApi.error('加载用户数据失败');
+        handleError('加载用户数据失败，请刷新页面重试', {
+          type: ErrorType.BUSINESS,
+          showType: 'notification',
+        });
       }
     });
     fetchModules();
     return () => abortController.abort();
-  }, []);
+  }, [handleError]);
 
   const fetchUsers = async (config?: AxiosRequestConfig) => {
     setLoading(true);
@@ -110,10 +101,17 @@ const UserManagementPage = () => {
     } catch (error) {
       if (error instanceof Error) {
         if (error.name !== 'CanceledError') {
-          messageApi.error('加载用户数据失败');
+          handleError('加载用户数据失败，请检查网络连接后重试', {
+            type: ErrorType.NETWORK,
+            showType: 'notification',
+          });
         }
       } else {
         console.error('Unexpected error:', error);
+        handleError('发生了未知错误，请联系管理员', {
+          type: ErrorType.SYSTEM,
+          showType: 'notification',
+        });
       }
     } finally {
       setLoading(false);
@@ -130,7 +128,10 @@ const UserManagementPage = () => {
         })),
       );
     } catch (error) {
-      messageApi.error('加载模块列表失败');
+      handleError('加载模块列表失败，部分功能可能受限', {
+        type: ErrorType.BUSINESS,
+        showType: 'notification',
+      });
     }
   };
   const [loading, setLoading] = useState(false);
@@ -153,7 +154,10 @@ const UserManagementPage = () => {
   // 重新加载数据
   const handleReload = () => {
     fetchUsers().catch(() => {
-      messageApi.error('加载用户数据失败');
+      handleError('刷新数据失败，请检查网络连接', {
+        type: ErrorType.NETWORK,
+        showType: 'message',
+      });
     });
   };
 
@@ -191,7 +195,10 @@ const UserManagementPage = () => {
         } else {
           // 如果原始数据不存在，则重新加载
           fetchUsers().catch(() => {
-            messageApi.error('加载用户数据失败');
+            handleError('加载用户数据失败', {
+              type: ErrorType.NETWORK,
+              showType: 'message',
+            });
           });
         }
         // 重置分页到第一页
@@ -200,7 +207,7 @@ const UserManagementPage = () => {
       }
 
       // 去除特殊字符（如中文输入法中的单引号等）
-      const cleanValue = value.replace(/[''"]/g, '');
+      const cleanValue = value.replace(/['"']/g, '');
 
       // 分词处理，按空格拆分搜索词
       const searchTerms = cleanValue
@@ -263,9 +270,12 @@ const UserManagementPage = () => {
     try {
       await deleteUser(key);
       setData(data.filter((item) => item.key !== key));
-      messageApi.success('用户已删除');
-    } catch {
-      messageApi.error('删除用户失败');
+      showSuccess('用户已删除');
+    } catch (error) {
+      handleError('删除用户失败，请稍后重试', {
+        type: ErrorType.BUSINESS,
+        showType: 'message',
+      });
     }
   };
 
@@ -283,26 +293,38 @@ const UserManagementPage = () => {
       if (selectedRecord) {
         // 确保两次密码输入一致
         if (values.newPassword !== values.confirmPassword) {
-          messageApi.error('两次输入的密码不一致');
+          handleError('两次输入的密码不一致', {
+            type: ErrorType.VALIDATION,
+            showType: 'message',
+          });
           return;
         }
 
         // 检查密码复杂度
         if (values.newPassword.length < 6 || values.newPassword.length > 20) {
-          messageApi.error('密码长度需在6~20个字符之间');
+          handleError('密码长度需在6~20个字符之间', {
+            type: ErrorType.VALIDATION,
+            showType: 'message',
+          });
           return;
         }
         if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(values.newPassword)) {
-          messageApi.error('密码必须包含字母和数字');
+          handleError('密码必须包含字母和数字', {
+            type: ErrorType.VALIDATION,
+            showType: 'message',
+          });
           return;
         }
 
         await changeUserPassword(selectedRecord.key, values.newPassword);
-        messageApi.success('密码修改成功');
+        showSuccess('密码修改成功');
         setIsPasswordModalVisible(false);
       }
     } catch (error) {
-      messageApi.error('密码修改失败');
+      handleError('密码修改失败，请检查输入信息后重试', {
+        type: ErrorType.BUSINESS,
+        showType: 'message',
+      });
       console.error('密码修改失败:', error);
     }
   };
@@ -320,10 +342,13 @@ const UserManagementPage = () => {
         return moduleInfo?.label || m.moduleId;
       });
       await batchAuthorizeModules(userId, moduleNames);
-      messageApi.success('模块权限更新成功');
+      showSuccess('模块权限更新成功');
       fetchUsers();
     } catch (error) {
-      messageApi.error('模块权限更新失败');
+      handleError('模块权限更新失败，请检查网络连接后重试', {
+        type: ErrorType.BUSINESS,
+        showType: 'message',
+      });
     }
   };
 
@@ -346,11 +371,14 @@ const UserManagementPage = () => {
           role: values.role,
           status: values.status,
         });
-        messageApi.success('用户信息已更新');
+        showSuccess('用户信息已更新');
       } else {
         // 添加新用户
         if (!values.password) {
-          messageApi.error('密码不能为空');
+          handleError('密码不能为空', {
+            type: ErrorType.VALIDATION,
+            showType: 'message',
+          });
           return;
         }
 
@@ -362,13 +390,17 @@ const UserManagementPage = () => {
           role: values.role,
           status: values.status,
         });
-        messageApi.success('用户已添加');
+        showSuccess('用户已添加');
       }
 
       setIsModalVisible(false);
       await fetchUsers(); // 刷新数据
     } catch (error) {
-      messageApi.error('操作失败');
+      const operation = selectedRecord ? '更新用户信息' : '添加用户';
+      handleError(`${operation}失败，请检查输入信息后重试`, {
+        type: ErrorType.BUSINESS,
+        showType: 'message',
+      });
       console.error('操作失败:', error);
     }
   };
@@ -487,7 +519,6 @@ const UserManagementPage = () => {
 
   return (
     <div className={styles.container}>
-      {contextHolder}
       <div className={styles.header}>
         <Breadcrumb
           items={[

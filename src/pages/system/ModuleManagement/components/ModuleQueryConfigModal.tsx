@@ -152,10 +152,6 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
       if (error && typeof error === 'object' && 'errorFields' in error) {
         // 表单验证失败
         messageApi.error('请检查表单填写是否正确');
-      } else {
-        // API调用失败
-        console.error('保存查询配置失败:', error);
-        messageApi.error('保存查询配置失败');
       }
     } finally {
       setSubmitting(false);

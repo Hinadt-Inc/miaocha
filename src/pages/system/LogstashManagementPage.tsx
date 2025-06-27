@@ -146,7 +146,6 @@ function LogstashManagementPage() {
       messageApi.success('机器删除成功');
       await fetchData();
     } catch (err) {
-      messageApi.error('删除机器失败');
       console.error('删除机器失败:', err);
     }
   };
@@ -165,7 +164,6 @@ function LogstashManagementPage() {
       const tasks = await getLogstashInstanceTasks(logstashMachineId.toString());
       setMachineTasks(tasks);
     } catch (err) {
-      messageApi.error('获取实例任务失败');
       console.error('获取实例任务失败:', err);
     } finally {
       setMachineTasksLoading(false);
@@ -178,7 +176,6 @@ function LogstashManagementPage() {
       const processes = await getLogstashProcesses();
       setData(processes);
     } catch (err) {
-      messageApi.error('获取Logstash进程列表失败');
       console.error('获取Logstash进程列表失败:', err);
     } finally {
       setLoading(false);
@@ -191,14 +188,12 @@ function LogstashManagementPage() {
       setTaskSummaries(summaries);
       setSummaryModalVisible(true);
     } catch (err) {
-      messageApi.error('获取任务历史失败');
       console.error('获取任务历史失败:', err);
     }
   };
 
   useEffect(() => {
     fetchData().catch((err) => {
-      messageApi.error('组件加载失败');
       console.error('组件加载失败:', err);
     });
   }, []);
@@ -225,7 +220,6 @@ function LogstashManagementPage() {
       messageApi.success('删除成功');
       await fetchData();
     } catch (err) {
-      messageApi.error('删除失败');
       console.error('删除Logstash进程失败:', err);
     }
   };
@@ -237,7 +231,6 @@ function LogstashManagementPage() {
       messageApi.success('启动命令已发送');
       await fetchData();
     } catch (err) {
-      messageApi.error('启动失败');
       console.error('启动Logstash进程失败:', err);
     }
   };
@@ -249,7 +242,6 @@ function LogstashManagementPage() {
       messageApi.success('启动命令已发送');
       await fetchData();
     } catch (err) {
-      messageApi.error('启动失败');
       console.error('启动Logstash机器实例失败:', err);
     }
   };
@@ -262,7 +254,6 @@ function LogstashManagementPage() {
       messageApi.success('配置刷新命令已发送');
       await fetchData();
     } catch (err) {
-      messageApi.error('配置刷新失败');
       console.error('刷新Logstash机器配置失败:', err);
     }
   };
@@ -278,7 +269,6 @@ function LogstashManagementPage() {
       messageApi.success('配置刷新命令已发送');
       await fetchData();
     } catch (err) {
-      messageApi.error('配置刷新失败');
       console.error('刷新Logstash配置失败:', err);
     }
   };
@@ -290,7 +280,6 @@ function LogstashManagementPage() {
       messageApi.success('重新初始化命令已发送');
       await fetchData();
     } catch (err) {
-      messageApi.error('重新初始化失败');
       console.error('重新初始化失败机器失败:', err);
     }
   };
@@ -302,7 +291,6 @@ function LogstashManagementPage() {
       messageApi.success('停止命令已发送');
       await fetchData();
     } catch (err) {
-      messageApi.error('停止失败');
       console.error('停止Logstash机器实例失败:', err);
     }
   };
@@ -314,7 +302,6 @@ function LogstashManagementPage() {
       messageApi.success('重新初始化命令已发送');
       await fetchData();
     } catch (err) {
-      messageApi.error('重新初始化失败');
       console.error('重新初始化机器失败:', err);
     }
   };
@@ -326,7 +313,6 @@ function LogstashManagementPage() {
       messageApi.success('强制停止命令已发送');
       await fetchData();
     } catch (err) {
-      messageApi.error('强制停止失败');
       console.error('强制停止Logstash机器实例失败:', err);
     }
   };
@@ -338,7 +324,6 @@ function LogstashManagementPage() {
       messageApi.success('全局强制停止命令已发送');
       await fetchData();
     } catch (err) {
-      messageApi.error('全局强制停止失败');
       console.error('强制停止Logstash进程失败:', err);
     }
   };
@@ -359,7 +344,6 @@ function LogstashManagementPage() {
       messageApi.success('停止命令已发送');
       await fetchData();
     } catch (err) {
-      messageApi.error('停止失败');
       console.error('停止Logstash进程失败:', err);
     }
   };
@@ -870,13 +854,6 @@ function LogstashManagementPage() {
                   name: values.name || currentProcess.name,
                   moduleId: values.moduleId || currentProcess.moduleId,
                 });
-
-                // 更新配置相关字段
-                // await updateLogstashConfig(currentProcess.id, {
-                //   configContent: values.configContent,
-                //   jvmOptions: values.jvmOptions,
-                //   logstashYml: values.logstashYml,
-                // });
                 messageApi.success('更新成功');
               } else {
                 const process = await createLogstashProcess(values);
@@ -900,8 +877,7 @@ function LogstashManagementPage() {
               setEditModalVisible(false);
               await fetchData();
             } catch (err) {
-              messageApi.error(currentProcess ? '更新失败' : '创建失败');
-              console.error('操作Logstash进程失败:', err);
+              console.error('Logstash进程操作失败:', err);
             }
           }}
           initialValues={currentProcess}
