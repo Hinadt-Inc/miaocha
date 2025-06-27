@@ -198,11 +198,12 @@ public class LogSearchIntegrationTest {
 
             LogSearchDTO searchRequest = createBaseSearchRequest();
 
-            // 测试深度嵌套：(('user' && 'login') || ('order' && 'payment')) && 'success'
+            // 测试深度嵌套：基于真实测试数据的内容组合
+            // (('user' && 'login') || ('order' && 'processed')) && 'request'
             KeywordConditionDTO nestedCondition = new KeywordConditionDTO();
             nestedCondition.setFieldName("message_text");
             nestedCondition.setSearchValue(
-                    "(('user' && 'login') || ('order' && 'payment')) && 'success'");
+                    "(('user' && 'login') || ('order' && 'processed')) && 'request'");
 
             searchRequest.setKeywordConditions(List.of(nestedCondition));
 
@@ -212,6 +213,29 @@ public class LogSearchIntegrationTest {
             // 验证查询结果
             assertThat(result).isNotNull();
             assertThat(result.getRows()).isNotEmpty();
+            assertThat(result.getTotalCount()).isGreaterThan(0);
+
+            // 验证返回的记录确实符合嵌套条件逻辑
+            boolean foundMatch =
+                    result.getRows().stream()
+                            .anyMatch(
+                                    row -> {
+                                        Object messageText = row.get("message_text");
+                                        if (messageText == null) return false;
+
+                                        String text = messageText.toString().toLowerCase();
+                                        // 验证嵌套逻辑：((user && login) || (order && processed)) &&
+                                        // request
+                                        boolean userLogin =
+                                                text.contains("user") && text.contains("login");
+                                        boolean orderProcessed =
+                                                text.contains("order")
+                                                        && text.contains("processed");
+                                        boolean hasRequest = text.contains("request");
+
+                                        return (userLogin || orderProcessed) && hasRequest;
+                                    });
+            assertThat(foundMatch).isTrue();
 
             log.info("✅ 深度嵌套AND/OR组合通过 - 查询到{}条记录", result.getTotalCount());
         }

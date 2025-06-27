@@ -14,7 +14,7 @@
         <frontend.maven.plugin.version>1.15.0</frontend.maven.plugin.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        <node.version>v22.11.0</node.version>
+        <node.version>v23.9.0</node.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <skipFrontend>false</skipFrontend>
         <skipTests>true</skipTests>

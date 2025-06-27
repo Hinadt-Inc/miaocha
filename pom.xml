@@ -406,14 +406,13 @@
                             <exclude>**/common/annotation/**/*.class</exclude>
 
                             <!-- ========== 排除转换器（简单数据转换） ========== -->
-                            <exclude>**/converter/**/*Converter.class</exclude>
                             <exclude>**/domain/converter/**/*.class</exclude>
 
                             <!-- ========== 排除Endpoint控制器（暂时，因为主要是数据绑定） ========== -->
                             <exclude>**/endpoint/**/*.class</exclude>
 
-                            <!-- ========== 排除特定工具类（无复杂逻辑） ========== -->
-                            <exclude>**/common/audit/**/*.class</exclude>
+                            <!-- ========== 排除公共类（无复杂逻辑） ========== -->
+                            <exclude>**/common/**/*.class</exclude>
 
                             <!-- ========== 排除Spring Security配置相关 ========== -->
                             <exclude>**/security/*Config*.class</exclude>
