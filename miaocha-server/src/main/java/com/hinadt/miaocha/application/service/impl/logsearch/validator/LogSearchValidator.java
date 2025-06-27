@@ -5,8 +5,6 @@ import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.dto.LogSearchDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
-import com.hinadt.miaocha.domain.entity.User;
-import com.hinadt.miaocha.domain.mapper.UserMapper;
 import org.springframework.stereotype.Component;
 
 /**
@@ -20,25 +18,15 @@ public class LogSearchValidator {
     /** 分页查询的最大页面大小限制 */
     private static final int MAX_PAGE_SIZE = 5000;
 
-    private final UserMapper userMapper;
     private final DatasourceService datasourceService;
 
-    public LogSearchValidator(UserMapper userMapper, DatasourceService datasourceService) {
-        this.userMapper = userMapper;
+    public LogSearchValidator(DatasourceService datasourceService) {
         this.datasourceService = datasourceService;
     }
 
     /** 验证并获取数据源（通过模块名称） */
     public DatasourceInfo validateAndGetDatasource(String module) {
         return datasourceService.getDatasourceInfoByModule(module);
-    }
-
-    /** 验证用户 */
-    public void validateUser(Long userId) {
-        User user = userMapper.selectById(userId);
-        if (user == null) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
     }
 
     /** 验证分页参数 */

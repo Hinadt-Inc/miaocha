@@ -60,7 +60,7 @@ class KeywordConditionBuilderTest {
 
             // 验证配置服务的正确调用
             verify(queryConfigValidationService)
-                    .validateKeywordFieldPermissions("nginx", dto.getKeywordConditions());
+                    .validateKeywordFieldPermissions(dto, dto.getKeywordConditions());
             verify(queryConfigValidationService).getFieldSearchMethodMap("nginx");
         }
 
@@ -401,7 +401,7 @@ class KeywordConditionBuilderTest {
             // Mock权限验证失败
             doThrow(new BusinessException(ErrorCode.KEYWORD_FIELD_NOT_ALLOWED, "字段不允许查询"))
                     .when(queryConfigValidationService)
-                    .validateKeywordFieldPermissions("test", dto.getKeywordConditions());
+                    .validateKeywordFieldPermissions(dto, dto.getKeywordConditions());
 
             BusinessException exception =
                     assertThrows(

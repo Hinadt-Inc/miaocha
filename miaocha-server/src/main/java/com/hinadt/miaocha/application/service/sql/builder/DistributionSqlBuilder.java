@@ -14,9 +14,13 @@ import org.springframework.stereotype.Component;
 public class DistributionSqlBuilder {
 
     private final KeywordConditionBuilder keywordConditionBuilder;
+    private final WhereConditionBuilder whereConditionBuilder;
 
-    public DistributionSqlBuilder(KeywordConditionBuilder keywordConditionBuilder) {
+    public DistributionSqlBuilder(
+            KeywordConditionBuilder keywordConditionBuilder,
+            WhereConditionBuilder whereConditionBuilder) {
         this.keywordConditionBuilder = keywordConditionBuilder;
+        this.whereConditionBuilder = whereConditionBuilder;
     }
 
     /** 构建自定义间隔时间分布SQL */
@@ -28,12 +32,13 @@ public class DistributionSqlBuilder {
             int intervalValue) {
 
         String customBucketExpr = customTimeBucket(timeField, timeUnit, intervalValue);
+        String timeCondition = timeRange(timeField, dto);
         String keywordConditions = keywordConditionBuilder.buildKeywordConditions(dto);
+        String whereConditions = whereConditionBuilder.buildWhereConditions(dto);
 
         return selectTimeDistribution(customBucketExpr)
                 + from(tableName)
-                + where(timeRange(timeField, dto))
-                + and(keywordConditions)
+                + buildWhereClause(timeCondition, keywordConditions, whereConditions)
                 + groupBy(customBucketExpr)
                 + orderBy(TIME_ALIAS, "ASC");
     }

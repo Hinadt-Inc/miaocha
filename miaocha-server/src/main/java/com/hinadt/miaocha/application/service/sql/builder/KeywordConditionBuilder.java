@@ -6,6 +6,7 @@ import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.dto.KeywordConditionDTO;
 import com.hinadt.miaocha.domain.dto.LogSearchDTO;
+import com.hinadt.miaocha.domain.dto.LogSearchDTODecorator;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
@@ -32,8 +33,7 @@ public class KeywordConditionBuilder {
         List<KeywordConditionDTO> keywordConditions = dto.getKeywordConditions();
 
         // 验证字段权限
-        queryConfigValidationService.validateKeywordFieldPermissions(
-                dto.getModule(), keywordConditions);
+        queryConfigValidationService.validateKeywordFieldPermissions(dto, keywordConditions);
 
         // 获取字段搜索方法映射
         Map<String, String> fieldSearchMethodMap =
@@ -57,11 +57,18 @@ public class KeywordConditionBuilder {
                     searchMethodToUse = keywordCondition.getSearchMethod().trim();
                 } else {
                     // 使用配置中的默认搜索方法
-                    searchMethodToUse = fieldSearchMethodMap.get(fieldName);
+                    // 如果是装饰器，需要用原始字段名查找配置
+                    String configFieldName = fieldName;
+                    if (dto instanceof LogSearchDTODecorator) {
+                        configFieldName =
+                                ((LogSearchDTODecorator) dto).getOriginalFieldName(fieldName);
+                    }
+
+                    searchMethodToUse = fieldSearchMethodMap.get(configFieldName);
                     if (StringUtils.isBlank(searchMethodToUse)) {
                         throw new BusinessException(
                                 ErrorCode.KEYWORD_FIELD_NOT_ALLOWED,
-                                "字段 '" + fieldName + "' 未配置默认搜索方法，请在请求中指定或在模块配置中设置");
+                                "字段 '" + configFieldName + "' 未配置默认搜索方法，请在请求中指定或在模块配置中设置");
                     }
                 }
 

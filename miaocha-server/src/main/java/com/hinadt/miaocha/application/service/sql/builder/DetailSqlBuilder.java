@@ -14,30 +14,36 @@ import org.springframework.stereotype.Component;
 public class DetailSqlBuilder {
 
     private final KeywordConditionBuilder keywordConditionBuilder;
+    private final WhereConditionBuilder whereConditionBuilder;
 
-    public DetailSqlBuilder(KeywordConditionBuilder keywordConditionBuilder) {
+    public DetailSqlBuilder(
+            KeywordConditionBuilder keywordConditionBuilder,
+            WhereConditionBuilder whereConditionBuilder) {
         this.keywordConditionBuilder = keywordConditionBuilder;
+        this.whereConditionBuilder = whereConditionBuilder;
     }
 
     /** 构建日志详情查询SQL */
     public String buildDetailQuery(LogSearchDTO dto, String tableName, String timeField) {
-        String searchConditions = keywordConditionBuilder.buildKeywordConditions(dto);
+        String timeCondition = timeRange(timeField, dto);
+        String keywordConditions = keywordConditionBuilder.buildKeywordConditions(dto);
+        String whereConditions = whereConditionBuilder.buildWhereConditions(dto);
 
         return selectFields(dto.getFields())
                 + from(tableName)
-                + where(timeRange(timeField, dto))
-                + and(searchConditions)
+                + buildWhereClause(timeCondition, keywordConditions, whereConditions)
                 + orderBy(timeField, "DESC")
                 + limit(dto.getPageSize(), dto.getOffset());
     }
 
     /** 构建总数查询SQL */
     public String buildCountQuery(LogSearchDTO dto, String tableName, String timeField) {
-        String searchConditions = keywordConditionBuilder.buildKeywordConditions(dto);
+        String timeCondition = timeRange(timeField, dto);
+        String keywordConditions = keywordConditionBuilder.buildKeywordConditions(dto);
+        String whereConditions = whereConditionBuilder.buildWhereConditions(dto);
 
         return selectCount()
                 + from(tableName)
-                + where(timeRange(timeField, dto))
-                + and(searchConditions);
+                + buildWhereClause(timeCondition, keywordConditions, whereConditions);
     }
 }

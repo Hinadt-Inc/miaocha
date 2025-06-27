@@ -7,7 +7,7 @@ import com.hinadt.miaocha.application.logstash.command.LogstashCommandFactory;
 import com.hinadt.miaocha.common.exception.SshException;
 import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
-import com.hinadt.miaocha.integration.data.IntegrationMySQLTestDataInitializer;
+import com.hinadt.miaocha.integration.data.IntegrationTestDataInitializer;
 import com.hinadt.miaocha.integration.logstash.support.LogstashMachineTestEnvironment;
 import com.hinadt.miaocha.integration.logstash.support.LogstashPackageManager;
 import java.util.List;
@@ -40,7 +40,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("Logstash Story 1: Logstash测试环境搭建和验证")
-@Order(1)
 public class LogstashEnvironmentSetupIntegrationTest {
 
     @Container @ServiceConnection
@@ -50,7 +49,7 @@ public class LogstashEnvironmentSetupIntegrationTest {
     @Autowired private LogstashPackageManager packageManager;
     @Autowired private SshClient sshClient;
     @Autowired private LogstashCommandFactory commandFactory;
-    @Autowired private IntegrationMySQLTestDataInitializer dataInitializer;
+    @Autowired private IntegrationTestDataInitializer dataInitializer;
 
     private List<MachineInfo> testMachines;
 

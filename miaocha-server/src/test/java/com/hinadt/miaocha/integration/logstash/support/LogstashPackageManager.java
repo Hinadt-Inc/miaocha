@@ -6,7 +6,10 @@ import com.hinadt.miaocha.domain.entity.MachineInfo;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.RandomAccessFile;
 import java.net.URL;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -27,6 +30,7 @@ public class LogstashPackageManager {
             "logstash-" + LOGSTASH_VERSION + "-linux-x86_64.tar.gz";
     private static final String LOGSTASH_DOWNLOAD_URL =
             "https://artifacts.elastic.co/downloads/logstash/" + LOGSTASH_FILENAME;
+    private static final String LOCK_FILE_NAME = ".cache-directory.lock";
 
     @Value("${test.logstash.cache.dir:${java.io.tmpdir}/logstash-test-cache}")
     private String cacheDirectory;
@@ -41,7 +45,10 @@ public class LogstashPackageManager {
         Path cacheDir = Paths.get(cacheDirectory);
         Path packagePath = cacheDir.resolve(LOGSTASH_FILENAME);
 
-        try {
+        // 使用目录锁确保同一时间只有一个进程访问缓存目录
+        try (DirectoryLock directoryLock = acquireDirectoryLock(cacheDir)) {
+            log.debug("成功获取缓存目录锁: {}", cacheDir);
+
             Files.createDirectories(cacheDir);
 
             if (Files.exists(packagePath)) {
@@ -68,6 +75,65 @@ public class LogstashPackageManager {
 
         } catch (Exception e) {
             throw new RuntimeException("准备Logstash软件包失败", e);
+        }
+    }
+
+    /**
+     * 获取目录锁，确保同一时间只有一个进程可以访问缓存目录
+     *
+     * @param cacheDir 缓存目录路径
+     * @return DirectoryLock 目录锁对象，使用try-with-resources自动释放
+     */
+    private DirectoryLock acquireDirectoryLock(Path cacheDir) {
+        try {
+            Files.createDirectories(cacheDir);
+            Path lockFilePath = cacheDir.resolve(LOCK_FILE_NAME);
+
+            log.debug("尝试获取缓存目录锁: {}", lockFilePath);
+
+            RandomAccessFile lockFile = new RandomAccessFile(lockFilePath.toFile(), "rw");
+            FileChannel channel = lockFile.getChannel();
+
+            // 获取独占锁，如果其他进程已经持有锁，则阻塞等待
+            log.info("等待获取缓存目录访问权限...");
+            FileLock lock = channel.lock(); // 阻塞直到获得锁
+
+            log.info("已获取缓存目录访问权限: {}", cacheDir);
+            return new DirectoryLock(lockFile, lock);
+
+        } catch (Exception e) {
+            throw new RuntimeException("获取目录锁失败: " + cacheDir, e);
+        }
+    }
+
+    /** 目录锁实现类 实现AutoCloseable接口，支持try-with-resources自动释放 */
+    private static class DirectoryLock implements AutoCloseable {
+        private final RandomAccessFile lockFile;
+        private final FileLock fileLock;
+
+        public DirectoryLock(RandomAccessFile lockFile, FileLock fileLock) {
+            this.lockFile = lockFile;
+            this.fileLock = fileLock;
+        }
+
+        @Override
+        public void close() {
+            try {
+                if (fileLock != null && fileLock.isValid()) {
+                    fileLock.release();
+                    log.debug("已释放目录锁");
+                }
+            } catch (IOException e) {
+                log.warn("释放文件锁时出错", e);
+            }
+
+            try {
+                if (lockFile != null) {
+                    lockFile.close();
+                }
+            } catch (IOException e) {
+                log.warn("关闭锁文件时出错", e);
+            }
         }
     }
 

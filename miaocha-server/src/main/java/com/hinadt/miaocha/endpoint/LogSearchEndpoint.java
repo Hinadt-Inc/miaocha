@@ -39,7 +39,7 @@ public class LogSearchEndpoint {
             @CurrentUser UserDTO user,
             @Parameter(description = "日志检索请求", required = true) @Valid @RequestBody
                     LogSearchDTO dto) {
-        LogDetailResultDTO result = logSearchService.searchDetails(user.getId(), dto);
+        LogDetailResultDTO result = logSearchService.searchDetails(dto);
         return ApiResponse.success(result);
     }
 
@@ -56,7 +56,7 @@ public class LogSearchEndpoint {
             @CurrentUser UserDTO user,
             @Parameter(description = "日志检索请求", required = true) @Valid @RequestBody
                     LogSearchDTO dto) {
-        LogHistogramResultDTO result = logSearchService.searchHistogram(user.getId(), dto);
+        LogHistogramResultDTO result = logSearchService.searchHistogram(dto);
         return ApiResponse.success(result);
     }
 
@@ -75,8 +75,7 @@ public class LogSearchEndpoint {
             @CurrentUser UserDTO user,
             @Parameter(description = "日志检索请求", required = true) @Valid @RequestBody
                     LogSearchDTO dto) {
-        LogFieldDistributionResultDTO result =
-                logSearchService.searchFieldDistributions(user.getId(), dto);
+        LogFieldDistributionResultDTO result = logSearchService.searchFieldDistributions(dto);
         return ApiResponse.success(result);
     }
 

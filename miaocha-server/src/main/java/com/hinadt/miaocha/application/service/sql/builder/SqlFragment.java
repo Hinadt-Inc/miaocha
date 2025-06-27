@@ -1,6 +1,7 @@
 package com.hinadt.miaocha.application.service.sql.builder;
 
 import com.hinadt.miaocha.domain.dto.LogSearchDTO;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 
@@ -46,19 +47,6 @@ public class SqlFragment {
         return " FROM " + tableName;
     }
 
-    /** 构建WHERE子句开始 */
-    public static String where(String condition) {
-        return " WHERE " + condition;
-    }
-
-    /** 添加AND条件 */
-    public static String and(String condition) {
-        if (StringUtils.isBlank(condition)) {
-            return "";
-        }
-        return " AND " + condition;
-    }
-
     /** 构建ORDER BY子句 */
     public static String orderBy(String field, String direction) {
         return String.format(" ORDER BY %s %s", field, direction);
@@ -88,7 +76,8 @@ public class SqlFragment {
                 timeField, intervalSeconds, intervalSeconds);
     }
 
-    private static int getIntervalInSeconds(String timeUnit, int intervalValue) {
+    /** 获取时间间隔的秒数 - 包访问权限便于测试 */
+    static int getIntervalInSeconds(String timeUnit, int intervalValue) {
         switch (timeUnit) {
             case "second":
                 return intervalValue;
@@ -111,5 +100,39 @@ public class SqlFragment {
     /** 构建子查询的SELECT子句 */
     public static String selectWithSubquery(String columns, String subQuery, String alias) {
         return String.format("SELECT %s FROM (%s) AS %s", columns, subQuery, alias);
+    }
+
+    /**
+     * 智能构建WHERE条件 - 解决AND重复问题
+     *
+     * @param timeCondition 时间条件（必须）
+     * @param keywordConditions 关键字条件
+     * @param whereConditions 用户WHERE条件
+     * @return 完整的WHERE子句
+     */
+    public static String buildWhereClause(
+            String timeCondition, String keywordConditions, String whereConditions) {
+        List<String> conditions = new ArrayList<>();
+
+        // 添加时间条件（必须存在）
+        if (StringUtils.isNotBlank(timeCondition)) {
+            conditions.add(timeCondition);
+        }
+
+        // 添加关键字条件
+        if (StringUtils.isNotBlank(keywordConditions)) {
+            conditions.add(keywordConditions);
+        }
+
+        // 添加用户WHERE条件
+        if (StringUtils.isNotBlank(whereConditions)) {
+            conditions.add(whereConditions);
+        }
+
+        if (conditions.isEmpty()) {
+            return "";
+        }
+
+        return " WHERE " + String.join(" AND ", conditions);
     }
 }

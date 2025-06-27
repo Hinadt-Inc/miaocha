@@ -314,6 +314,8 @@
                     <configuration>
                         <!-- ========== 集成测试并行配置 ========== -->
                         <!-- 集成测试使用较低的并行度，避免Testcontainers冲突 -->
+                        <forkCount>3</forkCount>
+
                         <parallel>classes</parallel>
                         <threadCount>8</threadCount>
                         <perCoreThreadCount>false</perCoreThreadCount>

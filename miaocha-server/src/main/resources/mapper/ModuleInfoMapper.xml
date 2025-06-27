@@ -4,12 +4,16 @@
 
     <!-- 模块信息表所有字段 -->
     <sql id="moduleInfoColumns">
-        id, name, datasource_id, table_name, doris_sql, query_config, create_time, update_time, create_user, update_user
+        id
+        , name, datasource_id, table_name, doris_sql, query_config, create_time, update_time, create_user, update_user
     </sql>
 
     <!-- 模块信息表带用户信息的字段 -->
     <sql id="moduleInfoWithUserColumns">
-        m.id, m.name, m.datasource_id, m.table_name, m.doris_sql, m.query_config,
+        m
+        .
+        id
+        , m.name, m.datasource_id, m.table_name, m.doris_sql, m.query_config,
         m.create_time, m.update_time, m.create_user, m.update_user,
         cu.nickname as create_user_name,
         uu.nickname as update_user_name
@@ -17,8 +21,8 @@
 
     <!-- 插入模块信息 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO module_info (name, datasource_id, table_name, create_user, update_user)
-        VALUES (#{name}, #{datasourceId}, #{tableName}, #{createUser}, #{updateUser})
+        INSERT INTO module_info (name, datasource_id, table_name, doris_sql, query_config, create_user, update_user)
+        VALUES (#{name}, #{datasourceId}, #{tableName}, #{dorisSql}, #{queryConfig}, #{createUser}, #{updateUser})
     </insert>
 
     <!-- 根据ID查询模块信息（带用户昵称） -->
@@ -71,24 +75,27 @@
 
     <!-- 更新模块信息 -->
     <update id="update">
-        UPDATE module_info SET
-            name = #{name},
+        UPDATE module_info
+        SET name          = #{name},
             datasource_id = #{datasourceId},
-            table_name = #{tableName},
-            doris_sql = #{dorisSql},
-            query_config = #{queryConfig},
-            update_user = #{updateUser}
+            table_name    = #{tableName},
+            doris_sql     = #{dorisSql},
+            query_config  = #{queryConfig},
+            update_user   = #{updateUser}
         WHERE id = #{id}
     </update>
 
     <!-- 根据ID删除模块信息 -->
     <delete id="deleteById">
-        DELETE FROM module_info WHERE id = #{id}
+        DELETE
+        FROM module_info
+        WHERE id = #{id}
     </delete>
 
     <!-- 删除所有模块信息 -->
     <delete id="deleteAll">
-        DELETE FROM module_info
+        DELETE
+        FROM module_info
     </delete>
 
     <!-- 检查模块名称是否存在 -->
@@ -102,7 +109,9 @@
 
     <!-- 检查数据源是否被模块使用 -->
     <select id="existsByDatasourceId" resultType="boolean">
-        SELECT COUNT(1) > 0 FROM module_info WHERE datasource_id = #{datasourceId}
+        SELECT COUNT(1) > 0
+        FROM module_info
+        WHERE datasource_id = #{datasourceId}
     </select>
 
 </mapper>

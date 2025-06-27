@@ -51,13 +51,22 @@ public class TestContainersFactory {
                 .withStartupTimeout(Duration.ofMinutes(2));
     }
 
+    /**
+     * Doris 测试容器 - 提供真实的 Doris 环境，用于日志搜索集成测试
+     *
+     * <p>配置说明： - 暴露 9030 端口用于 MySQL 协议连接（FE 查询端口） - 暴露 8030 端口用于 HTTP 协议连接（FE Web 端口） -
+     * 默认用户名：root，密码：空 - 启动超时设置为5分钟，因为 Doris 需要较长时间初始化
+     */
     public static GenericContainer<?> dorisContainer() {
         return new GenericContainer<>(DORIS_IMAGE)
                 .withNetwork(SHARED_NETWORK)
-                .withNetworkAliases("doris")
-                .withExposedPorts(9030)
+                .withNetworkAliases("doris-fe")
+                .withExposedPorts(9030, 9060, 8030, 8040) // 9030: MySQL协议端口, 8030: HTTP端口
+                .withEnv("TZ", "Asia/Shanghai") // 设置时区
                 .withStartupTimeout(Duration.ofMinutes(5))
-                .waitingFor(Wait.forListeningPorts(9030));
+                .waitingFor(
+                        Wait.forListeningPorts(9030, 9060, 8030, 8040)
+                                .withStartupTimeout(Duration.ofMinutes(5)));
     }
 
     /** SSH 机器容器管理器 根据测试场景动态创建所需数量的机器容器 */

@@ -31,13 +31,13 @@ import lombok.Data;
 public class QueryConfigDTO {
 
     @Size(max = 128, message = "时间字段名长度不能超过128个字符")
-    @Pattern(regexp = "^[a-zA-Z_][a-zA-Z0-9_]*$", message = "时间字段名只能包含字母、数字和下划线，且不能以数字开头")
+    @Pattern(regexp = "^[a-zA-Z_][a-zA-Z0-9_.\\[\\]'\"]*$", message = "时间字段名格式不正确")
     @Schema(
-            description = "分析时间字段名，用于指定模块中哪个字段作为时间查询字段。必须符合数据库字段命名规范",
+            description = "分析时间字段名，用于指定模块中哪个字段作为时间查询字段",
             example = "log_time",
             nullable = true,
             maxLength = 128,
-            pattern = "^[a-zA-Z_][a-zA-Z0-9_]*$")
+            pattern = "^[a-zA-Z_][a-zA-Z0-9_.\\[\\]'\"]*$")
     private String timeField;
 
     @Valid
@@ -60,13 +60,13 @@ public class QueryConfigDTO {
 
         @NotBlank(message = "字段名不能为空")
         @Size(max = 128, message = "字段名长度不能超过128个字符")
-        @Pattern(regexp = "^[a-zA-Z_][a-zA-Z0-9_]*$", message = "字段名只能包含字母、数字和下划线，且不能以数字开头")
+        @Pattern(regexp = "^[a-zA-Z_][a-zA-Z0-9_.\\[\\]'\"]*$", message = "字段名格式不正确")
         @Schema(
-                description = "字段名，对应数据表中的列名。必须符合数据库字段命名规范",
+                description = "字段名，对应数据表中的列名",
                 example = "message",
                 requiredMode = Schema.RequiredMode.REQUIRED,
                 maxLength = 128,
-                pattern = "^[a-zA-Z_][a-zA-Z0-9_]*$")
+                pattern = "^[a-zA-Z_][a-zA-Z0-9_.\\[\\]'\"]*$")
         private String fieldName;
 
         @NotBlank(message = "检索方法不能为空")
@@ -75,7 +75,7 @@ public class QueryConfigDTO {
                 message = "检索方法必须是: LIKE, MATCH_ALL, MATCH_ANY, MATCH_PHRASE 中的一种")
         @Schema(
                 description = "检索方法，定义该字段的搜索匹配方式",
-                example = "LIKE",
+                example = "MATCH_PHRASE",
                 allowableValues = {"LIKE", "MATCH_ALL", "MATCH_ANY", "MATCH_PHRASE"},
                 requiredMode = Schema.RequiredMode.REQUIRED,
                 implementation = String.class)

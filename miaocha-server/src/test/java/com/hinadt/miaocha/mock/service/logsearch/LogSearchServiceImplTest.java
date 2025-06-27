@@ -59,7 +59,6 @@ class LogSearchServiceImplTest {
 
     private LogSearchDTO testDto;
     private DatasourceInfo testDatasource;
-    private static final Long TEST_USER_ID = 123L;
 
     @BeforeEach
     void setUp() {
@@ -95,46 +94,25 @@ class LogSearchServiceImplTest {
         LogDetailResultDTO expectedResult = new LogDetailResultDTO();
         expectedResult.setTotalCount(100);
 
-        doNothing().when(validator).validateUser(TEST_USER_ID);
         doNothing().when(validator).validatePaginationParams(testDto);
         when(validator.validateAndGetDatasource("test-module")).thenReturn(testDatasource);
         when(searchTemplate.execute(eq(testDatasource), eq(testDto), eq(detailExecutor)))
                 .thenReturn(expectedResult);
 
         // Act
-        LogDetailResultDTO result = logSearchService.searchDetails(TEST_USER_ID, testDto);
+        LogDetailResultDTO result = logSearchService.searchDetails(testDto);
 
         // Assert
         assertEquals(expectedResult, result);
 
         // 验证调用顺序和参数
-        verify(validator).validateUser(TEST_USER_ID);
+
         verify(validator).validatePaginationParams(testDto);
         verify(validator).validateAndGetDatasource("test-module");
         verify(searchTemplate).execute(testDatasource, testDto, detailExecutor);
     }
 
-    @Test
-    @DisplayName("明细查询 - 用户验证失败")
-    void testSearchDetails_UserValidationFails() {
-        // Arrange
-        BusinessException expectedException =
-                new BusinessException(ErrorCode.UNAUTHORIZED, "用户未认证");
-        doThrow(expectedException).when(validator).validateUser(TEST_USER_ID);
-
-        // Act & Assert
-        BusinessException thrownException =
-                assertThrows(
-                        BusinessException.class,
-                        () -> logSearchService.searchDetails(TEST_USER_ID, testDto));
-
-        assertEquals(expectedException, thrownException);
-
-        // 验证没有执行后续步骤
-        verify(validator).validateUser(TEST_USER_ID);
-        verifyNoMoreInteractions(validator);
-        verifyNoInteractions(searchTemplate);
-    }
+    // 删除用户验证测试 - 已移除userId参数
 
     @Test
     @DisplayName("明细查询 - 分页参数验证失败")
@@ -143,18 +121,15 @@ class LogSearchServiceImplTest {
         BusinessException expectedException =
                 new BusinessException(ErrorCode.VALIDATION_ERROR, "分页参数无效");
 
-        doNothing().when(validator).validateUser(TEST_USER_ID);
         doThrow(expectedException).when(validator).validatePaginationParams(testDto);
 
         // Act & Assert
         BusinessException thrownException =
                 assertThrows(
-                        BusinessException.class,
-                        () -> logSearchService.searchDetails(TEST_USER_ID, testDto));
+                        BusinessException.class, () -> logSearchService.searchDetails(testDto));
 
         assertEquals(expectedException, thrownException);
 
-        verify(validator).validateUser(TEST_USER_ID);
         verify(validator).validatePaginationParams(testDto);
         verify(validator, never()).validateAndGetDatasource(anyString());
         verifyNoInteractions(searchTemplate);
@@ -167,19 +142,16 @@ class LogSearchServiceImplTest {
         BusinessException expectedException =
                 new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "数据源不存在");
 
-        doNothing().when(validator).validateUser(TEST_USER_ID);
         doNothing().when(validator).validatePaginationParams(testDto);
         when(validator.validateAndGetDatasource("test-module")).thenThrow(expectedException);
 
         // Act & Assert
         BusinessException thrownException =
                 assertThrows(
-                        BusinessException.class,
-                        () -> logSearchService.searchDetails(TEST_USER_ID, testDto));
+                        BusinessException.class, () -> logSearchService.searchDetails(testDto));
 
         assertEquals(expectedException, thrownException);
 
-        verify(validator).validateUser(TEST_USER_ID);
         verify(validator).validatePaginationParams(testDto);
         verify(validator).validateAndGetDatasource("test-module");
         verifyNoInteractions(searchTemplate);
@@ -192,7 +164,6 @@ class LogSearchServiceImplTest {
         LogQueryException expectedException =
                 new LogQueryException(ErrorCode.INTERNAL_ERROR, "DetailQuery", "查询执行失败");
 
-        doNothing().when(validator).validateUser(TEST_USER_ID);
         doNothing().when(validator).validatePaginationParams(testDto);
         when(validator.validateAndGetDatasource("test-module")).thenReturn(testDatasource);
         when(searchTemplate.execute(testDatasource, testDto, detailExecutor))
@@ -201,13 +172,12 @@ class LogSearchServiceImplTest {
         // Act & Assert
         LogQueryException thrownException =
                 assertThrows(
-                        LogQueryException.class,
-                        () -> logSearchService.searchDetails(TEST_USER_ID, testDto));
+                        LogQueryException.class, () -> logSearchService.searchDetails(testDto));
 
         assertEquals(expectedException, thrownException);
 
         // 验证所有验证步骤都执行了
-        verify(validator).validateUser(TEST_USER_ID);
+
         verify(validator).validatePaginationParams(testDto);
         verify(validator).validateAndGetDatasource("test-module");
         verify(searchTemplate).execute(testDatasource, testDto, detailExecutor);
@@ -221,43 +191,24 @@ class LogSearchServiceImplTest {
         // Arrange
         LogHistogramResultDTO expectedResult = new LogHistogramResultDTO();
 
-        doNothing().when(validator).validateUser(TEST_USER_ID);
         when(validator.validateAndGetDatasource("test-module")).thenReturn(testDatasource);
         when(searchTemplate.execute(eq(testDatasource), eq(testDto), eq(histogramExecutor)))
                 .thenReturn(expectedResult);
 
         // Act
-        LogHistogramResultDTO result = logSearchService.searchHistogram(TEST_USER_ID, testDto);
+        LogHistogramResultDTO result = logSearchService.searchHistogram(testDto);
 
         // Assert
         assertEquals(expectedResult, result);
 
         // 验证调用顺序（注意柱状图查询不需要分页验证）
-        verify(validator).validateUser(TEST_USER_ID);
+
         verify(validator).validateAndGetDatasource("test-module");
         verify(validator, never()).validatePaginationParams(any()); // 不应该调用分页验证
         verify(searchTemplate).execute(testDatasource, testDto, histogramExecutor);
     }
 
-    @Test
-    @DisplayName("柱状图查询 - 用户验证失败")
-    void testSearchHistogram_UserValidationFails() {
-        // Arrange
-        BusinessException expectedException =
-                new BusinessException(ErrorCode.UNAUTHORIZED, "用户未认证");
-        doThrow(expectedException).when(validator).validateUser(TEST_USER_ID);
-
-        // Act & Assert
-        BusinessException thrownException =
-                assertThrows(
-                        BusinessException.class,
-                        () -> logSearchService.searchHistogram(TEST_USER_ID, testDto));
-
-        assertEquals(expectedException, thrownException);
-        verify(validator).validateUser(TEST_USER_ID);
-        verifyNoMoreInteractions(validator);
-        verifyNoInteractions(searchTemplate);
-    }
+    // 删除用户验证测试 - 已移除userId参数
 
     // ==================== searchFieldDistributions 测试 ====================
 
@@ -267,21 +218,19 @@ class LogSearchServiceImplTest {
         // Arrange
         LogFieldDistributionResultDTO expectedResult = new LogFieldDistributionResultDTO();
 
-        doNothing().when(validator).validateUser(TEST_USER_ID);
         doNothing().when(validator).validateFields(testDto);
         when(validator.validateAndGetDatasource("test-module")).thenReturn(testDatasource);
         when(searchTemplate.execute(eq(testDatasource), eq(testDto), eq(fieldDistributionExecutor)))
                 .thenReturn(expectedResult);
 
         // Act
-        LogFieldDistributionResultDTO result =
-                logSearchService.searchFieldDistributions(TEST_USER_ID, testDto);
+        LogFieldDistributionResultDTO result = logSearchService.searchFieldDistributions(testDto);
 
         // Assert
         assertEquals(expectedResult, result);
 
         // 验证调用顺序（包含字段验证）
-        verify(validator).validateUser(TEST_USER_ID);
+
         verify(validator).validateFields(testDto);
         verify(validator).validateAndGetDatasource("test-module");
         verify(searchTemplate).execute(testDatasource, testDto, fieldDistributionExecutor);
@@ -294,18 +243,16 @@ class LogSearchServiceImplTest {
         BusinessException expectedException =
                 new BusinessException(ErrorCode.VALIDATION_ERROR, "查询字段为空");
 
-        doNothing().when(validator).validateUser(TEST_USER_ID);
         doThrow(expectedException).when(validator).validateFields(testDto);
 
         // Act & Assert
         BusinessException thrownException =
                 assertThrows(
                         BusinessException.class,
-                        () -> logSearchService.searchFieldDistributions(TEST_USER_ID, testDto));
+                        () -> logSearchService.searchFieldDistributions(testDto));
 
         assertEquals(expectedException, thrownException);
 
-        verify(validator).validateUser(TEST_USER_ID);
         verify(validator).validateFields(testDto);
         verify(validator, never()).validateAndGetDatasource(anyString());
         verifyNoInteractions(searchTemplate);
@@ -455,25 +402,21 @@ class LogSearchServiceImplTest {
         // Arrange
         LogDetailResultDTO expectedResult = new LogDetailResultDTO();
 
-        doNothing().when(validator).validateUser(TEST_USER_ID);
         doNothing().when(validator).validatePaginationParams(testDto);
         when(validator.validateAndGetDatasource("test-module")).thenReturn(testDatasource);
         when(searchTemplate.execute(testDatasource, testDto, detailExecutor))
                 .thenReturn(expectedResult);
 
         // Act
-        logSearchService.searchDetails(TEST_USER_ID, testDto);
+        logSearchService.searchDetails(testDto);
 
         // Assert - 验证传递给验证器的参数是正确的
-        ArgumentCaptor<Long> userIdCaptor = ArgumentCaptor.forClass(Long.class);
         ArgumentCaptor<LogSearchDTO> dtoCaptor = ArgumentCaptor.forClass(LogSearchDTO.class);
         ArgumentCaptor<String> moduleCaptor = ArgumentCaptor.forClass(String.class);
 
-        verify(validator).validateUser(userIdCaptor.capture());
         verify(validator).validatePaginationParams(dtoCaptor.capture());
         verify(validator).validateAndGetDatasource(moduleCaptor.capture());
 
-        assertEquals(TEST_USER_ID, userIdCaptor.getValue());
         assertEquals(testDto, dtoCaptor.getValue());
         assertEquals("test-module", moduleCaptor.getValue());
     }

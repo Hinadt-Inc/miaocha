@@ -63,9 +63,8 @@ public class LogSearchServiceImpl implements LogSearchService {
     /** 执行日志明细查询 */
     @Override
     @Transactional
-    public LogDetailResultDTO searchDetails(Long userId, LogSearchDTO dto) {
+    public LogDetailResultDTO searchDetails(LogSearchDTO dto) {
         // 验证参数
-        validator.validateUser(userId);
         validator.validatePaginationParams(dto);
         DatasourceInfo datasourceInfo = validator.validateAndGetDatasource(dto.getModule());
 
@@ -76,9 +75,8 @@ public class LogSearchServiceImpl implements LogSearchService {
     /** 执行日志时间分布查询（柱状图数据） */
     @Override
     @Transactional
-    public LogHistogramResultDTO searchHistogram(Long userId, LogSearchDTO dto) {
+    public LogHistogramResultDTO searchHistogram(LogSearchDTO dto) {
         // 验证参数
-        validator.validateUser(userId);
         DatasourceInfo datasourceInfo = validator.validateAndGetDatasource(dto.getModule());
 
         // 执行搜索
@@ -88,9 +86,8 @@ public class LogSearchServiceImpl implements LogSearchService {
     /** 执行字段TOP5分布查询 */
     @Override
     @Transactional
-    public LogFieldDistributionResultDTO searchFieldDistributions(Long userId, LogSearchDTO dto) {
+    public LogFieldDistributionResultDTO searchFieldDistributions(LogSearchDTO dto) {
         // 验证参数
-        validator.validateUser(userId);
         validator.validateFields(dto);
         DatasourceInfo datasourceInfo = validator.validateAndGetDatasource(dto.getModule());
 

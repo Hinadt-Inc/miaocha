@@ -4,6 +4,8 @@ import com.hinadt.miaocha.application.service.ModuleInfoService;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.dto.KeywordConditionDTO;
+import com.hinadt.miaocha.domain.dto.LogSearchDTO;
+import com.hinadt.miaocha.domain.dto.LogSearchDTODecorator;
 import com.hinadt.miaocha.domain.dto.module.QueryConfigDTO;
 import com.hinadt.miaocha.domain.dto.module.QueryConfigDTO.KeywordFieldConfigDTO;
 import java.util.List;
@@ -59,16 +61,17 @@ public class QueryConfigValidationService {
     /**
      * 验证关键字查询条件的字段权限
      *
-     * @param module 模块名
+     * @param dto LogSearchDTO（可能是装饰器）
      * @param keywordConditions 关键字查询条件列表
      * @throws BusinessException 如果字段未配置或无权限
      */
     public void validateKeywordFieldPermissions(
-            String module, List<KeywordConditionDTO> keywordConditions) {
+            LogSearchDTO dto, List<KeywordConditionDTO> keywordConditions) {
         if (keywordConditions == null || keywordConditions.isEmpty()) {
             return;
         }
 
+        String module = dto.getModule();
         QueryConfigDTO queryConfig = validateAndGetQueryConfig(module);
         List<KeywordFieldConfigDTO> keywordFields = queryConfig.getKeywordFields();
 
@@ -87,10 +90,17 @@ public class QueryConfigValidationService {
         // 验证每个查询条件的字段权限
         for (KeywordConditionDTO condition : keywordConditions) {
             String fieldName = condition.getFieldName();
-            if (!fieldConfigMap.containsKey(fieldName)) {
+
+            // 如果是装饰器，需要用原始字段名查找配置
+            String configFieldName = fieldName;
+            if (dto instanceof LogSearchDTODecorator) {
+                configFieldName = ((LogSearchDTODecorator) dto).getOriginalFieldName(fieldName);
+            }
+
+            if (!fieldConfigMap.containsKey(configFieldName)) {
                 throw new BusinessException(
                         ErrorCode.KEYWORD_FIELD_NOT_ALLOWED,
-                        "字段 '" + fieldName + "' 不允许进行关键字查询，请检查模块配置");
+                        "字段 '" + configFieldName + "'不在允许关键字检索字段内 ,不允许进行关键字查询，请检查模块配置");
             }
         }
     }

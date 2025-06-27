@@ -1,8 +1,12 @@
 package com.hinadt.miaocha.application.service.sql.converter;
 
+import com.hinadt.miaocha.domain.dto.KeywordConditionDTO;
 import com.hinadt.miaocha.domain.dto.LogSearchDTO;
 import com.hinadt.miaocha.domain.dto.LogSearchDTODecorator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -34,20 +38,51 @@ public class LogSearchDTOConverter {
             return null;
         }
 
-        // 转换SELECT字段列表
+        // 转换各个字段
         List<String> convertedFields = convertSelectFields(original.getFields());
-
-        // 转换WHERE条件列表
         List<String> convertedWhereSqls = convertWhereClauses(original.getWhereSqls());
+        List<KeywordConditionDTO> convertedKeywordConditions =
+                convertKeywordConditions(original.getKeywordConditions());
 
-        // 如果没有任何转换，直接返回原始对象
+        // 如果没有任何变化，返回原始对象
         if (convertedFields == original.getFields()
-                && convertedWhereSqls == original.getWhereSqls()) {
+                && convertedWhereSqls == original.getWhereSqls()
+                && convertedKeywordConditions == original.getKeywordConditions()) {
             return original;
         }
 
+        // 构建字段映射
+        Map<String, String> fieldMapping = buildFieldMapping(original, convertedKeywordConditions);
+
         // 创建装饰器包装转换后的数据
-        return new LogSearchDTODecorator(original, convertedFields, convertedWhereSqls);
+        return new LogSearchDTODecorator(
+                original,
+                convertedFields,
+                convertedWhereSqls,
+                convertedKeywordConditions,
+                fieldMapping);
+    }
+
+    /** 构建字段映射关系 */
+    private Map<String, String> buildFieldMapping(
+            LogSearchDTO original, List<KeywordConditionDTO> convertedKeywordConditions) {
+        Map<String, String> mapping = new HashMap<>();
+
+        if (original.getKeywordConditions() != null
+                && convertedKeywordConditions != null
+                && original.getKeywordConditions().size() == convertedKeywordConditions.size()) {
+
+            for (int i = 0; i < original.getKeywordConditions().size(); i++) {
+                String originalField = original.getKeywordConditions().get(i).getFieldName();
+                String convertedField = convertedKeywordConditions.get(i).getFieldName();
+
+                if (!originalField.equals(convertedField)) {
+                    mapping.put(convertedField, originalField);
+                }
+            }
+        }
+
+        return mapping;
     }
 
     /**
@@ -90,6 +125,53 @@ public class LogSearchDTOConverter {
         }
 
         return variantFieldConverter.convertWhereClauses(whereClauses);
+    }
+
+    /**
+     * 转换关键字条件列表
+     *
+     * @param keywordConditions 原始关键字条件列表
+     * @return 转换后的关键字条件列表，如果不需要转换则返回原始对象
+     */
+    private List<KeywordConditionDTO> convertKeywordConditions(
+            List<KeywordConditionDTO> keywordConditions) {
+        if (keywordConditions == null || keywordConditions.isEmpty()) {
+            return keywordConditions;
+        }
+
+        // 检查是否需要转换
+        boolean needsConversion =
+                keywordConditions.stream()
+                        .anyMatch(condition -> needsVariantConversion(condition.getFieldName()));
+
+        if (!needsConversion) {
+            return keywordConditions; // 返回原始对象，避免不必要的复制
+        }
+
+        // 转换字段名
+        return keywordConditions.stream()
+                .map(this::convertKeywordCondition)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 转换单个关键字条件
+     *
+     * @param original 原始关键字条件
+     * @return 转换后的关键字条件
+     */
+    private KeywordConditionDTO convertKeywordCondition(KeywordConditionDTO original) {
+        if (original == null || !needsVariantConversion(original.getFieldName())) {
+            return original;
+        }
+
+        // 创建新的条件对象，只转换字段名
+        KeywordConditionDTO converted = new KeywordConditionDTO();
+        converted.setFieldName(variantFieldConverter.convertTopnField(original.getFieldName()));
+        converted.setSearchValue(original.getSearchValue());
+        converted.setSearchMethod(original.getSearchMethod());
+
+        return converted;
     }
 
     /**

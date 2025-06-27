@@ -18,9 +18,13 @@ public class FieldDistributionSqlBuilder {
     public static final int SAMPLE_SIZE = 5000;
 
     private final KeywordConditionBuilder keywordConditionBuilder;
+    private final WhereConditionBuilder whereConditionBuilder;
 
-    public FieldDistributionSqlBuilder(KeywordConditionBuilder keywordConditionBuilder) {
+    public FieldDistributionSqlBuilder(
+            KeywordConditionBuilder keywordConditionBuilder,
+            WhereConditionBuilder whereConditionBuilder) {
         this.keywordConditionBuilder = keywordConditionBuilder;
+        this.whereConditionBuilder = whereConditionBuilder;
     }
 
     /**
@@ -60,12 +64,13 @@ public class FieldDistributionSqlBuilder {
 
     /** 构建内层查询（采样查询） */
     private String buildInnerQuery(LogSearchDTO dto, String tableName, String timeField) {
-        String searchConditions = keywordConditionBuilder.buildKeywordConditions(dto);
+        String timeCondition = timeRange(timeField, dto);
+        String keywordConditions = keywordConditionBuilder.buildKeywordConditions(dto);
+        String whereConditions = whereConditionBuilder.buildWhereConditions(dto);
 
         return selectFields(null)
                 + from(tableName)
-                + where(timeRange(timeField, dto))
-                + and(searchConditions)
+                + buildWhereClause(timeCondition, keywordConditions, whereConditions)
                 + orderBy(timeField, "DESC")
                 + limit(SAMPLE_SIZE, 0);
     }
