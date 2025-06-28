@@ -24,6 +24,8 @@ interface IProps {
   onSelectedQueryConfigsChange?: (selectedQueryConfigs: any[]) => void; // 选中的查询配置列表变化回调函数
 }
 
+const SEARCH_METHODS_OPTIONS = ['LIKE', 'MATCH_ALL', 'MATCH_ANY', 'MATCH_PHRASE'];
+
 const SearchBar = forwardRef((props: IProps, ref) => {
   const searchBarRef = useRef<HTMLDivElement>(null);
   const {
@@ -243,8 +245,11 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       const fieldMethods = originalKeywordFields
         .filter((field: any) => field.fieldName === value)
         .map((field: any) => field.searchMethod);
-
-      setAvailableSearchMethods(fieldMethods);
+      // console.log('AAAAA', value, fieldMethods);
+      const allFieldMethods = value?.includes('.') ? ['LIKE'] : SEARCH_METHODS_OPTIONS;
+      const defaultMethod = fieldMethods[0] || allFieldMethods[0];
+      setSelectedSearchMethod(defaultMethod);
+      setAvailableSearchMethods(allFieldMethods);
     } else {
       setAvailableSearchMethods([]);
     }
@@ -612,7 +617,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
           value: method,
           label: method,
         }))}
-        disabled={!selectedFieldName || availableSearchMethods.length === 0}
+        disabled={!selectedFieldName || availableSearchMethods.length === 0 || selectedFieldName?.includes('.')}
       />
     );
   }, [selectedSearchMethod, availableSearchMethods, selectedFieldName]);
