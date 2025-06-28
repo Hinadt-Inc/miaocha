@@ -7,13 +7,13 @@ import com.hinadt.miaocha.application.service.impl.logsearch.template.SearchCont
 import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
 import com.hinadt.miaocha.application.service.sql.builder.FieldDistributionSqlBuilder;
 import com.hinadt.miaocha.application.service.sql.builder.LogSqlBuilder;
-import com.hinadt.miaocha.application.service.sql.converter.LogSearchDTOConverter;
 import com.hinadt.miaocha.application.service.sql.processor.QueryResult;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.common.exception.LogQueryException;
 import com.hinadt.miaocha.domain.dto.logsearch.FieldDistributionDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogFieldDistributionResultDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTODecorator;
 import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,17 +34,14 @@ public class FieldDistributionSearchExecutor extends BaseSearchExecutor
         implements SearchExecutor<LogFieldDistributionResultDTO> {
 
     private final LogSqlBuilder logSqlBuilder;
-    private final LogSearchDTOConverter dtoConverter;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public FieldDistributionSearchExecutor(
             JdbcQueryExecutor jdbcQueryExecutor,
             LogSqlBuilder logSqlBuilder,
-            LogSearchDTOConverter dtoConverter,
             @Qualifier("logQueryExecutor") Executor logQueryExecutor) {
         super(jdbcQueryExecutor, logQueryExecutor);
         this.logSqlBuilder = logSqlBuilder;
-        this.dtoConverter = dtoConverter;
     }
 
     @Override
@@ -56,16 +53,14 @@ public class FieldDistributionSearchExecutor extends BaseSearchExecutor
 
         LogFieldDistributionResultDTO result = new LogFieldDistributionResultDTO();
 
-        // 1. 转换fields中的点语法为括号语法（用于TOPN函数）
-        List<String> convertedTopnFields =
-                dto.getFields().stream()
-                        .map(dtoConverter::convertTopnField)
-                        .collect(java.util.stream.Collectors.toList());
+        // 1. 获取装饰器信息
+        LogSearchDTODecorator decorator = (LogSearchDTODecorator) dto;
+        List<String> originalFields = decorator.getOriginalFields(); // 用于结果处理
 
-        // 2. 构建字段分布查询SQL - 统一通过LogSqlBuilder
+        // 2. 构建字段分布查询SQL - 让SQL Builder自己处理字段转换
         String fieldDistributionSql =
                 logSqlBuilder.buildFieldDistributionSql(
-                        dto, tableName, convertedTopnFields, dto.getFields(), 5);
+                        dto, tableName, null, null, 5); // 传null，让Builder自己处理
 
         log.debug("字段分布SQL: {}", fieldDistributionSql);
 
@@ -88,7 +83,7 @@ public class FieldDistributionSearchExecutor extends BaseSearchExecutor
             List<FieldDistributionDTO> fieldDistributions =
                     processTopnResult(
                             fieldDistributionResult,
-                            dto.getFields(),
+                            originalFields,
                             FieldDistributionSqlBuilder.SAMPLE_SIZE);
             result.setFieldDistributions(fieldDistributions);
 

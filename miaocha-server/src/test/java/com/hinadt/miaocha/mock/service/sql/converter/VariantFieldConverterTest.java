@@ -140,13 +140,13 @@ class VariantFieldConverterTest {
     class SelectFieldConversionTests {
 
         @Test
-        @DisplayName("简单字段转换 - 期望：request.method转换为request['method'] AS 'request.method'")
+        @DisplayName("简单字段转换 - 期望：request.method转换为request['method']")
         void testSimpleFieldConversion() {
             List<String> input = Arrays.asList("request.method", "host", "log_time");
             List<String> result = converter.convertSelectFields(input);
 
             assertEquals(3, result.size());
-            assertEquals("request['method'] AS 'request.method'", result.get(0), "点语法字段应转换并添加别名");
+            assertEquals("request['method']", result.get(0), "点语法字段应转换为bracket语法");
             assertEquals("host", result.get(1), "普通字段应保持不变");
             assertEquals("log_time", result.get(2), "普通字段应保持不变");
         }
@@ -162,17 +162,10 @@ class VariantFieldConverterTest {
             List<String> result = converter.convertSelectFields(input);
 
             assertEquals(3, result.size());
+            assertEquals("user['profile']['name']", result.get(0), "2层嵌套字段应正确转换");
+            assertEquals("business['order']['payment']['method']", result.get(1), "3层嵌套字段应正确转换");
             assertEquals(
-                    "user['profile']['name'] AS 'user.profile.name'", result.get(0), "2层嵌套字段应正确转换");
-            assertEquals(
-                    "business['order']['payment']['method'] AS 'business.order.payment.method'",
-                    result.get(1),
-                    "3层嵌套字段应正确转换");
-            assertEquals(
-                    "trace['spans']['operations']['duration']['ms'] AS"
-                            + " 'trace.spans.operations.duration.ms'",
-                    result.get(2),
-                    "4层嵌套字段应正确转换");
+                    "trace['spans']['operations']['duration']['ms']", result.get(2), "4层嵌套字段应正确转换");
         }
 
         @Test
@@ -190,9 +183,8 @@ class VariantFieldConverterTest {
             assertEquals(5, result.size());
             assertEquals("log_time", result.get(0), "普通字段应保持不变");
             assertEquals("service_name", result.get(1), "普通字段应保持不变");
-            assertEquals("request['method'] AS 'request.method'", result.get(2), "点语法字段应转换");
-            assertEquals(
-                    "response['status_code'] AS 'response.status_code'", result.get(3), "点语法字段应转换");
+            assertEquals("request['method']", result.get(2), "点语法字段应转换");
+            assertEquals("response['status_code']", result.get(3), "点语法字段应转换");
             assertEquals("host", result.get(4), "普通字段应保持不变");
         }
     }
@@ -269,7 +261,7 @@ class VariantFieldConverterTest {
             List<String> result = converter.convertSelectFields(input);
 
             assertEquals(4, result.size(), "结果大小应与输入一致");
-            assertEquals("message['level'] AS 'message.level'", result.get(0));
+            assertEquals("message['level']", result.get(0));
             assertNull(result.get(1), "null元素应保持为null");
             assertEquals("host", result.get(2));
             assertNull(result.get(3), "null元素应保持为null");
@@ -519,21 +511,12 @@ class VariantFieldConverterTest {
                         assertEquals(fields.size(), result.size(), "转换后字段数量应保持一致");
 
                         // 验证几个关键字段的转换
+                        assertTrue(result.contains("service_info['name']"), "服务名称字段应正确转换");
                         assertTrue(
-                                result.contains("service_info['name'] AS 'service_info.name'"),
-                                "服务名称字段应正确转换");
+                                result.contains("request['headers']['user_agent']"), "请求头字段应正确转换");
+                        assertTrue(result.contains("trace['trace_id']"), "追踪ID字段应正确转换");
                         assertTrue(
-                                result.contains(
-                                        "request['headers']['user_agent'] AS"
-                                                + " 'request.headers.user_agent'"),
-                                "请求头字段应正确转换");
-                        assertTrue(
-                                result.contains("trace['trace_id'] AS 'trace.trace_id'"),
-                                "追踪ID字段应正确转换");
-                        assertTrue(
-                                result.contains(
-                                        "business_data['product']['category'] AS"
-                                                + " 'business_data.product.category'"),
+                                result.contains("business_data['product']['category']"),
                                 "业务数据嵌套字段应正确转换");
 
                         Allure.parameter("转换成功字段数", String.valueOf(result.size()));
@@ -618,18 +601,9 @@ class VariantFieldConverterTest {
             assertEquals(fields.size(), result.size(), "金融交易字段转换后数量应保持一致");
 
             // 验证关键字段转换
-            assertTrue(
-                    result.contains("transaction['amount']['value'] AS 'transaction.amount.value'"),
-                    "交易金额字段应正确转换");
-            assertTrue(
-                    result.contains(
-                            "risk_assessment['rules']['triggered'] AS"
-                                    + " 'risk_assessment.rules.triggered'"),
-                    "风控规则字段应正确转换");
-            assertTrue(
-                    result.contains(
-                            "compliance['aml_check']['status'] AS 'compliance.aml_check.status'"),
-                    "合规检查字段应正确转换");
+            assertTrue(result.contains("transaction['amount']['value']"), "交易金额字段应正确转换");
+            assertTrue(result.contains("risk_assessment['rules']['triggered']"), "风控规则字段应正确转换");
+            assertTrue(result.contains("compliance['aml_check']['status']"), "合规检查字段应正确转换");
         }
     }
 
@@ -655,8 +629,7 @@ class VariantFieldConverterTest {
             assertTrue(
                     endTime - startTime < 5000,
                     "10000个字段转换应在5秒内完成，实际用时：" + (endTime - startTime) + "ms");
-            assertEquals(
-                    "message['field0']['subfield0'] AS 'message.field0.subfield0'", result.get(0));
+            assertEquals("message['field0']['subfield0']", result.get(0));
         }
 
         @Test

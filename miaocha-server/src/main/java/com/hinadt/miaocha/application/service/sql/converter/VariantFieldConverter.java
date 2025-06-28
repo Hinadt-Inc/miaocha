@@ -110,10 +110,10 @@ public class VariantFieldConverter {
     }
 
     /**
-     * 转换SELECT字段列表中的点语法为括号语法，并添加别名
+     * 转换SELECT字段列表中的点语法为括号语法
      *
      * @param fields 字段列表
-     * @return 转换后的字段列表
+     * @return 转换后的字段列表（仅转换语法，不添加AS别名）
      */
     public List<String> convertSelectFields(List<String> fields) {
         if (fields == null) {
@@ -137,8 +137,7 @@ public class VariantFieldConverter {
             // 检查是否是点语法
             if (isDotSyntax(trimmedField)) {
                 String bracketSyntax = convertDotToBracketSyntax(trimmedField);
-                String fieldWithAlias = bracketSyntax + " AS '" + trimmedField + "'";
-                convertedFields.add(fieldWithAlias);
+                convertedFields.add(bracketSyntax); // 只转换语法，不添加AS别名
             } else {
                 convertedFields.add(field);
             }

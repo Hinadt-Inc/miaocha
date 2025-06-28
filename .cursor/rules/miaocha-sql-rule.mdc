@@ -1,5 +1,5 @@
 ---
-description: sql 迁移脚本编写规范
+description: SQL脚本规范，项目SQL版本SQL规范
 globs: 
 alwaysApply: false
 ---

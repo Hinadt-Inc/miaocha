@@ -921,6 +921,127 @@ public class LogSearchIntegrationTest {
                     histogramResult.getDistributionData().size(),
                     fieldResult.getFieldDistributions().size());
         }
+
+        @Test
+        @Order(7)
+        @DisplayName("FIELD-003: Variant字段分布查询 - 测试点语法字段转换")
+        void testVariantFieldDistribution() {
+            log.info("🔍 测试Variant字段分布查询");
+
+            LogSearchDTO searchRequest = createBaseSearchRequest();
+
+            // 测试message.level字段的分布查询（点语法转换）
+            searchRequest.setFields(List.of("message.level"));
+
+            LogFieldDistributionResultDTO result =
+                    logSearchService.searchFieldDistributions(searchRequest);
+
+            // 验证查询结果
+            assertThat(result).isNotNull();
+            assertThat(result.getFieldDistributions()).isNotEmpty();
+            assertThat(result.getFieldDistributions().size()).isEqualTo(1);
+
+            // 验证字段名正确返回
+            FieldDistributionDTO levelDistribution = result.getFieldDistributions().get(0);
+            assertThat(levelDistribution.getFieldName()).isEqualTo("message.level");
+            assertThat(levelDistribution.getValueDistributions()).isNotEmpty();
+
+            // 验证包含预期的日志级别
+            Set<String> levels =
+                    levelDistribution.getValueDistributions().stream()
+                            .map(dist -> String.valueOf(dist.getValue()))
+                            .collect(java.util.stream.Collectors.toSet());
+            assertThat(levels).containsAnyOf("INFO", "ERROR", "WARN", "DEBUG");
+
+            log.info("✅ Variant字段分布查询通过 - message.level包含{}种级别", levels.size());
+        }
+
+        @Test
+        @Order(8)
+        @DisplayName("FIELD-004: 多Variant字段分布查询 - 测试多个点语法字段")
+        void testMultipleVariantFieldDistribution() {
+            log.info("🔍 测试多Variant字段分布查询");
+
+            LogSearchDTO searchRequest = createBaseSearchRequest();
+
+            // 测试多个Variant字段的分布查询
+            searchRequest.setFields(List.of("message.level", "message.service"));
+
+            LogFieldDistributionResultDTO result =
+                    logSearchService.searchFieldDistributions(searchRequest);
+
+            // 验证查询结果
+            assertThat(result).isNotNull();
+            assertThat(result.getFieldDistributions()).hasSize(2);
+
+            // 验证每个字段的结果
+            Map<String, FieldDistributionDTO> distributionMap =
+                    result.getFieldDistributions().stream()
+                            .collect(
+                                    java.util.stream.Collectors.toMap(
+                                            FieldDistributionDTO::getFieldName,
+                                            java.util.function.Function.identity()));
+
+            // 验证message.level字段
+            assertThat(distributionMap).containsKey("message.level");
+            FieldDistributionDTO levelDist = distributionMap.get("message.level");
+            assertThat(levelDist.getValueDistributions()).isNotEmpty();
+
+            // 验证message.service字段
+            assertThat(distributionMap).containsKey("message.service");
+            FieldDistributionDTO serviceDist = distributionMap.get("message.service");
+            assertThat(serviceDist.getValueDistributions()).isNotEmpty();
+
+            log.info(
+                    "✅ 多Variant字段分布查询通过 - level:{}种, service:{}种",
+                    levelDist.getValueDistributions().size(),
+                    serviceDist.getValueDistributions().size());
+        }
+
+        @Test
+        @Order(9)
+        @DisplayName("FIELD-005: 混合字段分布查询 - 普通字段与Variant字段混合")
+        void testMixedFieldDistribution() {
+            log.info("🔍 测试混合字段分布查询");
+
+            LogSearchDTO searchRequest = createBaseSearchRequest();
+
+            // 测试普通字段与Variant字段混合查询
+            searchRequest.setFields(List.of("host", "message.level", "source"));
+
+            LogFieldDistributionResultDTO result =
+                    logSearchService.searchFieldDistributions(searchRequest);
+
+            // 验证查询结果
+            assertThat(result).isNotNull();
+            assertThat(result.getFieldDistributions()).hasSize(3);
+
+            // 验证每个字段都有正确的结果
+            Map<String, FieldDistributionDTO> distributionMap =
+                    result.getFieldDistributions().stream()
+                            .collect(
+                                    java.util.stream.Collectors.toMap(
+                                            FieldDistributionDTO::getFieldName,
+                                            java.util.function.Function.identity()));
+
+            // 验证普通字段
+            assertThat(distributionMap).containsKey("host");
+            assertThat(distributionMap).containsKey("source");
+
+            // 验证Variant字段
+            assertThat(distributionMap).containsKey("message.level");
+
+            // 验证所有字段都有分布数据
+            distributionMap
+                    .values()
+                    .forEach(
+                            dist -> {
+                                assertThat(dist.getValueDistributions()).isNotEmpty();
+                                assertThat(dist.getFieldName()).isNotNull();
+                            });
+
+            log.info("✅ 混合字段分布查询通过 - 3个字段均有分布数据");
+        }
     }
 
     // ==================== 异常处理功能组 ====================

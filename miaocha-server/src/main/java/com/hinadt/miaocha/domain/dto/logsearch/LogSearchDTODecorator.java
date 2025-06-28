@@ -184,4 +184,13 @@ public class LogSearchDTODecorator extends LogSearchDTO {
     public LogSearchDTO getOriginal() {
         return delegate;
     }
+
+    /**
+     * 获取原始字段列表（用于字段分布查询等需要原始字段名的场景）
+     *
+     * @return 原始字段列表
+     */
+    public List<String> getOriginalFields() {
+        return delegate.getFields();
+    }
 }

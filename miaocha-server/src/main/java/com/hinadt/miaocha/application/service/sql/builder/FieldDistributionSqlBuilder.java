@@ -3,6 +3,7 @@ package com.hinadt.miaocha.application.service.sql.builder;
 import static com.hinadt.miaocha.application.service.sql.builder.SqlFragment.*;
 
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTODecorator;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
@@ -39,6 +40,20 @@ public class FieldDistributionSqlBuilder {
             List<String> fields,
             List<String> originalFields,
             int topN) {
+
+        // 如果是装饰器，使用转换后的字段进行TOPN，使用原始字段作为AS别名
+        if (dto instanceof LogSearchDTODecorator decorator) {
+
+            List<String> convertedFields = decorator.getFields(); // 转换后的纯字段名，用于TOPN函数
+            List<String> originalFieldNames = decorator.getOriginalFields(); // 原始字段名，用于AS别名
+
+            String topnColumns = buildTopnColumns(convertedFields, originalFieldNames, topN);
+            String innerQuery = buildInnerQuery(dto, tableName, timeField);
+
+            return selectWithSubquery(topnColumns, innerQuery, "sub_query");
+        }
+
+        // 普通DTO的处理逻辑保持不变
         String topnColumns = buildTopnColumns(fields, originalFields, topN);
         String innerQuery = buildInnerQuery(dto, tableName, timeField);
 

@@ -44,17 +44,10 @@ public class LogSearchDTOConverter {
         List<KeywordConditionDTO> convertedKeywordConditions =
                 convertKeywordConditions(original.getKeywordConditions());
 
-        // 如果没有任何变化，返回原始对象
-        if (convertedFields == original.getFields()
-                && convertedWhereSqls == original.getWhereSqls()
-                && convertedKeywordConditions == original.getKeywordConditions()) {
-            return original;
-        }
-
         // 构建字段映射
         Map<String, String> fieldMapping = buildFieldMapping(original, convertedKeywordConditions);
 
-        // 创建装饰器包装转换后的数据
+        // 始终创建装饰器，提供统一的接口给下游使用
         return new LogSearchDTODecorator(
                 original,
                 convertedFields,
@@ -264,15 +257,5 @@ public class LogSearchDTOConverter {
         }
 
         return true;
-    }
-
-    /**
-     * 转换TOPN字段（用于字段分布查询）
-     *
-     * @param field 字段名
-     * @return 转换后的字段名
-     */
-    public String convertTopnField(String field) {
-        return variantFieldConverter.convertTopnField(field);
     }
 }
