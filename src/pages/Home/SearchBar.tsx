@@ -153,8 +153,8 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       getQueryConfig.run(selectedModule);
     } else {
       setQueryConfigs([]);
-      setSelectedQueryConfig(undefined);
-      setSelectedQueryConfigs([]); // 清空选中的查询配置
+      // setSelectedQueryConfig(undefined);
+      // setSelectedQueryConfigs([]); // 清空选中的查询配置
     }
   }, [selectedModule]);
 
