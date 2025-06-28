@@ -19,6 +19,7 @@ interface IProps {
   activeColumns?: string[]; // 激活的字段列表
   getDistributionWithSearchBar?: () => void; // 获取字段分布回调函数
   selectedModule?: string; // 当前选中的模块
+  moduleQueryConfig?: any; // 模块查询配置
   onQueryConfigChange?: (selectedConfig: string | undefined, queryConfigs: any[], res?: any) => void; // 查询配置变化回调函数
   onSelectedQueryConfigsChange?: (selectedQueryConfigs: any[]) => void; // 选中的查询配置列表变化回调函数
 }
@@ -35,6 +36,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     activeColumns,
     getDistributionWithSearchBar,
     selectedModule,
+    moduleQueryConfig,
     onQueryConfigChange,
     onSelectedQueryConfigsChange,
   } = props;
@@ -61,7 +63,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
 
   // 查询配置相关状态
   const [queryConfigs, setQueryConfigs] = useState<any[]>([]);
-  const [selectedQueryConfig, setSelectedQueryConfig] = useState<string | undefined>(undefined);
   const [selectedQueryConfigs, setSelectedQueryConfigs] = useState<any[]>([]); // 选中的查询配置列表
   const [selectedFieldName, setSelectedFieldName] = useState<string | undefined>(undefined); // 选中的字段名
   const [selectedSearchMethod, setSelectedSearchMethod] = useState<string | undefined>(undefined); // 选中的搜索方法
@@ -232,11 +233,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     setSql(value || '');
   };
 
-  // 处理查询配置选择变化
-  const changeQueryConfig = (value: string | undefined) => {
-    setSelectedQueryConfig(value || undefined);
-  };
-
   // 处理字段名选择变化
   const changeFieldName = (value: string | undefined) => {
     setSelectedFieldName(value || undefined);
@@ -343,7 +339,8 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     // 只有在组件初始化完成后才执行搜索和保存逻辑
     if (!initialized) return;
 
-    const _fields = activeColumns?.length === 1 && activeColumns[0] === 'log_time' ? [] : activeColumns || [];
+    const timeField = moduleQueryConfig?.timeField || 'log_time'; // 如果没有配置则回退到log_time
+    const _fields = activeColumns?.length === 1 && activeColumns[0] === timeField ? [] : activeColumns || [];
     const params = {
       ...searchParams,
       ...(keywords.length > 0 && { keywords }),

@@ -106,9 +106,21 @@ const HomePage = () => {
       onSuccess: (res) => {
         const { rows } = res;
         // 为每条记录添加唯一ID
+        const timeField = moduleQueryConfig?.timeField || 'log_time'; // 如果没有配置则回退到log_time
         (rows || []).map((item, index) => {
           item._key = `${Date.now()}_${index}`;
-          item['log_time'] = item['log_time'] ? dayjs(item['log_time'] as string).format(DATE_FORMAT_THOUSOND) : '';
+          if (item[timeField]) {
+            try {
+              const timeValue = dayjs(item[timeField] as string);
+              if (timeValue.isValid()) {
+                item[timeField] = timeValue.format(DATE_FORMAT_THOUSOND);
+              } else {
+                item[timeField] = item[timeField] || '';
+              }
+            } catch (error) {
+              item[timeField] = item[timeField] || '';
+            }
+          }
         });
         setDetailData(res);
       },
@@ -299,8 +311,18 @@ const HomePage = () => {
       onSearch: onSearchFromLog,
       onChangeColumns: handleChangeColumnsByLog,
       onSearchFromTable: setSearchParams,
+      moduleQueryConfig,
     }),
-    [histogramData, detailData, getDetailData, logTableColumns, searchParams, whereSqlsFromSider, sqls],
+    [
+      histogramData,
+      detailData,
+      getDetailData,
+      logTableColumns,
+      searchParams,
+      whereSqlsFromSider,
+      sqls,
+      moduleQueryConfig,
+    ],
   );
 
   // 处理查询配置变化
@@ -357,6 +379,7 @@ const HomePage = () => {
       activeColumns,
       getDistributionWithSearchBar,
       selectedModule,
+      moduleQueryConfig,
       onQueryConfigChange: handleQueryConfigChange,
       onSelectedQueryConfigsChange: handleSelectedQueryConfigsChange,
     }),
@@ -369,6 +392,7 @@ const HomePage = () => {
       activeColumns,
       getDistributionWithSearchBar,
       selectedModule,
+      moduleQueryConfig,
       handleQueryConfigChange,
       handleSelectedQueryConfigsChange,
     ],

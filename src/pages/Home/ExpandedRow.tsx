@@ -7,10 +7,11 @@ import { highlightText } from '@/utils/highlightText';
 interface IProps {
   data: Record<string, any>;
   keywords: string[]; // 搜索参数
+  moduleQueryConfig?: any; // 模块查询配置
 }
 
 const ExpandedRow = (props: IProps) => {
-  const { data, keywords } = props;
+  const { data, keywords, moduleQueryConfig } = props;
   const columns = [
     {
       title: '字段',
@@ -25,14 +26,15 @@ const ExpandedRow = (props: IProps) => {
   ];
 
   const dataSource = useMemo(() => {
+    const timeField = moduleQueryConfig?.timeField || 'log_time'; // 如果没有配置则回退到log_time
     return Object.entries(data)
       .filter((item) => item[0] !== '_key')
       .map(([key, value], index) => ({
         key: `${key}_${index}`,
         field: key,
-        value: key === 'log_time' ? String(value ?? '').replace('T', ' ') : String(value ?? ''),
+        value: key === timeField ? String(value ?? '').replace('T', ' ') : String(value ?? ''),
       }));
-  }, [data]);
+  }, [data, moduleQueryConfig]);
 
   const items = [
     {
