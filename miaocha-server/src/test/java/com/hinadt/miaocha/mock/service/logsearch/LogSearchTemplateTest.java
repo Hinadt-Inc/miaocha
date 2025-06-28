@@ -309,38 +309,7 @@ class LogSearchTemplateTest {
         assertEquals("invalid_expression", thrownException.getExpression());
     }
 
-    @Test
-    @DisplayName("连接关闭失败 - 抛出BusinessException(INTERNAL_ERROR)")
-    void testExecute_ConnectionCloseFails() throws Exception {
-        // Arrange
-        LogDetailResultDTO expectedResult = new LogDetailResultDTO();
-        expectedResult.setTotalCount(50);
-
-        doNothing().when(timeRangeProcessor).processTimeRange(testDto);
-        when(dtoConverter.convert(testDto)).thenReturn(convertedDto);
-        when(moduleInfoService.getTableNameByModule("test-module")).thenReturn("test_table");
-        when(queryConfigValidationService.getTimeField("test-module")).thenReturn("timestamp");
-        when(jdbcQueryExecutor.getConnection(testDatasource)).thenReturn(connection);
-        when(mockExecutor.execute(any(SearchContext.class))).thenReturn(expectedResult);
-        doThrow(new SQLException("关闭连接失败")).when(connection).close();
-
-        // Act & Assert - 连接关闭异常会被转换为BusinessException
-        BusinessException thrownException =
-                assertThrows(
-                        BusinessException.class,
-                        () -> {
-                            logSearchTemplate.execute(testDatasource, testDto, mockExecutor);
-                        });
-
-        assertEquals(ErrorCode.INTERNAL_ERROR, thrownException.getErrorCode());
-
-        verify(timeRangeProcessor).processTimeRange(testDto);
-        verify(dtoConverter).convert(testDto);
-        verify(moduleInfoService).getTableNameByModule("test-module");
-        verify(queryConfigValidationService).getTimeField("test-module");
-        verify(jdbcQueryExecutor).getConnection(testDatasource);
-        verify(mockExecutor).execute(any(SearchContext.class));
-    }
+    // 注意：连接关闭失败测试已移除，因为现在连接由HikariCP管理，不再手动关闭
 
     @Test
     @DisplayName("执行时间计算 - 验证执行时间被正确设置")

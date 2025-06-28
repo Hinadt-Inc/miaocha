@@ -356,10 +356,10 @@ public class LogSearchTestDataInitializer {
 
             long endTime = System.currentTimeMillis();
             log.info(
-                    "Stream Load数据导入完成！总计{}条记录，耗时: {}ms，平均: {:.2f}条/秒",
+                    "Stream Load数据导入完成！总计{}条记录，耗时: {}ms，平均: {}条/秒",
                     TOTAL_LOG_RECORDS,
                     endTime - startTime,
-                    TOTAL_LOG_RECORDS * 1000.0 / (endTime - startTime));
+                    String.format("%.2f", TOTAL_LOG_RECORDS * 1000.0 / (endTime - startTime)));
 
         } catch (Exception e) {
             log.error("Stream Load数据导入失败", e);
@@ -772,11 +772,12 @@ public class LogSearchTestDataInitializer {
             log.info("   过滤行数: {}", filteredRows);
             log.info("   未选择行数: {}", unselectedRows);
             log.info(
-                    "   数据大小: {} bytes ({:.2f} MB)",
+                    "   数据大小: {} bytes ({} MB)",
                     loadBytes,
                     loadBytes instanceof Number
-                            ? ((Number) loadBytes).doubleValue() / (1024 * 1024)
-                            : 0);
+                            ? String.format(
+                                    "%.2f", ((Number) loadBytes).doubleValue() / (1024 * 1024))
+                            : "0");
 
             log.info("⏱️ 时间分析:");
             log.info("   总导入时间: {} ms", loadTimeMs);
@@ -791,7 +792,7 @@ public class LogSearchTestDataInitializer {
             if (loadTimeMs instanceof Number && loadedRows instanceof Number) {
                 double timeSeconds = ((Number) loadTimeMs).doubleValue() / 1000.0;
                 double rowsPerSecond = ((Number) loadedRows).doubleValue() / timeSeconds;
-                log.info("🚀 导入速度: {:.2f} 行/秒", rowsPerSecond);
+                log.info("🚀 导入速度: {} 行/秒", String.format("%.2f", rowsPerSecond));
             }
 
         } catch (Exception e) {
@@ -1368,5 +1369,10 @@ public class LogSearchTestDataInitializer {
     /** 获取测试模块信息 */
     public ModuleInfo getTestModule() {
         return moduleInfoMapper.selectByName(TEST_MODULE_NAME);
+    }
+
+    /** 获取测试数据源信息 */
+    public DatasourceInfo getTestDatasource() {
+        return datasourceMapper.selectByName(TEST_DATASOURCE_NAME);
     }
 }

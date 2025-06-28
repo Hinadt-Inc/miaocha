@@ -272,7 +272,7 @@ public class SqlQueryServiceImpl implements SqlQueryService {
             }
 
             schemaInfo.setTables(tables);
-            conn.close();
+            // 注意：这里不关闭conn，让HikariCP管理连接生命周期
             return schemaInfo;
         } catch (Exception e) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "获取数据库结构失败: " + e.getMessage());

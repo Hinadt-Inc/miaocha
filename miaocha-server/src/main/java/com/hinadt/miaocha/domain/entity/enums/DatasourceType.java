@@ -8,23 +8,19 @@ import lombok.Getter;
 @Schema(description = "数据源类型枚举")
 public enum DatasourceType {
     @Schema(description = "MySQL数据库")
-    MYSQL("mysql", "jdbc:mysql://%s:%d/%s"),
-
-    @Schema(description = "PostgreSQL数据库")
-    POSTGRESQL("postgresql", "jdbc:postgresql://%s:%d/%s"),
-
-    @Schema(description = "Oracle数据库")
-    ORACLE("oracle", "jdbc:oracle:thin:@%s:%d:%s"),
+    MYSQL("mysql", "jdbc:mysql://%s:%d/%s", "com.mysql.cj.jdbc.Driver"),
 
     @Schema(description = "Apache Doris数据库")
-    DORIS("doris", "jdbc:mysql://%s:%d/%s");
+    DORIS("doris", "jdbc:mysql://%s:%d/%s", "com.mysql.cj.jdbc.Driver");
 
     private final String type;
     private final String urlTemplate;
+    private final String driverClassName;
 
-    DatasourceType(String type, String urlTemplate) {
+    DatasourceType(String type, String urlTemplate, String driverClassName) {
         this.type = type;
         this.urlTemplate = urlTemplate;
+        this.driverClassName = driverClassName;
     }
 
     /** 根据类型获取枚举 */
@@ -88,20 +84,13 @@ public enum DatasourceType {
 
         try {
             // 处理 MySQL/Doris 格式: jdbc:mysql://host:port/database?params
-            if (jdbcUrl.startsWith("jdbc:mysql://") || jdbcUrl.startsWith("jdbc:postgresql://")) {
+            if (jdbcUrl.startsWith("jdbc:mysql://")) {
                 String afterProtocol = jdbcUrl.substring(jdbcUrl.indexOf("://") + 3);
                 int slashIndex = afterProtocol.indexOf('/');
                 if (slashIndex > 0 && slashIndex < afterProtocol.length() - 1) {
                     String afterSlash = afterProtocol.substring(slashIndex + 1);
                     int questionIndex = afterSlash.indexOf('?');
                     return questionIndex > 0 ? afterSlash.substring(0, questionIndex) : afterSlash;
-                }
-            }
-            // 处理 Oracle 格式: jdbc:oracle:thin:@host:port:database
-            else if (jdbcUrl.startsWith("jdbc:oracle:thin:@")) {
-                String[] parts = jdbcUrl.split(":");
-                if (parts.length >= 5) {
-                    return parts[parts.length - 1];
                 }
             }
         } catch (Exception e) {

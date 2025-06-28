@@ -1,5 +1,6 @@
 package com.hinadt.miaocha.application.service.sql;
 
+import com.hinadt.miaocha.application.service.datasource.HikariDatasourceManager;
 import com.hinadt.miaocha.application.service.sql.processor.QueryResult;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
@@ -7,16 +8,70 @@ import com.hinadt.miaocha.domain.dto.SqlQueryResultDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import java.sql.*;
 import java.util.*;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 public class JdbcQueryExecutor {
 
+    @Autowired private HikariDatasourceManager hikariDatasourceManager;
+
+    /**
+     * 执行SQL查询或更新操作
+     *
+     * @param datasourceInfo 数据源信息
+     * @param sql SQL语句
+     * @return SQL执行结果
+     */
     public SqlQueryResultDTO executeQuery(DatasourceInfo datasourceInfo, String sql) {
         SqlQueryResultDTO result = new SqlQueryResultDTO();
 
-        try (Connection conn = getConnection(datasourceInfo)) {
-            Statement stmt = conn.createStatement();
+        try {
+            Connection conn = hikariDatasourceManager.getConnection(datasourceInfo);
+            try (Statement stmt = conn.createStatement()) {
+                boolean isResultSet = stmt.execute(sql);
+
+                if (isResultSet) {
+                    try (ResultSet rs = stmt.getResultSet()) {
+                        processResultSet(rs, result);
+                    }
+                } else {
+                    result.setAffectedRows(stmt.getUpdateCount());
+                }
+            }
+            // 注意：这里不关闭conn，让HikariCP管理连接生命周期
+        } catch (SQLException e) {
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "SQL执行失败: " + e.getMessage());
+        }
+
+        return result;
+    }
+
+    /**
+     * 获取数据库连接（供需要直接操作连接的场景使用）
+     *
+     * @param datasourceInfo 数据源信息
+     * @return 数据库连接
+     * @throws SQLException 如果获取连接失败
+     */
+    public Connection getConnection(DatasourceInfo datasourceInfo) throws SQLException {
+        return hikariDatasourceManager.getConnection(datasourceInfo);
+    }
+
+    /**
+     * 执行SQL查询或更新操作（供需要直接传入连接的场景使用）
+     *
+     * @param conn 数据库连接
+     * @param sql SQL语句
+     * @return SQL执行结果
+     * @throws SQLException 如果SQL执行出错
+     */
+    public SqlQueryResultDTO executeQuery(Connection conn, String sql) throws SQLException {
+        SqlQueryResultDTO result = new SqlQueryResultDTO();
+
+        try (Statement stmt = conn.createStatement()) {
             boolean isResultSet = stmt.execute(sql);
 
             if (isResultSet) {
@@ -26,8 +81,6 @@ public class JdbcQueryExecutor {
             } else {
                 result.setAffectedRows(stmt.getUpdateCount());
             }
-        } catch (SQLException e) {
-            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "SQL执行失败: " + e.getMessage());
         }
 
         return result;
@@ -72,17 +125,6 @@ public class JdbcQueryExecutor {
         result.setColumns(columns);
         result.setRows(rows);
         return result;
-    }
-
-    public Connection getConnection(DatasourceInfo datasourceInfo) throws SQLException {
-        // 直接使用 JDBC URL
-        String url = datasourceInfo.getJdbcUrl();
-        if (url == null || url.isEmpty()) {
-            throw new BusinessException(ErrorCode.DATASOURCE_CONNECTION_FAILED, "JDBC URL不能为空");
-        }
-
-        return DriverManager.getConnection(
-                url, datasourceInfo.getUsername(), datasourceInfo.getPassword());
     }
 
     private void processResultSet(ResultSet rs, SqlQueryResultDTO result) throws SQLException {

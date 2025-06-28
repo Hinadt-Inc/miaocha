@@ -1,6 +1,7 @@
 package com.hinadt.miaocha.application.service.impl;
 
 import com.hinadt.miaocha.application.service.DatasourceService;
+import com.hinadt.miaocha.application.service.datasource.HikariDatasourceManager;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.converter.DatasourceConverter;
@@ -17,11 +18,13 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /** 数据源服务实现类 */
+@Slf4j
 @Service
 public class DatasourceServiceImpl implements DatasourceService {
 
@@ -30,6 +33,8 @@ public class DatasourceServiceImpl implements DatasourceService {
     @Autowired private DatasourceConverter datasourceConverter;
 
     @Autowired private ModuleInfoMapper moduleInfoMapper;
+
+    @Autowired private HikariDatasourceManager hikariDatasourceManager;
 
     @Override
     @Transactional
@@ -82,6 +87,10 @@ public class DatasourceServiceImpl implements DatasourceService {
         datasourceInfo.setId(id);
         datasourceMapper.update(datasourceInfo);
 
+        // 数据源信息已更新，使对应的连接池失效
+        log.info("数据源信息已更新，正在使连接池失效: {}", datasourceInfo.getName());
+        hikariDatasourceManager.invalidateDataSourceById(id);
+
         return datasourceConverter.toDto(datasourceInfo);
     }
 
@@ -89,7 +98,8 @@ public class DatasourceServiceImpl implements DatasourceService {
     @Transactional
     public void deleteDatasource(Long id) {
         // 检查数据源是否存在
-        if (datasourceMapper.selectById(id) == null) {
+        DatasourceInfo datasourceInfo = datasourceMapper.selectById(id);
+        if (datasourceInfo == null) {
             throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
         }
 
@@ -97,6 +107,10 @@ public class DatasourceServiceImpl implements DatasourceService {
         if (moduleInfoMapper.existsByDatasourceId(id)) {
             throw new BusinessException(ErrorCode.DATASOURCE_IN_USE);
         }
+
+        // 删除数据源前，先使对应的连接池失效
+        log.info("正在删除数据源，先使连接池失效: {}", datasourceInfo.getName());
+        hikariDatasourceManager.invalidateDataSourceById(id);
 
         datasourceMapper.deleteById(id);
     }

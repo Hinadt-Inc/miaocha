@@ -21,3 +21,21 @@ logstash:
   # Logstash压缩包路径
   deploy-dir: logstash
 
+# 秒查配置
+miaocha:
+  datasource:
+    hikari:
+      # 在集成测试中启用JMX监控以便监控连接池状态
+      enable-jmx-monitoring: true
+      # Doris 数据源连接池配置 - 支持查询和编辑器操作
+      maximum-pool-size: 100
+      minimum-idle: 10
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-test-query: SELECT 1
+      validation-timeout: 5000
+      leak-detection-threshold: 60000
+      auto-commit: true
+      read-only: false
+      isolate-internal-queries: false

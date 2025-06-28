@@ -12,6 +12,7 @@ import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.converter.ModuleInfoConverter;
 import com.hinadt.miaocha.domain.converter.ModulePermissionConverter;
+import com.hinadt.miaocha.domain.dto.SqlQueryResultDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoCreateDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoUpdateDTO;
@@ -383,11 +384,16 @@ class ModuleInfoServiceTest {
 
         String sql = "CREATE TABLE test_logs ...";
 
+        // 准备executeQuery的返回值
+        SqlQueryResultDTO executeResult = new SqlQueryResultDTO();
+        executeResult.setAffectedRows(1);
+
         // Mock 行为
         when(moduleInfoMapper.selectById(1L)).thenReturn(moduleWithoutDoris);
         doNothing().when(tableValidationService).validateDorisSql(moduleWithoutDoris, sql);
         when(datasourceMapper.selectById(1L)).thenReturn(sampleDatasourceInfo);
-        // jdbcQueryExecutor.executeQuery没有返回值，不需要mock
+        when(jdbcQueryExecutor.executeQuery(eq(sampleDatasourceInfo), eq(sql)))
+                .thenReturn(executeResult);
         when(moduleInfoMapper.update(any(ModuleInfo.class))).thenReturn(1);
         when(moduleInfoConverter.toDto(any(ModuleInfo.class), eq(sampleDatasourceInfo)))
                 .thenReturn(sampleModuleInfoDTO);
@@ -402,7 +408,7 @@ class ModuleInfoServiceTest {
         verify(moduleInfoMapper).selectById(1L);
         verify(tableValidationService).validateDorisSql(moduleWithoutDoris, sql);
         verify(datasourceMapper).selectById(1L);
-        verify(jdbcQueryExecutor).executeQuery(sampleDatasourceInfo, sql);
+        verify(jdbcQueryExecutor).executeQuery(eq(sampleDatasourceInfo), eq(sql));
         verify(moduleInfoMapper).update(any(ModuleInfo.class));
     }
 
@@ -428,7 +434,7 @@ class ModuleInfoServiceTest {
         assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
 
         // 验证不会执行SQL
-        verify(jdbcQueryExecutor, never()).executeQuery(any(), any());
+        verify(jdbcQueryExecutor, never()).executeQuery(any(DatasourceInfo.class), anyString());
     }
 
     @Test

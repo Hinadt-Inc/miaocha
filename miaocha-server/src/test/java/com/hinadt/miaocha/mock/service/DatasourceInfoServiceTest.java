@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import com.hinadt.miaocha.application.service.datasource.HikariDatasourceManager;
 import com.hinadt.miaocha.application.service.impl.DatasourceServiceImpl;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
@@ -47,6 +48,8 @@ class DatasourceInfoServiceTest {
     @Mock private DatasourceConverter datasourceConverter;
 
     @Mock private ModuleInfoMapper moduleInfoMapper;
+
+    @Mock private HikariDatasourceManager hikariDatasourceManager;
 
     @Spy @InjectMocks private DatasourceServiceImpl datasourceService;
 

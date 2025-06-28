@@ -306,7 +306,7 @@ class LogSearchServiceImplTest {
         verify(jdbcQueryExecutor).getConnection(testDatasource);
         verify(metadataServiceFactory).getService("doris");
         verify(metadataService).getColumnInfo(connection, tableName);
-        verify(connection).close();
+        // 注意：连接现在由HikariCP管理，不需要手动关闭
     }
 
     @Test
@@ -365,8 +365,7 @@ class LogSearchServiceImplTest {
         verify(metadataServiceFactory).getService("doris");
         verify(metadataService).getColumnInfo(connection, tableName);
 
-        // 验证连接被正确关闭（即使查询失败）
-        verify(connection).close();
+        // 注意：连接现在由HikariCP管理，即使查询失败也无需手动关闭
     }
 
     @Test

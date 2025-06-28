@@ -132,7 +132,7 @@ public class SqlQueryServiceTest {
         lenient().when(datasourceMapper.selectById(anyLong())).thenReturn(testDatasourceInfo);
         lenient().when(userMapper.selectById(anyLong())).thenReturn(testUser);
         lenient()
-                .when(jdbcQueryExecutor.executeQuery(any(), anyString()))
+                .when(jdbcQueryExecutor.executeQuery(any(DatasourceInfo.class), anyString()))
                 .thenReturn(testResultDTO);
         lenient().when(sqlQueryHistoryMapper.insert(any())).thenReturn(1);
 
@@ -177,7 +177,7 @@ public class SqlQueryServiceTest {
         // 验证调用
         verify(datasourceMapper).selectById(testQueryDTO.getDatasourceId());
         verify(userMapper).selectById(testUser.getId());
-        verify(jdbcQueryExecutor).executeQuery(testDatasourceInfo, testQueryDTO.getSql());
+        verify(jdbcQueryExecutor).executeQuery(eq(testDatasourceInfo), eq(testQueryDTO.getSql()));
         verify(sqlQueryHistoryMapper).insert(any(SqlQueryHistory.class));
         verify(permissionChecker)
                 .checkQueryPermission(
@@ -202,7 +202,7 @@ public class SqlQueryServiceTest {
         // 验证调用
         verify(datasourceMapper).selectById(testQueryDTO.getDatasourceId());
         verify(userMapper).selectById(testUser.getId());
-        verify(jdbcQueryExecutor).executeQuery(testDatasourceInfo, testQueryDTO.getSql());
+        verify(jdbcQueryExecutor).executeQuery(eq(testDatasourceInfo), eq(testQueryDTO.getSql()));
         verify(exporterFactory).getExporter("xlsx");
         verify(fileExporter).exportToFile(any(), anyString());
         verify(sqlQueryHistoryMapper).insert(any(SqlQueryHistory.class));
@@ -281,7 +281,7 @@ public class SqlQueryServiceTest {
         verify(datasourceMapper).selectById(testQueryDTO.getDatasourceId());
         verify(permissionChecker)
                 .checkQueryPermission(testUser, testQueryDTO.getDatasourceId(), "");
-        verify(jdbcQueryExecutor, never()).executeQuery(any(), anyString());
+        verify(jdbcQueryExecutor, never()).executeQuery(any(DatasourceInfo.class), anyString());
     }
 
     @Test
@@ -304,7 +304,7 @@ public class SqlQueryServiceTest {
         assertTrue(exception.getMessage().contains("导出失败"));
         verify(datasourceMapper).selectById(testQueryDTO.getDatasourceId());
         verify(userMapper).selectById(testUser.getId());
-        verify(jdbcQueryExecutor).executeQuery(testDatasourceInfo, testQueryDTO.getSql());
+        verify(jdbcQueryExecutor).executeQuery(eq(testDatasourceInfo), eq(testQueryDTO.getSql()));
         verify(exporterFactory).getExporter("xlsx");
         verify(fileExporter).exportToFile(any(), anyString());
         verify(permissionChecker)
@@ -404,6 +404,6 @@ public class SqlQueryServiceTest {
         assertEquals(processedSql, testQueryDTO.getSql());
 
         // 验证后续流程正常
-        verify(jdbcQueryExecutor).executeQuery(testDatasourceInfo, processedSql);
+        verify(jdbcQueryExecutor).executeQuery(eq(testDatasourceInfo), eq(processedSql));
     }
 }

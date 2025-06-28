@@ -12,7 +12,11 @@ import com.hinadt.miaocha.domain.dto.*;
 import com.hinadt.miaocha.domain.dto.logsearch.*;
 import com.hinadt.miaocha.integration.data.IntegrationTestDataInitializer;
 import com.hinadt.miaocha.integration.data.LogSearchTestDataInitializer;
+import java.lang.management.ManagementFactory;
 import java.util.*;
+import java.util.concurrent.*;
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -1041,6 +1045,934 @@ public class LogSearchIntegrationTest {
                             });
 
             log.info("✅ 混合字段分布查询通过 - 3个字段均有分布数据");
+        }
+    }
+
+    // ==================== 并发可靠性测试组 ====================
+
+    @Nested
+    @DisplayName("并发可靠性测试组")
+    @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+    class ConcurrencyReliabilityIntegrationTest {
+
+        @Test
+        @Order(1)
+        @DisplayName("CONCURRENT-001: HikariCP连接池并发可靠性压测")
+        void testHikariCPHighConcurrentReliability() {
+            log.info("🚀 开始HikariCP连接池并发可靠性压测");
+
+            // 获取测试环境信息
+            ConcurrentTestContext context = initializeTestContext();
+            logTestConfiguration(context);
+
+            // 创建执行器和监控
+            ExecutorService executor = Executors.newFixedThreadPool(context.threadCount);
+            ScheduledExecutorService monitor = createConnectionPoolMonitor(context.datasourceId);
+
+            try {
+                // 执行并发查询测试
+                ConcurrentTestResult testResult = executeConcurrentQueries(executor, context);
+
+                // 验证查询结果
+                validateQueryResults(testResult);
+
+                // 记录测试统计信息
+                logTestStatistics(testResult, context);
+
+                log.info("✅ HikariCP连接池并发可靠性压测通过 - 所有{}个查询成功完成", testResult.totalQueries);
+
+            } catch (TimeoutException e) {
+                log.error("❌ 并发压测超时", e);
+                throw new RuntimeException("并发压测超时: " + e.getMessage(), e);
+            } catch (Exception e) {
+                log.error("❌ 并发压测失败", e);
+                throw new RuntimeException("并发压测失败: " + e.getMessage(), e);
+            } finally {
+                // 清理资源
+                cleanupResources(executor, monitor, context.datasourceId);
+            }
+        }
+
+        // ==================== 并发测试相关的内部类和私有方法 ====================
+
+        /** 并发测试上下文信息 */
+        private record ConcurrentTestContext(
+                String moduleName,
+                Long datasourceId,
+                int threadCount,
+                int detailQueries,
+                int histogramQueries,
+                int fieldDistributionQueries) {}
+
+        /** 并发测试结果 */
+        private record ConcurrentTestResult(
+                List<String> results,
+                long totalTime,
+                int totalQueries,
+                long successCount,
+                List<CompletableFuture<String>> futures) {}
+
+        /** 初始化测试上下文 */
+        private ConcurrentTestContext initializeTestContext() {
+            String moduleName = logSearchDataInitializer.getTestModule().getName();
+            Long datasourceId = logSearchDataInitializer.getTestModule().getDatasourceId();
+
+            return new ConcurrentTestContext(moduleName, datasourceId, 30, 20, 15, 15);
+        }
+
+        /** 记录测试配置信息 */
+        private void logTestConfiguration(ConcurrentTestContext context) {
+            log.info("📊 测试配置:");
+            log.info("   - 数据源模块: {}", context.moduleName);
+            log.info("   - 数据源ID: {}", context.datasourceId);
+            log.info("   - 总测试数据: {} 条", LogSearchTestDataInitializer.TOTAL_LOG_RECORDS);
+            log.info("   - 并发线程数: {} 个", context.threadCount);
+            log.info(
+                    "   - 查询任务分布: {}详情 + {}直方图 + {}字段分布",
+                    context.detailQueries,
+                    context.histogramQueries,
+                    context.fieldDistributionQueries);
+
+            // 记录测试开始前的连接池状态
+            logDataSourceStatus("测试开始前", context.datasourceId);
+        }
+
+        /** 创建连接池监控器 */
+        private ScheduledExecutorService createConnectionPoolMonitor(Long datasourceId) {
+            ScheduledExecutorService monitor = Executors.newScheduledThreadPool(1);
+            monitor.scheduleAtFixedRate(
+                    () -> {
+                        logDataSourceStatus("测试进行中", datasourceId);
+                    },
+                    2,
+                    2,
+                    TimeUnit.SECONDS);
+            return monitor;
+        }
+
+        /** 执行并发查询测试 */
+        private ConcurrentTestResult executeConcurrentQueries(
+                ExecutorService executor, ConcurrentTestContext context)
+                throws InterruptedException,
+                        java.util.concurrent.ExecutionException,
+                        TimeoutException {
+
+            List<CompletableFuture<String>> futures = new ArrayList<>();
+
+            // 创建详情查询任务
+            futures.addAll(createDetailQueries(executor, context.detailQueries));
+
+            // 创建直方图查询任务
+            futures.addAll(createHistogramQueries(executor, context.histogramQueries));
+
+            // 创建字段分布查询任务
+            futures.addAll(
+                    createFieldDistributionQueries(executor, context.fieldDistributionQueries));
+
+            // 启动所有查询
+            log.info("⏳ 启动所有{}个并发查询...", futures.size());
+            log.info(
+                    "📊 查询分布: {}个详情查询 + {}个直方图查询 + {}个字段分布查询",
+                    context.detailQueries,
+                    context.histogramQueries,
+                    context.fieldDistributionQueries);
+
+            long startTime = System.currentTimeMillis();
+            logDataSourceStatus("查询启动后", context.datasourceId);
+
+            CompletableFuture<Void> allQueries =
+                    CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+
+            // 设置超时时间为120秒
+            allQueries.get(120, TimeUnit.SECONDS);
+
+            long endTime = System.currentTimeMillis();
+            long totalTime = endTime - startTime;
+
+            logDataSourceStatus("查询完成后", context.datasourceId);
+
+            // 收集所有查询结果
+            List<String> results = futures.stream().map(CompletableFuture::join).toList();
+
+            long successCount = results.stream().filter(r -> r.contains("成功")).count();
+
+            return new ConcurrentTestResult(
+                    results, totalTime, futures.size(), successCount, futures);
+        }
+
+        /** 创建详情查询任务 */
+        private List<CompletableFuture<String>> createDetailQueries(
+                ExecutorService executor, int queryCount) {
+            List<CompletableFuture<String>> futures = new ArrayList<>();
+
+            // 基于实际测试数据的查询配置
+            String[] actualHosts = {
+                "172.20.61.22", "172.20.61.18", "172.20.61.35", "192.168.1.10", "10.0.1.15"
+            };
+            String[] actualLevels = {"INFO", "ERROR", "WARN", "DEBUG"};
+            String[] actualServices = {
+                "hina-cloud-engine",
+                "order-service",
+                "user-service",
+                "payment-service",
+                "notification-service"
+            };
+            String[] errorKeywords = {
+                "NullPointerException",
+                "timeout",
+                "SQLException",
+                "OutOfMemoryError",
+                "ValidationException",
+                "TimeoutException"
+            };
+
+            int queryId = 1;
+
+            // 主机查询 (5个)
+            for (int i = 0; i < 5 && queryId <= queryCount; i++, queryId++) {
+                final String host = actualHosts[i % actualHosts.length];
+                futures.add(createDetailQueryByHost(executor, host, queryId));
+            }
+
+            // 级别查询 (4个)
+            for (int i = 0; i < 4 && queryId <= queryCount; i++, queryId++) {
+                final String level = actualLevels[i];
+                futures.add(createDetailQueryByLevel(executor, level, queryId));
+            }
+
+            // 服务查询 (5个)
+            for (int i = 0; i < 5 && queryId <= queryCount; i++, queryId++) {
+                final String service = actualServices[i];
+                futures.add(createDetailQueryByService(executor, service, queryId));
+            }
+
+            // 错误关键字查询 (剩余数量)
+            for (int i = 0; i < errorKeywords.length && queryId <= queryCount; i++, queryId++) {
+                final String keyword = errorKeywords[i];
+                futures.add(createDetailQueryByErrorKeyword(executor, keyword, queryId));
+            }
+
+            return futures;
+        }
+
+        /** 创建基于主机的详情查询 */
+        private CompletableFuture<String> createDetailQueryByHost(
+                ExecutorService executor, String host, int queryId) {
+            return CompletableFuture.supplyAsync(
+                    () -> {
+                        try {
+                            LogSearchDTO request = createBaseSearchRequest();
+                            request.setWhereSqls(List.of("host = '" + host + "'"));
+                            request.setFields(
+                                    List.of("host", "source", "log_time", "message.level"));
+                            request.setPageSize(50);
+
+                            LogDetailResultDTO result = logSearchService.searchDetails(request);
+
+                            // 数据验证
+                            validateDetailResult(result, "主机查询", host);
+
+                            log.info(
+                                    "✅ 详情查询{}完成 - 主机{}，查询到{}条记录",
+                                    queryId,
+                                    host,
+                                    result.getTotalCount());
+                            return "详情查询"
+                                    + queryId
+                                    + "成功: "
+                                    + result.getTotalCount()
+                                    + "条记录(主机:"
+                                    + host
+                                    + ")";
+                        } catch (Exception e) {
+                            log.error("❌ 详情查询{}失败", queryId, e);
+                            throw new RuntimeException(
+                                    "详情查询" + queryId + "失败: " + e.getMessage(), e);
+                        }
+                    },
+                    executor);
+        }
+
+        /** 创建基于级别的详情查询 */
+        private CompletableFuture<String> createDetailQueryByLevel(
+                ExecutorService executor, String level, int queryId) {
+            return CompletableFuture.supplyAsync(
+                    () -> {
+                        try {
+                            LogSearchDTO request = createBaseSearchRequest();
+                            KeywordConditionDTO condition =
+                                    createKeywordCondition("message.level", level, "MATCH_PHRASE");
+                            request.setKeywordConditions(List.of(condition));
+                            request.setPageSize(30);
+
+                            LogDetailResultDTO result = logSearchService.searchDetails(request);
+
+                            // 数据验证
+                            validateDetailResult(result, "级别查询", level);
+
+                            log.info(
+                                    "✅ 详情查询{}完成 - 级别{}，查询到{}条记录",
+                                    queryId,
+                                    level,
+                                    result.getTotalCount());
+                            return "详情查询"
+                                    + queryId
+                                    + "成功: "
+                                    + result.getTotalCount()
+                                    + "条记录(级别:"
+                                    + level
+                                    + ")";
+                        } catch (Exception e) {
+                            log.error("❌ 详情查询{}失败", queryId, e);
+                            throw new RuntimeException(
+                                    "详情查询" + queryId + "失败: " + e.getMessage(), e);
+                        }
+                    },
+                    executor);
+        }
+
+        /** 创建基于服务的详情查询 */
+        private CompletableFuture<String> createDetailQueryByService(
+                ExecutorService executor, String service, int queryId) {
+            return CompletableFuture.supplyAsync(
+                    () -> {
+                        try {
+                            LogSearchDTO request = createBaseSearchRequest();
+                            KeywordConditionDTO condition =
+                                    createKeywordCondition(
+                                            "message.service", service, "MATCH_PHRASE");
+                            request.setKeywordConditions(List.of(condition));
+                            request.setFields(
+                                    List.of(
+                                            "message.service",
+                                            "message.timestamp",
+                                            "message.thread"));
+                            request.setPageSize(20);
+
+                            LogDetailResultDTO result = logSearchService.searchDetails(request);
+
+                            // 数据验证
+                            validateDetailResult(result, "服务查询", service);
+
+                            log.info(
+                                    "✅ 详情查询{}完成 - 服务{}，查询到{}条记录",
+                                    queryId,
+                                    service,
+                                    result.getTotalCount());
+                            return "详情查询"
+                                    + queryId
+                                    + "成功: "
+                                    + result.getTotalCount()
+                                    + "条记录(服务:"
+                                    + service
+                                    + ")";
+                        } catch (Exception e) {
+                            log.error("❌ 详情查询{}失败", queryId, e);
+                            throw new RuntimeException(
+                                    "详情查询" + queryId + "失败: " + e.getMessage(), e);
+                        }
+                    },
+                    executor);
+        }
+
+        /** 创建基于错误关键字的详情查询 */
+        private CompletableFuture<String> createDetailQueryByErrorKeyword(
+                ExecutorService executor, String keyword, int queryId) {
+            return CompletableFuture.supplyAsync(
+                    () -> {
+                        try {
+                            LogSearchDTO request = createBaseSearchRequest();
+                            KeywordConditionDTO condition =
+                                    createKeywordCondition("message_text", keyword, "MATCH_PHRASE");
+                            request.setKeywordConditions(List.of(condition));
+                            request.setWhereSqls(List.of("message.level = 'ERROR'"));
+                            request.setPageSize(10);
+
+                            LogDetailResultDTO result = logSearchService.searchDetails(request);
+
+                            // 数据验证
+                            validateDetailResult(result, "错误关键字查询", keyword);
+
+                            log.info(
+                                    "✅ 详情查询{}完成 - 错误关键字{}，查询到{}条记录",
+                                    queryId,
+                                    keyword,
+                                    result.getTotalCount());
+                            return "详情查询"
+                                    + queryId
+                                    + "成功: "
+                                    + result.getTotalCount()
+                                    + "条记录(错误:"
+                                    + keyword
+                                    + ")";
+                        } catch (Exception e) {
+                            log.error("❌ 详情查询{}失败", queryId, e);
+                            throw new RuntimeException(
+                                    "详情查询" + queryId + "失败: " + e.getMessage(), e);
+                        }
+                    },
+                    executor);
+        }
+
+        /** 验证详情查询结果 */
+        private void validateDetailResult(
+                LogDetailResultDTO result, String queryType, String queryParam) {
+            assertThat(result).isNotNull();
+            assertThat(result.getRows()).isNotNull();
+            assertThat(result.getTotalCount()).isNotNull().isGreaterThanOrEqualTo(0);
+            assertThat(result.getColumns()).isNotNull().isNotEmpty();
+
+            // 如果有数据，验证数据的完整性
+            if (result.getTotalCount() > 0) {
+                assertThat(result.getRows()).isNotEmpty();
+                assertThat(result.getRows().size()).isLessThanOrEqualTo(result.getTotalCount());
+
+                // 验证每行数据都不为空
+                result.getRows()
+                        .forEach(
+                                row -> {
+                                    assertThat(row).isNotNull().isNotEmpty();
+                                });
+            }
+
+            log.debug(
+                    "✅ {}({})数据验证通过 - 总数:{}, 返回行数:{}, 列数:{}",
+                    queryType,
+                    queryParam,
+                    result.getTotalCount(),
+                    result.getRows().size(),
+                    result.getColumns().size());
+        }
+
+        /** 创建直方图查询任务 */
+        private List<CompletableFuture<String>> createHistogramQueries(
+                ExecutorService executor, int queryCount) {
+            List<CompletableFuture<String>> futures = new ArrayList<>();
+
+            String[] timeGroupings = {"minute", "hour", "auto", "second", "day"};
+            Integer[] targetBuckets = {30, 50, 60, 40, 20};
+            String[] actualLevels = {"INFO", "ERROR", "WARN", "DEBUG"};
+            String[] actualHosts = {
+                "172.20.61.22", "172.20.61.18", "172.20.61.35", "192.168.1.10", "10.0.1.15"
+            };
+
+            int queryId = 1;
+
+            // 不同时间分组单位的直方图 (5个)
+            for (int i = 0; i < 5 && queryId <= queryCount; i++, queryId++) {
+                final String timeGrouping = timeGroupings[i];
+                final Integer targetBucket = targetBuckets[i];
+                futures.add(
+                        createHistogramQueryByTimeGrouping(
+                                executor, timeGrouping, targetBucket, queryId));
+            }
+
+            // 带条件过滤的直方图 (5个)
+            for (int i = 0; i < 5 && queryId <= queryCount; i++, queryId++) {
+                final String level = actualLevels[i % actualLevels.length];
+                futures.add(createHistogramQueryByLevel(executor, level, queryId));
+            }
+
+            // 复杂条件的直方图 (剩余数量)
+            for (int i = 0; i < actualHosts.length && queryId <= queryCount; i++, queryId++) {
+                final String host = actualHosts[i];
+                futures.add(createHistogramQueryByHostCondition(executor, host, queryId));
+            }
+
+            return futures;
+        }
+
+        /** 创建基于时间分组的直方图查询 */
+        private CompletableFuture<String> createHistogramQueryByTimeGrouping(
+                ExecutorService executor, String timeGrouping, Integer targetBucket, int queryId) {
+            return CompletableFuture.supplyAsync(
+                    () -> {
+                        try {
+                            LogSearchDTO request = createBaseSearchRequest();
+                            request.setTimeGrouping(timeGrouping);
+                            request.setTargetBuckets(targetBucket);
+
+                            LogHistogramResultDTO result =
+                                    logSearchService.searchHistogram(request);
+
+                            // 数据验证
+                            validateHistogramResult(
+                                    result, "时间分组查询", timeGrouping + "/" + targetBucket);
+
+                            log.info(
+                                    "✅ 直方图查询{}完成 - {}分组/{}目标桶，{}个时间窗口",
+                                    queryId,
+                                    timeGrouping,
+                                    targetBucket,
+                                    result.getDistributionData().size());
+                            return "直方图查询"
+                                    + queryId
+                                    + "成功: "
+                                    + result.getDistributionData().size()
+                                    + "个时间窗口("
+                                    + timeGrouping
+                                    + "/"
+                                    + targetBucket
+                                    + "桶)";
+                        } catch (Exception e) {
+                            log.error("❌ 直方图查询{}失败", queryId, e);
+                            throw new RuntimeException(
+                                    "直方图查询" + queryId + "失败: " + e.getMessage(), e);
+                        }
+                    },
+                    executor);
+        }
+
+        /** 创建基于级别的直方图查询 */
+        private CompletableFuture<String> createHistogramQueryByLevel(
+                ExecutorService executor, String level, int queryId) {
+            return CompletableFuture.supplyAsync(
+                    () -> {
+                        try {
+                            LogSearchDTO request = createBaseSearchRequest();
+                            request.setTimeGrouping("auto");
+                            request.setTargetBuckets(45);
+                            request.setWhereSqls(List.of("message.level = '" + level + "'"));
+
+                            LogHistogramResultDTO result =
+                                    logSearchService.searchHistogram(request);
+
+                            // 数据验证
+                            validateHistogramResult(result, "级别过滤查询", level);
+
+                            log.info(
+                                    "✅ 直方图查询{}完成 - {}级别时间分布，{}个时间窗口",
+                                    queryId,
+                                    level,
+                                    result.getDistributionData().size());
+                            return "直方图查询"
+                                    + queryId
+                                    + "成功: "
+                                    + result.getDistributionData().size()
+                                    + "个时间窗口("
+                                    + level
+                                    + "级别)";
+                        } catch (Exception e) {
+                            log.error("❌ 直方图查询{}失败", queryId, e);
+                            throw new RuntimeException(
+                                    "直方图查询" + queryId + "失败: " + e.getMessage(), e);
+                        }
+                    },
+                    executor);
+        }
+
+        /** 创建基于主机条件的直方图查询 */
+        private CompletableFuture<String> createHistogramQueryByHostCondition(
+                ExecutorService executor, String host, int queryId) {
+            return CompletableFuture.supplyAsync(
+                    () -> {
+                        try {
+                            LogSearchDTO request = createBaseSearchRequest();
+                            request.setTimeGrouping("hour");
+                            request.setTargetBuckets(24);
+                            request.setWhereSqls(
+                                    List.of("host = '" + host + "' AND message.level != 'DEBUG'"));
+
+                            LogHistogramResultDTO result =
+                                    logSearchService.searchHistogram(request);
+
+                            // 数据验证
+                            validateHistogramResult(result, "主机条件查询", host);
+
+                            log.info(
+                                    "✅ 直方图查询{}完成 - {}主机非DEBUG分布，{}个时间窗口",
+                                    queryId,
+                                    host,
+                                    result.getDistributionData().size());
+                            return "直方图查询"
+                                    + queryId
+                                    + "成功: "
+                                    + result.getDistributionData().size()
+                                    + "个时间窗口("
+                                    + host
+                                    + "主机)";
+                        } catch (Exception e) {
+                            log.error("❌ 直方图查询{}失败", queryId, e);
+                            throw new RuntimeException(
+                                    "直方图查询" + queryId + "失败: " + e.getMessage(), e);
+                        }
+                    },
+                    executor);
+        }
+
+        /** 验证直方图查询结果 */
+        private void validateHistogramResult(
+                LogHistogramResultDTO result, String queryType, String queryParam) {
+            assertThat(result).isNotNull();
+            assertThat(result.getDistributionData()).isNotNull();
+            assertThat(result.getTimeUnit()).isNotNull().isNotBlank();
+            assertThat(result.getTimeInterval()).isNotNull().isGreaterThan(0);
+
+            // 验证时间分布数据的完整性
+            result.getDistributionData()
+                    .forEach(
+                            data -> {
+                                assertThat(data).isNotNull();
+                                assertThat(data.getTimePoint()).isNotNull();
+                                assertThat(data.getCount()).isNotNull().isGreaterThanOrEqualTo(0);
+                            });
+
+            log.debug(
+                    "✅ {}({})数据验证通过 - 时间窗口数:{}, 时间单位:{}, 间隔:{}",
+                    queryType,
+                    queryParam,
+                    result.getDistributionData().size(),
+                    result.getTimeUnit(),
+                    result.getTimeInterval());
+        }
+
+        /** 创建字段分布查询任务 */
+        private List<CompletableFuture<String>> createFieldDistributionQueries(
+                ExecutorService executor, int queryCount) {
+            List<CompletableFuture<String>> futures = new ArrayList<>();
+
+            String[] singleFields = {
+                "host", "source", "message.level", "message.service", "message.thread"
+            };
+            String[][] multipleFields = {
+                {"host", "source"},
+                {"message.level", "message.service"},
+                {"host", "message.level"},
+                {"source", "message.thread"},
+                {"message.service", "message.environment"}
+            };
+            String[] actualLevels = {"INFO", "ERROR", "WARN", "DEBUG"};
+
+            int queryId = 1;
+
+            // 单字段分布查询 (5个)
+            for (int i = 0; i < 5 && queryId <= queryCount; i++, queryId++) {
+                final String field = singleFields[i];
+                final int currentQueryId = queryId;
+                futures.add(createFieldDistributionQuerySingle(executor, field, currentQueryId));
+            }
+
+            // 多字段分布查询 (5个)
+            for (int i = 0; i < 5 && queryId <= queryCount; i++, queryId++) {
+                final String[] fields = multipleFields[i];
+                final int currentQueryId = queryId;
+                futures.add(createFieldDistributionQueryMultiple(executor, fields, currentQueryId));
+            }
+
+            // 带条件过滤的字段分布查询 (剩余数量)
+            for (int i = 0; i < actualLevels.length && queryId <= queryCount; i++, queryId++) {
+                final String level = actualLevels[i];
+                final int currentQueryId = queryId;
+                futures.add(
+                        createFieldDistributionQueryWithCondition(executor, level, currentQueryId));
+            }
+
+            return futures;
+        }
+
+        /** 创建单字段分布查询 */
+        private CompletableFuture<String> createFieldDistributionQuerySingle(
+                ExecutorService executor, String field, int queryId) {
+            return CompletableFuture.supplyAsync(
+                    () -> {
+                        try {
+                            LogSearchDTO request = createBaseSearchRequest();
+                            request.setFields(List.of(field));
+
+                            LogFieldDistributionResultDTO result =
+                                    logSearchService.searchFieldDistributions(request);
+
+                            // 数据验证
+                            validateFieldDistributionResult(result, "单字段查询", field);
+
+                            int totalDistributions =
+                                    result.getFieldDistributions().stream()
+                                            .mapToInt(fd -> fd.getValueDistributions().size())
+                                            .sum();
+                            log.info(
+                                    "✅ 字段分布查询{}完成 - {}字段，{}个不同值",
+                                    queryId,
+                                    field,
+                                    totalDistributions);
+                            return "字段分布查询"
+                                    + queryId
+                                    + "成功: "
+                                    + totalDistributions
+                                    + "个值("
+                                    + field
+                                    + ")";
+                        } catch (Exception e) {
+                            log.error("❌ 字段分布查询{}失败", queryId, e);
+                            throw new RuntimeException(
+                                    "字段分布查询" + queryId + "失败: " + e.getMessage(), e);
+                        }
+                    },
+                    executor);
+        }
+
+        /** 创建多字段分布查询 */
+        private CompletableFuture<String> createFieldDistributionQueryMultiple(
+                ExecutorService executor, String[] fields, int queryId) {
+            return CompletableFuture.supplyAsync(
+                    () -> {
+                        try {
+                            LogSearchDTO request = createBaseSearchRequest();
+                            request.setFields(List.of(fields));
+
+                            LogFieldDistributionResultDTO result =
+                                    logSearchService.searchFieldDistributions(request);
+
+                            // 数据验证
+                            validateFieldDistributionResult(
+                                    result, "多字段查询", String.join("+", fields));
+
+                            log.info(
+                                    "✅ 字段分布查询{}完成 - {}字段组合，{}个字段分布",
+                                    queryId,
+                                    String.join("+", fields),
+                                    result.getFieldDistributions().size());
+                            return "字段分布查询"
+                                    + queryId
+                                    + "成功: "
+                                    + result.getFieldDistributions().size()
+                                    + "个字段分布("
+                                    + String.join("+", fields)
+                                    + ")";
+                        } catch (Exception e) {
+                            log.error("❌ 字段分布查询{}失败", queryId, e);
+                            throw new RuntimeException(
+                                    "字段分布查询" + queryId + "失败: " + e.getMessage(), e);
+                        }
+                    },
+                    executor);
+        }
+
+        /** 创建带条件的字段分布查询 */
+        private CompletableFuture<String> createFieldDistributionQueryWithCondition(
+                ExecutorService executor, String level, int queryId) {
+            return CompletableFuture.supplyAsync(
+                    () -> {
+                        try {
+                            LogSearchDTO request = createBaseSearchRequest();
+                            request.setFields(List.of("host", "message.service"));
+                            request.setWhereSqls(List.of("message.level = '" + level + "'"));
+
+                            LogFieldDistributionResultDTO result =
+                                    logSearchService.searchFieldDistributions(request);
+
+                            // 数据验证
+                            validateFieldDistributionResult(result, "条件过滤查询", level);
+
+                            log.info(
+                                    "✅ 字段分布查询{}完成 - {}级别的主机+服务分布，{}个字段",
+                                    queryId,
+                                    level,
+                                    result.getFieldDistributions().size());
+                            return "字段分布查询"
+                                    + queryId
+                                    + "成功: "
+                                    + result.getFieldDistributions().size()
+                                    + "个字段分布("
+                                    + level
+                                    + "级别)";
+                        } catch (Exception e) {
+                            log.error("❌ 字段分布查询{}失败", queryId, e);
+                            throw new RuntimeException(
+                                    "字段分布查询" + queryId + "失败: " + e.getMessage(), e);
+                        }
+                    },
+                    executor);
+        }
+
+        /** 验证字段分布查询结果 */
+        private void validateFieldDistributionResult(
+                LogFieldDistributionResultDTO result, String queryType, String queryParam) {
+            assertThat(result).isNotNull();
+            assertThat(result.getFieldDistributions()).isNotNull().isNotEmpty();
+            assertThat(result.getSampleSize()).isNotNull().isGreaterThan(0);
+
+            // 验证每个字段分布的完整性
+            result.getFieldDistributions()
+                    .forEach(
+                            fieldDistribution -> {
+                                assertThat(fieldDistribution).isNotNull();
+                                assertThat(fieldDistribution.getFieldName())
+                                        .isNotNull()
+                                        .isNotBlank();
+                                assertThat(fieldDistribution.getValueDistributions()).isNotNull();
+
+                                // 验证值分布数据
+                                fieldDistribution
+                                        .getValueDistributions()
+                                        .forEach(
+                                                valueDistribution -> {
+                                                    assertThat(valueDistribution).isNotNull();
+                                                    assertThat(valueDistribution.getCount())
+                                                            .isNotNull()
+                                                            .isGreaterThan(0);
+                                                    assertThat(valueDistribution.getPercentage())
+                                                            .isNotNull()
+                                                            .isGreaterThanOrEqualTo(0.0);
+                                                });
+                            });
+
+            log.debug(
+                    "✅ {}({})数据验证通过 - 字段数:{}, 采样大小:{}",
+                    queryType,
+                    queryParam,
+                    result.getFieldDistributions().size(),
+                    result.getSampleSize());
+        }
+
+        /** 验证查询结果 */
+        private void validateQueryResults(ConcurrentTestResult testResult) {
+            // 验证所有查询都成功
+            assertThat(testResult.results).hasSize(testResult.totalQueries);
+            testResult.results.forEach(
+                    result -> {
+                        assertThat(result).contains("成功");
+                        log.debug("📋 查询结果: {}", result);
+                    });
+
+            // 验证没有异常
+            testResult.futures.forEach(
+                    future -> {
+                        assertThat(future).isCompleted();
+                        assertThat(future).isNotCancelled();
+                        assertThat(future.isCompletedExceptionally()).isFalse();
+                    });
+
+            // 验证成功率
+            double successRate = (testResult.successCount * 100.0 / testResult.totalQueries);
+            assertThat(successRate).isEqualTo(100.0);
+
+            log.info("✅ 查询结果验证通过 - 成功率: {}%", String.format("%.2f", successRate));
+        }
+
+        /** 记录测试统计信息 */
+        private void logTestStatistics(
+                ConcurrentTestResult testResult, ConcurrentTestContext context) {
+            double successRate = testResult.successCount * 100.0 / testResult.totalQueries;
+            double throughput = testResult.totalQueries * 1000.0 / testResult.totalTime;
+
+            log.info("🎉 HikariCP高并发压测完成！");
+            log.info("📊 执行统计:");
+            log.info("   - 并发线程数: {} 个", context.threadCount);
+            log.info(
+                    "   - 总查询数: {} 个 ({}详情 + {}直方图 + {}字段分布)",
+                    testResult.totalQueries,
+                    context.detailQueries,
+                    context.histogramQueries,
+                    context.fieldDistributionQueries);
+            log.info("   - 成功查询数: {} 个", testResult.successCount);
+            log.info("   - 成功率: {}%", String.format("%.2f", successRate));
+            log.info("   - 总耗时: {} ms", testResult.totalTime);
+            log.info("   - 平均耗时: {} ms/查询", testResult.totalTime / testResult.totalQueries);
+            log.info("   - 吞吐量: {} 查询/秒", String.format("%.2f", throughput));
+            log.info("   - 数据源模块: {}", context.moduleName);
+            log.info("   - 数据源ID: {}", context.datasourceId);
+
+            // 最终连接池状态检查
+            logDataSourceStatus("测试结束", context.datasourceId);
+        }
+
+        /** 清理资源 */
+        private void cleanupResources(
+                ExecutorService executor, ScheduledExecutorService monitor, Long datasourceId) {
+            monitor.shutdown();
+            executor.shutdown();
+            try {
+                if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
+                    executor.shutdownNow();
+                }
+                if (!monitor.awaitTermination(5, TimeUnit.SECONDS)) {
+                    monitor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                executor.shutdownNow();
+                monitor.shutdownNow();
+            }
+            log.info("🧹 线程池已清理");
+
+            // 最终状态记录
+            logDataSourceStatus("清理完成", datasourceId);
+        }
+
+        /** 记录数据源连接池状态信息 */
+        private void logDataSourceStatus(String phase, Long datasourceId) {
+            try {
+                log.info("📊 ========== {} 数据源状态 ==========", phase);
+                log.info("📌 数据源ID: {}", datasourceId);
+
+                // 尝试通过JMX获取HikariCP连接池信息
+                try {
+                    MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
+
+                    // HikariCP的JMX ObjectName模式: com.zaxxer.hikari:type=Pool (池名称)
+                    // 连接池名称格式: HikariPool-数据源名称-数据源ID
+                    String datasourceName = logSearchDataInitializer.getTestDatasource().getName();
+                    String poolName =
+                            String.format("HikariPool-%s-%s", datasourceName, datasourceId);
+                    ObjectName objectName =
+                            new ObjectName("com.zaxxer.hikari:type=Pool (" + poolName + ")");
+
+                    log.debug("🔍 查找JMX连接池: {}", objectName);
+                    log.debug("🔍 已注册的HikariCP MBeans:");
+                    mBeanServer
+                            .queryNames(new ObjectName("com.zaxxer.hikari:*"), null)
+                            .forEach(name -> log.debug("   - {}", name));
+
+                    if (mBeanServer.isRegistered(objectName)) {
+                        Integer totalConnections =
+                                (Integer) mBeanServer.getAttribute(objectName, "TotalConnections");
+                        Integer activeConnections =
+                                (Integer) mBeanServer.getAttribute(objectName, "ActiveConnections");
+                        Integer idleConnections =
+                                (Integer) mBeanServer.getAttribute(objectName, "IdleConnections");
+                        Integer threadsAwaitingConnection =
+                                (Integer)
+                                        mBeanServer.getAttribute(
+                                                objectName, "ThreadsAwaitingConnection");
+
+                        log.info("🔗 连接池状态:");
+                        log.info("   - 总连接数: {}", totalConnections);
+                        log.info("   - 活跃连接数: {}", activeConnections);
+                        log.info("   - 空闲连接数: {}", idleConnections);
+                        log.info("   - 等待连接的线程数: {}", threadsAwaitingConnection);
+                        double poolUtilization =
+                                totalConnections > 0
+                                        ? (activeConnections * 100.0 / totalConnections)
+                                        : 0;
+                        log.info("   - 连接池利用率: {}%", String.format("%.2f", poolUtilization));
+
+                    } else {
+                        log.info("🔗 连接池状态: JMX MBean未找到 - {}", objectName);
+                        log.info("   可能原因: 1) JMX监控未启用 2) 连接池尚未初始化 3) 连接池名称不匹配");
+                    }
+                } catch (Exception jmxException) {
+                    log.debug("⚠️  无法通过JMX获取连接池状态: {}", jmxException.getMessage());
+                    log.info("🔗 连接池状态: 无法获取详细信息 (JMX不可用)");
+                }
+
+                // 记录系统资源状态
+                Runtime runtime = Runtime.getRuntime();
+                long totalMemory = runtime.totalMemory();
+                long freeMemory = runtime.freeMemory();
+                long usedMemory = totalMemory - freeMemory;
+                double memoryUsageRate = (usedMemory * 100.0 / totalMemory);
+
+                log.info("💾 系统资源:");
+                log.info("   - 已用内存: {} MB", usedMemory / 1024 / 1024);
+                log.info("   - 空闲内存: {} MB", freeMemory / 1024 / 1024);
+                log.info("   - 总内存: {} MB", totalMemory / 1024 / 1024);
+                log.info("   - 内存使用率: {}%", String.format("%.2f", memoryUsageRate));
+                log.info("   - 活跃线程数: {}", Thread.activeCount());
+
+                log.info("📊 ==========================================");
+
+            } catch (Exception e) {
+                log.warn("⚠️  记录数据源状态时发生异常: {}", e.getMessage());
+            }
         }
     }
 

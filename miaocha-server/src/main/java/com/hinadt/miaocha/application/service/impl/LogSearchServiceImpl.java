@@ -104,10 +104,12 @@ public class LogSearchServiceImpl implements LogSearchService {
         // 获取表名
         String tableName = moduleInfoService.getTableNameByModule(module);
 
-        try (Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo)) {
+        try {
+            Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo);
             // 获取数据库元数据服务并查询字段信息
             DatabaseMetadataService metadataService =
                     metadataServiceFactory.getService(datasourceInfo.getType());
+            // 注意：这里不关闭conn，让HikariCP管理连接生命周期
             return metadataService.getColumnInfo(conn, tableName);
         } catch (SQLException e) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "获取表字段信息失败: " + e.getMessage());
