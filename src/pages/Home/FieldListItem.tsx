@@ -18,9 +18,10 @@ interface IProps {
   columnIndex: number; // 字段索引
   column: ILogColumnsResponse; // 字段数据
   fieldData: IFieldData; // 合并后的字段数据
+  moduleQueryConfig?: any; // 模块查询配置
 }
 
-const FieldListItem: React.FC<IProps> = ({ isSelected, column, columnIndex, fieldData }) => {
+const FieldListItem: React.FC<IProps> = ({ isSelected, column, columnIndex, fieldData, moduleQueryConfig }) => {
   const {
     distributions = {},
     activeColumns = [],
@@ -91,7 +92,10 @@ const FieldListItem: React.FC<IProps> = ({ isSelected, column, columnIndex, fiel
                 <Tag color={getFieldTypeColor(column.dataType)}>{column.dataType?.substr(0, 1)?.toUpperCase()}</Tag>
               </Tooltip>
               <span className={styles.columnName}>{column.columnName}</span>
-              {!(isSelected && column.columnName === 'log_time') && (
+              {(() => {
+                const timeField = moduleQueryConfig?.timeField || 'log_time';
+                return !(isSelected && column.columnName === timeField);
+              })() && (
                 <Button
                   color={isSelected ? 'danger' : 'primary'}
                   variant="link"

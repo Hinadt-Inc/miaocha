@@ -16,6 +16,7 @@ interface IProps {
   onChangeColumns: (params: ILogColumnsResponse[]) => void; // 列变化回调函数
   sqls?: string[]; // SQL语句列表
   onSearch?: (params: ILogSearchParams) => void; // 搜索回调函数
+  moduleQueryConfig?: any; // 模块查询配置
 }
 
 interface ColumnHeaderProps {
@@ -127,6 +128,7 @@ const VirtualTable = (props: IProps) => {
     whereSqlsFromSider = [],
     sqls,
     onSearch,
+    moduleQueryConfig,
   } = props;
   const containerRef = useRef<HTMLDivElement>(null);
   const tblRef: Parameters<typeof Table>[0]['ref'] = useRef(null);
@@ -224,7 +226,8 @@ const VirtualTable = (props: IProps) => {
     }));
   };
   const getBaseColumns = useMemo(() => {
-    const otherColumns = dynamicColumns?.filter((item) => item.selected && item.columnName !== 'log_time');
+    const timeField = moduleQueryConfig?.timeField || 'log_time'; // 如果没有配置则回退到log_time
+    const otherColumns = dynamicColumns?.filter((item) => item.selected && item.columnName !== timeField);
     const _columns: any[] = [];
     if (otherColumns && otherColumns.length > 0) {
       otherColumns.forEach((item: ILogColumnsResponse) => {
@@ -240,16 +243,58 @@ const VirtualTable = (props: IProps) => {
 
     return [
       {
-        title: 'log_time',
-        dataIndex: 'log_time',
+        title: timeField,
+        dataIndex: timeField,
         width: 190,
         resizable: false,
         sorter: (a: any, b: any) => {
-          const dateA = new Date(a.log_time).getTime();
-          const dateB = new Date(b.log_time).getTime();
-          return dateA - dateB;
+          // 处理时间字段排序，考虑到时间字段可能已经被格式化为字符串
+          const timeA = a[timeField];
+          const timeB = b[timeField];
+
+          // 如果值为空或无效，放到最后
+          if (!timeA && !timeB) return 0;
+          if (!timeA) return 1;
+          if (!timeB) return -1;
+
+          const parseTime = (timeStr: any) => {
+            if (!timeStr) return 0;
+
+            const str = String(timeStr);
+
+            // 如果是已经格式化的时间字符串（如 "2025-06-28 14:51:23.208"），直接用字符串比较
+            if (str.match(/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}/)) {
+              return str;
+            }
+
+            // 尝试转换为Date对象
+            const date = new Date(str);
+            if (!isNaN(date.getTime())) {
+              return date.getTime();
+            }
+
+            // 如果无法解析为日期，返回原字符串用于字符串比较
+            return str;
+          };
+
+          const parsedA = parseTime(timeA);
+          const parsedB = parseTime(timeB);
+
+          // 如果都是数字，按数字比较
+          if (typeof parsedA === 'number' && typeof parsedB === 'number') {
+            return parsedA - parsedB;
+          }
+
+          // 否则按字符串比较
+          return String(parsedA).localeCompare(String(parsedB));
         },
-        render: (text: string) => text?.replace('T', ' '),
+        render: (text: any) => {
+          if (!text) return '';
+          const str = String(text);
+          // 如果是"Invalid Date"或其他无效值，返回原值或空字符串
+          if (str === 'Invalid Date' || str === 'NaN') return '';
+          return str.replace('T', ' ');
+        },
       },
       {
         title: '_source',
@@ -337,8 +382,9 @@ const VirtualTable = (props: IProps) => {
 
   useEffect(() => {
     const resizableColumns = getBaseColumns.map((col, index) => {
-      // log_time列宽度始终为190且不可拖拽
-      if (col.dataIndex === 'log_time') {
+      // 时间字段列宽度始终为190且不可拖拽
+      const timeField = moduleQueryConfig?.timeField || 'log_time';
+      if (col.dataIndex === timeField) {
         return {
           ...col,
           width: 190,
@@ -418,8 +464,9 @@ const VirtualTable = (props: IProps) => {
 
   // 动态计算scroll.x
   useEffect(() => {
-    // 只统计动态列（不含log_time/_source）
-    const dynamicCols = columns.filter((col: any) => col.dataIndex !== 'log_time' && col.dataIndex !== '_source');
+    // 只统计动态列（不含时间字段/_source）
+    const timeField = moduleQueryConfig?.timeField || 'log_time';
+    const dynamicCols = columns.filter((col: any) => col.dataIndex !== timeField && col.dataIndex !== '_source');
     let extra = 0;
     dynamicCols.forEach((col: any) => {
       const titleStr = typeof col.title === 'string' ? col.title : col.dataIndex || '';
@@ -438,7 +485,8 @@ const VirtualTable = (props: IProps) => {
     setColumns(newCols);
     onChangeColumns(col);
     // 当删除列后，计算剩余的选中字段
-    const _fields = newCols?.filter((item) => !['log_time', '_source'].includes(item.title)) || [];
+    const timeField = moduleQueryConfig?.timeField || 'log_time';
+    const _fields = newCols?.filter((item) => ![timeField, '_source'].includes(item.title)) || [];
     if (_fields.length === 0 && onSearch) {
       const params = {
         ...searchParams,
@@ -466,7 +514,8 @@ const VirtualTable = (props: IProps) => {
   // 如果存在_source列，则不显示删除、左移、右移按钮
   const enhancedColumns = !hasSourceColumn
     ? columns.map((col, idx) => {
-        if (col.dataIndex === 'log_time') {
+        const timeField = moduleQueryConfig?.timeField || 'log_time';
+        if (col.dataIndex === timeField) {
           return col;
         }
         return {
@@ -499,7 +548,9 @@ const VirtualTable = (props: IProps) => {
         scroll={{ x: data.length > 0 ? scrollX : 0, y: containerHeight - headerHeight - 1 }}
         expandable={{
           columnWidth: 26,
-          expandedRowRender: (record) => <ExpandedRow data={record} keywords={searchParams?.keywords || []} />,
+          expandedRowRender: (record) => (
+            <ExpandedRow data={record} keywords={searchParams?.keywords || []} moduleQueryConfig={moduleQueryConfig} />
+          ),
         }}
         components={{
           header: {

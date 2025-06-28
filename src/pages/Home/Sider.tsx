@@ -15,8 +15,6 @@ interface IProps {
   setWhereSqlsFromSider: any; // 设置where条件
   onActiveColumnsChange?: (activeColumns: string[]) => void; // 激活字段变化回调函数
   onSelectedModuleChange?: (selectedModule: string) => void; // 选中模块变化回调函数
-  selectedQueryConfig?: string | undefined; // 选中的查询配置
-  queryConfigs?: any[]; // 查询配置列表
   moduleQueryConfig?: any; // 模块查询配置
   selectedQueryConfigs?: any[]; // 选中的查询配置列表
 }
@@ -30,8 +28,6 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
     setWhereSqlsFromSider,
     onActiveColumnsChange,
     onSelectedModuleChange,
-    selectedQueryConfig,
-    queryConfigs,
     moduleQueryConfig,
     selectedQueryConfigs,
   } = props;
@@ -48,9 +44,10 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
   const getColumns = useRequest(api.fetchColumns, {
     manual: true,
     onSuccess: (res) => {
-      // 确保log_time和message字段默认被选中
+      // 确保时间字段默认被选中（使用moduleQueryConfig中的timeField）
+      const timeField = moduleQueryConfig?.timeField || 'log_time'; // 如果没有配置则回退到log_time
       const processedColumns = res?.map((column) => {
-        if (column.columnName === 'log_time') {
+        if (column.columnName === timeField) {
           return { ...column, selected: true, _createTime: new Date().getTime() };
         }
         return column;
@@ -161,7 +158,8 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
     if (onSelectedModuleChange) {
       onSelectedModuleChange(value);
     }
-    getColumns.run({ datasourceId: Number(datasourceId), module: value });
+    // 注意：这里不立即调用getColumns，而是等待moduleQueryConfig加载完成
+    // getColumns.run({ datasourceId: Number(datasourceId), module: value });
     onSearch({
       ...searchParams,
       datasourceId: Number(datasourceId),
@@ -194,16 +192,29 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
         if (onSelectedModuleChange) {
           onSelectedModuleChange(module);
         }
-        getColumns.run({ datasourceId: Number(datasourceId), module });
+        // 注意：这里不立即调用getColumns，而是等待moduleQueryConfig加载完成
+        // getColumns.run({ datasourceId: Number(datasourceId), module });
       }
     }
   }, [modules, favoriteModule]);
 
+  // 当moduleQueryConfig和selectedModule都准备好时，调用getColumns
+  useEffect(() => {
+    if (selectedModule && moduleQueryConfig !== undefined && modules.length > 0) {
+      const targetModule = modules.find((item) => item.value === selectedModule);
+      if (targetModule) {
+        const datasourceId = targetModule.datasourceId;
+        getColumns.run({ datasourceId: Number(datasourceId), module: selectedModule });
+      }
+    }
+  }, [selectedModule, moduleQueryConfig, modules]);
+
   // 切换字段选中状态
   const toggleColumn = (data: ILogColumnsResponse) => {
     const index = columns.findIndex((item) => item.columnName === data.columnName);
-    // 如果是log_time字段，不允许取消选择
-    if (columns[index].columnName === 'log_time' || columns[index].isFixed) {
+    // 如果是时间字段，不允许取消选择（使用moduleQueryConfig中的timeField）
+    const timeField = moduleQueryConfig?.timeField || 'log_time';
+    if (columns[index].columnName === timeField || columns[index].isFixed) {
       return;
     }
     // 添加
@@ -375,6 +386,7 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
                   column={item}
                   columnIndex={index}
                   fieldData={fieldListProps}
+                  moduleQueryConfig={moduleQueryConfig}
                 />
               )),
           },
@@ -398,6 +410,7 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
                   column={item}
                   columnIndex={index}
                   fieldData={fieldListProps}
+                  moduleQueryConfig={moduleQueryConfig}
                 />
               )) || []),
             ],

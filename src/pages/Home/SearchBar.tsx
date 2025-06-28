@@ -19,6 +19,7 @@ interface IProps {
   activeColumns?: string[]; // 激活的字段列表
   getDistributionWithSearchBar?: () => void; // 获取字段分布回调函数
   selectedModule?: string; // 当前选中的模块
+  moduleQueryConfig?: any; // 模块查询配置
   onQueryConfigChange?: (selectedConfig: string | undefined, queryConfigs: any[], res?: any) => void; // 查询配置变化回调函数
   onSelectedQueryConfigsChange?: (selectedQueryConfigs: any[]) => void; // 选中的查询配置列表变化回调函数
 }
@@ -35,6 +36,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     activeColumns,
     getDistributionWithSearchBar,
     selectedModule,
+    moduleQueryConfig,
     onQueryConfigChange,
     onSelectedQueryConfigsChange,
   } = props;
@@ -61,30 +63,53 @@ const SearchBar = forwardRef((props: IProps, ref) => {
 
   // 查询配置相关状态
   const [queryConfigs, setQueryConfigs] = useState<any[]>([]);
-  const [selectedQueryConfig, setSelectedQueryConfig] = useState<string | undefined>(undefined);
   const [selectedQueryConfigs, setSelectedQueryConfigs] = useState<any[]>([]); // 选中的查询配置列表
+  const [selectedFieldName, setSelectedFieldName] = useState<string | undefined>(undefined); // 选中的字段名
+  const [selectedSearchMethod, setSelectedSearchMethod] = useState<string | undefined>(undefined); // 选中的搜索方法
+  const [availableSearchMethods, setAvailableSearchMethods] = useState<string[]>([]); // 当前字段可用的搜索方法
+  const [originalKeywordFields, setOriginalKeywordFields] = useState<any[]>([]); // 保存原始的keywordFields数据
 
   // 获取模块查询配置
   const getQueryConfig = useRequest(modulesApi.getModuleQueryConfig, {
     manual: true,
     onSuccess: (res) => {
       if (res && res.keywordFields) {
-        const configs = res.keywordFields.map((field: any, index: number) => ({
-          value: `${field.fieldName}_${field.searchMethod}`,
-          label: `${field.fieldName} (${field.searchMethod})`,
-          fieldName: field.fieldName,
-          searchMethod: field.searchMethod,
+        // 保存原始的keywordFields数据
+        setOriginalKeywordFields(res.keywordFields);
+
+        // 重新组织数据结构，按fieldName分组
+        const fieldMap = new Map();
+        res.keywordFields.forEach((field: any) => {
+          if (!fieldMap.has(field.fieldName)) {
+            fieldMap.set(field.fieldName, []);
+          }
+          fieldMap.get(field.fieldName).push(field.searchMethod);
+        });
+
+        // 生成字段选项
+        const fieldOptions = Array.from(fieldMap.keys()).map((fieldName) => ({
+          value: fieldName,
+          label: fieldName,
+          searchMethods: fieldMap.get(fieldName),
         }));
-        setQueryConfigs(configs);
-        // 重置选中状态，确保显示placeholder
-        setSelectedQueryConfig(undefined);
+
+        setQueryConfigs(fieldOptions);
+
+        // 重置选中状态
+        setSelectedFieldName(undefined);
+        setSelectedSearchMethod(undefined);
+        setAvailableSearchMethods([]);
+
         // 通知父组件查询配置已更新，传递完整的配置包括timeField
         if (onQueryConfigChange) {
-          onQueryConfigChange(undefined, configs, res);
+          onQueryConfigChange(undefined, fieldOptions, res);
         }
       } else {
+        setOriginalKeywordFields([]);
         setQueryConfigs([]);
-        setSelectedQueryConfig(undefined);
+        setSelectedFieldName(undefined);
+        setSelectedSearchMethod(undefined);
+        setAvailableSearchMethods([]);
         // 通知父组件查询配置已清空
         if (onQueryConfigChange) {
           onQueryConfigChange(undefined, [], null);
@@ -92,8 +117,11 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       }
     },
     onError: () => {
+      setOriginalKeywordFields([]);
       setQueryConfigs([]);
-      setSelectedQueryConfig(undefined);
+      setSelectedFieldName(undefined);
+      setSelectedSearchMethod(undefined);
+      setAvailableSearchMethods([]);
       // 通知父组件查询配置已清空
       if (onQueryConfigChange) {
         onQueryConfigChange(undefined, [], null);
@@ -205,9 +233,26 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     setSql(value || '');
   };
 
-  // 处理查询配置选择变化
-  const changeQueryConfig = (value: string | undefined) => {
-    setSelectedQueryConfig(value || undefined);
+  // 处理字段名选择变化
+  const changeFieldName = (value: string | undefined) => {
+    setSelectedFieldName(value || undefined);
+    setSelectedSearchMethod(undefined); // 重置搜索方法
+
+    if (value) {
+      // 从原始的keywordFields数据中找到对应字段的所有搜索方法
+      const fieldMethods = originalKeywordFields
+        .filter((field: any) => field.fieldName === value)
+        .map((field: any) => field.searchMethod);
+
+      setAvailableSearchMethods(fieldMethods);
+    } else {
+      setAvailableSearchMethods([]);
+    }
+  };
+
+  // 处理搜索方法选择变化
+  const changeSearchMethod = (value: string | undefined) => {
+    setSelectedSearchMethod(value || undefined);
   };
 
   const handleTimeFromTag = () => {
@@ -233,6 +278,27 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     return (
       <div className={styles.filter}>
         <Space wrap>
+          {selectedQueryConfigs.map((item: any) => (
+            <Tooltip placement="topLeft" title={`${item.fieldName} (${item.searchMethod})`}>
+              <Tag
+                key={item.value}
+                color="orange"
+                closable
+                onClick={() => {
+                  setSelectedFieldName(item.fieldName);
+                  setSelectedSearchMethod(item.searchMethod);
+                  // 从原始的keywordFields数据中设置可用的搜索方法
+                  const fieldMethods = originalKeywordFields
+                    .filter((field: any) => field.fieldName === item.fieldName)
+                    .map((field: any) => field.searchMethod);
+                  setAvailableSearchMethods(fieldMethods);
+                }}
+                onClose={() => handleCloseQueryConfig(item)}
+              >
+                <span className="tagContent">{item.label}</span>
+              </Tag>
+            </Tooltip>
+          ))}
           {keywords.map((item: string) => (
             <Tag
               key={item}
@@ -257,20 +323,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
               </Tag>
             </Tooltip>
           ))}
-          {selectedQueryConfigs.map((item: any) => (
-            <Tooltip placement="topLeft" title={`${item.fieldName} (${item.searchMethod})`}>
-              <Tag
-                key={item.value}
-                color="orange"
-                closable
-                onClick={() => setSelectedQueryConfig(item.value)}
-                onClose={() => handleCloseQueryConfig(item)}
-              >
-                <span className="tagContent">{item.label}</span>
-              </Tag>
-            </Tooltip>
-          ))}
-
           {/* 时间范围 */}
           {range.length === 2 && (
             <Tag color="blue" onClick={handleTimeFromTag}>
@@ -287,7 +339,8 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     // 只有在组件初始化完成后才执行搜索和保存逻辑
     if (!initialized) return;
 
-    const _fields = activeColumns?.length === 1 && activeColumns[0] === 'log_time' ? [] : activeColumns || [];
+    const timeField = moduleQueryConfig?.timeField || 'log_time'; // 如果没有配置则回退到log_time
+    const _fields = activeColumns?.length === 1 && activeColumns[0] === timeField ? [] : activeColumns || [];
     const params = {
       ...searchParams,
       ...(keywords.length > 0 && { keywords }),
@@ -364,18 +417,26 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       }
     }
 
-    // 如果选择了查询配置，添加到列表中
-    if (selectedQueryConfig) {
-      const selectedConfig = queryConfigs.find((config) => config.value === selectedQueryConfig);
-      if (selectedConfig && !selectedQueryConfigs.some((config) => config.value === selectedQueryConfig)) {
-        setSelectedQueryConfigs((prev) => [...prev, selectedConfig]);
+    // 如果选择了字段名，添加到列表中（搜索方法可以为空）
+    if (selectedFieldName) {
+      const searchMethod = selectedSearchMethod || ''; // 如果没有选择搜索方法，使用空字符串
+      const newConfig = {
+        value: `${selectedFieldName}_${searchMethod}`,
+        label: searchMethod ? `${selectedFieldName} (${searchMethod})` : selectedFieldName,
+        fieldName: selectedFieldName,
+        searchMethod: searchMethod,
+      };
+      if (!selectedQueryConfigs.some((config) => config.value === newConfig.value)) {
+        setSelectedQueryConfigs((prev) => [...prev, newConfig]);
       }
     }
 
     // 清空输入框
     setKeyword('');
     setSql('');
-    setSelectedQueryConfig(undefined);
+    setSelectedFieldName(undefined);
+    setSelectedSearchMethod(undefined);
+    setAvailableSearchMethods([]);
 
     const latestTime = getLatestTime(timeOption);
     setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
@@ -522,21 +583,39 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
   };
 
-  // 渲染查询配置下拉框
-  const queryConfigRender = useMemo(() => {
+  // 渲染字段名下拉框
+  const fieldNameRender = useMemo(() => {
     return (
       <Select
         allowClear
-        placeholder="选择查询配置"
+        placeholder="选择字段"
         style={{ width: '100%' }}
-        value={selectedQueryConfig}
-        onChange={changeQueryConfig}
+        value={selectedFieldName}
+        onChange={changeFieldName}
         loading={getQueryConfig.loading}
         options={queryConfigs}
         disabled={!selectedModule || queryConfigs.length === 0}
       />
     );
-  }, [selectedQueryConfig, queryConfigs, getQueryConfig.loading, selectedModule]);
+  }, [selectedFieldName, queryConfigs, getQueryConfig.loading, selectedModule]);
+
+  // 渲染搜索方法下拉框
+  const searchMethodRender = useMemo(() => {
+    return (
+      <Select
+        allowClear
+        placeholder="选择搜索方法"
+        style={{ width: '100%' }}
+        value={selectedSearchMethod}
+        onChange={changeSearchMethod}
+        options={availableSearchMethods.map((method) => ({
+          value: method,
+          label: method,
+        }))}
+        disabled={!selectedFieldName || availableSearchMethods.length === 0}
+      />
+    );
+  }, [selectedSearchMethod, availableSearchMethods, selectedFieldName]);
 
   const changeTimeGroup = (text: string) => {
     const latestTime = getLatestTime(timeOption);
@@ -582,7 +661,8 @@ const SearchBar = forwardRef((props: IProps, ref) => {
         </div>
       </div>
       <div className={styles.form}>
-        <div className={styles.item}>{queryConfigRender}</div>
+        <div className={styles.item}>{fieldNameRender}</div>
+        <div className={styles.item}>{searchMethodRender}</div>
         <div className={styles.item}>{keywordRender}</div>
         <div className={styles.item}>{sqlRender}</div>
         <div className={styles.item}>
