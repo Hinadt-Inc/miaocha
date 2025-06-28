@@ -146,6 +146,7 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
   const changeModules = (value: string) => {
     if (!value) {
       setSelectedModule('');
+      setHasCalledGetColumns(''); // 重置调用标识
       if (onSelectedModuleChange) {
         onSelectedModuleChange('');
       }
@@ -154,6 +155,8 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
     const datasourceId = modules.find((item) => item.value === value)?.datasourceId;
     // 解析value：datasourceId-module
     setSelectedModule(value);
+    // 重置调用标识，允许新模块重新调用getColumns
+    setHasCalledGetColumns('');
     // 通知父组件模块变化
     if (onSelectedModuleChange) {
       onSelectedModuleChange(value);
@@ -188,6 +191,8 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
         const datasourceId = String(targetModule.datasourceId);
         const module = String(targetModule.module);
         setSelectedModule(module);
+        // 重置调用标识，允许初始化时调用getColumns
+        setHasCalledGetColumns('');
         // 通知父组件模块变化
         if (onSelectedModuleChange) {
           onSelectedModuleChange(module);
@@ -198,16 +203,32 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
     }
   }, [modules, favoriteModule]);
 
+  // 添加状态来跟踪是否已经调用过getColumns，避免重复调用
+  const [hasCalledGetColumns, setHasCalledGetColumns] = useState<string>('');
+  const modulesRef = useRef<IStatus[]>([]);
+
+  // 更新modules的引用
+  useEffect(() => {
+    modulesRef.current = modules;
+  }, [modules]);
+
   // 当moduleQueryConfig和selectedModule都准备好时，调用getColumns
   useEffect(() => {
-    if (selectedModule && moduleQueryConfig !== undefined && modules.length > 0) {
-      const targetModule = modules.find((item) => item.value === selectedModule);
+    if (selectedModule && moduleQueryConfig !== undefined && modulesRef.current.length > 0) {
+      const targetModule = modulesRef.current.find((item) => item.value === selectedModule);
       if (targetModule) {
         const datasourceId = targetModule.datasourceId;
-        getColumns.run({ datasourceId: Number(datasourceId), module: selectedModule });
+        // 生成唯一标识，避免重复调用
+        const callKey = `${selectedModule}_${datasourceId}_${moduleQueryConfig?.timeField || 'default'}`;
+
+        // 只有当标识发生变化时才调用getColumns
+        if (hasCalledGetColumns !== callKey) {
+          setHasCalledGetColumns(callKey);
+          getColumns.run({ datasourceId: Number(datasourceId), module: selectedModule });
+        }
       }
     }
-  }, [selectedModule, moduleQueryConfig, modules]);
+  }, [selectedModule, moduleQueryConfig, hasCalledGetColumns]);
 
   // 切换字段选中状态
   const toggleColumn = (data: ILogColumnsResponse) => {
@@ -334,6 +355,15 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
   useImperativeHandle(ref, () => ({
     getDistributionWithSearchBar,
   }));
+
+  // 组件卸载时取消正在进行的请求
+  useEffect(() => {
+    return () => {
+      if (abortRef.current) {
+        abortRef.current.abort();
+      }
+    };
+  }, []);
 
   return (
     <div className={styles.layoutSider}>
