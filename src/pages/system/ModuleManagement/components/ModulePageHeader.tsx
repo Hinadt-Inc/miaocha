@@ -35,11 +35,11 @@ const ModulePageHeader: React.FC<ModulePageHeaderProps> = ({ searchText, loading
           allowClear
           suffix={<SearchOutlined />}
         />
-        <Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>
-          添加模块
-        </Button>
         <Button icon={<ReloadOutlined />} onClick={onReload} loading={loading}>
           刷新
+        </Button>
+        <Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>
+          添加模块
         </Button>
       </Space>
     </>

@@ -1,6 +1,6 @@
 import { Modal, Button, message } from 'antd';
 import { useEffect, useState, useRef } from 'react';
-import { startLogTail, stopLogTail, createLogTailTask } from '../../../api/logstash';
+import { startLogTail, stopLogTail, createLogTailTask } from '@/api/logstash';
 import styles from './LogstashLogTailModal.module.less';
 
 interface LogTailModalProps {

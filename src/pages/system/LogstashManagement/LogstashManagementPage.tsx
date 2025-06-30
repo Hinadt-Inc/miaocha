@@ -1,0 +1,258 @@
+import { Table } from 'antd';
+import { useState } from 'react';
+import { useErrorContext } from '@/providers/ErrorProvider';
+import {
+  LogstashPageHeader,
+  TaskHistoryModal,
+  TaskDetailModal,
+  LogstashDetailModal,
+  MachineTasksModal,
+  ExpandedRowRenderer,
+  LogstashEditModal,
+  LogstashMachineConfigModal,
+  LogstashMachineDetailModal,
+  LogstashScaleModal,
+  LogstashLogTailModal,
+} from './components';
+import { useLogstashData, useTableConfig, useLogstashActions, useMachineActions } from './hooks';
+import { scaleProcess } from '@/api/logstash';
+import type { LogstashTaskSummary } from '@/types/logstashTypes';
+import styles from './LogstashManagement.module.less';
+
+const LogstashManagementPage = () => {
+  const { data, loading, fetchData, handleReload, messageApi, contextHolder } = useLogstashData();
+  const { showSuccess } = useErrorContext();
+
+  const actions = useLogstashActions({ fetchData });
+  const machineActions = useMachineActions({ fetchData });
+
+  // messageApi 暂时保留，供其他未重构的组件使用
+  console.log('messageApi available for legacy components:', !!messageApi);
+
+  const [selectedTask, setSelectedTask] = useState<LogstashTaskSummary | null>(null);
+  const [stepsModalVisible, setStepsModalVisible] = useState(false);
+  const [scaleParams, setScaleParams] = useState({
+    addMachineIds: [] as number[],
+    removeLogstashMachineIds: [] as number[],
+    customDeployPath: '',
+    forceScale: false,
+  });
+
+  const { columns, pagination, handleTableChange } = useTableConfig({
+    onEdit: actions.handleEdit,
+    onDelete: (id: number) => {
+      actions.handleDelete(id);
+    },
+    onStart: (id: number) => {
+      actions.handleStart(id);
+    },
+    onStop: (id: number) => {
+      actions.handleStop(id);
+    },
+    onShowHistory: (id: number) => {
+      actions.handleShowHistory(id);
+    },
+    onScale: actions.handleScale,
+    onRefreshAllConfig: (record: any) => {
+      actions.handleRefreshAllConfig(record);
+    },
+    onReinitializeFailedMachines: (processId: number) => {
+      actions.handleReinitializeFailedMachines(processId);
+    },
+    onForceStopProcess: (id: number) => {
+      actions.handleForceStopProcess(id);
+    },
+    onShowDetail: actions.handleShowDetail,
+  });
+
+  const showTaskSteps = (task: LogstashTaskSummary) => {
+    setSelectedTask(task);
+    setStepsModalVisible(true);
+  };
+
+  const renderExpandedRow = (record: any) => (
+    <ExpandedRowRenderer record={record} data={data} machineActions={machineActions} />
+  );
+
+  const handleScale = async (
+    processId: number,
+    params?: {
+      addMachineIds: number[];
+      removeLogstashMachineIds: number[];
+      customDeployPath: string;
+      forceScale: boolean;
+    },
+  ) => {
+    try {
+      const scaleParameters = params || scaleParams;
+      await scaleProcess(processId, scaleParameters);
+      showSuccess('操作成功');
+      actions.setScaleModalVisible(false);
+      await fetchData();
+    } catch {
+      // API 错误已由全局错误处理器处理
+    }
+  };
+
+  return (
+    <div className={styles.container}>
+      {contextHolder}
+      <div className={styles.header}>
+        <LogstashPageHeader
+          loading={loading}
+          onAdd={actions.handleAdd}
+          onReload={handleReload}
+          className={styles.tableToolbar}
+        />
+      </div>
+
+      <div className={styles.antTable}>
+        <Table
+          columns={columns}
+          dataSource={data}
+          size="small"
+          rowKey="id"
+          loading={loading}
+          bordered
+          scroll={{ x: 'max-content' }}
+          pagination={{
+            ...pagination,
+            total: data.length,
+          }}
+          onChange={handleTableChange}
+          expandable={{
+            expandedRowRender: renderExpandedRow,
+          }}
+        />
+      </div>
+
+      {/* 编辑模态框 */}
+      <LogstashEditModal
+        visible={actions.editModalVisible}
+        onCancel={() => actions.setEditModalVisible(false)}
+        onOk={actions.handleSubmit}
+        initialValues={actions.currentProcess}
+      />
+
+      {/* 任务历史模态框 */}
+      <TaskHistoryModal
+        visible={actions.summaryModalVisible}
+        onClose={() => actions.setSummaryModalVisible(false)}
+        taskSummaries={actions.taskSummaries}
+        onShowSteps={showTaskSteps}
+      />
+
+      {/* 任务详情模态框 */}
+      <TaskDetailModal
+        visible={stepsModalVisible}
+        onClose={() => setStepsModalVisible(false)}
+        selectedTask={selectedTask}
+      />
+
+      {/* 进程详情模态框 */}
+      <LogstashDetailModal
+        visible={actions.currentDetail ? !!actions.detailModalVisible[actions.currentDetail.id] : false}
+        onClose={() => {
+          if (actions.currentDetail) {
+            actions.setDetailModalVisible({ ...actions.detailModalVisible, [actions.currentDetail.id]: false });
+          }
+        }}
+        detail={actions.currentDetail || null}
+        styles={{
+          configSection: styles.configSection,
+          configHeader: styles.configHeader,
+          configContent: styles.configContent,
+          machineStatusSection: styles.machineStatusSection,
+        }}
+      />
+
+      {/* 机器任务模态框 */}
+      <MachineTasksModal
+        visible={machineActions.machineTasksModalVisible}
+        onClose={() => machineActions.setMachineTasksModalVisible(false)}
+        machineTasks={machineActions.machineTasks}
+        loading={machineActions.machineTasksLoading}
+        machineId={machineActions.currentMachine?.logstashMachineId || 0}
+      />
+
+      {/* 机器配置模态框 */}
+      <LogstashMachineConfigModal
+        visible={machineActions.machineConfigModalVisible}
+        onCancel={() => machineActions.setMachineConfigModalVisible(false)}
+        processId={machineActions.currentMachine?.processId || 0}
+        logstashMachineId={machineActions.currentMachine?.logstashMachineId || 0}
+        initialConfig={{
+          configContent: machineActions.currentMachine?.configContent,
+          jvmOptions: machineActions.currentMachine?.jvmOptions,
+          logstashYml: machineActions.currentMachine?.logstashYml,
+        }}
+        onSuccess={() => {
+          fetchData();
+        }}
+      />
+
+      {/* 机器详情模态框 */}
+      <LogstashMachineDetailModal
+        visible={machineActions.machineDetailModalVisible}
+        onCancel={() => {
+          machineActions.setMachineDetailModalVisible(false);
+          machineActions.setCurrentMachineDetail(undefined);
+        }}
+        detail={machineActions.currentMachineDetail}
+      />
+
+      {/* 扩容模态框 */}
+      <LogstashScaleModal
+        visible={actions.scaleModalVisible}
+        onCancel={() => actions.setScaleModalVisible(false)}
+        onOk={async (params: {
+          addMachineIds: number[];
+          removeLogstashMachineIds?: number[];
+          customDeployPath: string;
+          forceScale: boolean;
+        }) => {
+          if (actions.currentProcess) {
+            const validParams = {
+              ...params,
+              removeLogstashMachineIds: params.removeLogstashMachineIds || [],
+            };
+            setScaleParams(validParams);
+            await handleScale(actions.currentProcess.id, validParams);
+          }
+        }}
+        currentProcess={actions.currentProcess}
+        initialParams={scaleParams}
+      />
+
+      {/* 日志模态框 */}
+      <LogstashLogTailModal
+        visible={machineActions.logTailModalVisible}
+        logstashMachineId={machineActions.currentLogTailMachineId || 0}
+        onCancel={() => machineActions.setLogTailModalVisible(false)}
+      />
+
+      {/* 底部日志模态框 */}
+      <LogstashLogTailModal
+        visible={machineActions.bottomLogTailModalVisible}
+        logstashMachineId={machineActions.currentLogTailMachineId || 0}
+        onCancel={() => machineActions.setBottomLogTailModalVisible(false)}
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          margin: 0,
+          maxWidth: '100%',
+          height: '300px',
+        }}
+        bodyStyle={{
+          padding: 0,
+          height: '100%',
+        }}
+      />
+    </div>
+  );
+};
+
+import withSystemAccess from '@/utils/withSystemAccess';
+export default withSystemAccess(LogstashManagementPage);
