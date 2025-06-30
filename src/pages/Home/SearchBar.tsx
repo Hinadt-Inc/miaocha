@@ -66,9 +66,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   // 查询配置相关状态
   const [queryConfigs, setQueryConfigs] = useState<any[]>([]);
   const [selectedQueryConfigs, setSelectedQueryConfigs] = useState<any[]>([]); // 选中的查询配置列表
-  const [selectedFieldName, setSelectedFieldName] = useState<string | undefined>(undefined); // 选中的字段名
-  const [selectedSearchMethod, setSelectedSearchMethod] = useState<string | undefined>(undefined); // 选中的搜索方法
-  const [availableSearchMethods, setAvailableSearchMethods] = useState<string[]>([]); // 当前字段可用的搜索方法
+  const [selectedFieldNames, setSelectedFieldNames] = useState<string[]>([]); // 选中的字段名列表（多选）
   const [originalKeywordFields, setOriginalKeywordFields] = useState<any[]>([]); // 保存原始的keywordFields数据
 
   // 获取模块查询配置
@@ -98,9 +96,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
         setQueryConfigs(fieldOptions);
 
         // 重置选中状态
-        setSelectedFieldName(undefined);
-        setSelectedSearchMethod(undefined);
-        setAvailableSearchMethods([]);
+        setSelectedFieldNames([]);
 
         // 通知父组件查询配置已更新，传递完整的配置包括timeField
         if (onQueryConfigChange) {
@@ -109,9 +105,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       } else {
         setOriginalKeywordFields([]);
         setQueryConfigs([]);
-        setSelectedFieldName(undefined);
-        setSelectedSearchMethod(undefined);
-        setAvailableSearchMethods([]);
+        setSelectedFieldNames([]);
         // 通知父组件查询配置已清空
         if (onQueryConfigChange) {
           onQueryConfigChange(undefined, [], null);
@@ -121,9 +115,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     onError: () => {
       setOriginalKeywordFields([]);
       setQueryConfigs([]);
-      setSelectedFieldName(undefined);
-      setSelectedSearchMethod(undefined);
-      setAvailableSearchMethods([]);
+      setSelectedFieldNames([]);
       // 通知父组件查询配置已清空
       if (onQueryConfigChange) {
         onQueryConfigChange(undefined, [], null);
@@ -232,30 +224,10 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     setSql(value || '');
   };
 
-  // 处理字段名选择变化
-  const changeFieldName = (value: string | undefined) => {
-    setSelectedFieldName(value || undefined);
-    setSelectedSearchMethod(undefined); // 重置搜索方法
+  // 处理字段名选择变化（多选）
+  const changeFieldNames = (values: string[]) => {
+    setSelectedFieldNames(values || []);
     setKeyword(''); // 清除关键词搜索
-
-    if (value) {
-      // 从原始的keywordFields数据中找到对应字段的所有搜索方法
-      const fieldMethods = originalKeywordFields
-        .filter((field: any) => field.fieldName === value)
-        .map((field: any) => field.searchMethod);
-      // console.log('AAAAA', value, fieldMethods);
-      const allFieldMethods = value?.includes('.') ? ['LIKE'] : SEARCH_METHODS_OPTIONS;
-      const defaultMethod = fieldMethods[0] || allFieldMethods[0];
-      setSelectedSearchMethod(defaultMethod);
-      setAvailableSearchMethods(allFieldMethods);
-    } else {
-      setAvailableSearchMethods([]);
-    }
-  };
-
-  // 处理搜索方法选择变化
-  const changeSearchMethod = (value: string | undefined) => {
-    setSelectedSearchMethod(value || undefined);
   };
 
   const handleTimeFromTag = () => {
@@ -276,23 +248,18 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       <div className={styles.filter}>
         <Space wrap>
           {selectedQueryConfigs.map((item: any) => (
-            <Tooltip placement="topLeft" title={`${item.fieldName} (${item.searchMethod}): ${item.searchValue || ''}`}>
+            <Tooltip placement="topLeft" title={`${item.fieldName}：${item.searchValue || ''}`}>
               <Tag
                 key={item.value}
                 color="orange"
                 closable
                 onClick={() => {
-                  setSelectedFieldName(item.fieldName);
-                  setSelectedSearchMethod(item.searchMethod);
+                  // 解析fieldName，支持多字段格式：fieldName1||fieldName2||fieldName3
+                  const fieldNames = item.fieldName.includes('||')
+                    ? item.fieldName.split('||').map((name: string) => name.trim())
+                    : [item.fieldName];
+                  setSelectedFieldNames(fieldNames);
                   setKeyword(item.searchValue || '');
-                  // 根据字段名特点设置可用的搜索方法
-                  if (item.fieldName?.includes('.')) {
-                    // 如果字段名包含.，则只有LIKE方法
-                    setAvailableSearchMethods(['LIKE']);
-                  } else {
-                    // 否则显示所有搜索方法选项
-                    setAvailableSearchMethods(SEARCH_METHODS_OPTIONS);
-                  }
                 }}
                 onClose={() => handleCloseQueryConfig(item)}
               >
@@ -379,11 +346,11 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     const keywordTrim = String(keyword || '')?.trim();
 
     // 校验：如果选择了字段或输入了关键词中的任意一个，则另一个也是必填项
-    if (selectedFieldName && !keywordTrim) {
+    if (selectedFieldNames.length > 0 && !keywordTrim) {
       messageApi.warning('请输入关键词搜索内容');
       return;
     }
-    if (keywordTrim && !selectedFieldName) {
+    if (keywordTrim && selectedFieldNames.length === 0) {
       messageApi.warning('请选择搜索字段');
       return;
     }
@@ -411,20 +378,14 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     }
 
     // 如果选择了字段名，添加到列表中
-    if (selectedFieldName) {
-      const searchMethod = selectedSearchMethod || ''; // 如果没有选择搜索方法，使用空字符串
+    if (selectedFieldNames.length > 0) {
+      // 将多个字段名用||连接
+      const fieldName = selectedFieldNames.join('||');
       const searchValue = keywordTrim || ''; // 使用关键词作为搜索值
       const newConfig = {
-        value: `${selectedFieldName}_${searchMethod}_${searchValue}`,
-        label: searchValue
-          ? searchMethod
-            ? `${selectedFieldName} (${searchMethod}): ${searchValue}`
-            : `${selectedFieldName}: ${searchValue}`
-          : searchMethod
-            ? `${selectedFieldName} (${searchMethod})`
-            : selectedFieldName,
-        fieldName: selectedFieldName,
-        searchMethod: searchMethod,
+        value: `${fieldName}_${searchValue}`,
+        label: `${fieldName}：${searchValue}`,
+        fieldName: fieldName,
         searchValue: searchValue,
       };
       if (!selectedQueryConfigs.some((config) => config.value === newConfig.value)) {
@@ -437,10 +398,9 @@ const SearchBar = forwardRef((props: IProps, ref) => {
         'message';
 
       const newConfig = {
-        value: `${defaultField}_LIKE_${keywordTrim}`,
-        label: `${defaultField}: ${keywordTrim}`,
+        value: `${defaultField}_${keywordTrim}`,
+        label: `${defaultField}：${keywordTrim}`,
         fieldName: defaultField,
-        searchMethod: 'LIKE',
         searchValue: keywordTrim,
       };
       if (!selectedQueryConfigs.some((config) => config.value === newConfig.value)) {
@@ -451,9 +411,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     // 清空输入框
     setKeyword('');
     setSql('');
-    setSelectedFieldName(undefined);
-    setSelectedSearchMethod(undefined);
-    setAvailableSearchMethods([]);
+    setSelectedFieldNames([]);
 
     const latestTime = getLatestTime(timeOption);
     setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
@@ -600,39 +558,25 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
   };
 
-  // 渲染字段名下拉框
+  // 渲染字段名下拉框（多选）
   const fieldNameRender = useMemo(() => {
     return (
       <Select
+        mode="multiple"
         allowClear
         showSearch
         placeholder="选择字段"
         style={{ width: '100%' }}
-        value={selectedFieldName}
-        onChange={changeFieldName}
+        value={selectedFieldNames}
+        onChange={changeFieldNames}
         loading={getQueryConfig.loading}
         options={queryConfigs}
         disabled={!selectedModule || queryConfigs.length === 0}
+        maxTagCount="responsive"
+        maxTagTextLength={10}
       />
     );
-  }, [selectedFieldName, queryConfigs, getQueryConfig.loading, selectedModule]);
-
-  // 渲染搜索方法下拉框
-  const searchMethodRender = useMemo(() => {
-    return (
-      <Select
-        placeholder="选择搜索方法"
-        style={{ width: '100%' }}
-        value={selectedSearchMethod}
-        onChange={changeSearchMethod}
-        options={availableSearchMethods.map((method) => ({
-          value: method,
-          label: method,
-        }))}
-        disabled={!selectedFieldName || availableSearchMethods.length === 0 || selectedFieldName?.includes('.')}
-      />
-    );
-  }, [selectedSearchMethod, availableSearchMethods, selectedFieldName]);
+  }, [selectedFieldNames, queryConfigs, getQueryConfig.loading, selectedModule]);
 
   const changeTimeGroup = (text: string) => {
     const latestTime = getLatestTime(timeOption);
@@ -680,7 +624,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       </div>
       <div className={styles.form}>
         <div className={styles.item}>{fieldNameRender}</div>
-        <div className={styles.item}>{searchMethodRender}</div>
         <div className={styles.item}>{keywordRender}</div>
         <div className={styles.item}>{sqlRender}</div>
         <div className={styles.item}>

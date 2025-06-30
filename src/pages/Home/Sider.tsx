@@ -68,11 +68,17 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
   const queryDistribution = useRequest(
     async (params: ILogSearchParams & { signal?: AbortSignal }) => {
       // 构造keywordConditions参数
-      const keywordConditions = (selectedQueryConfigs || []).map((config) => ({
-        fieldName: config.fieldName,
-        searchValue: config.searchValue || '',
-        ...(config.searchMethod && { searchMethod: config.searchMethod }),
-      }));
+      const keywordConditions = (selectedQueryConfigs || []).map((config) => {
+        // 将fieldName转换为fieldNames数组
+        const fieldNames = config.fieldName.includes('||')
+          ? config.fieldName.split('||').map((name: string) => name.trim())
+          : [config.fieldName];
+
+        return {
+          fieldNames: fieldNames,
+          searchValue: config.searchValue || '',
+        };
+      });
 
       const requestParams: any = {
         ...params,
