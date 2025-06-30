@@ -39,19 +39,36 @@
     margin-top: 2px;
     gap: 8px;
     .item {
+      min-width: 150px;
       &:first-child {
-        flex: 1;
+       width: 200px;
       }
       &:nth-child(2) {
+        width: 150px;
+      }
+      &:nth-child(3),&:nth-child(4) {
         flex: 1;
+        :global {
+          .ant-select,
+          .ant-select-selector,
+          .ant-input {
+            min-width: 0 !important;
+            width: 100% !important;
+          }
+        }
       }
-      &:nth-child(3) {
-        flex: 1;
-      }
-      &:nth-child(4) {
-        flex: 0 0 200px;
-        // min-width: 200px;
-      }
+      // &:nth-child(4) {
+      //   flex: 1;
+      //   // min-width: 200px;
+      //   :global {
+      //     .ant-select,
+      //     .ant-select-selector,
+      //     .ant-input {
+      //       min-width: 0 !important;
+      //       width: 100% !important;
+      //     }
+      //   }
+      // }
       &:last-child {
         :global {
          .ant-btn {
