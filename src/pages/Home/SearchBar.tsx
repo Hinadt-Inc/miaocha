@@ -593,6 +593,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     return (
       <Select
         allowClear
+        showSearch
         placeholder="选择字段"
         style={{ width: '100%' }}
         value={selectedFieldName}
