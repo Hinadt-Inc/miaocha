@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Form, Button, Select, message, AutoComplete } from 'antd';
-import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
+import { Modal, Form, Button, Select, message, AutoComplete, Tooltip } from 'antd';
+import { PlusOutlined, MinusCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { updateModuleQueryConfig, getModuleFieldNames } from '@/api/modules';
 import type { QueryConfigKeywordField, QueryConfig } from '@/api/modules';
 import styles from './ModuleQueryConfigModal.module.less';
@@ -223,7 +223,18 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
               }
             }}
           >
-            <Form.Item label="时间字段" name="timeField" rules={[{ required: true, message: '请输入时间字段名称' }]}>
+            <Form.Item
+              label={
+                <span>
+                  时间字段
+                  <Tooltip title="添加的时间字段毫秒级别检索仅支持 .SSS 格式，例如 yyyy-MM-dd HH:mm:ss.SSS">
+                    <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                  </Tooltip>
+                </span>
+              }
+              name="timeField"
+              rules={[{ required: true, message: '请输入时间字段名称' }]}
+            >
               <AutoComplete
                 placeholder="请输入时间字段名称，如：log_time"
                 options={fieldNames.map((field) => ({
