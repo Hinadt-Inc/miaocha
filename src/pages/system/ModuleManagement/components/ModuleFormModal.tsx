@@ -41,7 +41,7 @@ const ModuleFormModal: React.FC<ModuleFormModalProps> = ({
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="name" label="模块名称" rules={[{ required: true, message: '请输入模块名称' }]}>
-              <Input placeholder="请输入模块名称" />
+              <Input placeholder="请输入模块名称" maxLength={128} />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -60,7 +60,7 @@ const ModuleFormModal: React.FC<ModuleFormModalProps> = ({
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="tableName" label="表名" rules={[{ required: true, message: '请输入表名' }]}>
-              <Input placeholder="请输入表名" />
+              <Input placeholder="请输入表名" maxLength={128} />
             </Form.Item>
           </Col>
         </Row>

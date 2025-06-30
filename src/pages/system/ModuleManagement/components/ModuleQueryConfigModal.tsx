@@ -246,6 +246,7 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
                 }
                 notFoundContent={loadingFields ? '加载中...' : '无匹配字段'}
                 allowClear
+                maxLength={128}
               />
             </Form.Item>
 
@@ -319,6 +320,7 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
                                 }
                               }
                             }}
+                            maxLength={128}
                           />
                         </Form.Item>
                         <Form.Item

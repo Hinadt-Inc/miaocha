@@ -132,9 +132,9 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
             <div>
               <div>
                 <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
-                  <Input placeholder="请输入Logstash进程名称，例如：订单处理服务" />
+                  <Input placeholder="请输入Logstash进程名称，例如：订单处理服务" maxLength={128} />
                 </Form.Item>
-                <Form.Item name="moduleId" label="模块" rules={[{ required: true, message: '请输入模块' }]}>
+                <Form.Item name="moduleId" label="模块" rules={[{ required: true, message: '请选择模块' }]}>
                   <Select loading={loading}>
                     {moduleData.map((ds) => (
                       <Select.Option key={ds.id} value={ds.id}>
