@@ -5,13 +5,13 @@ import {
   LOGSTASH_CONFIG_TEMPLATE,
   JVM_CONFIG_TEMPLATE,
   LOGSTASH_BASE_CONFIG_TEMPLATE,
-} from '../../../utils/logstashTemplates';
+} from '@/utils/logstashTemplates';
 import { useEffect, useState } from 'react';
-import type { LogstashProcess } from '../../../types/logstashTypes';
-import { getModules } from '../../../api/modules';
-import { getMachines } from '../../../api/machine';
-import type { Machine } from '../../../types/machineTypes';
-import type { Module } from '../../../api/modules';
+import type { LogstashProcess } from '@/types/logstashTypes';
+import { getModules } from '@/api/modules';
+import { getMachines } from '@/api/machine';
+import type { Machine } from '@/types/machineTypes';
+import type { Module } from '@/api/modules';
 
 interface LogstashEditModalProps {
   visible: boolean;

@@ -1,8 +1,8 @@
 import { Form, Input, Modal, message, Switch, Button, Tooltip } from 'antd';
-import { LOGSTASH_CONFIG_TEMPLATE, JVM_CONFIG_TEMPLATE } from '../../../utils/logstashTemplates';
+import { LOGSTASH_CONFIG_TEMPLATE, JVM_CONFIG_TEMPLATE } from '@/utils/logstashTemplates';
 import { CopyOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
-import { getLogstashMachineDetail, updateLogstashMachineConfig } from '../../../api/logstash';
+import { updateLogstashMachineConfig } from '@/api/logstash';
 import { safeCopy } from '@/utils/clipboard';
 
 interface LogstashMachineConfigModalProps {
@@ -88,12 +88,8 @@ export default function LogstashMachineConfigModal({
 
   // 复制
   const copyConfigTemplate = async (text: string) => {
-    try {
-      await safeCopy(text);
-      messageApi.success('已复制到剪贴板');
-    } catch (error) {
-      messageApi.error('复制失败，请手动复制');
-    }
+    await safeCopy(text);
+    messageApi.success('已复制到剪贴板');
   };
 
   // 关闭并重置状态

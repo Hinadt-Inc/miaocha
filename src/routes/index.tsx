@@ -11,7 +11,7 @@ const UserManagementPage = lazy(() => import('@/pages/system/UserManagement'));
 const DataSourceManagementPage = lazy(() => import('@/pages/system/DataSourceManagement'));
 const SQLEditorPage = lazy(() => import('@/pages/SQLEditor/SQLEditorImpl'));
 const MachineManagementPage = lazy(() => import('@/pages/system/MachineManagement'));
-const LogstashManagementPage = lazy(() => import('@/pages/system/LogstashManagementPage'));
+const LogstashManagementPage = lazy(() => import('@/pages/system/LogstashManagement'));
 const ModuleManagementPage = lazy(() => import('@/pages/system/ModuleManagement'));
 
 const withSuspense = (Component: React.ComponentType) => (

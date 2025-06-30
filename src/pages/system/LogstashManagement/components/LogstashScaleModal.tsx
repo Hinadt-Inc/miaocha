@@ -1,8 +1,8 @@
 import { Form, Input, Modal, Select, Checkbox, message, Divider, Typography } from 'antd';
 import { useEffect, useState } from 'react';
-import type { LogstashProcess } from '../../../types/logstashTypes';
-import type { Machine } from '../../../types/machineTypes';
-import { getMachines } from '../../../api/machine';
+import type { LogstashProcess } from '@/types/logstashTypes';
+import type { Machine } from '@/types/machineTypes';
+import { getMachines } from '@/api/machine';
 
 const { Title, Text } = Typography;
 const { Option } = Select;

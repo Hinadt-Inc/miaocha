@@ -1,6 +1,6 @@
 import { Modal, Descriptions, Tag, Divider, Button, message, Tooltip } from 'antd';
 import { CopyOutlined } from '@ant-design/icons';
-import type { LogstashProcess } from '../../../types/logstashTypes';
+import type { LogstashProcess } from '@/types/logstashTypes';
 import { safeCopy } from '@/utils/clipboard';
 import dayjs from 'dayjs';
 
