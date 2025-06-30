@@ -58,8 +58,8 @@ miaocha:
       maximum-pool-size: 100
       minimum-idle: 10
       connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
+      idle-timeout: 300000          # 5分钟（从10分钟调整为5分钟）
+      max-lifetime: 600000          # 10分钟（从30分钟调整为10分钟）
       connection-test-query: SELECT 1
       validation-timeout: 5000
       leak-detection-threshold: 60000

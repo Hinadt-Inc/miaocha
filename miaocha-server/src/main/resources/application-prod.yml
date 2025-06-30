@@ -13,13 +13,7 @@ spring:
     url: jdbc:mysql://${DB_HOST:mysql}:${DB_PORT:3306}/${DB_NAME:log_manage_system}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
     username: ${DB_USER:root}
     password: ${DB_PASSWORD:password}
-    # 生产环境连接池配置
-    hikari:
-      maximum-pool-size: 20
-      minimum-idle: 5
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
+
 
   # 生产环境禁用SQL日志
   jpa:
@@ -31,7 +25,7 @@ spring:
     time-zone: GMT+8
   flyway:
     enabled: false
-    
+
 # JWT生产环境配置 - 更长的过期时间
 jwt:
   # 生产环境从环境变量获取密钥
