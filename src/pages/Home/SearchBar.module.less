@@ -44,7 +44,7 @@
        width: 200px;
       }
       &:nth-child(2) {
-        width: 150px;
+        width: 200px;
       }
       &:nth-child(3),&:nth-child(4) {
         flex: 1;
@@ -70,6 +70,7 @@
       //   }
       // }
       &:last-child {
+        min-width:0;
         :global {
          .ant-btn {
             font-size: 13px;
