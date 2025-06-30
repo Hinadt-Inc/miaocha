@@ -50,8 +50,15 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ visible, selectedRecord, 
       <Form form={form} layout="vertical">
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item name="nickname" label="昵称" rules={[{ required: true, message: '请输入昵称' }]}>
-              <Input placeholder="请输入昵称" />
+            <Form.Item
+              name="nickname"
+              label="昵称"
+              rules={[
+                { required: true, message: '请输入昵称' },
+                { max: 128, message: '昵称长度不能超过128个字符' },
+              ]}
+            >
+              <Input placeholder="请输入昵称" maxLength={128} />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -61,9 +68,10 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ visible, selectedRecord, 
               rules={[
                 { required: true, message: '请输入邮箱' },
                 { type: 'email', message: '请输入有效的邮箱地址' },
+                { max: 128, message: '邮箱长度不能超过128个字符' },
               ]}
             >
-              <Input placeholder="请输入邮箱" />
+              <Input placeholder="请输入邮箱" maxLength={128} />
             </Form.Item>
           </Col>
         </Row>
@@ -96,9 +104,10 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ visible, selectedRecord, 
                 rules={[
                   { required: true, message: '请输入密码' },
                   { min: 6, message: '密码长度不能少于6个字符' },
+                  { max: 128, message: '密码长度不能超过128个字符' },
                 ]}
               >
-                <Input.Password placeholder="请输入密码" />
+                <Input.Password placeholder="请输入密码" maxLength={128} />
               </Form.Item>
             </Col>
           </Row>

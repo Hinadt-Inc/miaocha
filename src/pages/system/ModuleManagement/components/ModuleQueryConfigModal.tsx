@@ -233,10 +233,10 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
                 </span>
               }
               name="timeField"
-              rules={[{ required: true, message: '请输入时间字段名称' }]}
+              rules={[{ required: true, message: '请选择时间字段' }]}
             >
               <AutoComplete
-                placeholder="请输入时间字段名称，如：log_time"
+                placeholder="请选择时间字段"
                 options={fieldNames.map((field) => ({
                   value: field,
                   label: field,
