@@ -1,5 +1,6 @@
 import { Table, Space, Button, Popconfirm, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import dayjs from 'dayjs';
 import type { LogstashProcess } from '@/types/logstashTypes';
 
 interface MachineTableProps {
@@ -72,6 +73,14 @@ const MachineTable = ({
         else if (state === 'STOPPED') color = 'red';
 
         return <Tag color={color}>{machineRecord.stateDescription}</Tag>;
+      },
+    },
+    {
+      title: '最近更新时间',
+      dataIndex: 'lastUpdateTime',
+      key: 'lastUpdateTime',
+      render: (lastUpdateTime: string) => {
+        return lastUpdateTime ? dayjs(lastUpdateTime).format('YYYY-MM-DD HH:mm:ss') : '-';
       },
     },
     {
