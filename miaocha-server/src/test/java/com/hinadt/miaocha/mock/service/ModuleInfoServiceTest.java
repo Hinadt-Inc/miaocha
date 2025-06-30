@@ -27,7 +27,6 @@ import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
 import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
 import com.hinadt.miaocha.domain.mapper.UserMapper;
 import com.hinadt.miaocha.domain.mapper.UserModulePermissionMapper;
-import io.qameta.allure.*;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
@@ -40,7 +39,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 /** ModuleInfo服务测试类 */
 @ExtendWith(MockitoExtension.class)
-@Feature("模块管理")
 @DisplayName("模块管理服务测试")
 class ModuleInfoServiceTest {
 
@@ -114,9 +112,6 @@ class ModuleInfoServiceTest {
     }
 
     @Test
-    @Story("创建模块")
-    @Description("测试成功创建模块的功能")
-    @Severity(SeverityLevel.CRITICAL)
     void testCreateModule_Success() {
         // 准备测试数据
         ModuleInfoCreateDTO createDTO = new ModuleInfoCreateDTO();
@@ -151,9 +146,6 @@ class ModuleInfoServiceTest {
     }
 
     @Test
-    @Story("创建模块")
-    @Description("测试模块名称已存在时抛出异常")
-    @Severity(SeverityLevel.NORMAL)
     void testCreateModule_NameExists() {
         // 准备测试数据
         ModuleInfoCreateDTO createDTO = new ModuleInfoCreateDTO();
@@ -176,9 +168,6 @@ class ModuleInfoServiceTest {
     }
 
     @Test
-    @Story("查询模块")
-    @Description("测试根据ID查询单个模块")
-    @Severity(SeverityLevel.CRITICAL)
     void testGetModuleById_Success() {
         // Mock 行为
         when(moduleInfoMapper.selectById(1L)).thenReturn(sampleModuleInfo);
@@ -200,9 +189,6 @@ class ModuleInfoServiceTest {
     }
 
     @Test
-    @Story("删除模块")
-    @Description("测试成功删除模块")
-    @Severity(SeverityLevel.CRITICAL)
     void testDeleteModule_Success() {
         // Mock 行为
         when(moduleInfoMapper.selectById(1L)).thenReturn(sampleModuleInfo);
@@ -219,9 +205,6 @@ class ModuleInfoServiceTest {
     }
 
     @Test
-    @Story("创建模块")
-    @Description("测试数据源不存在时抛出异常")
-    @Severity(SeverityLevel.NORMAL)
     void testCreateModule_DatasourceNotFound() {
         // 准备测试数据
         ModuleInfoCreateDTO createDTO = new ModuleInfoCreateDTO();
@@ -246,9 +229,6 @@ class ModuleInfoServiceTest {
     }
 
     @Test
-    @Story("更新模块")
-    @Description("测试成功更新模块")
-    @Severity(SeverityLevel.CRITICAL)
     void testUpdateModule_Success() {
         // 准备测试数据
         ModuleInfoUpdateDTO updateDTO = new ModuleInfoUpdateDTO();
@@ -285,9 +265,6 @@ class ModuleInfoServiceTest {
     }
 
     @Test
-    @Story("更新模块")
-    @Description("测试更新不存在的模块")
-    @Severity(SeverityLevel.NORMAL)
     void testUpdateModule_ModuleNotFound() {
         // 准备测试数据
         ModuleInfoUpdateDTO updateDTO = new ModuleInfoUpdateDTO();
@@ -305,9 +282,6 @@ class ModuleInfoServiceTest {
     }
 
     @Test
-    @Story("删除模块")
-    @Description("测试删除不存在的模块")
-    @Severity(SeverityLevel.NORMAL)
     void testDeleteModule_ModuleNotFound() {
         // Mock 行为
         when(moduleInfoMapper.selectById(999L)).thenReturn(null);
@@ -321,9 +295,6 @@ class ModuleInfoServiceTest {
     }
 
     @Test
-    @Story("删除模块")
-    @Description("测试删除被进程使用的模块")
-    @Severity(SeverityLevel.CRITICAL)
     void testDeleteModule_ModuleInUse() {
         // Mock 行为
         when(moduleInfoMapper.selectById(1L)).thenReturn(sampleModuleInfo);
@@ -341,9 +312,6 @@ class ModuleInfoServiceTest {
     }
 
     @Test
-    @Story("删除模块")
-    @Description("测试删除模块并删除Doris表")
-    @Severity(SeverityLevel.CRITICAL)
     void testDeleteModule_WithDorisTable() {
         // 准备有Doris SQL的模块
         ModuleInfo moduleWithDoris = new ModuleInfo();
@@ -372,9 +340,6 @@ class ModuleInfoServiceTest {
     }
 
     @Test
-    @Story("执行Doris SQL")
-    @Description("测试成功执行Doris SQL")
-    @Severity(SeverityLevel.CRITICAL)
     void testExecuteDorisSql_Success() {
         // 准备没有Doris SQL的模块
         ModuleInfo moduleWithoutDoris = new ModuleInfo();
@@ -413,9 +378,6 @@ class ModuleInfoServiceTest {
     }
 
     @Test
-    @Story("执行Doris SQL")
-    @Description("测试重复执行Doris SQL")
-    @Severity(SeverityLevel.NORMAL)
     void testExecuteDorisSql_AlreadyExecuted() {
         // 准备已有Doris SQL的模块
         ModuleInfo moduleWithDoris = new ModuleInfo();
@@ -438,9 +400,6 @@ class ModuleInfoServiceTest {
     }
 
     @Test
-    @Story("配置查询配置")
-    @Description("测试成功配置查询配置")
-    @Severity(SeverityLevel.CRITICAL)
     void testConfigureQueryConfig_Success() throws Exception {
         // 准备查询配置
         QueryConfigDTO queryConfig = new QueryConfigDTO();
@@ -474,9 +433,6 @@ class ModuleInfoServiceTest {
     }
 
     @Test
-    @Story("根据模块名获取表名")
-    @Description("测试成功获取表名")
-    @Severity(SeverityLevel.CRITICAL)
     void testGetTableNameByModule_Success() {
         // Mock 行为
         when(moduleInfoMapper.selectByName("test_module")).thenReturn(sampleModuleInfo);
@@ -490,9 +446,6 @@ class ModuleInfoServiceTest {
     }
 
     @Test
-    @Story("根据模块名获取表名")
-    @Description("测试模块不存在")
-    @Severity(SeverityLevel.NORMAL)
     void testGetTableNameByModule_ModuleNotFound() {
         // Mock 行为
         when(moduleInfoMapper.selectByName("non_exist")).thenReturn(null);
@@ -508,9 +461,6 @@ class ModuleInfoServiceTest {
     }
 
     @Test
-    @Story("根据模块名获取查询配置")
-    @Description("测试成功获取查询配置")
-    @Severity(SeverityLevel.NORMAL)
     void testGetQueryConfigByModule_Success() throws Exception {
         // 准备模块和配置
         ModuleInfo moduleWithConfig = new ModuleInfo();
@@ -534,9 +484,6 @@ class ModuleInfoServiceTest {
     }
 
     @Test
-    @Story("获取所有模块")
-    @Description("测试获取所有模块列表")
-    @Severity(SeverityLevel.NORMAL)
     void testGetAllModules_Success() {
         // 准备数据
         List<ModuleInfo> moduleList = Arrays.asList(sampleModuleInfo);
@@ -557,9 +504,6 @@ class ModuleInfoServiceTest {
     }
 
     @Test
-    @Story("获取模块权限信息")
-    @Description("测试获取所有模块及权限信息")
-    @Severity(SeverityLevel.NORMAL)
     void testGetAllModulesWithPermissions_Success() {
         // 准备权限数据
         UserModulePermission permission = new UserModulePermission();

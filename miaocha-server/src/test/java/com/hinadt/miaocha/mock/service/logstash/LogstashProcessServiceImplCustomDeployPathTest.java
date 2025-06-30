@@ -20,7 +20,6 @@ import com.hinadt.miaocha.domain.entity.MachineInfo;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
 import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
 import com.hinadt.miaocha.domain.mapper.MachineMapper;
-import io.qameta.allure.*;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -36,13 +35,9 @@ import org.mockito.quality.Strictness;
  *
  * <p>测试秒查系统中Logstash进程自定义部署路径功能，基于一机多实例架构 验证用户可以为不同的LogstashMachine实例指定特定的部署路径，支持同一台机器上部署多个实例
  */
-@Epic("秒查日志管理系统")
-@Feature("Logstash进程管理")
-@Story("自定义部署路径")
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("LogstashProcessService 自定义部署路径测试")
-@Owner("开发团队")
 class LogstashProcessServiceImplCustomDeployPathTest {
 
     @Mock private LogstashProcessMapper logstashProcessMapper;
@@ -78,7 +73,6 @@ class LogstashProcessServiceImplCustomDeployPathTest {
 
     @Test
     @DisplayName("创建进程 - 使用自定义部署路径（一机多实例支持）")
-    @Description("验证创建LogstashProcess时可以指定自定义部署路径，支持在同一台机器上部署多个实例")
     void testCreateLogstashProcessWithCustomDeployPath() {
         // 准备测试数据
         LogstashProcessCreateDTO createDTO = new LogstashProcessCreateDTO();
@@ -180,7 +174,6 @@ class LogstashProcessServiceImplCustomDeployPathTest {
 
     @Test
     @DisplayName("创建进程 - 使用默认部署路径")
-    @Description("验证创建LogstashProcess时不指定自定义路径，系统自动生成默认路径")
     void testCreateLogstashProcessWithDefaultDeployPath() {
         // 准备测试数据 - 不设置customDeployPath
         LogstashProcessCreateDTO createDTO = new LogstashProcessCreateDTO();
@@ -260,7 +253,6 @@ class LogstashProcessServiceImplCustomDeployPathTest {
 
     @Test
     @DisplayName("创建进程 - 空字符串自定义路径使用默认路径")
-    @Description("验证当customDeployPath为空字符串时，系统使用默认路径而不是空字符串")
     void testCreateLogstashProcessWithEmptyCustomDeployPath() {
         // 准备测试数据 - customDeployPath为空字符串，应该使用默认路径
         LogstashProcessCreateDTO createDTO = new LogstashProcessCreateDTO();
@@ -332,7 +324,6 @@ class LogstashProcessServiceImplCustomDeployPathTest {
 
     @Test
     @DisplayName("创建进程 - 同台机器不同路径支持多实例")
-    @Description("验证可以在同一台机器上使用不同部署路径创建多个LogstashProcess实例")
     void testCreateMultipleInstancesOnSameMachine() {
         // 第一个实例 - 使用自定义路径
         LogstashProcessCreateDTO createDTO1 = new LogstashProcessCreateDTO();

@@ -20,7 +20,6 @@ import com.hinadt.miaocha.domain.dto.user.UserUpdateDTO;
 import com.hinadt.miaocha.domain.entity.User;
 import com.hinadt.miaocha.domain.entity.enums.UserRole;
 import com.hinadt.miaocha.domain.mapper.UserMapper;
-import io.qameta.allure.*;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,11 +35,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
  *
  * <p>测试秒查系统的用户管理功能，包括用户注册、登录、密码管理等核心功能
  */
-@Epic("秒查日志管理系统")
-@Feature("用户管理")
 @ExtendWith(MockitoExtension.class)
 @DisplayName("用户服务测试")
-@Owner("开发团队")
 public class UserServiceTest {
 
     @Mock private UserMapper userMapper;
@@ -105,11 +101,7 @@ public class UserServiceTest {
     }
 
     @Test
-    @Story("用户认证")
-    @Severity(SeverityLevel.BLOCKER)
     @DisplayName("用户登录成功")
-    @Description("验证用户能够使用正确的邮箱和密码成功登录秒查系统")
-    @Issue("MIAOCHA-201")
     void testLogin_Success() {
         // 设置mock行为
         when(userMapper.selectByEmail("test@example.com")).thenReturn(testUser);

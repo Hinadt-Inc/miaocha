@@ -7,7 +7,6 @@ import com.hinadt.miaocha.application.service.sql.converter.VariantFieldConverte
 import com.hinadt.miaocha.domain.dto.logsearch.KeywordConditionDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTODecorator;
-import io.qameta.allure.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -27,11 +26,7 @@ import org.junit.jupiter.params.provider.ValueSource;
  * <p>测试覆盖范围： 1. 基本转换功能 - 不同字段类型的转换逻辑 2. 装饰器模式验证 - 装饰器的委托和透明性 3. 边界条件处理 - null值、空值、异常输入 4. 字段转换逻辑 -
  * 真实的点语法到bracket语法转换
  */
-@Epic("秒查日志管理系统")
-@Feature("SQL查询引擎")
-@Story("查询DTO转换")
 @DisplayName("日志搜索DTO转换器测试")
-@Owner("开发团队")
 class LogSearchDTOConverterTest {
 
     private LogSearchDTOConverter converter;
@@ -52,8 +47,6 @@ class LogSearchDTOConverterTest {
 
         @Test
         @DisplayName("普通字段转换 - 期望：始终创建装饰器，普通字段保持不变")
-        @Severity(SeverityLevel.CRITICAL)
-        @Description("验证当DTO只包含普通字段时，转换器创建装饰器但字段内容不变")
         void testRegularFieldsConversion() {
             LogSearchDTO original = createBasicDTO();
             original.setFields(Arrays.asList("host", "log_time", "level", "service_name"));
@@ -280,8 +273,6 @@ class LogSearchDTOConverterTest {
 
         @Test
         @DisplayName("装饰器原始字段获取验证 - 期望：getOriginalFields返回原始字段列表")
-        @Severity(SeverityLevel.CRITICAL)
-        @Description("验证装饰器能正确返回原始字段列表，用于字段分布查询等场景")
         void testDecoratorGetOriginalFields() {
             LogSearchDTO original = createBasicDTO();
             List<String> originalFields = Arrays.asList("message.logId", "message.level", "host");

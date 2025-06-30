@@ -11,7 +11,6 @@ import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.entity.User;
 import com.hinadt.miaocha.domain.entity.enums.UserRole;
-import io.qameta.allure.*;
 import java.time.LocalDateTime;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,10 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
  *
  * <p>重点测试权限验证的核心业务逻辑，确保不同角色用户的权限控制正确
  */
-@Epic("秒查日志管理系统")
-@Feature("权限管理")
 @DisplayName("查询权限检查器测试")
-@Owner("开发团队")
 @ExtendWith(MockitoExtension.class)
 class QueryPermissionCheckerTest {
 
@@ -72,8 +68,6 @@ class QueryPermissionCheckerTest {
 
     @Test
     @DisplayName("管理员权限检查 - 管理员应该可以执行任何查询")
-    @Description("测试管理员用户无需权限检查即可执行任何SQL")
-    @Severity(SeverityLevel.CRITICAL)
     void testCheckQueryPermission_AdminUser() {
         // 执行测试 - 管理员执行任何SQL都应该通过
         assertDoesNotThrow(
@@ -97,8 +91,6 @@ class QueryPermissionCheckerTest {
 
     @Test
     @DisplayName("超级管理员权限检查 - 超级管理员应该可以执行任何查询")
-    @Description("测试超级管理员用户无需权限检查即可执行任何SQL")
-    @Severity(SeverityLevel.CRITICAL)
     void testCheckQueryPermission_SuperAdminUser() {
         // 执行测试 - 超级管理员执行任何SQL都应该通过
         assertDoesNotThrow(
@@ -117,8 +109,6 @@ class QueryPermissionCheckerTest {
 
     @Test
     @DisplayName("普通用户权限检查 - 只能执行SELECT查询")
-    @Description("测试普通用户只能执行SELECT查询，其他操作应被拒绝")
-    @Severity(SeverityLevel.CRITICAL)
     void testCheckQueryPermission_NormalUser_NonSelectQuery() {
         // 测试非SELECT查询应被拒绝
         String[] nonSelectSqls = {
@@ -147,8 +137,6 @@ class QueryPermissionCheckerTest {
 
     @Test
     @DisplayName("普通用户权限检查 - SELECT查询需要模块权限")
-    @Description("测试普通用户执行SELECT查询时需要验证对表的模块权限")
-    @Severity(SeverityLevel.CRITICAL)
     void testCheckQueryPermission_NormalUser_SelectWithPermission() {
         // Mock TableValidationService 返回表名和SQL类型检查
         when(tableValidationService.isSelectStatement("SELECT * FROM user_logs")).thenReturn(true);
@@ -170,8 +158,6 @@ class QueryPermissionCheckerTest {
 
     @Test
     @DisplayName("普通用户权限检查 - SELECT查询无权限应被拒绝")
-    @Description("测试普通用户执行SELECT查询时，如果没有表权限应被拒绝")
-    @Severity(SeverityLevel.CRITICAL)
     void testCheckQueryPermission_NormalUser_SelectWithoutPermission() {
         // Mock TableValidationService 返回表名和SQL类型检查
         when(tableValidationService.isSelectStatement("SELECT * FROM system_logs"))
@@ -199,8 +185,6 @@ class QueryPermissionCheckerTest {
 
     @Test
     @DisplayName("表名提取测试 - 简单FROM子句")
-    @Description("测试从简单的FROM子句中正确提取表名")
-    @Severity(SeverityLevel.NORMAL)
     void testExtractTableNames_SimpleFROM() {
         // 测试简单表名提取 - 直接测试TableValidationService的行为
         when(tableValidationService.extractTableNames("SELECT * FROM user_logs"))
@@ -221,8 +205,6 @@ class QueryPermissionCheckerTest {
 
     @Test
     @DisplayName("表名提取测试 - 多表JOIN")
-    @Description("测试从复杂JOIN查询中正确提取所有表名")
-    @Severity(SeverityLevel.NORMAL)
     void testExtractTableNames_MultipleTablesWithJOIN() {
         // 测试多表JOIN - 直接测试TableValidationService的行为
         String sql = "SELECT u.*, l.* FROM user_logs u JOIN system_logs l ON u.id = l.user_id";
@@ -238,8 +220,6 @@ class QueryPermissionCheckerTest {
 
     @Test
     @DisplayName("SELECT查询检查 - 正确识别SELECT语句")
-    @Description("测试正确识别各种格式的SELECT语句")
-    @Severity(SeverityLevel.NORMAL)
     void testIsSelectQuery() {
         // 测试各种SELECT语句格式 - 直接测试TableValidationService的行为
         when(tableValidationService.isSelectStatement("SELECT * FROM users")).thenReturn(true);
@@ -265,8 +245,6 @@ class QueryPermissionCheckerTest {
 
     @Test
     @DisplayName("多表权限检查 - 需要所有表都有权限")
-    @Description("测试查询多个表时，需要对所有表都有权限")
-    @Severity(SeverityLevel.CRITICAL)
     void testCheckQueryPermission_MultipleTablesPermission() {
         // Mock TableValidationService 返回多个表名和SQL类型检查
         String sql = "SELECT * FROM user_logs, system_logs";

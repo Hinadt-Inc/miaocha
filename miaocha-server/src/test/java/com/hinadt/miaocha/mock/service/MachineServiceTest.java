@@ -15,7 +15,6 @@ import com.hinadt.miaocha.domain.dto.MachineDTO;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
 import com.hinadt.miaocha.domain.mapper.MachineMapper;
-import io.qameta.allure.*;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -28,7 +27,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 /** Machine服务测试类 */
 @ExtendWith(MockitoExtension.class)
-@Feature("机器管理")
 @DisplayName("机器管理服务测试")
 class MachineServiceTest {
 
@@ -82,9 +80,6 @@ class MachineServiceTest {
     }
 
     @Test
-    @Story("创建机器")
-    @Description("测试成功创建机器")
-    @Severity(SeverityLevel.CRITICAL)
     void testCreateMachine_Success() {
         // 准备测试数据
         MachineCreateDTO createDTO = new MachineCreateDTO();
@@ -116,9 +111,6 @@ class MachineServiceTest {
     }
 
     @Test
-    @Story("创建机器")
-    @Description("测试机器名称已存在时抛出异常")
-    @Severity(SeverityLevel.NORMAL)
     void testCreateMachine_NameExists() {
         // 准备测试数据
         MachineCreateDTO createDTO = new MachineCreateDTO();
@@ -140,9 +132,6 @@ class MachineServiceTest {
     }
 
     @Test
-    @Story("更新机器")
-    @Description("测试成功更新机器")
-    @Severity(SeverityLevel.CRITICAL)
     void testUpdateMachine_Success() {
         // 准备测试数据
         MachineCreateDTO updateDTO = new MachineCreateDTO();
@@ -173,9 +162,6 @@ class MachineServiceTest {
     }
 
     @Test
-    @Story("更新机器")
-    @Description("测试更新不存在的机器")
-    @Severity(SeverityLevel.NORMAL)
     void testUpdateMachine_MachineNotFound() {
         // 准备测试数据
         MachineCreateDTO updateDTO = new MachineCreateDTO();
@@ -194,9 +180,6 @@ class MachineServiceTest {
     }
 
     @Test
-    @Story("更新机器")
-    @Description("测试更新时机器名称重复")
-    @Severity(SeverityLevel.NORMAL)
     void testUpdateMachine_NameExists() {
         // 准备测试数据
         MachineCreateDTO updateDTO = new MachineCreateDTO();
@@ -222,9 +205,6 @@ class MachineServiceTest {
     }
 
     @Test
-    @Story("删除机器")
-    @Description("测试成功删除机器")
-    @Severity(SeverityLevel.CRITICAL)
     void testDeleteMachine_Success() {
         // Mock 行为 - 根据实际业务逻辑，使用countByMachineId而不是selectByMachineId
         when(machineMapper.selectById(1L)).thenReturn(sampleMachine);
@@ -241,9 +221,6 @@ class MachineServiceTest {
     }
 
     @Test
-    @Story("删除机器")
-    @Description("测试删除不存在的机器")
-    @Severity(SeverityLevel.NORMAL)
     void testDeleteMachine_MachineNotFound() {
         // Mock 行为
         when(machineMapper.selectById(999L)).thenReturn(null);
@@ -256,9 +233,6 @@ class MachineServiceTest {
     }
 
     @Test
-    @Story("删除机器")
-    @Description("测试删除被使用的机器")
-    @Severity(SeverityLevel.CRITICAL)
     void testDeleteMachine_MachineInUse() {
         // Mock 行为：机器被Logstash使用 - 根据实际业务逻辑，使用countByMachineId返回大于0的数量
         when(machineMapper.selectById(1L)).thenReturn(sampleMachine);
@@ -275,9 +249,6 @@ class MachineServiceTest {
     }
 
     @Test
-    @Story("连接测试")
-    @Description("测试机器连接成功")
-    @Severity(SeverityLevel.CRITICAL)
     void testTestConnection_Success() {
         // Mock 行为
         when(machineMapper.selectById(1L)).thenReturn(sampleMachine);
@@ -295,9 +266,6 @@ class MachineServiceTest {
     }
 
     @Test
-    @Story("连接测试")
-    @Description("测试机器连接失败")
-    @Severity(SeverityLevel.NORMAL)
     void testTestConnection_Failed() {
         // Mock 行为
         when(machineMapper.selectById(1L)).thenReturn(sampleMachine);
@@ -313,9 +281,6 @@ class MachineServiceTest {
     }
 
     @Test
-    @Story("连接测试")
-    @Description("测试通过连接信息直接测试连接")
-    @Severity(SeverityLevel.NORMAL)
     void testTestConnectionWithParams_Success() {
         // 准备测试数据
         MachineCreateDTO connectionDTO = new MachineCreateDTO();
@@ -341,9 +306,6 @@ class MachineServiceTest {
     }
 
     @Test
-    @Story("查询机器")
-    @Description("测试根据ID查询单个机器")
-    @Severity(SeverityLevel.CRITICAL)
     void testGetMachine_Success() {
         // Mock 行为
         when(machineMapper.selectById(1L)).thenReturn(sampleMachine);
@@ -363,9 +325,6 @@ class MachineServiceTest {
     }
 
     @Test
-    @Story("查询机器")
-    @Description("测试查询不存在的机器")
-    @Severity(SeverityLevel.NORMAL)
     void testGetMachine_NotFound() {
         // Mock 行为
         when(machineMapper.selectById(999L)).thenReturn(null);
@@ -378,9 +337,6 @@ class MachineServiceTest {
     }
 
     @Test
-    @Story("查询机器")
-    @Description("测试获取所有机器列表")
-    @Severity(SeverityLevel.NORMAL)
     void testGetAllMachines_Success() {
         // 准备数据
         List<MachineInfo> machineList = Collections.singletonList(sampleMachine);

@@ -15,7 +15,6 @@ import com.hinadt.miaocha.domain.dto.DatasourceDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
 import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
-import io.qameta.allure.*;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
@@ -35,12 +34,9 @@ import org.mockito.quality.Strictness;
  *
  * <p>测试秒查系统的数据源管理功能，包括数据源的创建、查询、更新等操作
  */
-@Epic("秒查日志管理系统")
-@Feature("数据源管理")
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("数据源服务测试")
-@Owner("开发团队")
 class DatasourceInfoServiceTest {
 
     @Mock private DatasourceMapper datasourceMapper;
@@ -94,50 +90,23 @@ class DatasourceInfoServiceTest {
     }
 
     @Test
-    @Story("数据源创建")
-    @Description("测试成功创建数据源的功能")
-    @Severity(SeverityLevel.CRITICAL)
     void testCreateDatasource_Success() {
-        Allure.step(
-                "准备测试数据",
-                () -> {
-                    Allure.parameter("数据源名称", createDTO.getName());
-                    Allure.parameter("数据源类型", createDTO.getType());
-                    Allure.parameter("连接地址", createDTO.getJdbcUrl());
-                });
+        // 模拟数据源不存在
+        when(datasourceMapper.selectByName(anyString())).thenReturn(null);
+        // 模拟插入成功
+        when(datasourceMapper.insert(any(DatasourceInfo.class))).thenReturn(1);
+        // 模拟连接测试成功
+        doReturn(DatasourceConnectionTestResultDTO.success())
+                .when(datasourceService)
+                .testConnection(any(DatasourceCreateDTO.class));
 
-        Allure.step(
-                "模拟外部依赖",
-                () -> {
-                    // 模拟数据源不存在
-                    when(datasourceMapper.selectByName(anyString())).thenReturn(null); // 模拟插入成功
-                    when(datasourceMapper.insert(any(DatasourceInfo.class))).thenReturn(1);
-                    // 模拟连接测试成功
-                    doReturn(DatasourceConnectionTestResultDTO.success())
-                            .when(datasourceService)
-                            .testConnection(any(DatasourceCreateDTO.class));
-                });
+        DatasourceDTO result = datasourceService.createDatasource(createDTO);
 
-        DatasourceDTO result =
-                Allure.step(
-                        "执行数据源创建",
-                        () -> {
-                            return datasourceService.createDatasource(createDTO);
-                        });
-
-        Allure.step(
-                "验证创建结果",
-                () -> {
-                    assertNotNull(result);
-                    assertEquals(createDTO.getName(), result.getName());
-                    verify(datasourceMapper, times(1)).selectByName(anyString());
-                    verify(datasourceMapper, times(1)).insert(any(DatasourceInfo.class));
-                    verify(datasourceService, times(1))
-                            .testConnection(any(DatasourceCreateDTO.class));
-
-                    Allure.attachment(
-                            "创建结果", "数据源ID: " + result.getId() + ", 名称: " + result.getName());
-                });
+        assertNotNull(result);
+        assertEquals(createDTO.getName(), result.getName());
+        verify(datasourceMapper, times(1)).selectByName(anyString());
+        verify(datasourceService, times(1)).testConnection(any(DatasourceCreateDTO.class));
+        verify(datasourceMapper, times(1)).insert(any(DatasourceInfo.class));
     }
 
     @Test

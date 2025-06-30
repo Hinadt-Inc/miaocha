@@ -44,9 +44,8 @@
 
         <!-- Test Coverage and Reporting Plugin Versions -->
         <jacoco.maven.plugin.version>0.8.12</jacoco.maven.plugin.version>
-        <allure.maven.plugin.version>2.14.0</allure.maven.plugin.version>
-        <allure.junit5.version>2.29.0</allure.junit5.version>
-        <aspectj.version>1.9.22</aspectj.version>
+
+
         <maven.failsafe.plugin.version>3.2.5</maven.failsafe.plugin.version>
 
         <!-- Testcontainers 版本 -->
@@ -160,19 +159,7 @@
                 <version>${bouncycastle.version}</version>
             </dependency>
 
-            <!-- Allure测试报告 -->
-            <dependency>
-                <groupId>io.qameta.allure</groupId>
-                <artifactId>allure-junit5</artifactId>
-                <version>${allure.junit5.version}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>io.qameta.allure</groupId>
-                <artifactId>allure-java-commons</artifactId>
-                <version>${allure.junit5.version}</version>
-                <scope>test</scope>
-            </dependency>
+
 
             <!-- Testcontainers 依赖 -->
             <dependency>
@@ -227,12 +214,7 @@
                         <threadCountMethods>8</threadCountMethods>
 
                         <!-- ========== 现有配置保持不变 ========== -->
-                        <systemPropertyVariables>
-                            <allure.results.directory>${project.build.directory}/allure-results
-                            </allure.results.directory>
-                        </systemPropertyVariables>
                         <argLine>
-                            -javaagent:"${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar"
                             ${argLine}
                         </argLine>
                         <includes>
@@ -251,13 +233,6 @@
                         </properties>
                         <reportFormat>xml</reportFormat>
                     </configuration>
-                    <dependencies>
-                        <dependency>
-                            <groupId>org.aspectj</groupId>
-                            <artifactId>aspectjweaver</artifactId>
-                            <version>${aspectj.version}</version>
-                        </dependency>
-                    </dependencies>
                 </plugin>
                 <plugin>
                     <artifactId>maven-jar-plugin</artifactId>
@@ -321,12 +296,7 @@
                         <perCoreThreadCount>false</perCoreThreadCount>
 
                         <!-- ========== 现有配置保持不变 ========== -->
-                        <systemPropertyVariables>
-                            <allure.results.directory>${project.build.directory}/allure-results
-                            </allure.results.directory>
-                        </systemPropertyVariables>
                         <argLine>
-                            -javaagent:"${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar"
                             ${argLine}
                         </argLine>
                         <includes>
@@ -340,13 +310,6 @@
                             </configurationParameters>
                         </properties>
                     </configuration>
-                    <dependencies>
-                        <dependency>
-                            <groupId>org.aspectj</groupId>
-                            <artifactId>aspectjweaver</artifactId>
-                            <version>${aspectj.version}</version>
-                        </dependency>
-                    </dependencies>
                     <executions>
                         <execution>
                             <goals>
@@ -506,18 +469,7 @@
                     </executions>
                 </plugin>
 
-                <!-- Allure测试报告插件 -->
-                <plugin>
-                    <groupId>io.qameta.allure</groupId>
-                    <artifactId>allure-maven</artifactId>
-                    <version>${allure.maven.plugin.version}</version>
-                    <configuration>
-                        <reportVersion>2.29.0</reportVersion>
-                        <allureDownloadUrl>
-                            https://github.com/allure-framework/allure2/releases/download/2.29.0/allure-2.29.0.zip
-                        </allureDownloadUrl>
-                    </configuration>
-                </plugin>
+
 
                 <!-- Code Quality Plugins -->
                 <plugin>
@@ -650,10 +602,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
             </plugin>
-            <plugin>
-                <groupId>io.qameta.allure</groupId>
-                <artifactId>allure-maven</artifactId>
-            </plugin>
+
         </plugins>
     </build>
 

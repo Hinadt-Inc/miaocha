@@ -53,42 +53,6 @@
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
         </dependency>
-        <dependency>
-            <groupId>io.qameta.allure</groupId>
-            <artifactId>allure-java-commons</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.qameta.allure</groupId>
-            <artifactId>allure-java-commons</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.qameta.allure</groupId>
-            <artifactId>allure-java-commons</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- Allure测试报告 -->
-        <dependency>
-            <groupId>io.qameta.allure</groupId>
-            <artifactId>allure-junit5</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- Allure测试报告 -->
-        <dependency>
-            <groupId>io.qameta.allure</groupId>
-            <artifactId>allure-junit5</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- Allure测试报告 -->
-        <dependency>
-            <groupId>io.qameta.allure</groupId>
-            <artifactId>allure-junit5</artifactId>
-            <scope>test</scope>
-        </dependency>
 
         <!-- Logstash JSON日志编码器 -->
         <dependency>

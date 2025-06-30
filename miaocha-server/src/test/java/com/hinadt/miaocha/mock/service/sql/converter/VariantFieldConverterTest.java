@@ -3,7 +3,6 @@ package com.hinadt.miaocha.mock.service.sql.converter;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.hinadt.miaocha.application.service.sql.converter.VariantFieldConverter;
-import io.qameta.allure.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -24,10 +23,6 @@ import org.junit.jupiter.params.provider.ValueSource;
  * <p>测试覆盖范围： 1. WHERE条件转换测试 - 各种复杂度的WHERE条件转换 2. SELECT字段转换测试 - 字段列表转换和别名生成 3. TOPN字段转换测试 - 单字段转换
  * 4. 边界条件测试 - 空值、null值、异常输入处理 5. 性能测试 - 大量数据处理性能验证 6. 复杂场景测试 - 真实业务场景模拟 7. 安全性测试 - 恶意输入和SQL注入防护
  */
-@Epic("秒查日志管理系统")
-@Feature("SQL查询引擎")
-@Story("动态字段转换")
-@Owner("开发团队")
 class VariantFieldConverterTest {
 
     private VariantFieldConverter converter;
@@ -44,40 +39,13 @@ class VariantFieldConverterTest {
     class WhereClauseConversionTests {
 
         @Test
-        @Severity(SeverityLevel.CRITICAL)
         @DisplayName("简单点语法WHERE条件转换 - 期望：request.method转换为request['method']")
-        @Description("验证秒查系统能够正确转换简单的JSON字段点语法查询条件")
-        @Issue("MIAOCHA-301")
         void testSimpleDotSyntaxWhereConversion() {
-            Allure.step(
-                    "准备简单点语法转换测试数据",
-                    () -> {
-                        String input = "request.method = 'POST'";
-                        Allure.parameter("输入SQL条件", input);
-                        Allure.parameter("期望输出", "request['method'] = 'POST'");
-                        Allure.parameter("测试场景", "简单JSON字段点语法转换");
-                    });
-
             String input = "request.method = 'POST'";
-            List<String> result =
-                    Allure.step(
-                            "执行WHERE条件转换",
-                            () -> {
-                                return converter.convertWhereClauses(Arrays.asList(input));
-                            });
+            List<String> result = converter.convertWhereClauses(Arrays.asList(input));
 
-            Allure.step(
-                    "验证转换结果",
-                    () -> {
-                        assertEquals(1, result.size(), "转换结果应包含1个条件");
-                        assertEquals(
-                                "request['method'] = 'POST'",
-                                result.get(0),
-                                "简单点语法应正确转换为bracket语法");
-
-                        Allure.parameter("实际输出", result.get(0));
-                        Allure.attachment("转换验证", "简单点语法WHERE条件转换成功");
-                    });
+            assertEquals(1, result.size(), "转换结果应包含1个条件");
+            assertEquals("request['method'] = 'POST'", result.get(0), "简单点语法应正确转换为bracket语法");
         }
 
         @Test
@@ -409,58 +377,6 @@ class VariantFieldConverterTest {
         @Test
         @DisplayName("真实微服务日志字段测试 - 期望：模拟微服务架构中实际的日志字段")
         void testRealMicroserviceLogFields() {
-            Allure.step(
-                    "准备真实微服务日志字段测试数据",
-                    () -> {
-                        List<String> fields =
-                                Arrays.asList(
-                                        // 服务基础信息
-                                        "service_info.name",
-                                        "service_info.version",
-                                        "service_info.instance_id",
-                                        // 请求信息
-                                        "request.method",
-                                        "request.path",
-                                        "request.headers.user_agent",
-                                        "request.headers.x_request_id",
-                                        // 响应信息
-                                        "response.status_code",
-                                        "response.content_length",
-                                        "response.headers.content_type",
-                                        // 性能指标
-                                        "performance.response_time_ms",
-                                        "performance.db_query_time_ms",
-                                        "performance.cache_hit_rate",
-                                        // 追踪信息
-                                        "trace.trace_id",
-                                        "trace.span_id",
-                                        "trace.parent_span_id",
-                                        // 用户信息
-                                        "user.id",
-                                        "user.role",
-                                        "user.session.id",
-                                        // 错误信息
-                                        "error.code",
-                                        "error.message",
-                                        "error.stack_trace.class",
-                                        // 业务数据
-                                        "business_data.order_id",
-                                        "business_data.product.category",
-                                        "business_data.payment.method");
-
-                        Allure.parameter("字段数量", String.valueOf(fields.size()));
-                        Allure.parameter(
-                                "覆盖场景",
-                                Arrays.asList(
-                                        "服务信息",
-                                        "HTTP请求/响应",
-                                        "性能监控",
-                                        "分布式追踪",
-                                        "用户信息",
-                                        "错误处理",
-                                        "业务数据"));
-                    });
-
             List<String> fields =
                     Arrays.asList(
                             // 服务基础信息
@@ -497,35 +413,16 @@ class VariantFieldConverterTest {
                             "business_data.product.category",
                             "business_data.payment.method");
 
-            List<String> result =
-                    Allure.step(
-                            "执行真实微服务字段转换",
-                            () -> {
-                                return converter.convertSelectFields(fields);
-                            });
+            List<String> result = converter.convertSelectFields(fields);
 
-            Allure.step(
-                    "验证真实微服务字段转换结果",
-                    () -> {
-                        // 验证所有字段都被正确转换
-                        assertEquals(fields.size(), result.size(), "转换后字段数量应保持一致");
+            // 验证所有字段都被正确转换
+            assertEquals(fields.size(), result.size(), "转换后字段数量应保持一致");
 
-                        // 验证几个关键字段的转换
-                        assertTrue(result.contains("service_info['name']"), "服务名称字段应正确转换");
-                        assertTrue(
-                                result.contains("request['headers']['user_agent']"), "请求头字段应正确转换");
-                        assertTrue(result.contains("trace['trace_id']"), "追踪ID字段应正确转换");
-                        assertTrue(
-                                result.contains("business_data['product']['category']"),
-                                "业务数据嵌套字段应正确转换");
-
-                        Allure.parameter("转换成功字段数", String.valueOf(result.size()));
-                        Allure.attachment(
-                                "微服务字段转换结果",
-                                String.format(
-                                        "输入字段数: %d\n转换后字段数: %d\n转换验证: 全部成功",
-                                        fields.size(), result.size()));
-                    });
+            // 验证几个关键字段的转换
+            assertTrue(result.contains("service_info['name']"), "服务名称字段应正确转换");
+            assertTrue(result.contains("request['headers']['user_agent']"), "请求头字段应正确转换");
+            assertTrue(result.contains("trace['trace_id']"), "追踪ID字段应正确转换");
+            assertTrue(result.contains("business_data['product']['category']"), "业务数据嵌套字段应正确转换");
         }
 
         @Test

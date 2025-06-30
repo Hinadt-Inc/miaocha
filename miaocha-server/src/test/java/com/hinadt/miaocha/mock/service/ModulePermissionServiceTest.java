@@ -19,7 +19,6 @@ import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
 import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
 import com.hinadt.miaocha.domain.mapper.UserMapper;
 import com.hinadt.miaocha.domain.mapper.UserModulePermissionMapper;
-import io.qameta.allure.*;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
@@ -31,11 +30,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /** 模块权限服务单元测试 */
-@Epic("秒查日志管理系统")
-@Feature("模块权限管理")
 @ExtendWith(MockitoExtension.class)
 @DisplayName("模块权限服务测试")
-@Owner("开发团队")
 public class ModulePermissionServiceTest {
 
     @Mock private UserMapper userMapper;
@@ -116,10 +112,7 @@ public class ModulePermissionServiceTest {
     }
 
     @Test
-    @Story("权限检查")
-    @Severity(SeverityLevel.CRITICAL)
     @DisplayName("检查普通用户模块权限 - 有权限")
-    @Description("验证普通用户对有权限的模块返回true")
     void testHasModulePermission_UserWithPermission() {
         // Mock设置
         when(userMapper.selectById(1L)).thenReturn(testUser);
@@ -184,10 +177,7 @@ public class ModulePermissionServiceTest {
     }
 
     @Test
-    @Story("获取用户模块权限")
-    @Severity(SeverityLevel.NORMAL)
     @DisplayName("获取普通用户可访问模块列表")
-    @Description("验证普通用户能正确获取其可访问的模块列表")
     void testGetUserAccessibleModules_NormalUser() {
         // 设置converter mock
         UserModulePermissionDTO mockDto = new UserModulePermissionDTO();
@@ -302,10 +292,7 @@ public class ModulePermissionServiceTest {
     }
 
     @Test
-    @Story("权限授予")
-    @Severity(SeverityLevel.CRITICAL)
     @DisplayName("授予用户模块权限 - 成功")
-    @Description("验证能够成功授予用户对模块的访问权限")
     void testGrantModulePermission_Success() {
         // 设置converter mock
         UserModulePermissionDTO mockDto = new UserModulePermissionDTO();
@@ -404,10 +391,7 @@ public class ModulePermissionServiceTest {
     }
 
     @Test
-    @Story("权限撤销")
-    @Severity(SeverityLevel.CRITICAL)
     @DisplayName("撤销用户模块权限 - 成功")
-    @Description("验证能够成功撤销用户对模块的访问权限")
     void testRevokeModulePermission_Success() {
         // Mock设置
         when(userMapper.selectById(1L)).thenReturn(testUser);
@@ -440,10 +424,7 @@ public class ModulePermissionServiceTest {
     }
 
     @Test
-    @Story("批量权限操作")
-    @Severity(SeverityLevel.NORMAL)
     @DisplayName("批量授予用户模块权限")
-    @Description("验证能够批量授予用户对多个模块的访问权限")
     void testBatchGrantModulePermissions() {
         List<String> modules = Arrays.asList("用户模块", "订单模块");
 

@@ -24,7 +24,6 @@ import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
 import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
 import com.hinadt.miaocha.domain.mapper.MachineMapper;
 import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
-import io.qameta.allure.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -42,13 +41,9 @@ import org.mockito.quality.Strictness;
  *
  * <p>测试秒查系统中Logstash进程的动态扩容缩容能力，基于LogstashMachine实例的新架构 支持同一台机器上部署多个LogstashProcess实例（一机多实例）
  */
-@Epic("秒查日志管理系统")
-@Feature("Logstash进程管理")
-@Story("进程扩容缩容")
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("LogstashProcessService 扩容缩容测试")
-@Owner("开发团队")
 class LogstashProcessServiceImplScaleTest {
 
     @Mock private LogstashProcessMapper logstashProcessMapper;
@@ -83,18 +78,8 @@ class LogstashProcessServiceImplScaleTest {
     }
 
     @Test
-    @Severity(SeverityLevel.CRITICAL)
     @DisplayName("扩容操作 - 成功添加机器（一机多实例支持）")
-    @Description("验证在日志处理负载增加时，能够成功向Logstash进程添加新机器节点，支持同一台机器部署多个实例")
-    @Issue("MIAOCHA-101")
     void testScaleOut_Success() {
-        Allure.step(
-                "准备扩容测试数据",
-                () -> {
-                    Allure.parameter("进程ID", "1");
-                    Allure.parameter("添加机器ID", "3, 4");
-                    Allure.parameter("部署路径", "/custom/deploy/path");
-                });
         // 准备测试数据
         Long processId = 1L;
         LogstashProcess process = createTestProcess(processId);
@@ -158,10 +143,7 @@ class LogstashProcessServiceImplScaleTest {
     }
 
     @Test
-    @Severity(SeverityLevel.CRITICAL)
     @DisplayName("扩容操作 - 检测路径冲突")
-    @Description("验证在扩容时能正确检测和处理部署路径冲突的情况")
-    @Issue("MIAOCHA-103")
     void testScaleOut_PathConflict() {
         // 准备测试数据
         Long processId = 1L;
@@ -194,10 +176,7 @@ class LogstashProcessServiceImplScaleTest {
     }
 
     @Test
-    @Severity(SeverityLevel.CRITICAL)
     @DisplayName("缩容操作 - 成功移除LogstashMachine实例")
-    @Description("验证在日志处理负载减少时，能够安全移除特定的LogstashMachine实例")
-    @Issue("MIAOCHA-102")
     void testScaleIn_Success() {
         // 准备测试数据
         Long processId = 1L;
@@ -409,19 +388,8 @@ class LogstashProcessServiceImplScaleTest {
     // ============ 一机多实例专项测试 ============
 
     @Test
-    @Severity(SeverityLevel.CRITICAL)
     @DisplayName("一机多实例 - 同台机器扩容多个不同进程实例")
-    @Description("验证在同一台机器上可以部署多个不同LogstashProcess的实例，通过不同的部署路径实现隔离")
-    @Issue("MIAOCHA-105")
     void testMultiInstanceOnSameMachine_DifferentProcesses() {
-        Allure.step(
-                "准备同机器多进程扩容测试数据",
-                () -> {
-                    Allure.parameter("目标机器ID", "1");
-                    Allure.parameter("进程1 ID", "100");
-                    Allure.parameter("进程2 ID", "200");
-                    Allure.parameter("验证场景", "同一台机器部署不同进程的实例");
-                });
 
         // 准备测试数据：同一台机器部署两个不同进程的实例
         Long machineId = 1L;
@@ -512,29 +480,11 @@ class LogstashProcessServiceImplScaleTest {
         // 验证两次部署服务初始化调用
         verify(logstashDeployService, times(2))
                 .initializeInstances(anyList(), any(LogstashProcess.class));
-
-        Allure.step(
-                "验证一机多实例部署成功",
-                () -> {
-                    Allure.attachment("验证结果", "同一台机器成功部署了两个不同进程的LogstashMachine实例");
-                });
     }
 
     @Test
-    @Severity(SeverityLevel.CRITICAL)
     @DisplayName("一机多实例 - 同进程同机器不同路径扩容")
-    @Description("验证同一个LogstashProcess可以在同一台机器上通过不同部署路径扩容多个实例")
-    @Issue("MIAOCHA-106")
     void testMultiInstanceOnSameMachine_SameProcess() {
-        Allure.step(
-                "准备同进程同机器多实例扩容测试数据",
-                () -> {
-                    Allure.parameter("目标机器ID", "1");
-                    Allure.parameter("进程ID", "100");
-                    Allure.parameter("实例1路径", "/logstash/process100/instance1");
-                    Allure.parameter("实例2路径", "/logstash/process100/instance2");
-                    Allure.parameter("验证场景", "同一进程在同一台机器部署多个实例");
-                });
 
         // 准备测试数据：同一个进程在同一台机器上扩容两个实例
         Long machineId = 1L;
@@ -616,28 +566,11 @@ class LogstashProcessServiceImplScaleTest {
 
         // 验证两次部署服务初始化调用
         verify(logstashDeployService, times(2)).initializeInstances(anyList(), eq(process));
-
-        Allure.step(
-                "验证同进程一机多实例部署成功",
-                () -> {
-                    Allure.attachment("验证结果", "同一个LogstashProcess在同一台机器成功部署了两个不同路径的实例");
-                });
     }
 
     @Test
-    @Severity(SeverityLevel.CRITICAL)
     @DisplayName("一机多实例 - 路径冲突检测")
-    @Description("验证在一机多实例架构下，系统能正确检测和阻止部署路径冲突")
-    @Issue("MIAOCHA-107")
     void testMultiInstanceOnSameMachine_PathConflictDetection() {
-        Allure.step(
-                "准备路径冲突检测测试数据",
-                () -> {
-                    Allure.parameter("目标机器ID", "1");
-                    Allure.parameter("进程ID", "100");
-                    Allure.parameter("冲突路径", "/logstash/shared/path");
-                    Allure.parameter("验证场景", "检测相同路径部署冲突");
-                });
 
         // 准备测试数据：尝试在相同路径创建实例
         Long machineId = 1L;
@@ -678,27 +611,11 @@ class LogstashProcessServiceImplScaleTest {
 
         // 验证没有创建新实例（因为冲突被阻止）
         verify(logstashMachineMapper, never()).insert(any(LogstashMachine.class));
-
-        Allure.step(
-                "验证路径冲突检测成功",
-                () -> {
-                    Allure.attachment("验证结果", "系统成功检测到路径冲突并阻止了重复部署");
-                });
     }
 
     @Test
-    @Severity(SeverityLevel.NORMAL)
     @DisplayName("一机多实例 - 查询同机器所有实例")
-    @Description("验证可以正确查询同一台机器上的所有LogstashMachine实例")
-    @Issue("MIAOCHA-108")
     void testMultiInstanceOnSameMachine_QueryAllInstances() {
-        Allure.step(
-                "准备同机器实例查询测试数据",
-                () -> {
-                    Allure.parameter("目标机器ID", "1");
-                    Allure.parameter("实例数量", "3");
-                    Allure.parameter("验证场景", "查询同机器所有实例");
-                });
 
         // 准备测试数据：同一台机器上的多个实例
         Long machineId = 1L;
@@ -739,12 +656,5 @@ class LogstashProcessServiceImplScaleTest {
         assertEquals(3, deployPaths.size()); // 三个不同的路径
 
         verify(logstashMachineMapper).selectByMachineId(machineId);
-
-        Allure.step(
-                "验证同机器实例查询成功",
-                () -> {
-                    Allure.attachment(
-                            "查询结果", String.format("在机器[%d]上发现%d个实例", machineId, result.size()));
-                });
     }
 }

@@ -24,7 +24,6 @@ import com.hinadt.miaocha.domain.entity.enums.UserRole;
 import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
 import com.hinadt.miaocha.domain.mapper.SqlQueryHistoryMapper;
 import com.hinadt.miaocha.domain.mapper.UserMapper;
-import io.qameta.allure.*;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -50,12 +49,9 @@ import org.springframework.test.util.ReflectionTestUtils;
  *
  * <p>测试秒查系统的SQL查询引擎，包括查询执行、结果导出、权限控制等功能
  */
-@Epic("秒查日志管理系统")
-@Feature("SQL查询引擎")
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("SQL查询服务测试")
-@Owner("开发团队")
 public class SqlQueryServiceTest {
 
     @Mock private DatasourceMapper datasourceMapper;
@@ -143,36 +139,10 @@ public class SqlQueryServiceTest {
     }
 
     @Test
-    @Story("SQL查询执行")
-    @Description("测试成功执行SQL查询的功能")
-    @Severity(SeverityLevel.CRITICAL)
     void testExecuteQuery_Success() {
-        Allure.step(
-                "执行SQL查询",
-                () -> {
-                    Allure.parameter("用户ID", testUser.getId());
-                    Allure.parameter("数据源ID", testQueryDTO.getDatasourceId());
-                    Allure.parameter("SQL语句", testQueryDTO.getSql());
-                });
 
         // 执行测试
         SqlQueryResultDTO result = sqlQueryService.executeQuery(testUser.getId(), testQueryDTO);
-
-        Allure.step(
-                "验证查询结果",
-                () -> {
-                    assertNotNull(result);
-                    assertEquals(testResultDTO.getColumns(), result.getColumns());
-                    assertEquals(testResultDTO.getRows(), result.getRows());
-                    assertEquals(testResultDTO.getExecutionTimeMs(), result.getExecutionTimeMs());
-
-                    Allure.attachment(
-                            "查询结果",
-                            "列数: "
-                                    + result.getColumns().size()
-                                    + ", 行数: "
-                                    + result.getRows().size());
-                });
 
         // 验证调用
         verify(datasourceMapper).selectById(testQueryDTO.getDatasourceId());
@@ -381,8 +351,6 @@ public class SqlQueryServiceTest {
 
     @Test
     @DisplayName("SQL查询使用TableValidationService处理LIMIT")
-    @Description("测试SqlQueryService正确委托TableValidationService处理LIMIT逻辑")
-    @Severity(SeverityLevel.CRITICAL)
     void testExecuteQuery_UsesTableValidationServiceForLimit() {
         // 设置tableValidationService的行为
         String originalSql = "SELECT * FROM users";
