@@ -16,8 +16,8 @@ import org.springframework.stereotype.Component;
 /**
  * 关键字条件构建器
  *
- * <p>处理基于keywordConditions的查询条件构建 支持配置驱动的搜索方法（LIKE, MATCH_PHRASE, MATCH_ANY, MATCH_ALL）
- * 支持复杂表达式解析（&& 和 || 运算符，括号嵌套）
+ * <p>处理基于keywordConditions的查询条件构建，支持： - 多字段关键字查询（每个条件支持多个字段，字段间OR连接，条件间AND连接） - 配置驱动的搜索方法（LIKE,
+ * MATCH_PHRASE, MATCH_ANY, MATCH_ALL） - 复杂表达式解析（&& 和 || 运算符，括号嵌套）
  */
 @Component
 public class KeywordConditionBuilder {
@@ -44,46 +44,62 @@ public class KeywordConditionBuilder {
 
         // 处理每个关键字条件
         for (KeywordConditionDTO keywordCondition : keywordConditions) {
-            if (StringUtils.isNotBlank(keywordCondition.getFieldName())
+            if (keywordCondition.getFieldNames() != null
+                    && !keywordCondition.getFieldNames().isEmpty()
                     && StringUtils.isNotBlank(keywordCondition.getSearchValue())) {
 
-                String fieldName = keywordCondition.getFieldName().trim();
                 String searchValue = keywordCondition.getSearchValue().trim();
+                StringBuilder fieldConditions = new StringBuilder();
+                boolean isFirstField = true;
 
-                // 优先使用 KeywordConditionDTO 中指定的搜索方法，如果没有指定则使用配置中的默认方法
-                String searchMethodToUse;
-                if (StringUtils.isNotBlank(keywordCondition.getSearchMethod())) {
-                    // 使用请求中指定的搜索方法
-                    searchMethodToUse = keywordCondition.getSearchMethod().trim();
-                } else {
-                    // 使用配置中的默认搜索方法
-                    // 如果是装饰器，需要用原始字段名查找配置
-                    String configFieldName = fieldName;
-                    if (dto instanceof LogSearchDTODecorator) {
-                        configFieldName =
-                                ((LogSearchDTODecorator) dto).getOriginalFieldName(fieldName);
-                    }
+                // 处理当前条件的每个字段
+                for (String fieldName : keywordCondition.getFieldNames()) {
+                    if (StringUtils.isNotBlank(fieldName)) {
+                        String trimmedFieldName = fieldName.trim();
 
-                    searchMethodToUse = fieldSearchMethodMap.get(configFieldName);
-                    if (StringUtils.isBlank(searchMethodToUse)) {
-                        throw new BusinessException(
-                                ErrorCode.KEYWORD_FIELD_NOT_ALLOWED,
-                                "字段 '" + configFieldName + "' 未配置默认搜索方法，请在请求中指定或在模块配置中设置");
+                        // 获取字段对应的搜索方法
+                        String configFieldName = trimmedFieldName;
+                        if (dto instanceof LogSearchDTODecorator) {
+                            configFieldName =
+                                    ((LogSearchDTODecorator) dto)
+                                            .getOriginalFieldName(trimmedFieldName);
+                        }
+
+                        String searchMethodToUse = fieldSearchMethodMap.get(configFieldName);
+                        if (StringUtils.isBlank(searchMethodToUse)) {
+                            throw new BusinessException(
+                                    ErrorCode.KEYWORD_FIELD_NOT_ALLOWED,
+                                    "字段 '" + configFieldName + "' 未配置默认搜索方法，请在模块配置中设置");
+                        }
+
+                        // 获取对应的搜索方法枚举并解析表达式
+                        SearchMethod searchMethod = SearchMethod.fromString(searchMethodToUse);
+                        String parsedCondition =
+                                searchMethod.parseExpression(trimmedFieldName, searchValue);
+
+                        if (StringUtils.isNotBlank(parsedCondition)) {
+                            if (!isFirstField) {
+                                fieldConditions.append(" OR ");
+                            }
+                            // 每个字段条件都用括号包围
+                            fieldConditions.append("(").append(parsedCondition).append(")");
+                            isFirstField = false;
+                        }
                     }
                 }
 
-                // 获取对应的搜索方法枚举
-                SearchMethod searchMethod = SearchMethod.fromString(searchMethodToUse);
-
-                // 使用搜索方法枚举解析表达式
-                String parsedCondition = searchMethod.parseExpression(fieldName, searchValue);
-
-                if (StringUtils.isNotBlank(parsedCondition)) {
+                String currentCondition = fieldConditions.toString();
+                if (StringUtils.isNotBlank(currentCondition)) {
                     if (!isFirstCondition) {
                         condition.append(" AND ");
                     }
-                    // 为每个字段的条件加括号
-                    condition.append("(").append(parsedCondition).append(")");
+
+                    // 如果是多字段，需要外层括号；单字段直接使用
+                    if (keywordCondition.getFieldNames().size() > 1) {
+                        condition.append("(").append(currentCondition).append(")");
+                    } else {
+                        condition.append(currentCondition);
+                    }
                     isFirstCondition = false;
                 }
             }
@@ -91,14 +107,15 @@ public class KeywordConditionBuilder {
 
         String result = condition.toString();
 
-        // 只有多个字段条件时才需要外层括号，单个条件不需要额外的括号
+        // 只有多个关键字条件时才需要最外层括号
         if (StringUtils.isNotBlank(result)) {
             // 计算实际有效条件的数量
             long validConditionCount =
                     keywordConditions.stream()
                             .filter(
                                     kc ->
-                                            StringUtils.isNotBlank(kc.getFieldName())
+                                            kc.getFieldNames() != null
+                                                    && !kc.getFieldNames().isEmpty()
                                                     && StringUtils.isNotBlank(kc.getSearchValue()))
                             .count();
 

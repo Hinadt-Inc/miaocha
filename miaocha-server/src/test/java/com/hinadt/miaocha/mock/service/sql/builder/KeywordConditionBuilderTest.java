@@ -10,6 +10,8 @@ import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.dto.logsearch.KeywordConditionDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -25,6 +27,8 @@ import org.mockito.MockitoAnnotations;
  * 关键字条件构建器测试
  *
  * <p>测试配置驱动的关键字条件构建核心逻辑，验证生成的SQL符合Doris语法规范
+ *
+ * <p>支持多字段查询，字段间使用AND连接
  */
 @DisplayName("关键字条件构建器测试")
 class KeywordConditionBuilderTest {
@@ -50,8 +54,8 @@ class KeywordConditionBuilderTest {
                     .thenReturn(Map.of("message", "LIKE"));
 
             LogSearchDTO dto = createLogSearchDTO("nginx");
-            KeywordConditionDTO condition = createKeywordCondition("message", "error");
-            dto.setKeywordConditions(Arrays.asList(condition));
+            KeywordConditionDTO condition = createKeywordCondition(List.of("message"), "error");
+            dto.setKeywordConditions(List.of(condition));
 
             String result = keywordConditionBuilder.buildKeywordConditions(dto);
 
@@ -71,8 +75,9 @@ class KeywordConditionBuilderTest {
                     .thenReturn(Map.of("content", "MATCH_PHRASE"));
 
             LogSearchDTO dto = createLogSearchDTO("app");
-            KeywordConditionDTO condition = createKeywordCondition("content", "java exception");
-            dto.setKeywordConditions(Arrays.asList(condition));
+            KeywordConditionDTO condition =
+                    createKeywordCondition(List.of("content"), "java exception");
+            dto.setKeywordConditions(List.of(condition));
 
             String result = keywordConditionBuilder.buildKeywordConditions(dto);
 
@@ -87,8 +92,9 @@ class KeywordConditionBuilderTest {
                     .thenReturn(Map.of("tags", "MATCH_ANY"));
 
             LogSearchDTO dto = createLogSearchDTO("system");
-            KeywordConditionDTO condition = createKeywordCondition("tags", "urgent critical");
-            dto.setKeywordConditions(Arrays.asList(condition));
+            KeywordConditionDTO condition =
+                    createKeywordCondition(List.of("tags"), "urgent critical");
+            dto.setKeywordConditions(List.of(condition));
 
             String result = keywordConditionBuilder.buildKeywordConditions(dto);
 
@@ -103,8 +109,9 @@ class KeywordConditionBuilderTest {
                     .thenReturn(Map.of("keywords", "MATCH_ALL"));
 
             LogSearchDTO dto = createLogSearchDTO("business");
-            KeywordConditionDTO condition = createKeywordCondition("keywords", "payment success");
-            dto.setKeywordConditions(Arrays.asList(condition));
+            KeywordConditionDTO condition =
+                    createKeywordCondition(List.of("keywords"), "payment success");
+            dto.setKeywordConditions(List.of(condition));
 
             String result = keywordConditionBuilder.buildKeywordConditions(dto);
 
@@ -131,8 +138,8 @@ class KeywordConditionBuilderTest {
                     .thenReturn(Map.of(fieldName, searchMethod));
 
             LogSearchDTO dto = createLogSearchDTO(module);
-            KeywordConditionDTO condition = createKeywordCondition(fieldName, searchValue);
-            dto.setKeywordConditions(Arrays.asList(condition));
+            KeywordConditionDTO condition = createKeywordCondition(List.of(fieldName), searchValue);
+            dto.setKeywordConditions(List.of(condition));
 
             String result = keywordConditionBuilder.buildKeywordConditions(dto);
 
@@ -141,12 +148,167 @@ class KeywordConditionBuilderTest {
     }
 
     @Nested
-    @DisplayName("多字段条件组合测试")
-    class MultipleFieldConditionsTests {
+    @DisplayName("多字段功能测试")
+    class MultipleFieldsTests {
 
         @Test
-        @DisplayName("多字段不同搜索方法组合测试 - 验证AND连接和括号逻辑符合Doris语法")
-        void testMultipleFieldsWithDifferentSearchMethods() {
+        @DisplayName("单个条件多字段测试 - 验证字段间OR连接")
+        void testSingleConditionWithMultipleFields() {
+            // Mock配置：不同字段使用不同搜索方法
+            when(queryConfigValidationService.getFieldSearchMethodMap("test"))
+                    .thenReturn(
+                            Map.of(
+                                    "message", "LIKE",
+                                    "content", "MATCH_PHRASE",
+                                    "tags", "MATCH_ANY"));
+
+            LogSearchDTO dto = createLogSearchDTO("test");
+            KeywordConditionDTO condition =
+                    createKeywordCondition(Arrays.asList("message", "content", "tags"), "error");
+            dto.setKeywordConditions(List.of(condition));
+
+            String result = keywordConditionBuilder.buildKeywordConditions(dto);
+
+            // 验证多字段间用OR连接，每个字段使用各自配置的搜索方法
+            String expected =
+                    "((message LIKE '%error%') OR (content MATCH_PHRASE 'error') OR (tags"
+                            + " MATCH_ANY 'error'))";
+            assertEquals(expected, result);
+        }
+
+        @Test
+        @DisplayName("多个条件多字段测试 - 验证条件间AND连接，字段间OR连接")
+        void testMultipleConditionsWithMultipleFields() {
+            when(queryConfigValidationService.getFieldSearchMethodMap("test"))
+                    .thenReturn(
+                            Map.of(
+                                    "message", "LIKE",
+                                    "level", "MATCH_PHRASE",
+                                    "service", "MATCH_ALL"));
+
+            LogSearchDTO dto = createLogSearchDTO("test");
+
+            KeywordConditionDTO condition1 =
+                    createKeywordCondition(Arrays.asList("message", "level"), "error");
+            KeywordConditionDTO condition2 =
+                    createKeywordCondition(List.of("service"), "user-service");
+
+            dto.setKeywordConditions(Arrays.asList(condition1, condition2));
+
+            String result = keywordConditionBuilder.buildKeywordConditions(dto);
+
+            // 验证多个条件间用AND连接，字段间用OR连接，外层需要括号
+            String expected =
+                    "(((message LIKE '%error%') OR (level MATCH_PHRASE 'error')) AND (service"
+                            + " MATCH_ALL 'user-service'))";
+            assertEquals(expected, result);
+        }
+
+        @Test
+        @DisplayName("字段名去空格测试 - 验证trim()功能")
+        void testFieldNameTrimming() {
+            when(queryConfigValidationService.getFieldSearchMethodMap("test"))
+                    .thenReturn(Map.of("message", "LIKE"));
+
+            LogSearchDTO dto = createLogSearchDTO("test");
+            KeywordConditionDTO condition = createKeywordCondition(List.of("  message  "), "error");
+            dto.setKeywordConditions(List.of(condition));
+
+            String result = keywordConditionBuilder.buildKeywordConditions(dto);
+
+            // 验证字段名的空格被正确处理
+            assertEquals("(message LIKE '%error%')", result);
+        }
+
+        @Test
+        @DisplayName("多字段复杂表达式测试 - 验证多字段的复杂表达式处理")
+        void testMultipleFieldsComplexExpression() {
+            when(queryConfigValidationService.getFieldSearchMethodMap("test"))
+                    .thenReturn(
+                            Map.of(
+                                    "message", "LIKE",
+                                    "level", "MATCH_PHRASE"));
+
+            LogSearchDTO dto = createLogSearchDTO("test");
+            KeywordConditionDTO condition =
+                    createKeywordCondition(
+                            Arrays.asList("message", "level"), "'error' || 'warning'");
+            dto.setKeywordConditions(List.of(condition));
+
+            String result = keywordConditionBuilder.buildKeywordConditions(dto);
+
+            // 验证每个字段都应用相同的复杂表达式，字段间用OR连接
+            String expected =
+                    "((message LIKE '%error%' OR message LIKE '%warning%') OR (level MATCH_PHRASE"
+                            + " 'error' OR level MATCH_PHRASE 'warning'))";
+            assertEquals(expected, result);
+        }
+
+        @Test
+        @DisplayName("多字段嵌套复杂表达式测试 - 验证多字段处理嵌套括号和多层运算符")
+        void testMultipleFieldsNestedComplexExpression() {
+            when(queryConfigValidationService.getFieldSearchMethodMap("test"))
+                    .thenReturn(
+                            Map.of(
+                                    "message", "LIKE",
+                                    "content", "MATCH_PHRASE",
+                                    "status", "MATCH_ANY"));
+
+            LogSearchDTO dto = createLogSearchDTO("test");
+            KeywordConditionDTO condition =
+                    createKeywordCondition(
+                            Arrays.asList("message", "content", "status"),
+                            "('critical' || 'error') && ('system' || 'application')");
+            dto.setKeywordConditions(List.of(condition));
+
+            String result = keywordConditionBuilder.buildKeywordConditions(dto);
+
+            // 验证复杂嵌套表达式在多字段间的正确应用，字段间用OR连接
+            String expected =
+                    "((( message LIKE '%critical%' OR message LIKE '%error%' ) AND ( message LIKE"
+                        + " '%system%' OR message LIKE '%application%' )) OR (( content"
+                        + " MATCH_PHRASE 'critical' OR content MATCH_PHRASE 'error' ) AND ( content"
+                        + " MATCH_PHRASE 'system' OR content MATCH_PHRASE 'application' )) OR (("
+                        + " status MATCH_ANY 'critical' OR status MATCH_ANY 'error' ) AND ( status"
+                        + " MATCH_ANY 'system' OR status MATCH_ANY 'application' )))";
+            assertEquals(expected, result);
+        }
+
+        @Test
+        @DisplayName("多字段混合运算符表达式测试 - 验证OR和AND混合运算符的优先级处理")
+        void testMultipleFieldsMixedOperatorsExpression() {
+            when(queryConfigValidationService.getFieldSearchMethodMap("test"))
+                    .thenReturn(
+                            Map.of(
+                                    "message", "LIKE",
+                                    "level", "MATCH_PHRASE"));
+
+            LogSearchDTO dto = createLogSearchDTO("test");
+            KeywordConditionDTO condition =
+                    createKeywordCondition(
+                            Arrays.asList("message", "level"),
+                            "'error' && 'critical' || 'warning' && 'info'");
+            dto.setKeywordConditions(List.of(condition));
+
+            String result = keywordConditionBuilder.buildKeywordConditions(dto);
+
+            // 验证混合运算符的优先级处理：AND优先级高于OR，字段间用OR连接
+            String expected =
+                    "((message LIKE '%error%' AND message LIKE '%critical%' OR message LIKE"
+                            + " '%warning%' AND message LIKE '%info%') OR"
+                            + " (level MATCH_PHRASE 'error' AND level MATCH_PHRASE 'critical'"
+                            + " OR level MATCH_PHRASE 'warning' AND level MATCH_PHRASE 'info'))";
+            assertEquals(expected, result);
+        }
+    }
+
+    @Nested
+    @DisplayName("单字段条件组合测试")
+    class SingleFieldConditionsTests {
+
+        @Test
+        @DisplayName("多个单字段条件测试 - 验证AND连接和括号逻辑符合Doris语法")
+        void testMultipleSingleFieldConditions() {
             // Mock配置：不同字段使用不同搜索方法
             when(queryConfigValidationService.getFieldSearchMethodMap("mixed"))
                     .thenReturn(
@@ -157,9 +319,10 @@ class KeywordConditionBuilderTest {
 
             LogSearchDTO dto = createLogSearchDTO("mixed");
 
-            KeywordConditionDTO condition1 = createKeywordCondition("message", "timeout");
-            KeywordConditionDTO condition2 = createKeywordCondition("level", "ERROR");
-            KeywordConditionDTO condition3 = createKeywordCondition("service", "order-service");
+            KeywordConditionDTO condition1 = createKeywordCondition(List.of("message"), "timeout");
+            KeywordConditionDTO condition2 = createKeywordCondition(List.of("level"), "ERROR");
+            KeywordConditionDTO condition3 =
+                    createKeywordCondition(List.of("service"), "order-service");
 
             dto.setKeywordConditions(Arrays.asList(condition1, condition2, condition3));
 
@@ -179,8 +342,8 @@ class KeywordConditionBuilderTest {
                     .thenReturn(Map.of("message", "LIKE"));
 
             LogSearchDTO dto = createLogSearchDTO("single");
-            KeywordConditionDTO condition = createKeywordCondition("message", "error");
-            dto.setKeywordConditions(Arrays.asList(condition));
+            KeywordConditionDTO condition = createKeywordCondition(List.of("message"), "error");
+            dto.setKeywordConditions(List.of(condition));
 
             String result = keywordConditionBuilder.buildKeywordConditions(dto);
 
@@ -198,8 +361,8 @@ class KeywordConditionBuilderTest {
                                     "level", "LIKE"));
 
             LogSearchDTO dto = createLogSearchDTO("two");
-            KeywordConditionDTO condition1 = createKeywordCondition("message", "error");
-            KeywordConditionDTO condition2 = createKeywordCondition("level", "ERROR");
+            KeywordConditionDTO condition1 = createKeywordCondition(List.of("message"), "error");
+            KeywordConditionDTO condition2 = createKeywordCondition(List.of("level"), "ERROR");
             dto.setKeywordConditions(Arrays.asList(condition1, condition2));
 
             String result = keywordConditionBuilder.buildKeywordConditions(dto);
@@ -222,12 +385,11 @@ class KeywordConditionBuilderTest {
 
             LogSearchDTO dto = createLogSearchDTO("test");
             KeywordConditionDTO condition =
-                    createKeywordCondition("message", "'error' || 'warning'");
-            dto.setKeywordConditions(Arrays.asList(condition));
+                    createKeywordCondition(List.of("message"), "'error' || 'warning'");
+            dto.setKeywordConditions(List.of(condition));
 
             String result = keywordConditionBuilder.buildKeywordConditions(dto);
 
-            // 验证OR表达式解析结果符合Doris语法
             assertEquals("(message LIKE '%error%' OR message LIKE '%warning%')", result);
         }
 
@@ -239,12 +401,11 @@ class KeywordConditionBuilderTest {
 
             LogSearchDTO dto = createLogSearchDTO("test");
             KeywordConditionDTO condition =
-                    createKeywordCondition("message", "'error' && 'critical'");
-            dto.setKeywordConditions(Arrays.asList(condition));
+                    createKeywordCondition(List.of("message"), "'error' && 'critical'");
+            dto.setKeywordConditions(List.of(condition));
 
             String result = keywordConditionBuilder.buildKeywordConditions(dto);
 
-            // 验证AND表达式解析结果符合Doris语法
             assertEquals("(message LIKE '%error%' AND message LIKE '%critical%')", result);
         }
 
@@ -256,74 +417,16 @@ class KeywordConditionBuilderTest {
 
             LogSearchDTO dto = createLogSearchDTO("test");
             KeywordConditionDTO condition =
-                    createKeywordCondition("message", "('error' || 'warning') && 'critical'");
-            dto.setKeywordConditions(Arrays.asList(condition));
+                    createKeywordCondition(
+                            List.of("message"), "('error' || 'warning') && 'critical'");
+            dto.setKeywordConditions(List.of(condition));
 
             String result = keywordConditionBuilder.buildKeywordConditions(dto);
 
-            // 验证复杂嵌套表达式解析结果符合Doris语法和运算符优先级
-            // 根据 FieldExpressionParser 的实际逻辑，括号表达式会添加空格
-            assertEquals(
+            String expected =
                     "(( message LIKE '%error%' OR message LIKE '%warning%' ) AND message LIKE"
-                            + " '%critical%')",
-                    result);
-        }
-
-        @Test
-        @DisplayName("MATCH_PHRASE复杂表达式测试 - 验证精确短语匹配的OR表达式")
-        void testComplexExpressionWithMatchPhrase() {
-            when(queryConfigValidationService.getFieldSearchMethodMap("test"))
-                    .thenReturn(Map.of("content", "MATCH_PHRASE"));
-
-            LogSearchDTO dto = createLogSearchDTO("test");
-            KeywordConditionDTO condition =
-                    createKeywordCondition("content", "'OutOfMemoryError' || 'StackOverflowError'");
-            dto.setKeywordConditions(Arrays.asList(condition));
-
-            String result = keywordConditionBuilder.buildKeywordConditions(dto);
-
-            // 验证MATCH_PHRASE方法的复杂表达式解析
-            assertEquals(
-                    "(content MATCH_PHRASE 'OutOfMemoryError' OR content MATCH_PHRASE"
-                            + " 'StackOverflowError')",
-                    result);
-        }
-
-        @Test
-        @DisplayName("MATCH_ANY复杂表达式测试 - 验证任意匹配的AND表达式")
-        void testComplexExpressionWithMatchAny() {
-            when(queryConfigValidationService.getFieldSearchMethodMap("test"))
-                    .thenReturn(Map.of("tags", "MATCH_ANY"));
-
-            LogSearchDTO dto = createLogSearchDTO("test");
-            KeywordConditionDTO condition =
-                    createKeywordCondition("tags", "'production' && 'critical'");
-            dto.setKeywordConditions(Arrays.asList(condition));
-
-            String result = keywordConditionBuilder.buildKeywordConditions(dto);
-
-            // 验证MATCH_ANY方法的复杂表达式解析
-            assertEquals("(tags MATCH_ANY 'production' AND tags MATCH_ANY 'critical')", result);
-        }
-
-        @Test
-        @DisplayName("MATCH_ALL复杂表达式测试 - 验证全匹配的嵌套表达式")
-        void testComplexExpressionWithMatchAll() {
-            when(queryConfigValidationService.getFieldSearchMethodMap("test"))
-                    .thenReturn(Map.of("keywords", "MATCH_ALL"));
-
-            LogSearchDTO dto = createLogSearchDTO("test");
-            KeywordConditionDTO condition =
-                    createKeywordCondition("keywords", "('payment' || 'order') && 'success'");
-            dto.setKeywordConditions(Arrays.asList(condition));
-
-            String result = keywordConditionBuilder.buildKeywordConditions(dto);
-
-            // 验证MATCH_ALL方法的复杂嵌套表达式解析
-            assertEquals(
-                    "(( keywords MATCH_ALL 'payment' OR keywords MATCH_ALL 'order' ) AND keywords"
-                            + " MATCH_ALL 'success')",
-                    result);
+                            + " '%critical%')";
+            assertEquals(expected, result);
         }
     }
 
@@ -340,32 +443,29 @@ class KeywordConditionBuilderTest {
             String result = keywordConditionBuilder.buildKeywordConditions(dto);
 
             assertEquals("", result);
-
-            // 验证不调用配置服务
-            verifyNoInteractions(queryConfigValidationService);
         }
 
         @Test
         @DisplayName("空列表关键字条件测试 - 验证返回空字符串")
         void testEmptyListKeywordConditions() {
             LogSearchDTO dto = createLogSearchDTO("test");
-            dto.setKeywordConditions(Arrays.asList());
+            dto.setKeywordConditions(Collections.emptyList());
 
             String result = keywordConditionBuilder.buildKeywordConditions(dto);
 
             assertEquals("", result);
-            verifyNoInteractions(queryConfigValidationService);
         }
 
         @Test
-        @DisplayName("字段名为空的条件测试 - 验证跳过处理")
-        void testEmptyFieldNameCondition() {
+        @DisplayName("字段名列表为空的条件测试 - 验证跳过处理")
+        void testEmptyFieldNamesCondition() {
             when(queryConfigValidationService.getFieldSearchMethodMap("test"))
                     .thenReturn(Map.of("message", "LIKE"));
 
             LogSearchDTO dto = createLogSearchDTO("test");
-            KeywordConditionDTO condition1 = createKeywordCondition("", "error");
-            KeywordConditionDTO condition2 = createKeywordCondition("message", "warning");
+            KeywordConditionDTO condition1 =
+                    createKeywordCondition(Collections.emptyList(), "error");
+            KeywordConditionDTO condition2 = createKeywordCondition(List.of("message"), "warning");
             dto.setKeywordConditions(Arrays.asList(condition1, condition2));
 
             String result = keywordConditionBuilder.buildKeywordConditions(dto);
@@ -381,8 +481,8 @@ class KeywordConditionBuilderTest {
                     .thenReturn(Map.of("message", "LIKE"));
 
             LogSearchDTO dto = createLogSearchDTO("test");
-            KeywordConditionDTO condition1 = createKeywordCondition("message", "");
-            KeywordConditionDTO condition2 = createKeywordCondition("message", "error");
+            KeywordConditionDTO condition1 = createKeywordCondition(List.of("message"), "");
+            KeywordConditionDTO condition2 = createKeywordCondition(List.of("message"), "error");
             dto.setKeywordConditions(Arrays.asList(condition1, condition2));
 
             String result = keywordConditionBuilder.buildKeywordConditions(dto);
@@ -395,8 +495,9 @@ class KeywordConditionBuilderTest {
         @DisplayName("字段权限验证失败测试 - 验证异常传播")
         void testFieldPermissionValidationFailure() {
             LogSearchDTO dto = createLogSearchDTO("test");
-            KeywordConditionDTO condition = createKeywordCondition("unauthorized_field", "test");
-            dto.setKeywordConditions(Arrays.asList(condition));
+            KeywordConditionDTO condition =
+                    createKeywordCondition(List.of("unauthorized_field"), "test");
+            dto.setKeywordConditions(List.of(condition));
 
             // Mock权限验证失败
             doThrow(new BusinessException(ErrorCode.KEYWORD_FIELD_NOT_ALLOWED, "字段不允许查询"))
@@ -415,77 +516,14 @@ class KeywordConditionBuilderTest {
         }
 
         @Test
-        @DisplayName("不支持的搜索方法测试 - 验证异常处理")
-        void testUnsupportedSearchMethod() {
-            when(queryConfigValidationService.getFieldSearchMethodMap("test"))
-                    .thenReturn(Map.of("message", "INVALID_METHOD"));
-
-            LogSearchDTO dto = createLogSearchDTO("test");
-            KeywordConditionDTO condition = createKeywordCondition("message", "error");
-            dto.setKeywordConditions(Arrays.asList(condition));
-
-            BusinessException exception =
-                    assertThrows(
-                            BusinessException.class,
-                            () -> {
-                                keywordConditionBuilder.buildKeywordConditions(dto);
-                            });
-
-            assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
-        }
-    }
-
-    @Nested
-    @DisplayName("搜索方法优先级测试")
-    class SearchMethodPriorityTests {
-
-        @Test
-        @DisplayName("请求指定搜索方法优先级测试 - 验证覆盖配置中的默认方法")
-        void testRequestSearchMethodOverridesConfig() {
-            // Mock配置：message字段配置为LIKE
-            when(queryConfigValidationService.getFieldSearchMethodMap("test"))
-                    .thenReturn(Map.of("message", "LIKE"));
-
-            LogSearchDTO dto = createLogSearchDTO("test");
-            KeywordConditionDTO condition = createKeywordCondition("message", "error");
-            // 在请求中指定使用MATCH_PHRASE，应该覆盖配置中的LIKE
-            condition.setSearchMethod("MATCH_PHRASE");
-            dto.setKeywordConditions(Arrays.asList(condition));
-
-            String result = keywordConditionBuilder.buildKeywordConditions(dto);
-
-            // 验证使用了请求中指定的MATCH_PHRASE而不是配置中的LIKE
-            assertEquals("(message MATCH_PHRASE 'error')", result);
-        }
-
-        @Test
-        @DisplayName("使用配置默认方法测试 - 验证未指定时使用配置中的方法")
-        void testUseConfigDefaultMethod() {
-            // Mock配置：message字段配置为MATCH_ALL
-            when(queryConfigValidationService.getFieldSearchMethodMap("test"))
-                    .thenReturn(Map.of("message", "MATCH_ALL"));
-
-            LogSearchDTO dto = createLogSearchDTO("test");
-            KeywordConditionDTO condition = createKeywordCondition("message", "error");
-            // 不指定searchMethod，应该使用配置中的默认方法
-            dto.setKeywordConditions(Arrays.asList(condition));
-
-            String result = keywordConditionBuilder.buildKeywordConditions(dto);
-
-            // 验证使用了配置中的MATCH_ALL方法
-            assertEquals("(message MATCH_ALL 'error')", result);
-        }
-
-        @Test
-        @DisplayName("字段未配置且请求未指定搜索方法测试 - 验证异常抛出")
-        void testFieldNotConfiguredAndNoRequestMethod() {
+        @DisplayName("字段未配置搜索方法测试 - 验证异常抛出")
+        void testFieldNotConfigured() {
             // Mock配置：不包含message字段的配置
             when(queryConfigValidationService.getFieldSearchMethodMap("test")).thenReturn(Map.of());
 
             LogSearchDTO dto = createLogSearchDTO("test");
-            KeywordConditionDTO condition = createKeywordCondition("message", "error");
-            // 既没有配置也没有在请求中指定，应该抛出异常
-            dto.setKeywordConditions(Arrays.asList(condition));
+            KeywordConditionDTO condition = createKeywordCondition(List.of("message"), "error");
+            dto.setKeywordConditions(List.of(condition));
 
             BusinessException exception =
                     assertThrows(
@@ -499,92 +537,55 @@ class KeywordConditionBuilderTest {
         }
 
         @Test
-        @DisplayName("字段未配置但请求指定搜索方法测试 - 验证可以正常工作")
-        void testFieldNotConfiguredButRequestSpecified() {
-            // Mock配置：不包含message字段的配置
-            when(queryConfigValidationService.getFieldSearchMethodMap("test")).thenReturn(Map.of());
-
-            LogSearchDTO dto = createLogSearchDTO("test");
-            KeywordConditionDTO condition = createKeywordCondition("message", "error");
-            // 在请求中指定搜索方法，即使配置中没有也应该可以工作
-            condition.setSearchMethod("LIKE");
-            dto.setKeywordConditions(Arrays.asList(condition));
-
-            String result = keywordConditionBuilder.buildKeywordConditions(dto);
-
-            // 验证使用了请求中指定的LIKE方法
-            assertEquals("(message LIKE '%error%')", result);
-        }
-
-        @Test
-        @DisplayName("混合优先级测试 - 验证多字段不同优先级处理")
-        void testMixedPriorityHandling() {
-            // Mock配置：只配置了message字段
+        @DisplayName("不支持的搜索方法测试 - 验证异常处理")
+        void testUnsupportedSearchMethod() {
+            // Mock配置：使用不支持的搜索方法
             when(queryConfigValidationService.getFieldSearchMethodMap("test"))
-                    .thenReturn(Map.of("message", "LIKE", "level", "MATCH_PHRASE"));
+                    .thenReturn(Map.of("message", "INVALID_METHOD"));
 
             LogSearchDTO dto = createLogSearchDTO("test");
+            KeywordConditionDTO condition = createKeywordCondition(List.of("message"), "error");
+            dto.setKeywordConditions(List.of(condition));
 
-            // 第一个条件：使用配置中的默认方法
-            KeywordConditionDTO condition1 = createKeywordCondition("message", "error");
+            BusinessException exception =
+                    assertThrows(
+                            BusinessException.class,
+                            () -> {
+                                keywordConditionBuilder.buildKeywordConditions(dto);
+                            });
 
-            // 第二个条件：覆盖配置中的方法
-            KeywordConditionDTO condition2 = createKeywordCondition("level", "ERROR");
-            condition2.setSearchMethod("MATCH_ALL"); // 覆盖配置中的MATCH_PHRASE
-
-            dto.setKeywordConditions(Arrays.asList(condition1, condition2));
-
-            String result = keywordConditionBuilder.buildKeywordConditions(dto);
-
-            // 验证第一个使用配置默认，第二个使用请求指定
-            assertEquals("((message LIKE '%error%') AND (level MATCH_ALL 'ERROR'))", result);
+            assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
         }
 
         @Test
-        @DisplayName("空白搜索方法处理测试 - 验证空格和null处理")
-        void testBlankSearchMethodHandling() {
-            // Mock配置
+        @DisplayName("混合字段配置测试 - 验证部分字段有配置部分字段无配置的情况")
+        void testMixedFieldConfiguration() {
+            // Mock配置：只配置部分字段
             when(queryConfigValidationService.getFieldSearchMethodMap("test"))
                     .thenReturn(Map.of("message", "LIKE"));
 
             LogSearchDTO dto = createLogSearchDTO("test");
+            KeywordConditionDTO condition =
+                    createKeywordCondition(Arrays.asList("message", "unconfigured_field"), "error");
+            dto.setKeywordConditions(List.of(condition));
 
-            // 测试空字符串
-            KeywordConditionDTO condition1 = createKeywordCondition("message", "error");
-            condition1.setSearchMethod("");
+            // 应该抛出字段未配置异常
+            BusinessException exception =
+                    assertThrows(
+                            BusinessException.class,
+                            () -> {
+                                keywordConditionBuilder.buildKeywordConditions(dto);
+                            });
 
-            // 测试只有空格
-            KeywordConditionDTO condition2 = createKeywordCondition("message", "warning");
-            condition2.setSearchMethod("   ");
-
-            dto.setKeywordConditions(Arrays.asList(condition1, condition2));
-
-            String result = keywordConditionBuilder.buildKeywordConditions(dto);
-
-            // 验证都使用了配置中的默认方法LIKE
-            assertEquals("((message LIKE '%error%') AND (message LIKE '%warning%'))", result);
+            assertEquals(ErrorCode.KEYWORD_FIELD_NOT_ALLOWED, exception.getErrorCode());
+            assertTrue(exception.getMessage().contains("unconfigured_field"));
+            assertTrue(exception.getMessage().contains("未配置默认搜索方法"));
         }
     }
 
     @Nested
-    @DisplayName("字段名和搜索值去空格测试")
+    @DisplayName("搜索值去空格测试")
     class TrimWhitespaceTests {
-
-        @Test
-        @DisplayName("字段名前后空格处理测试 - 验证trim()功能")
-        void testFieldNameTrimming() {
-            when(queryConfigValidationService.getFieldSearchMethodMap("test"))
-                    .thenReturn(Map.of("message", "LIKE"));
-
-            LogSearchDTO dto = createLogSearchDTO("test");
-            KeywordConditionDTO condition = createKeywordCondition("  message  ", "error");
-            dto.setKeywordConditions(Arrays.asList(condition));
-
-            String result = keywordConditionBuilder.buildKeywordConditions(dto);
-
-            // 验证字段名的空格被正确处理
-            assertEquals("(message LIKE '%error%')", result);
-        }
 
         @Test
         @DisplayName("搜索值前后空格处理测试 - 验证trim()功能")
@@ -593,8 +594,8 @@ class KeywordConditionBuilderTest {
                     .thenReturn(Map.of("message", "LIKE"));
 
             LogSearchDTO dto = createLogSearchDTO("test");
-            KeywordConditionDTO condition = createKeywordCondition("message", "  error  ");
-            dto.setKeywordConditions(Arrays.asList(condition));
+            KeywordConditionDTO condition = createKeywordCondition(List.of("message"), "  error  ");
+            dto.setKeywordConditions(List.of(condition));
 
             String result = keywordConditionBuilder.buildKeywordConditions(dto);
 
@@ -613,20 +614,11 @@ class KeywordConditionBuilderTest {
     }
 
     /** 创建关键字条件DTO对象 */
-    private KeywordConditionDTO createKeywordCondition(String fieldName, String searchValue) {
-        KeywordConditionDTO condition = new KeywordConditionDTO();
-        condition.setFieldName(fieldName);
-        condition.setSearchValue(searchValue);
-        return condition;
-    }
-
-    /** 创建带搜索方法的关键字条件DTO对象 */
     private KeywordConditionDTO createKeywordCondition(
-            String fieldName, String searchValue, String searchMethod) {
+            List<String> fieldNames, String searchValue) {
         KeywordConditionDTO condition = new KeywordConditionDTO();
-        condition.setFieldName(fieldName);
+        condition.setFieldNames(fieldNames);
         condition.setSearchValue(searchValue);
-        condition.setSearchMethod(searchMethod);
         return condition;
     }
 }

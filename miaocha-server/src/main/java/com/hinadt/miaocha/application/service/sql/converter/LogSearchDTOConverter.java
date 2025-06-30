@@ -66,11 +66,21 @@ public class LogSearchDTOConverter {
                 && original.getKeywordConditions().size() == convertedKeywordConditions.size()) {
 
             for (int i = 0; i < original.getKeywordConditions().size(); i++) {
-                String originalField = original.getKeywordConditions().get(i).getFieldName();
-                String convertedField = convertedKeywordConditions.get(i).getFieldName();
+                List<String> originalFields =
+                        original.getKeywordConditions().get(i).getFieldNames();
+                List<String> convertedFields = convertedKeywordConditions.get(i).getFieldNames();
 
-                if (!originalField.equals(convertedField)) {
-                    mapping.put(convertedField, originalField);
+                if (originalFields != null
+                        && convertedFields != null
+                        && originalFields.size() == convertedFields.size()) {
+                    for (int j = 0; j < originalFields.size(); j++) {
+                        String originalField = originalFields.get(j);
+                        String convertedField = convertedFields.get(j);
+
+                        if (!originalField.equals(convertedField)) {
+                            mapping.put(convertedField, originalField);
+                        }
+                    }
                 }
             }
         }
@@ -135,7 +145,11 @@ public class LogSearchDTOConverter {
         // 检查是否需要转换
         boolean needsConversion =
                 keywordConditions.stream()
-                        .anyMatch(condition -> needsVariantConversion(condition.getFieldName()));
+                        .anyMatch(
+                                condition ->
+                                        condition.getFieldNames() != null
+                                                && condition.getFieldNames().stream()
+                                                        .anyMatch(this::needsVariantConversion));
 
         if (!needsConversion) {
             return keywordConditions; // 返回原始对象，避免不必要的复制
@@ -154,15 +168,35 @@ public class LogSearchDTOConverter {
      * @return 转换后的关键字条件
      */
     private KeywordConditionDTO convertKeywordCondition(KeywordConditionDTO original) {
-        if (original == null || !needsVariantConversion(original.getFieldName())) {
+        if (original == null
+                || original.getFieldNames() == null
+                || original.getFieldNames().isEmpty()) {
             return original;
         }
 
-        // 创建新的条件对象，只转换字段名
+        // 检查是否需要转换
+        boolean needsConversion =
+                original.getFieldNames().stream().anyMatch(this::needsVariantConversion);
+
+        if (!needsConversion) {
+            return original;
+        }
+
+        // 创建新的条件对象，转换字段名列表
         KeywordConditionDTO converted = new KeywordConditionDTO();
-        converted.setFieldName(variantFieldConverter.convertTopnField(original.getFieldName()));
+
+        // 转换每个字段名
+        List<String> convertedFieldNames =
+                original.getFieldNames().stream()
+                        .map(
+                                fieldName ->
+                                        needsVariantConversion(fieldName)
+                                                ? variantFieldConverter.convertTopnField(fieldName)
+                                                : fieldName)
+                        .collect(Collectors.toList());
+
+        converted.setFieldNames(convertedFieldNames);
         converted.setSearchValue(original.getSearchValue());
-        converted.setSearchMethod(original.getSearchMethod());
 
         return converted;
     }

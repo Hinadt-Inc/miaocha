@@ -89,18 +89,30 @@ public class QueryConfigValidationService {
 
         // 验证每个查询条件的字段权限
         for (KeywordConditionDTO condition : keywordConditions) {
-            String fieldName = condition.getFieldName();
-
-            // 如果是装饰器，需要用原始字段名查找配置
-            String configFieldName = fieldName;
-            if (dto instanceof LogSearchDTODecorator) {
-                configFieldName = ((LogSearchDTODecorator) dto).getOriginalFieldName(fieldName);
+            if (condition.getFieldNames() == null || condition.getFieldNames().isEmpty()) {
+                continue;
             }
 
-            if (!fieldConfigMap.containsKey(configFieldName)) {
-                throw new BusinessException(
-                        ErrorCode.KEYWORD_FIELD_NOT_ALLOWED,
-                        "字段 '" + configFieldName + "'不在允许关键字检索字段内 ,不允许进行关键字查询，请检查模块配置");
+            // 验证条件中的每个字段
+            for (String fieldName : condition.getFieldNames()) {
+                if (fieldName == null || fieldName.trim().isEmpty()) {
+                    continue;
+                }
+
+                String trimmedFieldName = fieldName.trim();
+
+                // 如果是装饰器，需要用原始字段名查找配置
+                String configFieldName = trimmedFieldName;
+                if (dto instanceof LogSearchDTODecorator) {
+                    configFieldName =
+                            ((LogSearchDTODecorator) dto).getOriginalFieldName(trimmedFieldName);
+                }
+
+                if (!fieldConfigMap.containsKey(configFieldName)) {
+                    throw new BusinessException(
+                            ErrorCode.KEYWORD_FIELD_NOT_ALLOWED,
+                            "字段 '" + configFieldName + "'不在允许关键字检索字段内，不允许进行关键字查询，请检查模块配置");
+                }
             }
         }
     }

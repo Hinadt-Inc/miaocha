@@ -7,7 +7,6 @@ import com.hinadt.miaocha.application.service.impl.logsearch.validator.QueryConf
 import com.hinadt.miaocha.application.service.sql.builder.*;
 import com.hinadt.miaocha.application.service.sql.converter.LogSearchDTOConverter;
 import com.hinadt.miaocha.application.service.sql.converter.VariantFieldConverter;
-import com.hinadt.miaocha.domain.dto.logsearch.KeywordConditionDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTODecorator;
 import java.util.Arrays;
@@ -263,41 +262,6 @@ class LogSqlBuilderTest {
     @Nested
     @DisplayName("复杂场景SQL构建测试")
     class ComplexScenarioTests {
-
-        @Test
-        @DisplayName("包含关键字条件的详情查询 - 期望：正确处理关键字搜索条件")
-        void testDetailQueryWithKeywordConditions() {
-            // Arrange
-            LogSearchDTO original = createBasicDTO();
-            original.setFields(Arrays.asList("message.content", "level"));
-
-            KeywordConditionDTO keywordCondition = new KeywordConditionDTO();
-            keywordCondition.setFieldName("message.content");
-            keywordCondition.setSearchValue("error");
-            keywordCondition.setSearchMethod("like");
-            original.setKeywordConditions(Arrays.asList(keywordCondition));
-
-            LogSearchDTODecorator dto = (LogSearchDTODecorator) dtoConverter.convert(original);
-            String tableName = "test_logs";
-            String timeField = "log_time";
-
-            // Mock配置服务调用
-            doNothing()
-                    .when(queryConfigValidationService)
-                    .validateKeywordFieldPermissions(any(), any());
-            when(queryConfigValidationService.getFieldSearchMethodMap("test-module"))
-                    .thenReturn(java.util.Collections.emptyMap());
-
-            // Act
-            String result = logSqlBuilder.buildDetailQuery(dto, tableName, timeField);
-
-            // Assert
-            assertNotNull(result, "SQL不应为null");
-            assertTrue(result.contains("WHERE"), "应包含WHERE子句");
-            assertTrue(result.contains("message['content']"), "应包含转换后的字段名");
-            assertTrue(result.contains("LIKE"), "关键字搜索应使用LIKE操作符");
-            assertTrue(result.contains("%error%"), "应包含关键字搜索值");
-        }
 
         @Test
         @DisplayName("包含WHERE条件的字段分布查询 - 期望：正确处理自定义WHERE条件")

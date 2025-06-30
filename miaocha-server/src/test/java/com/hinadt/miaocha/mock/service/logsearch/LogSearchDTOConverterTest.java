@@ -110,14 +110,12 @@ class LogSearchDTOConverterTest {
             LogSearchDTO original = createBasicDTO();
 
             KeywordConditionDTO condition1 = new KeywordConditionDTO();
-            condition1.setFieldName("message.content");
+            condition1.setFieldNames(Arrays.asList("message.content"));
             condition1.setSearchValue("error");
-            condition1.setSearchMethod("contains");
 
             KeywordConditionDTO condition2 = new KeywordConditionDTO();
-            condition2.setFieldName("level");
+            condition2.setFieldNames(Arrays.asList("level"));
             condition2.setSearchValue("ERROR");
-            condition2.setSearchMethod("equals");
 
             original.setKeywordConditions(Arrays.asList(condition1, condition2));
 
@@ -128,11 +126,14 @@ class LogSearchDTOConverterTest {
 
             // 验证点语法字段名被转换
             assertEquals(
-                    "message['content']", resultConditions.get(0).getFieldName(), "点语法字段名应被转换");
+                    Arrays.asList("message['content']"),
+                    resultConditions.get(0).getFieldNames(),
+                    "点语法字段名应被转换");
             assertEquals("error", resultConditions.get(0).getSearchValue(), "搜索值应保持不变");
 
             // 验证普通字段名保持不变
-            assertEquals("level", resultConditions.get(1).getFieldName(), "普通字段名应保持不变");
+            assertEquals(
+                    Arrays.asList("level"), resultConditions.get(1).getFieldNames(), "普通字段名应保持不变");
         }
     }
 

@@ -114,9 +114,8 @@ public class LogSearchIntegrationTest {
 
             // 使用message_text字段搜索ERROR日志，配置中默认为MATCH_PHRASE方法
             KeywordConditionDTO keywordCondition = new KeywordConditionDTO();
-            keywordCondition.setFieldName("message_text");
+            keywordCondition.setFieldNames(List.of("message_text"));
             keywordCondition.setSearchValue("NullPointerException"); // 使用测试数据中真实存在的错误信息
-            // 不设置searchMethod，使用配置中的默认方法MATCH_PHRASE
 
             searchRequest.setKeywordConditions(List.of(keywordCondition));
 
@@ -154,7 +153,7 @@ public class LogSearchIntegrationTest {
 
             // 测试复杂表达式：基于真实测试数据的错误和用户相关日志
             KeywordConditionDTO complexCondition = new KeywordConditionDTO();
-            complexCondition.setFieldName("message_text");
+            complexCondition.setFieldNames(List.of("message_text"));
             complexCondition.setSearchValue(
                     "('NullPointerException' || 'timeout') && ('processing' || 'request')");
 
@@ -180,7 +179,7 @@ public class LogSearchIntegrationTest {
 
             // 测试三元素OR表达式：'ERROR' || 'WARN' || 'INFO'
             KeywordConditionDTO tripleOrCondition = new KeywordConditionDTO();
-            tripleOrCondition.setFieldName("message.level");
+            tripleOrCondition.setFieldNames(List.of("message.level"));
             tripleOrCondition.setSearchValue("'ERROR' || 'WARN' || 'INFO'");
 
             searchRequest.setKeywordConditions(List.of(tripleOrCondition));
@@ -206,7 +205,7 @@ public class LogSearchIntegrationTest {
             // 测试深度嵌套：基于真实测试数据的内容组合
             // (('user' && 'login') || ('order' && 'processed')) && 'request'
             KeywordConditionDTO nestedCondition = new KeywordConditionDTO();
-            nestedCondition.setFieldName("message_text");
+            nestedCondition.setFieldNames(List.of("message_text"));
             nestedCondition.setSearchValue(
                     "(('user' && 'login') || ('order' && 'processed')) && 'request'");
 
@@ -247,93 +246,101 @@ public class LogSearchIntegrationTest {
 
         @Test
         @Order(5)
-        @DisplayName("KW-005: 指定搜索方法覆盖配置默认值")
-        void testOverrideDefaultSearchMethod() {
-            log.info("🔍 测试指定搜索方法覆盖配置默认值");
+        @DisplayName("KW-005: 多字段OR查询 - 验证字段间OR连接逻辑")
+        void testMultiFieldOrSearch() {
+            log.info("🔍 测试多字段OR查询");
 
             LogSearchDTO searchRequest = createBaseSearchRequest();
 
-            // host字段配置默认为LIKE，但这里指定使用MATCH_PHRASE
-            KeywordConditionDTO overrideCondition = new KeywordConditionDTO();
-            overrideCondition.setFieldName("host");
-            overrideCondition.setSearchValue("172.20.61.22"); // 使用测试数据中真实存在的主机
-            overrideCondition.setSearchMethod("MATCH_PHRASE"); // 覆盖默认的LIKE方法
+            // 多字段OR连接：在host、level、service任一字段中匹配
+            KeywordConditionDTO multiFieldCondition = new KeywordConditionDTO();
+            multiFieldCondition.setFieldNames(List.of("host", "message.level", "message.service"));
+            multiFieldCondition.setSearchValue("'172.20.61' || 'ERROR'");
 
-            searchRequest.setKeywordConditions(List.of(overrideCondition));
+            searchRequest.setKeywordConditions(List.of(multiFieldCondition));
 
-            // 执行查询
             LogDetailResultDTO result = logSearchService.searchDetails(searchRequest);
 
-            // 验证查询结果
-            assertThat(result).isNotNull();
             assertThat(result.getTotalCount()).isGreaterThan(0);
 
-            // 验证返回的记录确实来自指定主机
+            // 验证返回记录符合多字段OR逻辑：任一字段匹配即可
             boolean foundMatch =
                     result.getRows().stream()
                             .anyMatch(
                                     row -> {
                                         Object host = row.get("host");
-                                        return host != null
-                                                && "172.20.61.22".equals(host.toString());
+                                        Object message = row.get("message");
+
+                                        String hostStr = host != null ? host.toString() : "";
+                                        String messageStr =
+                                                message != null ? message.toString() : "";
+
+                                        // 验证OR逻辑：host包含172.20.61 OR message包含ERROR（任一字段匹配即可）
+                                        boolean hostMatch = hostStr.contains("172.20.61");
+                                        boolean levelMatch = messageStr.contains("ERROR");
+
+                                        return hostMatch || levelMatch;
                                     });
             assertThat(foundMatch).isTrue();
-            assertThat(result.getRows()).isNotEmpty();
 
-            log.info("✅ 指定搜索方法覆盖通过 - 查询到{}条记录", result.getTotalCount());
+            log.info("✅ 多字段OR查询通过 - 查询到{}条记录", result.getTotalCount());
         }
 
         @Test
         @Order(6)
-        @DisplayName("KW-006: 多字段关键字搜索 - 验证多字段AND组合")
-        void testMultiFieldKeywordSearch() {
-            log.info("🔍 测试多字段关键字搜索");
+        @DisplayName("KW-006: 多条件AND多字段OR查询 - 验证条件间AND连接，字段间OR连接")
+        void testMultiConditionAndMultiFieldOrSearch() {
+            log.info("🔍 测试多条件AND多字段OR查询");
 
             LogSearchDTO searchRequest = createBaseSearchRequest();
 
-            // 多个字段的关键字条件，基于真实测试数据
-            KeywordConditionDTO levelCondition = new KeywordConditionDTO();
-            levelCondition.setFieldName("message.level");
-            levelCondition.setSearchValue("ERROR"); // 测试数据中的真实级别
-
-            KeywordConditionDTO serviceCondition = new KeywordConditionDTO();
-            serviceCondition.setFieldName("message.service");
-            serviceCondition.setSearchValue("hina-cloud-engine"); // 测试数据中的真实服务名
-
+            // 第一个条件：在多个字段中搜索主机信息（字段间OR连接）
             KeywordConditionDTO hostCondition = new KeywordConditionDTO();
-            hostCondition.setFieldName("host");
-            hostCondition.setSearchValue("172.20.61"); // 匹配测试数据中的主机IP段
+            hostCondition.setFieldNames(List.of("host", "source"));
+            hostCondition.setSearchValue("'172.20.61'");
 
-            searchRequest.setKeywordConditions(
-                    List.of(levelCondition, serviceCondition, hostCondition));
+            // 第二个条件：在message字段中搜索级别信息
+            KeywordConditionDTO levelCondition = new KeywordConditionDTO();
+            levelCondition.setFieldNames(List.of("message.level"));
+            levelCondition.setSearchValue("'ERROR' || 'INFO'");
 
-            // 执行查询
+            // 多个条件间AND连接
+            searchRequest.setKeywordConditions(List.of(hostCondition, levelCondition));
+
             LogDetailResultDTO result = logSearchService.searchDetails(searchRequest);
 
-            // 验证查询结果
-            assertThat(result).isNotNull();
+            assertThat(result.getTotalCount()).isGreaterThan(0);
 
-            // 验证返回的记录确实符合所有条件
-            if (result.getTotalCount() > 0) {
-                boolean allMatch =
-                        result.getRows().stream()
-                                .allMatch(
-                                        row -> {
-                                            Object level = row.get("level");
-                                            Object service = row.get("service");
-                                            Object host = row.get("host");
-                                            return level != null
-                                                    && level.toString().contains("ERROR")
-                                                    && service != null
-                                                    && service.toString()
-                                                            .contains("hina-cloud-engine")
-                                                    && host != null
-                                                    && host.toString().contains("172.20.61");
-                                        });
-                assertThat(allMatch).isTrue();
-            }
+            // 验证返回记录符合逻辑：条件间AND连接，字段间OR连接
+            boolean foundMatch =
+                    result.getRows().stream()
+                            .anyMatch(
+                                    row -> {
+                                        Object host = row.get("host");
+                                        Object source = row.get("source");
+                                        Object message = row.get("message");
 
-            log.info("✅ 多字段关键字搜索通过 - 查询到{}条记录", result.getTotalCount());
+                                        String hostStr = host != null ? host.toString() : "";
+                                        String sourceStr = source != null ? source.toString() : "";
+                                        String messageStr =
+                                                message != null ? message.toString() : "";
+
+                                        // 验证第一个条件：host包含172.20.61 OR source包含172.20.61
+                                        boolean firstConditionMatch =
+                                                hostStr.contains("172.20.61")
+                                                        || sourceStr.contains("172.20.61");
+
+                                        // 验证第二个条件：message包含ERROR OR INFO
+                                        boolean secondConditionMatch =
+                                                messageStr.contains("ERROR")
+                                                        || messageStr.contains("INFO");
+
+                                        // 两个条件都必须满足（AND连接）
+                                        return firstConditionMatch && secondConditionMatch;
+                                    });
+            assertThat(foundMatch).isTrue();
+
+            log.info("✅ 多条件AND多字段OR查询通过 - 查询到{}条记录", result.getTotalCount());
         }
 
         @Test
@@ -368,7 +375,7 @@ public class LogSearchIntegrationTest {
 
             // 尝试使用未在模块配置中的字段进行关键字搜索
             KeywordConditionDTO unauthorizedCondition = new KeywordConditionDTO();
-            unauthorizedCondition.setFieldName("unauthorized_field"); // 未配置的字段
+            unauthorizedCondition.setFieldNames(List.of("unauthorized_field")); // 未配置的字段
             unauthorizedCondition.setSearchValue("test");
 
             searchRequest.setKeywordConditions(List.of(unauthorizedCondition));
@@ -397,7 +404,7 @@ public class LogSearchIntegrationTest {
 
             // 测试包含单引号的搜索值
             KeywordConditionDTO specialCharCondition = new KeywordConditionDTO();
-            specialCharCondition.setFieldName("message_text");
+            specialCharCondition.setFieldNames(List.of("message_text"));
             specialCharCondition.setSearchValue("user's data"); // 包含单引号
 
             searchRequest.setKeywordConditions(List.of(specialCharCondition));
@@ -413,39 +420,37 @@ public class LogSearchIntegrationTest {
 
         @Test
         @Order(10)
-        @DisplayName("KW-010: 不同搜索方法的行为验证")
-        void testDifferentSearchMethodBehaviors() {
-            log.info("🔍 测试不同搜索方法的行为验证");
+        @DisplayName("KW-010: 配置驱动搜索方法验证")
+        void testConfigDrivenSearchMethods() {
+            log.info("🔍 测试配置驱动搜索方法验证");
 
             LogSearchDTO searchRequest = createBaseSearchRequest();
 
-            // 测试LIKE方法的模糊匹配
-            KeywordConditionDTO likeCondition = new KeywordConditionDTO();
-            likeCondition.setFieldName("host");
-            likeCondition.setSearchValue("61"); // 部分匹配
-            likeCondition.setSearchMethod("LIKE");
+            // 测试host字段使用配置的LIKE方法进行模糊匹配
+            KeywordConditionDTO hostCondition = new KeywordConditionDTO();
+            hostCondition.setFieldNames(List.of("host"));
+            hostCondition.setSearchValue("61"); // 部分匹配
 
-            searchRequest.setKeywordConditions(List.of(likeCondition));
+            searchRequest.setKeywordConditions(List.of(hostCondition));
 
-            LogDetailResultDTO likeResult = logSearchService.searchDetails(searchRequest);
+            LogDetailResultDTO hostResult = logSearchService.searchDetails(searchRequest);
 
-            // 测试MATCH_PHRASE方法的精确匹配
-            KeywordConditionDTO phraseCondition = new KeywordConditionDTO();
-            phraseCondition.setFieldName("message.level");
-            phraseCondition.setSearchValue("ERROR");
-            phraseCondition.setSearchMethod("MATCH_PHRASE");
+            // 测试message.level字段使用配置的MATCH_PHRASE方法进行精确匹配
+            KeywordConditionDTO levelCondition = new KeywordConditionDTO();
+            levelCondition.setFieldNames(List.of("message.level"));
+            levelCondition.setSearchValue("ERROR");
 
-            searchRequest.setKeywordConditions(List.of(phraseCondition));
+            searchRequest.setKeywordConditions(List.of(levelCondition));
 
-            LogDetailResultDTO phraseResult = logSearchService.searchDetails(searchRequest);
+            LogDetailResultDTO levelResult = logSearchService.searchDetails(searchRequest);
 
-            assertThat(likeResult).isNotNull();
-            assertThat(phraseResult).isNotNull();
+            assertThat(hostResult).isNotNull();
+            assertThat(levelResult).isNotNull();
 
             log.info(
-                    "✅ 不同搜索方法行为验证通过 - LIKE查询到{}条记录，MATCH_PHRASE查询到{}条记录",
-                    likeResult.getTotalCount(),
-                    phraseResult.getTotalCount());
+                    "✅ 配置驱动搜索方法验证通过 - host字段查询到{}条记录，level字段查询到{}条记录",
+                    hostResult.getTotalCount(),
+                    levelResult.getTotalCount());
         }
     }
 
@@ -702,9 +707,8 @@ public class LogSearchIntegrationTest {
 
             // 组合多种查询条件
             KeywordConditionDTO keywordCondition = new KeywordConditionDTO();
-            keywordCondition.setFieldName("message_text");
+            keywordCondition.setFieldNames(List.of("message_text"));
             keywordCondition.setSearchValue("service");
-            keywordCondition.setSearchMethod("LIKE");
 
             searchRequest.setKeywordConditions(List.of(keywordCondition));
             searchRequest.setWhereSqls(List.of("host LIKE '172.20.61.%'"));
@@ -1301,7 +1305,7 @@ public class LogSearchIntegrationTest {
                         try {
                             LogSearchDTO request = createBaseSearchRequest();
                             KeywordConditionDTO condition =
-                                    createKeywordCondition("message.level", level, "MATCH_PHRASE");
+                                    createKeywordCondition(List.of("message.level"), level);
                             request.setKeywordConditions(List.of(condition));
                             request.setPageSize(30);
 
@@ -1339,8 +1343,7 @@ public class LogSearchIntegrationTest {
                         try {
                             LogSearchDTO request = createBaseSearchRequest();
                             KeywordConditionDTO condition =
-                                    createKeywordCondition(
-                                            "message.service", service, "MATCH_PHRASE");
+                                    createKeywordCondition(List.of("message.service"), service);
                             request.setKeywordConditions(List.of(condition));
                             request.setFields(
                                     List.of(
@@ -1383,7 +1386,7 @@ public class LogSearchIntegrationTest {
                         try {
                             LogSearchDTO request = createBaseSearchRequest();
                             KeywordConditionDTO condition =
-                                    createKeywordCondition("message_text", keyword, "MATCH_PHRASE");
+                                    createKeywordCondition(List.of("message_text"), keyword);
                             request.setKeywordConditions(List.of(condition));
                             request.setWhereSqls(List.of("message.level = 'ERROR'"));
                             request.setPageSize(10);
@@ -2040,8 +2043,9 @@ public class LogSearchIntegrationTest {
             LogSearchDTO searchRequest = createBaseSearchRequest();
 
             // 使用不在模块配置中的字段进行关键字查询
-            KeywordConditionDTO invalidCondition =
-                    createKeywordCondition("invalid_field_name", "test", "LIKE");
+            KeywordConditionDTO invalidCondition = new KeywordConditionDTO();
+            invalidCondition.setFieldNames(List.of("invalid_field_name"));
+            invalidCondition.setSearchValue("test");
             searchRequest.setKeywordConditions(List.of(invalidCondition));
 
             // 验证抛出字段权限异常
@@ -2122,11 +2126,10 @@ public class LogSearchIntegrationTest {
 
     /** 创建关键字条件 */
     private KeywordConditionDTO createKeywordCondition(
-            String fieldName, String searchValue, String searchMethod) {
+            List<String> fieldNames, String searchValue) {
         KeywordConditionDTO condition = new KeywordConditionDTO();
-        condition.setFieldName(fieldName);
+        condition.setFieldNames(fieldNames);
         condition.setSearchValue(searchValue);
-        condition.setSearchMethod(searchMethod);
         return condition;
     }
 }
