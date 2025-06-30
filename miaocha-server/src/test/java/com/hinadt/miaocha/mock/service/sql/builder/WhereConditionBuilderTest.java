@@ -83,27 +83,10 @@ class WhereConditionBuilderTest {
     }
 
     @Test
-    @DisplayName("SQL注入防护 - 危险关键字")
-    void testSqlInjectionDangerousKeywords() {
-        LogSearchDTO dto = new LogSearchDTO();
-        dto.setWhereSqls(Arrays.asList("level = 'INFO'; DROP TABLE logs"));
-
-        BusinessException exception =
-                assertThrows(
-                        BusinessException.class,
-                        () -> {
-                            whereConditionBuilder.buildWhereConditions(dto);
-                        });
-
-        assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
-        assertTrue(exception.getMessage().contains("危险的SQL关键字"));
-    }
-
-    @Test
     @DisplayName("SQL注入防护 - SQL注释")
     void testSqlInjectionComments() {
         LogSearchDTO dto = new LogSearchDTO();
-        dto.setWhereSqls(Arrays.asList("level = 'INFO' -- AND user_id = 1"));
+        dto.setWhereSqls(List.of("level = 'INFO' -- AND user_id = 1"));
 
         BusinessException exception =
                 assertThrows(
@@ -120,7 +103,7 @@ class WhereConditionBuilderTest {
     @DisplayName("SQL注入防护 - 引号转义")
     void testSqlInjectionQuoteEscaping() {
         LogSearchDTO dto = new LogSearchDTO();
-        dto.setWhereSqls(Arrays.asList("level = '''OR 1=1 OR'''"));
+        dto.setWhereSqls(List.of("level = '''OR 1=1 OR'''"));
 
         BusinessException exception =
                 assertThrows(

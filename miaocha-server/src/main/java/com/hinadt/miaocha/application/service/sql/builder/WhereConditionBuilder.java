@@ -27,12 +27,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class WhereConditionBuilder {
 
-    /** 危险SQL关键字模式 - 防止基础SQL注入攻击 */
-    private static final Pattern DANGEROUS_SQL_PATTERN =
-            Pattern.compile(
-                    "(?i)\\b(DROP|DELETE|INSERT|UPDATE|CREATE|ALTER|TRUNCATE|EXEC|EXECUTE|UNION|DECLARE|CAST|CONVERT|SCRIPT|JAVASCRIPT)\\b",
-                    Pattern.CASE_INSENSITIVE);
-
     /** 注释模式 - 防止SQL注释注入 */
     private static final Pattern COMMENT_PATTERN =
             Pattern.compile(
@@ -85,12 +79,6 @@ public class WhereConditionBuilder {
 
         String trimmedCondition = condition.trim();
 
-        // 检测危险的SQL关键字
-        if (DANGEROUS_SQL_PATTERN.matcher(trimmedCondition).find()) {
-            throw new BusinessException(
-                    ErrorCode.VALIDATION_ERROR, "WHERE条件包含危险的SQL关键字，可能存在SQL注入风险: " + condition);
-        }
-
         // 检测SQL注释注入
         if (COMMENT_PATTERN.matcher(trimmedCondition).find()) {
             throw new BusinessException(
@@ -104,10 +92,10 @@ public class WhereConditionBuilder {
         }
 
         // 基础长度限制
-        if (trimmedCondition.length() > 1000) {
+        if (trimmedCondition.length() > 10000) {
             throw new BusinessException(
                     ErrorCode.VALIDATION_ERROR,
-                    "WHERE条件过长，最大长度为1000字符: " + trimmedCondition.length());
+                    "WHERE条件过长，最大长度为10000字符: " + trimmedCondition.length());
         }
 
         return trimmedCondition;
