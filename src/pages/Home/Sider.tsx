@@ -67,25 +67,16 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
   // 获取指定字段的TOP5分布数据
   const queryDistribution = useRequest(
     async (params: ILogSearchParams & { signal?: AbortSignal }) => {
-      // 构造queryConfig参数
-      let queryConfig: any = undefined;
-      if (moduleQueryConfig) {
-        queryConfig = {
-          timeField: moduleQueryConfig.timeField,
-        };
-
-        // 如果有选中的查询配置列表，则添加对应的keywordFields
-        if (selectedQueryConfigs && selectedQueryConfigs.length > 0) {
-          queryConfig.keywordFields = selectedQueryConfigs.map((config) => ({
-            fieldName: config.fieldName,
-            searchMethod: config.searchMethod,
-          }));
-        }
-      }
+      // 构造keywordConditions参数
+      const keywordConditions = (selectedQueryConfigs || []).map((config) => ({
+        fieldName: config.fieldName,
+        searchValue: config.searchValue || '',
+        ...(config.searchMethod && { searchMethod: config.searchMethod }),
+      }));
 
       const requestParams: any = {
         ...params,
-        keywordConditions: queryConfig?.keywordFields || [],
+        keywordConditions: keywordConditions,
       };
       delete requestParams?.datasourceId;
       // 传 signal 给 api

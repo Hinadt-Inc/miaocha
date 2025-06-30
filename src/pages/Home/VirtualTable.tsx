@@ -17,6 +17,7 @@ interface IProps {
   sqls?: string[]; // SQL语句列表
   onSearch?: (params: ILogSearchParams) => void; // 搜索回调函数
   moduleQueryConfig?: any; // 模块查询配置
+  selectedQueryConfigs?: any[]; // 选中的查询配置列表
 }
 
 interface ColumnHeaderProps {
@@ -129,6 +130,7 @@ const VirtualTable = (props: IProps) => {
     sqls,
     onSearch,
     moduleQueryConfig,
+    selectedQueryConfigs,
   } = props;
   const containerRef = useRef<HTMLDivElement>(null);
   const tblRef: Parameters<typeof Table>[0]['ref'] = useRef(null);
@@ -180,7 +182,11 @@ const VirtualTable = (props: IProps) => {
   }, [sqls]);
 
   const keyWordsFormat = useMemo(() => {
-    const { keywords = [] } = searchParams;
+    // 从selectedQueryConfigs中提取searchValue
+    const keywords = (selectedQueryConfigs || [])
+      .map((config: any) => config.searchValue)
+      .filter((value: string) => value && value.trim().length > 0);
+
     if (!keywords || keywords.length === 0) return [];
 
     /**
@@ -213,8 +219,15 @@ const VirtualTable = (props: IProps) => {
       // 单个关键词的情况，移除引号
       return [trimmed.replace(/^['"]|['"]$/g, '')];
     }
-    return Array.from(new Set(convertKeywords(keywords?.slice(-1)[0])));
-  }, [searchParams]);
+
+    // 处理所有关键词并去重
+    const allKeywords = keywords
+      .map((keyword: string) => convertKeywords(keyword))
+      .flat()
+      .filter((keyword: string) => keyword.length > 0);
+
+    return Array.from(new Set(allKeywords));
+  }, [selectedQueryConfigs]);
 
   const handleResize = (index: number) => (width: number) => {
     const column = columns[index];
@@ -236,7 +249,7 @@ const VirtualTable = (props: IProps) => {
           title: columnName,
           dataIndex: columnName,
           width: columnWidths[columnName] ?? 150,
-          render: (text: string) => highlightText(text, searchParams?.keywords || []),
+          render: (text: string) => highlightText(text, keyWordsFormat || []),
         });
       });
     }
@@ -369,14 +382,14 @@ const VirtualTable = (props: IProps) => {
           },
           render: (text: string) => {
             return highlightText(text, [
-              ...(searchParams?.keywords || []),
+              ...(keyWordsFormat || []),
               ...((whereSqlsFromSider.map((item) => item.value) || []) as string[]),
             ]);
           },
         };
       }),
     ];
-  }, [dynamicColumns, searchParams.keywords, columnWidths, whereSqlsFromSider, sqls]);
+  }, [dynamicColumns, keyWordsFormat, columnWidths, whereSqlsFromSider, sqls]);
 
   // console.log('columnWidths', columnWidths);
 
@@ -549,7 +562,7 @@ const VirtualTable = (props: IProps) => {
         expandable={{
           columnWidth: 26,
           expandedRowRender: (record) => (
-            <ExpandedRow data={record} keywords={searchParams?.keywords || []} moduleQueryConfig={moduleQueryConfig} />
+            <ExpandedRow data={record} keywords={keyWordsFormat || []} moduleQueryConfig={moduleQueryConfig} />
           ),
         }}
         components={{
