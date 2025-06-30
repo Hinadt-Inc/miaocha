@@ -118,16 +118,11 @@ const DataSourceFormModal: React.FC<DataSourceFormModalProps> = ({
         colProps={{ span: 12 }}
         name="password"
         label="数据库密码"
-        placeholder={currentDataSource ? '不修改密码请留空' : '请输入数据库密码'}
-        rules={
-          currentDataSource
-            ? [{ max: 128, message: '密码不能超过128个字符' }]
-            : [
-                { required: true, message: '请输入数据库密码' },
-                { max: 128, message: '密码不能超过128个字符' },
-              ]
-        }
-        tooltip={currentDataSource ? '如需修改密码请输入新密码，否则留空保持原密码不变' : ''}
+        placeholder={'请输入数据库密码'}
+        rules={[
+          { required: true, message: '请输入数据库密码' },
+          { max: 128, message: '密码不能超过128个字符' },
+        ]}
         fieldProps={{ maxLength: 128 }}
       />
 
