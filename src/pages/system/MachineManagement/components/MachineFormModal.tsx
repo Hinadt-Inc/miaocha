@@ -41,13 +41,27 @@ const MachineFormModal: React.FC<MachineFormModalProps> = ({
       <Form form={form} layout="vertical" onFinish={onFinish}>
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入机器名称' }]}>
-              <Input placeholder="测试服务器" />
+            <Form.Item
+              name="name"
+              label="名称"
+              rules={[
+                { required: true, message: '请输入机器名称' },
+                { max: 128, message: '机器名称不能超过128个字符' },
+              ]}
+            >
+              <Input placeholder="测试服务器" maxLength={128} />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="ip" label="IP地址" rules={[{ required: true, message: '请输入IP地址' }]}>
-              <Input placeholder="192.168.1.100" />
+            <Form.Item
+              name="ip"
+              label="IP地址"
+              rules={[
+                { required: true, message: '请输入IP地址' },
+                { max: 128, message: 'IP地址不能超过128个字符' },
+              ]}
+            >
+              <Input placeholder="IP地址" maxLength={128} />
             </Form.Item>
           </Col>
         </Row>
@@ -58,20 +72,27 @@ const MachineFormModal: React.FC<MachineFormModalProps> = ({
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入用户名' }]}>
-              <Input placeholder="root" />
+            <Form.Item
+              name="username"
+              label="用户名"
+              rules={[
+                { required: true, message: '请输入用户名' },
+                { max: 128, message: '用户名不能超过128个字符' },
+              ]}
+            >
+              <Input placeholder="root" maxLength={128} />
             </Form.Item>
           </Col>
         </Row>
         <Row gutter={16}>
           <Col span={24}>
-            <Form.Item name="password" label="密码">
-              <Input.Password placeholder="可选" />
+            <Form.Item name="password" label="密码" rules={[{ max: 128, message: '密码不能超过128个字符' }]}>
+              <Input.Password placeholder="可选" maxLength={128} />
             </Form.Item>
           </Col>
           <Col span={24}>
             <Form.Item name="sshKey" label="SSH密钥">
-              <Input.TextArea placeholder="可选" rows={4} />
+              <Input.TextArea placeholder="可选" rows={4} showCount />
             </Form.Item>
           </Col>
         </Row>
