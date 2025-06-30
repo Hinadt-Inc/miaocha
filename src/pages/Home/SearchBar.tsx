@@ -285,11 +285,14 @@ const SearchBar = forwardRef((props: IProps, ref) => {
                   setSelectedFieldName(item.fieldName);
                   setSelectedSearchMethod(item.searchMethod);
                   setKeyword(item.searchValue || '');
-                  // 从原始的keywordFields数据中设置可用的搜索方法
-                  const fieldMethods = originalKeywordFields
-                    .filter((field: any) => field.fieldName === item.fieldName)
-                    .map((field: any) => field.searchMethod);
-                  setAvailableSearchMethods(fieldMethods);
+                  // 根据字段名特点设置可用的搜索方法
+                  if (item.fieldName?.includes('.')) {
+                    // 如果字段名包含.，则只有LIKE方法
+                    setAvailableSearchMethods(['LIKE']);
+                  } else {
+                    // 否则显示所有搜索方法选项
+                    setAvailableSearchMethods(SEARCH_METHODS_OPTIONS);
+                  }
                 }}
                 onClose={() => handleCloseQueryConfig(item)}
               >
