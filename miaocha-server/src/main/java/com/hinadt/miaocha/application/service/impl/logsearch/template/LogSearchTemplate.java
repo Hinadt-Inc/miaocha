@@ -62,16 +62,16 @@ public class LogSearchTemplate {
             String timeField = getTimeField(dto.getModule());
 
             // 4. 执行具体的搜索逻辑
-            Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo);
-            SearchContext context = new SearchContext(conn, convertedDto, tableName, timeField);
-            T result = executor.execute(context);
+            try (Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo)) {
+                SearchContext context = new SearchContext(conn, convertedDto, tableName, timeField);
+                T result = executor.execute(context);
 
-            // 5. 设置执行时间
-            long endTime = System.currentTimeMillis();
-            result.setExecutionTimeMs(endTime - startTime);
+                // 5. 设置执行时间
+                long endTime = System.currentTimeMillis();
+                result.setExecutionTimeMs(endTime - startTime);
 
-            // 注意：这里不关闭conn，让HikariCP管理连接生命周期
-            return result;
+                return result;
+            }
 
         } catch (SQLException e) {
             log.error("数据库连接失败, {}", datasourceInfo, e);

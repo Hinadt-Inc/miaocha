@@ -242,20 +242,20 @@ public class TableValidationServiceImpl implements TableValidationService {
                 return false;
             }
 
-            Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo);
-            DatabaseMetadataService metadataService =
-                    metadataServiceFactory.getService(datasourceInfo.getType());
+            try (Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo)) {
+                DatabaseMetadataService metadataService =
+                        metadataServiceFactory.getService(datasourceInfo.getType());
 
-            List<String> allTables = metadataService.getAllTables(conn);
-            boolean tableExists = allTables.contains(moduleInfo.getTableName());
+                List<String> allTables = metadataService.getAllTables(conn);
+                boolean tableExists = allTables.contains(moduleInfo.getTableName());
 
-            logger.debug(
-                    "模块 {} 的表 {} 在数据库中{}存在",
-                    moduleInfo.getName(),
-                    moduleInfo.getTableName(),
-                    tableExists ? "" : "不");
-            // 注意：这里不关闭conn，让HikariCP管理连接生命周期
-            return tableExists;
+                logger.debug(
+                        "模块 {} 的表 {} 在数据库中{}存在",
+                        moduleInfo.getName(),
+                        moduleInfo.getTableName(),
+                        tableExists ? "" : "不");
+                return tableExists;
+            }
         } catch (Exception e) {
             logger.error("检查模块 {} 的表是否存在时发生错误: {}", moduleInfo.getName(), e.getMessage());
             return false;
@@ -317,17 +317,17 @@ public class TableValidationServiceImpl implements TableValidationService {
                 DatasourceInfo datasourceInfo =
                         datasourceMapper.selectById(moduleInfo.getDatasourceId());
                 if (datasourceInfo != null) {
-                    Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo);
-                    DatabaseMetadataService metadataService =
-                            metadataServiceFactory.getService(datasourceInfo.getType());
+                    try (Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo)) {
+                        DatabaseMetadataService metadataService =
+                                metadataServiceFactory.getService(datasourceInfo.getType());
 
-                    List<SchemaInfoDTO.ColumnInfoDTO> columns =
-                            metadataService.getColumnInfo(conn, moduleInfo.getTableName());
+                        List<SchemaInfoDTO.ColumnInfoDTO> columns =
+                                metadataService.getColumnInfo(conn, moduleInfo.getTableName());
 
-                    // 注意：这里不关闭conn，让HikariCP管理连接生命周期
-                    return columns.stream()
-                            .map(SchemaInfoDTO.ColumnInfoDTO::getColumnName)
-                            .collect(Collectors.toList());
+                        return columns.stream()
+                                .map(SchemaInfoDTO.ColumnInfoDTO::getColumnName)
+                                .collect(Collectors.toList());
+                    }
                 }
             } catch (Exception e) {
                 logger.error("从数据库获取模块 {} 字段信息时发生错误: {}", moduleId, e.getMessage());

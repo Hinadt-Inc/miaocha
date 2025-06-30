@@ -28,20 +28,18 @@ public class JdbcQueryExecutor {
     public SqlQueryResultDTO executeQuery(DatasourceInfo datasourceInfo, String sql) {
         SqlQueryResultDTO result = new SqlQueryResultDTO();
 
-        try {
-            Connection conn = hikariDatasourceManager.getConnection(datasourceInfo);
-            try (Statement stmt = conn.createStatement()) {
-                boolean isResultSet = stmt.execute(sql);
+        try (Connection conn = hikariDatasourceManager.getConnection(datasourceInfo);
+                Statement stmt = conn.createStatement()) {
 
-                if (isResultSet) {
-                    try (ResultSet rs = stmt.getResultSet()) {
-                        processResultSet(rs, result);
-                    }
-                } else {
-                    result.setAffectedRows(stmt.getUpdateCount());
+            boolean isResultSet = stmt.execute(sql);
+
+            if (isResultSet) {
+                try (ResultSet rs = stmt.getResultSet()) {
+                    processResultSet(rs, result);
                 }
+            } else {
+                result.setAffectedRows(stmt.getUpdateCount());
             }
-            // 注意：这里不关闭conn，让HikariCP管理连接生命周期
         } catch (SQLException e) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "SQL执行失败: " + e.getMessage());
         }

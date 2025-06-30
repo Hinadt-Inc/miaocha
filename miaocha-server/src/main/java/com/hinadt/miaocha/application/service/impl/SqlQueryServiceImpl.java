@@ -242,10 +242,7 @@ public class SqlQueryServiceImpl implements SqlQueryService {
     /** 同步获取schema信息 */
     private SchemaInfoDTO getSchemaInfoSync(
             User user, Long userId, DatasourceInfo datasourceInfo, SchemaInfoDTO schemaInfo) {
-        try {
-            // 获取JDBC连接
-            Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo);
-
+        try (Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo)) {
             // 获取对应数据库类型的元数据服务
             DatabaseMetadataService metadataService =
                     metadataServiceFactory.getService(datasourceInfo.getType());
@@ -272,7 +269,6 @@ public class SqlQueryServiceImpl implements SqlQueryService {
             }
 
             schemaInfo.setTables(tables);
-            // 注意：这里不关闭conn，让HikariCP管理连接生命周期
             return schemaInfo;
         } catch (Exception e) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "获取数据库结构失败: " + e.getMessage());
