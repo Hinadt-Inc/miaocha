@@ -193,7 +193,7 @@ declare global {
 
   // 日志表字段的参数
   interface ILogColumnsParams {
-    datasourceId: number; // 数据源ID
+    datasourceId?: number; // 数据源ID
     module: string; // 表名
   }
 

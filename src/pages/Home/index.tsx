@@ -93,11 +93,11 @@ const HomePage = () => {
         }
       }
 
-      const requestParams = {
+      const requestParams: any = {
         ...params,
-        ...(queryConfig && { queryConfig }),
+        keywordConditions: queryConfig?.keywordFields || [],
       };
-
+      delete requestParams?.datasourceId;
       // 传 signal 给 api
       return api.fetchLogDetails(requestParams, { signal: params.signal });
     },
@@ -149,11 +149,12 @@ const HomePage = () => {
         }
       }
 
-      const requestParams = {
+      const requestParams: any = {
         ...params,
-        ...(queryConfig && { queryConfig }),
+        keywordConditions: queryConfig?.keywordFields || [],
       };
 
+      delete requestParams?.datasourceId;
       // 传 signal 给 api
       return api.fetchLogHistogram(requestParams, { signal: params.signal });
     },

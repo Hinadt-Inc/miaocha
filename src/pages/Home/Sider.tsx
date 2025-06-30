@@ -83,11 +83,11 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
         }
       }
 
-      const requestParams = {
+      const requestParams: any = {
         ...params,
-        ...(queryConfig && { queryConfig }),
+        keywordConditions: queryConfig?.keywordFields || [],
       };
-
+      delete requestParams?.datasourceId;
       // 传 signal 给 api
       return api.fetchDistributions(requestParams, { signal: params.signal });
     },
@@ -224,7 +224,8 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
         // 只有当标识发生变化时才调用getColumns
         if (hasCalledGetColumns !== callKey) {
           setHasCalledGetColumns(callKey);
-          getColumns.run({ datasourceId: Number(datasourceId), module: selectedModule });
+          // datasourceId: Number(datasourceId),
+          getColumns.run({ module: selectedModule });
         }
       }
     }
