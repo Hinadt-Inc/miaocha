@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, Suspense, lazy, forwardRef, useImperativeHandle, useRef } from 'react';
-import { AutoComplete, Button, Space, Tag, Popover, Statistic, Tooltip, Select } from 'antd';
+import { AutoComplete, Button, Space, Tag, Popover, Statistic, Tooltip, Select, message } from 'antd';
 import CountUp from 'react-countup';
 import SpinIndicator from '@/components/SpinIndicator';
 import styles from './SearchBar.module.less';
@@ -42,11 +42,11 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     onQueryConfigChange,
     onSelectedQueryConfigsChange,
   } = props;
+  const [messageApi, contextHolder] = message.useMessage();
 
   const [timeGroup, setTimeGroup] = useState<string>('auto'); // 时间分组
   const [activeTab, setActiveTab] = useState('quick'); // 选项卡值
   const [keyword, setKeyword] = useState<string>(''); // 关键词
-  const [keywords, setKeywords] = useState<string[]>([]); // 关键词列表
   const [keywordHistory, setKeywordHistory] = useState<string[]>(() => {
     const saved = localStorage.getItem('keywordHistory');
     return saved ? JSON.parse(saved) : [];
@@ -139,10 +139,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
         try {
           const params = JSON.parse(savedSearchParams);
 
-          // 恢复关键词
-          if (params.keywords && Array.isArray(params.keywords)) {
-            setKeywords(params.keywords);
-          }
+          // 关键词现在通过selectedQueryConfigs恢复，无需单独处理
 
           // 恢复SQL条件
           if (params.whereSqls && Array.isArray(params.whereSqls)) {
@@ -239,6 +236,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   const changeFieldName = (value: string | undefined) => {
     setSelectedFieldName(value || undefined);
     setSelectedSearchMethod(undefined); // 重置搜索方法
+    setKeyword(''); // 清除关键词搜索
 
     if (value) {
       // 从原始的keywordFields数据中找到对应字段的所有搜索方法
@@ -264,12 +262,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     setOpenTimeRange(true);
   };
 
-  const handleCloseKeyword = (item: string) => {
-    setKeywords((prev) => prev.filter((k) => k !== item));
-    const latestTime = getLatestTime(timeOption);
-    setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
-  };
-
   const handleCloseSql = (item: string) => {
     setSqls((prev) => prev.filter((sub) => sub !== item));
     setWhereSqlsFromSider((prev: any) => prev.filter((sub: any) => sub.label !== item));
@@ -284,7 +276,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       <div className={styles.filter}>
         <Space wrap>
           {selectedQueryConfigs.map((item: any) => (
-            <Tooltip placement="topLeft" title={`${item.fieldName} (${item.searchMethod})`}>
+            <Tooltip placement="topLeft" title={`${item.fieldName} (${item.searchMethod}): ${item.searchValue || ''}`}>
               <Tag
                 key={item.value}
                 color="orange"
@@ -292,6 +284,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
                 onClick={() => {
                   setSelectedFieldName(item.fieldName);
                   setSelectedSearchMethod(item.searchMethod);
+                  setKeyword(item.searchValue || '');
                   // 从原始的keywordFields数据中设置可用的搜索方法
                   const fieldMethods = originalKeywordFields
                     .filter((field: any) => field.fieldName === item.fieldName)
@@ -303,17 +296,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
                 <span className="tagContent">{item.label}</span>
               </Tag>
             </Tooltip>
-          ))}
-          {keywords.map((item: string) => (
-            <Tag
-              key={item}
-              color="purple"
-              closable
-              onClick={() => setKeyword(item)}
-              onClose={() => handleCloseKeyword(item)}
-            >
-              <span className="tagContent">{item}</span>
-            </Tag>
           ))}
           {sqls.map((item: string) => (
             <Tooltip placement="topLeft" title={item}>
@@ -337,9 +319,9 @@ const SearchBar = forwardRef((props: IProps, ref) => {
         </Space>
       </div>
     );
-  }, [keywords, sqls, selectedQueryConfigs, timeOption]);
+  }, [sqls, selectedQueryConfigs, timeOption]);
 
-  // 当keywords、sqls、查询配置或时间变化时触发搜索
+  // 当sqls、查询配置或时间变化时触发搜索
   useEffect(() => {
     // 只有在组件初始化完成后才执行搜索和保存逻辑
     if (!initialized) return;
@@ -348,7 +330,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     const _fields = activeColumns?.length === 1 && activeColumns[0] === timeField ? [] : activeColumns || [];
     const params = {
       ...searchParams,
-      ...(keywords.length > 0 && { keywords }),
       ...(sqls.length > 0 && { whereSqls: sqls }),
       startTime: dayjs(timeOption?.range?.[0]).format(DATE_FORMAT_THOUSOND),
       endTime: dayjs(timeOption?.range?.[1]).format(DATE_FORMAT_THOUSOND),
@@ -357,9 +338,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       offset: 0,
       fields: _fields,
     };
-    if (keywords.length === 0) {
-      delete params.keywords;
-    }
     if (sqls.length === 0) {
       delete params.whereSqls;
     }
@@ -367,7 +345,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     // 保存查询条件到本地存储
     try {
       const searchParamsToSave = {
-        keywords: params.keywords || [],
         whereSqls: params.whereSqls || [],
         startTime: params.startTime,
         endTime: params.endTime,
@@ -392,20 +369,28 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     if (getDistributionWithSearchBar) {
       getDistributionWithSearchBar();
     }
-  }, [keywords, sqls, selectedQueryConfigs, timeOption, timeGroup, activeColumns, onSqlsChange, initialized]);
+  }, [sqls, selectedQueryConfigs, timeOption, timeGroup, activeColumns, onSqlsChange, initialized]);
 
   // 处理关键词搜索
   const handleSubmit = () => {
-    // 保存搜索历史
     const keywordTrim = String(keyword || '')?.trim();
+
+    // 校验：如果选择了字段或输入了关键词中的任意一个，则另一个也是必填项
+    if (selectedFieldName && !keywordTrim) {
+      messageApi.warning('请输入关键词搜索内容');
+      return;
+    }
+    if (keywordTrim && !selectedFieldName) {
+      messageApi.warning('请选择搜索字段');
+      return;
+    }
+
+    // 保存搜索历史
     if (keywordTrim) {
       if (!keywordHistory.includes(keywordTrim)) {
         const newHistory = [keywordTrim, ...keywordHistory].slice(0, 10);
         setKeywordHistory(newHistory);
         localStorage.setItem('keywordHistory', JSON.stringify(newHistory));
-      }
-      if (!keywords.includes(keywordTrim)) {
-        setKeywords((prev) => [...prev, keywordTrim]);
       }
     }
 
@@ -422,14 +407,38 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       }
     }
 
-    // 如果选择了字段名，添加到列表中（搜索方法可以为空）
+    // 如果选择了字段名，添加到列表中
     if (selectedFieldName) {
       const searchMethod = selectedSearchMethod || ''; // 如果没有选择搜索方法，使用空字符串
+      const searchValue = keywordTrim || ''; // 使用关键词作为搜索值
       const newConfig = {
-        value: `${selectedFieldName}_${searchMethod}`,
-        label: searchMethod ? `${selectedFieldName} (${searchMethod})` : selectedFieldName,
+        value: `${selectedFieldName}_${searchMethod}_${searchValue}`,
+        label: searchValue
+          ? searchMethod
+            ? `${selectedFieldName} (${searchMethod}): ${searchValue}`
+            : `${selectedFieldName}: ${searchValue}`
+          : searchMethod
+            ? `${selectedFieldName} (${searchMethod})`
+            : selectedFieldName,
         fieldName: selectedFieldName,
         searchMethod: searchMethod,
+        searchValue: searchValue,
+      };
+      if (!selectedQueryConfigs.some((config) => config.value === newConfig.value)) {
+        setSelectedQueryConfigs((prev) => [...prev, newConfig]);
+      }
+    } else if (keywordTrim) {
+      // 如果只输入了关键词而没有选择字段，使用默认字段（message或第一个文本字段）
+      const defaultField =
+        (columns || []).find((col) => col.columnName === 'message' || col.columnName === 'msg')?.columnName ||
+        'message';
+
+      const newConfig = {
+        value: `${defaultField}_LIKE_${keywordTrim}`,
+        label: `${defaultField}: ${keywordTrim}`,
+        fieldName: defaultField,
+        searchMethod: 'LIKE',
+        searchValue: keywordTrim,
       };
       if (!selectedQueryConfigs.some((config) => config.value === newConfig.value)) {
         setSelectedQueryConfigs((prev) => [...prev, newConfig]);
@@ -609,7 +618,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   const searchMethodRender = useMemo(() => {
     return (
       <Select
-        allowClear
         placeholder="选择搜索方法"
         style={{ width: '100%' }}
         value={selectedSearchMethod}
@@ -659,6 +667,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
 
   return (
     <div className={styles.searchBar} ref={searchBarRef}>
+      {contextHolder}
       <div className={styles.top}>
         <div className={styles.left}>{leftRender}</div>
         <div className={styles.right}>

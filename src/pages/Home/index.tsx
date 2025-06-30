@@ -77,25 +77,16 @@ const HomePage = () => {
   // 执行日志明细查询
   const getDetailData = useRequest(
     async (params: ILogSearchParams & { signal?: AbortSignal }) => {
-      // 构造queryConfig参数
-      let queryConfig: any = undefined;
-      if (moduleQueryConfig) {
-        queryConfig = {
-          timeField: moduleQueryConfig.timeField,
-        };
-
-        // 如果有选中的查询配置列表，则添加对应的keywordFields
-        if (selectedQueryConfigs && selectedQueryConfigs.length > 0) {
-          queryConfig.keywordFields = selectedQueryConfigs.map((config) => ({
-            fieldName: config.fieldName,
-            searchMethod: config.searchMethod,
-          }));
-        }
-      }
+      // 构造keywordConditions参数
+      const keywordConditions = selectedQueryConfigs.map((config) => ({
+        fieldName: config.fieldName,
+        searchValue: config.searchValue || '',
+        ...(config.searchMethod && { searchMethod: config.searchMethod }),
+      }));
 
       const requestParams: any = {
         ...params,
-        keywordConditions: queryConfig?.keywordFields || [],
+        keywordConditions: keywordConditions,
       };
       delete requestParams?.datasourceId;
       // 传 signal 给 api
@@ -133,25 +124,16 @@ const HomePage = () => {
   // 执行日志时间分布查询
   const getHistogramData = useRequest(
     async (params: ILogSearchParams & { signal?: AbortSignal }) => {
-      // 构造queryConfig参数
-      let queryConfig: any = undefined;
-      if (moduleQueryConfig) {
-        queryConfig = {
-          timeField: moduleQueryConfig.timeField,
-        };
-
-        // 如果有选中的查询配置列表，则添加对应的keywordFields
-        if (selectedQueryConfigs && selectedQueryConfigs.length > 0) {
-          queryConfig.keywordFields = selectedQueryConfigs.map((config) => ({
-            fieldName: config.fieldName,
-            searchMethod: config.searchMethod,
-          }));
-        }
-      }
+      // 构造keywordConditions参数
+      const keywordConditions = selectedQueryConfigs.map((config) => ({
+        fieldName: config.fieldName,
+        searchValue: config.searchValue || '',
+        ...(config.searchMethod && { searchMethod: config.searchMethod }),
+      }));
 
       const requestParams: any = {
         ...params,
-        keywordConditions: queryConfig?.keywordFields || [],
+        keywordConditions: keywordConditions,
       };
 
       delete requestParams?.datasourceId;
@@ -182,7 +164,6 @@ const HomePage = () => {
       startTime: searchParams.startTime,
       endTime: searchParams.endTime,
       timeRange: searchParams.timeRange,
-      keywords: searchParams.keywords,
       whereSqls: searchParams.whereSqls,
       offset: searchParams.offset,
       fields: searchParams.fields,
@@ -313,6 +294,7 @@ const HomePage = () => {
       onChangeColumns: handleChangeColumnsByLog,
       onSearchFromTable: setSearchParams,
       moduleQueryConfig,
+      selectedQueryConfigs,
     }),
     [
       histogramData,
@@ -323,6 +305,7 @@ const HomePage = () => {
       whereSqlsFromSider,
       sqls,
       moduleQueryConfig,
+      selectedQueryConfigs,
     ],
   );
 
