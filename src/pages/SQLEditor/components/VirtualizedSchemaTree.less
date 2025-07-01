@@ -4,17 +4,22 @@
   display: flex;
   flex-direction: column;
   
+  .ant-card-head {
+    flex-shrink: 0;
+  }
+  
   .ant-card-body {
     flex: 1;
     display: flex;
     flex-direction: column;
     min-height: 0;
     overflow: hidden;
+    padding: 0 !important; /* 移除内边距，让内容撑满 */
   }
   
   &.virtualized-schema-tree-card-collapsed {
     .ant-card-body {
-      padding: 8px 0;
+      padding: 8px 0 !important;
     }
   }
 }
@@ -26,13 +31,44 @@
   position: relative;
   min-height: 0; /* 重要：允许容器缩小 */
   overflow: hidden;
+  /* 启用GPU加速 */
+  transform: translateZ(0);
+  /* 优化重绘区域 */
+  overflow-anchor: none;
+  /* 减少滚动时的重排 */
+  scroll-behavior: auto;
+  /* 启用硬件加速和复合层 */
+  will-change: scroll-position;
+  
+  /* 优化滚动性能 */
+  [data-react-window-list] {
+    /* 避免滚动时的空白闪烁 */
+    backface-visibility: hidden;
+    will-change: transform;
+    /* 确保列表始终有背景 */
+    background-color: #fff;
+    /* 减少重绘区域 */
+    contain: layout style paint;
+  }
+  
+  /* 虚拟滚动优化 */
+  [data-react-window-list] > div {
+    /* 减少重绘 */
+    will-change: transform;
+    /* 硬件加速 */
+    transform: translateZ(0);
+    /* 优化复合层 */
+    contain: layout;
+  }
 }
 
 .loading-spinner {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 200px;
+  height: 100%;
+  min-height: 200px;
+  flex: 1;
 }
 
 /* 性能优化 - 减少重绘 */
@@ -46,7 +82,12 @@
   border-radius: 4px;
   margin: 1px 0;
   will-change: transform;
-  contain: layout;
+  contain: layout style;
+  /* 添加背景色，避免透明导致的留白 */
+  background-color: #fff;
+  /* 确保节点高度一致性 */
+  min-height: 28px;
+  box-sizing: border-box;
   
   * {
     will-change: transform;
@@ -67,6 +108,26 @@
   &.virtual-tree-node-collapsed {
     justify-content: center;
     padding: 4px;
+    min-height: 32px;
+  }
+  
+  /* 滚动时的简化样式，提高性能 */
+  &.virtual-tree-node-scrolling {
+    transition: none;
+    contain: strict;
+    background-color: #fff !important;
+    
+    .tree-copy-icon {
+      display: none; /* 滚动时隐藏复制图标，减少渲染 */
+    }
+    
+    .tree-node-title {
+      transition: none;
+    }
+    
+    &:hover {
+      background-color: #fff !important;
+    }
   }
   
   &.table-node {
@@ -216,4 +277,23 @@
   &:hover {
     background: #a1a1a1;
   }
+}
+
+.tree-content-wrapper {
+  height: 100%;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.empty-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  flex: 1;
+  min-height: 200px;
 }

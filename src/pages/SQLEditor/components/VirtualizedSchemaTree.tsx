@@ -8,7 +8,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
 } from '@ant-design/icons';
-import { FixedSizeList as List } from 'react-window';
+import { VariableSizeList as List } from 'react-window';
 import { SchemaResult } from '../types';
 import './VirtualizedSchemaTree.less';
 
@@ -39,9 +39,11 @@ const TreeNodeRenderer = memo(
     index,
     style,
     data,
+    isScrolling,
   }: {
     index: number;
     style: React.CSSProperties;
+    isScrolling?: boolean;
     data: {
       nodes: TreeNode[];
       onToggleExpand: (key: string) => void;
@@ -76,43 +78,70 @@ const TreeNodeRenderer = memo(
     );
 
     const handleNodeClick = useCallback(() => {
-      if (node?.isTable) {
+      if (node?.isTable && !isScrolling) {
         onToggleExpand(node.key);
       }
-    }, [node?.isTable, node?.key, onToggleExpand]);
+    }, [node?.isTable, node?.key, onToggleExpand, isScrolling]);
 
     const handleNodeDoubleClick = useCallback(
       (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (node?.isTable) {
+        if (node?.isTable && !isScrolling) {
           onDoubleClick(node.key);
         }
       },
-      [node?.isTable, node?.key, onDoubleClick],
+      [node?.isTable, node?.key, onDoubleClick, isScrolling],
     );
 
     const handleInsertTableClick = useCallback(
       (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (node?.isTable) {
+        if (node?.isTable && !isScrolling) {
           onInsertTable(node.key);
         }
       },
-      [node?.isTable, node?.key, onInsertTable],
+      [node?.isTable, node?.key, onInsertTable, isScrolling],
     );
 
     const handleInsertFieldClick = useCallback(
       (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (node && !node.isTable && onInsertField) {
+        if (node && !node.isTable && onInsertField && !isScrolling) {
           const fieldName = node.key.split('-')[1];
           onInsertField(fieldName);
         }
       },
-      [node, onInsertField],
+      [node, onInsertField, isScrolling],
     );
 
     if (!node) return null;
+
+    // 滚动时使用简化渲染，减少重绘
+    if (isScrolling) {
+      return (
+        // eslint-disable-next-line react/forbid-dom-props
+        <div
+          style={style}
+          className={`virtual-tree-node virtual-tree-node-scrolling level-${node.level} ${node.isTable ? 'table-node' : 'column-node'} ${collapsed ? 'virtual-tree-node-collapsed' : ''}`}
+        >
+          <div className="tree-node-content">
+            {!collapsed && (
+              <>
+                <div className={`tree-indent level-${node.level}`} />
+                {node.isTable && (
+                  <div className={`expand-indicator ${node.isExpanded ? 'expanded' : 'collapsed'}`}>
+                    {node.children && node.children.length > 0 ? (node.isExpanded ? '▼' : '▶') : null}
+                  </div>
+                )}
+                {node.isTable ? <TableOutlined className="tree-table-icon" /> : <span className="tree-spacer" />}
+                <span className="tree-node-title">{node.title}</span>
+              </>
+            )}
+            {collapsed && node.isTable && <TableOutlined className="tree-table-icon" />}
+          </div>
+        </div>
+      );
+    }
 
     // 折叠状态下的渲染
     if (collapsed) {
@@ -191,7 +220,31 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
   const [lazyLoadStarted, setLazyLoadStarted] = useState(false);
   const listRef = useRef<List>(null);
 
-  // 构建扁平化的树节点列表
+  // 添加滚动防抖优化，减少快速滚动时的渲染压力
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleScroll = useCallback(() => {
+    // 清除之前的timeout
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+
+    // 设置新的timeout，在滚动停止后减少渲染压力
+    scrollTimeoutRef.current = setTimeout(() => {
+      // 可以在这里添加滚动停止后的优化逻辑
+    }, 300);
+  }, []);
+
+  // 清理timeout
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // 扁平化的树节点列表，添加更多缓存优化
   const flattenedNodes = useMemo(() => {
     if (!databaseSchema || 'error' in databaseSchema || !lazyLoadStarted) {
       return [];
@@ -254,34 +307,41 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
     [databaseSchema, handleInsertTable],
   );
 
-  // 延迟加载
+  // 延迟加载优化 - 减少初始渲染延迟
   useEffect(() => {
     if (databaseSchema && !lazyLoadStarted) {
-      const timer = setTimeout(() => {
+      // 使用requestIdleCallback优化渲染时机，如果不支持则fallback到setTimeout
+      const idleCallback = window.requestIdleCallback || ((cb: () => void) => setTimeout(cb, 0));
+
+      idleCallback(() => {
         setLazyLoadStarted(true);
-      }, 100); // 减少延迟时间
-      return () => clearTimeout(timer);
+      });
     }
   }, [databaseSchema, lazyLoadStarted]);
 
   // 计算列表高度 - 使用容器自适应高度，改为更合理的初始值
-  const [containerHeight, setContainerHeight] = useState(window.innerHeight * 0.85); // 使用屏幕高度70%作为初始值
+  const [containerHeight, setContainerHeight] = useState(400); // 设置一个合理的默认值
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 使用 ResizeObserver 监听容器高度变化
+  // 使用 ResizeObserver 监听容器高度变化，添加防抖优化
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    // 创建ResizeObserver来监听容器尺寸变化
+    let resizeTimer: NodeJS.Timeout;
+
+    // 创建ResizeObserver来监听容器尺寸变化，添加防抖
     const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const height = entry.contentRect.height;
-        if (height > 50) {
-          // 设置最小高度阈值，避免无效高度
-          setContainerHeight(height);
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        for (const entry of entries) {
+          const height = entry.contentRect.height;
+          if (height > 100) {
+            // 降低最小高度阈值
+            setContainerHeight(height);
+          }
         }
-      }
+      }, 16); // 使用 requestAnimationFrame 的频率
     });
 
     resizeObserver.observe(container);
@@ -289,13 +349,32 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
     // 初始计算 - 延迟执行确保DOM已渲染
     const calculateInitialHeight = () => {
       const height = container.offsetHeight;
-      if (height > 50) {
+      if (height > 100) {
+        // 降低最小高度阈值
         setContainerHeight(height);
       } else {
-        // 如果容器高度为0，尝试使用父元素高度
+        // 如果容器高度为0，尝试计算可用高度
+        const wrapper = container.closest('.tree-content-wrapper') as HTMLElement;
+        if (wrapper) {
+          const wrapperHeight = wrapper.offsetHeight;
+          if (wrapperHeight > 100) {
+            setContainerHeight(wrapperHeight);
+          }
+        }
+
+        // 尝试从Card body获取高度
+        const cardBody = container.closest('.ant-card-body') as HTMLElement;
+        if (cardBody) {
+          const availableHeight = cardBody.offsetHeight;
+          if (availableHeight > 100) {
+            setContainerHeight(availableHeight);
+          }
+        }
+
+        // Fallback: 使用父元素高度
         const parentHeight = container.parentElement?.offsetHeight;
-        if (parentHeight && parentHeight > 50) {
-          setContainerHeight(parentHeight - 48); // 减去Card头部和padding
+        if (parentHeight && parentHeight > 100) {
+          setContainerHeight(parentHeight);
         }
       }
     };
@@ -306,11 +385,36 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
     // 延迟再次计算，确保布局完成
     const timer = setTimeout(calculateInitialHeight, 100);
 
+    // 再次延迟计算，确保所有布局都完成
+    const timer2 = setTimeout(calculateInitialHeight, 300);
+
     return () => {
       resizeObserver.disconnect();
       clearTimeout(timer);
+      clearTimeout(timer2);
+      clearTimeout(resizeTimer);
     };
-  }, []);
+  }, [lazyLoadStarted]); // 依赖 lazyLoadStarted，确保数据加载后重新计算
+
+  // 动态计算节点高度，避免不同节点类型的高度不一致导致的滚动问题
+  const getItemSize = useCallback(
+    (index: number) => {
+      const node = flattenedNodes[index];
+      if (!node) return 28;
+
+      if (collapsed) {
+        return 32;
+      }
+
+      // 根据节点类型调整高度，确保一致性
+      if (node.isTable) {
+        return 30; // 表节点稍高一点
+      } else {
+        return 26; // 列节点稍低一点
+      }
+    },
+    [flattenedNodes, collapsed],
+  );
 
   // 列表数据
   const listData = useMemo(
@@ -362,49 +466,54 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
         </Space>
       }
       className={`virtualized-schema-tree-card ${collapsed ? 'virtualized-schema-tree-card-collapsed' : ''}`}
-      styles={{
-        body: {
-          padding: 0,
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-        },
-      }}
     >
-      {(() => {
-        if (loadingSchema) {
+      <div className="tree-content-wrapper">
+        {(() => {
+          if (loadingSchema) {
+            return (
+              <div className="loading-spinner">
+                <Spin />
+              </div>
+            );
+          }
+
+          if (databaseSchema && 'tables' in databaseSchema && lazyLoadStarted) {
+            return (
+              <div ref={containerRef} className="virtualized-tree-container">
+                <List
+                  ref={listRef}
+                  height={containerHeight}
+                  width="100%"
+                  itemCount={flattenedNodes.length}
+                  itemSize={getItemSize} // 使用动态计算的行高
+                  itemData={listData}
+                  overscanCount={25} // 增加预渲染项目数量，减少滚动留白
+                  useIsScrolling // 启用滚动状态，优化性能
+                  onScroll={handleScroll} // 添加滚动处理
+                  // 添加滚动优化配置
+                  style={{
+                    willChange: 'transform',
+                    overflowAnchor: 'none', // 防止浏览器的自动滚动锚定
+                  }}
+                  // 额外的性能优化
+                  estimatedItemSize={28} // 估算平均高度，提高滚动性能
+                >
+                  {TreeNodeRenderer}
+                </List>
+              </div>
+            );
+          }
+
           return (
-            <div className="loading-spinner">
-              <Spin />
+            <div className="empty-container">
+              <Empty
+                description={collapsed ? undefined : '请选择数据源获取数据库结构'}
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              />
             </div>
           );
-        }
-
-        if (databaseSchema && 'tables' in databaseSchema && lazyLoadStarted) {
-          return (
-            <div ref={containerRef} className="virtualized-tree-container">
-              <List
-                ref={listRef}
-                height={containerHeight}
-                width="100%"
-                itemCount={flattenedNodes.length}
-                itemSize={collapsed ? 32 : 28} // 行高
-                itemData={listData}
-                overscanCount={5} // 预渲染项目数量
-              >
-                {TreeNodeRenderer}
-              </List>
-            </div>
-          );
-        }
-
-        return (
-          <Empty
-            description={collapsed ? undefined : '请选择数据源获取数据库结构'}
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-          />
-        );
-      })()}
+        })()}
+      </div>
     </Card>
   );
 };

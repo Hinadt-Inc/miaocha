@@ -33,11 +33,19 @@ const VirtualFieldList: React.FC<{
     setScrollTop(e.currentTarget.scrollTop);
   }, []);
 
-  // 计算可视范围
+  // 计算可视范围，增大缓冲区
   const visibleRange = useMemo(() => {
+    const actualHeight = containerRef.current?.clientHeight || containerHeight;
+    const visibleCount = Math.ceil(actualHeight / itemHeight);
+    const bufferSize = Math.max(5, Math.floor(visibleCount / 2)); // 动态缓冲区，至少5个元素
+
     const start = Math.floor(scrollTop / itemHeight);
-    const end = Math.min(data.length, start + Math.ceil(containerHeight / itemHeight) + 2);
-    return { start: Math.max(0, start - 1), end };
+    const end = Math.min(data.length, start + visibleCount + bufferSize);
+
+    return {
+      start: Math.max(0, start - bufferSize),
+      end,
+    };
   }, [scrollTop, itemHeight, containerHeight, data.length]);
 
   const visibleData = data.slice(visibleRange.start, visibleRange.end);
@@ -46,8 +54,7 @@ const VirtualFieldList: React.FC<{
     <div
       ref={containerRef}
       style={{
-        // height: containerHeight,
-        height: 'calc( 100vh - 300px )',
+        height: 'calc(100vh - 300px)',
         overflow: 'auto',
         borderRadius: '4px',
       }}
