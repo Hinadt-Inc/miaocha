@@ -9,8 +9,6 @@ export { useQueryHistory } from './useQueryHistory';
 export { useSQLEditorState } from './useSQLEditorState';
 export { useSQLEditorActions } from './useSQLEditorActions';
 
-// 新增：Splitter尺寸监听Hook
-export { useSplitterSize } from './useSplitterSize';
-export { useEditorLayout } from './useEditorLayout';
+// 工具类hooks
 export { useSQLSnippets } from './useSQLSnippets';
 export { useSQLCompletion } from './useSQLCompletion';

@@ -1,10 +1,11 @@
-import { useCallback } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import { message } from 'antd';
 import { debounce } from 'lodash';
 import copy from 'copy-to-clipboard';
 import * as monaco from 'monaco-editor';
 import { downloadAsCSV, insertTextToEditor, getSQLContext, generateColumnList } from '../utils/editorUtils';
 import { QueryResult } from '../types';
+import { useSQLCompletion } from './useSQLCompletion';
 import type { useSQLEditorState } from './useSQLEditorState';
 
 type SQLEditorState = ReturnType<typeof useSQLEditorState>;
@@ -27,7 +28,12 @@ export const useSQLEditorActions = (editorState: SQLEditorState) => {
     saveSettings,
     fetchDatabaseSchema,
     setQueryResults,
+    databaseSchema,
   } = editorState;
+
+  // 初始化 SQL 补全功能
+  const { registerCompletionProvider } = useSQLCompletion(databaseSchema);
+  const completionProviderRef = useRef<monaco.IDisposable | null>(null);
 
   // 计算SQL语句数量的辅助函数
   const countSQLStatements = useCallback((text: string): number => {
@@ -308,6 +314,20 @@ export const useSQLEditorActions = (editorState: SQLEditorState) => {
       // 添加快捷键：Ctrl+Enter 执行查询
       editor.addCommand(monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.Enter, executeQuery);
 
+      // 注册 SQL 补全提供器
+      try {
+        // 清理之前的补全提供器
+        if (completionProviderRef.current) {
+          completionProviderRef.current.dispose();
+        }
+
+        // 注册新的补全提供器
+        completionProviderRef.current = registerCompletionProvider();
+        console.log('✅ SQL补全提供器已注册');
+      } catch (error) {
+        console.warn('⚠️ SQL补全提供器注册失败:', error);
+      }
+
       // 监听编辑器内容变化
       const model = editor.getModel();
       if (model) {
@@ -317,8 +337,18 @@ export const useSQLEditorActions = (editorState: SQLEditorState) => {
         });
       }
     },
-    [executeQuery, setSqlQuery],
+    [executeQuery, setSqlQuery, registerCompletionProvider],
   );
+
+  // 清理补全提供器
+  useEffect(() => {
+    return () => {
+      if (completionProviderRef.current) {
+        completionProviderRef.current.dispose();
+        completionProviderRef.current = null;
+      }
+    };
+  }, []);
 
   return {
     // 数据源操作
