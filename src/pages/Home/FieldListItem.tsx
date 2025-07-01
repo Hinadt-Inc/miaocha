@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { Collapse, Tag, Button, Progress, Tooltip, Typography, Empty } from 'antd';
 import { getFieldTypeColor } from '@/utils/logDataHelpers';
 import styles from './Sider.module.less';
@@ -21,113 +21,121 @@ interface IProps {
   moduleQueryConfig?: any; // 模块查询配置
 }
 
-const FieldListItem: React.FC<IProps> = ({ isSelected, column, columnIndex, fieldData, moduleQueryConfig }) => {
-  const {
-    distributions = {},
-    activeColumns = [],
-    onActiveColumns,
-    searchParams,
-    onDistribution,
-    onToggle,
-    setWhereSqlsFromSider,
-  } = fieldData;
+const FieldListItem: React.FC<IProps> = memo(
+  ({ isSelected, column, columnIndex, fieldData, moduleQueryConfig }) => {
+    const {
+      distributions = {},
+      activeColumns = [],
+      onActiveColumns,
+      searchParams,
+      onDistribution,
+      onToggle,
+      setWhereSqlsFromSider,
+    } = fieldData;
 
-  const [activeKey, setActiveKey] = useState<string[]>([]);
+    const [activeKey, setActiveKey] = useState<string[]>([]);
 
-  // 切换折叠面板
-  const handleCollapseChange = useCallback(
-    (key: string[]) => {
-      const { columnName = '' } = column;
-      // 只有当折叠面板状态变化时才更新activeColumns
-      if (key.length > 0) {
-        if (!activeColumns.includes(columnName)) {
-          const newActiveColumns = [...activeColumns, columnName];
+    // 切换折叠面板
+    const handleCollapseChange = useCallback(
+      (key: string[]) => {
+        const { columnName = '' } = column;
+        // 只有当折叠面板状态变化时才更新activeColumns
+        if (key.length > 0) {
+          if (!activeColumns.includes(columnName)) {
+            const newActiveColumns = [...activeColumns, columnName];
+            onActiveColumns(newActiveColumns);
+            onDistribution(columnName, newActiveColumns, '');
+          }
+        } else {
+          // 移除
+          const newActiveColumns = activeColumns.filter((item) => item !== columnName);
           onActiveColumns(newActiveColumns);
           onDistribution(columnName, newActiveColumns, '');
         }
-      } else {
-        // 移除
-        const newActiveColumns = activeColumns.filter((item) => item !== columnName);
-        onActiveColumns(newActiveColumns);
-        onDistribution(columnName, newActiveColumns, '');
-      }
-      setActiveKey(key as string[]);
-    },
-    [activeColumns, column.columnName, onActiveColumns],
-  );
+        setActiveKey(key as string[]);
+      },
+      [activeColumns, column.columnName, onActiveColumns, onDistribution],
+    );
 
-  if (column.isFixed) {
-    return null;
-  }
+    // 切换字段选中状态的回调
+    const handleToggle = useCallback(
+      (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onToggle(column);
+      },
+      [onToggle, column],
+    );
 
-  // 数组count求和
-  const sumArrayCount = (_valueDistributions: IValueDistributions[]): number => {
-    const _counts = _valueDistributions.map((item) => item.count);
-    return _counts.reduce((sum: number, item: string | number): number => {
-      const num = typeof item === 'string' ? parseFloat(item) : item;
-      return sum + (isNaN(num) ? 0 : num);
-    }, 0);
-  };
+    // 点击查询的回调
+    const handleQuery = useCallback(
+      (flag: '=' | '!=', son: IValueDistributions) => {
+        const { columnName = '' } = column;
+        const { value } = son;
+        setWhereSqlsFromSider(flag, columnName, value);
+      },
+      [setWhereSqlsFromSider, column],
+    );
 
-  // 点击查询
-  const query = (flag: '=' | '!=', parent: ILogColumnsResponse, son: IValueDistributions) => {
-    const { columnName = '' } = parent;
-    const { value } = son;
-    setWhereSqlsFromSider(flag, columnName, value);
-  };
+    if (column.isFixed) {
+      return null;
+    }
 
-  return (
-    <Collapse
-      size="small"
-      key={column.columnName}
-      activeKey={activeKey}
-      className={styles.item}
-      onChange={handleCollapseChange}
-      items={[
-        {
-          key: `${column.columnName}`,
-          label: (
-            <div className={styles.bar}>
-              <Tooltip placement="topLeft" title={column.dataType} arrow={false}>
-                <Tag color={getFieldTypeColor(column.dataType)}>{column.dataType?.substr(0, 1)?.toUpperCase()}</Tag>
-              </Tooltip>
-              <span className={styles.columnName}>{column.columnName}</span>
-              {(() => {
-                const timeField = moduleQueryConfig?.timeField || 'log_time';
-                return !(isSelected && column.columnName === timeField);
-              })() && (
-                <Button
-                  color={isSelected ? 'danger' : 'primary'}
-                  variant="link"
-                  className={styles.footBtn}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggle(column);
-                  }}
-                >
-                  {isSelected ? '移除' : '添加'}
-                </Button>
-              )}
-            </div>
-          ),
-          children: (
-            <div className={styles.record}>
-              {(() => {
-                const dist = distributions[column.columnName as string];
-                const hasData =
-                  !!dist &&
-                  ((dist.nonNullCount || 0) > 0 ||
-                    (dist.totalCount || 0) > 0 ||
-                    (dist.valueDistributions?.length || 0) > 0);
-                return (
+    // 数组count求和
+    const sumArrayCount = (valueDistributions: IValueDistributions[]): number => {
+      const counts = valueDistributions.map((item) => item.count);
+      return counts.reduce((sum: number, item: string | number): number => {
+        const num = typeof item === 'string' ? parseFloat(item) : item;
+        return sum + (isNaN(num) ? 0 : num);
+      }, 0);
+    };
+
+    // 获取时间字段名
+    const timeField = moduleQueryConfig?.timeField || 'log_time';
+    const isTimeField = isSelected && column.columnName === timeField;
+
+    // 获取分布数据
+    const dist = distributions[column.columnName as string];
+    const hasData =
+      !!dist &&
+      ((dist.nonNullCount || 0) > 0 || (dist.totalCount || 0) > 0 || (dist.valueDistributions?.length || 0) > 0);
+
+    return (
+      <Collapse
+        size="small"
+        key={column.columnName}
+        activeKey={activeKey}
+        className={styles.item}
+        onChange={handleCollapseChange}
+        items={[
+          {
+            key: `${column.columnName}`,
+            label: (
+              <div className={styles.bar}>
+                <Tooltip placement="topLeft" title={column.dataType} arrow={false}>
+                  <Tag color={getFieldTypeColor(column.dataType)}>{column.dataType?.substr(0, 1)?.toUpperCase()}</Tag>
+                </Tooltip>
+                <span className={styles.columnName}>{column.columnName}</span>
+                {!isTimeField && (
+                  <Button
+                    color={isSelected ? 'danger' : 'primary'}
+                    variant="link"
+                    className={styles.footBtn}
+                    onClick={handleToggle}
+                  >
+                    {isSelected ? '移除' : '添加'}
+                  </Button>
+                )}
+              </div>
+            ),
+            children: (
+              <div className={styles.record}>
+                {!hasData && <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />}
+                {hasData && (
                   <>
-                    {!hasData && <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />}
-                    {hasData && (
-                      <div className={styles.header}>
-                        <b>TOP5 </b>
-                        {sumArrayCount(dist?.valueDistributions) || 0} / {dist?.sampleSize || 0} 记录
-                      </div>
-                    )}
+                    <div className={styles.header}>
+                      <b>TOP5 </b>
+                      {sumArrayCount(dist?.valueDistributions)} / {dist?.sampleSize || 0} 记录
+                    </div>
                     <div className={styles.ul}>
                       {dist?.valueDistributions?.map((sub: IValueDistributions, i: number) => (
                         <div className={styles.li} key={`list${columnIndex}${column.columnName}${i}`}>
@@ -149,7 +157,7 @@ const FieldListItem: React.FC<IProps> = ({ isSelected, column, columnIndex, fiel
                                 disabled={searchParams?.whereSqls?.includes(`${column.columnName} = '${sub.value}'`)}
                                 color="primary"
                                 variant="link"
-                                onClick={() => query('=', column, sub)}
+                                onClick={() => handleQuery('=', sub)}
                               >
                                 <i className="iconfont icon-fangda"></i>
                               </Button>
@@ -157,7 +165,7 @@ const FieldListItem: React.FC<IProps> = ({ isSelected, column, columnIndex, fiel
                                 disabled={searchParams?.whereSqls?.includes(`${column.columnName} != '${sub.value}'`)}
                                 color="primary"
                                 variant="link"
-                                onClick={() => query('!=', column, sub)}
+                                onClick={() => handleQuery('!=', sub)}
                               >
                                 <i className="iconfont icon-suoxiao1"></i>
                               </Button>
@@ -172,14 +180,27 @@ const FieldListItem: React.FC<IProps> = ({ isSelected, column, columnIndex, fiel
                       ))}
                     </div>
                   </>
-                );
-              })()}
-            </div>
-          ),
-        },
-      ]}
-    />
-  );
-};
+                )}
+              </div>
+            ),
+          },
+        ]}
+      />
+    );
+  },
+  (prevProps, nextProps) => {
+    // 自定义比较函数，只在关键属性变化时才重新渲染
+    return (
+      prevProps.isSelected === nextProps.isSelected &&
+      prevProps.column.columnName === nextProps.column.columnName &&
+      prevProps.column.selected === nextProps.column.selected &&
+      prevProps.fieldData.distributions[prevProps.column.columnName as string] ===
+        nextProps.fieldData.distributions[nextProps.column.columnName as string] &&
+      prevProps.fieldData.searchParams === nextProps.fieldData.searchParams
+    );
+  },
+);
+
+FieldListItem.displayName = 'FieldListItem';
 
 export default FieldListItem;
