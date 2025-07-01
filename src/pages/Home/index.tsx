@@ -176,19 +176,24 @@ const HomePage = () => {
       return;
     }
 
-    // 初始化调用或参数变化后的调用
-    if (abortRef.current) abortRef.current.abort(); // 取消上一次
-    abortRef.current = new AbortController();
-    getDetailData.run({ ...searchParams, signal: abortRef.current.signal });
-    getHistogramData.run({ ...searchParams, signal: abortRef.current.signal });
+    // 延迟执行，避免快速连续调用
+    const timer = setTimeout(() => {
+      // 初始化调用或参数变化后的调用
+      if (abortRef.current) abortRef.current.abort(); // 取消上一次
+      abortRef.current = new AbortController();
+      getDetailData.run({ ...searchParams, signal: abortRef.current.signal });
+      getHistogramData.run({ ...searchParams, signal: abortRef.current.signal });
 
-    // 更新最后调用的参数标识
-    lastCallParamsRef.current = currentCallParams;
+      // 更新最后调用的参数标识
+      lastCallParamsRef.current = currentCallParams;
 
-    // 标记已初始化
-    if (!isInitialized) {
-      setIsInitialized(true);
-    }
+      // 标记已初始化
+      if (!isInitialized) {
+        setIsInitialized(true);
+      }
+    }, 100); // 延迟100ms执行
+
+    return () => clearTimeout(timer);
   }, [searchParams, moduleQueryConfig, selectedQueryConfigs]);
 
   // 处理列变化
@@ -231,6 +236,38 @@ const HomePage = () => {
     setSearchParams(newSearchParams);
   };
 
+  // 处理查询配置变化
+  const handleQueryConfigChange = useCallback(
+    (selectedConfig: string | undefined, configs: any[], moduleConfig?: any) => {
+      setSelectedQueryConfig(selectedConfig);
+      setQueryConfigs(configs);
+      // 如果传递了完整的模块配置，则更新moduleQueryConfig
+      if (moduleConfig !== undefined) {
+        setModuleQueryConfig(moduleConfig);
+      }
+    },
+    [],
+  );
+
+  // 处理选中的查询配置列表变化
+  const handleSelectedQueryConfigsChange = useCallback((selectedQueryConfigs: any[]) => {
+    setSelectedQueryConfigs(selectedQueryConfigs);
+  }, []);
+
+  // 处理选中模块变化
+  const handleSelectedModuleChange = useCallback((selectedModule: string, datasourceId?: number) => {
+    setSelectedModule(selectedModule);
+    // 如果提供了datasourceId，同时更新搜索参数
+    if (selectedModule && datasourceId) {
+      setSearchParams((prev) => ({
+        ...prev,
+        datasourceId: datasourceId,
+        module: selectedModule,
+        offset: 0,
+      }));
+    }
+  }, []);
+
   // 优化字段选择组件的props
   const siderProps = {
     searchParams,
@@ -239,7 +276,7 @@ const HomePage = () => {
     onSearch: setSearchParams,
     onChangeColumns: handleChangeColumns,
     onActiveColumnsChange: setActiveColumns,
-    onSelectedModuleChange: setSelectedModule,
+    onSelectedModuleChange: handleSelectedModuleChange,
     selectedQueryConfig,
     queryConfigs,
     moduleQueryConfig,
@@ -308,24 +345,6 @@ const HomePage = () => {
       selectedQueryConfigs,
     ],
   );
-
-  // 处理查询配置变化
-  const handleQueryConfigChange = useCallback(
-    (selectedConfig: string | undefined, configs: any[], moduleConfig?: any) => {
-      setSelectedQueryConfig(selectedConfig);
-      setQueryConfigs(configs);
-      // 如果传递了完整的模块配置，则更新moduleQueryConfig
-      if (moduleConfig !== undefined) {
-        setModuleQueryConfig(moduleConfig);
-      }
-    },
-    [],
-  );
-
-  // 处理选中的查询配置列表变化
-  const handleSelectedQueryConfigsChange = useCallback((selectedQueryConfigs: any[]) => {
-    setSelectedQueryConfigs(selectedQueryConfigs);
-  }, []);
 
   // 获取模块查询配置
   const getModuleQueryConfig = useRequest((moduleName: string) => modulesApi.getModuleQueryConfig(moduleName), {

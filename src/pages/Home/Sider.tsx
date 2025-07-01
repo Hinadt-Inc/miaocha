@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, forwardRef, useImperativeHandle, useRef } from 'react';
+import { useState, useEffect, useMemo, forwardRef, useImperativeHandle, useRef, useCallback } from 'react';
 import { Collapse, Select, Input } from 'antd';
 import { StarOutlined, StarFilled } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
@@ -14,10 +14,62 @@ interface IProps {
   onChangeColumns?: (params: ILogColumnsResponse[]) => void; // 列变化回调函数
   setWhereSqlsFromSider: any; // 设置where条件
   onActiveColumnsChange?: (activeColumns: string[]) => void; // 激活字段变化回调函数
-  onSelectedModuleChange?: (selectedModule: string) => void; // 选中模块变化回调函数
+  onSelectedModuleChange?: (selectedModule: string, datasourceId?: number) => void; // 选中模块变化回调函数
   moduleQueryConfig?: any; // 模块查询配置
   selectedQueryConfigs?: any[]; // 选中的查询配置列表
 }
+
+// 简化的虚拟滚动组件
+const VirtualFieldList: React.FC<{
+  data: any[];
+  itemHeight: number;
+  containerHeight: number;
+  renderItem: (item: any, index: number) => React.ReactNode;
+}> = ({ data, itemHeight, containerHeight, renderItem }) => {
+  const [scrollTop, setScrollTop] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
+  }, []);
+
+  // 计算可视范围
+  const visibleRange = useMemo(() => {
+    const start = Math.floor(scrollTop / itemHeight);
+    const end = Math.min(data.length, start + Math.ceil(containerHeight / itemHeight) + 2);
+    return { start: Math.max(0, start - 1), end };
+  }, [scrollTop, itemHeight, containerHeight, data.length]);
+
+  const visibleData = data.slice(visibleRange.start, visibleRange.end);
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        // height: containerHeight,
+        height: 'calc( 100vh - 300px )',
+        overflow: 'auto',
+        borderRadius: '4px',
+      }}
+      onScroll={handleScroll}
+    >
+      {/* 总高度占位符 */}
+      <div style={{ height: data.length * itemHeight, position: 'relative' }}>
+        {/* 可视区域内容 */}
+        <div
+          style={{
+            position: 'absolute',
+            top: visibleRange.start * itemHeight,
+            left: 0,
+            right: 0,
+          }}
+        >
+          {visibleData.map((item, index) => renderItem(item, visibleRange.start + index))}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((props, ref) => {
   const {
@@ -69,9 +121,10 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
     async (params: ILogSearchParams & { signal?: AbortSignal }) => {
       // 构造keywordConditions参数
       const keywordConditions = (selectedQueryConfigs || []).map((config) => ({
-        fieldName: config.fieldName,
+        fieldNames: config.fieldName.includes('||')
+          ? config.fieldName.split('||').map((name: string) => name.trim())
+          : [config.fieldName],
         searchValue: config.searchValue || '',
-        ...(config.searchMethod && { searchMethod: config.searchMethod }),
       }));
 
       const requestParams: any = {
@@ -148,18 +201,17 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
     setSelectedModule(value);
     // 重置调用标识，允许新模块重新调用getColumns
     setHasCalledGetColumns('');
-    // 通知父组件模块变化
+    // 通知父组件模块变化，让父组件统一处理搜索参数更新
     if (onSelectedModuleChange) {
-      onSelectedModuleChange(value);
+      onSelectedModuleChange(value, Number(datasourceId));
     }
-    // 注意：这里不立即调用getColumns，而是等待moduleQueryConfig加载完成
-    // getColumns.run({ datasourceId: Number(datasourceId), module: value });
-    onSearch({
-      ...searchParams,
-      datasourceId: Number(datasourceId),
-      module: value,
-      offset: 0,
-    });
+    // 移除直接调用onSearch，让父组件统一控制
+    // onSearch({
+    //   ...searchParams,
+    //   datasourceId: Number(datasourceId),
+    //   module: value,
+    //   offset: 0,
+    // });
   };
 
   // 当 modules 加载完成后，自动选择第一个数据源和第一个模块
@@ -186,7 +238,7 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
         setHasCalledGetColumns('');
         // 通知父组件模块变化
         if (onSelectedModuleChange) {
-          onSelectedModuleChange(module);
+          onSelectedModuleChange(module, targetModule.datasourceId);
         }
         // 注意：这里不立即调用getColumns，而是等待moduleQueryConfig加载完成
         // getColumns.run({ datasourceId: Number(datasourceId), module });
@@ -344,6 +396,23 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
       });
   }, [columns, searchText]);
 
+  // 虚拟列表的渲染函数
+  const renderVirtualItem = useCallback(
+    (item: ILogColumnsResponse, index: number) => {
+      return (
+        <FieldListItem
+          key={item.columnName}
+          isSelected={false}
+          column={item}
+          columnIndex={index}
+          fieldData={fieldListProps}
+          moduleQueryConfig={moduleQueryConfig}
+        />
+      );
+    },
+    [fieldListProps, moduleQueryConfig],
+  );
+
   useImperativeHandle(ref, () => ({
     getDistributionWithSearchBar,
   }));
@@ -355,6 +424,11 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
         abortRef.current.abort();
       }
     };
+  }, []);
+
+  // 计算虚拟滚动容器高度
+  const virtualContainerHeight = useMemo(() => {
+    return 700; // 固定高度700px
   }, []);
 
   return (
@@ -424,7 +498,7 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
           },
           {
             key: 'available',
-            label: '可用字段',
+            label: `可用字段 (${filteredAvailableColumns?.length || 0})`,
             children: [
               <Input.Search
                 key="search"
@@ -435,16 +509,28 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
               />,
-              ...(filteredAvailableColumns?.map((item, index) => (
-                <FieldListItem
-                  key={item.columnName}
-                  isSelected={false}
-                  column={item}
-                  columnIndex={index}
-                  fieldData={fieldListProps}
-                  moduleQueryConfig={moduleQueryConfig}
-                />
-              )) || []),
+              <div key="virtual-list-container" style={{ marginTop: '8px' }}>
+                {filteredAvailableColumns && filteredAvailableColumns.length > 0 ? (
+                  <VirtualFieldList
+                    data={filteredAvailableColumns}
+                    itemHeight={35}
+                    containerHeight={virtualContainerHeight}
+                    renderItem={renderVirtualItem}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      textAlign: 'center',
+                      color: '#999',
+                      padding: '20px',
+                      border: '1px solid #f0f0f0',
+                      borderRadius: '4px',
+                    }}
+                  >
+                    {searchText ? '未找到匹配的字段' : '暂无可用字段'}
+                  </div>
+                )}
+              </div>,
             ],
           },
         ]}

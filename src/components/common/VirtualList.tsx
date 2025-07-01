@@ -52,12 +52,12 @@ export const VirtualList = forwardRef(
       // 重新计算当前的可视数量
       const currentVisibleCount = containerHeight > 0 ? Math.ceil(containerHeight / itemHeight) + 10 : 50;
 
-      console.log('当前滚动位置:', containerScrollTop, '容器高度:', containerHeight, '可视数量:', currentVisibleCount);
+      // console.log('当前滚动位置:', containerScrollTop, '容器高度:', containerHeight, '可视数量:', currentVisibleCount);
 
       const start = Math.max(0, Math.floor(containerScrollTop / itemHeight) - 5);
       const end = Math.min(data.length, start + currentVisibleCount);
 
-      console.log('可视范围:', { start, end, total: data.length });
+      // console.log('可视范围:', { start, end, total: data.length });
       setVisibleRange({ start, end });
     }, [data.length, itemHeight, containerHeight]); // 移除 visibleCount 依赖
 
@@ -151,7 +151,7 @@ export const VirtualList = forwardRef(
         if (visibleRange.end === 0 || visibleRange.end < 20) {
           const defaultEnd = Math.min(data.length, 50);
           setVisibleRange({ start: 0, end: defaultEnd });
-          console.log('初始设置可视范围:', { start: 0, end: defaultEnd });
+          // console.log('初始设置可视范围:', { start: 0, end: defaultEnd });
         }
 
         setTimeout(() => {
@@ -172,13 +172,13 @@ export const VirtualList = forwardRef(
     // 根据是否使用表格样式，返回不同的渲染结果
     const visibleData = data.slice(visibleRange.start, visibleRange.end);
 
-    console.log('渲染数据:', {
-      total: data.length,
-      visibleRange,
-      visibleDataLength: visibleData.length,
-      containerHeight,
-      itemHeight,
-    });
+    // console.log('渲染数据:', {
+    //   total: data.length,
+    //   visibleRange,
+    //   visibleDataLength: visibleData.length,
+    //   containerHeight,
+    //   itemHeight,
+    // });
 
     useImperativeHandle(ref, () => ({
       scrollToBottom: () => {
