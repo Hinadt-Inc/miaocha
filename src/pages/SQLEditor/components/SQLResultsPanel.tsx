@@ -82,16 +82,6 @@ export const SQLResultsPanel: React.FC<SQLResultsPanelProps> = ({
         )
       }
     >
-      {queryResults?.status === 'error' && (
-        <Alert
-          message="查询失败"
-          description={queryResults.message}
-          type="error"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
-      )}
-
       {activeTab === 'results' ? (
         <ResultsViewer
           queryResults={queryResults}

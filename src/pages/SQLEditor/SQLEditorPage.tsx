@@ -100,7 +100,7 @@ const SQLEditorPage: React.FC = () => {
     <Layout style={{ height: '100vh', padding: '10px' }}>
       <Splitter style={{ height: '100%' }}>
         {/* 数据库结构侧边栏 */}
-        <Splitter.Panel defaultSize={280} min={200} max={600} className="database-schema-panel" resizable>
+        <Splitter.Panel defaultSize={280} min={200} className="database-schema-panel" resizable>
           <div className="sider-container">
             <SQLEditorSidebar
               databaseSchema={databaseSchema}
@@ -121,7 +121,7 @@ const SQLEditorPage: React.FC = () => {
             <Content className="content-container">
               <Splitter layout="vertical" style={{ height: '100%' }}>
                 {/* 查询编辑器区域 - 简化高度管理，使用100% */}
-                <Splitter.Panel defaultSize="35%" min={200} max="60%" className="query-panel-container">
+                <Splitter.Panel defaultSize="35%" min={200} className="query-panel-container">
                   <SQLQueryPanel
                     sqlQuery={sqlQuery}
                     onChange={handleSqlQueryChange}
