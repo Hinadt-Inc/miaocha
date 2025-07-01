@@ -159,60 +159,9 @@ export const initMonacoEditorLocally = (): typeof monaco => {
           },
         });
 
-        // 设置SQL自动补全
-        monaco.languages.registerCompletionItemProvider('sql', {
-          provideCompletionItems: (model, position) => {
-            const word = model.getWordUntilPosition(position);
-            const range = {
-              startLineNumber: position.lineNumber,
-              endLineNumber: position.lineNumber,
-              startColumn: word.startColumn,
-              endColumn: word.endColumn,
-            };
-
-            const suggestions: monaco.languages.CompletionItem[] = [
-              {
-                label: 'SELECT',
-                kind: monaco.languages.CompletionItemKind.Keyword,
-                insertText: 'SELECT ',
-                detail: 'SQL SELECT statement',
-                range,
-              },
-              {
-                label: 'FROM',
-                kind: monaco.languages.CompletionItemKind.Keyword,
-                insertText: 'FROM ',
-                detail: 'SQL FROM clause',
-                range,
-              },
-              {
-                label: 'WHERE',
-                kind: monaco.languages.CompletionItemKind.Keyword,
-                insertText: 'WHERE ',
-                detail: 'SQL WHERE clause',
-                range,
-              },
-              {
-                label: 'ORDER BY',
-                kind: monaco.languages.CompletionItemKind.Keyword,
-                insertText: 'ORDER BY ',
-                detail: 'SQL ORDER BY clause',
-                range,
-              },
-              {
-                label: 'GROUP BY',
-                kind: monaco.languages.CompletionItemKind.Keyword,
-                insertText: 'GROUP BY ',
-                detail: 'SQL GROUP BY clause',
-                range,
-              },
-            ];
-
-            return { suggestions };
-          },
-        });
-
-        console.log('✅ SQL语言支持已注册');
+        // SQL补全提供器将在组件中通过 useSQLCompletion hook 注册
+        // 这样可以访问到数据库结构信息和上下文状态
+        console.log('✅ SQL语言支持已注册，等待补全提供器注册');
       }
     } catch (sqlError) {
       console.warn('SQL语言配置失败:', sqlError);

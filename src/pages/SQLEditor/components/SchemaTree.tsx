@@ -12,7 +12,7 @@ import { SchemaResult } from '../types';
 import './SchemaTree.less';
 
 interface SchemaTreeProps {
-  databaseSchema: SchemaResult | null;
+  databaseSchema: SchemaResult | { error: string } | null;
   loadingSchema: boolean;
   refreshSchema: () => void;
   handleTreeNodeDoubleClick: (tableName: string) => void;
@@ -42,6 +42,9 @@ const SchemaTree: React.FC<SchemaTreeProps> = ({
   // 树形结构数据 - 只在必要时计算
   const treeData = useMemo(() => {
     if (!databaseSchema) return [];
+
+    // 检查是否为错误状态
+    if ('error' in databaseSchema) return [];
 
     // 第一次加载延迟200ms，减少同时大量节点渲染
     if (!lazyLoadStarted) {
@@ -95,9 +98,11 @@ const SchemaTree: React.FC<SchemaTreeProps> = ({
                 className="tree-copy-icon"
                 onClick={(e) => {
                   e.stopPropagation();
-                  const table = databaseSchema?.tables.find((t) => t.tableName === node.key);
-                  if (table) {
-                    handleInsertTable(table.tableName, table.columns);
+                  if (databaseSchema && 'tables' in databaseSchema) {
+                    const table = databaseSchema.tables.find((t: { tableName: string }) => t.tableName === node.key);
+                    if (table) {
+                      handleInsertTable(table.tableName, table.columns);
+                    }
                   }
                 }}
               />
@@ -172,7 +177,7 @@ const SchemaTree: React.FC<SchemaTreeProps> = ({
           );
         }
 
-        if (databaseSchema?.tables && lazyLoadStarted) {
+        if (databaseSchema && 'tables' in databaseSchema && lazyLoadStarted) {
           return (
             <Tree
               showLine

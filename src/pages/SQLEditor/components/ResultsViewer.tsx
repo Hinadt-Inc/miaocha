@@ -196,6 +196,19 @@ const estimateColumnWidth = (col: string, rows: any[], maxWidth: number = 400): 
  * 以表格形式展示 SQL 查询结果
  */
 const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, formatTableCell }) => {
+  // 添加详细调试日志
+  console.log('ResultsViewer render:', {
+    queryResults,
+    loading,
+    hasQueryResults: !!queryResults,
+    queryResultsType: typeof queryResults,
+    status: queryResults?.status,
+    hasRows: queryResults?.rows?.length,
+    hasColumns: queryResults?.columns?.length,
+    rowsType: typeof queryResults?.rows,
+    columnsType: typeof queryResults?.columns,
+  });
+
   // 组件状态
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [draggingColumn, setDraggingColumn] = useState<string | null>(null);
@@ -260,38 +273,79 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
   if (loading)
     return (
       <div className="results-viewer-container">
-        <div className="table-wrapper" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <div className="table-wrapper centered-content">
           <Spin size="large" />
         </div>
       </div>
     );
-  if (!queryResults)
+
+  if (!queryResults) {
+    console.log('No queryResults - showing empty state');
     return (
       <div className="results-viewer-container">
-        <div className="table-wrapper" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <div className="table-wrapper centered-content">
           <Empty description="请执行查询以查看结果" />
         </div>
       </div>
     );
+  }
+
+  console.log('QueryResults available, checking status and data...', {
+    status: queryResults.status,
+    hasRows: !!queryResults.rows?.length,
+    hasColumns: !!queryResults.columns?.length,
+  });
 
   // 错误状态
   if (queryResults.status === 'error') {
+    console.log('Showing error state:', queryResults.message);
     return <Alert type="error" message="查询执行错误" description={queryResults.message ?? '未知错误'} showIcon />;
   }
 
-  // 无数据返回
-  if (!queryResults.rows?.length) {
+  // 检查数据可用性 - 放宽条件
+  if (!queryResults.rows || queryResults.rows.length === 0) {
+    console.log('No rows in query results - showing empty state');
     return (
       <div className="results-viewer-container">
-        <div className="table-wrapper" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <div className="table-wrapper centered-content">
           <Empty description="查询没有返回数据" />
         </div>
       </div>
     );
   }
 
-  // 构建表格列
-  const columns = queryResults.columns?.map((col) => {
+  console.log('Proceeding to render table with data:', {
+    rowCount: queryResults.rows.length,
+    columnCount: queryResults.columns?.length,
+  });
+
+  // 构建表格列 - 如果没有columns字段，从第一行数据推导
+  let columnList = queryResults.columns;
+  if (!columnList || columnList.length === 0) {
+    // 从第一行数据推导列名
+    if (queryResults.rows && queryResults.rows.length > 0) {
+      columnList = Object.keys(queryResults.rows[0]);
+      console.log('Columns derived from first row:', columnList);
+    } else {
+      console.log('No columns and no rows to derive from');
+      columnList = [];
+    }
+  } else {
+    console.log('Using provided columns:', columnList);
+  }
+
+  if (columnList.length === 0) {
+    console.log('No columns available - cannot render table');
+    return (
+      <div className="results-viewer-container">
+        <div className="table-wrapper centered-content">
+          <Empty description="查询结果格式异常，无法显示表格" />
+        </div>
+      </div>
+    );
+  }
+
+  const columns = columnList.map((col) => {
     // 检查是否为特殊类型的列
     const lowerCol = col.toLowerCase();
     const isMessageColumn = lowerCol.includes('message');
@@ -344,10 +398,10 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
           type="link"
           size="small"
           onClick={() => {
-            if (!queryResults?.rows?.length || !queryResults.columns?.length) return;
+            if (!queryResults?.rows?.length || !columnList?.length) return;
 
             const widths: Record<string, number> = {};
-            queryResults.columns.forEach((col) => {
+            columnList.forEach((col) => {
               if (queryResults.rows) {
                 widths[col] = estimateColumnWidth(col, queryResults.rows);
               }

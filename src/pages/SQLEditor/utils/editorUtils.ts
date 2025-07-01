@@ -1,7 +1,7 @@
 import { message } from 'antd';
 import * as monaco from 'monaco-editor';
 import dayjs from 'dayjs';
-import { executeSQL, downloadSqlResult } from '@/api/sql';
+import { executeSQL, downloadSqlResult } from '../../../api/sql';
 
 export type CSVRowData = Record<string, string | number | boolean | null | undefined | object>;
 

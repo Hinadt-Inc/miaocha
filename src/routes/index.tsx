@@ -9,7 +9,7 @@ const LoginPage = lazy(() => import('@/pages/Login'));
 const HomePage = lazy(() => import('@/pages/Home'));
 const UserManagementPage = lazy(() => import('@/pages/system/UserManagement'));
 const DataSourceManagementPage = lazy(() => import('@/pages/system/DataSourceManagement'));
-const SQLEditorPage = lazy(() => import('@/pages/SQLEditor/SQLEditorImpl'));
+const SQLEditorPage = lazy(() => import('@/pages/SQLEditor'));
 const MachineManagementPage = lazy(() => import('@/pages/system/MachineManagement'));
 const LogstashManagementPage = lazy(() => import('@/pages/system/LogstashManagement'));
 const ModuleManagementPage = lazy(() => import('@/pages/system/ModuleManagement'));
