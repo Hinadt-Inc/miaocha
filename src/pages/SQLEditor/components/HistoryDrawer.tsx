@@ -1,7 +1,7 @@
 import { Drawer, Space, Tag, Empty, Badge, Button, Typography, Pagination } from 'antd';
 import { ClockCircleOutlined, CopyOutlined, HistoryOutlined } from '@ant-design/icons';
 import VirtualList from 'rc-virtual-list';
-import type { QueryHistoryItem } from '@/api/sql';
+import type { QueryHistoryItem } from '../../../api/sql';
 import './HistoryDrawer.less';
 
 const { Text } = Typography;

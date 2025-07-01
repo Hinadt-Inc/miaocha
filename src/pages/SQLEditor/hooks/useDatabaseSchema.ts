@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { message } from 'antd';
 import { getSchema } from '../../../api/sql';
 import type { SchemaResult } from '../types';
@@ -15,35 +15,49 @@ export const useDatabaseSchema = (initialSelectedSource?: string) => {
    * 获取数据库结构
    * @param sourceId 数据源ID
    */
-  const fetchDatabaseSchema = useCallback(async (sourceId?: string) => {
-    const dataSourceId = sourceId ?? initialSelectedSource;
-    
-    if (!dataSourceId) {
-      message.warning('请先选择数据源');
-      return null;
-    }
-    
-    setLoadingSchema(true);
-    try {
-      const response = await getSchema(dataSourceId);
-      if (response) {
-        setDatabaseSchema(response);
-        return response;
+  const fetchDatabaseSchema = useCallback(
+    async (sourceId?: string) => {
+      const dataSourceId = sourceId ?? initialSelectedSource;
+
+      if (!dataSourceId) {
+        // 清空之前的schema
+        setDatabaseSchema(null);
+        return null;
       }
-      return null;
-    } catch (error) {
-      console.error('获取数据库结构失败:', error);
-      message.error('获取数据库结构失败');
-      return null;
-    } finally {
-      setLoadingSchema(false);
+
+      setLoadingSchema(true);
+      try {
+        const response = await getSchema(dataSourceId);
+        if (response) {
+          setDatabaseSchema(response);
+          return response;
+        }
+        return null;
+      } catch (error) {
+        console.error('获取数据库结构失败:', error);
+        message.error('获取数据库结构失败');
+        return null;
+      } finally {
+        setLoadingSchema(false);
+      }
+    },
+    [initialSelectedSource],
+  );
+
+  // 自动加载数据库结构
+  useEffect(() => {
+    if (initialSelectedSource) {
+      fetchDatabaseSchema(initialSelectedSource);
+    } else {
+      // 如果没有选中数据源，清空schema
+      setDatabaseSchema(null);
     }
-  }, [initialSelectedSource]);
+  }, [initialSelectedSource, fetchDatabaseSchema]);
 
   return {
     databaseSchema,
     setDatabaseSchema,
     loadingSchema,
-    fetchDatabaseSchema
+    fetchDatabaseSchema,
   };
 };

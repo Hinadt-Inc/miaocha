@@ -2,7 +2,7 @@ import { useRef, useMemo } from 'react';
 import { Empty, Form, Select } from 'antd';
 import ReactECharts from 'echarts-for-react';
 import { QueryResult } from '../types';
-import { colorPrimary } from '@/utils/utils';
+import { colorPrimary } from '../../../utils/utils';
 import './VisualizationPanel.less';
 
 const { Option } = Select;

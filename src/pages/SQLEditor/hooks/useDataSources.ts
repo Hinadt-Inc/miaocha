@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { message } from 'antd';
-import { getDataSources } from '@/api/datasource';
-import type { DataSource } from '@/types/datasourceTypes';
+import { getDataSources } from '../../../api/datasource';
+import type { DataSource } from '../../../types/datasourceTypes';
 
 // 本地存储键
 const SELECTED_SOURCE_KEY = 'sql_editor_selected_source';
@@ -26,10 +26,10 @@ export const useDataSources = () => {
       try {
         const response = await getDataSources();
         setDataSources(response);
-        
+
         // 如果有保存的选中数据源，验证它是否存在于当前数据源列表中
         const savedSource = localStorage.getItem(SELECTED_SOURCE_KEY);
-        if (savedSource && response.some(source => source.id === savedSource)) {
+        if (savedSource && response.some((source) => source.id === savedSource)) {
           // 如果存在，使用保存的数据源
           setSelectedSource(savedSource);
         } else if (response.length > 0) {
@@ -53,11 +53,11 @@ export const useDataSources = () => {
     localStorage.setItem(SELECTED_SOURCE_KEY, sourceId);
   };
 
-  return { 
+  return {
     dataSources,
     setDataSources,
-    selectedSource, 
+    selectedSource,
     setSelectedSource: handleSetSelectedSource,
-    loading
+    loading,
   };
 };
