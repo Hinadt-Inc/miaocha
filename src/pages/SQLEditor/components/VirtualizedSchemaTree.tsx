@@ -364,7 +364,7 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
       className={`virtualized-schema-tree-card ${collapsed ? 'virtualized-schema-tree-card-collapsed' : ''}`}
       styles={{
         body: {
-          padding: collapsed ? '8px 0' : undefined,
+          padding: 0,
           height: '100%',
           display: 'flex',
           flexDirection: 'column',

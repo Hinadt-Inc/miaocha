@@ -276,6 +276,7 @@
     flex-direction: column;
     min-height: 200px;
     max-height: 60%; /* 限制查询面板最大高度，给结果面板更多空间 */
+    overflow: hidden; /* 防止溢出 */
     
     /* 查询面板包装器样式 */
     .query-panel-wrapper {
@@ -288,11 +289,14 @@
       height: 100%;
       display: flex;
       flex-direction: column;
+      flex: 1; /* 占据剩余空间 */
+      min-height: 0; /* 允许收缩 */
       
       .ant-card-body {
         flex: 1;
         display: flex;
         flex-direction: column;
+        min-height: 0; /* 重要：允许收缩 */
       }
     }
   }
@@ -358,8 +362,21 @@
 
 /* 编辑器卡片 */
 .editor-card {
+  height: 100%; /* 确保卡片占满容器高度 */
+  display: flex;
+  flex-direction: column;
+
+  .ant-card-head {
+    flex-shrink: 0; /* 头部不收缩 */
+  }
+
   .ant-card-body {
     padding: 10px;
+    flex: 1; /* 内容区域占据剩余空间 */
+    min-height: 0; /* 允许收缩 */
+    overflow: hidden; /* 防止溢出 */
+    display: flex;
+    flex-direction: column;
   }
 }
 

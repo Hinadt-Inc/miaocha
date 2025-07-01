@@ -32,10 +32,46 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
   const [monacoInitialized, setMonacoInitialized] = useState(false);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
   useEffect(() => {
     setIsCollapsed(collapsed);
   }, [collapsed]);
+
+  // 监听容器大小变化并更新编辑器布局
+  useEffect(() => {
+    if (!containerRef.current || !editorRef.current) return;
+
+    // 创建ResizeObserver来监听容器大小变化
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (editorRef.current && entry.target === containerRef.current) {
+          // 使用requestAnimationFrame确保DOM更新完成后再调用layout
+          requestAnimationFrame(() => {
+            if (editorRef.current) {
+              editorRef.current.layout();
+              // 额外触发一次layout，确保在容器收缩时也能正确更新
+              setTimeout(() => {
+                if (editorRef.current) {
+                  editorRef.current.layout();
+                }
+              }, 50);
+            }
+          });
+        }
+      }
+    });
+
+    resizeObserver.observe(containerRef.current);
+    resizeObserverRef.current = resizeObserver;
+
+    return () => {
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+        resizeObserverRef.current = null;
+      }
+    };
+  }, [editorRef.current, containerRef.current]);
 
   // 一次性初始化Monaco Editor
   useEffect(() => {
@@ -76,7 +112,7 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
           value: sqlQuery,
           language: 'sql',
           theme: editorSettings.theme || 'sqlTheme',
-          automaticLayout: true,
+          automaticLayout: true, // 保持自动布局
           minimap: { enabled: editorSettings?.minimap ?? false },
           wordWrap: editorSettings?.wordWrap ? 'on' : 'off',
           fontSize: editorSettings?.fontSize ?? 14,
@@ -113,6 +149,17 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
             showSnippets: true,
             showFunctions: true,
           },
+          // 添加滚动条配置，确保编辑器能正确处理容器大小变化
+          scrollbar: {
+            verticalScrollbarSize: 8,
+            horizontalScrollbarSize: 8,
+            alwaysConsumeMouseWheel: false,
+          },
+          // 优化性能
+          renderLineHighlight: 'line',
+          renderControlCharacters: false,
+          disableLayerHinting: false,
+          disableMonospaceOptimizations: false,
         });
 
         if (!isMounted) {
@@ -200,6 +247,11 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
           console.warn('清理编辑器实例失败:', error);
         }
         editorRef.current = null;
+      }
+      // 清理ResizeObserver
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+        resizeObserverRef.current = null;
       }
     };
   }, [isCollapsed, monacoInitialized]); // 添加monacoInitialized依赖

@@ -2,6 +2,7 @@
   position: relative;
   width: 100%;
   height: 100%; /* 简化：直接使用100%高度 */
+  overflow: hidden; /* 添加overflow hidden确保容器不会超出父级 */
 
   &.collapsed {
     height: 40px;
@@ -18,6 +19,8 @@
     border: 1px solid #e8e8e8;
     border-radius: 2px;
     position: relative;
+    display: flex; /* 添加flex布局 */
+    flex-direction: column; /* 垂直布局 */
 
     &.collapsed {
       height: 0;
@@ -32,6 +35,8 @@
   .monaco-editor-container {
     width: 100%;
     height: 100%; /* 简化：直接使用100%高度 */
+    flex: 1; /* 添加flex: 1使其占据剩余空间 */
+    min-height: 0; /* 重要：允许flex子项收缩到比内容更小 */
     
     &.loading {
       display: none;
