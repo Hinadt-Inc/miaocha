@@ -1,0 +1,343 @@
+/* 虚拟化树组件样式 - 模块化版本 */
+.virtualizedSchemaTreeCard {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  
+  :global(.ant-card-head) {
+    flex-shrink: 0;
+  }
+  
+  :global(.ant-card-body) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0 !important; /* 移除内边距，让内容撑满 */
+  }
+  
+  &.virtualizedSchemaTreeCardCollapsed {
+    :global(.ant-card-body) {
+      padding: 8px 0 !important;
+    }
+  }
+}
+
+.virtualizedTreeContainer {
+  height: 100%;
+  width: 100%;
+  flex: 1;
+  position: relative;
+  min-height: 0; /* 重要：允许容器缩小 */
+  overflow: hidden;
+  /* 启用GPU加速 */
+  transform: translateZ(0);
+  /* 优化重绘区域 */
+  overflow-anchor: none;
+  /* 减少滚动时的重排 */
+  scroll-behavior: auto;
+  /* 启用硬件加速和复合层 */
+  will-change: scroll-position;
+  
+  /* 优化滚动性能 */
+  :global([data-react-window-list]) {
+    /* 避免滚动时的空白闪烁 */
+    backface-visibility: hidden;
+    will-change: transform;
+    /* 确保列表始终有背景 */
+    background-color: #fff;
+    /* 减少重绘区域 */
+  }
+}
+
+.treeContentWrapper {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.virtualTreeNode {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-radius: 4px;
+  margin: 1px 0;
+  will-change: transform;
+  contain: layout style;
+  /* 添加背景色，避免透明导致的留白 */
+  background-color: #fff;
+  /* 确保节点高度一致性 */
+  min-height: 28px;
+  box-sizing: border-box;
+  -webkit-user-select: none;
+  user-select: none;
+  
+  * {
+    will-change: transform;
+  }
+  
+  &:hover {
+    background-color: rgba(24, 144, 255, 0.05);
+    
+    .treeCopyIcon {
+      opacity: 1;
+    }
+    
+    .treeNodeTitle {
+      color: #1890ff;
+    }
+  }
+  
+  &.virtualTreeNodeScrolling {
+    /* 滚动时的简化样式，提高性能 */
+    transition: none;
+    contain: strict;
+    background-color: #fff !important;
+    
+    .treeCopyIcon {
+      display: none; /* 滚动时隐藏复制图标，减少渲染 */
+    }
+    
+    .treeNodeTitle {
+      transition: none;
+    }
+    
+    &:hover {
+      background-color: #fff !important;
+    }
+  }
+  
+  &.virtualTreeNodeCollapsed {
+    justify-content: center;
+    padding: 4px;
+    min-height: 32px;
+  }
+  
+  &.tableNode {
+    font-weight: 500;
+    
+    &:hover {
+      background-color: rgba(24, 144, 255, 0.08);
+    }
+  }
+  
+  &.columnNode {
+    font-size: 12px;
+    color: #666;
+    
+    .treeNodeTitle {
+      font-weight: normal;
+    }
+  }
+}
+
+.treeNodeContent {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 4px;
+}
+
+/* 缩进样式 */
+.treeIndent {
+  flex-shrink: 0;
+  height: 1px;
+  
+  &.level0 { width: 0px; }
+  &.level1 { width: 20px; }
+  &.level2 { width: 40px; }
+  &.level3 { width: 60px; }
+}
+
+/* 展开指示器 */
+.expandIndicator {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #666;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  
+  &.expanded {
+    transform: rotate(0deg);
+  }
+  
+  &.collapsed {
+    transform: rotate(-90deg);
+  }
+  
+  &:hover {
+    color: #1890ff;
+    background-color: rgba(24, 144, 255, 0.1);
+    border-radius: 2px;
+  }
+}
+
+/* 图标样式 */
+.treeTableIcon {
+  flex-shrink: 0;
+  color: #1890ff;
+  margin-right: 6px;
+  font-size: 14px;
+}
+
+.treeSpacer {
+  width: 20px;
+  height: 1px;
+  margin-right: 6px;
+}
+
+.treeNodeTitle {
+  flex: 1;
+  color: #262626;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 8px;
+}
+
+.treeCopyIcon {
+  color: #8c8c8c;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 2px;
+  
+  &:hover {
+    color: #1890ff;
+    background-color: rgba(24, 144, 255, 0.1);
+  }
+}
+
+/* 加载状态 */
+.loadingContainer {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #fafafa;
+}
+
+/* 错误状态 */
+.errorContainer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background-color: #fff2f0;
+  
+  .errorTitle {
+    color: #cf1322;
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+  
+  .errorMessage {
+    color: #8c8c8c;
+    text-align: center;
+    line-height: 1.5;
+  }
+}
+
+/* 空状态 */
+.emptyContainer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+/* 工具栏 */
+.treeToolbar {
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #f0f0f0;
+  background-color: #fafafa;
+  
+  .toolbarTitle {
+    font-weight: 500;
+    color: #262626;
+    font-size: 14px;
+  }
+  
+  .toolbarActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+/* 搜索框 */
+.searchContainer {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  
+  .searchInput {
+    width: 100%;
+  }
+}
+
+/* 滚动条样式 */
+.treeContainerScrollbar {
+  :global(.react-window-list) {
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 3px;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 3px;
+      
+      &:hover {
+        background: #a8a8a8;
+      }
+    }
+  }
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+  .virtualTreeNode {
+    &.level0 { padding-left: 4px; }
+    &.level1 { padding-left: 16px; }
+    &.level2 { padding-left: 28px; }
+    &.level3 { padding-left: 40px; }
+    &.level4 { padding-left: 52px; }
+  }
+  
+  .treeNodeTitle {
+    font-size: 13px;
+  }
+  
+  .treeIndent {
+    &.level1 { width: 12px; }
+    &.level2 { width: 24px; }
+    &.level3 { width: 36px; }
+    &.level4 { width: 48px; }
+  }
+}

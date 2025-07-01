@@ -2,7 +2,7 @@ import React, { memo, useState, useEffect, useRef } from 'react';
 import { Table, Spin, Empty, Alert, Typography, Button } from 'antd';
 import { QueryResult } from '../types';
 import ResizeObserver from 'rc-resize-observer';
-import './ResultsViewer.less';
+import styles from '../SQLEditorPage.module.less';
 
 const { Text } = Typography;
 
@@ -272,8 +272,8 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
   // 加载中或无结果的早期返回
   if (loading)
     return (
-      <div className="results-viewer-container">
-        <div className="table-wrapper centered-content">
+      <div className={styles.resultsViewerContainer}>
+        <div className={`${styles.tableWrapper} ${styles.centeredContent}`}>
           <Spin size="large" />
         </div>
       </div>
@@ -282,8 +282,8 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
   if (!queryResults) {
     console.log('No queryResults - showing empty state');
     return (
-      <div className="results-viewer-container">
-        <div className="table-wrapper centered-content">
+      <div className={styles.resultsViewerContainer}>
+        <div className={`${styles.tableWrapper} ${styles.centeredContent}`}>
           <Empty description="请执行查询以查看结果" />
         </div>
       </div>
@@ -306,8 +306,8 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
   if (!queryResults.rows || queryResults.rows.length === 0) {
     console.log('No rows in query results - showing empty state');
     return (
-      <div className="results-viewer-container">
-        <div className="table-wrapper centered-content">
+      <div className={styles.resultsViewerContainer}>
+        <div className={`${styles.tableWrapper} ${styles.centeredContent}`}>
           <Empty description="查询没有返回数据" />
         </div>
       </div>
@@ -337,8 +337,8 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
   if (columnList.length === 0) {
     console.log('No columns available - cannot render table');
     return (
-      <div className="results-viewer-container">
-        <div className="table-wrapper centered-content">
+      <div className={styles.resultsViewerContainer}>
+        <div className={`${styles.tableWrapper} ${styles.centeredContent}`}>
           <Empty description="查询结果格式异常，无法显示表格" />
         </div>
       </div>
@@ -387,13 +387,13 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
 
   // 查询执行信息
   const executionInfo = (
-    <div className="execution-info">
+    <div className={styles.executionInfo}>
       {queryResults.executionTimeMs && (
         <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
           查询执行时间: {queryResults.executionTimeMs}ms | 返回行数: {queryResults.rows.length}
         </Text>
       )}
-      <div className="toolbar">
+      <div className={styles.toolbar}>
         <Button
           type="link"
           size="small"
@@ -417,10 +417,10 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
   );
 
   return (
-    <div className="results-viewer-container" ref={containerRef}>
+    <div className={styles.resultsViewerContainer} ref={containerRef}>
       {executionInfo}
       <ResizeObserver>
-        <div className="table-wrapper">
+        <div className={styles.tableWrapper}>
           <Table
             dataSource={queryResults.rows.map((row, index) => ({ ...row, key: index }))}
             columns={columns}
@@ -433,7 +433,7 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
               pageSizeOptions: PAGE_SIZE_OPTIONS,
               showTotal: (total) => `共 ${total} 条记录`,
             }}
-            className="resizable-table"
+            className={styles.resizableTable}
             components={{
               header: {
                 cell: ResizableTitle,

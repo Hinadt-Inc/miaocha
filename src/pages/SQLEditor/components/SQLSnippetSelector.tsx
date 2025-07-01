@@ -2,6 +2,7 @@ import React from 'react';
 import { Button, Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
 import { useSQLSnippets } from '../hooks/useSQLSnippets';
+import styles from '../SQLEditorPage.module.less';
 
 export interface SQLSnippetSelectorProps {
   onSelect: (snippet: string) => void;
@@ -19,7 +20,7 @@ export const SQLSnippetSelector: React.FC<SQLSnippetSelectorProps> = ({ onSelect
     label: (
       <div>
         <div>{snippet.label}</div>
-        <div className="snippet-description">{snippet.description}</div>
+        <div className={styles.snippetDescription}>{snippet.description}</div>
       </div>
     ),
     onClick: () => onSelect(snippet.insertText),

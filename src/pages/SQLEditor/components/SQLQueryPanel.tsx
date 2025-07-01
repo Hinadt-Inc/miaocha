@@ -4,6 +4,7 @@ import { CopyOutlined } from '@ant-design/icons';
 import QueryEditor from './QueryEditor';
 import { SQLSnippetSelector } from './SQLSnippetSelector';
 import * as monaco from 'monaco-editor';
+import styles from '../SQLEditorPage.module.less';
 
 export interface SQLQueryPanelProps {
   sqlQuery: string;
@@ -34,7 +35,7 @@ export const SQLQueryPanel: React.FC<SQLQueryPanelProps> = ({
     <Card
       hoverable={false}
       title={
-        <div className="editor-header-container">
+        <div className={styles.editorHeaderContainer}>
           <Space>
             <span>SQL 查询</span>
             <Tooltip title="复制 SQL">
@@ -52,7 +53,7 @@ export const SQLQueryPanel: React.FC<SQLQueryPanelProps> = ({
           {header}
         </div>
       }
-      className="editor-card"
+      className={styles.editorCard}
     >
       <QueryEditor
         sqlQuery={sqlQuery}

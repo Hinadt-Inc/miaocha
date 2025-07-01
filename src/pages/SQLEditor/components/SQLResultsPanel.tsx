@@ -1,9 +1,10 @@
 import React from 'react';
-import { Card, Tabs, Button, Alert } from 'antd';
+import { Card, Tabs, Button } from 'antd';
 import ResultsViewer from './ResultsViewer';
 import VisualizationPanel from './VisualizationPanel';
 import formatTableCell from '../utils/formatters';
 import { ChartType, QueryResult } from '../types';
+import styles from '../SQLEditorPage.module.less';
 
 export interface SQLResultsPanelProps {
   queryResults: QueryResult | null;
@@ -66,8 +67,8 @@ export const SQLResultsPanel: React.FC<SQLResultsPanelProps> = ({
 
   return (
     <Card
-      title={<Tabs activeKey={activeTab} onChange={onTabChange} className="results-tabs" items={tabItems} />}
-      className="results-card"
+      title={<Tabs activeKey={activeTab} onChange={onTabChange} className={styles.resultsTabs} items={tabItems} />}
+      className={styles.resultsCard}
       style={{ height: '100%', overflow: 'auto' }}
       extra={
         activeTab === 'results' && (

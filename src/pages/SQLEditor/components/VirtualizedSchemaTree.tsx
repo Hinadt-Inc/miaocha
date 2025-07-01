@@ -10,7 +10,12 @@ import {
 } from '@ant-design/icons';
 import { VariableSizeList as List } from 'react-window';
 import { SchemaResult } from '../types';
-import './VirtualizedSchemaTree.less';
+import styles from './VirtualizedSchemaTree.module.less';
+
+// 工具函数：获取CSS类名
+const cx = (...classNames: (string | undefined | false)[]): string => {
+  return classNames.filter(Boolean).join(' ');
+};
 
 interface TreeNode {
   title: string;
@@ -122,22 +127,32 @@ const TreeNodeRenderer = memo(
         // eslint-disable-next-line react/forbid-dom-props
         <div
           style={style}
-          className={`virtual-tree-node virtual-tree-node-scrolling level-${node.level} ${node.isTable ? 'table-node' : 'column-node'} ${collapsed ? 'virtual-tree-node-collapsed' : ''}`}
+          className={cx(
+            styles.virtualTreeNode,
+            styles.virtualTreeNodeScrolling,
+            styles[`level${node.level}`],
+            node.isTable ? styles.tableNode : styles.columnNode,
+            collapsed ? styles.virtualTreeNodeCollapsed : '',
+          )}
         >
-          <div className="tree-node-content">
+          <div className={styles.treeNodeContent}>
             {!collapsed && (
               <>
-                <div className={`tree-indent level-${node.level}`} />
+                <div className={cx(styles.treeIndent, styles[`level${node.level}`])} />
                 {node.isTable && (
-                  <div className={`expand-indicator ${node.isExpanded ? 'expanded' : 'collapsed'}`}>
+                  <div className={cx(styles.expandIndicator, node.isExpanded ? styles.expanded : styles.collapsed)}>
                     {node.children && node.children.length > 0 ? (node.isExpanded ? '▼' : '▶') : null}
                   </div>
                 )}
-                {node.isTable ? <TableOutlined className="tree-table-icon" /> : <span className="tree-spacer" />}
-                <span className="tree-node-title">{node.title}</span>
+                {node.isTable ? (
+                  <TableOutlined className={styles.treeTableIcon} />
+                ) : (
+                  <span className={styles.treeSpacer} />
+                )}
+                <span className={styles.treeNodeTitle}>{node.title}</span>
               </>
             )}
-            {collapsed && node.isTable && <TableOutlined className="tree-table-icon" />}
+            {collapsed && node.isTable && <TableOutlined className={styles.treeTableIcon} />}
           </div>
         </div>
       );
@@ -147,8 +162,8 @@ const TreeNodeRenderer = memo(
     if (collapsed) {
       return (
         // eslint-disable-next-line react/forbid-dom-props
-        <div style={style} className="virtual-tree-node virtual-tree-node-collapsed">
-          {node.isTable && <TableOutlined className="tree-table-icon" />}
+        <div style={style} className={cx(styles.virtualTreeNode, styles.virtualTreeNodeCollapsed)}>
+          {node.isTable && <TableOutlined className={styles.treeTableIcon} />}
         </div>
       );
     }
@@ -162,39 +177,45 @@ const TreeNodeRenderer = memo(
       // eslint-disable-next-line react/forbid-dom-props, jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions, jsx-a11y/no-noninteractive-tabindex
       <div
         style={style}
-        className={`virtual-tree-node level-${node.level} ${node.isTable ? 'table-node' : 'column-node'}`}
+        className={cx(
+          styles.virtualTreeNode,
+          styles[`level${node.level}`],
+          node.isTable ? styles.tableNode : styles.columnNode,
+        )}
         onClick={handleNodeClick}
         onDoubleClick={handleNodeDoubleClick}
         onKeyDown={handleNodeKeyDown}
         tabIndex={0}
         aria-label={`${node.isTable ? 'Table' : 'Column'}: ${node.title}`}
       >
-        <div className="tree-node-content">
+        <div className={styles.treeNodeContent}>
           {/* 缩进 */}
-          <div className={`tree-indent level-${node.level}`} />
+          <div className={cx(styles.treeIndent, styles[`level${node.level}`])} />
 
           {/* 展开/折叠指示器 */}
           {node.isTable && (
-            <div className={`expand-indicator ${node.isExpanded ? 'expanded' : 'collapsed'}`}>{expandIcon}</div>
+            <div className={cx(styles.expandIndicator, node.isExpanded ? styles.expanded : styles.collapsed)}>
+              {expandIcon}
+            </div>
           )}
 
           {/* 图标 */}
-          {node.isTable ? <TableOutlined className="tree-table-icon" /> : <span className="tree-spacer" />}
+          {node.isTable ? <TableOutlined className={styles.treeTableIcon} /> : <span className={styles.treeSpacer} />}
 
           {/* 标题 */}
           <Tooltip title={node.content}>
-            <span className="tree-node-title">{node.title}</span>
+            <span className={styles.treeNodeTitle}>{node.title}</span>
           </Tooltip>
 
           {/* 操作按钮 */}
           {node.isTable ? (
             <Tooltip title="插入表和字段">
-              <CopyOutlined className="tree-copy-icon" onClick={handleInsertTableClick} />
+              <CopyOutlined className={styles.treeCopyIcon} onClick={handleInsertTableClick} />
             </Tooltip>
           ) : (
             onInsertField && (
               <Tooltip title="插入字段">
-                <CopyOutlined className="tree-copy-icon" onClick={handleInsertFieldClick} />
+                <CopyOutlined className={styles.treeCopyIcon} onClick={handleInsertFieldClick} />
               </Tooltip>
             )
           )}
@@ -465,13 +486,13 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
           )}
         </Space>
       }
-      className={`virtualized-schema-tree-card ${collapsed ? 'virtualized-schema-tree-card-collapsed' : ''}`}
+      className={cx(styles.virtualizedSchemaTreeCard, collapsed ? styles.virtualizedSchemaTreeCardCollapsed : '')}
     >
-      <div className="tree-content-wrapper">
+      <div className={styles.treeContentWrapper}>
         {(() => {
           if (loadingSchema) {
             return (
-              <div className="loading-spinner">
+              <div className={styles.loadingContainer}>
                 <Spin />
               </div>
             );
@@ -479,7 +500,7 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
 
           if (databaseSchema && 'tables' in databaseSchema && lazyLoadStarted) {
             return (
-              <div ref={containerRef} className="virtualized-tree-container">
+              <div ref={containerRef} className={styles.virtualizedTreeContainer}>
                 <List
                   ref={listRef}
                   height={containerHeight}
@@ -505,7 +526,7 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
           }
 
           return (
-            <div className="empty-container">
+            <div className={styles.emptyContainer}>
               <Empty
                 description={collapsed ? undefined : '请选择数据源获取数据库结构'}
                 image={Empty.PRESENTED_IMAGE_SIMPLE}

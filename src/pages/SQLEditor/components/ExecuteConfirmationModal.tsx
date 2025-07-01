@@ -4,7 +4,6 @@ import { PlayCircleOutlined } from '@ant-design/icons';
 import * as monaco from 'monaco-editor';
 
 import { initMonacoEditorLocally } from '../utils/monacoLocalInit';
-import './QueryEditor.less';
 
 interface ExecuteConfirmationModalProps {
   visible: boolean;

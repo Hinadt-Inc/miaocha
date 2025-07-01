@@ -1,5 +1,5 @@
-.history-list {
-  .history-item {
+.historyList {
+  .historyItem {
     margin-bottom: 16px;
     padding: 12px;
     border: 1px solid #e8e8e8;
@@ -12,27 +12,27 @@
       border-color: #d9d9d9;
     }
     
-    &.error-history {
+    &.errorHistory {
       border-color: #ffccc7;
       background-color: #fff2f0;
     }
     
-    .history-item-header {
+    .historyItemHeader {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 8px;
       
-      .history-success {
+      .historySuccess {
         color: #52c41a;
       }
       
-      .history-error {
+      .historyError {
         color: #f5222d;
       }
     }
     
-    .history-sql {
+    .historySql {
       font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
       font-size: 12px;
       background-color: rgba(0, 0, 0, 0.03);
@@ -43,6 +43,7 @@
       text-overflow: ellipsis;
       display: -webkit-box;
       -webkit-line-clamp: 3;
+      line-clamp: 3;
       -webkit-box-orient: vertical;
     }
   }

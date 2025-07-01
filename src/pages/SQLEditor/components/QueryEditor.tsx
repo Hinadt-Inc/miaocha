@@ -2,7 +2,7 @@ import React, { memo, useState, useRef, useEffect } from 'react';
 import * as monaco from 'monaco-editor';
 import { Spin } from 'antd';
 import { EditorSettings } from '../types';
-import './QueryEditor.less';
+import styles from './QueryEditor.module.less';
 
 import { initMonacoEditorLocally } from '../utils/monacoLocalInit';
 
@@ -266,21 +266,21 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
   // 如果折叠，返回简单视图
   if (isCollapsed) {
     return (
-      <div className="editor-container collapsed">
-        <div className="editor-wrapper collapsed" />
+      <div className={`${styles.editorContainer} ${styles.collapsed}`}>
+        <div className={`${styles.editorWrapper} ${styles.collapsed}`} />
       </div>
     );
   }
 
   return (
-    <div className="editor-container">
-      <div className="editor-wrapper">
+    <div className={styles.editorContainer}>
+      <div className={styles.editorWrapper}>
         {loading && (
-          <div className="editor-loading">
+          <div className={styles.editorLoading}>
             <Spin size="large" tip="正在加载编辑器..." />
           </div>
         )}
-        <div ref={containerRef} className={`monaco-editor-container ${loading ? 'loading' : ''}`} />
+        <div ref={containerRef} className={`${styles.monacoEditorContainer} ${loading ? styles.loading : ''}`} />
       </div>
     </div>
   );

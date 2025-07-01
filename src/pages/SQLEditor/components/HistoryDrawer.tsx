@@ -2,7 +2,7 @@ import { Drawer, Space, Tag, Empty, Badge, Button, Typography, Pagination } from
 import { ClockCircleOutlined, CopyOutlined, HistoryOutlined } from '@ant-design/icons';
 import VirtualList from 'rc-virtual-list';
 import type { QueryHistoryItem } from '../../../api/sql';
-import './HistoryDrawer.less';
+import styles from './HistoryDrawer.module.less';
 
 const { Text } = Typography;
 
@@ -42,19 +42,19 @@ const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
       open={visible}
       onClose={onClose}
     >
-      <div className="history-list">
+      <div className={styles.historyList}>
         {queryHistory.length > 0 ? (
           <>
             <VirtualList data={queryHistory} itemHeight={120} itemKey="id">
               {(history) => (
-                <div key={history.id} className="history-item" onClick={() => loadFromHistory(history.sqlQuery)}>
-                  <div className="history-item-header">
+                <div key={history.id} className={styles.historyItem} onClick={() => loadFromHistory(history.sqlQuery)}>
+                  <div className={styles.historyItemHeader}>
                     <Space>
                       <ClockCircleOutlined style={{ color: '#1890ff' }} />
                       <Text>{new Date(history.createTime).toLocaleString()}</Text>
                     </Space>
                     <Space>
-                      <Badge status="success" text={<Text className="history-success">成功</Text>} />
+                      <Badge status="success" text={<Text className={styles.historySuccess}>成功</Text>} />
                       <Button
                         type="text"
                         size="small"
@@ -66,7 +66,7 @@ const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                       />
                     </Space>
                   </div>
-                  <div className="history-sql">{history.sqlQuery}</div>
+                  <div className={styles.historySql}>{history.sqlQuery}</div>
                 </div>
               )}
             </VirtualList>

@@ -1,6 +1,7 @@
 import React from 'react';
 import VirtualizedSchemaTree from './VirtualizedSchemaTree';
 import { SchemaResult } from '../types';
+import styles from '../SQLEditorPage.module.less';
 
 export interface SQLEditorSidebarProps {
   databaseSchema: SchemaResult | { error: string } | null;
@@ -37,8 +38,8 @@ export const SQLEditorSidebar: React.FC<SQLEditorSidebarProps> = ({
   onToggle,
 }) => {
   return (
-    <div className="sql-editor-sidebar">
-      <div className="sidebar-content">
+    <div className={styles.sqlEditorSidebar}>
+      <div className={styles.sidebarContent}>
         <VirtualizedSchemaTree
           databaseSchema={databaseSchema}
           loadingSchema={loadingSchema}
