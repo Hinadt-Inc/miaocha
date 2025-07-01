@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Tabs, Button, Alert, Splitter } from 'antd';
+import { Card, Tabs, Button, Alert } from 'antd';
 import ResultsViewer from './ResultsViewer';
 import VisualizationPanel from './VisualizationPanel';
 import formatTableCell from '../utils/formatters';
@@ -65,54 +65,52 @@ export const SQLResultsPanel: React.FC<SQLResultsPanelProps> = ({
   ];
 
   return (
-    <Splitter.Panel>
-      <Card
-        title={<Tabs activeKey={activeTab} onChange={onTabChange} className="results-tabs" items={tabItems} />}
-        className="results-card"
-        style={{ marginTop: '10px', height: 'calc(100% - 10px)', overflow: 'auto' }}
-        extra={
-          activeTab === 'results' && (
-            <Button
-              type="primary"
-              onClick={onDownloadResults}
-              disabled={!queryResults?.rows?.length}
-              aria-label="下载查询结果"
-            >
-              下载CSV
-            </Button>
-          )
-        }
-      >
-        {queryResults?.status === 'error' && (
-          <Alert
-            message="查询失败"
-            description={queryResults.message}
-            type="error"
-            showIcon
-            style={{ marginBottom: 16 }}
-          />
-        )}
+    <Card
+      title={<Tabs activeKey={activeTab} onChange={onTabChange} className="results-tabs" items={tabItems} />}
+      className="results-card"
+      style={{ height: '100%', overflow: 'auto' }}
+      extra={
+        activeTab === 'results' && (
+          <Button
+            type="primary"
+            onClick={onDownloadResults}
+            disabled={!queryResults?.rows?.length}
+            aria-label="下载查询结果"
+          >
+            下载CSV
+          </Button>
+        )
+      }
+    >
+      {queryResults?.status === 'error' && (
+        <Alert
+          message="查询失败"
+          description={queryResults.message}
+          type="error"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
 
-        {activeTab === 'results' ? (
-          <ResultsViewer
-            queryResults={queryResults}
-            loading={loading}
-            downloadResults={onDownloadResults}
-            formatTableCell={(value) => formatTableCell(value)}
-          />
-        ) : (
-          <VisualizationPanel
-            queryResults={queryResults}
-            chartType={chartType}
-            setChartType={onChartTypeChange}
-            xField={xField}
-            setXField={onXFieldChange}
-            yField={yField}
-            setYField={onYFieldChange}
-            fullscreen={fullscreen}
-          />
-        )}
-      </Card>
-    </Splitter.Panel>
+      {activeTab === 'results' ? (
+        <ResultsViewer
+          queryResults={queryResults}
+          loading={loading}
+          downloadResults={onDownloadResults}
+          formatTableCell={(value) => formatTableCell(value)}
+        />
+      ) : (
+        <VisualizationPanel
+          queryResults={queryResults}
+          chartType={chartType}
+          setChartType={onChartTypeChange}
+          xField={xField}
+          setXField={onXFieldChange}
+          yField={yField}
+          setYField={onYFieldChange}
+          fullscreen={fullscreen}
+        />
+      )}
+    </Card>
   );
 };

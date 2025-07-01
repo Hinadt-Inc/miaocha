@@ -89,7 +89,7 @@ const SQLEditorPage: React.FC = () => {
     handleInsertTable,
   } = editorActions;
 
-  const { siderWidth, siderCollapsed, setSiderCollapsed, handleSplitterDrag } = layoutConfig;
+  const { siderWidth, siderCollapsed, setSiderCollapsed } = layoutConfig;
 
   // 处理SQL查询状态更新的包装函数
   const handleSqlQueryChange = (value: string | undefined) => {
@@ -127,46 +127,51 @@ const SQLEditorPage: React.FC = () => {
 
       <Layout className="layout-inner">
         <Content className="content-container">
-          <SQLQueryPanel
-            sqlQuery={sqlQuery}
-            onChange={handleSqlQueryChange}
-            onEditorMount={handleEditorDidMount}
-            editorSettings={editorSettings}
-            height={editorHeight}
-            onHeightChange={setEditorHeight}
-            onInsertSnippet={insertSnippet}
-            onCopyToClipboard={() => copyToClipboard(sqlQuery)}
-            header={
-              <SQLEditorHeader
-                dataSources={dataSources}
-                selectedSource={selectedSource}
-                onSourceChange={setSelectedSource}
-                loadingSchema={loadingSchema}
-                loadingDataSources={loadingDataSources}
-                loadingResults={loadingResults}
-                onExecuteQuery={executeQuery}
-                onToggleHistory={() => setHistoryDrawerVisible(true)}
-                onToggleSettings={() => setSettingsDrawerVisible(true)}
+          <div className="editor-results-layout">
+            <div className="query-panel-container">
+              <SQLQueryPanel
                 sqlQuery={sqlQuery}
+                onChange={handleSqlQueryChange}
+                onEditorMount={handleEditorDidMount}
+                editorSettings={editorSettings}
+                height={editorHeight}
+                onHeightChange={setEditorHeight}
+                onInsertSnippet={insertSnippet}
+                onCopyToClipboard={() => copyToClipboard(sqlQuery)}
+                header={
+                  <SQLEditorHeader
+                    dataSources={dataSources}
+                    selectedSource={selectedSource}
+                    onSourceChange={setSelectedSource}
+                    loadingSchema={loadingSchema}
+                    loadingDataSources={loadingDataSources}
+                    loadingResults={loadingResults}
+                    onExecuteQuery={executeQuery}
+                    onToggleHistory={() => setHistoryDrawerVisible(true)}
+                    onToggleSettings={() => setSettingsDrawerVisible(true)}
+                    sqlQuery={sqlQuery}
+                  />
+                }
               />
-            }
-            onSplitterResize={handleSplitterDrag}
-          />
+            </div>
 
-          <SQLResultsPanel
-            queryResults={queryResults}
-            loading={loadingResults}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            onDownloadResults={handleDownloadResults}
-            chartType={chartType}
-            onChartTypeChange={handleChartTypeChange}
-            xField={xField}
-            onXFieldChange={setXField}
-            yField={yField}
-            onYFieldChange={setYField}
-            fullscreen={fullscreen}
-          />
+            <div className="results-panel-container">
+              <SQLResultsPanel
+                queryResults={queryResults}
+                loading={loadingResults}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                onDownloadResults={handleDownloadResults}
+                chartType={chartType}
+                onChartTypeChange={handleChartTypeChange}
+                xField={xField}
+                onXFieldChange={setXField}
+                yField={yField}
+                onYFieldChange={setYField}
+                fullscreen={fullscreen}
+              />
+            </div>
+          </div>
         </Content>
       </Layout>
 

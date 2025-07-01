@@ -124,23 +124,54 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  .results-card {
-    padding-top: 10px;
+  
+  .editor-results-layout {
+    height: 100%;
     display: flex;
     flex-direction: column;
-    flex: 1;
-    min-height: 0;
-    overflow: auto;
-    .ant-card-body {
-      flex: 1;
+  }
+  
+  .query-panel-container {
+    flex: 0 0 auto;
+    min-height: 200px;
+    max-height: 50vh;
+  }
+  
+  .results-panel-container {
+    flex: 1 1 auto;
+    min-height: 300px;
+    margin-top: 10px;
+    
+    .results-card {
+      height: 100%;
       display: flex;
       flex-direction: column;
-      min-height: 0;
-      padding: 0;
-      height: 100%;
-    }
-    .editor-card {
-      height: 100%;
+      
+      .ant-card-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        padding: 16px;
+        overflow: hidden;
+        
+        .results-viewer-container {
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          
+          .table-wrapper {
+            flex: 1;
+            overflow: auto;
+            
+            &.centered-content {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+          }
+        }
+      }
     }
   }
 }
@@ -155,7 +186,7 @@
 /* 查询编辑器卡片 */
 .query-editor-card {
   .ant-card-head {
-    min-height: auto;
+    min-height: 48px;
     padding: 0 12px;
     
     .ant-card-head-title {
