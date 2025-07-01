@@ -37,9 +37,9 @@ const HomePage = () => {
     pageSize: 1000,
     datasourceId: null,
     module: null,
-    startTime: QUICK_RANGES.last_15m.from().format(DATE_FORMAT_THOUSOND),
-    endTime: QUICK_RANGES.last_15m.to().format(DATE_FORMAT_THOUSOND),
-    timeRange: 'last_15m',
+    startTime: QUICK_RANGES.last_5m.from().format(DATE_FORMAT_THOUSOND),
+    endTime: QUICK_RANGES.last_5m.to().format(DATE_FORMAT_THOUSOND),
+    timeRange: 'last_5m',
     timeGrouping: 'auto',
   };
   // 日志检索请求参数
