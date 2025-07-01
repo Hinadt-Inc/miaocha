@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { message } from 'antd';
-import type { EditorSettings } from '@/pages/SQLEditor/types';
-import { SETTINGS_STORAGE_KEY } from '@/pages/SQLEditor/types';
+import type { EditorSettings } from '../types';
+import { SETTINGS_STORAGE_KEY } from '../types';
 
 const DEFAULT_SETTINGS: EditorSettings = {
   fontSize: 14,
@@ -9,7 +9,7 @@ const DEFAULT_SETTINGS: EditorSettings = {
   wordWrap: true,
   autoComplete: true,
   tabSize: 2,
-  minimap: false
+  minimap: false,
 };
 
 export const useEditorSettings = () => {
@@ -34,13 +34,22 @@ export const useEditorSettings = () => {
   }, []);
 
   const isValidEditorSettings = (obj: unknown): obj is EditorSettings => {
-    return !!obj && typeof obj === 'object' &&
-      'fontSize' in obj && typeof obj.fontSize === 'number' &&
-      'theme' in obj && typeof obj.theme === 'string' &&
-      'wordWrap' in obj && typeof obj.wordWrap === 'boolean' &&
-      'autoComplete' in obj && typeof obj.autoComplete === 'boolean' &&
-      'tabSize' in obj && typeof obj.tabSize === 'number' &&
-      'minimap' in obj && typeof obj.minimap === 'boolean';
+    return (
+      !!obj &&
+      typeof obj === 'object' &&
+      'fontSize' in obj &&
+      typeof obj.fontSize === 'number' &&
+      'theme' in obj &&
+      typeof obj.theme === 'string' &&
+      'wordWrap' in obj &&
+      typeof obj.wordWrap === 'boolean' &&
+      'autoComplete' in obj &&
+      typeof obj.autoComplete === 'boolean' &&
+      'tabSize' in obj &&
+      typeof obj.tabSize === 'number' &&
+      'minimap' in obj &&
+      typeof obj.minimap === 'boolean'
+    );
   };
 
   const saveSettings = (partialSettings: Partial<EditorSettings>) => {
@@ -51,7 +60,7 @@ export const useEditorSettings = () => {
   };
 
   const toggleSettings = () => {
-    setIsSettingsOpen(prev => !prev);
+    setIsSettingsOpen((prev) => !prev);
   };
 
   return {
@@ -59,6 +68,6 @@ export const useEditorSettings = () => {
     setSettings,
     saveSettings,
     isSettingsOpen,
-    toggleSettings
+    toggleSettings,
   };
 };

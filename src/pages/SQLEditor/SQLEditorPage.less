@@ -20,7 +20,18 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  
+  .loading-indicator {
+    display: flex;
+    align-items: center;
+    color: #1890ff;
+    
+    .loading-text {
+      margin-left: 4px;
+    }
+  }
 }
+
 /* SQL编辑器容器 */
 .sql-editor-container {
   height: 100%;
@@ -38,6 +49,47 @@
     z-index: 1000;
     background-color: #fff;
     padding: 16px;
+  }
+}
+
+/* Splitter 根容器样式 */
+.ant-splitter {
+  height: 100%;
+  
+  .ant-splitter-panel {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .ant-splitter-bar {
+    background: #f0f0f0;
+    border-radius: 2px;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      background: #d9d9d9;
+    }
+    
+    &:active {
+      background: #bfbfbf;
+    }
+  }
+  
+  /* 水平分割线样式 */
+  &.ant-splitter-horizontal .ant-splitter-bar {
+    cursor: col-resize;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 2px;
+      height: 20px;
+      background: #bfbfbf;
+      border-radius: 1px;
+    }
   }
 }
 
@@ -88,20 +140,81 @@
 
 /* 侧边栏容器样式 - 匹配HomePage */
 .sider-container {
-  margin-right: 10px;
+  height: 100%;
   border-radius: 4px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   overflow: hidden;
+  background: #fff;
   
   .ant-layout-sider-children {
     display: flex;
     flex-direction: column;
     height: 100%;
   }
+  
+  .sql-editor-sidebar {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    
+    .sidebar-content {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+  }
+}
+
+/* Splitter 面板样式 */
+.database-schema-panel {
+  height: 100%;
+  
+  .sider-container {
+    height: 100%;
+    margin-right: 0;
+    border: 1px solid #f0f0f0;
+    
+    /* 为数据库结构面板添加标题栏 */
+    .sidebar-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid #f0f0f0;
+      background: #fafafa;
+      font-weight: 500;
+      font-size: 14px;
+      color: #262626;
+    }
+  }
+}
+
+.main-editor-panel {
+  height: 100%;
+  margin-left: 10px;
+  
+  .layout-inner {
+    height: 100%;
+    background: transparent;
+  }
+  
+  .content-container {
+    height: 100%;
+    
+    /* 确保垂直 Splitter 占满高度 */
+    > .ant-splitter {
+      height: 100%;
+    }
+  }
 }
 .ant-layout {
-    background-color: #F6F8F9 !important;
+  background-color: #F6F8F9 !important;
+  height: 100vh;
+  
+  &.layout-inner {
+    background: transparent !important;
+    height: 100%;
   }
+}
 
 
 /* 内容容器样式 - 匹配HomePage */
@@ -112,24 +225,118 @@
   border-radius: 4px;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  .results-card {
-    padding-top: 10px;
+  height: 100%; /* 改为100%，让它充分利用父容器高度 */
+  overflow: hidden; /* 添加overflow hidden确保内容不会溢出 */
+  
+  /* 嵌套 Splitter 样式 */
+  .ant-splitter {
+    &.ant-splitter-vertical {
+      .ant-splitter-bar {
+        cursor: row-resize;
+        height: 8px; /* 增加分割条高度，更容易操作 */
+        background: #f0f0f0;
+        border-radius: 4px;
+        margin: 4px 0; /* 增加上下边距 */
+        position: relative;
+        transition: all 0.2s ease;
+        
+        &:hover {
+          background: #d9d9d9;
+          height: 10px; /* 悬停时稍微增加高度 */
+          margin: 3px 0;
+        }
+        
+        &:active {
+          background: #1890ff;
+        }
+        
+        &::after {
+          content: '';
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: 24px; /* 增加宽度 */
+          height: 3px; /* 增加高度 */
+          background: #bfbfbf;
+          border-radius: 2px;
+          transition: all 0.2s ease;
+        }
+        
+        &:hover::after {
+          background: #1890ff;
+          width: 30px;
+        }
+      }
+    }
+  }
+  
+  .query-panel-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 200px;
+    max-height: 60%; /* 限制查询面板最大高度，给结果面板更多空间 */
+    overflow: hidden; /* 防止溢出 */
+    
+    /* 查询面板包装器样式 */
+    .query-panel-wrapper {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .ant-card {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      flex: 1; /* 占据剩余空间 */
+      min-height: 0; /* 允许收缩 */
+      
+      .ant-card-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0; /* 重要：允许收缩 */
+      }
+    }
+  }
+  
+  .results-panel-container {
     display: flex;
     flex-direction: column;
     flex: 1;
-    min-height: 0;
-    overflow: auto;
-    .ant-card-body {
-      flex: 1;
+    min-height: 400px; /* 增加结果面板最小高度 */
+    
+    .results-card {
+      height: 100%;
       display: flex;
       flex-direction: column;
-      min-height: 0;
-      padding: 0;
-      height: 100%;
-    }
-    .editor-card {
-      height: 100%;
+      
+      .ant-card-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        padding: 16px;
+        overflow: hidden;
+        
+        .results-viewer-container {
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          
+          .table-wrapper {
+            flex: 1;
+            overflow: auto;
+            
+            &.centered-content {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+          }
+        }
+      }
     }
   }
 }
@@ -144,7 +351,7 @@
 /* 查询编辑器卡片 */
 .query-editor-card {
   .ant-card-head {
-    min-height: auto;
+    min-height: 48px;
     padding: 0 12px;
     
     .ant-card-head-title {
@@ -155,8 +362,21 @@
 
 /* 编辑器卡片 */
 .editor-card {
+  height: 100%; /* 确保卡片占满容器高度 */
+  display: flex;
+  flex-direction: column;
+
+  .ant-card-head {
+    flex-shrink: 0; /* 头部不收缩 */
+  }
+
   .ant-card-body {
     padding: 10px;
+    flex: 1; /* 内容区域占据剩余空间 */
+    min-height: 0; /* 允许收缩 */
+    overflow: hidden; /* 防止溢出 */
+    display: flex;
+    flex-direction: column;
   }
 }
 
@@ -350,6 +570,11 @@
       width: 100%;
     }
   }
+  
+  /* 中等屏幕下的 Splitter 调整 */
+  .database-schema-panel {
+    min-width: 150px !important;
+  }
 }
 
 /* 平板和小屏幕设备 */
@@ -359,12 +584,28 @@
     flex-direction: column;
   }
   
-  .sider-container {
-    width: 100% !important;
-    max-width: 100% !important;
-    flex: 0 0 auto !important;
-    margin-right: 0;
-    height: 100%;
+  /* 小屏幕下隐藏数据库结构面板，可以通过按钮切换 */
+  .ant-splitter {
+    flex-direction: column;
+    
+    .database-schema-panel {
+      min-height: 200px;
+      max-height: 40vh;
+    }
+    
+    .main-editor-panel {
+      margin-left: 0;
+      margin-top: 10px;
+    }
+    
+    .ant-splitter-bar {
+      cursor: row-resize;
+      
+      &::after {
+        width: 20px;
+        height: 2px;
+      }
+    }
   }
   
   .editor-results-container {
@@ -428,4 +669,35 @@
   .results-container {
     max-height: 300px;
   }
+}
+
+/* SQL编辑器侧边栏样式 */
+.sql-editor-sidebar {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid #f0f0f0;
+    
+    .sidebar-title {
+      margin-left: 8px;
+      font-weight: 500;
+    }
+  }
+  
+  .sidebar-content {
+    flex: 1;
+    overflow: hidden;
+  }
+}
+
+/* 片段选择器样式 */
+.snippet-description {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-top: 2px;
 }

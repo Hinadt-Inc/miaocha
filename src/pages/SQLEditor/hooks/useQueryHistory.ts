@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { message } from 'antd';
-import type { QueryHistoryItem } from '@/api/sql';
-import { queryHistory } from '@/api/sql';
+import type { QueryHistoryItem } from '../../../api/sql';
+import { queryHistory } from '../../../api/sql';
 
 interface UseQueryHistoryReturn {
   history: QueryHistoryItem[];

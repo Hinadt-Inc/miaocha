@@ -12,18 +12,13 @@ interface QueryEditorProps {
   onEditorMount?: (editor: monaco.editor.IStandaloneCodeEditor, monaco: typeof import('monaco-editor')) => void;
   editorSettings: EditorSettings;
   collapsed?: boolean;
-  height?: number | string;
-  resizable?: boolean; // 是否支持拖拽调整高度
-  minHeight?: number; // 最小高度
-  maxHeight?: number; // 最大高度
-  onHeightChange?: (height: number) => void; // 高度变化回调
 }
 
 /**
- * SQL查询编辑器组件 - 完全本地版本
+ * SQL查询编辑器组件 - 完全本地版本，简化高度管理
  * 使用Monaco编辑器提供语法高亮和自动完成功能
  * 支持收起/展开功能
- * 🚀 无CDN依赖，100%本地资源
+ * 🚀 无CDN依赖，100%本地资源，简单的100%高度
  */
 const QueryEditor: React.FC<QueryEditorProps> = ({
   sqlQuery,
@@ -31,84 +26,52 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
   onEditorMount,
   editorSettings,
   collapsed = false,
-  height = 300,
-  resizable = true,
-  minHeight = 200,
-  maxHeight = 800,
-  onHeightChange,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(collapsed);
   const [loading, setLoading] = useState(true);
   const [monacoInitialized, setMonacoInitialized] = useState(false);
-  const [currentHeight, setCurrentHeight] = useState<number>(typeof height === 'number' ? height : 300);
-  const [isResizing, setIsResizing] = useState(false);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const resizeRef = useRef<HTMLDivElement>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
   useEffect(() => {
     setIsCollapsed(collapsed);
   }, [collapsed]);
 
-  // 处理拖拽调整高度
+  // 监听容器大小变化并更新编辑器布局
   useEffect(() => {
-    if (!resizable || !resizeRef.current) return;
+    if (!containerRef.current || !editorRef.current) return;
 
-    const resizeHandle = resizeRef.current;
-    let startY: number;
-    let startHeight: number;
-
-    const handleMouseDown = (e: MouseEvent) => {
-      setIsResizing(true);
-      startY = e.clientY;
-      startHeight = currentHeight;
-
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'row-resize';
-      document.body.style.userSelect = 'none';
-
-      e.preventDefault();
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const deltaY = e.clientY - startY;
-      const newHeight = Math.max(minHeight, Math.min(maxHeight, startHeight + deltaY));
-
-      setCurrentHeight(newHeight);
-      onHeightChange?.(newHeight);
-
-      // 实时调整编辑器布局
-      if (editorRef.current) {
-        setTimeout(() => {
-          editorRef.current?.layout();
-        }, 0);
+    // 创建ResizeObserver来监听容器大小变化
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (editorRef.current && entry.target === containerRef.current) {
+          // 使用requestAnimationFrame确保DOM更新完成后再调用layout
+          requestAnimationFrame(() => {
+            if (editorRef.current) {
+              editorRef.current.layout();
+              // 额外触发一次layout，确保在容器收缩时也能正确更新
+              setTimeout(() => {
+                if (editorRef.current) {
+                  editorRef.current.layout();
+                }
+              }, 50);
+            }
+          });
+        }
       }
-    };
+    });
 
-    const handleMouseUp = () => {
-      setIsResizing(false);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-
-    resizeHandle.addEventListener('mousedown', handleMouseDown);
+    resizeObserver.observe(containerRef.current);
+    resizeObserverRef.current = resizeObserver;
 
     return () => {
-      resizeHandle.removeEventListener('mousedown', handleMouseDown);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+        resizeObserverRef.current = null;
+      }
     };
-  }, [resizable, currentHeight, minHeight, maxHeight, onHeightChange]);
-
-  // 监听外部高度变化
-  useEffect(() => {
-    if (typeof height === 'number' && height !== currentHeight) {
-      setCurrentHeight(height);
-    }
-  }, [height]);
+  }, [editorRef.current, containerRef.current]);
 
   // 一次性初始化Monaco Editor
   useEffect(() => {
@@ -149,7 +112,7 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
           value: sqlQuery,
           language: 'sql',
           theme: editorSettings.theme || 'sqlTheme',
-          automaticLayout: true,
+          automaticLayout: true, // 保持自动布局
           minimap: { enabled: editorSettings?.minimap ?? false },
           wordWrap: editorSettings?.wordWrap ? 'on' : 'off',
           fontSize: editorSettings?.fontSize ?? 14,
@@ -186,6 +149,17 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
             showSnippets: true,
             showFunctions: true,
           },
+          // 添加滚动条配置，确保编辑器能正确处理容器大小变化
+          scrollbar: {
+            verticalScrollbarSize: 8,
+            horizontalScrollbarSize: 8,
+            alwaysConsumeMouseWheel: false,
+          },
+          // 优化性能
+          renderLineHighlight: 'line',
+          renderControlCharacters: false,
+          disableLayerHinting: false,
+          disableMonospaceOptimizations: false,
         });
 
         if (!isMounted) {
@@ -274,6 +248,11 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
         }
         editorRef.current = null;
       }
+      // 清理ResizeObserver
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+        resizeObserverRef.current = null;
+      }
     };
   }, [isCollapsed, monacoInitialized]); // 添加monacoInitialized依赖
 
@@ -283,16 +262,6 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
       editorRef.current.setValue(sqlQuery);
     }
   }, [sqlQuery]);
-
-  // 设置CSS变量
-  useEffect(() => {
-    if (containerRef.current?.parentElement) {
-      const wrapper = containerRef.current.parentElement.parentElement;
-      if (wrapper) {
-        wrapper.style.setProperty('--editor-height', `${currentHeight}px`);
-      }
-    }
-  }, [currentHeight]);
 
   // 如果折叠，返回简单视图
   if (isCollapsed) {
@@ -304,18 +273,14 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
   }
 
   return (
-    <div className={`editor-container ${isResizing ? 'resizing' : ''}`}>
+    <div className="editor-container">
       <div className="editor-wrapper">
         {loading && (
           <div className="editor-loading">
             <Spin size="large" tip="正在加载编辑器..." />
           </div>
         )}
-        <div
-          ref={containerRef}
-          className={`monaco-editor-container ${loading ? 'loading' : ''}`}
-          data-height={currentHeight}
-        />
+        <div ref={containerRef} className={`monaco-editor-container ${loading ? 'loading' : ''}`} />
       </div>
     </div>
   );

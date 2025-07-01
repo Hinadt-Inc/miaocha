@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { message } from 'antd';
-import { executeSQL } from '@/api/sql';
-import type { QueryResult } from '@/pages/SQLEditor/types';
+import { executeSQL } from '../../../api/sql';
+import type { QueryResult } from '../types';
 import * as monaco from 'monaco-editor';
 import { getSelectedSQLStatement, isCompleteSQLStatement } from '../utils/editorUtils';
 
@@ -26,6 +26,13 @@ export const useQueryExecution = (
   const [queryResults, setQueryResults] = useState<QueryResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [sqlQuery, setSqlQuery] = useState('');
+
+  console.log('useQueryExecution hook state:', {
+    queryResults,
+    loading,
+    selectedSource,
+    sqlQuery: sqlQuery.substring(0, 50) + (sqlQuery.length > 50 ? '...' : ''),
+  });
 
   const executeQuery = useCallback(
     async (options?: ExecuteQueryOptions): Promise<QueryResult> => {
@@ -86,32 +93,48 @@ export const useQueryExecution = (
         // 转换rows类型以匹配QueryResult
         const convertedResponse: QueryResult = {
           ...response,
-          rows: response.rows?.map((row) => {
-            const convertedRow: Record<string, string | number | boolean | null | undefined | object> = {};
-            for (const key in row) {
-              const value = row[key];
-              if (
-                typeof value === 'string' ||
-                typeof value === 'number' ||
-                typeof value === 'boolean' ||
-                value === null ||
-                value === undefined ||
-                (typeof value === 'object' && !Array.isArray(value))
-              ) {
-                convertedRow[key] = value;
-              } else {
-                // 对于不兼容的类型，转换为字符串
-                convertedRow[key] = JSON.stringify(value);
+          status: response.status || 'success', // 确保status字段存在
+          rows:
+            response.rows?.map((row) => {
+              const convertedRow: Record<string, string | number | boolean | null | undefined | object> = {};
+              for (const key in row) {
+                const value = row[key];
+                if (
+                  typeof value === 'string' ||
+                  typeof value === 'number' ||
+                  typeof value === 'boolean' ||
+                  value === null ||
+                  value === undefined ||
+                  (typeof value === 'object' && !Array.isArray(value))
+                ) {
+                  convertedRow[key] = value;
+                } else {
+                  // 对于不兼容的类型，转换为字符串
+                  convertedRow[key] = JSON.stringify(value);
+                }
               }
-            }
-            return convertedRow;
-          }),
+              return convertedRow;
+            }) || [],
         };
 
+        console.log('Query execution result:', convertedResponse); // 添加调试日志
+        console.log('Setting query results to state...'); // 确认状态更新
         setQueryResults(convertedResponse);
+        console.log('Query results state updated successfully'); // 确认更新完成
         return convertedResponse;
       } catch (error) {
         console.error('执行查询失败:', error);
+
+        // 创建错误结果对象
+        const errorResult: QueryResult = {
+          queryId: '',
+          status: 'error',
+          message: error instanceof Error ? error.message : '执行查询失败',
+          columns: [],
+          rows: [],
+        };
+
+        setQueryResults(errorResult);
         message.error('执行查询失败');
         throw error;
       } finally {
