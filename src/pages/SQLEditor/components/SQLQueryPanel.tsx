@@ -10,8 +10,8 @@ export interface SQLQueryPanelProps {
   onChange: (value: string | undefined) => void;
   onEditorMount: (editor: monaco.editor.IStandaloneCodeEditor, monaco: typeof import('monaco-editor')) => void;
   editorSettings: any;
-  height: number;
-  onHeightChange: (height: number) => void;
+  height?: number | string; // 改为可选，因为编辑器现在使用100%
+  onHeightChange?: (height: number) => void; // 保持可选，向后兼容
   onInsertSnippet: (snippet: string) => void;
   onCopyToClipboard: () => void;
   header: React.ReactNode;
@@ -26,8 +26,6 @@ export const SQLQueryPanel: React.FC<SQLQueryPanelProps> = ({
   onChange,
   onEditorMount,
   editorSettings,
-  height,
-  onHeightChange,
   onInsertSnippet,
   onCopyToClipboard,
   header,
@@ -61,11 +59,6 @@ export const SQLQueryPanel: React.FC<SQLQueryPanelProps> = ({
         onChange={onChange}
         onEditorMount={onEditorMount}
         editorSettings={editorSettings}
-        height={height}
-        resizable={true}
-        minHeight={200}
-        maxHeight={800}
-        onHeightChange={onHeightChange}
       />
     </Card>
   );

@@ -336,7 +336,6 @@ export const useSQLEditorActions = (editorState: SQLEditorState) => {
     setYField: editorState.setYField,
     setHistoryDrawerVisible: editorState.setHistoryDrawerVisible,
     setSettingsDrawerVisible: editorState.setSettingsDrawerVisible,
-    setEditorHeight: editorState.setEditorHeight,
 
     // 编辑器操作
     saveEditorSettings: saveSettings,

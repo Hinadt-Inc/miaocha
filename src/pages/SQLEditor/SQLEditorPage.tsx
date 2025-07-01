@@ -46,9 +46,8 @@ const SQLEditorPage: React.FC = () => {
     historyDrawerVisible,
     settingsDrawerVisible,
 
-    // 编辑器相关
+    // 编辑器设置
     editorSettings,
-    editorHeight,
 
     // 查询历史
     queryHistory,
@@ -70,7 +69,6 @@ const SQLEditorPage: React.FC = () => {
     setYField,
     setHistoryDrawerVisible,
     setSettingsDrawerVisible,
-    setEditorHeight,
 
     // 编辑器操作
     saveEditorSettings,
@@ -111,7 +109,6 @@ const SQLEditorPage: React.FC = () => {
               onTreeNodeDoubleClick={handleTreeNodeDoubleClick}
               onInsertTable={handleInsertTable}
               onInsertField={handleInsertField}
-              fullscreen={fullscreen}
               collapsed={false}
               onToggle={() => {}}
             />
@@ -122,15 +119,16 @@ const SQLEditorPage: React.FC = () => {
         <Splitter.Panel className="main-editor-panel" resizable>
           <Layout className="layout-inner">
             <Content className="content-container">
-              <div className="editor-results-layout">
-                <div className="query-panel-container">
+              <Splitter layout="vertical" style={{ height: '100%' }}>
+                {/* 查询编辑器区域 - 简化高度管理，使用100% */}
+                <Splitter.Panel defaultSize="35%" min={200} max="60%" className="query-panel-container">
                   <SQLQueryPanel
                     sqlQuery={sqlQuery}
                     onChange={handleSqlQueryChange}
                     onEditorMount={handleEditorDidMount}
                     editorSettings={editorSettings}
-                    height={editorHeight}
-                    onHeightChange={setEditorHeight}
+                    height="100%"
+                    onHeightChange={() => {}} // 空函数，保持接口兼容
                     onInsertSnippet={insertSnippet}
                     onCopyToClipboard={() => copyToClipboard(sqlQuery)}
                     header={
@@ -148,9 +146,10 @@ const SQLEditorPage: React.FC = () => {
                       />
                     }
                   />
-                </div>
+                </Splitter.Panel>
 
-                <div className="results-panel-container">
+                {/* 查询结果区域 - 获得更多可用空间 */}
+                <Splitter.Panel className="results-panel-container">
                   <SQLResultsPanel
                     queryResults={queryResults}
                     loading={loadingResults}
@@ -165,8 +164,8 @@ const SQLEditorPage: React.FC = () => {
                     onYFieldChange={setYField}
                     fullscreen={fullscreen}
                   />
-                </div>
-              </div>
+                </Splitter.Panel>
+              </Splitter>
             </Content>
           </Layout>
         </Splitter.Panel>

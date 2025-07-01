@@ -1,5 +1,5 @@
 import React from 'react';
-import SchemaTree from './SchemaTree';
+import VirtualizedSchemaTree from './VirtualizedSchemaTree';
 import { SchemaResult } from '../types';
 
 export interface SQLEditorSidebarProps {
@@ -18,7 +18,6 @@ export interface SQLEditorSidebarProps {
     }[],
   ) => void;
   onInsertField: (fieldName: string) => void;
-  fullscreen: boolean;
   collapsed: boolean;
   onToggle: () => void;
 }
@@ -34,21 +33,19 @@ export const SQLEditorSidebar: React.FC<SQLEditorSidebarProps> = ({
   onTreeNodeDoubleClick,
   onInsertTable,
   onInsertField,
-  fullscreen,
   collapsed,
   onToggle,
 }) => {
   return (
     <div className="sql-editor-sidebar">
       <div className="sidebar-content">
-        <SchemaTree
+        <VirtualizedSchemaTree
           databaseSchema={databaseSchema}
           loadingSchema={loadingSchema}
           refreshSchema={refreshSchema}
           handleTreeNodeDoubleClick={onTreeNodeDoubleClick}
           handleInsertTable={onInsertTable}
           handleInsertField={onInsertField}
-          fullscreen={fullscreen}
           collapsed={collapsed}
           toggleSider={onToggle}
         />

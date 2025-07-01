@@ -42,7 +42,6 @@ export const useSQLEditorState = () => {
   const [fullscreen, setFullscreen] = useState<boolean>(false);
   const [historyDrawerVisible, setHistoryDrawerVisible] = useState(false);
   const [settingsDrawerVisible, setSettingsDrawerVisible] = useState(false);
-  const [editorHeight, setEditorHeight] = useState<number>(300); // 设置默认高度为300px
 
   return {
     // 编辑器引用
@@ -92,7 +91,5 @@ export const useSQLEditorState = () => {
     setHistoryDrawerVisible,
     settingsDrawerVisible,
     setSettingsDrawerVisible,
-    editorHeight,
-    setEditorHeight,
   };
 };

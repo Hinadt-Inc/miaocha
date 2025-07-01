@@ -5,6 +5,7 @@ export { default as VisualizationPanel } from './VisualizationPanel';
 export { default as HistoryDrawer } from './HistoryDrawer';
 export { default as SettingsDrawer } from './SettingsDrawer';
 export { default as SchemaTree } from './SchemaTree';
+export { default as VirtualizedSchemaTree } from './VirtualizedSchemaTree';
 export { default as EditorHeader } from './EditorHeader';
 
 // 重构后的新组件导出
