@@ -373,7 +373,17 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
           title: item.label,
           label: (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>{item.label}</span>
+              <span
+                style={{
+                  display: 'inline-block',
+                  maxWidth: '120px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {item.label}
+              </span>
               <span
                 onClick={(e) => toggleFavorite(item.module, e)}
                 style={{
