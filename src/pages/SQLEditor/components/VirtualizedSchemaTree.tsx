@@ -264,8 +264,8 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
     }
   }, [databaseSchema, lazyLoadStarted]);
 
-  // 计算列表高度 - 使用容器自适应高度
-  const [containerHeight, setContainerHeight] = useState(400);
+  // 计算列表高度 - 使用容器自适应高度，改为更合理的初始值
+  const [containerHeight, setContainerHeight] = useState(window.innerHeight * 0.85); // 使用屏幕高度70%作为初始值
   const containerRef = useRef<HTMLDivElement>(null);
 
   // 使用 ResizeObserver 监听容器高度变化
@@ -273,10 +273,12 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
     const container = containerRef.current;
     if (!container) return;
 
+    // 创建ResizeObserver来监听容器尺寸变化
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const height = entry.contentRect.height;
-        if (height > 0) {
+        if (height > 50) {
+          // 设置最小高度阈值，避免无效高度
           setContainerHeight(height);
         }
       }
@@ -284,14 +286,29 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
 
     resizeObserver.observe(container);
 
-    // 初始计算
-    const height = container.offsetHeight;
-    if (height > 0) {
-      setContainerHeight(height);
-    }
+    // 初始计算 - 延迟执行确保DOM已渲染
+    const calculateInitialHeight = () => {
+      const height = container.offsetHeight;
+      if (height > 50) {
+        setContainerHeight(height);
+      } else {
+        // 如果容器高度为0，尝试使用父元素高度
+        const parentHeight = container.parentElement?.offsetHeight;
+        if (parentHeight && parentHeight > 50) {
+          setContainerHeight(parentHeight - 48); // 减去Card头部和padding
+        }
+      }
+    };
+
+    // 立即计算
+    calculateInitialHeight();
+
+    // 延迟再次计算，确保布局完成
+    const timer = setTimeout(calculateInitialHeight, 100);
 
     return () => {
       resizeObserver.disconnect();
+      clearTimeout(timer);
     };
   }, []);
 
@@ -345,7 +362,14 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
         </Space>
       }
       className={`virtualized-schema-tree-card ${collapsed ? 'virtualized-schema-tree-card-collapsed' : ''}`}
-      styles={{ body: { padding: collapsed ? '8px 0' : undefined } }}
+      styles={{
+        body: {
+          padding: collapsed ? '8px 0' : undefined,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+        },
+      }}
     >
       {(() => {
         if (loadingSchema) {

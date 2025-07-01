@@ -100,7 +100,7 @@ const SQLEditorPage: React.FC = () => {
     <Layout style={{ height: '100vh', padding: '10px' }}>
       <Splitter style={{ height: '100%' }}>
         {/* 数据库结构侧边栏 */}
-        <Splitter.Panel defaultSize={280} min={200} max={500} className="database-schema-panel" resizable>
+        <Splitter.Panel defaultSize={280} min={200} max={600} className="database-schema-panel" resizable>
           <div className="sider-container">
             <SQLEditorSidebar
               databaseSchema={databaseSchema}
