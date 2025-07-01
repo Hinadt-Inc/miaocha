@@ -286,10 +286,11 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
 
   // 设置CSS变量
   useEffect(() => {
-    if (containerRef.current?.parentElement) {
-      const wrapper = containerRef.current.parentElement.parentElement;
+    if (containerRef.current) {
+      const container = containerRef.current;
+      const wrapper = container.closest('.editor-container');
       if (wrapper) {
-        wrapper.style.setProperty('--editor-height', `${currentHeight}px`);
+        (wrapper as HTMLElement).style.setProperty('--editor-height', `${currentHeight}px`);
       }
     }
   }, [currentHeight]);

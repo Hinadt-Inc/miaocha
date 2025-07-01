@@ -20,7 +20,18 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  
+  .loading-indicator {
+    display: flex;
+    align-items: center;
+    color: #1890ff;
+    
+    .loading-text {
+      margin-left: 4px;
+    }
+  }
 }
+
 /* SQL编辑器容器 */
 .sql-editor-container {
   height: 100%;
@@ -428,4 +439,35 @@
   .results-container {
     max-height: 300px;
   }
+}
+
+/* SQL编辑器侧边栏样式 */
+.sql-editor-sidebar {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid #f0f0f0;
+    
+    .sidebar-title {
+      margin-left: 8px;
+      font-weight: 500;
+    }
+  }
+  
+  .sidebar-content {
+    flex: 1;
+    overflow: hidden;
+  }
+}
+
+/* 片段选择器样式 */
+.snippet-description {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-top: 2px;
 }
