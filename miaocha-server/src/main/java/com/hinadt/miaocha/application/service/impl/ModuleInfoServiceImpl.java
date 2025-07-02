@@ -242,14 +242,14 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
                     ErrorCode.VALIDATION_ERROR, "该模块正在被 " + processCount + " 个进程使用，无法删除");
         }
 
+        moduleInfoMapper.deleteById(id);
+
         // 根据参数决定是否删除关联的Doris表数据
         if (deleteDorisTable
                 && StringUtils.hasText(moduleInfo.getTableName())
                 && StringUtils.hasText(moduleInfo.getDorisSql())) {
             deleteDorisTable(moduleInfo);
         }
-
-        moduleInfoMapper.deleteById(id);
     }
 
     /**

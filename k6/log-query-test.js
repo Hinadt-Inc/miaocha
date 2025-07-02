@@ -45,8 +45,8 @@ const TEST_PRESETS = {
         gracefulStop: '30s',
       },
     },
-    testType: 'QPS性能探索',
-    description: '渐进式QPS探索，找到系统性能上限',
+    testType: 'qps_exploration',
+    description: 'Progressive QPS exploration to find system performance limit',
   },
 
   // 基准模式：固定QPS深度测试
@@ -54,14 +54,15 @@ const TEST_PRESETS = {
     scenarios: {
       steady_qps: {
         executor: 'constant-arrival-rate',
-        rate: parseInt(__ENV.QPS) || 40,
-        timeUnit: '2s',
+        rate: parseInt(__ENV.QPS) || 10,
+        timeUnit: '1s',
         duration: __ENV.DURATION || '5m',
         preAllocatedVUs: 200,
+        gracefulStop: '30s'
       },
     },
-    testType: 'QPS基准测试',
-    description: `固定${__ENV.QPS || 10}QPS稳定性测试`,
+    testType: 'qps_benchmark',
+    description: `Fixed ${__ENV.QPS || 10} QPS stability test`,
   },
 
   benchmark_constant: {
@@ -73,7 +74,7 @@ const TEST_PRESETS = {
         gracefulStop: '30s',
       }
     },
-    testType: 'QPS基准测试2',
+    testType: 'qps_benchmark_constant',
   },
 
 
@@ -91,8 +92,8 @@ const TEST_PRESETS = {
         gracefulRampDown: '15s',
       },
     },
-    testType: '平均负载测试',
-    description: '40分钟渐进式用户负载测试',
+    testType: 'average_load_test',
+    description: '40min progressive user load test',
   },
 };
 
@@ -111,10 +112,10 @@ export const options = {
 
   // 请求标签
   tags: {
-    测试类型: currentPreset.testType,
-    模块: '日志查询',
-    测试模式: TEST_MODE,
-    描述: currentPreset.description,
+    test_type: currentPreset.testType,
+    module: 'log_query',
+    test_mode: TEST_MODE,
+    description: currentPreset.description,
   },
 };
 
@@ -127,7 +128,7 @@ export function setup() {
     JSON.stringify(loginPayload),
     {
       headers: createBaseHeaders(),
-      tags: {接口名称: '登录初始化'},
+      tags: {api_name: 'login_init'},
     }
   );
 
@@ -156,7 +157,7 @@ export default function (data) {
   // 构造测试数据
   const testData = generateTestData();
 
-  group(`日志查询 - ${currentPreset.testType}`, function () {
+  group(`log_query_${currentPreset.testType}`, function () {
     const payload = createLogQueryPayload(testData);
 
     // 使用 http.batch 模拟前端并行请求
@@ -168,7 +169,7 @@ export default function (data) {
         body: JSON.stringify(payload),
         params: {
           headers: headers,
-          tags: {接口名称: '日志明细查询', 时间范围: testData.description},
+          tags: {api_name: 'log_details_query', time_range: testData.description},
         }
       },
       // // 请求2: 日志直方图查询
@@ -178,7 +179,7 @@ export default function (data) {
       //   body: JSON.stringify(payload),
       //   params: {
       //     headers: headers,
-      //     tags: {接口名称: '日志直方图查询', 时间范围: testData.description},
+      //     tags: {api_name: 'log_histogram_query', time_range: testData.description},
       //   }
       // }
     ]);

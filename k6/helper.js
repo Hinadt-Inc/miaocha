@@ -34,7 +34,7 @@ function generateTimeRange() {
   return {
     startTime: formatDateTime(startTime),
     endTime: formatDateTime(endTime),
-    description: `${CONFIG.TIME_RANGE_MINUTES}分钟范围(±${CONFIG.TIME_FLUCTUATION_MINUTES}分钟波动)`,
+    description: `${CONFIG.TIME_RANGE_MINUTES}min_range_pm${CONFIG.TIME_FLUCTUATION_MINUTES}min_fluctuation`,
   };
 }
 
