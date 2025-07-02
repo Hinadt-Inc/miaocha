@@ -47,17 +47,25 @@ public class FieldDistributionSqlBuilder {
             List<String> convertedFields = decorator.getFields(); // 转换后的纯字段名，用于TOPN函数
             List<String> originalFieldNames = decorator.getOriginalFields(); // 原始字段名，用于AS别名
 
-            String topnColumns = buildTopnColumns(convertedFields, originalFieldNames, topN);
+            String selectColumns =
+                    buildTopnColumnsWithTotal(convertedFields, originalFieldNames, topN);
             String innerQuery = buildInnerQuery(dto, tableName, timeField);
 
-            return selectWithSubquery(topnColumns, innerQuery, "sub_query");
+            return selectWithSubquery(selectColumns, innerQuery, "sub_query");
         }
 
         // 普通DTO的处理逻辑保持不变
-        String topnColumns = buildTopnColumns(fields, originalFields, topN);
+        String selectColumns = buildTopnColumnsWithTotal(fields, originalFields, topN);
         String innerQuery = buildInnerQuery(dto, tableName, timeField);
 
-        return selectWithSubquery(topnColumns, innerQuery, "sub_query");
+        return selectWithSubquery(selectColumns, innerQuery, "sub_query");
+    }
+
+    /** 构建包含TOPN函数和总数统计的SELECT列 */
+    private String buildTopnColumnsWithTotal(
+            List<String> fields, List<String> originalFields, int topN) {
+        String topnColumns = buildTopnColumns(fields, originalFields, topN);
+        return topnColumns + ", count(*) AS '" + TOTAL_ALIAS + "'";
     }
 
     /** 构建TOPN函数调用列表 */

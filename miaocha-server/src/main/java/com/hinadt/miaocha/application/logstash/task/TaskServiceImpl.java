@@ -172,7 +172,7 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public Optional<TaskDetailDTO> getTaskDetail(String taskId) {
         Optional<LogstashTask> taskOpt = taskMapper.findById(taskId);
-        if (!taskOpt.isPresent()) {
+        if (taskOpt.isEmpty()) {
             return Optional.empty();
         }
 

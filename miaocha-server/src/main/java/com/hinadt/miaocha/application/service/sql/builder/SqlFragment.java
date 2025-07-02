@@ -39,7 +39,7 @@ public class SqlFragment {
     /** 构建时间分布查询的SELECT子句 */
     public static String selectTimeDistribution(String timeExpression) {
         return String.format(
-                "SELECT %s AS %s, COUNT(1) AS %s", timeExpression, TIME_ALIAS, COUNT_ALIAS);
+                "SELECT %s AS %s, COUNT(*) AS %s", timeExpression, TIME_ALIAS, COUNT_ALIAS);
     }
 
     /** 构建FROM子句 */

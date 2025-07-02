@@ -98,14 +98,16 @@ class LogSqlBuilderTest {
                     logSqlBuilder.buildDistributionSqlWithInterval(
                             dto, tableName, timeUnit, intervalValue);
 
-            // Assert
+            // Assert - 验证完整的SQL结构
+            String expectedSql =
+                    "SELECT FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(log_time) / 300) * 300) AS"
+                            + " log_time_, COUNT(1) AS count FROM test_logs WHERE log_time >="
+                            + " '2024-01-01 00:00:00.000' AND log_time < '2024-01-01 01:00:00.000'"
+                            + " GROUP BY FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(log_time) / 300) * 300)"
+                            + " ORDER BY log_time_ ASC";
+
             assertNotNull(result, "SQL不应为null");
-            assertTrue(result.contains("SELECT"), "应包含SELECT子句");
-            assertTrue(result.contains("FROM " + tableName), "应包含正确的表名");
-            assertTrue(result.contains("GROUP BY"), "应包含GROUP BY子句");
-            assertTrue(result.contains("ORDER BY"), "应包含ORDER BY子句");
-            assertTrue(result.contains(expectedTimeField), "应包含时间字段");
-            assertTrue(result.contains("COUNT(1)"), "应包含计数函数");
+            assertEquals(expectedSql, result, "生成的SQL应与预期完全一致");
 
             // 验证调用了配置服务
             verify(queryConfigValidationService, times(1)).getTimeField("test-module");
@@ -128,9 +130,16 @@ class LogSqlBuilderTest {
                     logSqlBuilder.buildDistributionSqlWithInterval(
                             dto, tableName, timeUnit, intervalValue);
 
-            // Assert
+            // Assert - 验证完整的SQL结构，确保使用默认时间字段
+            String expectedSql =
+                    "SELECT FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(log_time) / 3600) * 3600) AS"
+                        + " log_time_, COUNT(1) AS count FROM test_logs WHERE log_time >="
+                        + " '2024-01-01 00:00:00.000' AND log_time < '2024-01-01 01:00:00.000'"
+                        + " GROUP BY FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(log_time) / 3600) * 3600)"
+                        + " ORDER BY log_time_ ASC";
+
             assertNotNull(result, "SQL不应为null");
-            assertTrue(result.contains("log_time"), "应使用默认时间字段log_time");
+            assertEquals(expectedSql, result, "配置异常时应使用默认时间字段");
             verify(queryConfigValidationService, times(1)).getTimeField("test-module");
         }
     }
@@ -166,21 +175,15 @@ class LogSqlBuilderTest {
             // Act
             String result = logSqlBuilder.buildDetailQuery(dto, tableName, timeField);
 
-            // Assert
-            assertNotNull(result, "SQL不应为null");
-            assertTrue(result.contains("SELECT"), "应包含SELECT子句");
-            assertTrue(result.contains("FROM " + tableName), "应包含正确的表名");
-            assertTrue(result.contains("ORDER BY"), "应包含ORDER BY子句");
-            assertTrue(result.contains("LIMIT 50"), "应包含正确的LIMIT");
-            assertTrue(result.contains("OFFSET 100"), "应包含正确的OFFSET");
-            assertTrue(result.contains("message['logId'] AS 'message.logId'"), "应包含转换后的字段");
-            assertTrue(result.contains("level"), "应包含普通字段");
-            assertTrue(result.contains("host"), "应包含普通字段");
+            // Assert - 验证完整的SQL结构
+            String expectedSql =
+                    "SELECT message['logId'] AS 'message.logId', level, host FROM test_logs WHERE"
+                            + " log_time >= '2024-01-01 00:00:00.000' AND log_time < '2024-01-01"
+                            + " 01:00:00.000' ORDER BY level ASC, host DESC, log_time DESC LIMIT 50"
+                            + " OFFSET 100";
 
-            // 验证排序功能
-            assertTrue(result.contains("level ASC"), "应包含level字段升序排序");
-            assertTrue(result.contains("host DESC"), "应包含host字段倒序排序");
-            assertTrue(result.contains("log_time DESC"), "应包含默认时间字段排序");
+            assertNotNull(result, "SQL不应为null");
+            assertEquals(expectedSql, result, "生成的SQL应与预期完全一致");
         }
 
         @Test
@@ -195,12 +198,13 @@ class LogSqlBuilderTest {
             // Act
             String result = logSqlBuilder.buildCountQuery(dto, tableName, timeField);
 
-            // Assert
+            // Assert - 验证完整的SQL结构
+            String expectedSql =
+                    "SELECT COUNT(1) AS total FROM test_logs WHERE log_time >= '2024-01-01"
+                            + " 00:00:00.000' AND log_time < '2024-01-01 01:00:00.000'";
+
             assertNotNull(result, "SQL不应为null");
-            assertTrue(result.contains("SELECT COUNT(1)"), "应包含COUNT查询");
-            assertTrue(result.contains("FROM " + tableName), "应包含正确的表名");
-            assertFalse(result.contains("LIMIT"), "COUNT查询不应包含LIMIT");
-            assertFalse(result.contains("ORDER BY"), "COUNT查询不应包含ORDER BY");
+            assertEquals(expectedSql, result, "生成的SQL应与预期完全一致");
         }
 
         @Test
@@ -224,9 +228,14 @@ class LogSqlBuilderTest {
             // Act
             String result = logSqlBuilder.buildDetailQuery(dto, tableName, timeField);
 
-            // Assert
-            assertTrue(result.contains("log_time ASC"), "应包含用户指定的时间字段升序排序");
-            assertFalse(result.contains("log_time DESC"), "不应包含默认的时间字段倒序排序");
+            // Assert - 验证完整的SQL结构
+            String expectedSql =
+                    "SELECT level, host FROM test_logs WHERE log_time >= '2024-01-01 00:00:00.000'"
+                        + " AND log_time < '2024-01-01 01:00:00.000' ORDER BY log_time ASC LIMIT 20"
+                        + " OFFSET 0";
+
+            assertNotNull(result, "SQL不应为null");
+            assertEquals(expectedSql, result, "用户指定时间字段排序应覆盖默认排序");
         }
 
         @Test
@@ -244,8 +253,14 @@ class LogSqlBuilderTest {
             // Act
             String result = logSqlBuilder.buildDetailQuery(dto, tableName, timeField);
 
-            // Assert
-            assertTrue(result.contains("ORDER BY log_time DESC"), "应包含默认时间字段倒序排序");
+            // Assert - 验证完整的SQL结构
+            String expectedSql =
+                    "SELECT level, host FROM test_logs WHERE log_time >= '2024-01-01 00:00:00.000'"
+                        + " AND log_time < '2024-01-01 01:00:00.000' ORDER BY log_time DESC LIMIT"
+                        + " 20 OFFSET 0";
+
+            assertNotNull(result, "SQL不应为null");
+            assertEquals(expectedSql, result, "无排序字段时应包含默认时间字段倒序排序");
         }
     }
 
@@ -275,25 +290,22 @@ class LogSqlBuilderTest {
                     logSqlBuilder.buildFieldDistributionSql(
                             dto, tableName, convertedFields, originalFields, topN);
 
-            // Assert
-            assertNotNull(result, "SQL不应为null");
-            assertTrue(result.contains("SELECT"), "应包含SELECT子句");
-            assertTrue(result.contains("TOPN"), "应包含TOPN函数");
-            assertTrue(result.contains("FROM"), "应包含FROM子句");
-            assertTrue(result.contains("sub_query"), "应包含子查询");
-            assertTrue(result.contains("LIMIT 1000"), "应包含采样LIMIT");
+            // Assert - 验证完整的SQL结构
+            String expectedSql =
+                    "SELECT TOPN(message['level'], 5) AS 'message.level', TOPN(host, 5) AS 'host',"
+                        + " TOPN(source, 5) AS 'source', count(*) AS 'total' FROM (SELECT * FROM"
+                        + " test_logs WHERE log_time >= '2024-01-01 00:00:00.000' AND log_time <"
+                        + " '2024-01-01 01:00:00.000' ORDER BY log_time DESC LIMIT 1000 OFFSET 0)"
+                        + " AS sub_query";
 
-            // 验证TOPN函数格式 - 应该是纯字段名，不包含AS别名
-            assertTrue(
-                    result.contains("TOPN(message['level'], 5) AS 'message.level'"),
-                    "应包含转换后字段的TOPN函数");
-            assertTrue(result.contains("TOPN(host, 5) AS 'host'"), "应包含普通字段的TOPN函数");
+            assertNotNull(result, "SQL不应为null");
+            assertEquals(expectedSql, result, "生成的SQL应与预期完全一致");
 
             verify(queryConfigValidationService, times(1)).getTimeField("test-module");
         }
 
         @Test
-        @DisplayName("字段分布SQL配置异常处理 - 期望：使用默认时间字段")
+        @DisplayName("字段分布SQL配置异常处理 - 期望：使用默认时间字段并包含总数统计")
         void testFieldDistributionSqlWithConfigException() {
             // Arrange
             LogSearchDTO original = createBasicDTO();
@@ -313,9 +325,15 @@ class LogSqlBuilderTest {
                     logSqlBuilder.buildFieldDistributionSql(
                             dto, tableName, convertedFields, originalFields, topN);
 
-            // Assert
+            // Assert - 验证完整的SQL结构，确保使用默认时间字段
+            String expectedSql =
+                    "SELECT TOPN(level, 10) AS 'level', count(*) AS 'total' FROM (SELECT * FROM"
+                        + " test_logs WHERE log_time >= '2024-01-01 00:00:00.000' AND log_time <"
+                        + " '2024-01-01 01:00:00.000' ORDER BY log_time DESC LIMIT 1000 OFFSET 0)"
+                        + " AS sub_query";
+
             assertNotNull(result, "SQL不应为null");
-            assertTrue(result.contains("log_time"), "应使用默认时间字段log_time");
+            assertEquals(expectedSql, result, "配置异常时应使用默认时间字段并包含总数统计");
             verify(queryConfigValidationService, times(1)).getTimeField("test-module");
         }
     }
@@ -347,11 +365,15 @@ class LogSqlBuilderTest {
                     logSqlBuilder.buildFieldDistributionSql(
                             dto, tableName, convertedFields, originalFields, topN);
 
-            // Assert
+            // Assert - 验证完整的SQL结构
+            String expectedSql =
+                    "SELECT TOPN(level, 5) AS 'level', count(*) AS 'total' FROM (SELECT * FROM"
+                        + " test_logs WHERE log_time >= '2024-01-01 00:00:00.000' AND log_time <"
+                        + " '2024-01-01 01:00:00.000' AND (message['level'] = 'ERROR' AND host ="
+                        + " 'server1') ORDER BY log_time DESC LIMIT 1000 OFFSET 0) AS sub_query";
+
             assertNotNull(result, "SQL不应为null");
-            assertTrue(result.contains("WHERE"), "应包含WHERE子句");
-            assertTrue(result.contains("message['level'] = 'ERROR'"), "应包含转换后的WHERE条件");
-            assertTrue(result.contains("host = 'server1'"), "应包含普通WHERE条件");
+            assertEquals(expectedSql, result, "包含WHERE条件的字段分布SQL应与预期完全一致");
         }
 
         @Test
@@ -378,10 +400,18 @@ class LogSqlBuilderTest {
                     logSqlBuilder.buildDistributionSqlWithInterval(
                             dto, tableName, timeUnit, intervalValue);
 
-            // Assert
+            // Assert - 验证完整的SQL结构
+            String expectedSql =
+                    "SELECT FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(log_time) / 7200) * 7200) AS"
+                        + " log_time_, COUNT(1) AS count FROM test_logs WHERE log_time >="
+                        + " '2024-01-01 00:00:00.000' AND log_time < '2024-01-01 01:00:00.000' AND"
+                        + " (request['headers']['authorization'] IS NOT NULL AND"
+                        + " response['data']['user']['id'] = '12345') GROUP BY"
+                        + " FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(log_time) / 7200) * 7200) ORDER BY"
+                        + " log_time_ ASC";
+
             assertNotNull(result, "SQL不应为null");
-            assertTrue(result.contains("request['headers']['authorization']"), "应包含转换后的嵌套字段");
-            assertTrue(result.contains("response['data']['user']['id']"), "应包含转换后的嵌套字段");
+            assertEquals(expectedSql, result, "复杂嵌套字段的时间分布SQL应与预期完全一致");
         }
     }
 

@@ -72,10 +72,17 @@
         SELECT
         <include refid="logstashMachineColumns"/>
         FROM logstash_machine
-        WHERE id IN
-        <foreach collection="list" item="id" open="(" separator="," close=")">
-            #{id}
-        </foreach>
+        <where>
+            <if test="list != null and list.size() > 0">
+                id IN
+                <foreach collection="list" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+            </if>
+            <if test="list == null or list.size() == 0">
+                1 = 0
+            </if>
+        </where>
     </select>
 
     <!-- 根据 Logstash 进程 ID 查询 -->

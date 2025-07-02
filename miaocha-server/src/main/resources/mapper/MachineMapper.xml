@@ -54,10 +54,18 @@
     <select id="selectByIds" resultType="com.hinadt.miaocha.domain.entity.MachineInfo">
         SELECT
         <include refid="machineColumns"/>
-        FROM machine_info WHERE id IN
-        <foreach collection="ids" item="id" open="(" separator="," close=")">
-            #{id}
-        </foreach>
+        FROM machine_info
+        <where>
+            <if test="ids != null and ids.size() > 0">
+                id IN
+                <foreach collection="ids" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+            </if>
+            <if test="ids == null or ids.size() == 0">
+                1 = 0
+            </if>
+        </where>
     </select>
 
     <!-- 查询所有机器信息 -->

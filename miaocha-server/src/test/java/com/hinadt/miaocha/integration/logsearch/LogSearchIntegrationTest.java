@@ -1959,6 +1959,24 @@ public class LogSearchIntegrationTest {
             assertThat(result.getFieldDistributions()).isNotNull().isNotEmpty();
             assertThat(result.getSampleSize()).isNotNull().isGreaterThan(0);
 
+            // 验证新增的actualSampleCount字段 - 这是我们功能修改的核心验证
+            assertThat(result.getActualSampleCount())
+                    .as("actualSampleCount字段应该被正确设置")
+                    .isNotNull()
+                    .isGreaterThan(0);
+
+            // 验证actualSampleCount与sampleSize的业务逻辑关系
+            assertThat(result.getActualSampleCount())
+                    .as("实际采样数应该小于等于配置的采样大小")
+                    .isLessThanOrEqualTo(result.getSampleSize());
+
+            // 验证isSampledStatistics字段的逻辑一致性
+            assertThat(result.getIsSampledStatistics()).isNotNull();
+            if (result.getActualSampleCount() < result.getSampleSize()) {
+                // 当实际采样数小于配置大小时，说明数据量不足，这是正常的采样统计
+                assertThat(result.getIsSampledStatistics()).as("数据量不足时应标记为采样统计").isTrue();
+            }
+
             // 验证每个字段分布的完整性
             result.getFieldDistributions()
                     .forEach(
@@ -1985,11 +2003,13 @@ public class LogSearchIntegrationTest {
                             });
 
             log.debug(
-                    "✅ {}({})数据验证通过 - 字段数:{}, 采样大小:{}",
+                    "✅ {}({})数据验证通过 - 字段数:{}, 配置采样大小:{}, 实际采样数:{}, 采样统计:{}",
                     queryType,
                     queryParam,
                     result.getFieldDistributions().size(),
-                    result.getSampleSize());
+                    result.getSampleSize(),
+                    result.getActualSampleCount(),
+                    result.getIsSampledStatistics());
         }
 
         /** 验证查询结果 */

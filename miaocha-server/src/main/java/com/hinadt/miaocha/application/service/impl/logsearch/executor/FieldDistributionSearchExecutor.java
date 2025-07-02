@@ -1,23 +1,18 @@
 package com.hinadt.miaocha.application.service.impl.logsearch.executor;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hinadt.miaocha.application.service.impl.logsearch.template.LogSearchTemplate.SearchExecutor;
 import com.hinadt.miaocha.application.service.impl.logsearch.template.SearchContext;
 import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
-import com.hinadt.miaocha.application.service.sql.builder.FieldDistributionSqlBuilder;
 import com.hinadt.miaocha.application.service.sql.builder.LogSqlBuilder;
 import com.hinadt.miaocha.application.service.sql.processor.QueryResult;
+import com.hinadt.miaocha.application.service.sql.processor.ResultProcessor;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.common.exception.LogQueryException;
-import com.hinadt.miaocha.domain.dto.logsearch.FieldDistributionDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogFieldDistributionResultDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTODecorator;
 import java.sql.Connection;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -34,14 +29,16 @@ public class FieldDistributionSearchExecutor extends BaseSearchExecutor
         implements SearchExecutor<LogFieldDistributionResultDTO> {
 
     private final LogSqlBuilder logSqlBuilder;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ResultProcessor resultProcessor;
 
     public FieldDistributionSearchExecutor(
             JdbcQueryExecutor jdbcQueryExecutor,
             LogSqlBuilder logSqlBuilder,
+            ResultProcessor resultProcessor,
             @Qualifier("logQueryExecutor") Executor logQueryExecutor) {
         super(jdbcQueryExecutor, logQueryExecutor);
         this.logSqlBuilder = logSqlBuilder;
+        this.resultProcessor = resultProcessor;
     }
 
     @Override
@@ -76,112 +73,14 @@ public class FieldDistributionSearchExecutor extends BaseSearchExecutor
             // 等待查询完成
             QueryResult fieldDistributionResult = fieldDistributionFuture.get();
 
-            // 4. 设置采样信息
-            result.setActualSampleCount(FieldDistributionSqlBuilder.SAMPLE_SIZE);
-
-            // 5. 处理结果
-            List<FieldDistributionDTO> fieldDistributions =
-                    processTopnResult(
-                            fieldDistributionResult,
-                            originalFields,
-                            FieldDistributionSqlBuilder.SAMPLE_SIZE);
-            result.setFieldDistributions(fieldDistributions);
+            // 4. 处理字段分布结果
+            resultProcessor.processFieldDistributionResult(
+                    fieldDistributionResult, result, originalFields);
 
             return result;
         } catch (ExecutionException | InterruptedException e) {
             // 其他异常（超时、中断等）让外层处理，转为BusinessException
             throw new RuntimeException(e);
         }
-    }
-
-    /** 处理TOPN查询结果，转换为FieldDistributionDTO列表 */
-    private List<FieldDistributionDTO> processTopnResult(
-            QueryResult queryResult, List<String> fields, Integer sampleSize) {
-        List<FieldDistributionDTO> result = new ArrayList<>();
-
-        if (queryResult.hasData()) {
-            Map<String, Object> row = queryResult.getFirstRow(); // TOPN查询只返回一行数据
-
-            for (String field : fields) {
-                String jsonValue = getFieldValue(row, field);
-
-                if (jsonValue != null || row.containsKey(field)) {
-                    FieldDistributionDTO dto = new FieldDistributionDTO();
-                    dto.setFieldName(field);
-
-                    // 解析JSON格式的TOPN结果
-                    List<FieldDistributionDTO.ValueDistribution> valueDistributions;
-                    if (jsonValue != null) {
-                        valueDistributions = parseTopnJson(jsonValue, sampleSize);
-                    } else {
-                        valueDistributions = new ArrayList<>();
-                    }
-                    dto.setValueDistributions(valueDistributions);
-
-                    result.add(dto);
-                }
-            }
-        }
-
-        return result;
-    }
-
-    /** 获取字段值，支持多种列名格式 */
-    private String getFieldValue(Map<String, Object> row, String field) {
-        // 优先尝试AS别名（直接使用原字段名）
-        if (row.containsKey(field)) {
-            return (String) row.get(field);
-        }
-
-        // 兼容旧格式：尝试TOPN函数格式的列名
-        String topnColumnNameLower = "topn(" + field + ", 5)";
-        String topnColumnNameUpper = "TOPN(" + field + ", 5)";
-
-        if (row.containsKey(topnColumnNameLower)) {
-            return (String) row.get(topnColumnNameLower);
-        } else if (row.containsKey(topnColumnNameUpper)) {
-            return (String) row.get(topnColumnNameUpper);
-        }
-
-        return null;
-    }
-
-    /** 解析TOPN函数返回的JSON字符串 格式如：{"value1":count1,"value2":count2,...} */
-    private List<FieldDistributionDTO.ValueDistribution> parseTopnJson(
-            String jsonValue, Integer sampleSize) {
-        List<FieldDistributionDTO.ValueDistribution> result = new ArrayList<>();
-
-        if (jsonValue == null || jsonValue.trim().isEmpty()) {
-            return result;
-        }
-
-        try {
-            // 使用Jackson解析JSON
-            Map<String, Integer> jsonMap =
-                    objectMapper.readValue(jsonValue, new TypeReference<Map<String, Integer>>() {});
-
-            // 解析每个键值对
-            for (Map.Entry<String, Integer> entry : jsonMap.entrySet()) {
-                String key = entry.getKey();
-                int count = entry.getValue();
-
-                FieldDistributionDTO.ValueDistribution vd =
-                        new FieldDistributionDTO.ValueDistribution();
-                vd.setValue(key);
-                vd.setCount(count);
-
-                // 计算基于采样总数的百分比，保留2位小数
-                double percentage = sampleSize > 0 ? (double) count / sampleSize * 100 : 0.0;
-                vd.setPercentage(Math.round(percentage * 100) / 100.0);
-
-                result.add(vd);
-            }
-
-        } catch (Exception e) {
-            log.error("解析TOPN JSON失败: {}", jsonValue, e);
-            // 返回空结果而不是抛出异常，保证系统稳定性
-        }
-
-        return result;
     }
 }
