@@ -212,7 +212,6 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
   collapsed = false,
 }) => {
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
-  const [lazyLoadStarted, setLazyLoadStarted] = useState(false);
   const listRef = useRef<List>(null);
 
   // 添加滚动防抖优化，减少快速滚动时的渲染压力
@@ -241,7 +240,8 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
 
   // 扁平化的树节点列表，添加更多缓存优化
   const flattenedNodes = useMemo(() => {
-    if (!databaseSchema || 'error' in databaseSchema || !lazyLoadStarted) {
+    // 如果正在加载或者没有数据，返回空数组
+    if (loadingSchema || !databaseSchema || 'error' in databaseSchema) {
       return [];
     }
 
@@ -274,7 +274,7 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
     });
 
     return nodes;
-  }, [databaseSchema, expandedKeys, lazyLoadStarted]);
+  }, [databaseSchema, expandedKeys, loadingSchema]);
 
   // 切换展开/折叠状态
   const handleToggleExpand = useCallback((key: string) => {
@@ -302,17 +302,15 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
     [databaseSchema, handleInsertTable],
   );
 
-  // 延迟加载优化 - 减少初始渲染延迟
-  useEffect(() => {
-    if (databaseSchema && !lazyLoadStarted) {
-      // 使用requestIdleCallback优化渲染时机，如果不支持则fallback到setTimeout
-      const idleCallback = window.requestIdleCallback || ((cb: () => void) => setTimeout(cb, 0));
-
-      idleCallback(() => {
-        setLazyLoadStarted(true);
-      });
-    }
-  }, [databaseSchema, lazyLoadStarted]);
+  // 移除延迟加载逻辑，因为它会导致loading状态混乱
+  // useEffect(() => {
+  //   if (databaseSchema && !lazyLoadStarted) {
+  //     const idleCallback = window.requestIdleCallback || ((cb: () => void) => setTimeout(cb, 0));
+  //     idleCallback(() => {
+  //       setLazyLoadStarted(true);
+  //     });
+  //   }
+  // }, [databaseSchema, lazyLoadStarted]);
 
   // 计算列表高度 - 使用容器自适应高度，改为更合理的初始值
   const [containerHeight, setContainerHeight] = useState(400); // 设置一个合理的默认值
@@ -389,7 +387,7 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
       clearTimeout(timer2);
       clearTimeout(resizeTimer);
     };
-  }, [lazyLoadStarted]); // 依赖 lazyLoadStarted，确保数据加载后重新计算
+  }, []); // 移除依赖，只在组件挂载时执行
 
   // 动态计算节点高度，避免不同节点类型的高度不一致导致的滚动问题
   const getItemSize = useCallback(
@@ -448,6 +446,7 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
     >
       <div className={styles.treeContentWrapper}>
         {(() => {
+          // 首先检查loading状态
           if (loadingSchema) {
             return (
               <div className={styles.loadingContainer}>
@@ -456,7 +455,20 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
             );
           }
 
-          if (databaseSchema && 'tables' in databaseSchema && lazyLoadStarted) {
+          // 检查是否有错误状态
+          if (databaseSchema && 'error' in databaseSchema) {
+            return (
+              <div className={styles.emptyContainer}>
+                <Empty
+                  description={collapsed ? undefined : `获取数据库结构失败: ${databaseSchema.error}`}
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                />
+              </div>
+            );
+          }
+
+          // 然后检查是否有有效数据
+          if (databaseSchema && 'tables' in databaseSchema && databaseSchema.tables.length > 0) {
             return (
               <div ref={containerRef} className={styles.virtualizedTreeContainer}>
                 <List
@@ -483,6 +495,7 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
             );
           }
 
+          // 最后显示空状态
           return (
             <div className={styles.emptyContainer}>
               <Empty
