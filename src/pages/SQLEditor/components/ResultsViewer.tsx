@@ -2,6 +2,7 @@ import React, { memo, useState, useEffect, useRef } from 'react';
 import { Table, Spin, Empty, Alert, Typography, Button } from 'antd';
 import { QueryResult } from '../types';
 import ResizeObserver from 'rc-resize-observer';
+import dayjs from 'dayjs';
 import styles from '../SQLEditorPage.module.less';
 
 const { Text } = Typography;
@@ -95,15 +96,51 @@ const compareValues = (a: unknown, b: unknown): number => {
   return 0;
 };
 
+// 时间格式化函数
+const formatLogTime = (value: any): React.ReactNode => {
+  if (!value) return value;
+
+  try {
+    // 尝试解析时间值
+    let date = dayjs(value);
+
+    // 如果第一次解析失败，尝试其他常见格式
+    if (!date.isValid()) {
+      // 尝试作为时间戳解析（毫秒）
+      if (typeof value === 'number' || /^\d+$/.test(String(value))) {
+        const timestamp = Number(value);
+        // 判断是秒还是毫秒时间戳
+        if (timestamp < 10000000000) {
+          // 秒级时间戳
+          date = dayjs.unix(timestamp);
+        } else {
+          // 毫秒级时间戳
+          date = dayjs(timestamp);
+        }
+      }
+    }
+
+    if (date.isValid()) {
+      return date.format('YYYY-MM-DD HH:mm:ss');
+    }
+  } catch (error) {
+    console.warn('Failed to format log_time:', value, error);
+  }
+
+  // 如果解析失败，返回原值
+  return value;
+};
+
 // 估算列宽的实用函数
 const estimateColumnWidth = (col: string, rows: any[], maxWidth: number = 400): number => {
   // 根据列名类型调整最大宽度和初始值
   const lowerCol = col.toLowerCase();
-  const isMessageColumn = lowerCol.includes('message');
+  const isMessageColumn = lowerCol.includes('message') || lowerCol === 'msg';
   const isPathColumn = lowerCol.includes('path') || lowerCol.includes('url') || lowerCol.includes('file');
   const isTimestampColumn = lowerCol.includes('time') || lowerCol.includes('date');
   const isIdColumn = lowerCol === 'id' || lowerCol.endsWith('_id');
   const isStatusColumn = lowerCol.includes('status') || lowerCol.includes('state');
+  const isMarkerColumn = lowerCol === 'marker' || lowerCol.includes('marker');
 
   // 为不同类型的列提供不同的默认宽度
   let columnMaxWidth = maxWidth;
@@ -117,6 +154,8 @@ const estimateColumnWidth = (col: string, rows: any[], maxWidth: number = 400): 
     columnMaxWidth = 120; // ID列通常较窄
   } else if (isStatusColumn) {
     columnMaxWidth = 100; // 状态列通常较窄
+  } else if (isMarkerColumn) {
+    columnMaxWidth = 600; // marker列适中宽度
   }
 
   // 列名长度本身也是重要参考
@@ -161,6 +200,10 @@ const estimateColumnWidth = (col: string, rows: any[], maxWidth: number = 400): 
         } else {
           valueWidth = baseWidth;
         }
+      } else if (isMarkerColumn) {
+        // marker列特殊处理，通常内容较短但需要足够显示空间
+        const baseWidth = Math.min(strValue.length * 9, columnMaxWidth);
+        valueWidth = Math.max(baseWidth, 100);
       } else if (isPathColumn) {
         // path列特殊处理，给予足够空间显示完整路径
         // 路径通常有特殊字符和斜杠，需要更多空间
@@ -250,8 +293,9 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
 
     // 检查是否是特殊列
     const lowerKey = columnKey.toLowerCase();
-    const isMessageColumn = lowerKey.includes('message');
+    const isMessageColumn = lowerKey.includes('message') || lowerKey === 'msg';
     const isPathColumn = lowerKey.includes('path') || lowerKey.includes('url') || lowerKey.includes('file');
+    const isMarkerColumn = lowerKey === 'marker' || lowerKey.includes('marker');
 
     // 重新计算该列的最佳宽度，对于特殊列使用更大的最大宽度
     let maxWidth = 500;
@@ -259,6 +303,8 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
       maxWidth = 800;
     } else if (isPathColumn) {
       maxWidth = 600;
+    } else if (isMarkerColumn) {
+      maxWidth = 200;
     }
 
     const optimalWidth = estimateColumnWidth(columnKey, queryResults.rows, maxWidth);
@@ -348,22 +394,53 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
   const columns = columnList.map((col) => {
     // 检查是否为特殊类型的列
     const lowerCol = col.toLowerCase();
-    const isMessageColumn = lowerCol.includes('message');
+    const isMessageColumn = lowerCol.includes('message') || lowerCol === 'msg';
     const isPathColumn = lowerCol.includes('path') || lowerCol.includes('url') || lowerCol.includes('file');
     const isTimeColumn = lowerCol === 'log_time' || lowerCol.includes('timestamp');
-    const shouldNotEllipsis = isMessageColumn || isPathColumn;
+    const isMarkerColumn = lowerCol === 'marker' || lowerCol.includes('marker');
+    const shouldNotEllipsis = isMessageColumn || isPathColumn || isMarkerColumn;
+
+    // 计算默认宽度
+    let defaultWidth = 150;
+    if (isMessageColumn) {
+      defaultWidth = 400;
+    } else if (isPathColumn) {
+      defaultWidth = 300;
+    } else if (isTimeColumn) {
+      defaultWidth = 180;
+    } else if (isMarkerColumn) {
+      defaultWidth = 150;
+    }
+
+    // 计算CSS类名
+    let cellClassName = '';
+    if (isMessageColumn) {
+      cellClassName = 'message-column';
+    } else if (isPathColumn) {
+      cellClassName = 'path-column';
+    } else if (isTimeColumn) {
+      cellClassName = 'time-column';
+    } else if (isMarkerColumn) {
+      cellClassName = 'marker-column';
+    }
 
     return {
       title: col,
       dataIndex: col,
       key: col,
-      width: columnWidths[col] || (isMessageColumn ? 400 : isPathColumn ? 300 : isTimeColumn ? 180 : 150), // 为特殊列提供更宽的默认宽度
-      render: (value: any) => formatTableCell(value),
+      width: columnWidths[col] || defaultWidth,
+      render: (value: any) => {
+        // 对 log_time 列进行特殊时间格式化处理
+        if (isTimeColumn && (col.toLowerCase() === 'log_time' || col.toLowerCase().includes('timestamp'))) {
+          return formatLogTime(value);
+        }
+        return formatTableCell(value);
+      },
       // 对于特殊类型的列，禁用文本省略
       ellipsis: !shouldNotEllipsis,
       sorter: (a: Record<string, unknown>, b: Record<string, unknown>) => compareValues(a[col], b[col]),
       onHeaderCell: () => ({
-        width: columnWidths[col] || (isMessageColumn ? 400 : isPathColumn ? 300 : isTimeColumn ? 180 : 150),
+        width: columnWidths[col] || defaultWidth,
         onResize: (width: number) => {
           setColumnWidths((prev) => ({
             ...prev,
@@ -374,13 +451,7 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
       }),
       // 为特殊类型的列添加特殊样式
       onCell: () => ({
-        className: isMessageColumn
-          ? 'message-column'
-          : isPathColumn
-            ? 'path-column'
-            : isTimeColumn
-              ? 'time-column'
-              : '',
+        className: cellClassName,
       }),
     };
   });
@@ -388,12 +459,12 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
   // 查询执行信息
   const executionInfo = (
     <div className={styles.executionInfo}>
-      {queryResults.executionTimeMs && (
-        <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
-          查询执行时间: {queryResults.executionTimeMs}ms | 返回行数: {queryResults.rows.length}
-        </Text>
-      )}
       <div className={styles.toolbar}>
+        {queryResults.executionTimeMs && (
+          <Text type="secondary">
+            查询执行时间: {queryResults.executionTimeMs}ms | 返回行数: {queryResults.rows.length}
+          </Text>
+        )}
         <Button
           type="link"
           size="small"
