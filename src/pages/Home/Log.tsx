@@ -16,7 +16,6 @@ interface IProps {
   onChangeColumns: (params: ILogColumnsResponse[]) => void; // 列变化回调函数
   onSearchFromTable?: (params: ILogSearchParams) => void; // 来自表格的搜索回调
   moduleQueryConfig?: any; // 模块查询配置
-  selectedQueryConfigs?: any[]; // 选中的查询配置列表
 }
 
 const Log = (props: IProps) => {
@@ -32,7 +31,6 @@ const Log = (props: IProps) => {
     onChangeColumns,
     onSearchFromTable,
     moduleQueryConfig,
-    selectedQueryConfigs,
   } = props || {};
   const { rows = [], totalCount } = detailData || {};
   const [allRows, setAllRows] = useState<any[]>([]); // 用于存储所有历史数据的状态
@@ -84,7 +82,6 @@ const Log = (props: IProps) => {
       sqls,
       onSearch: onSearchFromTable,
       moduleQueryConfig,
-      selectedQueryConfigs,
     }),
     [
       allRows,
@@ -96,7 +93,6 @@ const Log = (props: IProps) => {
       whereSqlsFromSider,
       sqls,
       onSearchFromTable,
-      selectedQueryConfigs,
     ],
   );
 

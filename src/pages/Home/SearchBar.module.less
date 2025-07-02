@@ -41,34 +41,12 @@
     .item {
       min-width: 150px;
       &:first-child {
-       width: 260px;
+        flex: 1;
       }
       &:nth-child(2) {
         flex: 1;
       }
-      &:nth-child(3){
-        flex: 1;
-        :global {
-          .ant-select,
-          .ant-select-selector,
-          .ant-input {
-            min-width: 0 !important;
-            width: 100% !important;
-          }
-        }
-      }
-      // &:nth-child(4) {
-      //   flex: 1;
-      //   // min-width: 200px;
-      //   :global {
-      //     .ant-select,
-      //     .ant-select-selector,
-      //     .ant-input {
-      //       min-width: 0 !important;
-      //       width: 100% !important;
-      //     }
-      //   }
-      // }
+    
       &:last-child {
         min-width:0;
         :global {
