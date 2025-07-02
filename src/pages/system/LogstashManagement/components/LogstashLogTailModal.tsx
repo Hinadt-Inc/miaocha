@@ -7,11 +7,9 @@ interface LogTailModalProps {
   visible: boolean;
   logstashMachineId: number;
   onCancel: () => void;
-  style?: React.CSSProperties;
-  bodyStyle?: React.CSSProperties;
 }
 
-export default function LogTailModal({ visible, logstashMachineId, onCancel, style, bodyStyle }: LogTailModalProps) {
+export default function LogTailModal({ visible, logstashMachineId, onCancel }: LogTailModalProps) {
   interface LogEntry {
     id: string;
     timestamp: number;
@@ -21,8 +19,8 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel, sty
 
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isTailing, setIsTailing] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [status, setStatus] = useState<any>(null);
+  const [isPaused] = useState(false);
+  const [, setStatus] = useState<any>(null);
   const [maxLogs] = useState(1000);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);

@@ -9,7 +9,7 @@ import {
   SQLSettingsDrawer,
 } from './components';
 import { useSQLEditorState, useSQLEditorActions } from './hooks';
-import './SQLEditorPage.less';
+import styles from './SQLEditorPage.module.less';
 
 const { Content } = Layout;
 
@@ -100,8 +100,8 @@ const SQLEditorPage: React.FC = () => {
     <Layout style={{ height: '100vh', padding: '10px' }}>
       <Splitter style={{ height: '100%' }}>
         {/* 数据库结构侧边栏 */}
-        <Splitter.Panel defaultSize={280} min={200} className="database-schema-panel" resizable>
-          <div className="sider-container">
+        <Splitter.Panel defaultSize={280} min={200} className={styles.databaseSchemaPanel} resizable>
+          <div className={styles.siderContainer}>
             <SQLEditorSidebar
               databaseSchema={databaseSchema}
               loadingSchema={loadingSchema}
@@ -116,12 +116,12 @@ const SQLEditorPage: React.FC = () => {
         </Splitter.Panel>
 
         {/* 主编辑器区域 */}
-        <Splitter.Panel className="main-editor-panel" resizable>
-          <Layout className="layout-inner">
-            <Content className="content-container">
+        <Splitter.Panel className={styles.mainEditorPanel} resizable>
+          <Layout className={styles.layoutInner}>
+            <Content className={styles.contentContainer}>
               <Splitter layout="vertical" style={{ height: '100%' }}>
                 {/* 查询编辑器区域 - 简化高度管理，使用100% */}
-                <Splitter.Panel defaultSize="35%" min={200} className="query-panel-container">
+                <Splitter.Panel defaultSize="35%" min={200} className={styles.queryPanelContainer}>
                   <SQLQueryPanel
                     sqlQuery={sqlQuery}
                     onChange={handleSqlQueryChange}
@@ -149,7 +149,7 @@ const SQLEditorPage: React.FC = () => {
                 </Splitter.Panel>
 
                 {/* 查询结果区域 - 获得更多可用空间 */}
-                <Splitter.Panel className="results-panel-container">
+                <Splitter.Panel className={styles.resultsPanelContainer}>
                   <SQLResultsPanel
                     queryResults={queryResults}
                     loading={loadingResults}

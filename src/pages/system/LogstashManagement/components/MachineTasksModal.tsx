@@ -8,22 +8,9 @@ interface MachineTasksModalProps {
   machineTasks: LogstashTaskStatus[];
   loading: boolean;
   machineId: number;
-  styles?: {
-    taskItem?: string;
-    taskDescriptions?: string;
-    stepsTitle?: string;
-    machineSteps?: string;
-  };
 }
 
-const MachineTasksModal = ({
-  visible,
-  onClose,
-  machineTasks,
-  loading,
-  machineId,
-  styles: customStyles,
-}: MachineTasksModalProps) => {
+const MachineTasksModal = ({ visible, onClose, machineTasks, loading, machineId }: MachineTasksModalProps) => {
   const getStatusColor = (status: string) => {
     if (status === 'COMPLETED') return 'success';
     if (status === 'FAILED') return 'error';

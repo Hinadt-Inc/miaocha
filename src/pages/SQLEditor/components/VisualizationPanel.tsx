@@ -3,7 +3,7 @@ import { Empty, Form, Select } from 'antd';
 import ReactECharts from 'echarts-for-react';
 import { QueryResult } from '../types';
 import { colorPrimary } from '../../../utils/utils';
-import './VisualizationPanel.less';
+import styles from '../SQLEditorPage.module.less';
 
 const { Option } = Select;
 
@@ -158,8 +158,6 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
       };
     }
 
-    const colors = ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de'];
-
     return {
       ...baseOption,
       tooltip: {
@@ -254,8 +252,8 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
   }
 
   return (
-    <div className="visualization-panel">
-      <div className="chart-controls">
+    <div className={styles.visualizationPanel}>
+      <div className={styles.chartControls}>
         <Form layout="inline">
           <Form.Item label="图表类型">
             <Select value={chartType} onChange={(value) => setChartType(value)} style={{ width: 120 }}>
@@ -284,7 +282,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
           </Form.Item>
         </Form>
       </div>
-      <div className="chart-container">
+      <div className={styles.chartContainer}>
         <ReactECharts
           ref={chartRef}
           style={{ height: 400, width: '100%' }}

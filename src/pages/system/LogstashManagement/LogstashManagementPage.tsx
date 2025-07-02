@@ -236,19 +236,6 @@ const LogstashManagementPage = () => {
         visible={machineActions.bottomLogTailModalVisible}
         logstashMachineId={machineActions.currentLogTailMachineId || 0}
         onCancel={() => machineActions.setBottomLogTailModalVisible(false)}
-        style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          margin: 0,
-          maxWidth: '100%',
-          height: '300px',
-        }}
-        bodyStyle={{
-          padding: 0,
-          height: '100%',
-        }}
       />
     </div>
   );

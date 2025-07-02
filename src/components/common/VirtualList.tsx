@@ -35,7 +35,6 @@ export const VirtualList = forwardRef(
     const containerRef = useRef<HTMLDivElement>(null);
     const [visibleRange, setVisibleRange] = useState<{ start: number; end: number }>({ start: 0, end: 20 }); // 初始显示前20条
     const [containerHeight, setContainerHeight] = useState<number>(0);
-    const [scrollTop, setScrollTop] = useState<number>(0);
 
     // 计算当前应该渲染哪些数据
     const calculateVisibleRange = useCallback(() => {
@@ -47,7 +46,7 @@ export const VirtualList = forwardRef(
         : containerRef.current;
 
       const containerScrollTop = scrollContainer?.scrollTop || 0;
-      setScrollTop(containerScrollTop);
+      // setScrollTop(containerScrollTop); // 移除未使用的状态更新
 
       // 重新计算当前的可视数量
       const currentVisibleCount = containerHeight > 0 ? Math.ceil(containerHeight / itemHeight) + 10 : 50;

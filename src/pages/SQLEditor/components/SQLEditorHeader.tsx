@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button, Select, Space, Tooltip } from 'antd';
 import { PlayCircleOutlined, HistoryOutlined, SettingOutlined, ReloadOutlined } from '@ant-design/icons';
+import styles from '../SQLEditorPage.module.less';
 
 export interface SQLEditorHeaderProps {
   dataSources: Array<{ id: string; name: string; type: string }>;
@@ -32,7 +33,7 @@ export const SQLEditorHeader: React.FC<SQLEditorHeaderProps> = ({
   sqlQuery,
 }) => {
   return (
-    <Space className="editor-header-actions">
+    <Space className={styles.editorHeaderActions}>
       <Select
         placeholder="选择数据源"
         value={selectedSource}
@@ -70,9 +71,9 @@ export const SQLEditorHeader: React.FC<SQLEditorHeaderProps> = ({
       </Tooltip>
 
       {loadingSchema && (
-        <div className="loading-indicator">
+        <div className={styles.loadingIndicator}>
           <ReloadOutlined spin />
-          <span className="loading-text">加载数据库结构...</span>
+          <span className={styles.loadingText}>加载数据库结构...</span>
         </div>
       )}
     </Space>
