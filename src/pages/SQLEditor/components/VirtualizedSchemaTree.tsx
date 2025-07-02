@@ -24,7 +24,6 @@ interface VirtualizedSchemaTreeProps {
   databaseSchema: SchemaResult | { error: string } | null;
   loadingSchema: boolean;
   refreshSchema: () => void;
-  handleTreeNodeDoubleClick: (tableName: string) => void;
   handleInsertTable: (tableName: string, columns: SchemaResult['tables'][0]['columns']) => void;
   handleInsertField?: (fieldName: string) => void;
   collapsed?: boolean;
@@ -45,13 +44,12 @@ const TreeNodeRenderer = memo(
     data: {
       nodes: TreeNode[];
       onToggleExpand: (key: string) => void;
-      onDoubleClick: (tableName: string) => void;
       onInsertTable: (tableName: string) => void;
       onInsertField?: (fieldName: string) => void;
       collapsed: boolean;
     };
   }) => {
-    const { nodes, onToggleExpand, onDoubleClick, onInsertTable, onInsertField, collapsed } = data;
+    const { nodes, onToggleExpand, onInsertTable, onInsertField, collapsed } = data;
     const node = nodes[index];
 
     const handleNodeKeyDown = useCallback(
@@ -59,11 +57,7 @@ const TreeNodeRenderer = memo(
         if (e.key === 'Enter') {
           e.preventDefault();
           if (node?.isTable) {
-            if (e.shiftKey) {
-              onDoubleClick(node.key);
-            } else {
-              onToggleExpand(node.key);
-            }
+            onToggleExpand(node.key);
           }
         } else if (e.key === ' ') {
           e.preventDefault();
@@ -72,7 +66,7 @@ const TreeNodeRenderer = memo(
           }
         }
       },
-      [node?.isTable, node?.key, onToggleExpand, onDoubleClick],
+      [node?.isTable, node?.key, onToggleExpand],
     );
 
     const handleNodeClick = useCallback(() => {
@@ -80,16 +74,6 @@ const TreeNodeRenderer = memo(
         onToggleExpand(node.key);
       }
     }, [node?.isTable, node?.key, onToggleExpand, isScrolling]);
-
-    const handleNodeDoubleClick = useCallback(
-      (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (node?.isTable && !isScrolling) {
-          onDoubleClick(node.key);
-        }
-      },
-      [node?.isTable, node?.key, onDoubleClick, isScrolling],
-    );
 
     const handleInsertTableClick = useCallback(
       (e: React.MouseEvent) => {
@@ -176,7 +160,6 @@ const TreeNodeRenderer = memo(
           node.isTable ? styles.tableNode : styles.columnNode,
         )}
         onClick={handleNodeClick}
-        onDoubleClick={handleNodeDoubleClick}
         onKeyDown={handleNodeKeyDown}
         tabIndex={0}
         aria-label={`${node.isTable ? 'Table' : 'Column'}: ${node.title}`}
@@ -224,13 +207,11 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
   databaseSchema,
   loadingSchema,
   refreshSchema,
-  handleTreeNodeDoubleClick,
   handleInsertTable,
   handleInsertField,
   collapsed = false,
 }) => {
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
-  const [lazyLoadStarted, setLazyLoadStarted] = useState(false);
   const listRef = useRef<List>(null);
 
   // 添加滚动防抖优化，减少快速滚动时的渲染压力
@@ -259,7 +240,8 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
 
   // 扁平化的树节点列表，添加更多缓存优化
   const flattenedNodes = useMemo(() => {
-    if (!databaseSchema || 'error' in databaseSchema || !lazyLoadStarted) {
+    // 如果正在加载或者没有数据，返回空数组
+    if (loadingSchema || !databaseSchema || 'error' in databaseSchema) {
       return [];
     }
 
@@ -292,7 +274,7 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
     });
 
     return nodes;
-  }, [databaseSchema, expandedKeys, lazyLoadStarted]);
+  }, [databaseSchema, expandedKeys, loadingSchema]);
 
   // 切换展开/折叠状态
   const handleToggleExpand = useCallback((key: string) => {
@@ -320,94 +302,40 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
     [databaseSchema, handleInsertTable],
   );
 
-  // 延迟加载优化 - 减少初始渲染延迟
-  useEffect(() => {
-    if (databaseSchema && !lazyLoadStarted) {
-      // 使用requestIdleCallback优化渲染时机，如果不支持则fallback到setTimeout
-      const idleCallback = window.requestIdleCallback || ((cb: () => void) => setTimeout(cb, 0));
+  // 移除延迟加载逻辑，因为它会导致loading状态混乱
 
-      idleCallback(() => {
-        setLazyLoadStarted(true);
-      });
-    }
-  }, [databaseSchema, lazyLoadStarted]);
-
-  // 计算列表高度 - 使用容器自适应高度，改为更合理的初始值
-  const [containerHeight, setContainerHeight] = useState(400); // 设置一个合理的默认值
+  // 使用容器ref来动态计算100%高度
   const containerRef = useRef<HTMLDivElement>(null);
+  const [containerHeight, setContainerHeight] = useState(400); // 默认高度
 
-  // 使用 ResizeObserver 监听容器高度变化，添加防抖优化
+  // 使用ResizeObserver监听容器高度变化，实现真正的100%高度
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    let resizeTimer: NodeJS.Timeout;
+    const updateHeight = () => {
+      // 获取容器的实际高度
+      const rect = container.getBoundingClientRect();
+      if (rect.height > 50) {
+        setContainerHeight(rect.height);
+      }
+    };
 
-    // 创建ResizeObserver来监听容器尺寸变化，添加防抖
-    const resizeObserver = new ResizeObserver((entries) => {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => {
-        for (const entry of entries) {
-          const height = entry.contentRect.height;
-          if (height > 100) {
-            // 降低最小高度阈值
-            setContainerHeight(height);
-          }
-        }
-      }, 16); // 使用 requestAnimationFrame 的频率
+    // 创建ResizeObserver监听容器尺寸变化
+    const resizeObserver = new ResizeObserver(() => {
+      updateHeight();
     });
 
     resizeObserver.observe(container);
 
-    // 初始计算 - 延迟执行确保DOM已渲染
-    const calculateInitialHeight = () => {
-      const height = container.offsetHeight;
-      if (height > 100) {
-        // 降低最小高度阈值
-        setContainerHeight(height);
-      } else {
-        // 如果容器高度为0，尝试计算可用高度
-        const wrapper = container.closest('.tree-content-wrapper') as HTMLElement;
-        if (wrapper) {
-          const wrapperHeight = wrapper.offsetHeight;
-          if (wrapperHeight > 100) {
-            setContainerHeight(wrapperHeight);
-          }
-        }
-
-        // 尝试从Card body获取高度
-        const cardBody = container.closest('.ant-card-body') as HTMLElement;
-        if (cardBody) {
-          const availableHeight = cardBody.offsetHeight;
-          if (availableHeight > 100) {
-            setContainerHeight(availableHeight);
-          }
-        }
-
-        // Fallback: 使用父元素高度
-        const parentHeight = container.parentElement?.offsetHeight;
-        if (parentHeight && parentHeight > 100) {
-          setContainerHeight(parentHeight);
-        }
-      }
-    };
-
-    // 立即计算
-    calculateInitialHeight();
-
-    // 延迟再次计算，确保布局完成
-    const timer = setTimeout(calculateInitialHeight, 100);
-
-    // 再次延迟计算，确保所有布局都完成
-    const timer2 = setTimeout(calculateInitialHeight, 300);
+    // 初始计算高度，延迟确保DOM渲染完成
+    const timer = setTimeout(updateHeight, 100);
 
     return () => {
       resizeObserver.disconnect();
       clearTimeout(timer);
-      clearTimeout(timer2);
-      clearTimeout(resizeTimer);
     };
-  }, [lazyLoadStarted]); // 依赖 lazyLoadStarted，确保数据加载后重新计算
+  }, []);
 
   // 动态计算节点高度，避免不同节点类型的高度不一致导致的滚动问题
   const getItemSize = useCallback(
@@ -434,19 +362,11 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
     () => ({
       nodes: flattenedNodes,
       onToggleExpand: handleToggleExpand,
-      onDoubleClick: handleTreeNodeDoubleClick,
       onInsertTable: handleInsertTableClick,
       onInsertField: handleInsertField,
       collapsed,
     }),
-    [
-      flattenedNodes,
-      handleToggleExpand,
-      handleTreeNodeDoubleClick,
-      handleInsertTableClick,
-      handleInsertField,
-      collapsed,
-    ],
+    [flattenedNodes, handleToggleExpand, handleInsertTableClick, handleInsertField, collapsed],
   );
 
   return (
@@ -472,8 +392,9 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
       }
       className={cx(styles.virtualizedSchemaTreeCard, collapsed ? styles.virtualizedSchemaTreeCardCollapsed : '')}
     >
-      <div className={styles.treeContentWrapper}>
+      <div ref={containerRef} className={styles.treeContentWrapper}>
         {(() => {
+          // 首先检查loading状态
           if (loadingSchema) {
             return (
               <div className={styles.loadingContainer}>
@@ -482,9 +403,22 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
             );
           }
 
-          if (databaseSchema && 'tables' in databaseSchema && lazyLoadStarted) {
+          // 检查是否有错误状态
+          if (databaseSchema && 'error' in databaseSchema) {
             return (
-              <div ref={containerRef} className={styles.virtualizedTreeContainer}>
+              <div className={styles.emptyContainer}>
+                <Empty
+                  description={collapsed ? undefined : `获取数据库结构失败: ${databaseSchema.error}`}
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                />
+              </div>
+            );
+          }
+
+          // 然后检查是否有有效数据
+          if (databaseSchema && 'tables' in databaseSchema && databaseSchema.tables.length > 0) {
+            return (
+              <div className={styles.virtualizedTreeContainer}>
                 <List
                   ref={listRef}
                   height={containerHeight}
@@ -509,6 +443,7 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
             );
           }
 
+          // 最后显示空状态
           return (
             <div className={styles.emptyContainer}>
               <Empty

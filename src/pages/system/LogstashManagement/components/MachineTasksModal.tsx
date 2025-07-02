@@ -34,6 +34,7 @@ interface MachineTasksModalProps {
   onClose: () => void;
   machineTasks: LogstashTaskStatus[];
   loading: boolean;
+  machineId: number;
 }
 
 const MachineTasksModal = ({ visible, onClose, machineTasks, loading }: MachineTasksModalProps) => {

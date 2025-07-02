@@ -227,20 +227,6 @@ export const useSQLEditorActions = (editorState: SQLEditorState) => {
     [setSqlQuery],
   );
 
-  // 处理树节点双击
-  const handleTreeNodeDoubleClick = useCallback(
-    (tableName: string) => {
-      if (editorRef.current) {
-        insertTextToEditor(editorRef.current, tableName);
-        const model = editorRef.current.getModel();
-        if (model) {
-          setSqlQuery(model.getValue());
-        }
-      }
-    },
-    [setSqlQuery],
-  );
-
   // 插入字段
   const handleInsertField = useCallback(
     (fieldName: string) => {
@@ -378,7 +364,6 @@ export const useSQLEditorActions = (editorState: SQLEditorState) => {
     copyToClipboard,
     handlePaginationChange: editorState.handlePaginationChange,
     insertSnippet,
-    handleTreeNodeDoubleClick,
     handleInsertField,
     handleInsertTable,
   };

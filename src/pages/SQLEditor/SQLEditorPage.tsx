@@ -81,7 +81,6 @@ const SQLEditorPage: React.FC = () => {
     copyToClipboard,
     handlePaginationChange,
     insertSnippet,
-    handleTreeNodeDoubleClick,
     handleInsertField,
     handleInsertTable,
   } = editorActions;
@@ -106,7 +105,6 @@ const SQLEditorPage: React.FC = () => {
               databaseSchema={databaseSchema}
               loadingSchema={loadingSchema}
               refreshSchema={() => fetchDatabaseSchema(selectedSource)}
-              onTreeNodeDoubleClick={handleTreeNodeDoubleClick}
               onInsertTable={handleInsertTable}
               onInsertField={handleInsertField}
               collapsed={false}
