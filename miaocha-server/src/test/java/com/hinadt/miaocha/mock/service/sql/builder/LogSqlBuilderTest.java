@@ -148,6 +148,17 @@ class LogSqlBuilderTest {
             original.setPageSize(50);
             original.setOffset(100);
 
+            // 添加排序字段测试整体功能
+            LogSearchDTO.SortField levelSort = new LogSearchDTO.SortField();
+            levelSort.setFieldName("level");
+            levelSort.setDirection("ASC");
+
+            LogSearchDTO.SortField hostSort = new LogSearchDTO.SortField();
+            hostSort.setFieldName("host");
+            hostSort.setDirection("DESC");
+
+            original.setSortFields(Arrays.asList(levelSort, hostSort));
+
             LogSearchDTODecorator dto = (LogSearchDTODecorator) dtoConverter.convert(original);
             String tableName = "test_logs";
             String timeField = "log_time";
@@ -165,6 +176,11 @@ class LogSqlBuilderTest {
             assertTrue(result.contains("message['logId'] AS 'message.logId'"), "应包含转换后的字段");
             assertTrue(result.contains("level"), "应包含普通字段");
             assertTrue(result.contains("host"), "应包含普通字段");
+
+            // 验证排序功能
+            assertTrue(result.contains("level ASC"), "应包含level字段升序排序");
+            assertTrue(result.contains("host DESC"), "应包含host字段倒序排序");
+            assertTrue(result.contains("log_time DESC"), "应包含默认时间字段排序");
         }
 
         @Test
@@ -185,6 +201,51 @@ class LogSqlBuilderTest {
             assertTrue(result.contains("FROM " + tableName), "应包含正确的表名");
             assertFalse(result.contains("LIMIT"), "COUNT查询不应包含LIMIT");
             assertFalse(result.contains("ORDER BY"), "COUNT查询不应包含ORDER BY");
+        }
+
+        @Test
+        @DisplayName("时间字段排序覆盖 - 期望：用户指定时间字段排序覆盖默认排序")
+        void testTimeFieldSortOverride() {
+            // Arrange
+            LogSearchDTO original = createBasicDTO();
+            original.setFields(Arrays.asList("level", "host"));
+
+            // 用户指定时间字段排序（升序，与默认倒序不同）
+            LogSearchDTO.SortField timeSort = new LogSearchDTO.SortField();
+            timeSort.setFieldName("log_time");
+            timeSort.setDirection("ASC");
+
+            original.setSortFields(List.of(timeSort));
+
+            LogSearchDTODecorator dto = (LogSearchDTODecorator) dtoConverter.convert(original);
+            String tableName = "test_logs";
+            String timeField = "log_time";
+
+            // Act
+            String result = logSqlBuilder.buildDetailQuery(dto, tableName, timeField);
+
+            // Assert
+            assertTrue(result.contains("log_time ASC"), "应包含用户指定的时间字段升序排序");
+            assertFalse(result.contains("log_time DESC"), "不应包含默认的时间字段倒序排序");
+        }
+
+        @Test
+        @DisplayName("无排序字段默认行为 - 期望：只包含默认时间字段排序")
+        void testDefaultSortBehavior() {
+            // Arrange
+            LogSearchDTO original = createBasicDTO();
+            original.setFields(Arrays.asList("level", "host"));
+            original.setSortFields(null); // 无自定义排序
+
+            LogSearchDTODecorator dto = (LogSearchDTODecorator) dtoConverter.convert(original);
+            String tableName = "test_logs";
+            String timeField = "log_time";
+
+            // Act
+            String result = logSqlBuilder.buildDetailQuery(dto, tableName, timeField);
+
+            // Assert
+            assertTrue(result.contains("ORDER BY log_time DESC"), "应包含默认时间字段倒序排序");
         }
     }
 
@@ -220,7 +281,7 @@ class LogSqlBuilderTest {
             assertTrue(result.contains("TOPN"), "应包含TOPN函数");
             assertTrue(result.contains("FROM"), "应包含FROM子句");
             assertTrue(result.contains("sub_query"), "应包含子查询");
-            assertTrue(result.contains("LIMIT 5000"), "应包含采样LIMIT");
+            assertTrue(result.contains("LIMIT 1000"), "应包含采样LIMIT");
 
             // 验证TOPN函数格式 - 应该是纯字段名，不包含AS别名
             assertTrue(
@@ -268,7 +329,7 @@ class LogSqlBuilderTest {
         void testFieldDistributionWithWhereConditions() {
             // Arrange
             LogSearchDTO original = createBasicDTO();
-            original.setFields(Arrays.asList("level"));
+            original.setFields(List.of("level"));
             original.setWhereSqls(Arrays.asList("message.level = 'ERROR'", "host = 'server1'"));
 
             LogSearchDTODecorator dto = (LogSearchDTODecorator) dtoConverter.convert(original);

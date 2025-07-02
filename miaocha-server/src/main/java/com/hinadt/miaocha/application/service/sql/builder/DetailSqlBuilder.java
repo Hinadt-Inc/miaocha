@@ -35,10 +35,13 @@ public class DetailSqlBuilder {
         // 为字段添加AS别名（如果需要）
         String selectClause = buildSelectFieldsWithAlias(dto);
 
+        // 构建排序子句
+        String orderClause = buildOrderClause(dto, timeField);
+
         return selectClause
                 + from(tableName)
                 + buildWhereClause(timeCondition, keywordConditions, whereConditions)
-                + orderBy(timeField, "DESC")
+                + orderClause
                 + limit(dto.getPageSize(), dto.getOffset());
     }
 
@@ -103,5 +106,45 @@ public class DetailSqlBuilder {
         return selectCount()
                 + from(tableName)
                 + buildWhereClause(timeCondition, keywordConditions, whereConditions);
+    }
+
+    /**
+     * 构建排序子句
+     *
+     * <p>逻辑说明： 1. 如果用户指定了排序字段，优先使用用户指定的排序 2. 如果用户指定的排序中包含时间字段，以用户指定的为准 3.
+     * 如果用户没有指定排序，或指定的排序中不包含时间字段，则追加默认的时间字段倒序排序
+     *
+     * @param dto 查询DTO
+     * @param timeField 时间字段名
+     * @return ORDER BY子句
+     */
+    private String buildOrderClause(LogSearchDTO dto, String timeField) {
+        List<SqlFragment.OrderField> orderFields = new ArrayList<>();
+
+        // 1. 添加用户指定的排序字段
+        if (dto.getSortFields() != null && !dto.getSortFields().isEmpty()) {
+            List<SqlFragment.OrderField> userOrderFields =
+                    dto.getSortFields().stream()
+                            .map(
+                                    sortField ->
+                                            new SqlFragment.OrderField(
+                                                    sortField.getFieldName(),
+                                                    sortField.getDirection()))
+                            .toList();
+            orderFields.addAll(userOrderFields);
+        }
+
+        // 2. 检查是否已经包含时间字段排序
+        boolean hasTimeFieldSort =
+                orderFields.stream()
+                        .anyMatch(orderField -> timeField.equals(orderField.fieldName()));
+
+        // 3. 如果没有时间字段排序，添加默认的时间字段排序
+        if (!hasTimeFieldSort) {
+            orderFields.add(new SqlFragment.OrderField(timeField, "DESC"));
+        }
+
+        // 4. 构建ORDER BY子句
+        return orderByMultiple(orderFields);
     }
 }

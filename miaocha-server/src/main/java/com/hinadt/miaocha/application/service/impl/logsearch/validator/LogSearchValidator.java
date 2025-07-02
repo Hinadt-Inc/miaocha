@@ -5,6 +5,8 @@ import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
+import java.util.HashSet;
+import java.util.Set;
 import org.springframework.stereotype.Component;
 
 /**
@@ -40,6 +42,23 @@ public class LogSearchValidator {
     public void validateFields(LogSearchDTO dto) {
         if (dto.getFields() == null || dto.getFields().isEmpty()) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "字段列表不能为空");
+        }
+    }
+
+    /** 验证排序字段列表 */
+    public void validateSortFields(LogSearchDTO dto) {
+        if (dto.getSortFields() == null || dto.getSortFields().isEmpty()) {
+            return; // 排序字段是可选的
+        }
+
+        // 验证字段名不重复
+        Set<String> fieldNames = new HashSet<>();
+        for (LogSearchDTO.SortField sortField : dto.getSortFields()) {
+            String fieldName = sortField.getFieldName();
+            if (fieldName != null && !fieldNames.add(fieldName)) {
+                throw new BusinessException(
+                        ErrorCode.VALIDATION_ERROR, "排序字段不能重复，重复字段: " + fieldName);
+            }
         }
     }
 }

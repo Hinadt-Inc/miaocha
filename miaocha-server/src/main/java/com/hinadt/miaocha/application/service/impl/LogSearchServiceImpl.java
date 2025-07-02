@@ -65,6 +65,7 @@ public class LogSearchServiceImpl implements LogSearchService {
     public LogDetailResultDTO searchDetails(LogSearchDTO dto) {
         // 验证参数
         validator.validatePaginationParams(dto);
+        validator.validateSortFields(dto);
         DatasourceInfo datasourceInfo = validator.validateAndGetDatasource(dto.getModule());
 
         // 执行搜索

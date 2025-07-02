@@ -95,6 +95,7 @@ class LogSearchServiceImplTest {
         expectedResult.setTotalCount(100);
 
         doNothing().when(validator).validatePaginationParams(testDto);
+        doNothing().when(validator).validateSortFields(testDto);
         when(validator.validateAndGetDatasource("test-module")).thenReturn(testDatasource);
         when(searchTemplate.execute(eq(testDatasource), eq(testDto), eq(detailExecutor)))
                 .thenReturn(expectedResult);
@@ -106,8 +107,8 @@ class LogSearchServiceImplTest {
         assertEquals(expectedResult, result);
 
         // 验证调用顺序和参数
-
         verify(validator).validatePaginationParams(testDto);
+        verify(validator).validateSortFields(testDto);
         verify(validator).validateAndGetDatasource("test-module");
         verify(searchTemplate).execute(testDatasource, testDto, detailExecutor);
     }
@@ -131,6 +132,7 @@ class LogSearchServiceImplTest {
         assertEquals(expectedException, thrownException);
 
         verify(validator).validatePaginationParams(testDto);
+        verify(validator, never()).validateSortFields(any());
         verify(validator, never()).validateAndGetDatasource(anyString());
         verifyNoInteractions(searchTemplate);
     }
@@ -143,6 +145,7 @@ class LogSearchServiceImplTest {
                 new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "数据源不存在");
 
         doNothing().when(validator).validatePaginationParams(testDto);
+        doNothing().when(validator).validateSortFields(testDto);
         when(validator.validateAndGetDatasource("test-module")).thenThrow(expectedException);
 
         // Act & Assert
@@ -153,6 +156,7 @@ class LogSearchServiceImplTest {
         assertEquals(expectedException, thrownException);
 
         verify(validator).validatePaginationParams(testDto);
+        verify(validator).validateSortFields(testDto);
         verify(validator).validateAndGetDatasource("test-module");
         verifyNoInteractions(searchTemplate);
     }
@@ -165,6 +169,7 @@ class LogSearchServiceImplTest {
                 new LogQueryException(ErrorCode.INTERNAL_ERROR, "DetailQuery", "查询执行失败");
 
         doNothing().when(validator).validatePaginationParams(testDto);
+        doNothing().when(validator).validateSortFields(testDto);
         when(validator.validateAndGetDatasource("test-module")).thenReturn(testDatasource);
         when(searchTemplate.execute(testDatasource, testDto, detailExecutor))
                 .thenThrow(expectedException);
@@ -177,10 +182,33 @@ class LogSearchServiceImplTest {
         assertEquals(expectedException, thrownException);
 
         // 验证所有验证步骤都执行了
-
         verify(validator).validatePaginationParams(testDto);
+        verify(validator).validateSortFields(testDto);
         verify(validator).validateAndGetDatasource("test-module");
         verify(searchTemplate).execute(testDatasource, testDto, detailExecutor);
+    }
+
+    @Test
+    @DisplayName("明细查询 - 排序字段验证失败")
+    void testSearchDetails_SortFieldsValidationFails() {
+        // Arrange
+        BusinessException expectedException =
+                new BusinessException(ErrorCode.VALIDATION_ERROR, "排序字段不能重复，重复字段: level");
+
+        doNothing().when(validator).validatePaginationParams(testDto);
+        doThrow(expectedException).when(validator).validateSortFields(testDto);
+
+        // Act & Assert
+        BusinessException thrownException =
+                assertThrows(
+                        BusinessException.class, () -> logSearchService.searchDetails(testDto));
+
+        assertEquals(expectedException, thrownException);
+
+        verify(validator).validatePaginationParams(testDto);
+        verify(validator).validateSortFields(testDto);
+        verify(validator, never()).validateAndGetDatasource(anyString());
+        verifyNoInteractions(searchTemplate);
     }
 
     // ==================== searchHistogram 测试 ====================

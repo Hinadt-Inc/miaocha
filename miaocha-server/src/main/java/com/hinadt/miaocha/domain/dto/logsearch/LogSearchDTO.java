@@ -1,17 +1,24 @@
 package com.hinadt.miaocha.domain.dto.logsearch;
 
+import com.hinadt.miaocha.domain.validator.ValidSortField;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.util.List;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 /** 日志检索请求DTO */
 @Data
 @Schema(description = "日志检索请求对象")
 public class LogSearchDTO {
-    @Schema(description = "模块名称", example = "nginx", required = true)
+    @Schema(description = "模块名称", example = "nginx", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "模块名称不能为空")
     private String module;
 
@@ -28,7 +35,7 @@ public class LogSearchDTO {
 
     @Schema(
             description = "WHERE 条件SQL列表，每个条件直接拼接到SQL语句中，多个条件之间使用AND连接",
-            example = "['level = \'ERROR\'', 'service_name = \'user-service\'']")
+            example = "['level = 'ERROR'', 'service_name = 'user-service'']")
     private List<String> whereSqls;
 
     @Schema(description = "开始时间", example = "2023-06-01 10:00:00.000")
@@ -75,4 +82,31 @@ public class LogSearchDTO {
 
     @Schema(description = "查询字段列表，为空则查询全部", example = "['log_time', 'level', 'message']")
     private List<String> fields;
+
+    @Valid
+    @Schema(description = "排序字段列表，支持多个字段排序")
+    private List<SortField> sortFields;
+
+    @Getter
+    @Setter
+    @Schema(description = "排序字段配置")
+    public static class SortField {
+        @NotNull(message = "排序字段名不能为空") @Size(max = 128, message = "排序字段名长度不能超过128个字符")
+        @ValidSortField
+        @Schema(
+                description = "排序字段名，只允许普通字段名，不支持复杂字段引用（如 a.b、a['c'] 等）",
+                example = "log_time",
+                requiredMode = Schema.RequiredMode.REQUIRED,
+                maxLength = 128)
+        private String fieldName;
+
+        @NotNull(message = "排序方向不能为空") @Pattern(regexp = "^(ASC|DESC)$", message = "排序方向必须是 ASC 或 DESC")
+        @Schema(
+                description = "排序方向",
+                example = "DESC",
+                allowableValues = {"ASC", "DESC"},
+                requiredMode = Schema.RequiredMode.REQUIRED,
+                defaultValue = "DESC")
+        private String direction = "DESC";
+    }
 }

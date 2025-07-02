@@ -78,6 +78,11 @@ public class LogSearchDTODecorator extends LogSearchDTO {
     }
 
     @Override
+    public List<SortField> getSortFields() {
+        return delegate.getSortFields();
+    }
+
+    @Override
     public void setModule(String module) {
         delegate.setModule(module);
     }
@@ -130,6 +135,11 @@ public class LogSearchDTODecorator extends LogSearchDTO {
     @Override
     public void setOffset(Integer offset) {
         delegate.setOffset(offset);
+    }
+
+    @Override
+    public void setSortFields(List<SortField> sortFields) {
+        delegate.setSortFields(sortFields);
     }
 
     /**

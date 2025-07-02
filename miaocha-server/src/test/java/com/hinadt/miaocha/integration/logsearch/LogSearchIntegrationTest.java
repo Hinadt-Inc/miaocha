@@ -696,6 +696,229 @@ public class LogSearchIntegrationTest {
 
             log.info("✅ 空查询条件处理通过 - 查询到{}条记录", result.getTotalCount());
         }
+
+        @Test
+        @Order(4)
+        @DisplayName("SORT-001: 单字段排序功能")
+        void testSingleFieldSort() {
+            log.info("🔍 测试单字段排序功能");
+
+            LogSearchDTO searchRequest = createBaseSearchRequest();
+            searchRequest.setFields(List.of("log_time", "host", "source"));
+
+            // 测试升序排序
+            LogSearchDTO.SortField ascSort = new LogSearchDTO.SortField();
+            ascSort.setFieldName("host");
+            ascSort.setDirection("ASC");
+            searchRequest.setSortFields(List.of(ascSort));
+
+            LogDetailResultDTO ascResult = logSearchService.searchDetails(searchRequest);
+
+            // 测试降序排序
+            LogSearchDTO.SortField descSort = new LogSearchDTO.SortField();
+            descSort.setFieldName("host");
+            descSort.setDirection("DESC");
+            searchRequest.setSortFields(List.of(descSort));
+
+            LogDetailResultDTO descResult = logSearchService.searchDetails(searchRequest);
+
+            // 验证查询结果
+            assertThat(ascResult).isNotNull();
+            assertThat(ascResult.getRows()).isNotEmpty();
+            assertThat(descResult).isNotNull();
+            assertThat(descResult.getRows()).isNotEmpty();
+
+            // 验证排序效果：从外部验证排序顺序
+            List<String> ascHosts =
+                    ascResult.getRows().stream()
+                            .map(row -> String.valueOf(row.get("host")))
+                            .limit(3)
+                            .toList();
+            List<String> descHosts =
+                    descResult.getRows().stream()
+                            .map(row -> String.valueOf(row.get("host")))
+                            .limit(3)
+                            .toList();
+
+            // 验证升序排序：第一个应该小于等于第二个
+            if (ascHosts.size() >= 2) {
+                assertThat(ascHosts.get(0).compareTo(ascHosts.get(1))).isLessThanOrEqualTo(0);
+            }
+
+            // 验证降序排序：第一个应该大于等于第二个
+            if (descHosts.size() >= 2) {
+                assertThat(descHosts.get(0).compareTo(descHosts.get(1))).isGreaterThanOrEqualTo(0);
+            }
+
+            log.info(
+                    "✅ 单字段排序功能通过 - ASC:{}条记录，DESC:{}条记录",
+                    ascResult.getTotalCount(),
+                    descResult.getTotalCount());
+        }
+
+        @Test
+        @Order(5)
+        @DisplayName("SORT-002: 多字段排序功能")
+        void testMultiFieldSort() {
+            log.info("🔍 测试多字段排序功能");
+
+            LogSearchDTO searchRequest = createBaseSearchRequest();
+            searchRequest.setFields(List.of("log_time", "host", "source"));
+
+            // 创建多字段排序：先按source升序，再按host降序
+            LogSearchDTO.SortField sourceSort = new LogSearchDTO.SortField();
+            sourceSort.setFieldName("source");
+            sourceSort.setDirection("ASC");
+
+            LogSearchDTO.SortField hostSort = new LogSearchDTO.SortField();
+            hostSort.setFieldName("host");
+            hostSort.setDirection("DESC");
+
+            searchRequest.setSortFields(List.of(sourceSort, hostSort));
+
+            LogDetailResultDTO result = logSearchService.searchDetails(searchRequest);
+
+            // 验证查询结果
+            assertThat(result).isNotNull();
+            assertThat(result.getRows()).isNotEmpty();
+            assertThat(result.getTotalCount()).isGreaterThan(0);
+
+            // 验证多字段排序效果：检查相同source值的记录host字段是否按降序排列
+            Map<String, List<String>> sourceToHosts =
+                    result.getRows().stream()
+                            .collect(
+                                    java.util.stream.Collectors.groupingBy(
+                                            row -> String.valueOf(row.get("source")),
+                                            java.util.stream.Collectors.mapping(
+                                                    row -> String.valueOf(row.get("host")),
+                                                    java.util.stream.Collectors.toList())));
+
+            // 验证每个source组内的host是否按降序排列
+            sourceToHosts.forEach(
+                    (source, hosts) -> {
+                        if (hosts.size() >= 2) {
+                            for (int i = 0; i < hosts.size() - 1; i++) {
+                                assertThat(hosts.get(i).compareTo(hosts.get(i + 1)))
+                                        .isGreaterThanOrEqualTo(0);
+                            }
+                        }
+                    });
+
+            log.info(
+                    "✅ 多字段排序功能通过 - 查询到{}条记录，{}个source分组",
+                    result.getTotalCount(),
+                    sourceToHosts.size());
+        }
+
+        @Test
+        @Order(6)
+        @DisplayName("SORT-003: 时间字段排序覆盖")
+        void testTimeFieldSortOverride() {
+            log.info("🔍 测试时间字段排序覆盖");
+
+            LogSearchDTO searchRequest = createBaseSearchRequest();
+            searchRequest.setFields(List.of("log_time", "host", "source"));
+
+            // 用户指定时间字段升序排序（覆盖默认的倒序）
+            LogSearchDTO.SortField timeSort = new LogSearchDTO.SortField();
+            timeSort.setFieldName("log_time");
+            timeSort.setDirection("ASC");
+
+            searchRequest.setSortFields(List.of(timeSort));
+
+            LogDetailResultDTO result = logSearchService.searchDetails(searchRequest);
+
+            // 验证查询结果
+            assertThat(result).isNotNull();
+            assertThat(result.getRows()).isNotEmpty();
+            assertThat(result.getTotalCount()).isGreaterThan(0);
+
+            // 验证时间字段升序排序：检查时间顺序
+            List<String> logTimes =
+                    result.getRows().stream()
+                            .map(row -> String.valueOf(row.get("log_time")))
+                            .limit(5)
+                            .toList();
+
+            // 验证时间升序排序
+            if (logTimes.size() >= 2) {
+                for (int i = 0; i < logTimes.size() - 1; i++) {
+                    assertThat(logTimes.get(i).compareTo(logTimes.get(i + 1)))
+                            .isLessThanOrEqualTo(0);
+                }
+            }
+
+            log.info("✅ 时间字段排序覆盖通过 - 查询到{}条记录，时间升序排列", result.getTotalCount());
+        }
+
+        @Test
+        @Order(7)
+        @DisplayName("SORT-004: 排序组合查询")
+        void testSortWithCombinedConditions() {
+            log.info("🔍 测试排序组合查询");
+
+            LogSearchDTO searchRequest = createBaseSearchRequest();
+
+            // 组合查询条件：关键字 + WHERE条件 + 字段选择 + 排序
+            searchRequest.setKeywords(List.of("service"));
+            searchRequest.setWhereSqls(List.of("host LIKE '172.20.61.%'"));
+            searchRequest.setFields(List.of("log_time", "host", "source", "message_text"));
+
+            // 添加排序
+            LogSearchDTO.SortField hostSort = new LogSearchDTO.SortField();
+            hostSort.setFieldName("host");
+            hostSort.setDirection("ASC");
+
+            LogSearchDTO.SortField sourceSort = new LogSearchDTO.SortField();
+            sourceSort.setFieldName("source");
+            sourceSort.setDirection("DESC");
+
+            searchRequest.setSortFields(List.of(hostSort, sourceSort));
+
+            LogDetailResultDTO result = logSearchService.searchDetails(searchRequest);
+
+            // 验证查询结果
+            assertThat(result).isNotNull();
+            assertThat(result.getRows()).isNotEmpty();
+            assertThat(result.getTotalCount()).isGreaterThan(0);
+
+            // 验证字段过滤
+            assertThat(result.getColumns())
+                    .containsExactlyInAnyOrder("log_time", "host", "source", "message_text");
+
+            // 验证关键字过滤：至少一条记录包含"service"
+            boolean hasServiceKeyword =
+                    result.getRows().stream()
+                            .anyMatch(
+                                    row -> {
+                                        Object messageText = row.get("message_text");
+                                        return messageText != null
+                                                && messageText.toString().contains("service");
+                                    });
+            assertThat(hasServiceKeyword).isTrue();
+
+            // 验证WHERE条件：所有记录的host都符合条件
+            result.getRows()
+                    .forEach(
+                            row -> {
+                                Object host = row.get("host");
+                                assertThat(host).isNotNull();
+                                assertThat(host.toString()).startsWith("172.20.61.");
+                            });
+
+            // 验证排序效果：检查host升序排序
+            List<String> hosts =
+                    result.getRows().stream()
+                            .map(row -> String.valueOf(row.get("host")))
+                            .limit(3)
+                            .toList();
+
+            if (hosts.size() >= 2) {
+                assertThat(hosts.get(0).compareTo(hosts.get(1))).isLessThanOrEqualTo(0);
+            }
+
+            log.info("✅ 排序组合查询通过 - 查询到{}条记录，综合功能正常", result.getTotalCount());
+        }
     }
 
     // ==================== 高级功能组 ====================

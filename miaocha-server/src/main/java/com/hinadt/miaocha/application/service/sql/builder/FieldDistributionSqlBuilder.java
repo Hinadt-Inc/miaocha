@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 public class FieldDistributionSqlBuilder {
 
     /** 字段分布统计的采样大小常量 */
-    public static final int SAMPLE_SIZE = 5000;
+    public static final int SAMPLE_SIZE = 1000;
 
     private final KeywordConditionBuilder keywordConditionBuilder;
     private final WhereConditionBuilder whereConditionBuilder;
@@ -31,7 +31,7 @@ public class FieldDistributionSqlBuilder {
     /**
      * 构建字段分布TOP N查询SQL
      *
-     * <p>使用两层查询优化性能： - 内层：先筛选出前5000条数据 - 外层：对这5000条数据使用Doris的TOPN函数进行统计
+     * <p>使用两层查询优化性能： - 内层：先筛选出前1000条数据 - 外层：对这1000条数据使用Doris的TOPN函数进行统计
      */
     public String buildFieldDistribution(
             LogSearchDTO dto,

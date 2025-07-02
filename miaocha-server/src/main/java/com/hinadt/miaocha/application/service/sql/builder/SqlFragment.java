@@ -52,6 +52,21 @@ public class SqlFragment {
         return String.format(" ORDER BY %s %s", field, direction);
     }
 
+    /** 构建多字段ORDER BY子句 */
+    public static String orderByMultiple(List<OrderField> orderFields) {
+        if (orderFields == null || orderFields.isEmpty()) {
+            return "";
+        }
+
+        List<String> orderClauses = new ArrayList<>();
+        for (OrderField orderField : orderFields) {
+            orderClauses.add(
+                    String.format("%s %s", orderField.fieldName(), orderField.direction()));
+        }
+
+        return " ORDER BY " + String.join(", ", orderClauses);
+    }
+
     /** 构建LIMIT子句 */
     public static String limit(int pageSize, int offset) {
         return String.format(" LIMIT %d OFFSET %d", pageSize, offset);
@@ -135,4 +150,7 @@ public class SqlFragment {
 
         return " WHERE " + String.join(" AND ", conditions);
     }
+
+    /** 排序字段封装类 */
+    public record OrderField(String fieldName, String direction) {}
 }
