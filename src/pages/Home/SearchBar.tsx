@@ -202,9 +202,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   useEffect(() => {
     // 只有在组件初始化完成后才执行搜索和保存逻辑
     if (!initialized) return;
-
-    const timeField = moduleQueryConfig?.timeField || 'log_time'; // 如果没有配置则回退到log_time
-    const _fields = activeColumns?.length === 1 && activeColumns[0] === timeField ? [] : activeColumns || [];
+    const fieldsHasDot = activeColumns?.some((item: any) => item.includes('.'));
     const params = {
       ...searchParams,
       ...(keywords.length > 0 && { keywords }),
@@ -214,7 +212,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       timeRange: timeOption?.value,
       timeGrouping: timeGroup,
       offset: 0,
-      fields: _fields,
+      fields: fieldsHasDot ? activeColumns : [],
     };
     if (keywords.length === 0) {
       delete params.keywords;
