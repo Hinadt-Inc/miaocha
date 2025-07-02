@@ -4,9 +4,11 @@ import com.hinadt.miaocha.application.service.sql.builder.FieldDistributionSqlBu
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /** 日志字段分布查询结果DTO */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @Schema(description = "日志字段分布查询结果对象")
 public class LogFieldDistributionResultDTO extends LogSearchResultDTO {
 

@@ -4,9 +4,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Map;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /** 日志明细查询结果DTO */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @Schema(description = "日志明细查询结果对象")
 public class LogDetailResultDTO extends LogSearchResultDTO {
 

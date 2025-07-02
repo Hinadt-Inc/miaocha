@@ -3,14 +3,10 @@ package com.hinadt.miaocha.application.service.impl.logsearch.validator;
 import com.hinadt.miaocha.application.service.ModuleInfoService;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
-import com.hinadt.miaocha.domain.dto.logsearch.KeywordConditionDTO;
-import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
-import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTODecorator;
 import com.hinadt.miaocha.domain.dto.module.QueryConfigDTO;
 import com.hinadt.miaocha.domain.dto.module.QueryConfigDTO.KeywordFieldConfigDTO;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,7 +14,7 @@ import org.springframework.stereotype.Service;
 /**
  * 查询配置验证服务
  *
- * <p>负责： 1. 验证模块的查询配置是否完整 2. 验证关键字查询字段权限 3. 获取字段对应的搜索方法 4. 获取配置的时间字段
+ * <p>负责： 1. 验证模块的查询配置是否完整 2. 获取字段对应的搜索方法 3. 获取配置的时间字段
  */
 @Service
 public class QueryConfigValidationService {
@@ -56,65 +52,6 @@ public class QueryConfigValidationService {
                     ErrorCode.TIME_FIELD_NOT_CONFIGURED, "模块 '" + module + "' 未配置时间字段");
         }
         return timeField;
-    }
-
-    /**
-     * 验证关键字查询条件的字段权限
-     *
-     * @param dto LogSearchDTO（可能是装饰器）
-     * @param keywordConditions 关键字查询条件列表
-     * @throws BusinessException 如果字段未配置或无权限
-     */
-    public void validateKeywordFieldPermissions(
-            LogSearchDTO dto, List<KeywordConditionDTO> keywordConditions) {
-        if (keywordConditions == null || keywordConditions.isEmpty()) {
-            return;
-        }
-
-        String module = dto.getModule();
-        QueryConfigDTO queryConfig = validateAndGetQueryConfig(module);
-        List<KeywordFieldConfigDTO> keywordFields = queryConfig.getKeywordFields();
-
-        if (keywordFields == null || keywordFields.isEmpty()) {
-            throw new BusinessException(
-                    ErrorCode.KEYWORD_FIELDS_NOT_CONFIGURED, "模块 '" + module + "' 未配置关键字查询字段");
-        }
-
-        // 构建字段名到配置的映射
-        Map<String, KeywordFieldConfigDTO> fieldConfigMap =
-                keywordFields.stream()
-                        .collect(
-                                Collectors.toMap(
-                                        KeywordFieldConfigDTO::getFieldName, Function.identity()));
-
-        // 验证每个查询条件的字段权限
-        for (KeywordConditionDTO condition : keywordConditions) {
-            if (condition.getFieldNames() == null || condition.getFieldNames().isEmpty()) {
-                continue;
-            }
-
-            // 验证条件中的每个字段
-            for (String fieldName : condition.getFieldNames()) {
-                if (fieldName == null || fieldName.trim().isEmpty()) {
-                    continue;
-                }
-
-                String trimmedFieldName = fieldName.trim();
-
-                // 如果是装饰器，需要用原始字段名查找配置
-                String configFieldName = trimmedFieldName;
-                if (dto instanceof LogSearchDTODecorator) {
-                    configFieldName =
-                            ((LogSearchDTODecorator) dto).getOriginalFieldName(trimmedFieldName);
-                }
-
-                if (!fieldConfigMap.containsKey(configFieldName)) {
-                    throw new BusinessException(
-                            ErrorCode.KEYWORD_FIELD_NOT_ALLOWED,
-                            "字段 '" + configFieldName + "'不在允许关键字检索字段内，不允许进行关键字查询，请检查模块配置");
-                }
-            }
-        }
     }
 
     /**

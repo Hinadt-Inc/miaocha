@@ -80,7 +80,7 @@ public class FieldDistributionSqlBuilder {
     /** 构建内层查询（采样查询） */
     private String buildInnerQuery(LogSearchDTO dto, String tableName, String timeField) {
         String timeCondition = timeRange(timeField, dto);
-        String keywordConditions = keywordConditionBuilder.buildKeywordConditions(dto);
+        String keywordConditions = keywordConditionBuilder.buildKeywords(dto);
         String whereConditions = whereConditionBuilder.buildWhereConditions(dto);
 
         return selectFields(null)

@@ -112,8 +112,12 @@ public class VariantFieldConverter {
     /**
      * 转换SELECT字段列表中的点语法为括号语法
      *
+     * <p>⚠️ **重要：此方法必须严格保持输入与输出的顺序一致性！**
+     *
+     * <p>顺序依赖说明： - 输出列表的每个索引位置必须对应输入列表的相同索引位置 - 禁止在此方法中进行排序、去重、过滤等改变顺序的操作
+     *
      * @param fields 字段列表
-     * @return 转换后的字段列表（仅转换语法，不添加AS别名）
+     * @return 转换后的字段列表（仅转换语法，不添加AS别名）**顺序与输入严格一致**
      */
     public List<String> convertSelectFields(List<String> fields) {
         if (fields == null) {
@@ -127,7 +131,14 @@ public class VariantFieldConverter {
 
         List<String> convertedFields = new ArrayList<>();
         for (String field : fields) {
-            if (field == null || field.trim().isEmpty()) {
+            // 处理null字段
+            if (field == null) {
+                convertedFields.add(field);
+                continue;
+            }
+
+            // 处理空字符串字段
+            if (field.trim().isEmpty()) {
                 convertedFields.add(field);
                 continue;
             }
@@ -166,12 +177,17 @@ public class VariantFieldConverter {
     }
 
     /**
-     * 检查字段是否使用点语法
+     * 检查字段是否需要 variant 转换（点语法转括号语法）
      *
      * @param field 字段名
-     * @return 是否是点语法
+     * @return 是否需要转换
      */
-    private boolean isDotSyntax(String field) {
+    public boolean needsVariantConversion(String field) {
+        // 空值检查
+        if (field == null) {
+            return false;
+        }
+
         // 基本检查
         if (!field.contains(".")
                 || field.contains("[")
@@ -194,6 +210,18 @@ public class VariantFieldConverter {
         }
 
         return true;
+    }
+
+    /**
+     * 检查字段是否使用点语法
+     *
+     * @param field 字段名
+     * @return 是否是点语法
+     * @deprecated 使用 {@link #needsVariantConversion(String)} 代替
+     */
+    @Deprecated
+    private boolean isDotSyntax(String field) {
+        return needsVariantConversion(field);
     }
 
     /** 检查是否是有效的标识符（支持Unicode字符） */

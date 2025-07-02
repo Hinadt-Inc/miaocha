@@ -33,7 +33,7 @@ public class DistributionSqlBuilder {
 
         String customBucketExpr = customTimeBucket(timeField, timeUnit, intervalValue);
         String timeCondition = timeRange(timeField, dto);
-        String keywordConditions = keywordConditionBuilder.buildKeywordConditions(dto);
+        String keywordConditions = keywordConditionBuilder.buildKeywords(dto);
         String whereConditions = whereConditionBuilder.buildWhereConditions(dto);
 
         return selectTimeDistribution(customBucketExpr)

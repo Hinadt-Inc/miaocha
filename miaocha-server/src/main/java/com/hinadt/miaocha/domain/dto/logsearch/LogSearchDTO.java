@@ -16,11 +16,15 @@ public class LogSearchDTO {
     private String module;
 
     @Schema(
-            description = "结构化关键字查询条件列表，支持配置驱动的字段和搜索方法",
-            example =
-                    "[{\"fieldName\": \"message\", \"searchValue\": \"error\"}, "
-                            + "{\"fieldName\": \"level\", \"searchValue\": \"ERROR\"}]")
-    private List<KeywordConditionDTO> keywordConditions;
+            description =
+                    "搜索关键字列表，每个关键字支持多种格式：\n"
+                            + "1. 单个关键字: error\n"
+                            + "2. 多个关键字OR关系: 'error' || 'timeout'\n"
+                            + "3. 多个关键字AND关系: 'error' && 'timeout'\n"
+                            + "4. 复杂表达式: ('error' || 'warning') && ('timeout' || 'failure')\n"
+                            + "关键字将自动应用到模块配置中的所有关键字字段上",
+            example = "['error', '('error' || 'warning') && 'timeout'']")
+    private List<String> keywords;
 
     @Schema(
             description = "WHERE 条件SQL列表，每个条件直接拼接到SQL语句中，多个条件之间使用AND连接",

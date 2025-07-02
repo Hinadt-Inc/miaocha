@@ -29,7 +29,7 @@ public class DetailSqlBuilder {
     /** 构建日志详情查询SQL */
     public String buildDetailQuery(LogSearchDTO dto, String tableName, String timeField) {
         String timeCondition = timeRange(timeField, dto);
-        String keywordConditions = keywordConditionBuilder.buildKeywordConditions(dto);
+        String keywordConditions = keywordConditionBuilder.buildKeywords(dto);
         String whereConditions = whereConditionBuilder.buildWhereConditions(dto);
 
         // 为字段添加AS别名（如果需要）
@@ -62,6 +62,20 @@ public class DetailSqlBuilder {
         return selectFields(fields);
     }
 
+    /**
+     * 为转换后的字段构建AS别名
+     *
+     * <p>⚠️ **顺序依赖契约：此方法严格依赖 convertedFields 与 originalFields 的索引对应关系**
+     *
+     * <p>前置条件： - convertedFields 和 originalFields 必须保持相同的顺序 - convertedFields[i] 必须是
+     * originalFields[i] 的variant转换结果 - 此契约由 VariantFieldConverter.convertSelectFields() 方法保证
+     *
+     * <p>处理逻辑： - 如果字段被转换：生成 "convertedField AS 'originalField'" - 如果字段未转换：直接使用字段名
+     *
+     * @param convertedFields 转换后的字段列表（由VariantFieldConverter转换）
+     * @param originalFields 原始字段列表（与convertedFields顺序严格对应）
+     * @return 带AS别名的字段列表
+     */
     private static List<String> obtainsFieldsWithAlias(
             List<String> convertedFields, List<String> originalFields) {
         List<String> fieldsWithAlias = new ArrayList<>();
@@ -83,7 +97,7 @@ public class DetailSqlBuilder {
     /** 构建总数查询SQL */
     public String buildCountQuery(LogSearchDTO dto, String tableName, String timeField) {
         String timeCondition = timeRange(timeField, dto);
-        String keywordConditions = keywordConditionBuilder.buildKeywordConditions(dto);
+        String keywordConditions = keywordConditionBuilder.buildKeywords(dto);
         String whereConditions = whereConditionBuilder.buildWhereConditions(dto);
 
         return selectCount()

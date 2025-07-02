@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.hinadt.miaocha.application.service.sql.converter.LogSearchDTOConverter;
 import com.hinadt.miaocha.application.service.sql.converter.VariantFieldConverter;
-import com.hinadt.miaocha.domain.dto.logsearch.KeywordConditionDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTODecorator;
 import java.util.ArrayList;
@@ -105,35 +104,18 @@ class LogSearchDTOConverterTest {
         }
 
         @Test
-        @DisplayName("关键字条件转换 - 期望：正确转换关键字条件中的字段名")
-        void testKeywordConditionConversion() {
+        @DisplayName("关键字列表转换 - 期望：keywords字段正确传递")
+        void testKeywordsConversion() {
             LogSearchDTO original = createBasicDTO();
-
-            KeywordConditionDTO condition1 = new KeywordConditionDTO();
-            condition1.setFieldNames(Arrays.asList("message.content"));
-            condition1.setSearchValue("error");
-
-            KeywordConditionDTO condition2 = new KeywordConditionDTO();
-            condition2.setFieldNames(Arrays.asList("level"));
-            condition2.setSearchValue("ERROR");
-
-            original.setKeywordConditions(Arrays.asList(condition1, condition2));
+            original.setKeywords(Arrays.asList("error", "timeout", "exception"));
 
             LogSearchDTO result = converter.convert(original);
 
-            List<KeywordConditionDTO> resultConditions = result.getKeywordConditions();
-            assertEquals(2, resultConditions.size(), "应有2个关键字条件");
-
-            // 验证点语法字段名被转换
+            assertInstanceOf(LogSearchDTODecorator.class, result, "应创建装饰器");
             assertEquals(
-                    Arrays.asList("message['content']"),
-                    resultConditions.get(0).getFieldNames(),
-                    "点语法字段名应被转换");
-            assertEquals("error", resultConditions.get(0).getSearchValue(), "搜索值应保持不变");
-
-            // 验证普通字段名保持不变
-            assertEquals(
-                    Arrays.asList("level"), resultConditions.get(1).getFieldNames(), "普通字段名应保持不变");
+                    Arrays.asList("error", "timeout", "exception"),
+                    result.getKeywords(),
+                    "keywords字段应正确传递");
         }
     }
 
