@@ -17,6 +17,7 @@ interface IProps {
   sqls?: string[]; // SQL语句列表
   onSearch?: (params: ILogSearchParams) => void; // 搜索回调函数
   moduleQueryConfig?: any; // 模块查询配置
+  onSortChange?: (sortConfig: any[]) => void; // 排序变化回调函数
 }
 
 interface ColumnHeaderProps {
@@ -129,6 +130,7 @@ const VirtualTable = (props: IProps) => {
     sqls,
     onSearch,
     moduleQueryConfig,
+    onSortChange,
   } = props;
   const containerRef = useRef<HTMLDivElement>(null);
   const tblRef: Parameters<typeof Table>[0]['ref'] = useRef(null);
@@ -137,6 +139,7 @@ const VirtualTable = (props: IProps) => {
   const [columns, setColumns] = useState<any[]>([]);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [scrollX, setScrollX] = useState(1300);
+  const [sortConfig, setSortConfig] = useState<any[]>([]);
 
   // 处理sqls数据，根据SQL语法提取字段名和值
   const sqlFilterValue = useMemo(() => {
@@ -256,46 +259,49 @@ const VirtualTable = (props: IProps) => {
         dataIndex: timeField,
         width: 190,
         resizable: false,
-        sorter: (a: any, b: any) => {
-          // 处理时间字段排序，考虑到时间字段可能已经被格式化为字符串
-          const timeA = a[timeField];
-          const timeB = b[timeField];
+        sorter: {
+          compare: (a: any, b: any) => {
+            // 处理时间字段排序，考虑到时间字段可能已经被格式化为字符串
+            const timeA = a[timeField];
+            const timeB = b[timeField];
 
-          // 如果值为空或无效，放到最后
-          if (!timeA && !timeB) return 0;
-          if (!timeA) return 1;
-          if (!timeB) return -1;
+            // 如果值为空或无效，放到最后
+            if (!timeA && !timeB) return 0;
+            if (!timeA) return 1;
+            if (!timeB) return -1;
 
-          const parseTime = (timeStr: any) => {
-            if (!timeStr) return 0;
+            const parseTime = (timeStr: any) => {
+              if (!timeStr) return 0;
 
-            const str = String(timeStr);
+              const str = String(timeStr);
 
-            // 如果是已经格式化的时间字符串（如 "2025-06-28 14:51:23.208"），直接用字符串比较
-            if (str.match(/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}/)) {
+              // 如果是已经格式化的时间字符串（如 "2025-06-28 14:51:23.208"），直接用字符串比较
+              if (str.match(/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}/)) {
+                return str;
+              }
+
+              // 尝试转换为Date对象
+              const date = new Date(str);
+              if (!isNaN(date.getTime())) {
+                return date.getTime();
+              }
+
+              // 如果无法解析为日期，返回原字符串用于字符串比较
               return str;
+            };
+
+            const parsedA = parseTime(timeA);
+            const parsedB = parseTime(timeB);
+
+            // 如果都是数字，按数字比较
+            if (typeof parsedA === 'number' && typeof parsedB === 'number') {
+              return parsedA - parsedB;
             }
 
-            // 尝试转换为Date对象
-            const date = new Date(str);
-            if (!isNaN(date.getTime())) {
-              return date.getTime();
-            }
-
-            // 如果无法解析为日期，返回原字符串用于字符串比较
-            return str;
-          };
-
-          const parsedA = parseTime(timeA);
-          const parsedB = parseTime(timeB);
-
-          // 如果都是数字，按数字比较
-          if (typeof parsedA === 'number' && typeof parsedB === 'number') {
-            return parsedA - parsedB;
-          }
-
-          // 否则按字符串比较
-          return String(parsedA).localeCompare(String(parsedB));
+            // 否则按字符串比较
+            return String(parsedA).localeCompare(String(parsedB));
+          },
+          multiple: 1, // 时间字段排序优先级最高
         },
         render: (text: any) => {
           if (!text) return '';
@@ -368,13 +374,16 @@ const VirtualTable = (props: IProps) => {
         return {
           ...column,
           width: isLast ? undefined : columnWidths[column.dataIndex] || 150,
-          sorter: (a: any, b: any) => {
-            const valueA = a[column.dataIndex];
-            const valueB = b[column.dataIndex];
-            if (typeof valueA === 'string' && typeof valueB === 'string') {
-              return valueA.localeCompare(valueB);
-            }
-            return (valueA || '').toString().localeCompare((valueB || '').toString());
+          sorter: {
+            compare: (a: any, b: any) => {
+              const valueA = a[column.dataIndex];
+              const valueB = b[column.dataIndex];
+              if (typeof valueA === 'string' && typeof valueB === 'string') {
+                return valueA.localeCompare(valueB);
+              }
+              return (valueA || '').toString().localeCompare((valueB || '').toString());
+            },
+            multiple: idx + 2, // 动态列排序优先级依次递减，从2开始（时间字段优先级为1）
           },
           render: (text: string) => {
             return highlightText(text, [
@@ -518,6 +527,38 @@ const VirtualTable = (props: IProps) => {
     [newCols[colIndex], newCols[colIndex + 1]] = [newCols[colIndex + 1], newCols[colIndex]];
     setColumns(newCols);
   };
+  // 触发多列字段排序
+  const handleTableChange = (pagination: any, filters: any, sorter: any) => {
+    let resultSorter: any[] = [];
+    // 处理排序信息
+    if (sorter) {
+      // 判断是单个排序还是多个排序
+      if (Array.isArray(sorter)) {
+        // 多列排序
+        // 过滤出有效的排序字段
+        const activeSorts = sorter.filter((sort: any) => sort.order);
+        resultSorter = activeSorts.map((sort: any) => ({
+          fieldName: sort.field || sort.columnKey,
+          direction: sort.order === 'ascend' ? 'ASC' : 'DESC',
+        }));
+      } else {
+        // 单列排序
+        if (sorter.order) {
+          resultSorter.push({
+            fieldName: sorter.field || sorter.columnKey,
+            direction: sorter.order === 'ascend' ? 'ASC' : 'DESC',
+          });
+        } else {
+        }
+      }
+    }
+    setSortConfig(resultSorter);
+
+    // 通知父组件排序配置变化
+    if (onSortChange) {
+      onSortChange(resultSorter);
+    }
+  };
 
   // 包装列头，添加删除、左移、右移按钮，并根据是否存在_source列来决定是否显示
   // 如果存在_source列，则不显示删除、左移、右移按钮
@@ -554,7 +595,13 @@ const VirtualTable = (props: IProps) => {
         dataSource={data}
         pagination={false}
         columns={enhancedColumns}
+        onChange={handleTableChange}
         scroll={{ x: data.length > 0 ? scrollX : 0, y: containerHeight - headerHeight - 1 }}
+        // 启用多列排序
+        sortDirections={['ascend', 'descend']}
+        showSorterTooltip={{
+          title: '点击排序，按住Ctrl+点击可多列排序',
+        }}
         expandable={{
           columnWidth: 26,
           expandedRowRender: (record) => (

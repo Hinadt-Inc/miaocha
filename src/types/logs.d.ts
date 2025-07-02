@@ -111,6 +111,13 @@ declare global {
      */
     fields?: string[];
     /**
+     * 排序字段列表
+     */
+    sortFields?: Array<{
+      fieldName: string;
+      direction: 'ASC' | 'DESC';
+    }>;
+    /**
      * 查询配置
      */
     queryConfig?: {

@@ -19,6 +19,7 @@ const HomePage = () => {
   const [sqls, setSqls] = useState<string[]>([]); // SQL语句列表
   const [activeColumns, setActiveColumns] = useState<string[]>([]); // 激活的字段列表
   const [selectedModule, setSelectedModule] = useState<string>(''); // 当前选中的模块
+  const [sortConfig, setSortConfig] = useState<any[]>([]); // 排序配置
   const searchBarRef = useRef<any>(null);
   const siderRef = useRef<any>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -149,10 +150,10 @@ const HomePage = () => {
       keywords: searchParams.keywords,
       offset: searchParams.offset,
       fields: searchParams.fields,
+      sortFields: searchParams.sortFields, // 添加排序字段到参数标识
       moduleQueryConfigTimeField: moduleQueryConfig?.timeField,
     });
 
-    // 如果参数没有变化，避免重复调用
     if (lastCallParamsRef.current === currentCallParams) {
       return;
     }
@@ -231,6 +232,11 @@ const HomePage = () => {
     }
   }, []);
 
+  // 处理排序配置变化
+  const handleSortChange = useCallback((newSortConfig: any[]) => {
+    setSortConfig(newSortConfig);
+  }, []);
+
   // 优化字段选择组件的props
   const siderProps = {
     searchParams,
@@ -291,6 +297,7 @@ const HomePage = () => {
       onChangeColumns: handleChangeColumnsByLog,
       onSearchFromTable: setSearchParams,
       moduleQueryConfig,
+      onSortChange: handleSortChange,
     }),
     [
       histogramData,
@@ -301,6 +308,8 @@ const HomePage = () => {
       whereSqlsFromSider,
       sqls,
       moduleQueryConfig,
+      handleSortChange,
+      sortConfig, // 添加sortConfig到依赖数组
     ],
   );
 
@@ -341,6 +350,7 @@ const HomePage = () => {
       getDistributionWithSearchBar,
       selectedModule,
       moduleQueryConfig,
+      sortConfig,
     }),
     [
       searchParams,
@@ -352,6 +362,7 @@ const HomePage = () => {
       getDistributionWithSearchBar,
       selectedModule,
       moduleQueryConfig,
+      sortConfig,
     ],
   );
 

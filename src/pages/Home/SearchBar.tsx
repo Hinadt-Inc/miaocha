@@ -18,6 +18,7 @@ interface IProps {
   getDistributionWithSearchBar?: () => void; // 获取字段分布回调函数
   selectedModule?: string; // 当前选中的模块
   moduleQueryConfig?: any; // 模块查询配置
+  sortConfig?: any[]; // 排序配置
 }
 
 const SearchBar = forwardRef((props: IProps, ref) => {
@@ -33,6 +34,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     getDistributionWithSearchBar,
     selectedModule,
     moduleQueryConfig,
+    sortConfig = [],
   } = props;
   const [messageApi, contextHolder] = message.useMessage();
 
@@ -203,6 +205,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     // 只有在组件初始化完成后才执行搜索和保存逻辑
     if (!initialized) return;
     const fieldsHasDot = activeColumns?.some((item: any) => item.includes('.'));
+    const resSortConfig = sortConfig?.filter((item) => !item.fieldName.includes('.'));
     const params = {
       ...searchParams,
       ...(keywords.length > 0 && { keywords }),
@@ -213,6 +216,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       timeGrouping: timeGroup,
       offset: 0,
       fields: fieldsHasDot ? activeColumns : [],
+      sortFields: resSortConfig || [],
     };
     if (keywords.length === 0) {
       delete params.keywords;
@@ -236,7 +240,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     } catch (error) {
       console.error('保存查询条件失败:', error);
     }
-
     onSearch(params as ILogSearchParams);
 
     // 通知父组件sqls数据变化
@@ -248,7 +251,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     if (getDistributionWithSearchBar) {
       getDistributionWithSearchBar();
     }
-  }, [keywords, sqls, timeOption, timeGroup, activeColumns, onSqlsChange, initialized]);
+  }, [keywords, sqls, timeOption, timeGroup, activeColumns, sortConfig, onSqlsChange, initialized]);
 
   // 处理关键词和SQL搜索
   const handleSubmit = () => {
