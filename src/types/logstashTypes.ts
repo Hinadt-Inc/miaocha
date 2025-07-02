@@ -33,6 +33,7 @@ export interface LogstashTaskStatus {
   operationType: string;
   startTime: string;
   endTime: string;
+  createTime: string; // 添加创建时间字段
   duration: number;
   totalSteps: number;
   successCount: number;
@@ -40,6 +41,10 @@ export interface LogstashTaskStatus {
   skippedCount: number;
   progressPercentage: number;
   errorMessage: string;
+  machineId: number; // 添加机器ID字段
+  machineName: string; // 添加机器名称字段
+  machineIp: string; // 添加机器IP字段
+  processName: string; // 添加进程名称字段
   instanceSteps: {
     [key: string]: LogstashTaskStep[];
   };
