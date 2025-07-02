@@ -1,13 +1,6 @@
 import React, { useCallback, useMemo, useState, memo, useRef, useEffect } from 'react';
 import { Button, Card, Empty, Space, Spin, Tooltip } from 'antd';
-import {
-  CopyOutlined,
-  FileSearchOutlined,
-  ReloadOutlined,
-  TableOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-} from '@ant-design/icons';
+import { CopyOutlined, FileSearchOutlined, ReloadOutlined, TableOutlined } from '@ant-design/icons';
 import { VariableSizeList as List } from 'react-window';
 import { SchemaResult } from '../types';
 import styles from './VirtualizedSchemaTree.module.less';
@@ -235,7 +228,6 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
   handleInsertTable,
   handleInsertField,
   collapsed = false,
-  toggleSider,
 }) => {
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   const [lazyLoadStarted, setLazyLoadStarted] = useState(false);
