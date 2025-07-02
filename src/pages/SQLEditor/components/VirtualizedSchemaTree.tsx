@@ -24,7 +24,6 @@ interface VirtualizedSchemaTreeProps {
   databaseSchema: SchemaResult | { error: string } | null;
   loadingSchema: boolean;
   refreshSchema: () => void;
-  handleTreeNodeDoubleClick: (tableName: string) => void;
   handleInsertTable: (tableName: string, columns: SchemaResult['tables'][0]['columns']) => void;
   handleInsertField?: (fieldName: string) => void;
   collapsed?: boolean;
@@ -45,13 +44,12 @@ const TreeNodeRenderer = memo(
     data: {
       nodes: TreeNode[];
       onToggleExpand: (key: string) => void;
-      onDoubleClick: (tableName: string) => void;
       onInsertTable: (tableName: string) => void;
       onInsertField?: (fieldName: string) => void;
       collapsed: boolean;
     };
   }) => {
-    const { nodes, onToggleExpand, onDoubleClick, onInsertTable, onInsertField, collapsed } = data;
+    const { nodes, onToggleExpand, onInsertTable, onInsertField, collapsed } = data;
     const node = nodes[index];
 
     const handleNodeKeyDown = useCallback(
@@ -59,11 +57,7 @@ const TreeNodeRenderer = memo(
         if (e.key === 'Enter') {
           e.preventDefault();
           if (node?.isTable) {
-            if (e.shiftKey) {
-              onDoubleClick(node.key);
-            } else {
-              onToggleExpand(node.key);
-            }
+            onToggleExpand(node.key);
           }
         } else if (e.key === ' ') {
           e.preventDefault();
@@ -72,7 +66,7 @@ const TreeNodeRenderer = memo(
           }
         }
       },
-      [node?.isTable, node?.key, onToggleExpand, onDoubleClick],
+      [node?.isTable, node?.key, onToggleExpand],
     );
 
     const handleNodeClick = useCallback(() => {
@@ -80,16 +74,6 @@ const TreeNodeRenderer = memo(
         onToggleExpand(node.key);
       }
     }, [node?.isTable, node?.key, onToggleExpand, isScrolling]);
-
-    const handleNodeDoubleClick = useCallback(
-      (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (node?.isTable && !isScrolling) {
-          onDoubleClick(node.key);
-        }
-      },
-      [node?.isTable, node?.key, onDoubleClick, isScrolling],
-    );
 
     const handleInsertTableClick = useCallback(
       (e: React.MouseEvent) => {
@@ -176,7 +160,6 @@ const TreeNodeRenderer = memo(
           node.isTable ? styles.tableNode : styles.columnNode,
         )}
         onClick={handleNodeClick}
-        onDoubleClick={handleNodeDoubleClick}
         onKeyDown={handleNodeKeyDown}
         tabIndex={0}
         aria-label={`${node.isTable ? 'Table' : 'Column'}: ${node.title}`}
@@ -224,7 +207,6 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
   databaseSchema,
   loadingSchema,
   refreshSchema,
-  handleTreeNodeDoubleClick,
   handleInsertTable,
   handleInsertField,
   collapsed = false,
@@ -434,19 +416,11 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
     () => ({
       nodes: flattenedNodes,
       onToggleExpand: handleToggleExpand,
-      onDoubleClick: handleTreeNodeDoubleClick,
       onInsertTable: handleInsertTableClick,
       onInsertField: handleInsertField,
       collapsed,
     }),
-    [
-      flattenedNodes,
-      handleToggleExpand,
-      handleTreeNodeDoubleClick,
-      handleInsertTableClick,
-      handleInsertField,
-      collapsed,
-    ],
+    [flattenedNodes, handleToggleExpand, handleInsertTableClick, handleInsertField, collapsed],
   );
 
   return (

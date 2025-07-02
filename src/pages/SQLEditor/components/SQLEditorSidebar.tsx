@@ -7,7 +7,6 @@ export interface SQLEditorSidebarProps {
   databaseSchema: SchemaResult | { error: string } | null;
   loadingSchema: boolean;
   refreshSchema: () => void;
-  onTreeNodeDoubleClick: (tableName: string) => void;
   onInsertTable: (
     tableName: string,
     columns: {
@@ -31,7 +30,6 @@ export const SQLEditorSidebar: React.FC<SQLEditorSidebarProps> = ({
   databaseSchema,
   loadingSchema,
   refreshSchema,
-  onTreeNodeDoubleClick,
   onInsertTable,
   onInsertField,
   collapsed,
@@ -44,7 +42,6 @@ export const SQLEditorSidebar: React.FC<SQLEditorSidebarProps> = ({
           databaseSchema={databaseSchema}
           loadingSchema={loadingSchema}
           refreshSchema={refreshSchema}
-          handleTreeNodeDoubleClick={onTreeNodeDoubleClick}
           handleInsertTable={onInsertTable}
           handleInsertField={onInsertField}
           collapsed={collapsed}
