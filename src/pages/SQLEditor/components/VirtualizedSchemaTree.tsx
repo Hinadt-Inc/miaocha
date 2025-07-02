@@ -461,14 +461,6 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
     <Card
       title={
         <Space>
-          {toggleSider && (
-            <Button
-              type="text"
-              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-              onClick={toggleSider}
-              size="small"
-            />
-          )}
           {!collapsed && (
             <>
               <FileSearchOutlined />
