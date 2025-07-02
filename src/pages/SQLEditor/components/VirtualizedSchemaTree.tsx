@@ -303,91 +303,39 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
   );
 
   // 移除延迟加载逻辑，因为它会导致loading状态混乱
-  // useEffect(() => {
-  //   if (databaseSchema && !lazyLoadStarted) {
-  //     const idleCallback = window.requestIdleCallback || ((cb: () => void) => setTimeout(cb, 0));
-  //     idleCallback(() => {
-  //       setLazyLoadStarted(true);
-  //     });
-  //   }
-  // }, [databaseSchema, lazyLoadStarted]);
 
-  // 计算列表高度 - 使用容器自适应高度，改为更合理的初始值
-  const [containerHeight, setContainerHeight] = useState(400); // 设置一个合理的默认值
+  // 使用容器ref来动态计算100%高度
   const containerRef = useRef<HTMLDivElement>(null);
+  const [containerHeight, setContainerHeight] = useState(400); // 默认高度
 
-  // 使用 ResizeObserver 监听容器高度变化，添加防抖优化
+  // 使用ResizeObserver监听容器高度变化，实现真正的100%高度
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    let resizeTimer: NodeJS.Timeout;
+    const updateHeight = () => {
+      // 获取容器的实际高度
+      const rect = container.getBoundingClientRect();
+      if (rect.height > 50) {
+        setContainerHeight(rect.height);
+      }
+    };
 
-    // 创建ResizeObserver来监听容器尺寸变化，添加防抖
-    const resizeObserver = new ResizeObserver((entries) => {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => {
-        for (const entry of entries) {
-          const height = entry.contentRect.height;
-          if (height > 100) {
-            // 降低最小高度阈值
-            setContainerHeight(height);
-          }
-        }
-      }, 16); // 使用 requestAnimationFrame 的频率
+    // 创建ResizeObserver监听容器尺寸变化
+    const resizeObserver = new ResizeObserver(() => {
+      updateHeight();
     });
 
     resizeObserver.observe(container);
 
-    // 初始计算 - 延迟执行确保DOM已渲染
-    const calculateInitialHeight = () => {
-      const height = container.offsetHeight;
-      if (height > 100) {
-        // 降低最小高度阈值
-        setContainerHeight(height);
-      } else {
-        // 如果容器高度为0，尝试计算可用高度
-        const wrapper = container.closest('.tree-content-wrapper') as HTMLElement;
-        if (wrapper) {
-          const wrapperHeight = wrapper.offsetHeight;
-          if (wrapperHeight > 100) {
-            setContainerHeight(wrapperHeight);
-          }
-        }
-
-        // 尝试从Card body获取高度
-        const cardBody = container.closest('.ant-card-body') as HTMLElement;
-        if (cardBody) {
-          const availableHeight = cardBody.offsetHeight;
-          if (availableHeight > 100) {
-            setContainerHeight(availableHeight);
-          }
-        }
-
-        // Fallback: 使用父元素高度
-        const parentHeight = container.parentElement?.offsetHeight;
-        if (parentHeight && parentHeight > 100) {
-          setContainerHeight(parentHeight);
-        }
-      }
-    };
-
-    // 立即计算
-    calculateInitialHeight();
-
-    // 延迟再次计算，确保布局完成
-    const timer = setTimeout(calculateInitialHeight, 100);
-
-    // 再次延迟计算，确保所有布局都完成
-    const timer2 = setTimeout(calculateInitialHeight, 300);
+    // 初始计算高度，延迟确保DOM渲染完成
+    const timer = setTimeout(updateHeight, 100);
 
     return () => {
       resizeObserver.disconnect();
       clearTimeout(timer);
-      clearTimeout(timer2);
-      clearTimeout(resizeTimer);
     };
-  }, []); // 移除依赖，只在组件挂载时执行
+  }, []);
 
   // 动态计算节点高度，避免不同节点类型的高度不一致导致的滚动问题
   const getItemSize = useCallback(
@@ -444,7 +392,7 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
       }
       className={cx(styles.virtualizedSchemaTreeCard, collapsed ? styles.virtualizedSchemaTreeCardCollapsed : '')}
     >
-      <div className={styles.treeContentWrapper}>
+      <div ref={containerRef} className={styles.treeContentWrapper}>
         {(() => {
           // 首先检查loading状态
           if (loadingSchema) {
@@ -470,7 +418,7 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
           // 然后检查是否有有效数据
           if (databaseSchema && 'tables' in databaseSchema && databaseSchema.tables.length > 0) {
             return (
-              <div ref={containerRef} className={styles.virtualizedTreeContainer}>
+              <div className={styles.virtualizedTreeContainer}>
                 <List
                   ref={listRef}
                   height={containerHeight}
