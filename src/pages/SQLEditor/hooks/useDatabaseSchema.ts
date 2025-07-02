@@ -15,34 +15,31 @@ export const useDatabaseSchema = (initialSelectedSource?: string) => {
    * 获取数据库结构
    * @param sourceId 数据源ID
    */
-  const fetchDatabaseSchema = useCallback(
-    async (sourceId?: string) => {
-      const dataSourceId = sourceId ?? initialSelectedSource;
+  const fetchDatabaseSchema = useCallback(async (sourceId?: string) => {
+    const dataSourceId = sourceId ?? initialSelectedSource;
 
-      if (!dataSourceId) {
-        // 清空之前的schema
-        setDatabaseSchema(null);
-        return null;
-      }
+    if (!dataSourceId) {
+      // 清空之前的schema
+      setDatabaseSchema(null);
+      return null;
+    }
 
-      setLoadingSchema(true);
-      try {
-        const response = await getSchema(dataSourceId);
-        if (response) {
-          setDatabaseSchema(response);
-          return response;
-        }
-        return null;
-      } catch (error) {
-        console.error('获取数据库结构失败:', error);
-        message.error('获取数据库结构失败');
-        return null;
-      } finally {
-        setLoadingSchema(false);
+    setLoadingSchema(true);
+    try {
+      const response = await getSchema(dataSourceId);
+      if (response) {
+        setDatabaseSchema(response);
+        return response;
       }
-    },
-    [initialSelectedSource],
-  );
+      return null;
+    } catch (error) {
+      console.error('获取数据库结构失败:', error);
+      message.error('获取数据库结构失败');
+      return null;
+    } finally {
+      setLoadingSchema(false);
+    }
+  }, []); // 移除 initialSelectedSource 依赖，避免循环更新
 
   // 自动加载数据库结构
   useEffect(() => {
@@ -52,7 +49,7 @@ export const useDatabaseSchema = (initialSelectedSource?: string) => {
       // 如果没有选中数据源，清空schema
       setDatabaseSchema(null);
     }
-  }, [initialSelectedSource, fetchDatabaseSchema]);
+  }, [initialSelectedSource]); // 只依赖 initialSelectedSource，移除 fetchDatabaseSchema
 
   return {
     databaseSchema,

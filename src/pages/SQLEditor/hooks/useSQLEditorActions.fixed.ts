@@ -334,10 +334,26 @@ export const useSQLEditorActions = (editorState: SQLEditorState) => {
         console.warn('⚠️ SQL补全提供器注册失败:', error);
       }
 
-      // 这里不再添加内容变化监听，因为已经在QueryEditor组件中处理
-      // 移除可能导致重复监听和循环更新的代码
+      // 监听编辑器内容变化 - 使用防抖避免频繁更新
+      const model = editor.getModel();
+      if (model) {
+        const debouncedContentChange = debounce((content: string) => {
+          setSqlQuery(content);
+        }, 300);
+
+        const disposable = model.onDidChangeContent(() => {
+          const currentValue = model.getValue();
+          debouncedContentChange(currentValue);
+        });
+
+        // 清理函数
+        return () => {
+          disposable.dispose();
+          debouncedContentChange.cancel();
+        };
+      }
     },
-    [executeQuery, registerCompletionProvider], // 移除setSqlQuery依赖
+    [executeQuery, setSqlQuery, registerCompletionProvider],
   );
 
   // 清理补全提供器

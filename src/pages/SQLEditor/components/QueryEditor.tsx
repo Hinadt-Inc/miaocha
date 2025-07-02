@@ -169,15 +169,20 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
 
         editorRef.current = editor;
 
-        // 监听内容变化 - 添加防抖处理
+        // 监听内容变化 - 添加防抖处理并避免循环更新
         let changeTimeout: NodeJS.Timeout;
 
         const handleContentChange = () => {
+          // 如果是程序更新内容，跳过onChange回调
+          if (isUpdatingFromState.current) {
+            return;
+          }
+
           if (changeTimeout) {
             clearTimeout(changeTimeout);
           }
           changeTimeout = setTimeout(() => {
-            if (isMounted && editorRef.current) {
+            if (isMounted && editorRef.current && !isUpdatingFromState.current) {
               try {
                 const value = editor.getValue();
                 onChange(value);
@@ -256,10 +261,17 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
     };
   }, [isCollapsed, monacoInitialized]); // 添加monacoInitialized依赖
 
-  // 更新编辑器内容
+  // 更新编辑器内容 - 使用标志位避免循环更新
+  const isUpdatingFromState = useRef(false);
+
   useEffect(() => {
-    if (editorRef.current && editorRef.current.getValue() !== sqlQuery) {
+    if (editorRef.current && editorRef.current.getValue() !== sqlQuery && !isUpdatingFromState.current) {
+      isUpdatingFromState.current = true;
       editorRef.current.setValue(sqlQuery);
+      // 延迟重置标志位，确保内容变化事件处理完成
+      setTimeout(() => {
+        isUpdatingFromState.current = false;
+      }, 50);
     }
   }, [sqlQuery]);
 
