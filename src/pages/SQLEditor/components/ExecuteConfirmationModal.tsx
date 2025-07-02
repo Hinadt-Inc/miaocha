@@ -4,6 +4,7 @@ import { PlayCircleOutlined } from '@ant-design/icons';
 import * as monaco from 'monaco-editor';
 
 import { initMonacoEditorLocally } from '../utils/monacoLocalInit';
+import styles from './ExecuteConfirmationModal.module.less';
 
 interface ExecuteConfirmationModalProps {
   visible: boolean;
@@ -222,13 +223,17 @@ const ExecuteConfirmationModal: React.FC<ExecuteConfirmationModalProps> = ({
         </Space>
       }
     >
-      {readonly && <Alert message="此模块已有SQL语句，无法编辑" type="info" style={{ marginBottom: 16 }} showIcon />}
-      <div ref={containerRef} className="execute-modal-editor-container" />
-      {editorLoading && (
-        <div className="execute-modal-loading">
-          <div>正在加载编辑器...</div>
-        </div>
+      {readonly && (
+        <Alert message="此模块已有SQL语句，无法编辑" type="info" className={styles.readonlyAlert} showIcon />
       )}
+      <div className={styles.editorWrapper}>
+        <div ref={containerRef} className={styles.executeModalEditorContainer} />
+        {editorLoading && (
+          <div className={styles.executeModalLoading}>
+            <div>正在加载编辑器...</div>
+          </div>
+        )}
+      </div>
     </Modal>
   );
 };
