@@ -77,7 +77,7 @@ class LogSearchTemplateTest {
     void testExecute_NormalFlow_CallsAllStepsInOrder() throws Exception {
         // Arrange
         LogDetailResultDTO expectedResult = new LogDetailResultDTO();
-        expectedResult.setTotalCount(100);
+        expectedResult.setTotalCount(100L);
 
         doNothing().when(timeRangeProcessor).processTimeRange(testDto);
         when(dtoConverter.convert(testDto)).thenReturn(convertedDto);
@@ -92,7 +92,7 @@ class LogSearchTemplateTest {
 
         // Assert
         assertNotNull(result);
-        assertEquals(100, result.getTotalCount());
+        assertEquals(100L, result.getTotalCount());
         assertTrue(result.getExecutionTimeMs() >= 0);
 
         // 验证执行顺序和SearchContext参数
@@ -316,7 +316,7 @@ class LogSearchTemplateTest {
     void testExecute_ExecutionTimeCalculation() throws Exception {
         // Arrange
         LogDetailResultDTO expectedResult = new LogDetailResultDTO();
-        expectedResult.setTotalCount(25);
+        expectedResult.setTotalCount(25L);
 
         doNothing().when(timeRangeProcessor).processTimeRange(testDto);
         when(dtoConverter.convert(testDto)).thenReturn(convertedDto);
@@ -333,7 +333,7 @@ class LogSearchTemplateTest {
 
         // Assert
         assertNotNull(result);
-        assertEquals(25, result.getTotalCount());
+        assertEquals(25L, result.getTotalCount());
         assertTrue(result.getExecutionTimeMs() >= 0);
         assertTrue(result.getExecutionTimeMs() <= (endTime - startTime) + 100); // 允许100ms误差
     }

@@ -19,7 +19,7 @@ public class QueryResult {
     private List<Map<String, Object>> rows;
 
     /** 总行数（用于分页） */
-    private Integer totalCount;
+    private Long totalCount;
 
     /** 是否有数据 */
     public boolean hasData() {

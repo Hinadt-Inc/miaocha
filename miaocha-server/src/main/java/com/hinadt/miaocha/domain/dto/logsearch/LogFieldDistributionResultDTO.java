@@ -19,7 +19,7 @@ public class LogFieldDistributionResultDTO extends LogSearchResultDTO {
     private Integer sampleSize = FieldDistributionSqlBuilder.SAMPLE_SIZE;
 
     @Schema(description = "实际采样条数：实际参与统计的数据条数", example = "1000")
-    private Integer actualSampleCount;
+    private Long actualSampleCount;
 
     @Schema(description = "是否为采样统计：true表示基于采样数据统计，false表示全量数据统计", example = "true")
     private Boolean isSampledStatistics = true;

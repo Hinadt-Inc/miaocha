@@ -101,7 +101,7 @@ class LogSqlBuilderTest {
             // Assert - 验证完整的SQL结构
             String expectedSql =
                     "SELECT FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(log_time) / 300) * 300) AS"
-                            + " log_time_, COUNT(1) AS count FROM test_logs WHERE log_time >="
+                            + " log_time_, COUNT(*) AS count FROM test_logs WHERE log_time >="
                             + " '2024-01-01 00:00:00.000' AND log_time < '2024-01-01 01:00:00.000'"
                             + " GROUP BY FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(log_time) / 300) * 300)"
                             + " ORDER BY log_time_ ASC";
@@ -133,7 +133,7 @@ class LogSqlBuilderTest {
             // Assert - 验证完整的SQL结构，确保使用默认时间字段
             String expectedSql =
                     "SELECT FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(log_time) / 3600) * 3600) AS"
-                        + " log_time_, COUNT(1) AS count FROM test_logs WHERE log_time >="
+                        + " log_time_, COUNT(*) AS count FROM test_logs WHERE log_time >="
                         + " '2024-01-01 00:00:00.000' AND log_time < '2024-01-01 01:00:00.000'"
                         + " GROUP BY FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(log_time) / 3600) * 3600)"
                         + " ORDER BY log_time_ ASC";
@@ -200,7 +200,7 @@ class LogSqlBuilderTest {
 
             // Assert - 验证完整的SQL结构
             String expectedSql =
-                    "SELECT COUNT(1) AS total FROM test_logs WHERE log_time >= '2024-01-01"
+                    "SELECT COUNT(*) AS total FROM test_logs WHERE log_time >= '2024-01-01"
                             + " 00:00:00.000' AND log_time < '2024-01-01 01:00:00.000'";
 
             assertNotNull(result, "SQL不应为null");
@@ -403,7 +403,7 @@ class LogSqlBuilderTest {
             // Assert - 验证完整的SQL结构
             String expectedSql =
                     "SELECT FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(log_time) / 7200) * 7200) AS"
-                        + " log_time_, COUNT(1) AS count FROM test_logs WHERE log_time >="
+                        + " log_time_, COUNT(*) AS count FROM test_logs WHERE log_time >="
                         + " '2024-01-01 00:00:00.000' AND log_time < '2024-01-01 01:00:00.000' AND"
                         + " (request['headers']['authorization'] IS NOT NULL AND"
                         + " response['data']['user']['id'] = '12345') GROUP BY"

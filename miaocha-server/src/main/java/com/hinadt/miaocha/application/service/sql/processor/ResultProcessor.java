@@ -80,15 +80,15 @@ public class ResultProcessor {
      * @param queryResult 结构化查询结果
      * @return 总数值
      */
-    public int processTotalCountResult(QueryResult queryResult) {
-        int totalCount = 0;
+    public long processTotalCountResult(QueryResult queryResult) {
+        long totalCount = 0L;
 
         if (queryResult != null && queryResult.hasData()) {
             Map<String, Object> firstRow = queryResult.getFirstRow();
             if (firstRow.containsKey(TOTAL_ALIAS)) {
                 Object totalObj = firstRow.get(TOTAL_ALIAS);
                 if (totalObj instanceof Number) {
-                    totalCount = ((Number) totalObj).intValue();
+                    totalCount = ((Number) totalObj).longValue();
                 }
             }
         }
@@ -109,7 +109,7 @@ public class ResultProcessor {
             List<String> originalFields) {
 
         // 1. 获取真实的采样总数
-        int actualSampleCount = processTotalCountResult(queryResult);
+        long actualSampleCount = processTotalCountResult(queryResult);
         result.setActualSampleCount(actualSampleCount);
 
         // 2. 处理字段分布数据
@@ -235,7 +235,7 @@ public class ResultProcessor {
      * @return 值分布列表
      */
     private List<FieldDistributionDTO.ValueDistribution> parseTopnJson(
-            String jsonValue, Integer sampleSize) {
+            String jsonValue, Long sampleSize) {
         List<FieldDistributionDTO.ValueDistribution> result = new ArrayList<>();
 
         if (jsonValue == null || jsonValue.trim().isEmpty()) {

@@ -92,7 +92,7 @@ class LogSearchServiceImplTest {
     void testSearchDetails_Success() {
         // Arrange
         LogDetailResultDTO expectedResult = new LogDetailResultDTO();
-        expectedResult.setTotalCount(100);
+        expectedResult.setTotalCount(100L);
 
         doNothing().when(validator).validatePaginationParams(testDto);
         doNothing().when(validator).validateSortFields(testDto);

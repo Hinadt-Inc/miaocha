@@ -19,5 +19,5 @@ public class LogDetailResultDTO extends LogSearchResultDTO {
     private List<Map<String, Object>> rows;
 
     @Schema(description = "日志总数")
-    private Integer totalCount;
+    private Long totalCount;
 }

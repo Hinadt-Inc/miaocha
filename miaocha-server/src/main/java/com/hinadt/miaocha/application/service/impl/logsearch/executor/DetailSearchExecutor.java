@@ -69,7 +69,7 @@ public class DetailSearchExecutor extends BaseSearchExecutor
             QueryResult countQueryResult = countFuture.get();
 
             resultProcessor.processDetailResult(detailQueryResult, result);
-            int totalCount = resultProcessor.processTotalCountResult(countQueryResult);
+            long totalCount = resultProcessor.processTotalCountResult(countQueryResult);
             result.setTotalCount(totalCount);
 
             return result;

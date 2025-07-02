@@ -1593,7 +1593,8 @@ public class LogSearchIntegrationTest {
             // 如果有数据，验证数据的完整性
             if (result.getTotalCount() > 0) {
                 assertThat(result.getRows()).isNotEmpty();
-                assertThat(result.getRows().size()).isLessThanOrEqualTo(result.getTotalCount());
+                assertThat((long) result.getRows().size())
+                        .isLessThanOrEqualTo(result.getTotalCount());
 
                 // 验证每行数据都不为空
                 result.getRows()

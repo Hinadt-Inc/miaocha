@@ -93,23 +93,18 @@ public class SqlFragment {
 
     /** 获取时间间隔的秒数 - 包访问权限便于测试 */
     static int getIntervalInSeconds(String timeUnit, int intervalValue) {
-        switch (timeUnit) {
-            case "second":
-                return intervalValue;
-            case "minute":
-                return intervalValue * 60;
-            case "hour":
-                return intervalValue * 3600;
-            case "day":
-                return intervalValue * 86400;
-            default:
-                throw new IllegalArgumentException("不支持的时间单位: " + timeUnit);
-        }
+        return switch (timeUnit) {
+            case "second" -> intervalValue;
+            case "minute" -> intervalValue * 60;
+            case "hour" -> intervalValue * 3600;
+            case "day" -> intervalValue * 86400;
+            default -> throw new IllegalArgumentException("不支持的时间单位: " + timeUnit);
+        };
     }
 
     /** 构建统计查询的SELECT子句 */
     public static String selectCount() {
-        return "SELECT COUNT(1) AS " + TOTAL_ALIAS;
+        return "SELECT COUNT(*) AS " + TOTAL_ALIAS;
     }
 
     /** 构建子查询的SELECT子句 */
