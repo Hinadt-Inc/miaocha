@@ -17,7 +17,6 @@ interface IProps {
   sqls?: string[]; // SQL语句列表
   onSearch?: (params: ILogSearchParams) => void; // 搜索回调函数
   moduleQueryConfig?: any; // 模块查询配置
-  selectedQueryConfigs?: any[]; // 选中的查询配置列表
 }
 
 interface ColumnHeaderProps {
@@ -130,7 +129,6 @@ const VirtualTable = (props: IProps) => {
     sqls,
     onSearch,
     moduleQueryConfig,
-    selectedQueryConfigs,
   } = props;
   const containerRef = useRef<HTMLDivElement>(null);
   const tblRef: Parameters<typeof Table>[0]['ref'] = useRef(null);
@@ -182,10 +180,8 @@ const VirtualTable = (props: IProps) => {
   }, [sqls]);
 
   const keyWordsFormat = useMemo(() => {
-    // 从selectedQueryConfigs中提取searchValue
-    const keywords = (selectedQueryConfigs || [])
-      .map((config: any) => config.searchValue)
-      .filter((value: string) => value && value.trim().length > 0);
+    // 从searchParams.keywords中获取关键词
+    const keywords = searchParams.keywords || [];
 
     if (!keywords || keywords.length === 0) return [];
 
@@ -227,7 +223,7 @@ const VirtualTable = (props: IProps) => {
       .filter((keyword: string) => keyword.length > 0);
 
     return Array.from(new Set(allKeywords));
-  }, [selectedQueryConfigs]);
+  }, [searchParams.keywords]);
 
   const handleResize = (index: number) => (width: number) => {
     const column = columns[index];

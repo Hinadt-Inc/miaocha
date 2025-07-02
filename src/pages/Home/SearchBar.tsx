@@ -1,12 +1,10 @@
 import { useState, useMemo, useEffect, Suspense, lazy, forwardRef, useImperativeHandle, useRef } from 'react';
-import { AutoComplete, Button, Space, Tag, Popover, Statistic, Tooltip, Select, message } from 'antd';
+import { AutoComplete, Button, Space, Tag, Popover, Statistic, Tooltip, message } from 'antd';
 import CountUp from 'react-countup';
 import SpinIndicator from '@/components/SpinIndicator';
 import styles from './SearchBar.module.less';
 import { QUICK_RANGES, TIME_GROUP, getLatestTime, DATE_FORMAT_THOUSOND } from './utils';
 import dayjs from 'dayjs';
-import { useRequest } from 'ahooks';
-import * as modulesApi from '@/api/modules';
 const TimePicker = lazy(() => import('./TimePicker.tsx'));
 
 interface IProps {
@@ -20,11 +18,7 @@ interface IProps {
   getDistributionWithSearchBar?: () => void; // 获取字段分布回调函数
   selectedModule?: string; // 当前选中的模块
   moduleQueryConfig?: any; // 模块查询配置
-  onQueryConfigChange?: (selectedConfig: string | undefined, queryConfigs: any[], res?: any) => void; // 查询配置变化回调函数
-  onSelectedQueryConfigsChange?: (selectedQueryConfigs: any[]) => void; // 选中的查询配置列表变化回调函数
 }
-
-const SEARCH_METHODS_OPTIONS = ['LIKE', 'MATCH_ALL', 'MATCH_ANY', 'MATCH_PHRASE'];
 
 const SearchBar = forwardRef((props: IProps, ref) => {
   const searchBarRef = useRef<HTMLDivElement>(null);
@@ -39,14 +33,13 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     getDistributionWithSearchBar,
     selectedModule,
     moduleQueryConfig,
-    onQueryConfigChange,
-    onSelectedQueryConfigsChange,
   } = props;
   const [messageApi, contextHolder] = message.useMessage();
 
   const [timeGroup, setTimeGroup] = useState<string>('auto'); // 时间分组
   const [activeTab, setActiveTab] = useState('quick'); // 选项卡值
-  const [keyword, setKeyword] = useState<string>(''); // 关键词
+  const [keywords, setKeywords] = useState<string[]>([]); // 关键词列表
+  const [keyword, setKeyword] = useState<string>(''); // 当前输入的关键词
   const [keywordHistory, setKeywordHistory] = useState<string[]>(() => {
     const saved = localStorage.getItem('keywordHistory');
     return saved ? JSON.parse(saved) : [];
@@ -63,66 +56,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   // 添加查询条件恢复功能
   const [initialized, setInitialized] = useState(false);
 
-  // 查询配置相关状态
-  const [queryConfigs, setQueryConfigs] = useState<any[]>([]);
-  const [selectedQueryConfigs, setSelectedQueryConfigs] = useState<any[]>([]); // 选中的查询配置列表
-  const [selectedFieldNames, setSelectedFieldNames] = useState<string[]>([]); // 选中的字段名列表（多选）
-  const [originalKeywordFields, setOriginalKeywordFields] = useState<any[]>([]); // 保存原始的keywordFields数据
-
-  // 获取模块查询配置
-  const getQueryConfig = useRequest(modulesApi.getModuleQueryConfig, {
-    manual: true,
-    onSuccess: (res) => {
-      if (res && res.keywordFields) {
-        // 保存原始的keywordFields数据
-        setOriginalKeywordFields(res.keywordFields);
-
-        // 重新组织数据结构，按fieldName分组
-        const fieldMap = new Map();
-        res.keywordFields.forEach((field: any) => {
-          if (!fieldMap.has(field.fieldName)) {
-            fieldMap.set(field.fieldName, []);
-          }
-          fieldMap.get(field.fieldName).push(field.searchMethod);
-        });
-
-        // 生成字段选项
-        const fieldOptions = Array.from(fieldMap.keys()).map((fieldName) => ({
-          value: fieldName,
-          label: fieldName,
-          searchMethods: fieldMap.get(fieldName),
-        }));
-
-        setQueryConfigs(fieldOptions);
-
-        // 重置选中状态
-        setSelectedFieldNames([]);
-
-        // 通知父组件查询配置已更新，传递完整的配置包括timeField
-        if (onQueryConfigChange) {
-          onQueryConfigChange(undefined, fieldOptions, res);
-        }
-      } else {
-        setOriginalKeywordFields([]);
-        setQueryConfigs([]);
-        setSelectedFieldNames([]);
-        // 通知父组件查询配置已清空
-        if (onQueryConfigChange) {
-          onQueryConfigChange(undefined, [], null);
-        }
-      }
-    },
-    onError: () => {
-      setOriginalKeywordFields([]);
-      setQueryConfigs([]);
-      setSelectedFieldNames([]);
-      // 通知父组件查询配置已清空
-      if (onQueryConfigChange) {
-        onQueryConfigChange(undefined, [], null);
-      }
-    },
-  });
-
   // 在组件初始化时恢复之前的查询条件
   useEffect(() => {
     if (!initialized) {
@@ -131,16 +64,14 @@ const SearchBar = forwardRef((props: IProps, ref) => {
         try {
           const params = JSON.parse(savedSearchParams);
 
-          // 关键词现在通过selectedQueryConfigs恢复，无需单独处理
+          // 恢复关键词
+          if (params.keywords && Array.isArray(params.keywords)) {
+            setKeywords(params.keywords);
+          }
 
           // 恢复SQL条件
           if (params.whereSqls && Array.isArray(params.whereSqls)) {
             setSqls(params.whereSqls);
-          }
-
-          // 恢复查询配置
-          if (params.selectedQueryConfigs && Array.isArray(params.selectedQueryConfigs)) {
-            setSelectedQueryConfigs(params.selectedQueryConfigs);
           }
 
           // 恢复时间分组
@@ -165,24 +96,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       setInitialized(true);
     }
   }, [initialized]);
-
-  // 当selectedModule变化时，获取查询配置
-  useEffect(() => {
-    if (selectedModule) {
-      getQueryConfig.run(selectedModule);
-    } else {
-      setQueryConfigs([]);
-      // setSelectedQueryConfig(undefined);
-      // setSelectedQueryConfigs([]); // 清空选中的查询配置
-    }
-  }, [selectedModule]);
-
-  // 当selectedQueryConfigs变化时，通知父组件
-  useEffect(() => {
-    if (onSelectedQueryConfigsChange) {
-      onSelectedQueryConfigsChange(selectedQueryConfigs);
-    }
-  }, [selectedQueryConfigs, onSelectedQueryConfigsChange]);
 
   // 暴露给父组件的方法
   useImperativeHandle(ref, () => ({
@@ -214,7 +127,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   const [openTimeRange, setOpenTimeRange] = useState<boolean>(false); // 显隐浮层
   const [openTimeGroup, setOpenTimeGroup] = useState<boolean>(false); // 显隐浮层-时间分组
 
-  // 处理搜索输入变化
+  // 处理关键词输入变化
   const changeKeyword = (value: string) => {
     setKeyword(value || '');
   };
@@ -222,12 +135,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   // 处理sql输入变化
   const changeSql = (value: string) => {
     setSql(value || '');
-  };
-
-  // 处理字段名选择变化（多选）
-  const changeFieldNames = (values: string[]) => {
-    setSelectedFieldNames(values || []);
-    setKeyword(''); // 清除关键词搜索
   };
 
   const handleTimeFromTag = () => {
@@ -241,29 +148,29 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
   };
 
-  // 显示关键字、sql、查询配置、时间的标签
+  // 处理删除关键词
+  const handleCloseKeyword = (item: string) => {
+    setKeywords((prev) => prev.filter((keyword) => keyword !== item));
+    const latestTime = getLatestTime(timeOption);
+    setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
+  };
+
+  // 显示关键词、sql、时间的标签
   const filterRender = useMemo(() => {
     const { range = [] } = timeOption;
     return (
       <div className={styles.filter}>
         <Space wrap>
-          {selectedQueryConfigs.map((item: any) => (
-            <Tooltip placement="topLeft" title={`${item.fieldName}：${item.searchValue || ''}`}>
+          {keywords.map((item: string) => (
+            <Tooltip placement="topLeft" title={item}>
               <Tag
-                key={item.value}
+                key={item}
                 color="orange"
                 closable
-                onClick={() => {
-                  // 解析fieldName，支持多字段格式：fieldName1||fieldName2||fieldName3
-                  const fieldNames = item.fieldName.includes('||')
-                    ? item.fieldName.split('||').map((name: string) => name.trim())
-                    : [item.fieldName];
-                  setSelectedFieldNames(fieldNames);
-                  setKeyword(item.searchValue || '');
-                }}
-                onClose={() => handleCloseQueryConfig(item)}
+                onClick={() => setKeyword(item)}
+                onClose={() => handleCloseKeyword(item)}
               >
-                <span className="tagContent">{item.label}</span>
+                <span className="tagContent">{item}</span>
               </Tag>
             </Tooltip>
           ))}
@@ -289,9 +196,9 @@ const SearchBar = forwardRef((props: IProps, ref) => {
         </Space>
       </div>
     );
-  }, [sqls, selectedQueryConfigs, timeOption]);
+  }, [sqls, keywords, timeOption]);
 
-  // 当sqls、查询配置或时间变化时触发搜索
+  // 当关键词、sqls或时间变化时触发搜索
   useEffect(() => {
     // 只有在组件初始化完成后才执行搜索和保存逻辑
     if (!initialized) return;
@@ -300,6 +207,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     const _fields = activeColumns?.length === 1 && activeColumns[0] === timeField ? [] : activeColumns || [];
     const params = {
       ...searchParams,
+      ...(keywords.length > 0 && { keywords }),
       ...(sqls.length > 0 && { whereSqls: sqls }),
       startTime: dayjs(timeOption?.range?.[0]).format(DATE_FORMAT_THOUSOND),
       endTime: dayjs(timeOption?.range?.[1]).format(DATE_FORMAT_THOUSOND),
@@ -308,6 +216,9 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       offset: 0,
       fields: _fields,
     };
+    if (keywords.length === 0) {
+      delete params.keywords;
+    }
     if (sqls.length === 0) {
       delete params.whereSqls;
     }
@@ -315,13 +226,13 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     // 保存查询条件到本地存储
     try {
       const searchParamsToSave = {
+        keywords: keywords || [],
         whereSqls: params.whereSqls || [],
         startTime: params.startTime,
         endTime: params.endTime,
         timeRange: params.timeRange,
         timeGrouping: params.timeGrouping,
         fields: params.fields,
-        selectedQueryConfigs: selectedQueryConfigs || [],
       };
       localStorage.setItem('searchBarParams', JSON.stringify(searchParamsToSave));
     } catch (error) {
@@ -339,33 +250,27 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     if (getDistributionWithSearchBar) {
       getDistributionWithSearchBar();
     }
-  }, [sqls, selectedQueryConfigs, timeOption, timeGroup, activeColumns, onSqlsChange, initialized]);
+  }, [keywords, sqls, timeOption, timeGroup, activeColumns, onSqlsChange, initialized]);
 
-  // 处理关键词搜索
+  // 处理关键词和SQL搜索
   const handleSubmit = () => {
     const keywordTrim = String(keyword || '')?.trim();
+    const sqlTrim = String(sql || '')?.trim();
 
-    // 校验：如果选择了字段或输入了关键词中的任意一个，则另一个也是必填项
-    if (selectedFieldNames.length > 0 && !keywordTrim) {
-      messageApi.warning('请输入关键词搜索内容');
-      return;
-    }
-    if (keywordTrim && selectedFieldNames.length === 0) {
-      messageApi.warning('请选择搜索字段');
-      return;
-    }
-
-    // 保存搜索历史
+    // 保存关键词搜索历史
     if (keywordTrim) {
       if (!keywordHistory.includes(keywordTrim)) {
         const newHistory = [keywordTrim, ...keywordHistory].slice(0, 10);
         setKeywordHistory(newHistory);
         localStorage.setItem('keywordHistory', JSON.stringify(newHistory));
       }
+      // 添加到关键词列表
+      if (!keywords.includes(keywordTrim)) {
+        setKeywords((prev) => [...prev, keywordTrim]);
+      }
     }
 
     // 保存SQL历史
-    const sqlTrim = String(sql || '')?.trim();
     if (sqlTrim) {
       if (!sqlHistory.includes(sqlTrim)) {
         const newHistory = [sqlTrim, ...sqlHistory].slice(0, 10);
@@ -377,41 +282,9 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       }
     }
 
-    // 如果选择了字段名，添加到列表中
-    if (selectedFieldNames.length > 0) {
-      // 将多个字段名用||连接
-      const fieldName = selectedFieldNames.join('||');
-      const searchValue = keywordTrim || ''; // 使用关键词作为搜索值
-      const newConfig = {
-        value: `${fieldName}_${searchValue}`,
-        label: `${fieldName}：${searchValue}`,
-        fieldName: fieldName,
-        searchValue: searchValue,
-      };
-      if (!selectedQueryConfigs.some((config) => config.value === newConfig.value)) {
-        setSelectedQueryConfigs((prev) => [...prev, newConfig]);
-      }
-    } else if (keywordTrim) {
-      // 如果只输入了关键词而没有选择字段，使用默认字段（message或第一个文本字段）
-      const defaultField =
-        (columns || []).find((col) => col.columnName === 'message' || col.columnName === 'msg')?.columnName ||
-        'message';
-
-      const newConfig = {
-        value: `${defaultField}_${keywordTrim}`,
-        label: `${defaultField}：${keywordTrim}`,
-        fieldName: defaultField,
-        searchValue: keywordTrim,
-      };
-      if (!selectedQueryConfigs.some((config) => config.value === newConfig.value)) {
-        setSelectedQueryConfigs((prev) => [...prev, newConfig]);
-      }
-    }
-
     // 清空输入框
     setKeyword('');
     setSql('');
-    setSelectedFieldNames([]);
 
     const latestTime = getLatestTime(timeOption);
     setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
@@ -540,43 +413,11 @@ const SearchBar = forwardRef((props: IProps, ref) => {
                 </>
               ),
             })),
-            // 查询历史，暂时去掉
-            // ...sqlHistory.map((item: string) => ({
-            //   value: item,
-            //   label: item,
-            // })),
           ]}
         />
       </Space.Compact>
     );
   }, [sql, sqlHistory, columns]);
-
-  // 处理删除查询配置
-  const handleCloseQueryConfig = (item: any) => {
-    setSelectedQueryConfigs((prev) => prev.filter((config) => config.value !== item.value));
-    const latestTime = getLatestTime(timeOption);
-    setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
-  };
-
-  // 渲染字段名下拉框（多选）
-  const fieldNameRender = useMemo(() => {
-    return (
-      <Select
-        mode="multiple"
-        allowClear
-        showSearch
-        placeholder="选择字段"
-        style={{ width: '100%' }}
-        value={selectedFieldNames}
-        onChange={changeFieldNames}
-        loading={getQueryConfig.loading}
-        options={queryConfigs}
-        disabled={!selectedModule || queryConfigs.length === 0}
-        maxTagCount="responsive"
-        maxTagTextLength={10}
-      />
-    );
-  }, [selectedFieldNames, queryConfigs, getQueryConfig.loading, selectedModule]);
 
   const changeTimeGroup = (text: string) => {
     const latestTime = getLatestTime(timeOption);
@@ -623,7 +464,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
         </div>
       </div>
       <div className={styles.form}>
-        <div className={styles.item}>{fieldNameRender}</div>
         <div className={styles.item}>{keywordRender}</div>
         <div className={styles.item}>{sqlRender}</div>
         <div className={styles.item}>

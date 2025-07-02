@@ -16,7 +16,6 @@ interface IProps {
   onActiveColumnsChange?: (activeColumns: string[]) => void; // 激活字段变化回调函数
   onSelectedModuleChange?: (selectedModule: string, datasourceId?: number) => void; // 选中模块变化回调函数
   moduleQueryConfig?: any; // 模块查询配置
-  selectedQueryConfigs?: any[]; // 选中的查询配置列表
 }
 
 // 简化的虚拟滚动组件
@@ -88,7 +87,6 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
     onActiveColumnsChange,
     onSelectedModuleChange,
     moduleQueryConfig,
-    selectedQueryConfigs,
   } = props;
   const [columns, setColumns] = useState<ILogColumnsResponse[]>([]); // 日志表字段
   const [selectedModule, setSelectedModule] = useState<string>(''); // 已选模块
@@ -126,17 +124,8 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
   // 获取指定字段的TOP5分布数据
   const queryDistribution = useRequest(
     async (params: ILogSearchParams & { signal?: AbortSignal }) => {
-      // 构造keywordConditions参数
-      const keywordConditions = (selectedQueryConfigs || []).map((config) => ({
-        fieldNames: config.fieldName.includes('||')
-          ? config.fieldName.split('||').map((name: string) => name.trim())
-          : [config.fieldName],
-        searchValue: config.searchValue || '',
-      }));
-
       const requestParams: any = {
         ...params,
-        keywordConditions: keywordConditions,
       };
       delete requestParams?.datasourceId;
       // 传 signal 给 api

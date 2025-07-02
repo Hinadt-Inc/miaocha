@@ -51,7 +51,10 @@ declare global {
      * 模块名称
      */
     module: string | null;
-
+    /**
+     * 关键词列表
+     */
+    keywords?: string[];
     /**
      * 自定义SQL条件列表
      */
