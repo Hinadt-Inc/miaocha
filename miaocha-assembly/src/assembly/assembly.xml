@@ -35,12 +35,11 @@
     <fileSets>
         <!-- Version file -->
         <fileSet>
-            <directory>src/main/resources</directory>
+            <directory>${project.build.outputDirectory}</directory>
             <outputDirectory>.</outputDirectory>
             <includes>
                 <include>version.txt</include>
             </includes>
-            <filtered>true</filtered>
         </fileSet>
 
         <!-- Configuration Files -->
@@ -48,10 +47,10 @@
             <directory>src/main/resources</directory>
             <outputDirectory>config</outputDirectory>
             <includes>
-                <include>version.txt</include>
                 <include>banner.txt</include>
             </includes>
             <excludes>
+                <exclude>version.txt</exclude>
                 <exclude>*.properties</exclude>
                 <exclude>*.yml</exclude>
                 <exclude>*.xml</exclude>

@@ -1,7 +1,7 @@
-import sql from 'k6/bin/k6/x/sql';
-import driver from 'k6/bin/k6/x/sql/driver/mysql';
-import {check, group} from 'k6/bin/k6';
-import {Rate, Counter, Trend} from 'k6/bin/k6/metrics';
+import sql from 'k6/x/sql';
+import driver from 'k6/x/sql/driver/mysql';
+import {check, group} from 'k6';
+import {Rate, Counter, Trend} from 'k6/metrics';
 
 // 自定义指标
 const errorRate = new Rate('errors');

@@ -9,6 +9,9 @@ spring:
     version: '@project.version@'
   profiles:
     active: '@spring.profiles.active@'
+  output:
+    ansi:
+      enabled: always
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://${DB_HOST:mysql}:${DB_PORT:3306}/${DB_NAME:log_manage_system}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
