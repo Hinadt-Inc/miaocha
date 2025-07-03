@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Form } from 'antd';
-import { createUser, updateUser, deleteUser, changeUserPassword } from '@/api/user';
+import { createUser, updateUser, deleteUser, changeUserPassword, changeMyPassword } from '@/api/user';
 import { batchAuthorizeModules } from '@/api/modules';
 import { useErrorContext, ErrorType } from '@/providers/ErrorProvider';
 import type { UserData } from '../components';
@@ -106,8 +106,18 @@ export const useUserActions = ({ setData, data, originalDataRef, moduleList, fet
     try {
       const values = await passwordForm.validateFields();
       if (selectedRecord) {
-        await changeUserPassword(selectedRecord.key, values.newPassword);
-        showSuccess(`用户 "${selectedRecord.nickname}" 密码修改成功`);
+        const isSuperAdmin = selectedRecord.role === 'SUPER_ADMIN';
+        if (isSuperAdmin) {
+          await changeMyPassword({
+            oldPassword: values.oldPassword,
+            newPassword: values.newPassword,
+          });
+        } else {
+          await changeUserPassword(selectedRecord.key, values.newPassword);
+        }
+        const userTitle = `用户 ${selectedRecord.nickname}`;
+        const usperAdminTips = `密码修改成功`;
+        showSuccess(isSuperAdmin ? usperAdminTips : `${userTitle} ${usperAdminTips}`);
         setIsPasswordModalVisible(false);
       }
     } catch (error) {
