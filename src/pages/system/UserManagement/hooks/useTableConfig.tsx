@@ -132,7 +132,7 @@ export const useTableConfig = ({ onEdit, onDelete, onChangePassword, onOpenModul
               授权
             </Button>
           )}
-          {!['SUPER_ADMIN'].includes(record.role) && (
+          {
             <>
               <Button type="link" onClick={() => onChangePassword(record)} style={{ padding: '0 8px' }}>
                 改密码
@@ -151,7 +151,7 @@ export const useTableConfig = ({ onEdit, onDelete, onChangePassword, onOpenModul
                 </Button>
               </Popconfirm>
             </>
-          )}
+          }
         </Space>
       ),
     },

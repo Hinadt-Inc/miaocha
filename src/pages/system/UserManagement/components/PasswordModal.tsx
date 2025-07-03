@@ -23,6 +23,11 @@ const PasswordModal: React.FC<PasswordModalProps> = ({ visible, selectedRecord, 
         <Form.Item label="用户名">
           <Input value={selectedRecord?.nickname || selectedRecord?.username} readOnly disabled />
         </Form.Item>
+        {selectedRecord?.role === 'SUPER_ADMIN' && (
+          <Form.Item label="旧密码" name="oldPassword" rules={[{ required: true, message: '请输入旧密码' }]}>
+            <Input.Password />
+          </Form.Item>
+        )}
         <Form.Item
           name="newPassword"
           label="新密码"
