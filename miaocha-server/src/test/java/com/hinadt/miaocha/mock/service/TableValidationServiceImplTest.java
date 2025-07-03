@@ -735,6 +735,24 @@ class TableValidationServiceImplTest {
         }
 
         @Test
+        @DisplayName("LIMIT处理 - 以分号结尾的LIMIT保持不变")
+        void testProcessSqlWithLimit_ExistingValidLimitWithSemicolon() {
+            String sqlWithLimit = "SELECT *, EXPREC(host) FROM log_table_xunxin_variant LIMIT 10 ;";
+            String result = tableValidationService.processSqlWithLimit(sqlWithLimit);
+
+            assertEquals(sqlWithLimit, result, "以分号结尾的合法LIMIT应该保持不变: " + result);
+        }
+
+        @Test
+        @DisplayName("LIMIT处理 - 以分号结尾的LIMIT OFFSET格式保持不变")
+        void testProcessSqlWithLimit_ExistingValidLimitOffsetWithSemicolon() {
+            String sqlWithLimit = "SELECT * FROM users LIMIT 10, 20;";
+            String result = tableValidationService.processSqlWithLimit(sqlWithLimit);
+
+            assertEquals(sqlWithLimit, result, "以分号结尾的合法LIMIT OFFSET应该保持不变: " + result);
+        }
+
+        @Test
         @DisplayName("LIMIT处理 - 超过最大LIMIT抛出异常")
         void testProcessSqlWithLimit_ExceedsMaxLimit() {
             String sqlWithLargeLimit = "SELECT * FROM users LIMIT 20000";

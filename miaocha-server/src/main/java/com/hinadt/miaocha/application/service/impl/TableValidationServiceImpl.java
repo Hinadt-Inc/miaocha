@@ -57,7 +57,8 @@ public class TableValidationServiceImpl implements TableValidationService {
 
     /** LIMIT 子句检测正则 */
     private static final Pattern LIMIT_PATTERN =
-            Pattern.compile("\\blimit\\s+\\d+(?:\\s*,\\s*\\d+)?\\s*$", Pattern.CASE_INSENSITIVE);
+            Pattern.compile(
+                    "\\blimit\\s+\\d+(?:\\s*,\\s*\\d+)?\\s*;?\\s*$", Pattern.CASE_INSENSITIVE);
 
     /** 默认查询限制条数 */
     private static final int DEFAULT_QUERY_LIMIT = 1000;
@@ -612,6 +613,11 @@ public class TableValidationServiceImpl implements TableValidationService {
     private int extractLimitValue(String limitClause) {
         // 移除LIMIT关键字，只保留数字部分
         String numbers = limitClause.replaceAll("\\blimit\\s+", "").trim();
+
+        // 移除末尾的分号（如果有）
+        if (numbers.endsWith(";")) {
+            numbers = numbers.substring(0, numbers.length() - 1).trim();
+        }
 
         // 处理LIMIT X, Y格式
         if (numbers.contains(",")) {

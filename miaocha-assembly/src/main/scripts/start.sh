@@ -21,8 +21,8 @@ fi
 # 显示欢迎标题
 show_header
 
-# 默认环境
-ACTIVE_PROFILE="dev"
+# 默认环境 (优先使用环境变量 SPRING_PROFILES_ACTIVE)
+ACTIVE_PROFILE=${SPRING_PROFILES_ACTIVE:-dev}
 
 # 解析命令行参数
 while [[ $# -gt 0 ]]; do
