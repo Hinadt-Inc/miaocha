@@ -13,6 +13,7 @@ import com.hinadt.miaocha.config.security.JwtUtils;
 import com.hinadt.miaocha.domain.converter.UserConverter;
 import com.hinadt.miaocha.domain.dto.auth.LoginRequestDTO;
 import com.hinadt.miaocha.domain.dto.auth.LoginResponseDTO;
+import com.hinadt.miaocha.domain.dto.user.AdminUpdatePasswordDTO;
 import com.hinadt.miaocha.domain.dto.user.UpdatePasswordDTO;
 import com.hinadt.miaocha.domain.dto.user.UserCreateDTO;
 import com.hinadt.miaocha.domain.dto.user.UserDTO;
@@ -56,6 +57,7 @@ public class UserServiceTest {
     private UserUpdateDTO updateDTO;
     private LoginRequestDTO loginRequestDTO;
     private UpdatePasswordDTO updatePasswordDTO;
+    private AdminUpdatePasswordDTO adminUpdatePasswordDTO;
 
     @BeforeEach
     void setUp() {
@@ -98,6 +100,10 @@ public class UserServiceTest {
         updatePasswordDTO = new UpdatePasswordDTO();
         updatePasswordDTO.setOldPassword("old_password");
         updatePasswordDTO.setNewPassword("new_password");
+
+        // 准备管理员更新密码DTO
+        adminUpdatePasswordDTO = new AdminUpdatePasswordDTO();
+        adminUpdatePasswordDTO.setPassword("new_password");
     }
 
     @Test
@@ -616,5 +622,35 @@ public class UserServiceTest {
         dto.setRole(testUser.getRole());
         dto.setStatus(testUser.getStatus());
         return dto;
+    }
+
+    @Test
+    @DisplayName("管理员试图修改其他管理员密码失败")
+    void testUpdatePasswordByAdmin_AdminUpdateAdminFailed() {
+        // 准备管理员用户
+        UserDTO adminUser = new UserDTO();
+        adminUser.setId(2L);
+        adminUser.setRole(UserRole.ADMIN.name());
+
+        // 准备目标用户（管理员）
+        User targetUser = createTestUser();
+        targetUser.setRole(UserRole.ADMIN.name());
+
+        // 设置mock行为
+        when(userMapper.selectById(1L)).thenReturn(targetUser);
+
+        // 执行测试并验证异常
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> {
+                            userService.updatePasswordByAdmin(
+                                    1L, adminUpdatePasswordDTO, adminUser);
+                        });
+
+        assertEquals(ErrorCode.PERMISSION_DENIED, exception.getErrorCode());
+        assertEquals("管理员不能修改其他管理员的密码", exception.getMessage());
+        verify(userMapper).selectById(1L);
+        verify(userMapper, never()).updatePassword(anyLong(), anyString());
     }
 }

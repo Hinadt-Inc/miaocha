@@ -117,8 +117,9 @@ public class UserEndpoint {
     public ApiResponse<Void> updatePassword(
             @Parameter(description = "用户ID", required = true) @PathVariable("id") Long id,
             @Parameter(description = "密码更新信息", required = true) @Valid @RequestBody
-                    AdminUpdatePasswordDTO adminUpdatePasswordDTO) {
-        userService.updatePasswordByAdmin(id, adminUpdatePasswordDTO);
+                    AdminUpdatePasswordDTO adminUpdatePasswordDTO,
+            @CurrentUser UserDTO currentUser) {
+        userService.updatePasswordByAdmin(id, adminUpdatePasswordDTO, currentUser);
         return ApiResponse.success();
     }
 

@@ -97,8 +97,10 @@ public interface UserService {
      *
      * @param id 用户ID
      * @param adminUpdatePasswordDTO 管理员密码更新DTO
+     * @param currentUser 当前操作用户
      */
-    void updatePasswordByAdmin(Long id, AdminUpdatePasswordDTO adminUpdatePasswordDTO);
+    void updatePasswordByAdmin(
+            Long id, AdminUpdatePasswordDTO adminUpdatePasswordDTO, UserDTO currentUser);
 
     /**
      * 修改自己的密码

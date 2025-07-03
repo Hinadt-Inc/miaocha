@@ -252,8 +252,13 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public void updatePasswordByAdmin(Long id, AdminUpdatePasswordDTO adminUpdatePasswordDTO) {
-        User user = getUserEntityById(id);
+    public void updatePasswordByAdmin(
+            Long id, AdminUpdatePasswordDTO adminUpdatePasswordDTO, UserDTO currentUser) {
+        User targetUser = getUserEntityById(id);
+
+        // 权限验证
+        validatePasswordChangePermission(currentUser, targetUser);
+
         userMapper.updatePassword(id, passwordEncoder.encode(adminUpdatePasswordDTO.getPassword()));
     }
 
@@ -283,6 +288,39 @@ public class UserServiceImpl implements UserService {
      */
     private String generateUid() {
         return NanoIdUtils.randomNanoId();
+    }
+
+    /**
+     * 验证修改密码权限
+     *
+     * @param currentUser 当前操作用户
+     * @param targetUser 目标用户
+     */
+    private void validatePasswordChangePermission(UserDTO currentUser, User targetUser) {
+        String currentUserRole = currentUser.getRole();
+        String targetUserRole = targetUser.getRole();
+
+        // 超级管理员可以修改任何人的密码
+        if (UserRole.SUPER_ADMIN.name().equals(currentUserRole)) {
+            return;
+        }
+
+        // 管理员只能修改普通用户的密码，不能修改其他管理员和超级管理员的密码
+        if (UserRole.ADMIN.name().equals(currentUserRole)) {
+            if (UserRole.ADMIN.name().equals(targetUserRole)) {
+                throw new BusinessException(ErrorCode.PERMISSION_DENIED, "管理员不能修改其他管理员的密码");
+            }
+            if (UserRole.SUPER_ADMIN.name().equals(targetUserRole)) {
+                throw new BusinessException(ErrorCode.PERMISSION_DENIED, "管理员不能修改超级管理员的密码");
+            }
+            // 管理员可以修改普通用户的密码
+            if (UserRole.USER.name().equals(targetUserRole)) {
+                return;
+            }
+        }
+
+        // 普通用户不能修改任何人的密码
+        throw new BusinessException(ErrorCode.PERMISSION_DENIED, "您没有权限修改用户密码");
     }
 
     /**
