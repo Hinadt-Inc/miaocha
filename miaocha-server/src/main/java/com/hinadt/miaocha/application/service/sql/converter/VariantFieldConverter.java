@@ -5,13 +5,17 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 
 /**
- * Variant字段转换器 用于将点语法转换为Doris的括号语法，支持WHERE条件和SELECT字段
+ * Variant字段转换器
+ *
+ * <p>用于将点语法转换为Doris的括号语法，支持WHERE条件和SELECT字段
  *
  * <p>转换规则： - message.logId -> message['logId'] - message.marker.data -> message['marker']['data'] -
- * 支持多层嵌套，支持Unicode字符，正确处理引号内的内容
+ * 支持多层嵌套，支持Unicode字符，正确处理引号内的内容 - 根字段必须符合标识符规范，子字段可以以数字开头
  */
 @Component
 public class VariantFieldConverter {
+
+    // ==================== 公共接口方法 ====================
 
     /**
      * 转换WHERE条件中的点语法为括号语法
@@ -23,9 +27,108 @@ public class VariantFieldConverter {
         if (whereClause == null || whereClause.trim().isEmpty()) {
             return whereClause;
         }
-
         return convertDotSyntaxSafely(whereClause);
     }
+
+    /**
+     * 转换SELECT字段列表中的点语法为括号语法
+     *
+     * <p>⚠️ **重要：此方法必须严格保持输入与输出的顺序一致性！**
+     *
+     * @param fields 字段列表
+     * @return 转换后的字段列表（仅转换语法，不添加AS别名）
+     */
+    public List<String> convertSelectFields(List<String> fields) {
+        if (fields == null) {
+            return null;
+        }
+
+        if (fields.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<String> convertedFields = new ArrayList<>();
+        for (String field : fields) {
+            convertedFields.add(convertSingleField(field));
+        }
+        return convertedFields;
+    }
+
+    /**
+     * 转换TOPN函数中的字段
+     *
+     * @param field 字段名
+     * @return 转换后的字段名（仅转换，不添加别名）
+     */
+    public String convertTopnField(String field) {
+        return convertSingleField(field);
+    }
+
+    /**
+     * 批量转换WHERE条件列表
+     *
+     * @param whereClauses WHERE条件列表
+     * @return 转换后的WHERE条件列表
+     */
+    public List<String> convertWhereClauses(List<String> whereClauses) {
+        if (whereClauses == null || whereClauses.isEmpty()) {
+            return whereClauses;
+        }
+
+        List<String> convertedClauses = new ArrayList<>();
+        for (String clause : whereClauses) {
+            convertedClauses.add(convertWhereClause(clause));
+        }
+        return convertedClauses;
+    }
+
+    // ==================== 字段转换核心逻辑 ====================
+
+    /**
+     * 转换单个字段
+     *
+     * @param field 字段名
+     * @return 转换后的字段名
+     */
+    private String convertSingleField(String field) {
+        if (field == null || field.trim().isEmpty()) {
+            return field;
+        }
+
+        String trimmedField = field.trim();
+        if (needsVariantConversion(trimmedField)) {
+            return convertDotToBracketSyntax(trimmedField);
+        }
+        return field;
+    }
+
+    /**
+     * 将点语法转换为括号语法
+     *
+     * <p>示例： - message.logId -> message['logId'] - message.marker.data -> message['marker']['data']
+     * - a.b.c.d -> a['b']['c']['d']
+     *
+     * @param dotSyntax 点语法字段
+     * @return 括号语法字段
+     */
+    private String convertDotToBracketSyntax(String dotSyntax) {
+        String[] parts = dotSyntax.split("\\.");
+        if (parts.length < 2) {
+            return dotSyntax;
+        }
+
+        StringBuilder result = new StringBuilder();
+        result.append(parts[0]); // 根字段
+
+        // 为每个子字段添加括号语法
+        for (int i = 1; i < parts.length; i++) {
+            result.append("['").append(parts[i]).append("']");
+        }
+
+        return result.toString();
+    }
+
+    // ==================== WHERE条件安全转换 ====================
 
     /**
      * 安全地转换点语法，正确处理引号内的内容
@@ -98,9 +201,9 @@ public class VariantFieldConverter {
 
     /** 处理累积的token */
     private void flushToken(StringBuilder result, StringBuilder currentToken, boolean inQuote) {
-        if (currentToken.length() > 0) {
+        if (!currentToken.isEmpty()) {
             String token = currentToken.toString().trim();
-            if (!inQuote && isDotSyntax(token)) {
+            if (!inQuote && needsVariantConversion(token)) {
                 result.append(convertDotToBracketSyntax(token));
             } else {
                 result.append(currentToken.toString());
@@ -109,72 +212,7 @@ public class VariantFieldConverter {
         }
     }
 
-    /**
-     * 转换SELECT字段列表中的点语法为括号语法
-     *
-     * <p>⚠️ **重要：此方法必须严格保持输入与输出的顺序一致性！**
-     *
-     * <p>顺序依赖说明： - 输出列表的每个索引位置必须对应输入列表的相同索引位置 - 禁止在此方法中进行排序、去重、过滤等改变顺序的操作
-     *
-     * @param fields 字段列表
-     * @return 转换后的字段列表（仅转换语法，不添加AS别名）**顺序与输入严格一致**
-     */
-    public List<String> convertSelectFields(List<String> fields) {
-        if (fields == null) {
-            return null;
-        }
-
-        if (fields.isEmpty()) {
-            // 返回新的空列表，避免返回同一个对象引用
-            return new ArrayList<>();
-        }
-
-        List<String> convertedFields = new ArrayList<>();
-        for (String field : fields) {
-            // 处理null字段
-            if (field == null) {
-                convertedFields.add(field);
-                continue;
-            }
-
-            // 处理空字符串字段
-            if (field.trim().isEmpty()) {
-                convertedFields.add(field);
-                continue;
-            }
-
-            String trimmedField = field.trim();
-
-            // 检查是否是点语法
-            if (isDotSyntax(trimmedField)) {
-                String bracketSyntax = convertDotToBracketSyntax(trimmedField);
-                convertedFields.add(bracketSyntax); // 只转换语法，不添加AS别名
-            } else {
-                convertedFields.add(field);
-            }
-        }
-
-        return convertedFields;
-    }
-
-    /**
-     * 转换TOPN函数中的字段
-     *
-     * @param field 字段名
-     * @return 转换后的字段名（仅转换，不添加别名）
-     */
-    public String convertTopnField(String field) {
-        if (field == null || field.trim().isEmpty()) {
-            return field;
-        }
-
-        String trimmedField = field.trim();
-        if (isDotSyntax(trimmedField)) {
-            return convertDotToBracketSyntax(trimmedField);
-        }
-
-        return field;
-    }
+    // ==================== 字段验证逻辑 ====================
 
     /**
      * 检查字段是否需要 variant 转换（点语法转括号语法）
@@ -196,15 +234,25 @@ public class VariantFieldConverter {
             return false;
         }
 
+        // 避免将数字字面量（如25.5、-123.45等）当作字段名处理
+        if (isNumericLiteral(field)) {
+            return false;
+        }
+
         // 检查是否是有效的标识符.标识符格式
         String[] parts = field.split("\\.");
         if (parts.length < 2) {
             return false;
         }
 
-        // 检查每个部分是否是有效的标识符
-        for (String part : parts) {
-            if (!isValidIdentifier(part)) {
+        // 检查根字段（第一个部分）必须是有效的标识符
+        if (!isValidRootIdentifier(parts[0])) {
+            return false;
+        }
+
+        // 检查子字段（后续部分）可以更宽松
+        for (int i = 1; i < parts.length; i++) {
+            if (!isValidSubIdentifier(parts[i])) {
                 return false;
             }
         }
@@ -213,19 +261,12 @@ public class VariantFieldConverter {
     }
 
     /**
-     * 检查字段是否使用点语法
+     * 检查是否是有效的根字段标识符（严格限制） 根字段必须以字母、下划线或Unicode字母开头
      *
-     * @param field 字段名
-     * @return 是否是点语法
-     * @deprecated 使用 {@link #needsVariantConversion(String)} 代替
+     * @param identifier 标识符
+     * @return 是否是有效的根字段标识符
      */
-    @Deprecated
-    private boolean isDotSyntax(String field) {
-        return needsVariantConversion(field);
-    }
-
-    /** 检查是否是有效的标识符（支持Unicode字符） */
-    private boolean isValidIdentifier(String identifier) {
+    private boolean isValidRootIdentifier(String identifier) {
         if (identifier == null || identifier.isEmpty()) {
             return false;
         }
@@ -237,28 +278,77 @@ public class VariantFieldConverter {
         }
 
         // 后续字符可以是字母、数字、下划线或某些Unicode字符
+        return isValidIdentifierChars(identifier);
+    }
+
+    /**
+     * 检查是否是有效的子字段标识符（宽松限制） 子字段可以以数字开头，因为Doris的Variant字段支持这种情况
+     *
+     * @param identifier 标识符
+     * @return 是否是有效的子字段标识符
+     */
+    private boolean isValidSubIdentifier(String identifier) {
+        if (identifier == null || identifier.isEmpty()) {
+            return false;
+        }
+
+        // 子字段的第一个字符可以是字母、数字、下划线或Unicode字母
+        char firstChar = identifier.charAt(0);
+        if (!Character.isLetterOrDigit(firstChar) && firstChar != '_') {
+            return false;
+        }
+
+        // 后续字符可以是字母、数字、下划线或某些Unicode字符
+        return isValidIdentifierChars(identifier);
+    }
+
+    /**
+     * 检查标识符字符是否有效（公共逻辑）
+     *
+     * @param identifier 标识符
+     * @return 字符是否有效
+     */
+    private boolean isValidIdentifierChars(String identifier) {
         for (int i = 1; i < identifier.length(); i++) {
             char c = identifier.charAt(i);
             if (!Character.isLetterOrDigit(c) && c != '_' && !isValidUnicodeChar(c)) {
                 return false;
             }
         }
-
         return true;
+    }
+
+    /**
+     * 检查字符串是否是数字字面量（包括整数和小数）
+     *
+     * @param str 待检查的字符串
+     * @return 是否是数字字面量
+     */
+    private boolean isNumericLiteral(String str) {
+        if (str == null || str.trim().isEmpty()) {
+            return false;
+        }
+
+        String trimmed = str.trim();
+
+        // 尝试解析为数字
+        try {
+            Double.parseDouble(trimmed);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     /** 检查是否是有效的Unicode字符（如emoji等） */
     private boolean isValidUnicodeChar(char c) {
-        // 允许一些常见的Unicode符号，如emoji
         int type = Character.getType(c);
         return type == Character.OTHER_SYMBOL
                 || type == Character.MODIFIER_SYMBOL
                 || type == Character.NON_SPACING_MARK
                 || type == Character.COMBINING_SPACING_MARK
-                // 增加对emoji等特殊字符的支持
                 || Character.isHighSurrogate(c)
                 || Character.isLowSurrogate(c)
-                // 处理更多Unicode字符类型，包括emoji
                 || (Character.UnicodeBlock.of(c) == Character.UnicodeBlock.EMOTICONS)
                 || (Character.UnicodeBlock.of(c)
                         == Character.UnicodeBlock.MISCELLANEOUS_SYMBOLS_AND_PICTOGRAPHS)
@@ -270,49 +360,17 @@ public class VariantFieldConverter {
                         == Character.UnicodeBlock.SYMBOLS_AND_PICTOGRAPHS_EXTENDED_A);
     }
 
-    /**
-     * 将点语法转换为括号语法
-     *
-     * <p>示例： - message.logId -> message['logId'] - message.marker.data -> message['marker']['data']
-     * - a.b.c.d -> a['b']['c']['d'] - message.中文字段 -> message['中文字段'] - message.emoji😀 ->
-     * message['emoji😀']
-     *
-     * @param dotSyntax 点语法字段
-     * @return 括号语法字段
-     */
-    private String convertDotToBracketSyntax(String dotSyntax) {
-        String[] parts = dotSyntax.split("\\.");
-        if (parts.length < 2) {
-            return dotSyntax; // 没有点，直接返回
-        }
-
-        StringBuilder result = new StringBuilder();
-        result.append(parts[0]); // 根字段
-
-        // 为每个子字段添加括号语法
-        for (int i = 1; i < parts.length; i++) {
-            result.append("['").append(parts[i]).append("']");
-        }
-
-        return result.toString();
-    }
+    // ==================== 兼容性方法（已废弃） ====================
 
     /**
-     * 批量转换WHERE条件列表
+     * 检查字段是否使用点语法
      *
-     * @param whereClauses WHERE条件列表
-     * @return 转换后的WHERE条件列表
+     * @param field 字段名
+     * @return 是否是点语法
+     * @deprecated 使用 {@link #needsVariantConversion(String)} 代替
      */
-    public List<String> convertWhereClauses(List<String> whereClauses) {
-        if (whereClauses == null || whereClauses.isEmpty()) {
-            return whereClauses;
-        }
-
-        List<String> convertedClauses = new ArrayList<>();
-        for (String clause : whereClauses) {
-            convertedClauses.add(convertWhereClause(clause));
-        }
-
-        return convertedClauses;
+    @Deprecated
+    private boolean isDotSyntax(String field) {
+        return needsVariantConversion(field);
     }
 }

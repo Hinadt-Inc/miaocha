@@ -259,12 +259,22 @@ class VariantFieldConverterTest {
     class SpecialCharacterTests {
 
         @Test
-        @DisplayName("不规范字段名处理 - 期望：以数字开头的字段名不转换")
-        void testInvalidFieldNames() {
+        @DisplayName("以数字开头的根字段名处理 - 期望：以数字开头的根字段名不转换")
+        void testNumericStartRootFieldNames() {
             String input = "123field.subfield = 'test'";
             String result = converter.convertWhereClause(input);
 
-            assertEquals(input, result, "以数字开头的字段名不符合标识符规范，不应转换");
+            assertEquals(input, result, "以数字开头的根字段名不符合标识符规范，不应转换");
+        }
+
+        @Test
+        @DisplayName("以数字开头的子字段名处理 - 期望：以数字开头的子字段名正常转换")
+        void testNumericStartSubFieldNames() {
+            String input = "message.123subfield = 'test'";
+            String expected = "message['123subfield'] = 'test'";
+            String result = converter.convertWhereClause(input);
+
+            assertEquals(expected, result, "以数字开头的子字段名应正常转换，因为Doris Variant支持");
         }
 
         @Test
@@ -285,6 +295,29 @@ class VariantFieldConverterTest {
             String result = converter.convertWhereClause(input);
 
             assertEquals(expected, result, "字段名中间包含数字应正常转换");
+        }
+
+        @Test
+        @DisplayName("哈希字段名处理 - 期望：以哈希值作为子字段名的情况正常转换")
+        void testHashFieldNames() {
+            // 模拟实际bug场景中的字段名
+            String input = "message.marker.data.176d23818d6bcdbb9700735a08418b63";
+            String expected = "message['marker']['data']['176d23818d6bcdbb9700735a08418b63']";
+
+            List<String> fields = Arrays.asList(input);
+            List<String> result = converter.convertSelectFields(fields);
+
+            assertEquals(1, result.size(), "应正确转换一个字段");
+            assertEquals(expected, result.get(0), "哈希子字段名应正确转换为bracket语法");
+        }
+
+        @Test
+        @DisplayName("数字字面量处理 - 期望：数字字面量不被当作字段名转换")
+        void testNumericLiteralHandling() {
+            String input = "temperature > 25.5 AND humidity < 60.0";
+            String result = converter.convertWhereClause(input);
+
+            assertEquals(input, result, "数字字面量不应被当作字段名转换");
         }
 
         @Test
