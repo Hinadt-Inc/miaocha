@@ -1,6 +1,6 @@
 import http from 'k6/http';
-import {check, group, sleep} from 'k6';
-import {Rate} from 'k6/metrics';
+import { check, group, sleep } from 'k6';
+import { Rate } from 'k6/metrics';
 import {
   CHECKS,
   CONFIG,
@@ -37,10 +37,10 @@ const TEST_PRESETS = {
         timeUnit: '2s',
         preAllocatedVUs: 200,
         stages: [
-          {duration: '5m', target: 10},
-          {duration: '5m', target: 20},
-          {duration: '5m', target: 30},
-          {duration: '5m', target: 40},
+          { duration: '5m', target: 10 },
+          { duration: '5m', target: 20 },
+          { duration: '5m', target: 30 },
+          { duration: '5m', target: 40 },
         ],
         gracefulStop: '30s',
       },
@@ -57,7 +57,7 @@ const TEST_PRESETS = {
         rate: parseInt(__ENV.QPS) || 10,
         timeUnit: '1s',
         duration: __ENV.DURATION || '5m',
-        preAllocatedVUs: 200,
+        preAllocatedVUs: 500,
         gracefulStop: '30s'
       },
     },
@@ -84,9 +84,9 @@ const TEST_PRESETS = {
       average_load: {
         executor: 'ramping-vus',
         stages: [
-          {duration: '5m', target: 50},
-          {duration: '30m', target: 50},
-          {duration: '5m', target: 0},
+          { duration: '5m', target: 50 },
+          { duration: '30m', target: 50 },
+          { duration: '5m', target: 0 },
         ],
         gracefulStop: '30s',
         gracefulRampDown: '15s',
@@ -128,7 +128,7 @@ export function setup() {
     JSON.stringify(loginPayload),
     {
       headers: createBaseHeaders(),
-      tags: {api_name: 'login_init'},
+      tags: { api_name: 'login_init' },
     }
   );
 
@@ -169,7 +169,7 @@ export default function (data) {
         body: JSON.stringify(payload),
         params: {
           headers: headers,
-          tags: {api_name: 'log_details_query', time_range: testData.description},
+          tags: { api_name: 'log_details_query', time_range: testData.description },
         }
       },
       // // 请求2: 日志直方图查询

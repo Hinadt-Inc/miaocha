@@ -65,7 +65,7 @@ public class ThreadPoolConfig {
         // 最大线程数：CPU核心数 * 2
         executor.setMaxPoolSize(Runtime.getRuntime().availableProcessors() * 2);
         // 队列容量
-        executor.setQueueCapacity(100);
+        executor.setQueueCapacity(500);
         // 线程名前缀
         executor.setThreadNamePrefix("log-query-");
         // 拒绝策略：由调用线程处理

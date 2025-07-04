@@ -1,7 +1,7 @@
 import sql from 'k6/x/sql';
 import driver from 'k6/x/sql/driver/mysql';
-import {check, group} from 'k6';
-import {Rate, Counter, Trend} from 'k6/metrics';
+import { check, group } from 'k6';
+import { Rate, Counter, Trend } from 'k6/metrics';
 
 // 自定义指标
 const errorRate = new Rate('errors');
@@ -9,7 +9,7 @@ const sqlQueryCount = new Counter('sql_queries_total');
 const sqlQueryDuration = new Trend('sql_query_duration');
 
 // 数据库连接 - 按照官方文档格式，整个密码URL编码
-const db = sql.open(driver, __ENV.DB_DSN || 'root:root%2540root123@tcp(10.0.19.5:9030)/log_db');
+const db = sql.open(driver, __ENV.DB_DSN || 'root:root%2540root123@tcp(10.0.20.5:9030)/log_db');
 
 const TEST_MODE = __ENV.TEST_MODE || 'default';
 const TABLE_NAME = __ENV.TABLE_NAME || 'log_table_test_env_v3';
@@ -31,10 +31,10 @@ const TEST_PRESETS = {
         timeUnit: '2s',
         preAllocatedVUs: 200,
         stages: [
-          {duration: '5m', target: 10},
-          {duration: '5m', target: 20},
-          {duration: '5m', target: 30},
-          {duration: '5m', target: 40},
+          { duration: '5m', target: 10 },
+          { duration: '5m', target: 20 },
+          { duration: '5m', target: 30 },
+          { duration: '5m', target: 40 },
         ],
         gracefulStop: '30s',
       },
@@ -48,7 +48,7 @@ const TEST_PRESETS = {
         rate: parseInt(__ENV.QPS) || 10,
         timeUnit: '1s',
         duration: __ENV.DURATION || '5m',
-        preAllocatedVUs: 200,
+        preAllocatedVUs: 500,
         gracefulStop: '30s'
       },
     },
@@ -59,9 +59,9 @@ const TEST_PRESETS = {
       average_sql_load: {
         executor: 'ramping-vus',
         stages: [
-          {duration: '5m', target: 50},
-          {duration: '30m', target: 50},
-          {duration: '5m', target: 0},
+          { duration: '5m', target: 50 },
+          { duration: '30m', target: 50 },
+          { duration: '5m', target: 0 },
         ],
         gracefulStop: '30s',
         gracefulRampDown: '15s',
@@ -89,8 +89,14 @@ export function setup() {
     const testQuery = `SELECT COUNT(*) as total_records
                        FROM ${TABLE_NAME}`;
     const result = db.query(testQuery);
-    return {totalRecords: result[0].total_records};
+    return { totalRecords: result[0].total_records };
   } catch (error) {
+    console.error(`[ERROR] 数据库连接失败:`, {
+      error: error.message,
+      stack: error.stack,
+      table: TABLE_NAME,
+      timestamp: new Date().toISOString()
+    });
     throw new Error(`数据库连接失败: ${error.message}`);
   }
 }
@@ -131,6 +137,16 @@ export default function (data) {
     } catch (error) {
       errorRate.add(1);
       sqlQueryCount.add(1);
+
+      // 打印详细错误信息
+      console.error(`[ERROR] 数据库查询失败:`, {
+        error: error.message,
+        stack: error.stack,
+        timeParams: timeParams,
+        table: TABLE_NAME,
+        timeField: TIME_FIELD,
+        timestamp: new Date().toISOString()
+      });
     }
   });
 }
@@ -175,7 +191,18 @@ function executeDetailQuery(timeParams) {
                        AND ${TIME_FIELD} < '${timeParams.endTime}'
                      ORDER BY ${TIME_FIELD} DESC LIMIT 1000
                      OFFSET 0`;
-  return db.query(detailSql);
+
+  try {
+    const result = db.query(detailSql);
+    return result;
+  } catch (error) {
+    console.error(`[ERROR] 详情查询失败:`, {
+      sql: detailSql,
+      error: error.message,
+      timeParams: timeParams
+    });
+    throw error;
+  }
 }
 
 // 执行计数查询 - 对应DetailSearchExecutor的countSql
@@ -184,7 +211,18 @@ function executeCountQuery(timeParams) {
                     FROM ${TABLE_NAME}
                     WHERE ${TIME_FIELD} >= '${timeParams.startTime}'
                       AND ${TIME_FIELD} < '${timeParams.endTime}'`;
-  return db.query(countSql);
+
+  try {
+    const result = db.query(countSql);
+    return result;
+  } catch (error) {
+    console.error(`[ERROR] 计数查询失败:`, {
+      sql: countSql,
+      error: error.message,
+      timeParams: timeParams
+    });
+    throw error;
+  }
 }
 
 // 执行直方图查询 - 对应HistogramSearchExecutor的distributionSql
