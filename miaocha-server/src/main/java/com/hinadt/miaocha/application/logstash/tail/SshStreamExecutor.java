@@ -64,6 +64,14 @@ public class SshStreamExecutor {
 
         // 初始化SSH客户端
         this.sshClient = SshClient.setUpDefaultClient();
+
+        // 配置服务器密钥验证器，忽略未知主机密钥的警告
+        this.sshClient.setServerKeyVerifier(
+                (clientSession, remoteAddress, serverKey) -> {
+                    log.debug("接受服务器密钥: {}@{}", serverKey.getAlgorithm(), remoteAddress);
+                    return true; // 总是接受服务器密钥
+                });
+
         this.sshClient.start();
 
         log.info(

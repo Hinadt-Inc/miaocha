@@ -187,8 +187,7 @@ public class SshClient {
         logger.debug("执行SSH命令: {}", command);
 
         // 创建SSHD客户端
-        org.apache.sshd.client.SshClient sshd =
-                org.apache.sshd.client.SshClient.setUpDefaultClient();
+        org.apache.sshd.client.SshClient sshd = createConfiguredSshClient();
         try {
             sshd.start();
 
@@ -265,8 +264,7 @@ public class SshClient {
         }
 
         // 创建SSHD客户端
-        org.apache.sshd.client.SshClient sshd =
-                org.apache.sshd.client.SshClient.setUpDefaultClient();
+        org.apache.sshd.client.SshClient sshd = createConfiguredSshClient();
         try {
             sshd.start();
 
@@ -319,8 +317,7 @@ public class SshClient {
         Path localFile = Paths.get(localPath);
 
         // 创建SSHD客户端
-        org.apache.sshd.client.SshClient sshd =
-                org.apache.sshd.client.SshClient.setUpDefaultClient();
+        org.apache.sshd.client.SshClient sshd = createConfiguredSshClient();
         try {
             sshd.start();
 
@@ -345,6 +342,21 @@ public class SshClient {
         } finally {
             sshd.stop();
         }
+    }
+
+    /** 创建配置好的SSH客户端 */
+    private org.apache.sshd.client.SshClient createConfiguredSshClient() {
+        org.apache.sshd.client.SshClient sshd =
+                org.apache.sshd.client.SshClient.setUpDefaultClient();
+
+        // 配置服务器密钥验证器，忽略未知主机密钥的警告
+        sshd.setServerKeyVerifier(
+                (clientSession, remoteAddress, serverKey) -> {
+                    logger.debug("接受服务器密钥: {}@{}", serverKey.getAlgorithm(), remoteAddress);
+                    return true; // 总是接受服务器密钥
+                });
+
+        return sshd;
     }
 
     /** 创建SSH会话并进行认证 */
