@@ -1,7 +1,7 @@
 package com.hinadt.miaocha.config.security;
 
+import com.hinadt.miaocha.domain.entity.User;
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -28,9 +28,6 @@ public class JwtUtils {
     @Value("${jwt.refresh-expiration:86400000}")
     private int refreshTokenExpirationMs;
 
-    // 令牌提前过期的缓冲时间（秒）
-    private static final int TOKEN_EXPIRATION_BUFFER_SECONDS = 30;
-
     /**
      * 生成JWT token
      *
@@ -39,6 +36,17 @@ public class JwtUtils {
      */
     public String generateToken(String uid) {
         return buildToken(uid, new HashMap<>(), jwtExpirationMs);
+    }
+
+    /**
+     * 生成JWT token（包含用户信息）
+     *
+     * @param user 用户对象
+     * @return JWT token
+     */
+    public String generateTokenWithUserInfo(User user) {
+        Map<String, Object> claims = buildUserClaims(user);
+        return buildToken(user.getUid(), claims, jwtExpirationMs);
     }
 
     /**
@@ -54,36 +62,15 @@ public class JwtUtils {
     }
 
     /**
-     * 从refresh token生成新的access token
+     * 生成刷新token（包含用户信息）
      *
-     * @param refreshToken 刷新token
-     * @return 新的token，如果刷新token无效则返回null
-     * @throws ExpiredJwtException 如果刷新token已过期
+     * @param user 用户对象
+     * @return refresh token
      */
-    public String generateTokenFromRefreshToken(String refreshToken) throws ExpiredJwtException {
-        try {
-            Claims claims =
-                    Jwts.parser()
-                            .verifyWith(getSigningKey())
-                            .build()
-                            .parseSignedClaims(refreshToken)
-                            .getPayload();
-
-            // 验证是否为刷新token
-            if (!"refresh".equals(claims.get("type"))) {
-                return null;
-            }
-
-            String uid = claims.getSubject();
-            return generateToken(uid);
-        } catch (ExpiredJwtException e) {
-            // 刷新token过期，向上抛出这个异常，以便调用者区分处理
-            log.error("Refresh token has expired: {}", e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("Error while generating token from refresh token: {}", e.getMessage());
-            return null;
-        }
+    public String generateRefreshTokenWithUserInfo(User user) {
+        Map<String, Object> claims = buildUserClaims(user);
+        claims.put("type", "refresh");
+        return buildToken(user.getUid(), claims, refreshTokenExpirationMs);
     }
 
     /**
@@ -104,34 +91,6 @@ public class JwtUtils {
         } catch (Exception e) {
             log.error("Error while getting expiration from token: {}", e.getMessage());
             return 0;
-        }
-    }
-
-    /**
-     * 检查令牌是否即将过期
-     *
-     * @param token JWT token
-     * @return 是否即将过期
-     */
-    public boolean isTokenNearExpiration(String token) {
-        try {
-            Claims claims =
-                    Jwts.parser()
-                            .verifyWith(getSigningKey())
-                            .build()
-                            .parseSignedClaims(token)
-                            .getPayload();
-
-            Date expiration = claims.getExpiration();
-            Date now = new Date();
-
-            // 计算还有多少毫秒过期
-            long timeToExpire = expiration.getTime() - now.getTime();
-
-            // 如果小于缓冲时间，则认为即将过期
-            return timeToExpire < (TOKEN_EXPIRATION_BUFFER_SECONDS * 1000);
-        } catch (Exception e) {
-            return true; // 如果解析出错，也视为即将过期
         }
     }
 
@@ -167,12 +126,118 @@ public class JwtUtils {
      * @return 用户ID
      */
     public String getUidFromToken(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .getSubject();
+        Claims claims =
+                Jwts.parser()
+                        .verifyWith(getSigningKey())
+                        .build()
+                        .parseSignedClaims(token)
+                        .getPayload();
+        Object userId = claims.get(User.Fields.uid);
+        if (userId == null) {
+            throw new RuntimeException("JWT token中缺少userId字段");
+        }
+
+        return String.valueOf(userId);
+    }
+
+    /**
+     * 从token中获取用户ID
+     *
+     * @param token JWT token
+     * @return 用户ID
+     * @throws RuntimeException 如果token中没有userId
+     */
+    public Long getUserIdFromToken(String token) {
+        Claims claims =
+                Jwts.parser()
+                        .verifyWith(getSigningKey())
+                        .build()
+                        .parseSignedClaims(token)
+                        .getPayload();
+        Object userId = claims.get(User.Fields.id);
+        if (userId == null) {
+            throw new RuntimeException("JWT token中缺少userId字段");
+        }
+        return Long.valueOf(userId.toString());
+    }
+
+    /**
+     * 从token中获取用户邮箱
+     *
+     * @param token JWT token
+     * @return 用户邮箱
+     * @throws RuntimeException 如果token中没有email
+     */
+    public String getEmailFromToken(String token) {
+        Claims claims =
+                Jwts.parser()
+                        .verifyWith(getSigningKey())
+                        .build()
+                        .parseSignedClaims(token)
+                        .getPayload();
+        String email = (String) claims.get(User.Fields.email);
+        if (email == null) {
+            throw new RuntimeException("JWT token中缺少email字段");
+        }
+        return email;
+    }
+
+    /**
+     * 从token中获取用户昵称
+     *
+     * @param token JWT token
+     * @return 用户昵称，可能为null（nickname不是必需字段）
+     */
+    public String getNicknameFromToken(String token) {
+        Claims claims =
+                Jwts.parser()
+                        .verifyWith(getSigningKey())
+                        .build()
+                        .parseSignedClaims(token)
+                        .getPayload();
+        return (String) claims.get(User.Fields.nickname);
+    }
+
+    /**
+     * 从token中获取用户角色
+     *
+     * @param token JWT token
+     * @return 用户角色
+     * @throws RuntimeException 如果token中没有role
+     */
+    public String getRoleFromToken(String token) {
+        Claims claims =
+                Jwts.parser()
+                        .verifyWith(getSigningKey())
+                        .build()
+                        .parseSignedClaims(token)
+                        .getPayload();
+        String role = (String) claims.get(User.Fields.role);
+        if (role == null) {
+            throw new RuntimeException("JWT token中缺少role字段");
+        }
+        return role;
+    }
+
+    /**
+     * 从token中获取用户状态
+     *
+     * @param token JWT token
+     * @return 用户状态
+     * @throws RuntimeException 如果token中没有status
+     */
+    public Integer getStatusFromToken(String token) {
+        Claims claims =
+                Jwts.parser()
+                        .verifyWith(getSigningKey())
+                        .build()
+                        .parseSignedClaims(token)
+                        .getPayload();
+        Integer status = (Integer) claims.get(User.Fields.status);
+        if (status == null) {
+            throw new RuntimeException("JWT token中缺少status字段");
+        }
+        return status;
     }
 
     /**
@@ -182,6 +247,23 @@ public class JwtUtils {
      */
     public void validateToken(String token) {
         Jwts.parser().verifyWith(getSigningKey()).build().parseSignedClaims(token);
+    }
+
+    /**
+     * 构建用户信息claims
+     *
+     * @param user 用户对象
+     * @return claims map
+     */
+    private Map<String, Object> buildUserClaims(User user) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put(User.Fields.id, user.getId());
+        claims.put(User.Fields.uid, user.getUid());
+        claims.put(User.Fields.nickname, user.getNickname());
+        claims.put(User.Fields.email, user.getEmail());
+        claims.put(User.Fields.role, user.getRole());
+        claims.put(User.Fields.status, user.getStatus());
+        return claims;
     }
 
     private SecretKey getSigningKey() {

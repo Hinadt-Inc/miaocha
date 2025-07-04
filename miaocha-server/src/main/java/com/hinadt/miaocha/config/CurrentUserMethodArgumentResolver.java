@@ -1,6 +1,5 @@
 package com.hinadt.miaocha.config;
 
-import com.hinadt.miaocha.application.service.UserService;
 import com.hinadt.miaocha.common.annotation.CurrentUser;
 import com.hinadt.miaocha.domain.dto.user.UserDTO;
 import lombok.RequiredArgsConstructor;
@@ -18,8 +17,6 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 @RequiredArgsConstructor
 public class CurrentUserMethodArgumentResolver implements HandlerMethodArgumentResolver {
 
-    private final UserService userService;
-
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
         return parameter.hasParameterAnnotation(CurrentUser.class)
@@ -34,8 +31,7 @@ public class CurrentUserMethodArgumentResolver implements HandlerMethodArgumentR
             WebDataBinderFactory binderFactory) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.isAuthenticated()) {
-            String uid = (String) authentication.getPrincipal();
-            return userService.getUserByUid(uid);
+            return authentication.getPrincipal();
         }
         return null;
     }

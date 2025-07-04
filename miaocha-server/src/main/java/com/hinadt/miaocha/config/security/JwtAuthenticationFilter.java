@@ -1,6 +1,5 @@
 package com.hinadt.miaocha.config.security;
 
-import com.hinadt.miaocha.application.service.UserService;
 import com.hinadt.miaocha.domain.dto.user.UserDTO;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -12,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -20,46 +18,55 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtUtils jwtUtils;
-    private final UserService userService;
+    /** JWT异常在request attribute中的key */
+    public static final String JWT_EXCEPTION_ATTRIBUTE = "jwtException";
 
-    public JwtAuthenticationFilter(JwtUtils jwtUtils, UserService userService) {
+    private final JwtUtils jwtUtils;
+
+    public JwtAuthenticationFilter(JwtUtils jwtUtils) {
         this.jwtUtils = jwtUtils;
-        this.userService = userService;
     }
 
     @Override
     protected void doFilterInternal(
             HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        try {
-            String jwt = parseJwt(request);
-            if (jwt != null) {
-                try {
-                    jwtUtils.validateToken(jwt);
-                    String uid = jwtUtils.getUidFromToken(jwt);
-                    UserDTO user = userService.getUserByUid(uid);
+        String jwt = parseJwt(request);
+        if (jwt != null) {
+            try {
+                jwtUtils.validateToken(jwt);
 
-                    if (user != null && user.getStatus() == 1) {
-                        List<SimpleGrantedAuthority> authorities =
-                                List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole()));
+                // 从JWT token构造UserDTO对象
+                UserDTO user = new UserDTO();
+                user.setUid(jwtUtils.getUidFromToken(jwt));
+                user.setId(jwtUtils.getUserIdFromToken(jwt));
+                user.setNickname(jwtUtils.getNicknameFromToken(jwt));
+                user.setEmail(jwtUtils.getEmailFromToken(jwt));
+                user.setRole(jwtUtils.getRoleFromToken(jwt));
+                user.setStatus(jwtUtils.getStatusFromToken(jwt));
 
-                        UsernamePasswordAuthenticationToken authentication =
-                                new UsernamePasswordAuthenticationToken(
-                                        user.getUid(), null, authorities);
+                if (user.getStatus() == 1) {
+                    List<SimpleGrantedAuthority> authorities =
+                            List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole()));
 
-                        authentication.setDetails(
-                                new WebAuthenticationDetailsSource().buildDetails(request));
-                        SecurityContextHolder.getContext().setAuthentication(authentication);
-                    }
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(user, null, authorities);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                } catch (Exception e) {
-                    // 保存异常到请求属性中，供后续处理
-                    request.setAttribute("jwtException", e);
+                    log.debug(
+                            "Authentication set from JWT token, uid: {}, role: {}",
+                            user.getUid(),
+                            user.getRole());
+                } else {
+                    // 用户被禁用，记录异常信息让授权阶段处理
+                    log.debug("User is disabled, uid: {}", user.getUid());
+                    request.setAttribute(
+                            JWT_EXCEPTION_ATTRIBUTE, new RuntimeException("User is disabled"));
                 }
+
+            } catch (Exception e) {
+                request.setAttribute(JWT_EXCEPTION_ATTRIBUTE, e);
             }
-        } catch (Exception e) {
-            log.error("Cannot set user authentication: {}", e.getMessage());
         }
 
         filterChain.doFilter(request, response);

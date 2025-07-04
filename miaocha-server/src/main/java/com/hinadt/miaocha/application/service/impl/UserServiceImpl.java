@@ -66,8 +66,8 @@ public class UserServiceImpl implements UserService {
             throw new BusinessException(ErrorCode.USER_PASSWORD_ERROR);
         }
 
-        String token = jwtUtils.generateToken(user.getUid());
-        String refreshToken = jwtUtils.generateRefreshToken(user.getUid());
+        String token = jwtUtils.generateTokenWithUserInfo(user);
+        String refreshToken = jwtUtils.generateRefreshTokenWithUserInfo(user);
 
         long expiresAt = jwtUtils.getExpirationFromToken(token);
         long refreshExpiresAt = jwtUtils.getExpirationFromToken(refreshToken);
@@ -88,18 +88,18 @@ public class UserServiceImpl implements UserService {
         String refreshToken = refreshTokenRequest.getRefreshToken();
 
         try {
-            // 验证刷新token并生成新的token
-            String newToken = jwtUtils.generateTokenFromRefreshToken(refreshToken);
-            if (newToken == null) {
-                throw new BusinessException(ErrorCode.INVALID_TOKEN, "无效的刷新令牌");
-            }
+            // 判断是否是刷新token
 
-            // 从刷新token中获取用户ID
+            // 验证刷新token是否有效
+            jwtUtils.validateToken(refreshToken);
+
+            // 从刷新token中获取uid，然后查询数据库获取最新用户信息
             String uid = jwtUtils.getUidFromToken(refreshToken);
             User user = getUserEntityByUid(uid);
 
-            // 同时生成新的刷新令牌
-            String newRefreshToken = jwtUtils.generateRefreshToken(uid);
+            // 使用最新的用户信息生成新的token和刷新令牌
+            String newToken = jwtUtils.generateTokenWithUserInfo(user);
+            String newRefreshToken = jwtUtils.generateRefreshTokenWithUserInfo(user);
 
             // 获取过期时间
             long expiresAt = jwtUtils.getExpirationFromToken(newToken);
@@ -107,7 +107,7 @@ public class UserServiceImpl implements UserService {
 
             return LoginResponseDTO.builder()
                     .token(newToken)
-                    .refreshToken(newRefreshToken) // 返回新的refreshToken
+                    .refreshToken(newRefreshToken)
                     .expiresAt(expiresAt)
                     .refreshExpiresAt(refreshExpiresAt)
                     .userId(user.getId())

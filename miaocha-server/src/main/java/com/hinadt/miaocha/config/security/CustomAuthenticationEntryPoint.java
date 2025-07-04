@@ -30,15 +30,22 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
 
         ApiResponse<Void> apiResponse;
 
-        // 从request attributes获取JWT处理中的异常（如果有）
-        Exception exception = (Exception) request.getAttribute("jwtException");
+        // 检查是否有JWT相关的异常
+        Exception jwtException =
+                (Exception) request.getAttribute(JwtAuthenticationFilter.JWT_EXCEPTION_ATTRIBUTE);
 
-        if (exception instanceof ExpiredJwtException) {
-            // 令牌过期
+        if (jwtException instanceof ExpiredJwtException) {
+            // JWT token过期
             apiResponse = ApiResponse.error(ErrorCode.TOKEN_EXPIRED);
-        } else {
-            // 其他认证异常
+        } else if (jwtException != null && "User is disabled".equals(jwtException.getMessage())) {
+            // 用户被禁用
+            apiResponse = ApiResponse.error(ErrorCode.USER_FORBIDDEN);
+        } else if (jwtException != null) {
+            // 其他JWT相关异常（格式错误、签名错误等）
             apiResponse = ApiResponse.error(ErrorCode.INVALID_TOKEN);
+        } else {
+            // 没有提供认证信息或认证信息不足
+            apiResponse = ApiResponse.error(ErrorCode.UNAUTHORIZED);
         }
 
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());

@@ -2,9 +2,11 @@ package com.hinadt.miaocha.domain.entity;
 
 import java.time.LocalDateTime;
 import lombok.Data;
+import lombok.experimental.FieldNameConstants;
 
 /** 用户实体类 */
 @Data
+@FieldNameConstants
 public class User {
     private Long id;
     private String nickname;

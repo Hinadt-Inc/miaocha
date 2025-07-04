@@ -1,6 +1,5 @@
 package com.hinadt.miaocha.config;
 
-import com.hinadt.miaocha.application.service.UserService;
 import com.hinadt.miaocha.config.security.CustomAccessDeniedHandler;
 import com.hinadt.miaocha.config.security.CustomAuthenticationEntryPoint;
 import com.hinadt.miaocha.config.security.JwtAuthenticationFilter;
@@ -28,11 +27,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     private final JwtUtils jwtUtils;
-    private final UserService userService;
 
-    public SecurityConfig(JwtUtils jwtUtils, UserService userService) {
+    public SecurityConfig(JwtUtils jwtUtils) {
         this.jwtUtils = jwtUtils;
-        this.userService = userService;
     }
 
     @Bean
@@ -152,7 +149,7 @@ public class SecurityConfig {
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(jwtUtils, userService);
+        return new JwtAuthenticationFilter(jwtUtils);
     }
 
     @Bean

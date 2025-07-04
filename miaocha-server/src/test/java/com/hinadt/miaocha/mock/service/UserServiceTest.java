@@ -112,8 +112,8 @@ public class UserServiceTest {
         // 设置mock行为
         when(userMapper.selectByEmail("test@example.com")).thenReturn(testUser);
         when(passwordEncoder.matches("password123", "encoded_password")).thenReturn(true);
-        when(jwtUtils.generateToken("test_uid")).thenReturn("test_token");
-        when(jwtUtils.generateRefreshToken("test_uid")).thenReturn("test_refresh_token");
+        when(jwtUtils.generateTokenWithUserInfo(testUser)).thenReturn("test_token");
+        when(jwtUtils.generateRefreshTokenWithUserInfo(testUser)).thenReturn("test_refresh_token");
         when(jwtUtils.getExpirationFromToken("test_token"))
                 .thenReturn(System.currentTimeMillis() + 3600000);
         when(jwtUtils.getExpirationFromToken("test_refresh_token"))
@@ -133,8 +133,8 @@ public class UserServiceTest {
         // 验证调用
         verify(userMapper).selectByEmail("test@example.com");
         verify(passwordEncoder).matches("password123", "encoded_password");
-        verify(jwtUtils).generateToken("test_uid");
-        verify(jwtUtils).generateRefreshToken("test_uid");
+        verify(jwtUtils).generateTokenWithUserInfo(testUser);
+        verify(jwtUtils).generateRefreshTokenWithUserInfo(testUser);
     }
 
     @Test
@@ -154,7 +154,7 @@ public class UserServiceTest {
         assertEquals(ErrorCode.USER_PASSWORD_ERROR, exception.getErrorCode());
         verify(userMapper).selectByEmail("test@example.com");
         verify(passwordEncoder).matches("password123", "encoded_password");
-        verify(jwtUtils, never()).generateToken(anyString());
+        verify(jwtUtils, never()).generateTokenWithUserInfo(any());
     }
 
     @Test
@@ -173,7 +173,7 @@ public class UserServiceTest {
         assertEquals(ErrorCode.USER_NOT_FOUND, exception.getErrorCode());
         verify(userMapper).selectByEmail("test@example.com");
         verify(passwordEncoder, never()).matches(anyString(), anyString());
-        verify(jwtUtils, never()).generateToken(anyString());
+        verify(jwtUtils, never()).generateTokenWithUserInfo(any());
     }
 
     @Test
