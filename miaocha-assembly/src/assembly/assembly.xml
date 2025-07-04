@@ -59,7 +59,7 @@
 
         <!-- Copy configuration from server module -->
         <fileSet>
-            <directory>../miaocha-server/src/main/resources</directory>
+            <directory>../miaocha-server/target/classes</directory>
             <outputDirectory>config</outputDirectory>
             <includes>
                 <include>**/*.yml</include>
