@@ -143,16 +143,65 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     setOpenTimeRange(true);
   };
 
-  const handleCloseSql = (item: string) => {
-    setSqls((prev) => prev.filter((sub) => sub !== item));
+  // 清除本地存储中的关键词
+  const clearKeywordFromLocalStorage = (item: string) => {
+    try {
+      const savedParams = localStorage.getItem('searchBarParams');
+      if (savedParams) {
+        const params = JSON.parse(savedParams);
+        params.keywords = params.keywords.filter((k: string) => k !== item);
+        localStorage.setItem('searchBarParams', JSON.stringify(params));
+      }
+    } catch (error) {
+      console.error('清除关键词本地存储失败:', error);
+    }
+  };
+
+  // 清除本地存储中的SQL
+  const clearSqlFromLocalStorage = (item: string) => {
+    try {
+      const savedParams = localStorage.getItem('searchBarParams');
+      if (savedParams) {
+        const params = JSON.parse(savedParams);
+        params.whereSqls = params.whereSqls.filter((s: string) => s !== item);
+        localStorage.setItem('searchBarParams', JSON.stringify(params));
+      }
+    } catch (error) {
+      console.error('清除SQL本地存储失败:', error);
+    }
+  };
+
+  // 处理点击keyword逻辑
+  const handleClickSearchBarKeyword = (item: string) => {
+    setKeyword(item);
+    clearKeywordFromLocalStorage(item);
+    // 从keywords数组中移除该项
+    setKeywords((prev) => prev.filter((keyword) => keyword !== item));
+  };
+
+  // 处理点击sql逻辑
+  const handleClickSearchBarSql = (item: string) => {
+    setSql(item);
+    clearSqlFromLocalStorage(item);
+    // 从sqls数组中移除该项
+    setSqls((prev) => prev.filter((sql) => sql !== item));
+    // 从sider中移除该项
     setWhereSqlsFromSider((prev: any) => prev.filter((sub: any) => sub.label !== item));
-    const latestTime = getLatestTime(timeOption);
-    setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
   };
 
   // 处理删除关键词
   const handleCloseKeyword = (item: string) => {
     setKeywords((prev) => prev.filter((keyword) => keyword !== item));
+    clearKeywordFromLocalStorage(item);
+    const latestTime = getLatestTime(timeOption);
+    setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
+  };
+
+  // 处理删除SQL
+  const handleCloseSql = (item: string) => {
+    setSqls((prev) => prev.filter((sub) => sub !== item));
+    clearSqlFromLocalStorage(item);
+    setWhereSqlsFromSider((prev: any) => prev.filter((sub: any) => sub.label !== item));
     const latestTime = getLatestTime(timeOption);
     setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
   };
@@ -164,12 +213,11 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       <div className={styles.filter}>
         <Space wrap>
           {keywords.map((item: string) => (
-            <Tooltip placement="topLeft" title={item}>
+            <Tooltip key={item} placement="topLeft" title={item}>
               <Tag
-                key={item}
                 color="orange"
                 closable
-                onClick={() => setKeyword(item)}
+                onClick={() => handleClickSearchBarKeyword(item)}
                 onClose={() => handleCloseKeyword(item)}
               >
                 <span className="tagContent">{item}</span>
@@ -177,12 +225,11 @@ const SearchBar = forwardRef((props: IProps, ref) => {
             </Tooltip>
           ))}
           {sqls.map((item: string) => (
-            <Tooltip placement="topLeft" title={item}>
+            <Tooltip key={item} placement="topLeft" title={item}>
               <Tag
-                key={item}
                 color="success"
                 closable
-                onClick={() => setSql(item)}
+                onClick={() => handleClickSearchBarSql(item)}
                 onClose={() => handleCloseSql(item)}
               >
                 <span className="tagContent">{item}</span>
@@ -251,7 +298,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     if (getDistributionWithSearchBar) {
       getDistributionWithSearchBar();
     }
-  }, [keywords, sqls, timeOption, timeGroup, activeColumns, sortConfig, onSqlsChange, initialized]);
+  }, [timeOption, timeGroup, activeColumns, sortConfig, onSqlsChange, initialized]);
 
   // 处理关键词和SQL搜索
   const handleSubmit = () => {
