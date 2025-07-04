@@ -4,6 +4,7 @@ import com.hinadt.miaocha.application.service.ModulePermissionService;
 import com.hinadt.miaocha.application.service.TableValidationService;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
+import com.hinadt.miaocha.domain.dto.permission.UserModulePermissionDTO;
 import com.hinadt.miaocha.domain.entity.User;
 import com.hinadt.miaocha.domain.entity.enums.UserRole;
 import java.sql.Connection;
@@ -13,7 +14,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 /** 查询权限检查器 */
@@ -34,10 +34,9 @@ public class QueryPermissionChecker {
      * 检查用户是否有权限执行指定的查询
      *
      * @param user 用户信息
-     * @param datasourceId 数据源ID
      * @param sql SQL查询语句
      */
-    public void checkQueryPermission(User user, Long datasourceId, String sql) {
+    public void checkQueryPermission(User user, String sql) {
         // 超级管理员和管理员有所有权限
         if (UserRole.SUPER_ADMIN.name().equals(user.getRole())
                 || UserRole.ADMIN.name().equals(user.getRole())) {
@@ -70,8 +69,8 @@ public class QueryPermissionChecker {
         // 获取用户可访问的所有模块
         List<String> permittedModules =
                 modulePermissionService.getUserAccessibleModules(userId).stream()
-                        .map(permission -> permission.getModule())
-                        .collect(Collectors.toList());
+                        .map(UserModulePermissionDTO::getModule)
+                        .toList();
 
         // 获取所有表
         DatabaseMetaData metaData = conn.getMetaData();

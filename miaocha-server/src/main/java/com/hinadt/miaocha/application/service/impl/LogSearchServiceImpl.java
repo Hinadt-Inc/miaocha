@@ -109,9 +109,43 @@ public class LogSearchServiceImpl implements LogSearchService {
             // 获取数据库元数据服务并查询字段信息
             DatabaseMetadataService metadataService =
                     metadataServiceFactory.getService(datasourceInfo.getType());
-            return metadataService.getColumnInfo(conn, tableName);
+            List<SchemaInfoDTO.ColumnInfoDTO> columns =
+                    metadataService.getColumnInfo(conn, tableName);
+
+            // 获取查询配置并排除配置的字段
+            return filterExcludeFields(module, columns);
         } catch (SQLException e) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "获取表字段信息失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 根据模块查询配置过滤排除字段
+     *
+     * @param module 模块名称
+     * @param columns 原始字段列表
+     * @return 过滤后的字段列表
+     */
+    private List<SchemaInfoDTO.ColumnInfoDTO> filterExcludeFields(
+            String module, List<SchemaInfoDTO.ColumnInfoDTO> columns) {
+        // 获取模块查询配置
+        var queryConfig = moduleInfoService.getQueryConfigByModule(module);
+
+        // 如果查询配置存在且排除字段不为空，则过滤字段
+        if (queryConfig != null
+                && queryConfig.getExcludeFields() != null
+                && !queryConfig.getExcludeFields().isEmpty()) {
+
+            return columns.stream()
+                    .filter(
+                            column ->
+                                    !queryConfig
+                                            .getExcludeFields()
+                                            .contains(column.getColumnName()))
+                    .toList();
+        }
+
+        // 否则返回原始字段列表
+        return columns;
     }
 }

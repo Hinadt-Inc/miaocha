@@ -26,7 +26,8 @@ import lombok.Data;
               "fieldName": "level",
               "searchMethod": "MATCH_ALL"
             }
-          ]
+          ],
+          "excludeFields": ["sensitive_data", "internal_id"]
         }
         """)
 public class QueryConfigDTO {
@@ -44,6 +45,15 @@ public class QueryConfigDTO {
     @Size(max = 20, message = "关键词检索字段配置不能超过20个")
     @Schema(description = "关键词检索字段配置列表，定义哪些字段可以用于关键词搜索以及对应的搜索方法", nullable = true)
     private List<KeywordFieldConfigDTO> keywordFields;
+
+    @Valid
+    @Size(max = 50, message = "查询排除字段不能超过50个")
+    @Schema(description = "查询字段排除列表，定义在日志查询中需要排除展示和查询的字段名", nullable = true)
+    private List<
+                    @NotBlank(message = "排除字段名不能为空") @Size(max = 128, message = "排除字段名长度不能超过128个字符")
+                    @Pattern(regexp = "^[a-zA-Z_][a-zA-Z0-9_.\\[\\]'\"]*$", message = "排除字段名格式不正确")
+                    String>
+            excludeFields;
 
     /** 关键词字段配置DTO 定义单个字段的关键词检索配置 */
     @Data

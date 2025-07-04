@@ -104,7 +104,7 @@ public class SqlQueryServiceImpl implements SqlQueryService {
         }
 
         // 使用权限检查器验证用户权限
-        permissionChecker.checkQueryPermission(user, dto.getDatasourceId(), dto.getSql());
+        permissionChecker.checkQueryPermission(user, dto.getSql());
 
         // 检查并添加查询限制（委托给TableValidationService）
         String processedSql = tableValidationService.processSqlWithLimit(dto.getSql());

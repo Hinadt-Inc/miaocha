@@ -73,17 +73,17 @@ class QueryPermissionCheckerTest {
         assertDoesNotThrow(
                 () ->
                         queryPermissionChecker.checkQueryPermission(
-                                adminUser, 1L, "DELETE FROM user_logs"));
+                                adminUser, "DELETE FROM user_logs"));
 
         assertDoesNotThrow(
                 () ->
                         queryPermissionChecker.checkQueryPermission(
-                                adminUser, 1L, "UPDATE user_logs SET status = 1"));
+                                adminUser, "UPDATE user_logs SET status = 1"));
 
         assertDoesNotThrow(
                 () ->
                         queryPermissionChecker.checkQueryPermission(
-                                adminUser, 1L, "SELECT * FROM user_logs"));
+                                adminUser, "SELECT * FROM user_logs"));
 
         // 验证不会调用模块权限检查
         verify(modulePermissionService, never()).hasModulePermission(anyLong(), anyString());
@@ -96,12 +96,12 @@ class QueryPermissionCheckerTest {
         assertDoesNotThrow(
                 () ->
                         queryPermissionChecker.checkQueryPermission(
-                                superAdminUser, 1L, "DROP TABLE user_logs"));
+                                superAdminUser, "DROP TABLE user_logs"));
 
         assertDoesNotThrow(
                 () ->
                         queryPermissionChecker.checkQueryPermission(
-                                superAdminUser, 1L, "INSERT INTO user_logs VALUES (1)"));
+                                superAdminUser, "INSERT INTO user_logs VALUES (1)"));
 
         // 验证不会调用模块权限检查
         verify(modulePermissionService, never()).hasModulePermission(anyLong(), anyString());
@@ -128,7 +128,7 @@ class QueryPermissionCheckerTest {
             BusinessException exception =
                     assertThrows(
                             BusinessException.class,
-                            () -> queryPermissionChecker.checkQueryPermission(normalUser, 1L, sql));
+                            () -> queryPermissionChecker.checkQueryPermission(normalUser, sql));
 
             assertEquals(ErrorCode.PERMISSION_DENIED, exception.getErrorCode());
             // 仅验证异常类型和错误码，不依赖具体错误消息
@@ -150,7 +150,7 @@ class QueryPermissionCheckerTest {
         assertDoesNotThrow(
                 () ->
                         queryPermissionChecker.checkQueryPermission(
-                                normalUser, 1L, "SELECT * FROM user_logs"));
+                                normalUser, "SELECT * FROM user_logs"));
 
         // 验证调用了权限检查
         verify(modulePermissionService).hasModulePermission(2L, "user_logs");
@@ -174,7 +174,7 @@ class QueryPermissionCheckerTest {
                         BusinessException.class,
                         () ->
                                 queryPermissionChecker.checkQueryPermission(
-                                        normalUser, 1L, "SELECT * FROM system_logs"));
+                                        normalUser, "SELECT * FROM system_logs"));
 
         assertEquals(ErrorCode.PERMISSION_DENIED, exception.getErrorCode());
         // 仅验证异常类型和错误码，不依赖具体错误消息
@@ -259,7 +259,7 @@ class QueryPermissionCheckerTest {
         BusinessException exception =
                 assertThrows(
                         BusinessException.class,
-                        () -> queryPermissionChecker.checkQueryPermission(normalUser, 1L, sql));
+                        () -> queryPermissionChecker.checkQueryPermission(normalUser, sql));
 
         assertEquals(ErrorCode.PERMISSION_DENIED, exception.getErrorCode());
         // 仅验证异常类型和错误码，不依赖具体错误消息

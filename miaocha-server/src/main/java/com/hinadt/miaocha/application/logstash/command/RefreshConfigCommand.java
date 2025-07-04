@@ -6,14 +6,12 @@ import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
-import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
 import java.util.concurrent.CompletableFuture;
 import org.springframework.util.StringUtils;
 
 /** 刷新Logstash配置文件命令 - 重构支持多实例，基于logstashMachineId 支持刷新主配置文件、JVM配置和系统配置 */
 public class RefreshConfigCommand extends AbstractLogstashCommand {
 
-    private final LogstashProcessMapper logstashProcessMapper;
     private final String configContent; // 可选的主配置内容，如果为null则从数据库获取
     private final String jvmOptions; // 可选的JVM选项内容，如果为null则从数据库获取
     private final String logstashYml; // 可选的系统配置内容，如果为null则从数据库获取
@@ -23,14 +21,12 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
             SshClient sshClient,
             String deployBaseDir,
             Long logstashMachineId,
-            LogstashProcessMapper logstashProcessMapper,
             LogstashMachineMapper logstashMachineMapper,
             LogstashDeployPathManager deployPathManager) {
         this(
                 sshClient,
                 deployBaseDir,
                 logstashMachineId,
-                logstashProcessMapper,
                 logstashMachineMapper,
                 null, // 从数据库获取主配置
                 null, // 从数据库获取JVM配置
@@ -44,7 +40,6 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
      * @param sshClient SSH客户端
      * @param deployBaseDir 部署基础目录
      * @param logstashMachineId LogstashMachine实例ID
-     * @param logstashProcessMapper 进程Mapper，用于获取主配置
      * @param logstashMachineMapper 机器Mapper，用于获取机器特定配置
      * @param configContent 主配置内容（可为null，从数据库获取）
      * @param jvmOptions JVM配置内容（可为null，从数据库获取）
@@ -55,7 +50,6 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
             SshClient sshClient,
             String deployBaseDir,
             Long logstashMachineId,
-            LogstashProcessMapper logstashProcessMapper,
             LogstashMachineMapper logstashMachineMapper,
             String configContent,
             String jvmOptions,
@@ -67,7 +61,6 @@ public class RefreshConfigCommand extends AbstractLogstashCommand {
                 logstashMachineId,
                 logstashMachineMapper,
                 deployPathManager);
-        this.logstashProcessMapper = logstashProcessMapper;
         this.configContent = configContent;
         this.jvmOptions = jvmOptions;
         this.logstashYml = logstashYml;

@@ -22,6 +22,7 @@ import com.hinadt.miaocha.domain.dto.logsearch.LogDetailResultDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogFieldDistributionResultDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogHistogramResultDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
+import com.hinadt.miaocha.domain.dto.module.QueryConfigDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -419,6 +420,53 @@ class LogSearchServiceImplTest {
 
         // 验证没有尝试连接数据库
         verifyNoInteractions(jdbcQueryExecutor, metadataServiceFactory, metadataService);
+    }
+
+    @Test
+    @DisplayName("获取表字段信息 - 验证排除字段机制正常工作")
+    void testGetTableColumns_ExcludeFieldsMechanism() throws SQLException {
+        // Arrange
+        String module = "test-module";
+        String tableName = "test_table";
+
+        SchemaInfoDTO.ColumnInfoDTO column1 = new SchemaInfoDTO.ColumnInfoDTO();
+        column1.setColumnName("id");
+        column1.setDataType("BIGINT");
+
+        SchemaInfoDTO.ColumnInfoDTO column2 = new SchemaInfoDTO.ColumnInfoDTO();
+        column2.setColumnName("password");
+        column2.setDataType("VARCHAR");
+
+        SchemaInfoDTO.ColumnInfoDTO column3 = new SchemaInfoDTO.ColumnInfoDTO();
+        column3.setColumnName("message");
+        column3.setDataType("TEXT");
+
+        List<SchemaInfoDTO.ColumnInfoDTO> allColumns = Arrays.asList(column1, column2, column3);
+
+        QueryConfigDTO queryConfig = new QueryConfigDTO();
+        queryConfig.setTimeField("timestamp");
+        queryConfig.setExcludeFields(Arrays.asList("password")); // 排除敏感字段
+
+        when(validator.validateAndGetDatasource(module)).thenReturn(testDatasource);
+        when(moduleInfoService.getTableNameByModule(module)).thenReturn(tableName);
+        when(jdbcQueryExecutor.getConnection(testDatasource)).thenReturn(connection);
+        when(metadataServiceFactory.getService("doris")).thenReturn(metadataService);
+        when(metadataService.getColumnInfo(connection, tableName)).thenReturn(allColumns);
+        when(moduleInfoService.getQueryConfigByModule(module)).thenReturn(queryConfig);
+
+        // Act
+        List<SchemaInfoDTO.ColumnInfoDTO> result = logSearchService.getTableColumns(module);
+
+        // Assert - password字段应该被排除
+        assertEquals(2, result.size());
+        List<String> resultColumnNames =
+                result.stream().map(SchemaInfoDTO.ColumnInfoDTO::getColumnName).toList();
+        assertFalse(resultColumnNames.contains("password"));
+        assertTrue(resultColumnNames.contains("id"));
+        assertTrue(resultColumnNames.contains("message"));
+
+        // 验证调用了获取查询配置的方法
+        verify(moduleInfoService).getQueryConfigByModule(module);
     }
 
     // ==================== 边界条件测试 ====================

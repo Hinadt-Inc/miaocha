@@ -210,9 +210,5 @@ public class LogstashConfigParser {
         public static ValidationResult invalid(String errorMessage) {
             return new ValidationResult(false, ErrorCode.VALIDATION_ERROR, errorMessage);
         }
-
-        public boolean isValid() {
-            return valid;
-        }
     }
 }

@@ -5,7 +5,6 @@ import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.config.LogstashProperties;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
-import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
 import org.springframework.stereotype.Component;
 
 /** Logstash命令工厂 - 重构支持多实例，基于logstashMachineId创建命令 */
@@ -15,19 +14,16 @@ public class LogstashCommandFactory {
     private final LogstashProperties logstashProperties;
     private final SshClient sshClient;
     private final LogstashMachineMapper logstashMachineMapper;
-    private final LogstashProcessMapper logstashProcessMapper;
     private final LogstashDeployPathManager deployPathManager;
 
     public LogstashCommandFactory(
             LogstashProperties logstashProperties,
             SshClient sshClient,
             LogstashMachineMapper logstashMachineMapper,
-            LogstashProcessMapper logstashProcessMapper,
             LogstashDeployPathManager deployPathManager) {
         this.logstashProperties = logstashProperties;
         this.sshClient = sshClient;
         this.logstashMachineMapper = logstashMachineMapper;
-        this.logstashProcessMapper = logstashProcessMapper;
         this.deployPathManager = deployPathManager;
     }
 
@@ -94,7 +90,6 @@ public class LogstashCommandFactory {
                 sshClient,
                 logstashProperties.getDeployDir(),
                 logstashMachineId,
-                logstashProcessMapper,
                 logstashMachineMapper,
                 deployPathManager);
     }

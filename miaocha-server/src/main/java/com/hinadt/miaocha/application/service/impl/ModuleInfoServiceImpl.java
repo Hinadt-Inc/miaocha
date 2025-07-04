@@ -76,255 +76,112 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
     @Override
     @Transactional
     public ModuleInfoDTO createModule(ModuleInfoCreateDTO request) {
-        // 检查模块名称是否已存在
-        if (moduleInfoMapper.existsByName(request.getName(), null)) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块名称已存在");
-        }
+        // 验证模块名称唯一性
+        validateModuleNameUnique(request.getName(), null);
 
-        // 检查数据源是否存在
-        DatasourceInfo datasourceInfo = datasourceMapper.selectById(request.getDatasourceId());
-        if (datasourceInfo == null) {
-            throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
-        }
+        // 获取数据源信息
+        DatasourceInfo datasourceInfo = getDatasourceOrThrow(request.getDatasourceId());
 
-        // 创建模块实体 - 审计字段由MyBatis拦截器自动设置
+        // 创建并保存模块
         ModuleInfo moduleInfo = moduleInfoConverter.toEntity(request);
+        insertModuleOrThrow(moduleInfo);
 
-        // 插入数据库
-        int result = moduleInfoMapper.insert(moduleInfo);
-        if (result == 0) {
-            throw new RuntimeException("创建模块失败");
-        }
-
-        // 返回响应DTO
         return moduleInfoConverter.toDto(moduleInfo, datasourceInfo);
     }
 
     @Override
     @Transactional
     public ModuleInfoDTO updateModule(ModuleInfoUpdateDTO request) {
-        // 检查模块是否存在
-        ModuleInfo existingModule = moduleInfoMapper.selectById(request.getId());
-        if (existingModule == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块不存在");
-        }
+        // 获取现有模块
+        ModuleInfo existingModule = getModuleOrThrow(request.getId());
 
-        // 检查模块名称是否与其他模块重复
-        if (moduleInfoMapper.existsByName(request.getName(), request.getId())) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块名称已存在");
-        }
+        // 验证模块名称唯一性
+        validateModuleNameUnique(request.getName(), request.getId());
 
-        // 检查数据源是否存在
-        DatasourceInfo datasourceInfo = datasourceMapper.selectById(request.getDatasourceId());
-        if (datasourceInfo == null) {
-            throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
-        }
+        // 获取数据源信息
+        DatasourceInfo datasourceInfo = getDatasourceOrThrow(request.getDatasourceId());
 
-        // 更新模块实体 - 审计字段由MyBatis拦截器自动设置
+        // 更新模块
         ModuleInfo moduleInfo = moduleInfoConverter.updateEntity(existingModule, request);
+        updateModuleOrThrow(moduleInfo);
 
-        int result = moduleInfoMapper.update(moduleInfo);
-        if (result == 0) {
-            throw new RuntimeException("更新模块失败");
-        }
-
-        // 重新查询以获取更新后的数据
-        ModuleInfo updatedModule = moduleInfoMapper.selectById(request.getId());
+        // 重新查询获取最新数据
+        ModuleInfo updatedModule = getModuleOrThrow(request.getId());
         return moduleInfoConverter.toDto(updatedModule, datasourceInfo);
-    }
-
-    @Override
-    public ModuleInfoDTO getModuleById(Long id) {
-        ModuleInfo moduleInfo = moduleInfoMapper.selectById(id);
-        if (moduleInfo == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块不存在");
-        }
-
-        DatasourceInfo datasourceInfo = datasourceMapper.selectById(moduleInfo.getDatasourceId());
-        return moduleInfoConverter.toDto(moduleInfo, datasourceInfo);
-    }
-
-    @Override
-    public List<ModuleInfoDTO> getAllModules() {
-        List<ModuleInfo> moduleInfos = moduleInfoMapper.selectAll();
-        return moduleInfos.stream()
-                .map(
-                        moduleInfo -> {
-                            DatasourceInfo datasourceInfo =
-                                    datasourceMapper.selectById(moduleInfo.getDatasourceId());
-                            return moduleInfoConverter.toDto(moduleInfo, datasourceInfo);
-                        })
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<ModuleInfoWithPermissionsDTO> getAllModulesWithPermissions() {
-        // 获取所有模块
-        List<ModuleInfo> moduleInfos = moduleInfoMapper.selectAll();
-        if (moduleInfos.isEmpty()) {
-            return new ArrayList<>();
-        }
-
-        // 获取所有数据源信息
-        Map<Long, DatasourceInfo> datasourceMap = new HashMap<>();
-        for (ModuleInfo moduleInfo : moduleInfos) {
-            if (!datasourceMap.containsKey(moduleInfo.getDatasourceId())) {
-                DatasourceInfo datasourceInfo =
-                        datasourceMapper.selectById(moduleInfo.getDatasourceId());
-                if (datasourceInfo != null) {
-                    datasourceMap.put(moduleInfo.getDatasourceId(), datasourceInfo);
-                }
-            }
-        }
-
-        // 获取所有用户模块权限
-        List<UserModulePermission> allPermissions = userModulePermissionMapper.selectAll();
-
-        // 按模块名称分组权限
-        Map<String, List<UserModulePermission>> permissionsByModule =
-                allPermissions.stream()
-                        .collect(Collectors.groupingBy(UserModulePermission::getModule));
-
-        // 获取所有用户信息
-        List<Long> userIds =
-                allPermissions.stream()
-                        .map(UserModulePermission::getUserId)
-                        .distinct()
-                        .collect(Collectors.toList());
-
-        Map<Long, User> userMap = new HashMap<>();
-        if (!userIds.isEmpty()) {
-            List<User> users = userMapper.selectByIds(userIds);
-            userMap = users.stream().collect(Collectors.toMap(User::getId, user -> user));
-        }
-
-        // 构建返回结果
-        List<ModuleInfoWithPermissionsDTO> result = new ArrayList<>();
-        for (ModuleInfo moduleInfo : moduleInfos) {
-            DatasourceInfo datasourceInfo = datasourceMap.get(moduleInfo.getDatasourceId());
-
-            // 获取该模块的权限用户列表
-            List<UserModulePermission> modulePermissions =
-                    permissionsByModule.getOrDefault(moduleInfo.getName(), new ArrayList<>());
-
-            // 转换为UserPermissionInfoDTO列表
-            List<UserPermissionInfoDTO> users = new ArrayList<>();
-            for (UserModulePermission permission : modulePermissions) {
-                User user = userMap.get(permission.getUserId());
-                if (user != null) {
-                    UserPermissionInfoDTO userInfo =
-                            modulePermissionConverter.createUserPermissionInfoDTO(permission, user);
-                    users.add(userInfo);
-                }
-            }
-
-            // 创建包含权限的模块DTO
-            ModuleInfoWithPermissionsDTO dto =
-                    moduleInfoConverter.toWithPermissionsDto(moduleInfo, datasourceInfo, users);
-            result.add(dto);
-        }
-
-        return result;
     }
 
     @Override
     @Transactional
     public void deleteModule(Long id, Boolean deleteDorisTable) {
-        ModuleInfo moduleInfo = moduleInfoMapper.selectById(id);
-        if (moduleInfo == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块不存在");
-        }
+        ModuleInfo moduleInfo = getModuleOrThrow(id);
 
-        // 检查是否有Logstash进程正在使用该模块
-        int processCount = logstashProcessMapper.countByModuleId(id);
-        if (processCount > 0) {
-            throw new BusinessException(
-                    ErrorCode.VALIDATION_ERROR, "该模块正在被 " + processCount + " 个进程使用，无法删除");
-        }
+        // 检查模块使用情况
+        validateModuleNotInUse(id);
 
-        moduleInfoMapper.deleteById(id);
+        // 删除模块
+        deleteModuleById(id);
 
-        // 根据参数决定是否删除关联的Doris表数据
-        if (deleteDorisTable
-                && StringUtils.hasText(moduleInfo.getTableName())
-                && StringUtils.hasText(moduleInfo.getDorisSql())) {
+        // 根据参数决定是否删除Doris表
+        if (Boolean.TRUE.equals(deleteDorisTable) && canDeleteDorisTable(moduleInfo)) {
             deleteDorisTable(moduleInfo);
         }
     }
 
-    /**
-     * 删除Doris表数据
-     *
-     * @param moduleInfo 模块信息
-     */
-    private void deleteDorisTable(ModuleInfo moduleInfo) {
-        // 获取数据源信息
-        DatasourceInfo datasourceInfo = datasourceMapper.selectById(moduleInfo.getDatasourceId());
-        if (datasourceInfo == null) {
-            throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
+    @Override
+    public ModuleInfoDTO getModuleById(Long id) {
+        ModuleInfo moduleInfo = getModuleOrThrow(id);
+        return convertToModuleDTO(moduleInfo);
+    }
+
+    @Override
+    public List<ModuleInfoDTO> getAllModules() {
+        List<ModuleInfo> moduleInfos = moduleInfoMapper.selectAll();
+        return moduleInfos.stream().map(this::convertToModuleDTO).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ModuleInfoWithPermissionsDTO> getAllModulesWithPermissions() {
+        List<ModuleInfo> moduleInfos = moduleInfoMapper.selectAll();
+        if (moduleInfos.isEmpty()) {
+            return new ArrayList<>();
         }
 
-        String tableName = moduleInfo.getTableName();
+        // 构建数据源映射
+        Map<Long, DatasourceInfo> datasourceMap = buildDatasourceMap(moduleInfos);
 
-        // 1. 先清空表数据
-        String truncateSQL = "TRUNCATE TABLE " + tableName;
-        try {
-            jdbcQueryExecutor.executeQuery(datasourceInfo, truncateSQL);
-        } catch (Exception e) {
-            // 如果TRUNCATE失败，可能是表不存在，记录日志但不抛出异常
-            log.error("清空表数据失败，表可能不存在: {}, 错误: {}", tableName, e.getMessage());
-        }
+        // 构建权限映射
+        Map<String, List<UserPermissionInfoDTO>> permissionMap = buildPermissionMap();
 
-        // 2. 删除表
-        String dropSQL = "DROP TABLE IF EXISTS " + tableName;
-        try {
-            jdbcQueryExecutor.executeQuery(datasourceInfo, dropSQL);
-        } catch (Exception e) {
-            // 如果DROP失败，记录日志但不抛出异常，允许删除模块继续进行
-            log.error("删除表失败，表可能不存在: {}, 错误: {}", tableName, e.getMessage());
-        }
+        // 转换为DTO
+        return moduleInfos.stream()
+                .map(
+                        moduleInfo -> {
+                            DatasourceInfo datasourceInfo =
+                                    datasourceMap.get(moduleInfo.getDatasourceId());
+                            List<UserPermissionInfoDTO> users =
+                                    permissionMap.getOrDefault(
+                                            moduleInfo.getName(), new ArrayList<>());
+                            return moduleInfoConverter.toWithPermissionsDto(
+                                    moduleInfo, datasourceInfo, users);
+                        })
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional
     public ModuleInfoDTO executeDorisSql(Long id, String sql) {
-        ModuleInfo moduleInfo = moduleInfoMapper.selectById(id);
-        if (moduleInfo == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块不存在");
-        }
+        ModuleInfo moduleInfo = getModuleOrThrow(id);
 
-        if (!StringUtils.hasText(sql)) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "SQL语句不能为空");
-        }
+        // 验证SQL
+        validateSqlForExecution(moduleInfo, sql);
 
-        // 检查dorisSql字段是否已有值
-        if (StringUtils.hasText(moduleInfo.getDorisSql())) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "该模块已经执行过Doris SQL，不能重复执行");
-        }
+        // 获取数据源并执行SQL
+        DatasourceInfo datasourceInfo = getDatasourceOrThrow(moduleInfo.getDatasourceId());
+        executeSqlSafely(datasourceInfo, sql);
 
-        // ��验Doris SQL语句
-        tableValidationService.validateDorisSql(moduleInfo, sql);
-
-        // 获取数据源
-        DatasourceInfo datasourceInfo = datasourceMapper.selectById(moduleInfo.getDatasourceId());
-        if (datasourceInfo == null) {
-            throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
-        }
-
-        // 执行SQL
-        try {
-            jdbcQueryExecutor.executeQuery(datasourceInfo, sql);
-        } catch (Exception e) {
-            throw new BusinessException(
-                    ErrorCode.SQL_EXECUTION_FAILED, "SQL执行失败: " + e.getMessage(), e);
-        }
-
-        // 更新模块的dorisSql字段 - 更新时间和更新人由MyBatis拦截器自动设置
+        // 更新模块SQL字段
         moduleInfo.setDorisSql(sql);
-        int result = moduleInfoMapper.update(moduleInfo);
-        if (result == 0) {
-            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "更新模块Doris SQL失败");
-        }
+        updateModuleOrThrow(moduleInfo);
 
         return moduleInfoConverter.toDto(moduleInfo, datasourceInfo);
     }
@@ -332,71 +189,31 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
     @Override
     @Transactional
     public ModuleInfoDTO configureQueryConfig(Long moduleId, QueryConfigDTO queryConfig) {
-        // 检查模块是否存在
-        ModuleInfo moduleInfo = moduleInfoMapper.selectById(moduleId);
-        if (moduleInfo == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块不存在");
-        }
+        ModuleInfo moduleInfo = getModuleOrThrow(moduleId);
 
-        // 检查表是否已经准备好（建表SQL配置或数据库中存在表）
-        if (!StringUtils.hasText(moduleInfo.getDorisSql())
-                && !tableValidationService.isTableExists(moduleInfo)) {
-            throw new BusinessException(ErrorCode.MODULE_DORIS_SQL_NOT_CONFIGURED);
-        }
+        // 验证表和配置
+        validateTableReady(moduleInfo);
+        validateQueryConfig(moduleInfo, queryConfig);
 
-        // 验证查询配置中的字段是否存在
-        if (queryConfig != null && queryConfig.getKeywordFields() != null) {
-            List<String> configuredFields =
-                    queryConfig.getKeywordFields().stream()
-                            .map(QueryConfigDTO.KeywordFieldConfigDTO::getFieldName)
-                            .collect(Collectors.toList());
-
-            // 如果配置了时间字段，也要验证
-            if (StringUtils.hasText(queryConfig.getTimeField())) {
-                configuredFields.add(queryConfig.getTimeField());
-            }
-
-            // 验证字段是否存在
-            tableValidationService.validateQueryConfigFields(moduleInfo, configuredFields);
-        }
-
-        // 将QueryConfigDTO转换为JSON字符串
-        String queryConfigJson;
-        try {
-            if (queryConfig == null) {
-                // 如果queryConfig为null，设置为空JSON对象
-                queryConfigJson = "{}";
-            } else {
-                queryConfigJson = objectMapper.writeValueAsString(queryConfig);
-            }
-        } catch (JsonProcessingException e) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "查询配置序列化失败: " + e.getMessage());
-        }
-
-        // 更新模块的查询配置 - 更新时间和更新人由MyBatis拦截器自动设置
+        // 更新配置
+        String queryConfigJson = serializeQueryConfig(queryConfig);
         moduleInfo.setQueryConfig(queryConfigJson);
-        moduleInfoMapper.update(moduleInfo);
+        updateModuleOrThrow(moduleInfo);
 
-        // 获取数据源信息
-        DatasourceInfo datasourceInfo = datasourceMapper.selectById(moduleInfo.getDatasourceId());
+        // 返回结果
+        DatasourceInfo datasourceInfo = getDatasourceOrThrow(moduleInfo.getDatasourceId());
         return moduleInfoConverter.toDto(moduleInfo, datasourceInfo);
     }
 
     @Override
     public String getTableNameByModule(String module) {
-        if (!StringUtils.hasText(module)) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块名称不能为空");
-        }
+        validateModuleName(module);
 
-        // 通过模块名称查询模块信息
-        ModuleInfo moduleInfo = moduleInfoMapper.selectByName(module);
-        if (moduleInfo == null) {
-            throw new BusinessException(ErrorCode.MODULE_NOT_FOUND, "未找到模块: " + module);
-        }
-
+        ModuleInfo moduleInfo = getModuleByName(module);
         String tableName = moduleInfo.getTableName();
+
         if (!StringUtils.hasText(tableName)) {
-            throw new RuntimeException("模块 " + module + " 对应的表名未配置");
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块 " + module + " 对应的表名未配置");
         }
 
         return tableName;
@@ -408,14 +225,237 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
             return null;
         }
 
-        // 通过模块名称查询模块信息
         ModuleInfo moduleInfo = moduleInfoMapper.selectByName(module);
         if (moduleInfo == null) {
             return null;
         }
 
-        // 解析查询配置JSON字符串
-        String queryConfigJson = moduleInfo.getQueryConfig();
+        return parseQueryConfig(moduleInfo.getQueryConfig(), module);
+    }
+
+    private void validateModuleName(String module) {
+        if (!StringUtils.hasText(module)) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块名称不能为空");
+        }
+    }
+
+    private void validateModuleNameUnique(String name, Long excludeId) {
+        if (moduleInfoMapper.existsByName(name, excludeId)) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块名称已存在");
+        }
+    }
+
+    private void validateModuleNotInUse(Long moduleId) {
+        int processCount = logstashProcessMapper.countByModuleId(moduleId);
+        if (processCount > 0) {
+            throw new BusinessException(
+                    ErrorCode.VALIDATION_ERROR, "该模块正在被 " + processCount + " 个进程使用，无法删除");
+        }
+    }
+
+    private void validateSqlForExecution(ModuleInfo moduleInfo, String sql) {
+        if (!StringUtils.hasText(sql)) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "SQL语句不能为空");
+        }
+
+        if (StringUtils.hasText(moduleInfo.getDorisSql())) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "该模块已经执行过Doris SQL，不能重复执行");
+        }
+
+        tableValidationService.validateDorisSql(moduleInfo, sql);
+    }
+
+    private void validateTableReady(ModuleInfo moduleInfo) {
+        if (!StringUtils.hasText(moduleInfo.getDorisSql())
+                && !tableValidationService.isTableExists(moduleInfo)) {
+            throw new BusinessException(ErrorCode.MODULE_DORIS_SQL_NOT_CONFIGURED);
+        }
+    }
+
+    private void validateQueryConfig(ModuleInfo moduleInfo, QueryConfigDTO queryConfig) {
+        validateExcludeFieldsNotContainTimeField(queryConfig);
+        validateConfiguredFieldsExist(moduleInfo, queryConfig);
+    }
+
+    private void validateExcludeFieldsNotContainTimeField(QueryConfigDTO queryConfig) {
+        if (queryConfig.getExcludeFields() != null
+                && !queryConfig.getExcludeFields().isEmpty()
+                && StringUtils.hasText(queryConfig.getTimeField())
+                && queryConfig.getExcludeFields().contains(queryConfig.getTimeField())) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "排除字段列表不能包含时间字段");
+        }
+    }
+
+    private void validateConfiguredFieldsExist(ModuleInfo moduleInfo, QueryConfigDTO queryConfig) {
+        List<String> configuredFields = collectConfiguredFields(queryConfig);
+        if (!configuredFields.isEmpty()) {
+            tableValidationService.validateQueryConfigFields(moduleInfo, configuredFields);
+        }
+    }
+
+    private ModuleInfo getModuleOrThrow(Long id) {
+        ModuleInfo moduleInfo = moduleInfoMapper.selectById(id);
+        if (moduleInfo == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块不存在");
+        }
+        return moduleInfo;
+    }
+
+    private ModuleInfo getModuleByName(String module) {
+        ModuleInfo moduleInfo = moduleInfoMapper.selectByName(module);
+        if (moduleInfo == null) {
+            throw new BusinessException(ErrorCode.MODULE_NOT_FOUND, "未找到模块: " + module);
+        }
+        return moduleInfo;
+    }
+
+    private DatasourceInfo getDatasourceOrThrow(Long datasourceId) {
+        DatasourceInfo datasourceInfo = datasourceMapper.selectById(datasourceId);
+        if (datasourceInfo == null) {
+            throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
+        }
+        return datasourceInfo;
+    }
+
+    private void insertModuleOrThrow(ModuleInfo moduleInfo) {
+        int result = moduleInfoMapper.insert(moduleInfo);
+        if (result == 0) {
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "创建模块失败");
+        }
+    }
+
+    private void updateModuleOrThrow(ModuleInfo moduleInfo) {
+        int result = moduleInfoMapper.update(moduleInfo);
+        if (result == 0) {
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "更新模块失败");
+        }
+    }
+
+    private void deleteModuleById(Long id) {
+        int result = moduleInfoMapper.deleteById(id);
+        if (result == 0) {
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "删除模块失败");
+        }
+    }
+
+    private void executeSqlSafely(DatasourceInfo datasourceInfo, String sql) {
+        try {
+            jdbcQueryExecutor.executeQuery(datasourceInfo, sql);
+        } catch (Exception e) {
+            throw new BusinessException(
+                    ErrorCode.SQL_EXECUTION_FAILED, "SQL执行失败: " + e.getMessage(), e);
+        }
+    }
+
+    private boolean canDeleteDorisTable(ModuleInfo moduleInfo) {
+        return StringUtils.hasText(moduleInfo.getTableName())
+                && StringUtils.hasText(moduleInfo.getDorisSql());
+    }
+
+    private void deleteDorisTable(ModuleInfo moduleInfo) {
+        DatasourceInfo datasourceInfo = getDatasourceOrThrow(moduleInfo.getDatasourceId());
+        String tableName = moduleInfo.getTableName();
+
+        // 清空表数据
+        executeSqlIgnoreError(datasourceInfo, "TRUNCATE TABLE " + tableName, "清空表数据");
+
+        // 删除表
+        executeSqlIgnoreError(datasourceInfo, "DROP TABLE IF EXISTS " + tableName, "删除表");
+    }
+
+    private void executeSqlIgnoreError(
+            DatasourceInfo datasourceInfo, String sql, String operation) {
+        try {
+            jdbcQueryExecutor.executeQuery(datasourceInfo, sql);
+        } catch (Exception e) {
+            log.error("{}失败: {}, 错误: {}", operation, sql, e.getMessage());
+        }
+    }
+
+    private ModuleInfoDTO convertToModuleDTO(ModuleInfo moduleInfo) {
+        DatasourceInfo datasourceInfo = getDatasourceOrThrow(moduleInfo.getDatasourceId());
+        return moduleInfoConverter.toDto(moduleInfo, datasourceInfo);
+    }
+
+    private Map<Long, DatasourceInfo> buildDatasourceMap(List<ModuleInfo> moduleInfos) {
+        return moduleInfos.stream()
+                .map(ModuleInfo::getDatasourceId)
+                .distinct()
+                .collect(Collectors.toMap(id -> id, this::getDatasourceOrThrow));
+    }
+
+    private Map<String, List<UserPermissionInfoDTO>> buildPermissionMap() {
+        List<UserModulePermission> allPermissions = userModulePermissionMapper.selectAll();
+        if (allPermissions.isEmpty()) {
+            return new HashMap<>();
+        }
+
+        // 构建用户信息映射
+        Map<Long, User> userMap = buildUserMap(allPermissions);
+
+        // 按模块分组权限并转换为DTO
+        return allPermissions.stream()
+                .collect(
+                        Collectors.groupingBy(
+                                UserModulePermission::getModule,
+                                Collectors.mapping(
+                                        permission ->
+                                                modulePermissionConverter
+                                                        .createUserPermissionInfoDTO(
+                                                                permission,
+                                                                userMap.get(
+                                                                        permission.getUserId())),
+                                        Collectors.toList())));
+    }
+
+    private Map<Long, User> buildUserMap(List<UserModulePermission> allPermissions) {
+        List<Long> userIds =
+                allPermissions.stream()
+                        .map(UserModulePermission::getUserId)
+                        .distinct()
+                        .collect(Collectors.toList());
+
+        if (userIds.isEmpty()) {
+            return new HashMap<>();
+        }
+
+        return userMapper.selectByIds(userIds).stream()
+                .collect(Collectors.toMap(User::getId, user -> user));
+    }
+
+    private List<String> collectConfiguredFields(QueryConfigDTO queryConfig) {
+        List<String> configuredFields = new ArrayList<>();
+
+        // 收集关键词字段
+        if (queryConfig.getKeywordFields() != null) {
+            configuredFields.addAll(
+                    queryConfig.getKeywordFields().stream()
+                            .map(QueryConfigDTO.KeywordFieldConfigDTO::getFieldName)
+                            .toList());
+        }
+
+        // 收集时间字段
+        if (StringUtils.hasText(queryConfig.getTimeField())) {
+            configuredFields.add(queryConfig.getTimeField());
+        }
+
+        // 收集排除字段
+        if (queryConfig.getExcludeFields() != null && !queryConfig.getExcludeFields().isEmpty()) {
+            configuredFields.addAll(queryConfig.getExcludeFields());
+        }
+
+        return configuredFields;
+    }
+
+    private String serializeQueryConfig(QueryConfigDTO queryConfig) {
+        try {
+            return objectMapper.writeValueAsString(queryConfig);
+        } catch (JsonProcessingException e) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "查询配置序列化失败: " + e.getMessage());
+        }
+    }
+
+    private QueryConfigDTO parseQueryConfig(String queryConfigJson, String module) {
         if (!StringUtils.hasText(queryConfigJson)) {
             return null;
         }
@@ -423,7 +463,7 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
         try {
             return objectMapper.readValue(queryConfigJson, QueryConfigDTO.class);
         } catch (JsonProcessingException e) {
-            log.warn("解析模块 {} 的查询配置JSON失���: {}", module, e.getMessage());
+            log.warn("解析模块 {} 的查询配置JSON失败: {}", module, e.getMessage());
             return null;
         }
     }

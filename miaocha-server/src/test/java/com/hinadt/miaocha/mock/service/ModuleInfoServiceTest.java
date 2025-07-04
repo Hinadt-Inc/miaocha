@@ -28,6 +28,7 @@ import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
 import com.hinadt.miaocha.domain.mapper.UserMapper;
 import com.hinadt.miaocha.domain.mapper.UserModulePermissionMapper;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -411,7 +412,7 @@ class ModuleInfoServiceTest {
         ModuleInfo moduleWithDoris = new ModuleInfo();
         moduleWithDoris.setId(1L);
         moduleWithDoris.setDatasourceId(1L); // 设置datasourceId避免null
-        moduleWithDoris.setDorisSql("CREATE TABLE ...");
+        moduleWithDoris.setDorisSql("CREATE TABLE test (id INT, timestamp DATETIME)");
 
         // Mock 行为
         when(moduleInfoMapper.selectById(1L)).thenReturn(moduleWithDoris);
@@ -430,6 +431,147 @@ class ModuleInfoServiceTest {
         // 验证调用 - 验证关键的业务逻辑调用
         verify(objectMapper).writeValueAsString(queryConfig);
         verify(moduleInfoMapper).update(any(ModuleInfo.class));
+        // 验证字段验证方法被调用，包含时间字段
+        verify(tableValidationService)
+                .validateQueryConfigFields(
+                        eq(moduleWithDoris), argThat(fields -> fields.contains("timestamp")));
+    }
+
+    @Test
+    void testConfigureQueryConfig_WithExcludeFields() throws Exception {
+        // 准备查询配置 - 包含排除字段
+        QueryConfigDTO queryConfig = new QueryConfigDTO();
+        queryConfig.setTimeField("timestamp");
+        queryConfig.setExcludeFields(Arrays.asList("password", "secret_key"));
+
+        String configJson =
+                "{\"timeField\":\"timestamp\",\"excludeFields\":[\"password\",\"secret_key\"]}";
+
+        // 准备有Doris SQL的模块
+        ModuleInfo moduleWithDoris = new ModuleInfo();
+        moduleWithDoris.setId(1L);
+        moduleWithDoris.setDatasourceId(1L);
+        moduleWithDoris.setDorisSql(
+                "CREATE TABLE test (id INT, timestamp DATETIME, password VARCHAR(255), secret_key"
+                        + " VARCHAR(255))");
+
+        // Mock 行为
+        when(moduleInfoMapper.selectById(1L)).thenReturn(moduleWithDoris);
+        when(objectMapper.writeValueAsString(queryConfig)).thenReturn(configJson);
+        when(moduleInfoMapper.update(any(ModuleInfo.class))).thenReturn(1);
+        when(datasourceMapper.selectById(1L)).thenReturn(sampleDatasourceInfo);
+        when(moduleInfoConverter.toDto(any(ModuleInfo.class), eq(sampleDatasourceInfo)))
+                .thenReturn(sampleModuleInfoDTO);
+
+        // 执行测试
+        ModuleInfoDTO result = moduleInfoService.configureQueryConfig(1L, queryConfig);
+
+        // 验证结果
+        assertNotNull(result);
+
+        // 验证调用 - 验证关键的业务逻辑调用
+        verify(objectMapper).writeValueAsString(queryConfig);
+        verify(moduleInfoMapper).update(any(ModuleInfo.class));
+        // 验证字段验证方法被调用，包含排除字段
+        verify(tableValidationService)
+                .validateQueryConfigFields(
+                        eq(moduleWithDoris),
+                        argThat(
+                                fields ->
+                                        fields.containsAll(
+                                                Arrays.asList(
+                                                        "timestamp", "password", "secret_key"))));
+    }
+
+    @Test
+    void testConfigureQueryConfig_WithKeywordFieldsAndExcludeFields() throws Exception {
+        // 准备查询配置 - 包含关键词字段和排除字段
+        QueryConfigDTO queryConfig = new QueryConfigDTO();
+        queryConfig.setTimeField("timestamp");
+
+        List<QueryConfigDTO.KeywordFieldConfigDTO> keywordFields = new ArrayList<>();
+        QueryConfigDTO.KeywordFieldConfigDTO keywordField =
+                new QueryConfigDTO.KeywordFieldConfigDTO();
+        keywordField.setFieldName("message");
+        keywordField.setSearchMethod("LIKE");
+        keywordFields.add(keywordField);
+        queryConfig.setKeywordFields(keywordFields);
+
+        queryConfig.setExcludeFields(Arrays.asList("password", "secret_key"));
+
+        String configJson =
+                "{\"timeField\":\"timestamp\",\"keywordFields\":[{\"fieldName\":\"message\",\"searchMethod\":\"LIKE\"}],\"excludeFields\":[\"password\",\"secret_key\"]}";
+
+        // 准备有Doris SQL的模块
+        ModuleInfo moduleWithDoris = new ModuleInfo();
+        moduleWithDoris.setId(1L);
+        moduleWithDoris.setDatasourceId(1L);
+        moduleWithDoris.setDorisSql(
+                "CREATE TABLE test (id INT, timestamp DATETIME, message TEXT, password"
+                        + " VARCHAR(255), secret_key VARCHAR(255))");
+
+        // Mock 行为
+        when(moduleInfoMapper.selectById(1L)).thenReturn(moduleWithDoris);
+        when(objectMapper.writeValueAsString(queryConfig)).thenReturn(configJson);
+        when(moduleInfoMapper.update(any(ModuleInfo.class))).thenReturn(1);
+        when(datasourceMapper.selectById(1L)).thenReturn(sampleDatasourceInfo);
+        when(moduleInfoConverter.toDto(any(ModuleInfo.class), eq(sampleDatasourceInfo)))
+                .thenReturn(sampleModuleInfoDTO);
+
+        // 执行测试
+        ModuleInfoDTO result = moduleInfoService.configureQueryConfig(1L, queryConfig);
+
+        // 验证结果
+        assertNotNull(result);
+
+        // 验证调用 - 验证关键的业务逻辑调用
+        verify(objectMapper).writeValueAsString(queryConfig);
+        verify(moduleInfoMapper).update(any(ModuleInfo.class));
+        // 验证字段验证方法被调用，包含时间字段、关键词字段和排除字段
+        verify(tableValidationService)
+                .validateQueryConfigFields(
+                        eq(moduleWithDoris),
+                        argThat(
+                                fields ->
+                                        fields.containsAll(
+                                                Arrays.asList(
+                                                        "timestamp",
+                                                        "message",
+                                                        "password",
+                                                        "secret_key"))));
+    }
+
+    @Test
+    void testConfigureQueryConfig_ExcludeFieldsContainsTimeField() throws Exception {
+        // 准备查询配置 - 排除字段包含时间字段
+        QueryConfigDTO queryConfig = new QueryConfigDTO();
+        queryConfig.setTimeField("timestamp");
+        queryConfig.setExcludeFields(Arrays.asList("password", "timestamp", "secret_key"));
+
+        // 准备有Doris SQL的模块
+        ModuleInfo moduleWithDoris = new ModuleInfo();
+        moduleWithDoris.setId(1L);
+        moduleWithDoris.setDatasourceId(1L);
+        moduleWithDoris.setDorisSql(
+                "CREATE TABLE test (id INT, timestamp DATETIME, password VARCHAR(255), secret_key"
+                        + " VARCHAR(255))");
+
+        // Mock 行为
+        when(moduleInfoMapper.selectById(1L)).thenReturn(moduleWithDoris);
+
+        // 执行测试并验证异常
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> moduleInfoService.configureQueryConfig(1L, queryConfig));
+
+        assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
+        assertEquals("排除字段列表不能包含时间字段", exception.getMessage());
+
+        // 验证不会执行后续的操作
+        verify(objectMapper, never()).writeValueAsString(any());
+        verify(moduleInfoMapper, never()).update(any());
+        verify(tableValidationService, never()).validateQueryConfigFields(any(), any());
     }
 
     @Test
