@@ -3,9 +3,9 @@
 
 # 🔍 秒查 - 企业级日志管理平台
 
-## 🚀 基于 Doris 的高性能日志检索系统，提供毫秒级查询和智能分析能力
+## 🚀 基于 Apache Doris 的高性能日志检索系统
 
-[![Version](https://img.shields.io/badge/Version-2.0.0--SNAPSHOT-blue.svg)](https://github.com/your-org/miaocha)
+[![Version](https://img.shields.io/badge/Version-2.0.0--SNAPSHOT-blue.svg)](https://github.com/Hinadt-Inc/miaocha)
 [![Java Version](https://img.shields.io/badge/Java-17+-orange.svg)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.4-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -14,175 +14,111 @@
 
 ---
 
-## 💡 项目概述
+## 📖 关于秒查
 
-**秒查（Miaocha）**是一个基于 **Spring Boot 3.x** 和 **React 19** 的企业级日志管理平台。系统提供完整的日志采集、存储、查询、分析功能，以及强大的 **Logstash 进程管理**能力，支持**分布式部署**和**动态扩缩容**，让您能够秒级查询海量日志数据。
+**秒查（Miaocha）** 是一个开源的企业级日志管理平台，基于 **Spring Boot 3.x**、**React 19** 和 **Apache Doris**
+，提供毫秒级日志查询、智能分析和动态扩缩容能力。支持分布式部署和强大的 Logstash 进程管理，满足企业海量日志处理需求。
 
-### ⭐ 为什么选择秒查？
+### ⭐ 核心优势
 
-- ⚡ **毫秒级查询**: 基于 Apache Doris 的高性能日志检索引擎
-- 🎯 **智能分析**: 支持复杂查询条件和多维度数据分析
-- 🚀 **动态扩容**: Logstash 进程支持秒级水平扩缩容
-- 🛡️ **企业级**: 完善的权限管理和多租户支持
-- 🔧 **零运维**: 内置自动化运维和故障恢复机制
+- ⚡ **毫秒级查询**: 高性能日志检索引擎
+- 🎯 **智能分析**: 支持复杂查询和多维度分析
+- 🚀 **动态扩容**: Logstash 秒级水平扩展
+- 🛡️ **企业级安全**: 细粒度权限和多租户支持
+- 🔧 **零运维**: 自动化运维与故障恢复
 
 ---
 
 ## 🎯 核心功能
 
-### 🔍 日志检索分析
-- **多维度检索**: 支持关键词、时间范围、字段条件的复杂组合查询
-- **实时统计分析**: 时间分布柱状图、字段分布统计
-- **高性能查询**: 毫秒级响应，支持海量数据检索
-- **智能可视化**: 直观的图表展示和数据探索
-
-### 📊 模块化日志管理
-- **业务线隔离**: 按业务模块区分不同应用的日志数据
-- **一站式流程**: 从建表配置到日志采集的完整管理
-- **动态配置**: 支持查询配置热更新和字段映射
-- **权限控制**: 模块级别的细粒度权限管理
-
-### ⚙️ Logstash 管理功能
-- **进程生命周期**: 部署、启动、停止、监控的完整管理
-- **智能扩缩容**: 支持动态添加/移除服务器节点
-- **状态监控**: 实时进程状态跟踪和健康检查
-- **配置管理**: 统一的配置文件管理和版本控制
-
-### 💻 SQL编辑器功能
-- **Monaco编辑器**: VS Code级别的SQL编辑体验
-- **智能提示**: 语法高亮、自动补全、错误检查
-- **多数据源**: 支持连接不同类型的数据库
-- **结果导出**: 支持CSV、Excel等格式的数据导出
-
-### 🔐 系统管理功能
-- **用户管理**: 用户创建、编辑、密码管理
-- **数据源管理**: 多种数据源连接配置和测试
-- **服务器管理**: SSH连接的服务器节点管理
-- **权限管理**: 基于模块的细粒度权限控制
+- **日志检索**: 支持关键词、时间范围、字段组合查询，毫秒级响应
+- **模块化管理**: 业务线隔离，动态配置查询字段和时间字段
+- **Logstash 管理**: 进程部署、监控、动态扩缩容
+- **SQL 编辑器**: 智能提示、语法高亮、结果导出
+- **系统管理**: 用户、权限、数据源、服务器管理
 
 ---
 
-## 🛠️ 技术栈
+## 📸 功能展示
 
-<div align="center">
-<table>
-<tr>
-<td width="50%" align="center">
+### 日志主界面搜索
 
-### 🔧 后端技术栈
+<img src="docs/images/logsearch.png" width="600"  alt=""/>
 
-[![Java](https://img.shields.io/badge/Java-17+-orange?logo=openjdk)](https://openjdk.org/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.4-brightgreen?logo=spring)](https://spring.io/)
-[![Spring Security](https://img.shields.io/badge/Spring%20Security-6+-green?logo=springsecurity)](https://spring.io/projects/spring-security)
-[![MyBatis](https://img.shields.io/badge/MyBatis-3.0.4-red?logo=mybatis)](https://mybatis.org/)
-[![MySQL](https://img.shields.io/badge/MySQL-8.4.0-blue?logo=mysql)](https://www.mysql.com/)
-[![Apache Doris](https://img.shields.io/badge/Apache%20Doris-支持-purple)](https://doris.apache.org/)
+### Logstash 进程管理
 
-</td>
-<td width="50%" align="center">
+<img src="docs/images/logstashmanage.png" width="600"  alt=""/>
 
-### 🎨 前端技术栈
+### SQL 编辑器查询
 
-[![React](https://img.shields.io/badge/React-19.1.0-blue?logo=react)](https://reactjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7.2-blue?logo=typescript)](https://www.typescriptlang.org/)
-[![Ant Design](https://img.shields.io/badge/Ant%20Design-5.25.1-blue?logo=antdesign)](https://ant.design/)
-[![Vite](https://img.shields.io/badge/Vite-6.2.0-purple?logo=vite)](https://vitejs.dev/)
-[![Monaco Editor](https://img.shields.io/badge/Monaco%20Editor-0.52.2-blue)](https://microsoft.github.io/monaco-editor/)
-[![ECharts](https://img.shields.io/badge/ECharts-5.6.0-red)](https://echarts.apache.org/)
-
-</td>
-</tr>
-</table>
-</div>
-
-### 🏗️ 项目结构
-
-```
-miaocha/
-├── miaocha-server/        # Spring Boot 后端服务
-│   ├── src/main/java/com/hinadt/miaocha/
-│   │   ├── endpoint/      # API接口层
-│   │   ├── application/   # 应用服务层
-│   │   ├── domain/        # 领域层
-│   │   ├── common/        # 通用组件
-│   │   └── config/        # 配置管理
-│   └── src/main/resources/
-├── miaocha-ui/            # React 前端界面
-│   └── frontend/
-│       ├── src/
-│       │   ├── pages/     # 页面组件
-│       │   ├── api/       # API接口
-│       │   ├── components/ # 公共组件
-│       │   └── utils/     # 工具函数
-│       └── package.json
-├── miaocha-assembly/      # 打包模块
-├── docs/                  # 项目文档
-└── pom.xml               # Maven 根配置
-```
+<img src="docs/images/sqlQuery.png" width="600"  alt=""/>
 
 ---
 
 ## 🚀 快速开始
 
-### 🏃‍♂️ 本地启动
+### 本地运行
 
 ```bash
-# 📥 1. 克隆项目
-git clone <repository-url>
+# 1. 克隆项目
+git clone https://github.com/Hinadt-Inc/miaocha
 cd miaocha
 
-# 🔧 2. 配置数据库连接  
+# 2. 配置数据库
 # 编辑 miaocha-server/src/main/resources/application-dev.yml
 
-# 🏗️ 3. 构建项目
+# 3. 构建项目
 mvn clean package
 
-# 🚀 4. 启动后端服务
+# 4. 启动后端
 cd miaocha-server
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 
-# 🎨 5. 启动前端服务（新终端）
+# 5. 启动前端
 cd miaocha-ui/frontend
 npm install
 npm run dev
 ```
 
-### 🐳 Docker 部署
+### Docker 部署
 
 ```bash
-# 🏗️ 构建并启动
-./build-start-docker.sh
+# 构建并启动
+./scripts/build-start-docker.sh
 
-# 🧹 清理镜像
-./clean-docker-images.sh
+# 清理镜像
+./scripts/clean-docker-images.sh
 ```
 
 ---
 
-## 📚 API 文档
+## 📝 文档资源
 
-🔗 **Swagger UI文档**: `http://<serverIp>:<port>/swagger-ui/index.html#/`
+| 类型   | 文档名称 | 描述        | 链接                             |
+|------|------|-----------|--------------------------------|
+| 开发手册 | 开发指南 | 环境搭建、代码规范 | [链接](docs/developer-guide.md)  |
+| 开发手册 | 部署指南 | 部署步骤、配置说明 | [链接](docs/deployment-guide.md) |
+| 产品手册 | 用户指南 | 功能使用、配置说明 | [链接](docs/user-guide.md)       |
+| 产品手册 | FAQ  | 常见问题解答    | [链接](docs/faq.md)              |
 
-### 🔌 主要API模块
-
-- 🔍 **日志检索**: `/api/logs` - 日志查询和分析
-- 💻 **SQL编辑器**: `/api/sql` - 自定义SQL查询
-- 👤 **用户管理**: `/api/users` - 用户和认证
-- 🗄️ **数据源管理**: `/api/datasources` - 数据源配置
-- ⚙️ **Logstash管理**: `/api/logstash` - 进程管理
-- 🖥️ **服务器管理**: `/api/machines` - 机器连接
-- 📊 **模块管理**: `/api/modules` - 日志模块配置
-- 🔐 **权限管理**: `/api/permissions` - 访问控制
+**注意**: 以上文档为占位符，请在 `docs/` 目录下补充实际内容。
 
 ---
 
-<div align="center">
+## 🔔 最新更新
 
-### 🌟 如果这个项目对您有帮助，请给我们一个 Star ⭐
+### 版本 2.0.0
 
-[![GitHub stars](https://img.shields.io/github/stars/your-org/miaocha?style=social)](https://github.com/your-org/miaocha)
+- **模块查询配置**: 支持多种字段检索方式，灵活指定时间字段，提升查询准确性
+- **性能优化**: 更快日志检索速度
+- **稳定性提升**: 修复已知问题
+
+---
+
+## 🌟 社区
+
+欢迎访问我们的 [GitHub 仓库](https://github.com/Hinadt-Inc/miaocha) 并给项目一个 Star ⭐ 支持！
+
+---
 
 <sub>🎨 Built with ❤️ | 📜 Licensed under Apache 2.0</sub>
-
-</div>
-

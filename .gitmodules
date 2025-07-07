@@ -1,0 +1,3 @@
+[submodule "miaocha-ui/frontend"]
+	path = miaocha-ui/frontend
+	url = https://github.com/Hinadt-Inc/miaocha-ui.git 
