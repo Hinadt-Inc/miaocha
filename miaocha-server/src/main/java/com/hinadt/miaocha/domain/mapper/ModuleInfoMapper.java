@@ -87,6 +87,13 @@ public interface ModuleInfoMapper {
     int deleteAll();
 
     /**
+     * 查询所有启用的模块信息
+     *
+     * @return 启用的模块信息列表
+     */
+    List<ModuleInfo> selectAllEnabled();
+
+    /**
      * 检查模块名称是否存在
      *
      * @param name 模块名称

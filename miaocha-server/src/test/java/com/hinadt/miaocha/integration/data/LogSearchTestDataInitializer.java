@@ -1311,6 +1311,7 @@ public class LogSearchTestDataInitializer {
             }
             """;
         module.setQueryConfig(queryConfig);
+        module.setStatus(1);
 
         moduleInfoMapper.insert(module);
         return module;

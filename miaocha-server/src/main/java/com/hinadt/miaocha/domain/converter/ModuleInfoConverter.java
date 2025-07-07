@@ -38,6 +38,7 @@ public class ModuleInfoConverter implements Converter<ModuleInfo, ModuleInfoDTO>
         entity.setName(dto.getName());
         entity.setDatasourceId(dto.getDatasourceId());
         entity.setTableName(dto.getTableName());
+        entity.setStatus(1); // 默认启用状态
         // 注意：不设置dorisSql，这应该只能通过executeDorisSql方法设置
 
         return entity;
@@ -92,6 +93,7 @@ public class ModuleInfoConverter implements Converter<ModuleInfo, ModuleInfoDTO>
         dto.setDatasourceId(entity.getDatasourceId());
         dto.setTableName(entity.getTableName());
         dto.setDorisSql(entity.getDorisSql());
+        dto.setStatus(entity.getStatus());
         dto.setCreateTime(entity.getCreateTime());
         dto.setUpdateTime(entity.getUpdateTime());
         dto.setCreateUser(entity.getCreateUser());
@@ -191,6 +193,7 @@ public class ModuleInfoConverter implements Converter<ModuleInfo, ModuleInfoDTO>
         dto.setDatasourceId(entity.getDatasourceId());
         dto.setTableName(entity.getTableName());
         dto.setDorisSql(entity.getDorisSql());
+        dto.setStatus(entity.getStatus());
         dto.setCreateTime(entity.getCreateTime());
         dto.setUpdateTime(entity.getUpdateTime());
         dto.setCreateUser(entity.getCreateUser());

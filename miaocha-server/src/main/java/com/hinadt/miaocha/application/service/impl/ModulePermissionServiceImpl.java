@@ -7,11 +7,12 @@ import com.hinadt.miaocha.domain.converter.ModulePermissionConverter;
 import com.hinadt.miaocha.domain.dto.permission.ModuleUsersPermissionDTO;
 import com.hinadt.miaocha.domain.dto.permission.UserModulePermissionDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
+import com.hinadt.miaocha.domain.entity.ModuleInfo;
 import com.hinadt.miaocha.domain.entity.User;
 import com.hinadt.miaocha.domain.entity.UserModulePermission;
 import com.hinadt.miaocha.domain.entity.enums.UserRole;
 import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
-import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
+import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
 import com.hinadt.miaocha.domain.mapper.UserMapper;
 import com.hinadt.miaocha.domain.mapper.UserModulePermissionMapper;
 import java.util.ArrayList;
@@ -30,21 +31,18 @@ import org.springframework.util.StringUtils;
 @Service
 public class ModulePermissionServiceImpl implements ModulePermissionService {
 
-    private final LogstashProcessMapper logstashProcessMapper;
     private final UserMapper userMapper;
     private final DatasourceMapper datasourceMapper;
     private final UserModulePermissionMapper userModulePermissionMapper;
-    private final com.hinadt.miaocha.domain.mapper.ModuleInfoMapper moduleInfoMapper;
+    private final ModuleInfoMapper moduleInfoMapper;
     private final ModulePermissionConverter modulePermissionConverter;
 
     public ModulePermissionServiceImpl(
-            LogstashProcessMapper logstashProcessMapper,
             UserMapper userMapper,
             DatasourceMapper datasourceMapper,
             UserModulePermissionMapper userModulePermissionMapper,
-            com.hinadt.miaocha.domain.mapper.ModuleInfoMapper moduleInfoMapper,
+            ModuleInfoMapper moduleInfoMapper,
             ModulePermissionConverter modulePermissionConverter) {
-        this.logstashProcessMapper = logstashProcessMapper;
         this.userMapper = userMapper;
         this.datasourceMapper = datasourceMapper;
         this.userModulePermissionMapper = userModulePermissionMapper;
@@ -58,6 +56,12 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
         User user = userMapper.selectById(userId);
         if (user == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        // 检查模块是否存在且启用
+        ModuleInfo moduleInfo = moduleInfoMapper.selectByName(module);
+        if (moduleInfo == null || moduleInfo.getStatus() == null || moduleInfo.getStatus() != 1) {
+            return false; // 模块不存在或已禁用
         }
 
         // 超级管理员和管理员拥有所有模块的权限
@@ -298,8 +302,8 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
             return new ArrayList<>();
         }
 
-        // 获取所有模块
-        List<com.hinadt.miaocha.domain.entity.ModuleInfo> allModules = moduleInfoMapper.selectAll();
+        // 获取所有启用的模块
+        List<ModuleInfo> allModules = moduleInfoMapper.selectAllEnabled();
 
         // 获取用户已有的模块权限
         List<UserModulePermission> userPermissions =
@@ -313,7 +317,7 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
 
         // 筛选出用户没有权限的模块
         return allModules.stream()
-                .map(com.hinadt.miaocha.domain.entity.ModuleInfo::getName)
+                .map(ModuleInfo::getName)
                 .filter(StringUtils::hasText) // 过滤掉空模块名
                 .filter(module -> !userModules.contains(module)) // 过滤掉用户已有权限的模块
                 .distinct() // 去重
@@ -331,8 +335,7 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
             return false;
         }
 
-        com.hinadt.miaocha.domain.entity.ModuleInfo moduleInfo =
-                moduleInfoMapper.selectByName(module);
+        ModuleInfo moduleInfo = moduleInfoMapper.selectByName(module);
         return moduleInfo != null;
     }
 
@@ -347,8 +350,7 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块名称不能为空");
         }
 
-        com.hinadt.miaocha.domain.entity.ModuleInfo moduleInfo =
-                moduleInfoMapper.selectByName(module);
+        ModuleInfo moduleInfo = moduleInfoMapper.selectByName(module);
         if (moduleInfo == null) {
             throw new BusinessException(ErrorCode.MODULE_NOT_FOUND, "未找到模块: " + module);
         }
@@ -372,11 +374,10 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
         List<UserModulePermissionDTO> result = new ArrayList<>();
 
         if (isAdmin) {
-            // 管理员拥有所有模块的权限
-            List<com.hinadt.miaocha.domain.entity.ModuleInfo> allModules =
-                    moduleInfoMapper.selectAll();
+            // 管理员拥有所有启用的模块的权限
+            List<ModuleInfo> allModules = moduleInfoMapper.selectAllEnabled();
 
-            for (com.hinadt.miaocha.domain.entity.ModuleInfo moduleInfo : allModules) {
+            for (ModuleInfo moduleInfo : allModules) {
                 // 查询数据源信息
                 DatasourceInfo datasourceInfo =
                         datasourceMapper.selectById(moduleInfo.getDatasourceId());
@@ -391,10 +392,25 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
                 result.add(dto);
             }
         } else {
-            // 非管理员，查询用户实际的模块权限
+            // 非管理员，查询用户实际的模块权限，但需要过滤掉禁用的模块
             List<UserModulePermission> permissions =
                     userModulePermissionMapper.selectByUser(userId);
-            result = modulePermissionConverter.toDtos(permissions);
+
+            // 过滤掉禁用的模块
+            List<UserModulePermission> enabledPermissions =
+                    permissions.stream()
+                            .filter(
+                                    permission -> {
+                                        ModuleInfo moduleInfo =
+                                                moduleInfoMapper.selectByName(
+                                                        permission.getModule());
+                                        return moduleInfo != null
+                                                && moduleInfo.getStatus() != null
+                                                && moduleInfo.getStatus() == 1;
+                                    })
+                            .collect(Collectors.toList());
+
+            result = modulePermissionConverter.toDtos(enabledPermissions);
         }
 
         return result;

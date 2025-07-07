@@ -13,6 +13,7 @@ import com.hinadt.miaocha.domain.dto.module.ModuleInfoCreateDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoUpdateDTO;
 import com.hinadt.miaocha.domain.dto.module.ModuleInfoWithPermissionsDTO;
+import com.hinadt.miaocha.domain.dto.module.ModuleStatusUpdateDTO;
 import com.hinadt.miaocha.domain.dto.module.QueryConfigDTO;
 import com.hinadt.miaocha.domain.dto.permission.ModuleUsersPermissionDTO.UserPermissionInfoDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
@@ -233,9 +234,33 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
         return parseQueryConfig(moduleInfo.getQueryConfig(), module);
     }
 
+    @Override
+    @Transactional
+    public ModuleInfoDTO updateModuleStatus(ModuleStatusUpdateDTO request) {
+        // 获取现有模块
+        ModuleInfo existingModule = getModuleOrThrow(request.getId());
+
+        // 验证状态值
+        validateModuleStatus(request.getStatus());
+
+        // 更新模块状态
+        existingModule.setStatus(request.getStatus());
+        updateModuleOrThrow(existingModule);
+
+        // 重新查询获取最新数据
+        ModuleInfo updatedModule = getModuleOrThrow(request.getId());
+        return convertToModuleDTO(updatedModule);
+    }
+
     private void validateModuleName(String module) {
         if (!StringUtils.hasText(module)) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块名称不能为空");
+        }
+    }
+
+    private void validateModuleStatus(Integer status) {
+        if (status == null || (status != 0 && status != 1)) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块状态只能是0（禁用）或1（启用）");
         }
     }
 

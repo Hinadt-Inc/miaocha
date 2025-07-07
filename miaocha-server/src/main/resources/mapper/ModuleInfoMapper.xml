@@ -5,7 +5,7 @@
     <!-- 模块信息表所有字段 -->
     <sql id="moduleInfoColumns">
         id
-        , name, datasource_id, table_name, doris_sql, query_config, create_time, update_time, create_user, update_user
+        , name, datasource_id, table_name, doris_sql, query_config, status, create_time, update_time, create_user, update_user
     </sql>
 
     <!-- 模块信息表带用户信息的字段 -->
@@ -13,7 +13,7 @@
         m
         .
         id
-        , m.name, m.datasource_id, m.table_name, m.doris_sql, m.query_config,
+        , m.name, m.datasource_id, m.table_name, m.doris_sql, m.query_config, m.status,
         m.create_time, m.update_time, m.create_user, m.update_user,
         cu.nickname as create_user_name,
         uu.nickname as update_user_name
@@ -21,8 +21,8 @@
 
     <!-- 插入模块信息 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO module_info (name, datasource_id, table_name, doris_sql, query_config, create_user, update_user)
-        VALUES (#{name}, #{datasourceId}, #{tableName}, #{dorisSql}, #{queryConfig}, #{createUser}, #{updateUser})
+        INSERT INTO module_info (name, datasource_id, table_name, doris_sql, query_config, status, create_user, update_user)
+        VALUES (#{name}, #{datasourceId}, #{tableName}, #{dorisSql}, #{queryConfig}, #{status}, #{createUser}, #{updateUser})
     </insert>
 
     <!-- 根据ID查询模块信息（带用户昵称） -->
@@ -66,6 +66,13 @@
         FROM module_info ORDER BY create_time DESC
     </select>
 
+    <!-- 查询所有启用的模块信息 -->
+    <select id="selectAllEnabled" resultType="com.hinadt.miaocha.domain.entity.ModuleInfo">
+        SELECT
+        <include refid="moduleInfoColumns"/>
+        FROM module_info WHERE status = 1 ORDER BY create_time DESC
+    </select>
+
     <!-- 根据数据源ID查询模块信息列表 -->
     <select id="selectByDatasourceId" resultType="com.hinadt.miaocha.domain.entity.ModuleInfo">
         SELECT
@@ -81,6 +88,7 @@
             table_name    = #{tableName},
             doris_sql     = #{dorisSql},
             query_config  = #{queryConfig},
+            status        = #{status},
             update_user   = #{updateUser}
         WHERE id = #{id}
     </update>

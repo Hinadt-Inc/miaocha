@@ -61,7 +61,6 @@ public class ModulePermissionServiceTest {
         // 创建服务实例
         modulePermissionService =
                 new ModulePermissionServiceImpl(
-                        null,
                         userMapper,
                         datasourceMapper,
                         userModulePermissionMapper,
@@ -100,6 +99,7 @@ public class ModulePermissionServiceTest {
         testModule.setId(1L);
         testModule.setName("用户模块");
         testModule.setDatasourceId(1L);
+        testModule.setStatus(1); // 设置为启用状态
 
         // 测试权限
         testPermission = new UserModulePermission();
@@ -125,7 +125,7 @@ public class ModulePermissionServiceTest {
         // 验证结果
         assertTrue(result);
         verify(userMapper).selectById(1L);
-        verify(moduleInfoMapper).selectByName("用户模块");
+        verify(moduleInfoMapper, times(2)).selectByName("用户模块"); // 一次检查状态，一次获取数据源ID
         verify(userModulePermissionMapper).select(1L, 1L, "用户模块");
     }
 
@@ -142,6 +142,10 @@ public class ModulePermissionServiceTest {
 
         // 验证结果
         assertFalse(result);
+
+        verify(userMapper).selectById(1L);
+        verify(moduleInfoMapper, times(2)).selectByName("用户模块"); // 一次检查状态，一次获取数据源ID
+        verify(userModulePermissionMapper).select(1L, 1L, "用户模块");
     }
 
     @Test
@@ -149,6 +153,7 @@ public class ModulePermissionServiceTest {
     void testHasModulePermission_AdminUser() {
         // Mock设置
         when(userMapper.selectById(2L)).thenReturn(testAdmin);
+        when(moduleInfoMapper.selectByName("用户模块")).thenReturn(testModule);
 
         // 执行测试
         boolean result = modulePermissionService.hasModulePermission(2L, "用户模块");
@@ -156,8 +161,8 @@ public class ModulePermissionServiceTest {
         // 验证结果
         assertTrue(result);
         verify(userMapper).selectById(2L);
-        // 管理员不需要检查具体权限
-        verify(moduleInfoMapper, never()).selectByName(anyString());
+        // 管理员需要检查模块状态，但不需要检查具体权限
+        verify(moduleInfoMapper).selectByName("用户模块");
         verify(userModulePermissionMapper, never()).select(anyLong(), anyLong(), anyString());
     }
 
@@ -191,6 +196,7 @@ public class ModulePermissionServiceTest {
         // Mock设置
         when(userMapper.selectById(1L)).thenReturn(testUser);
         when(userModulePermissionMapper.selectByUser(1L)).thenReturn(Arrays.asList(testPermission));
+        when(moduleInfoMapper.selectByName("用户模块")).thenReturn(testModule);
         when(modulePermissionConverter.toDtos(anyList())).thenReturn(Arrays.asList(mockDto));
 
         // 执行测试
@@ -223,6 +229,7 @@ public class ModulePermissionServiceTest {
         module2.setId(2L);
         module2.setName("订单模块");
         module2.setDatasourceId(1L);
+        module2.setStatus(1); // 设置为启用状态
 
         // 设置converter mock for admin permissions
         UserModulePermissionDTO mockAdminDto1 = new UserModulePermissionDTO();
@@ -245,7 +252,7 @@ public class ModulePermissionServiceTest {
 
         // Mock设置
         when(userMapper.selectById(2L)).thenReturn(testAdmin);
-        when(moduleInfoMapper.selectAll()).thenReturn(Arrays.asList(testModule, module2));
+        when(moduleInfoMapper.selectAllEnabled()).thenReturn(Arrays.asList(testModule, module2));
         when(datasourceMapper.selectById(1L)).thenReturn(testDatasource);
         when(modulePermissionConverter.createAdminPermissionDto(
                         anyLong(), anyLong(), anyString(), any(DatasourceInfo.class)))
@@ -269,7 +276,7 @@ public class ModulePermissionServiceTest {
         assertEquals(module2.getName(), dto2.getModule());
 
         verify(userMapper).selectById(2L);
-        verify(moduleInfoMapper).selectAll();
+        verify(moduleInfoMapper).selectAllEnabled();
         verify(datasourceMapper, times(2)).selectById(1L);
         verify(modulePermissionConverter, times(2))
                 .createAdminPermissionDto(

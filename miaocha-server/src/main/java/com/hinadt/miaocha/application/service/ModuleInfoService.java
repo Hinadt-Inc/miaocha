@@ -1,10 +1,6 @@
 package com.hinadt.miaocha.application.service;
 
-import com.hinadt.miaocha.domain.dto.module.ModuleInfoCreateDTO;
-import com.hinadt.miaocha.domain.dto.module.ModuleInfoDTO;
-import com.hinadt.miaocha.domain.dto.module.ModuleInfoUpdateDTO;
-import com.hinadt.miaocha.domain.dto.module.ModuleInfoWithPermissionsDTO;
-import com.hinadt.miaocha.domain.dto.module.QueryConfigDTO;
+import com.hinadt.miaocha.domain.dto.module.*;
 import java.util.List;
 
 /** 模块信息服务接口 */
@@ -89,4 +85,12 @@ public interface ModuleInfoService {
      * @return 查询配置DTO，如果模块不存在或未配置则返回null
      */
     QueryConfigDTO getQueryConfigByModule(String module);
+
+    /**
+     * 更新模块状态（启用/禁用）
+     *
+     * @param request 状态更新请求
+     * @return 模块信息响应
+     */
+    ModuleInfoDTO updateModuleStatus(ModuleStatusUpdateDTO request);
 }

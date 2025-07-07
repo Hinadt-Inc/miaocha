@@ -108,4 +108,12 @@ public class ModuleEndpoint {
         List<String> fieldNames = tableValidationService.getTableFieldNames(id);
         return ApiResponse.success(fieldNames);
     }
+
+    @PutMapping("/status")
+    @Operation(summary = "更新模块状态", description = "启用或禁用模块")
+    public ApiResponse<ModuleInfoDTO> updateModuleStatus(
+            @Valid @RequestBody ModuleStatusUpdateDTO statusUpdateDTO) {
+        ModuleInfoDTO response = moduleInfoService.updateModuleStatus(statusUpdateDTO);
+        return ApiResponse.success(response);
+    }
 }

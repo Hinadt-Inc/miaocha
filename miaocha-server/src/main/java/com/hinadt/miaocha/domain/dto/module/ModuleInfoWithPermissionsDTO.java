@@ -33,6 +33,9 @@ public class ModuleInfoWithPermissionsDTO {
     @Schema(description = "查询配置")
     private QueryConfigDTO queryConfig;
 
+    @Schema(description = "模块状态：1-启用，0-禁用", example = "1")
+    private Integer status;
+
     @Schema(description = "创建时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;

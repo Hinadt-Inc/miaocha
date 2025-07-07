@@ -35,6 +35,9 @@ public class ModuleInfo implements UserAuditable {
     @Schema(description = "查询配置JSON，包含时间字段和关键词检索字段配置")
     private String queryConfig;
 
+    @Schema(description = "模块状态：1-启用，0-禁用", example = "1")
+    private Integer status;
+
     @Schema(description = "创建时间")
     private LocalDateTime createTime;
 

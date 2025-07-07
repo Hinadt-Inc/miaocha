@@ -147,6 +147,7 @@ public class IntegrationTestDataInitializer {
         module.setDorisSql("SELECT * FROM test_table");
         module.setCreateUser("test_admin");
         module.setUpdateUser("test_admin");
+        module.setStatus(1);
 
         moduleInfoMapper.insert(module);
         return module;
