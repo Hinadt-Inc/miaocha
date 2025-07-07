@@ -1,0 +1,19 @@
+coverage:
+  precision: 2
+  round: down
+  range: "80...100"
+
+comment:
+  layout: "reach,diff,flags,files,footer"
+  behavior: default
+  require_changes: false
+
+ignore:
+  - "**/*.java"
+  - "**/target/**"
+  - "**/test/**"
+  - "**/tests/**"
+  - "**/*Test.java"
+  - "**/*Tests.java"
+  - "**/*IT.java"
+  - "**/*IntegrationTest.java" 
