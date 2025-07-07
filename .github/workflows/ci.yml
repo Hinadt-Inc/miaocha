@@ -9,26 +9,45 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # 需要完整历史用于覆盖率比较
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 需要完整历史用于覆盖率比较
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Configure system for Doris
+        run: |
+          # 关闭swap分区
+          sudo swapoff -a
+
+          # 设置系统参数
+          sudo sysctl -w vm.max_map_count=2000000
+          sudo sysctl -w vm.swappiness=0
+          sudo sysctl -w fs.file-max=655360
+
+          # 验证设置
+          echo "=== System Configuration ==="
+          echo "Swap status:"
+          swapon --show
+          echo "vm.max_map_count: $(cat /proc/sys/vm/max_map_count)"
+          echo "vm.swappiness: $(cat /proc/sys/vm/swappiness)"
+          echo "fs.file-max: $(cat /proc/sys/fs/file-max)"
+
+      - name: Run unit tests and integration tests
+        run: mvn clean verify
       
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: 'maven'
-        
-    - name: Run tests with coverage
-      run: mvn clean test verify
-      
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        file: ./miaocha-server/target/site/jacoco-aggregate/jacoco.xml
-        flags: tests
-        name: codecov-umbrella
-        fail_ci_if_error: false 
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./miaocha-server/target/site/jacoco-aggregate/jacoco.xml
+          flags: tests
+          name: codecov-umbrella
+          fail_ci_if_error: false
