@@ -19,6 +19,7 @@ import com.hinadt.miaocha.domain.dto.user.UserUpdateDTO;
 import com.hinadt.miaocha.domain.entity.User;
 import com.hinadt.miaocha.domain.entity.enums.UserRole;
 import com.hinadt.miaocha.domain.mapper.UserMapper;
+import com.hinadt.miaocha.domain.mapper.UserModulePermissionMapper;
 import io.jsonwebtoken.ExpiredJwtException;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -37,18 +38,21 @@ public class UserServiceImpl implements UserService {
     private final JwtUtils jwtUtils;
     private final UserConverter userConverter;
     private final ModulePermissionService modulePermissionService;
+    private final UserModulePermissionMapper userModulePermissionMapper;
 
     public UserServiceImpl(
             UserMapper userMapper,
             PasswordEncoder passwordEncoder,
             JwtUtils jwtUtils,
             UserConverter userConverter,
-            ModulePermissionService modulePermissionService) {
+            ModulePermissionService modulePermissionService,
+            UserModulePermissionMapper userModulePermissionMapper) {
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtils = jwtUtils;
         this.userConverter = userConverter;
         this.modulePermissionService = modulePermissionService;
+        this.userModulePermissionMapper = userModulePermissionMapper;
     }
 
     @Override
@@ -241,6 +245,8 @@ public class UserServiceImpl implements UserService {
         }
 
         userMapper.deleteById(id);
+
+        userModulePermissionMapper.deleteByUserId(id);
     }
 
     @Override

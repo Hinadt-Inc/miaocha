@@ -186,7 +186,7 @@ public class ModulePermissionServiceImpl implements ModulePermissionService {
                 allPermissions.stream()
                         .map(UserModulePermission::getDatasourceId)
                         .distinct()
-                        .collect(Collectors.toList());
+                        .toList();
 
         Map<Long, DatasourceInfo> datasourceMap = new HashMap<>();
         for (Long datasourceId : datasourceIds) {

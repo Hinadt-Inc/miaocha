@@ -83,4 +83,12 @@ public interface UserModulePermissionMapper {
      * @return 影响的行数
      */
     int deleteById(@Param("id") Long id);
+
+    /**
+     * 根据模块名称删除所有相关权限
+     *
+     * @param moduleName 模块名称
+     * @return 影响的行数
+     */
+    int deleteByModuleName(@Param("moduleName") String moduleName);
 }

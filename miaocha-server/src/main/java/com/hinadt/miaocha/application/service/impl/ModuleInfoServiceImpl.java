@@ -119,7 +119,7 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
         validateModuleNotInUse(id);
 
         // 删除模块
-        deleteModuleById(id);
+        deleteModuleInner(moduleInfo);
 
         // 根据参数决定是否删除Doris表
         if (Boolean.TRUE.equals(deleteDorisTable) && canDeleteDorisTable(moduleInfo)) {
@@ -331,11 +331,13 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
         }
     }
 
-    private void deleteModuleById(Long id) {
-        int result = moduleInfoMapper.deleteById(id);
+    private void deleteModuleInner(ModuleInfo moduleInfo) {
+        int result = moduleInfoMapper.deleteById(moduleInfo.getId());
         if (result == 0) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "删除模块失败");
         }
+
+        userModulePermissionMapper.deleteByModuleName(moduleInfo.getName());
     }
 
     private void executeSqlSafely(DatasourceInfo datasourceInfo, String sql) {

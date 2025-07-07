@@ -21,6 +21,7 @@ import com.hinadt.miaocha.domain.dto.user.UserUpdateDTO;
 import com.hinadt.miaocha.domain.entity.User;
 import com.hinadt.miaocha.domain.entity.enums.UserRole;
 import com.hinadt.miaocha.domain.mapper.UserMapper;
+import com.hinadt.miaocha.domain.mapper.UserModulePermissionMapper;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +51,8 @@ public class UserServiceTest {
 
     @Mock private ModulePermissionService modulePermissionService;
 
+    @Mock private UserModulePermissionMapper userModulePermissionMapper;
+
     private UserServiceImpl userService;
 
     private User testUser;
@@ -62,7 +65,13 @@ public class UserServiceTest {
     @BeforeEach
     void setUp() {
         // 重置所有Mock - 这很重要，避免测试间状态污染
-        reset(userMapper, passwordEncoder, jwtUtils, userConverter, modulePermissionService);
+        reset(
+                userMapper,
+                passwordEncoder,
+                jwtUtils,
+                userConverter,
+                modulePermissionService,
+                userModulePermissionMapper);
 
         // 手动创建UserServiceImpl，注入所有mock对象
         userService =
@@ -71,7 +80,8 @@ public class UserServiceTest {
                         passwordEncoder,
                         jwtUtils,
                         userConverter,
-                        modulePermissionService);
+                        modulePermissionService,
+                        userModulePermissionMapper);
 
         // 准备测试用户
         testUser = createTestUser();
@@ -135,6 +145,8 @@ public class UserServiceTest {
         verify(passwordEncoder).matches("password123", "encoded_password");
         verify(jwtUtils).generateTokenWithUserInfo(testUser);
         verify(jwtUtils).generateRefreshTokenWithUserInfo(testUser);
+        verify(jwtUtils).getExpirationFromToken("test_token");
+        verify(jwtUtils).getExpirationFromToken("test_refresh_token");
     }
 
     @Test
@@ -154,7 +166,7 @@ public class UserServiceTest {
         assertEquals(ErrorCode.USER_PASSWORD_ERROR, exception.getErrorCode());
         verify(userMapper).selectByEmail("test@example.com");
         verify(passwordEncoder).matches("password123", "encoded_password");
-        verify(jwtUtils, never()).generateTokenWithUserInfo(any());
+        verify(jwtUtils, never()).generateToken(anyString());
     }
 
     @Test
@@ -173,7 +185,7 @@ public class UserServiceTest {
         assertEquals(ErrorCode.USER_NOT_FOUND, exception.getErrorCode());
         verify(userMapper).selectByEmail("test@example.com");
         verify(passwordEncoder, never()).matches(anyString(), anyString());
-        verify(jwtUtils, never()).generateTokenWithUserInfo(any());
+        verify(jwtUtils, never()).generateToken(anyString());
     }
 
     @Test

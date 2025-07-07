@@ -57,4 +57,9 @@
         DELETE FROM user_module_permission WHERE id = #{id}
     </delete>
 
+    <!-- 根据模块名称删除所有相关权限 -->
+    <delete id="deleteByModuleName">
+        DELETE FROM user_module_permission WHERE module = #{moduleName}
+    </delete>
+
 </mapper>
