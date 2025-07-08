@@ -3,6 +3,7 @@ package com.hinadt.miaocha.domain.converter;
 import com.hinadt.miaocha.domain.dto.MachineCreateDTO;
 import com.hinadt.miaocha.domain.dto.MachineDTO;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
+import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
 import com.hinadt.miaocha.domain.mapper.UserMapper;
 import org.springframework.stereotype.Component;
 
@@ -11,9 +12,11 @@ import org.springframework.stereotype.Component;
 public class MachineConverter implements Converter<MachineInfo, MachineDTO> {
 
     private final UserMapper userMapper;
+    private final LogstashMachineMapper logstashMachineMapper;
 
-    public MachineConverter(UserMapper userMapper) {
+    public MachineConverter(UserMapper userMapper, LogstashMachineMapper logstashMachineMapper) {
         this.userMapper = userMapper;
+        this.logstashMachineMapper = logstashMachineMapper;
     }
 
     /** 将DTO转换为实体 */
@@ -73,6 +76,12 @@ public class MachineConverter implements Converter<MachineInfo, MachineDTO> {
         dto.setUpdateTime(entity.getUpdateTime());
         dto.setCreateUser(entity.getCreateUser());
         dto.setUpdateUser(entity.getUpdateUser());
+
+        // 查询Logstash进程实例数量
+        if (entity.getId() != null) {
+            int logstashMachineCount = logstashMachineMapper.countByMachineId(entity.getId());
+            dto.setLogstashMachineCount(logstashMachineCount);
+        }
 
         // 查询用户昵称
         if (entity.getCreateUser() != null) {
