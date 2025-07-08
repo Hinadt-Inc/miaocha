@@ -47,14 +47,6 @@ public interface UserService {
     UserDTO getUserByUid(String uid);
 
     /**
-     * 通过UID获取用户邮箱（高效查询，仅获取email字段）
-     *
-     * @param uid 用户UID
-     * @return 用户邮箱
-     */
-    String getUserEmailByUid(String uid);
-
-    /**
      * 获取所有用户
      *
      * @return 用户DTO列表

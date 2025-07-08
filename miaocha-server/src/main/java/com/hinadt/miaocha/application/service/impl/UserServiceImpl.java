@@ -142,15 +142,6 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public String getUserEmailByUid(String uid) {
-        String email = userMapper.selectEmailByUid(uid);
-        if (email == null) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
-        return email;
-    }
-
-    @Override
     public User getUserEntityById(Long id) {
         User user = userMapper.selectById(id);
         if (user == null) {
@@ -181,7 +172,75 @@ public class UserServiceImpl implements UserService {
             userDTO.setModulePermissions(permissions);
         }
 
-        return userDTOs;
+        // 按角色和更新时间排序
+        return sortUsersByRoleAndUpdateTime(userDTOs);
+    }
+
+    /**
+     * 按角色和更新时间排序用户列表 排序规则： 1. 先按角色优先级排序：超级管理员 > 管理员 > 普通用户 2. 在同一角色内按更新时间倒序排序
+     *
+     * @param userDTOs 用户列表
+     * @return 排序后的用户列表
+     */
+    private List<UserDTO> sortUsersByRoleAndUpdateTime(List<UserDTO> userDTOs) {
+        return userDTOs.stream()
+                .sorted(this::compareByRoleAndUpdateTime)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 用户排序比较器 先按角色优先级排序，角色相同时按更新时间倒序排序
+     *
+     * @param user1 用户1
+     * @param user2 用户2
+     * @return 比较结果
+     */
+    private int compareByRoleAndUpdateTime(UserDTO user1, UserDTO user2) {
+        // 1. 先按角色优先级排序
+        int roleComparison = compareByRolePriority(user1.getRole(), user2.getRole());
+        if (roleComparison != 0) {
+            return roleComparison;
+        }
+
+        // 2. 角色相同时，按更新时间倒序排序（最近更新的在前）
+        if (user1.getUpdateTime() != null && user2.getUpdateTime() != null) {
+            return user2.getUpdateTime().compareTo(user1.getUpdateTime());
+        } else if (user1.getUpdateTime() != null) {
+            return -1;
+        } else if (user2.getUpdateTime() != null) {
+            return 1;
+        }
+        return 0;
+    }
+
+    /**
+     * 按角色优先级比较 超级管理员 > 管理员 > 普通用户
+     *
+     * @param role1 角色1
+     * @param role2 角色2
+     * @return 比较结果
+     */
+    private int compareByRolePriority(String role1, String role2) {
+        int priority1 = getRolePriority(role1);
+        int priority2 = getRolePriority(role2);
+        return Integer.compare(priority1, priority2);
+    }
+
+    /**
+     * 获取角色优先级 数值越小优先级越高
+     *
+     * @param role 角色
+     * @return 优先级数值
+     */
+    private int getRolePriority(String role) {
+        if (UserRole.SUPER_ADMIN.name().equals(role)) {
+            return 1; // 最高优先级
+        } else if (UserRole.ADMIN.name().equals(role)) {
+            return 2; // 中等优先级
+        } else if (UserRole.USER.name().equals(role)) {
+            return 3; // 最低优先级
+        }
+        return 999; // 未知角色排在最后
     }
 
     @Override
