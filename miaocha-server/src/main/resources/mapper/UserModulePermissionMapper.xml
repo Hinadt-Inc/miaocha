@@ -62,4 +62,19 @@
         DELETE FROM user_module_permission WHERE module = #{moduleName}
     </delete>
 
+    <!-- 获取用户有权限访问的所有表名 -->
+    <!-- 通过联查用户模块权限表和模块信息表，获取用户实际可以访问的表名列表 -->
+    <select id="selectPermittedTableNames" resultType="java.lang.String">
+        SELECT DISTINCT mi.table_name
+        FROM user_module_permission ump
+        INNER JOIN module_info mi ON ump.module = mi.name
+            AND ump.datasource_id = mi.datasource_id
+        WHERE ump.user_id = #{userId}
+            AND mi.status = 1
+        <if test="datasourceId != null">
+            AND ump.datasource_id = #{datasourceId}
+        </if>
+        ORDER BY mi.table_name
+    </select>
+
 </mapper>

@@ -109,4 +109,12 @@ public interface ModuleInfoMapper {
      * @return 是否被使用
      */
     boolean existsByDatasourceId(Long datasourceId);
+
+    /**
+     * 获取指定数据源下所有启用模块的表名
+     *
+     * @param datasourceId 数据源ID（可选，如果为null则查询所有数据源）
+     * @return 启用模块的表名列表
+     */
+    List<String> selectEnabledModuleTableNames(@Param("datasourceId") Long datasourceId);
 }
