@@ -28,6 +28,9 @@ public class MachineDTO {
     @NotBlank(message = "机器用户名不能为空")
     private String username;
 
+    @Schema(description = "Logstash进程实例数量", example = "2")
+    private Integer logstashMachineCount;
+
     @Schema(description = "创建时间")
     private LocalDateTime createTime;
 
