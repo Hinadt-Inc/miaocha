@@ -91,4 +91,14 @@ public interface UserModulePermissionMapper {
      * @return 影响的行数
      */
     int deleteByModuleName(@Param("moduleName") String moduleName);
+
+    /**
+     * 获取用户有权限访问的所有表名 通过联查用户模块权限表和模块信息表，获取用户实际可以访问的表名列表
+     *
+     * @param userId 用户ID
+     * @param datasourceId 数据源ID（可选，如果为null则查询所有数据源）
+     * @return 用户有权限访问的表名列表
+     */
+    List<String> selectPermittedTableNames(
+            @Param("userId") Long userId, @Param("datasourceId") Long datasourceId);
 }
