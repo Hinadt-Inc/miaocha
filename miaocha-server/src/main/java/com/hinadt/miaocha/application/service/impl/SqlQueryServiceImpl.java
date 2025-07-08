@@ -256,7 +256,8 @@ public class SqlQueryServiceImpl implements SqlQueryService {
                 permittedTables = metadataService.getAllTables(conn);
             } else {
                 // 获取用户有权限的表
-                permittedTables = permissionChecker.getPermittedTables(userId, conn);
+                permittedTables =
+                        permissionChecker.getPermittedTables(userId, datasourceInfo.getId(), conn);
             }
 
             // 获取表信息

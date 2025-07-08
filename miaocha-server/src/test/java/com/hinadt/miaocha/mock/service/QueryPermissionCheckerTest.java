@@ -11,10 +11,20 @@ import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.entity.User;
 import com.hinadt.miaocha.domain.entity.enums.UserRole;
+import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
+import com.hinadt.miaocha.domain.mapper.UserMapper;
+import com.hinadt.miaocha.domain.mapper.UserModulePermissionMapper;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -24,6 +34,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * 查询权限检查器测试
  *
  * <p>重点测试权限验证的核心业务逻辑，确保不同角色用户的权限控制正确
+ *
+ * <p>包括：查询权限检查、表权限获取等核心功能的单元测试
  */
 @DisplayName("查询权限检查器测试")
 @ExtendWith(MockitoExtension.class)
@@ -31,6 +43,12 @@ class QueryPermissionCheckerTest {
 
     @Mock private ModulePermissionService modulePermissionService;
     @Mock private TableValidationService tableValidationService;
+    @Mock private UserModulePermissionMapper userModulePermissionMapper;
+    @Mock private UserMapper userMapper;
+    @Mock private ModuleInfoMapper moduleInfoMapper;
+    @Mock private Connection connection;
+    @Mock private DatabaseMetaData databaseMetaData;
+    @Mock private ResultSet resultSet;
 
     private QueryPermissionChecker queryPermissionChecker;
 
@@ -42,7 +60,12 @@ class QueryPermissionCheckerTest {
     void setUp() {
         // 使用构造函数注入创建实例
         queryPermissionChecker =
-                new QueryPermissionChecker(modulePermissionService, tableValidationService);
+                new QueryPermissionChecker(
+                        modulePermissionService,
+                        tableValidationService,
+                        userModulePermissionMapper,
+                        userMapper,
+                        moduleInfoMapper);
 
         // 准备管理员用户
         adminUser = new User();
@@ -132,6 +155,238 @@ class QueryPermissionCheckerTest {
 
             assertEquals(ErrorCode.PERMISSION_DENIED, exception.getErrorCode());
             // 仅验证异常类型和错误码，不依赖具体错误消息
+        }
+
+        // ================ getPermittedTables 方法测试组 ================
+
+        @Nested
+        @DisplayName("getPermittedTables 方法测试")
+        class GetPermittedTablesTest {
+
+            @Test
+            @DisplayName("管理员用户 - 应返回所有启用模块的表名与真实表的交集")
+            void testGetPermittedTables_AdminUser() throws SQLException {
+                // 准备测试数据
+                Long datasourceId = 1L;
+
+                // Mock 用户查询
+                when(userMapper.selectById(1L)).thenReturn(adminUser);
+
+                // Mock 数据库真实表
+                mockDatabaseTables("real_table1", "real_table2", "real_table3");
+
+                // Mock 启用模块表名
+                List<String> enabledModuleTables =
+                        Arrays.asList("real_table1", "real_table2", "non_exist_table");
+                when(moduleInfoMapper.selectEnabledModuleTableNames(datasourceId))
+                        .thenReturn(enabledModuleTables);
+
+                // 执行测试
+                List<String> result =
+                        queryPermissionChecker.getPermittedTables(1L, datasourceId, connection);
+
+                // 验证结果：应该是模块表名与真实表名的交集，且按字母顺序排列
+                assertEquals(2, result.size());
+                assertEquals("real_table1", result.get(0));
+                assertEquals("real_table2", result.get(1));
+
+                // 验证方法调用
+                verify(userMapper).selectById(1L);
+                verify(moduleInfoMapper).selectEnabledModuleTableNames(datasourceId);
+                verify(connection).getMetaData();
+            }
+
+            @Test
+            @DisplayName("超级管理员用户 - 应返回所有启用模块的表名与真实表的交集")
+            void testGetPermittedTables_SuperAdminUser() throws SQLException {
+                // 准备测试数据
+                Long datasourceId = 1L;
+
+                // Mock 用户查询
+                when(userMapper.selectById(3L)).thenReturn(superAdminUser);
+
+                // Mock 数据库真实表
+                mockDatabaseTables("table_a", "table_b");
+
+                // Mock 启用模块表名
+                List<String> enabledModuleTables = Arrays.asList("table_a", "table_c");
+                when(moduleInfoMapper.selectEnabledModuleTableNames(datasourceId))
+                        .thenReturn(enabledModuleTables);
+
+                // 执行测试
+                List<String> result =
+                        queryPermissionChecker.getPermittedTables(3L, datasourceId, connection);
+
+                // 验证结果：只返回既是启用模块又真实存在的表
+                assertEquals(1, result.size());
+                assertEquals("table_a", result.get(0));
+
+                // 验证方法调用
+                verify(userMapper).selectById(3L);
+                verify(moduleInfoMapper).selectEnabledModuleTableNames(datasourceId);
+            }
+
+            @Test
+            @DisplayName("普通用户 - 应返回用户有权限的表名与真实表的交集")
+            void testGetPermittedTables_NormalUser() throws SQLException {
+                // 准备测试数据
+                Long datasourceId = 1L;
+
+                // Mock 用户查询
+                when(userMapper.selectById(2L)).thenReturn(normalUser);
+
+                // Mock 数据库真实表
+                mockDatabaseTables("user_table1", "user_table2", "other_table");
+
+                // Mock 用户权限表名
+                List<String> userPermittedTables = Arrays.asList("user_table1", "user_table3");
+                when(userModulePermissionMapper.selectPermittedTableNames(2L, datasourceId))
+                        .thenReturn(userPermittedTables);
+
+                // 执行测试
+                List<String> result =
+                        queryPermissionChecker.getPermittedTables(2L, datasourceId, connection);
+
+                // 验证结果：只返回用户有权限且真实存在的表
+                assertEquals(1, result.size());
+                assertEquals("user_table1", result.get(0));
+
+                // 验证方法调用
+                verify(userMapper).selectById(2L);
+                verify(userModulePermissionMapper).selectPermittedTableNames(2L, datasourceId);
+            }
+
+            @Test
+            @DisplayName("普通用户 - 无权限表时应返回空列表")
+            void testGetPermittedTables_NormalUser_NoPermissions() throws SQLException {
+                // 准备测试数据
+                Long datasourceId = 1L;
+
+                // Mock 用户查询
+                when(userMapper.selectById(2L)).thenReturn(normalUser);
+
+                // Mock 数据库真实表
+                mockDatabaseTables("table1", "table2");
+
+                // Mock 用户无权限表
+                when(userModulePermissionMapper.selectPermittedTableNames(2L, datasourceId))
+                        .thenReturn(Arrays.asList());
+
+                // 执行测试
+                List<String> result =
+                        queryPermissionChecker.getPermittedTables(2L, datasourceId, connection);
+
+                // 验证结果：应返回空列表
+                assertTrue(result.isEmpty());
+
+                // 验证方法调用
+                verify(userMapper).selectById(2L);
+                verify(userModulePermissionMapper).selectPermittedTableNames(2L, datasourceId);
+            }
+
+            @Test
+            @DisplayName("用户不存在 - 应抛出BusinessException")
+            void testGetPermittedTables_UserNotFound() {
+                // Mock 用户不存在
+                when(userMapper.selectById(999L)).thenReturn(null);
+
+                // 执行测试并验证异常
+                BusinessException exception =
+                        assertThrows(
+                                BusinessException.class,
+                                () ->
+                                        queryPermissionChecker.getPermittedTables(
+                                                999L, 1L, connection));
+
+                assertEquals(ErrorCode.USER_NOT_FOUND, exception.getErrorCode());
+                verify(userMapper).selectById(999L);
+            }
+
+            @Test
+            @DisplayName("数据库连接异常 - 应抛出SQLException")
+            void testGetPermittedTables_DatabaseError() throws SQLException {
+                // Mock 用户查询
+                when(userMapper.selectById(1L)).thenReturn(adminUser);
+
+                // Mock 数据库连接异常
+                when(connection.getMetaData()).thenThrow(new SQLException("Connection failed"));
+
+                // 执行测试并验证异常
+                assertThrows(
+                        SQLException.class,
+                        () -> queryPermissionChecker.getPermittedTables(1L, 1L, connection));
+
+                verify(userMapper).selectById(1L);
+                verify(connection).getMetaData();
+            }
+
+            @Test
+            @DisplayName("数据源ID为null - 管理员应查询所有数据源的启用模块")
+            void testGetPermittedTables_AdminUser_NullDatasourceId() throws SQLException {
+                // Mock 用户查询
+                when(userMapper.selectById(1L)).thenReturn(adminUser);
+
+                // Mock 数据库真实表
+                mockDatabaseTables("global_table1", "global_table2");
+
+                // Mock 所有数据源的启用模块表名
+                List<String> enabledModuleTables = Arrays.asList("global_table1", "global_table3");
+                when(moduleInfoMapper.selectEnabledModuleTableNames(null))
+                        .thenReturn(enabledModuleTables);
+
+                // 执行测试
+                List<String> result =
+                        queryPermissionChecker.getPermittedTables(1L, null, connection);
+
+                // 验证结果
+                assertEquals(1, result.size());
+                assertEquals("global_table1", result.get(0));
+
+                // 验证方法调用
+                verify(moduleInfoMapper).selectEnabledModuleTableNames(null);
+            }
+
+            /** Mock数据库表查询结果 */
+            private void mockDatabaseTables(String... tableNames) throws SQLException {
+                when(connection.getMetaData()).thenReturn(databaseMetaData);
+                when(databaseMetaData.getTables(
+                                anyString(), isNull(), eq("%"), any(String[].class)))
+                        .thenReturn(resultSet);
+
+                // Mock ResultSet的迭代行为
+                boolean[] callCount = {false}; // 用于跟踪调用次数
+                int[] currentIndex = {0};
+
+                when(resultSet.next())
+                        .thenAnswer(
+                                invocation -> {
+                                    if (currentIndex[0] < tableNames.length) {
+                                        return true;
+                                    } else {
+                                        return false;
+                                    }
+                                });
+
+                when(resultSet.getString("TABLE_NAME"))
+                        .thenAnswer(
+                                invocation -> {
+                                    if (currentIndex[0] < tableNames.length) {
+                                        String tableName = tableNames[currentIndex[0]];
+                                        currentIndex[0]++;
+                                        return tableName;
+                                    }
+                                    return null;
+                                });
+            }
+        }
+
+        // ================ 原有测试方法保持不变 ================
+
+        @Nested
+        @DisplayName("checkQueryPermission 方法测试")
+        class CheckQueryPermissionTest {
+            // 原有的所有 checkQueryPermission 相关测试方法可以移到这里
+            // 为了保持向后兼容，暂时保留在外层
         }
     }
 

@@ -122,4 +122,15 @@
         WHERE datasource_id = #{datasourceId}
     </select>
 
+    <!-- 获取指定数据源下所有启用模块的表名 -->
+    <select id="selectEnabledModuleTableNames" resultType="java.lang.String">
+        SELECT DISTINCT table_name
+        FROM module_info
+        WHERE status = 1
+        <if test="datasourceId != null">
+            AND datasource_id = #{datasourceId}
+        </if>
+        ORDER BY table_name
+    </select>
+
 </mapper>
