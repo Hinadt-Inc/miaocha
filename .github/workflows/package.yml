@@ -1,19 +1,18 @@
-name: CI
+name: Package
 
 on:
-  pull_request:
-    branches: [ dev ]
   push:
-    branches: [ dev ]
+    branches: [ main ]
 
 jobs:
-  test:
+  package:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 需要完整历史用于覆盖率比较
+          fetch-depth: 0  # 需要完整历史
           submodules: true  # 自动签出所有子模块
 
       - name: Update submodules to latest
@@ -47,6 +46,19 @@ jobs:
           echo "vm.swappiness: $(cat /proc/sys/vm/swappiness)"
           echo "fs.file-max: $(cat /proc/sys/fs/file-max)"
 
-      - name: Run unit tests and integration tests
+      - name: Build and package
         run: mvn clean verify
 
+      - name: List build artifacts
+        run: |
+          echo "=== Build Artifacts ==="
+          find miaocha-assembly/target -type f -name "*.zip" -o -name "*.tar.gz" -o -name "*.jar" | head -20
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: miaocha-distribution-${{ github.sha }}
+          path: |
+            miaocha-assembly/target/*.zip
+            miaocha-assembly/target/*.tar.gz
+          retention-days: 30
