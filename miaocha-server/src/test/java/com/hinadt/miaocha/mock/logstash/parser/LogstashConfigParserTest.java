@@ -202,4 +202,29 @@ class LogstashConfigParserTest {
         LogstashConfigParser.ValidationResult result = parser.validateConfig(configContent);
         assertTrue(result.isValid());
     }
+
+    @Test
+    void testValidateKafkaConfigWithMultipleTopics() {
+        // 测试多个topics的配置 - 用户提供的真实用例
+        String configContent =
+                "input {\n"
+                    + "    kafka {\n"
+                    + "        topics => [ \"logs-k8s\", \"logs-applog\", \"logs-error\"]\n"
+                    + "        bootstrap_servers =>"
+                    + " \"172.20.52.15:9092,172.20.52.16:9092,172.20.52.17:9092,172.20.52.18:9092\"\n"
+                    + "        codec => json\n"
+                    + "        max_poll_records => \"20000\"\n"
+                    + "        group_id=> \"k8s-log\"\n"
+                    + "    }\n"
+                    + "}\n"
+                    + " \n"
+                    + "output {\n"
+                    + "  doris {\n"
+                    + "    table => \"log_table_test_env\"\n"
+                    + "  }\n"
+                    + "}";
+
+        LogstashConfigParser.ValidationResult result = parser.validateKafkaConfig(configContent);
+        assertTrue(result.isValid(), "多个topics的配置应该通过验证");
+    }
 }
