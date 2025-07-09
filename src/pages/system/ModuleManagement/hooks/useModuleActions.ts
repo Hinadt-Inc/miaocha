@@ -5,6 +5,7 @@ import {
   updateModule,
   deleteModule,
   executeDorisSql,
+  updateModuleStatus,
   type CreateModuleParams,
   type UpdateModuleParams,
 } from '@/api/modules';
@@ -153,6 +154,19 @@ export const useModuleActions = ({ messageApi, onDataChange }: UseModuleActionsP
     onDataChange();
   };
 
+  // 处理启用禁用状态切换
+  const handleStatusToggle = async (record: ModuleData) => {
+    try {
+      const newStatus = record.status === 1 ? 0 : 1;
+      await updateModuleStatus(Number(record.key), newStatus);
+      messageApi.success(`模块已${newStatus ? '启用' : '禁用'}`);
+      onDataChange();
+    } catch (error) {
+      messageApi.error('状态更新失败');
+      console.error('状态更新失败:', error);
+    }
+  };
+
   return {
     // Form Modal
     form,
@@ -195,5 +209,8 @@ export const useModuleActions = ({ messageApi, onDataChange }: UseModuleActionsP
     setConfigModalVisible,
     handleConfig,
     handleConfigSuccess,
+
+    // Status Toggle
+    handleStatusToggle,
   };
 };

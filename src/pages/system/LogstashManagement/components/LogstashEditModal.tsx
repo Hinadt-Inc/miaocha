@@ -148,7 +148,7 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
                 <Select mode="multiple" loading={loading} disabled={!!initialValues}>
                   {machines.map((m) => (
                     <Select.Option key={m.id} value={m.id}>
-                      {m.name} ({m.ip})
+                      {m.name} ({m.ip})-当前{m.logstashMachineCount}个实例
                     </Select.Option>
                   ))}
                 </Select>

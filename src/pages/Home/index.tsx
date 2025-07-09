@@ -20,6 +20,7 @@ const HomePage = () => {
   const [activeColumns, setActiveColumns] = useState<string[]>([]); // 激活的字段列表
   const [selectedModule, setSelectedModule] = useState<string>(''); // 当前选中的模块
   const [sortConfig, setSortConfig] = useState<any[]>([]); // 排序配置
+  const [commonColumns, setCommonColumns] = useState<string[]>([]); // 普通字段列表（不含有.的字段）
   const searchBarRef = useRef<any>(null);
   const siderRef = useRef<any>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -247,6 +248,7 @@ const HomePage = () => {
     onActiveColumnsChange: setActiveColumns,
     onSelectedModuleChange: handleSelectedModuleChange,
     moduleQueryConfig,
+    onCommonColumnsChange: setCommonColumns,
   };
 
   // 使用useCallback稳定getDistributionWithSearchBar函数引用
@@ -348,9 +350,8 @@ const HomePage = () => {
       onSqlsChange: setSqls,
       activeColumns,
       getDistributionWithSearchBar,
-      selectedModule,
-      moduleQueryConfig,
       sortConfig,
+      commonColumns,
     }),
     [
       searchParams,
@@ -360,9 +361,8 @@ const HomePage = () => {
       logTableColumns,
       activeColumns,
       getDistributionWithSearchBar,
-      selectedModule,
-      moduleQueryConfig,
       sortConfig,
+      commonColumns,
     ],
   );
 

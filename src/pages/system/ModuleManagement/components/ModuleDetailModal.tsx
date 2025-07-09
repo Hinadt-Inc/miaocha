@@ -39,6 +39,18 @@ const ModuleDetailModal: React.FC<ModuleDetailModalProps> = ({ visible, moduleDe
             <span className={modalStyles.noConfigText}>暂无配置</span>
           )}
         </div>
+        <div className={`${modalStyles.configRow} ${modalStyles.fieldsRow}`}>
+          <span className={modalStyles.configLabel}>排除字段：</span>
+          {queryConfig.excludeFields && queryConfig.excludeFields.length > 0 ? (
+            <div className={modalStyles.keywordFieldsInline}>
+              {queryConfig.excludeFields.map((field) => (
+                <Tag color="orange">{field}</Tag>
+              ))}
+            </div>
+          ) : (
+            <span className={modalStyles.noConfigText}>暂无排除配置</span>
+          )}
+        </div>
       </div>
     );
   };

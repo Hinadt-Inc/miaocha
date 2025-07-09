@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Popconfirm } from 'antd';
+import { Button, Popconfirm, Tag } from 'antd';
 import type { TableColumnsType, TablePaginationConfig } from 'antd';
 import type { Machine } from '@/types/machineTypes';
 import dayjs from 'dayjs';
@@ -24,6 +24,12 @@ export const useTableConfig = ({ onEdit, onDelete }: UseTableConfigProps) => {
     { title: '名称', dataIndex: 'name', key: 'name' },
     { title: 'IP地址', dataIndex: 'ip', key: 'ip' },
     { title: '端口', dataIndex: 'port', key: 'port' },
+    {
+      title: '当前实例数',
+      dataIndex: 'logstashMachineCount',
+      key: 'logstashMachineCount',
+      render: (text) => <Tag color="green">{text}</Tag>,
+    },
     { title: '用户名', dataIndex: 'username', key: 'username' },
     {
       title: '更新时间',

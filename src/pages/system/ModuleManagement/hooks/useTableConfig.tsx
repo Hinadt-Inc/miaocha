@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Space, Button, Tag } from 'antd';
+import { Space, Button, Tag, Popconfirm, Switch } from 'antd';
 import { DatabaseOutlined } from '@ant-design/icons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import dayjs from 'dayjs';
@@ -12,9 +12,17 @@ interface UseTableConfigProps {
   onExecuteSql: (record: ModuleData) => void;
   onDelete: (record: ModuleData) => void;
   onConfig: (record: ModuleData) => void;
+  onStatusToggle: (record: ModuleData) => void;
 }
 
-export const useTableConfig = ({ onViewDetail, onEdit, onExecuteSql, onDelete, onConfig }: UseTableConfigProps) => {
+export const useTableConfig = ({
+  onViewDetail,
+  onEdit,
+  onExecuteSql,
+  onDelete,
+  onConfig,
+  onStatusToggle,
+}: UseTableConfigProps) => {
   const [pagination, setPagination] = useState<TablePaginationConfig>({
     current: 1,
     pageSize: 10,
@@ -30,7 +38,16 @@ export const useTableConfig = ({ onViewDetail, onEdit, onExecuteSql, onDelete, o
       dataIndex: 'name',
       key: 'name',
       width: 150,
-      render: (text: string) => <Tag icon={<DatabaseOutlined />}>{text}</Tag>,
+      render: (text: string, record: ModuleData) => (
+        <Tag
+          color="#1677ff"
+          onClick={() => onViewDetail(record)}
+          style={{ cursor: 'pointer' }}
+          icon={<DatabaseOutlined />}
+        >
+          {text}
+        </Tag>
+      ),
     },
     {
       title: '数据源',
@@ -43,6 +60,23 @@ export const useTableConfig = ({ onViewDetail, onEdit, onExecuteSql, onDelete, o
       dataIndex: 'tableName',
       key: 'tableName',
       width: 150,
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 80,
+      render: (status: number, record: ModuleData) => (
+        <Popconfirm
+          title={`确认${status ? '禁用' : '启用'}该模块吗？`}
+          description={`${status ? '禁用后该模块将无法使用' : '启用后该模块可以正常使用'}`}
+          onConfirm={() => onStatusToggle(record)}
+          okText="确认"
+          cancelText="取消"
+        >
+          <Switch checked={status === 1} size="small" />
+        </Popconfirm>
+      ),
     },
     {
       title: '创建时间',
@@ -72,16 +106,17 @@ export const useTableConfig = ({ onViewDetail, onEdit, onExecuteSql, onDelete, o
       width: 120,
       render: (updateUserName: string, record: ModuleData) => updateUserName || record.updateUser,
     },
+
     {
       title: '操作',
       key: 'action',
       fixed: 'right' as const,
-      width: 350,
+      width: 220,
       render: (_: any, record: ModuleData) => (
         <Space size={0} className={styles.tableActionButtons}>
-          <Button type="link" onClick={() => onViewDetail(record)} className={styles.actionButton}>
+          {/* <Button type="link" onClick={() => onViewDetail(record)} className={styles.actionButton}>
             详情
-          </Button>
+          </Button> */}
           <Button type="link" onClick={() => onEdit(record)} className={styles.actionButton}>
             编辑
           </Button>

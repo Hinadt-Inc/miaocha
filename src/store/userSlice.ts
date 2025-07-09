@@ -143,6 +143,7 @@ export const userSlice: any = createSlice({
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('tokenExpiresAt');
       localStorage.removeItem('refreshTokenExpiresAt');
+      localStorage.removeItem('siderCollapsed');
     },
     setTokens: (state, action: PayloadAction<ITokens>) => {
       state.tokens = action.payload;

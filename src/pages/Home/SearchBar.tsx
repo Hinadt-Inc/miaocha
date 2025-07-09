@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, Suspense, lazy, forwardRef, useImperativeHandle, useRef } from 'react';
-import { AutoComplete, Button, Space, Tag, Popover, Statistic, Tooltip, message } from 'antd';
+import { AutoComplete, Button, Space, Tag, Popover, Statistic, Tooltip } from 'antd';
 import CountUp from 'react-countup';
 import SpinIndicator from '@/components/SpinIndicator';
 import styles from './SearchBar.module.less';
@@ -16,9 +16,8 @@ interface IProps {
   onSqlsChange?: (sqls: string[]) => void; // SQL列表变化回调函数
   activeColumns?: string[]; // 激活的字段列表
   getDistributionWithSearchBar?: () => void; // 获取字段分布回调函数
-  selectedModule?: string; // 当前选中的模块
-  moduleQueryConfig?: any; // 模块查询配置
   sortConfig?: any[]; // 排序配置
+  commonColumns?: string[]; // 普通字段列表（不含有.的字段）
 }
 
 const SearchBar = forwardRef((props: IProps, ref) => {
@@ -32,11 +31,9 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     onSqlsChange,
     activeColumns,
     getDistributionWithSearchBar,
-    selectedModule,
-    moduleQueryConfig,
     sortConfig = [],
+    commonColumns = [],
   } = props;
-  const [messageApi, contextHolder] = message.useMessage();
 
   const [timeGroup, setTimeGroup] = useState<string>('auto'); // 时间分组
   const [activeTab, setActiveTab] = useState('quick'); // 选项卡值
@@ -251,6 +248,8 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   useEffect(() => {
     // 只有在组件初始化完成后才执行搜索和保存逻辑
     if (!initialized) return;
+    // 等待 commonColumns 准备好后再执行（页面初始化时需要等待，后端说模块下一定会有普通字段）
+    if (commonColumns.length === 0) return;
     const fieldsHasDot = activeColumns?.some((item: any) => item.includes('.'));
     const resSortConfig = sortConfig?.filter((item) => !item.fieldName.includes('.'));
     const params = {
@@ -262,7 +261,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       timeRange: timeOption?.value,
       timeGrouping: timeGroup,
       offset: 0,
-      fields: fieldsHasDot ? activeColumns : [],
+      fields: fieldsHasDot ? [...commonColumns, ...(activeColumns || [])] : commonColumns,
       sortFields: resSortConfig || [],
     };
     if (keywords.length === 0) {
@@ -298,7 +297,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     if (getDistributionWithSearchBar) {
       getDistributionWithSearchBar();
     }
-  }, [timeOption, timeGroup, activeColumns, sortConfig, onSqlsChange, initialized]);
+  }, [timeOption, timeGroup, activeColumns, sortConfig, onSqlsChange, initialized, commonColumns]);
 
   // 处理关键词和SQL搜索
   const handleSubmit = () => {
@@ -503,7 +502,6 @@ const SearchBar = forwardRef((props: IProps, ref) => {
 
   return (
     <div className={styles.searchBar} ref={searchBarRef}>
-      {contextHolder}
       <div className={styles.top}>
         <div className={styles.left}>{leftRender}</div>
         <div className={styles.right}>

@@ -1,4 +1,5 @@
 import { Modal, Form, Row, Col, Input, Select } from 'antd';
+import { useEffect } from 'react';
 import type { DataSource } from '@/types/datasourceTypes';
 import type { ModuleData, ModuleFormData } from '../types';
 
@@ -19,6 +20,23 @@ const ModuleFormModal: React.FC<ModuleFormModalProps> = ({
 }) => {
   const [form] = Form.useForm();
 
+  // 处理表单初始化和数据回显
+  useEffect(() => {
+    if (visible) {
+      if (selectedRecord) {
+        // 编辑模式：回显数据
+        form.setFieldsValue({
+          name: selectedRecord.name,
+          datasourceId: selectedRecord.datasourceId,
+          tableName: selectedRecord.tableName,
+        });
+      } else {
+        // 添加模式：清空表单
+        form.resetFields();
+      }
+    }
+  }, [visible, selectedRecord, form]);
+
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
@@ -37,7 +55,7 @@ const ModuleFormModal: React.FC<ModuleFormModalProps> = ({
       width={600}
       maskClosable={false}
     >
-      <Form form={form} layout="vertical" initialValues={selectedRecord || {}}>
+      <Form form={form} layout="vertical">
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="name" label="模块名称" rules={[{ required: true, message: '请输入模块名称' }]}>

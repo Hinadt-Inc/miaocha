@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Modal, Form, Button, Select, message, AutoComplete, Tooltip } from 'antd';
 import { PlusOutlined, MinusCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { updateModuleQueryConfig, getModuleFieldNames } from '@/api/modules';
@@ -41,6 +41,7 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [fieldNames, setFieldNames] = useState<string[]>([]);
+  const [excludeFieldNames, setExcludeFieldNames] = useState<string[]>([]);
   const [loadingFields, setLoadingFields] = useState(false);
   const [disabledFields, setDisabledFields] = useState<number[]>([]);
   const [messageApi, contextHolder] = message.useMessage();
@@ -74,55 +75,74 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
     return Promise.resolve();
   };
 
+  // 弹框打开时的初始化
   useEffect(() => {
     if (visible && moduleId) {
-      initializeForm();
-      fetchFieldNames();
+      // 初始化表单
+      const config = queryConfig || {
+        timeField: '',
+        excludeFields: [],
+        keywordFields: [{ fieldName: '', searchMethod: 'LIKE' }],
+      };
+
+      const formData = {
+        timeField: config.timeField || '',
+        excludeFields: config.excludeFields || [],
+        keywordFields:
+          config.keywordFields && config.keywordFields.length > 0
+            ? config.keywordFields
+            : [{ fieldName: '', searchMethod: 'LIKE' }],
+      };
+
+      // 先重置表单，再设置值
+      form.resetFields();
+      form.setFieldsValue(formData);
+
+      // 初始化时也需要检查并设置禁用字段状态
+      const newDisabledFields: number[] = [];
+      formData.keywordFields.forEach((field: any, index: number) => {
+        if (field?.fieldName && isSpecialField(field.fieldName)) {
+          newDisabledFields.push(index);
+        }
+      });
+      setDisabledFields(newDisabledFields);
+
+      // 获取字段名称列表
+      const fetchFields = async () => {
+        setLoadingFields(true);
+        try {
+          const fields = await getModuleFieldNames(moduleId);
+          setFieldNames(fields);
+
+          // 获取字段后立即更新排除字段选项
+          const currentTimeField = formData.timeField || '';
+          if (currentTimeField) {
+            setExcludeFieldNames(fields.filter((field) => field !== currentTimeField));
+          } else {
+            setExcludeFieldNames(fields);
+          }
+        } catch (error) {
+          console.error('获取字段名失败:', error);
+          messageApi.warning('获取字段名失败，请手动输入');
+        } finally {
+          setLoadingFields(false);
+        }
+      };
+
+      fetchFields();
     }
-  }, [visible, moduleId, queryConfig]);
+  }, [visible, moduleId, queryConfig, messageApi]);
 
-  const fetchFieldNames = async () => {
-    if (!moduleId) return;
-
-    setLoadingFields(true);
-    try {
-      const fields = await getModuleFieldNames(moduleId);
-      setFieldNames(fields);
-    } catch (error) {
-      console.error('获取字段名失败:', error);
-      messageApi.warning('获取字段名失败，请手动输入');
-    } finally {
-      setLoadingFields(false);
-    }
-  };
-
-  const initializeForm = () => {
-    // 使用传入的 queryConfig 或默认值初始化表单
-    const config = queryConfig || {
-      timeField: '',
-      keywordFields: [{ fieldName: '', searchMethod: 'LIKE' }],
-    };
-
-    const formData = {
-      timeField: config.timeField || '',
-      keywordFields:
-        config.keywordFields && config.keywordFields.length > 0
-          ? config.keywordFields
-          : [{ fieldName: '', searchMethod: 'LIKE' }],
-    };
-
-    // 先重置表单，再设置值
-    form.resetFields();
-    form.setFieldsValue(formData);
-
-    // 初始化时也需要检查并设置禁用字段状态
-    const newDisabledFields: number[] = [];
-    formData.keywordFields.forEach((field: any, index: number) => {
-      if (field?.fieldName && isSpecialField(field.fieldName)) {
-        newDisabledFields.push(index);
+  // 时间字段变化时更新排除字段选项
+  const updateExcludeFieldNames = (timeField?: string) => {
+    const currentTimeField = timeField || form.getFieldValue('timeField') || '';
+    if (fieldNames.length > 0) {
+      if (currentTimeField) {
+        setExcludeFieldNames(fieldNames.filter((field) => field !== currentTimeField));
+      } else {
+        setExcludeFieldNames(fieldNames);
       }
-    });
-    setDisabledFields(newDisabledFields);
+    }
   };
 
   const handleSubmit = async () => {
@@ -139,6 +159,7 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
         moduleId,
         queryConfig: {
           timeField: values.timeField,
+          excludeFields: values.excludeFields,
           keywordFields: values.keywordFields.filter((field: QueryConfigKeywordField) => field.fieldName.trim()),
         },
       };
@@ -186,6 +207,7 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
             layout="vertical"
             initialValues={{
               timeField: '',
+              excludeFields: [],
               keywordFields: [{ fieldName: '', searchMethod: 'LIKE' }],
             }}
             onValuesChange={(changedValues, allValues) => {
@@ -244,9 +266,33 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
                 filterOption={(inputValue, option) =>
                   option?.value.toString().toLowerCase().includes(inputValue.toLowerCase()) || false
                 }
+                onBlur={() => updateExcludeFieldNames()}
+                onChange={(value) => updateExcludeFieldNames(value)}
                 notFoundContent={loadingFields ? '加载中...' : '无匹配字段'}
                 allowClear
                 maxLength={128}
+              />
+            </Form.Item>
+            <Form.Item
+              label={
+                <span>
+                  排除字段
+                  <Tooltip title="查询字段排除列表，定义在日志查询中需要排除展示和查询的字段名">
+                    <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                  </Tooltip>
+                </span>
+              }
+              name="excludeFields"
+            >
+              <Select
+                mode="multiple"
+                placeholder="请选择需要排除的字段"
+                options={excludeFieldNames.map((field) => ({
+                  value: field,
+                  label: field,
+                }))}
+                notFoundContent={loadingFields ? '加载中...' : '无匹配字段'}
+                allowClear
               />
             </Form.Item>
 

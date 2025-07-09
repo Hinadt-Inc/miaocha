@@ -7,6 +7,7 @@ export interface Module {
   datasourceName: string;
   tableName: string;
   dorisSql: string;
+  status?: number;
   createTime: string;
   updateTime: string;
   createUser: string;
@@ -40,6 +41,7 @@ export interface QueryConfigKeywordField {
 
 export interface QueryConfig {
   timeField: string;
+  excludeFields?: string[];
   keywordFields: QueryConfigKeywordField[];
 }
 
@@ -190,5 +192,14 @@ export const batchAuthorizeModulesWithExpiry = async (
     url: `/api/permissions/modules/user/${userId}/batch-grant-with-expiry`,
     method: 'POST',
     data: { userId, modules },
+  });
+};
+
+// 启用/禁用模块状态
+export const updateModuleStatus = async (id: number, status: number) => {
+  return request({
+    url: '/api/modules/status',
+    method: 'PUT',
+    data: { id, status },
   });
 };

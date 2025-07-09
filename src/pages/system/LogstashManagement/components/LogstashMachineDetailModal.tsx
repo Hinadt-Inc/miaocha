@@ -58,8 +58,19 @@ export default function LogstashMachineDetailModal({ visible, onCancel, detail }
             {dayjs(detail.updateTime).format('YYYY-MM-DD HH:mm:ss')}
           </Descriptions.Item>
         </Descriptions>
-
         <Divider orientation="left">配置信息</Divider>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h4>配置内容</h4>
+            <Tooltip title="复制">
+              <Button icon={<CopyOutlined />} onClick={() => handleCopy(detail.configContent)} size="small" />
+            </Tooltip>
+          </div>
+          <pre style={{ background: '#f5f5f5', padding: 12, borderRadius: 4, overflow: 'auto', height: 200 }}>
+            {detail.configContent}
+          </pre>
+        </div>
+
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <h4>JVM参数</h4>
@@ -81,18 +92,6 @@ export default function LogstashMachineDetailModal({ visible, onCancel, detail }
           </div>
           <pre style={{ background: '#f5f5f5', padding: 12, borderRadius: 4, overflow: 'auto', height: 200 }}>
             {detail.logstashYml}
-          </pre>
-        </div>
-
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <h4>配置内容</h4>
-            <Tooltip title="复制">
-              <Button icon={<CopyOutlined />} onClick={() => handleCopy(detail.configContent)} size="small" />
-            </Tooltip>
-          </div>
-          <pre style={{ background: '#f5f5f5', padding: 12, borderRadius: 4, overflow: 'auto', height: 200 }}>
-            {detail.configContent}
           </pre>
         </div>
       </Modal>

@@ -6,6 +6,7 @@ export interface Machine {
   username: string;
   createTime: string;
   updateTime: string;
+  logstashMachineCount: number;
   logstashMachineId?: number;
 }
 

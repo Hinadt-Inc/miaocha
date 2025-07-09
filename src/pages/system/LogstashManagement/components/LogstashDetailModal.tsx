@@ -103,19 +103,18 @@ const LogstashDetailModal = ({ visible, onClose, detail, styles: customStyles }:
             {detail.customPackagePath || '未设置'}
           </Descriptions.Item>
         </Descriptions>
-
         <div className={customStyles?.configSection || 'config-section'}>
           <div className={customStyles?.configHeader || 'config-header'}>
-            <h4>JVM参数</h4>
+            <h4>配置内容</h4>
             <Tooltip title="复制">
               <Button
                 type="text"
                 icon={<CopyOutlined />}
-                onClick={() => handleCopy(detail.jvmOptions || '', 'JVM参数')}
+                onClick={() => handleCopy(detail.configContent || '', '配置内容')}
               />
             </Tooltip>
           </div>
-          <pre className={customStyles?.configContent || 'config-content'}>{detail.jvmOptions}</pre>
+          <pre className={customStyles?.configContent || 'config-content'}>{detail.configContent}</pre>
         </div>
 
         <div className={customStyles?.configSection || 'config-section'}>
@@ -134,16 +133,16 @@ const LogstashDetailModal = ({ visible, onClose, detail, styles: customStyles }:
 
         <div className={customStyles?.configSection || 'config-section'}>
           <div className={customStyles?.configHeader || 'config-header'}>
-            <h4>配置内容</h4>
+            <h4>JVM参数</h4>
             <Tooltip title="复制">
               <Button
                 type="text"
                 icon={<CopyOutlined />}
-                onClick={() => handleCopy(detail.configContent || '', '配置内容')}
+                onClick={() => handleCopy(detail.jvmOptions || '', 'JVM参数')}
               />
             </Tooltip>
           </div>
-          <pre className={customStyles?.configContent || 'config-content'}>{detail.configContent}</pre>
+          <pre className={customStyles?.configContent || 'config-content'}>{detail.jvmOptions}</pre>
         </div>
 
         <div className={customStyles?.machineStatusSection || 'machine-status-section'}>

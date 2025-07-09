@@ -5,6 +5,26 @@ import styles from './VirtualTable.module.less';
 import { highlightText } from '@/utils/highlightText';
 import { CloseOutlined, DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons';
 
+// 计算文本宽度的函数
+const getTextWidth = (text: string, fontSize: number = 14, fontFamily: string = 'Arial'): number => {
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  if (!context) return text.length * 8; // 降级处理
+
+  context.font = `${fontSize}px ${fontFamily}`;
+  const metrics = context.measureText(text);
+  return Math.ceil(metrics.width);
+};
+
+// 计算列的自适应宽度
+const getAutoColumnWidth = (columnName: string, minWidth: number = 120, maxWidth: number = 400): number => {
+  const textWidth = getTextWidth(columnName, 14, '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto');
+  // 添加padding和排序图标空间：
+  // 左右padding各16px，排序图标20px，删除/移动按钮空间40px，安全余量20px
+  const totalWidth = textWidth + 112;
+  return Math.min(Math.max(totalWidth, minWidth), maxWidth);
+};
+
 interface IProps {
   data: any[]; // 数据
   loading?: boolean; // 加载状态
@@ -42,8 +62,10 @@ const ResizableTitle = (props: any) => {
       <div
         className={styles.resizeHandle}
         onMouseDown={(e) => {
+          // 阻止事件冒泡，防止触发排序
           e.preventDefault();
           e.stopPropagation();
+
           const startX = e.pageX;
           const startWidth = width;
 
@@ -53,18 +75,26 @@ const ResizableTitle = (props: any) => {
             // 鼠标往左拖，e.pageX - startX 为负，宽度变小。
             const newWidth = startWidth + (e.pageX - startX);
             // 限制宽度
-            if (newWidth >= 50 && newWidth <= 500) {
+            if (newWidth >= 80 && newWidth <= 800) {
               onResize(newWidth);
             }
           };
 
-          const handleMouseUp = () => {
+          const handleMouseUp = (e: MouseEvent) => {
+            // 拖拽结束时也阻止事件冒泡
+            e.preventDefault();
+            e.stopPropagation();
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
           };
 
           document.addEventListener('mousemove', handleMouseMove);
           document.addEventListener('mouseup', handleMouseUp);
+        }}
+        onClick={(e) => {
+          // 点击调整手柄时阻止冒泡，防止触发排序
+          e.preventDefault();
+          e.stopPropagation();
         }}
       />
     </th>
@@ -232,22 +262,54 @@ const VirtualTable = (props: IProps) => {
     const column = columns[index];
     if (!column?.dataIndex) return;
 
+    // 更新列宽状态，允许在任何模式下都能手动调整
     setColumnWidths((prev) => ({
       ...prev,
       [column.dataIndex]: width,
     }));
+
+    // 同时更新当前columns状态中的宽度，确保立即生效
+    setColumns((prevColumns) => {
+      const newColumns = [...prevColumns];
+      if (newColumns[index]) {
+        newColumns[index] = {
+          ...newColumns[index],
+          width: width,
+        };
+      }
+      return newColumns;
+    });
   };
   const getBaseColumns = useMemo(() => {
     const timeField = moduleQueryConfig?.timeField || 'log_time'; // 如果没有配置则回退到log_time
     const otherColumns = dynamicColumns?.filter((item) => item.selected && item.columnName !== timeField);
     const _columns: any[] = [];
+
+    // 计算总列数（包括时间字段和_source字段）
+    const totalColumns = 1 + (otherColumns?.length || 0) + 1; // 时间字段 + 动态列 + _source列
+    const shouldUseAutoWidth = totalColumns > 3;
+
     if (otherColumns && otherColumns.length > 0) {
       otherColumns.forEach((item: ILogColumnsResponse) => {
         const { columnName = '' } = item;
+
+        // 优先使用用户手动调整的宽度，其次根据列数决定使用自动宽度还是固定宽度
+        let columnWidth;
+        if (columnWidths[columnName]) {
+          // 如果用户手动调整过宽度，则使用用户设置的宽度
+          columnWidth = columnWidths[columnName];
+        } else if (shouldUseAutoWidth) {
+          // 如果没有手动调整过且列数较多，使用自动计算的宽度
+          columnWidth = getAutoColumnWidth(columnName);
+        } else {
+          // 默认使用固定宽度
+          columnWidth = 150;
+        }
+
         _columns.push({
           title: columnName,
           dataIndex: columnName,
-          width: columnWidths[columnName] ?? 150,
+          width: columnWidth,
           render: (text: string) => highlightText(text, keyWordsFormat || []),
         });
       });
@@ -371,9 +433,23 @@ const VirtualTable = (props: IProps) => {
       },
       ..._columns.map((column, idx) => {
         const isLast = idx === _columns.length - 1;
+
+        // 优先使用用户手动调整的宽度
+        let columnWidth;
+        if (columnWidths[column.dataIndex]) {
+          // 如果用户手动调整过宽度，则使用用户设置的宽度
+          columnWidth = columnWidths[column.dataIndex];
+        } else if (shouldUseAutoWidth) {
+          // 如果没有手动调整过且列数较多，使用之前计算好的自动宽度
+          columnWidth = column.width;
+        } else {
+          // 默认情况：最后一列自动撑满，其他列使用固定宽度
+          columnWidth = isLast ? undefined : 150;
+        }
+
         return {
           ...column,
-          width: isLast ? undefined : columnWidths[column.dataIndex] || 150,
+          width: columnWidth,
           sorter: {
             compare: (a: any, b: any) => {
               const valueA = a[column.dataIndex];
@@ -409,6 +485,8 @@ const VirtualTable = (props: IProps) => {
           onHeaderCell: undefined,
         };
       }
+
+      // 所有非时间字段列都支持宽度调整
       return {
         ...col,
         // 接收当前列的 column 对象作为参数
@@ -419,7 +497,7 @@ const VirtualTable = (props: IProps) => {
       };
     });
     setColumns(resizableColumns);
-  }, [getBaseColumns]);
+  }, [getBaseColumns, moduleQueryConfig]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -485,13 +563,29 @@ const VirtualTable = (props: IProps) => {
     // 只统计动态列（不含时间字段/_source）
     const timeField = moduleQueryConfig?.timeField || 'log_time';
     const dynamicCols = columns.filter((col: any) => col.dataIndex !== timeField && col.dataIndex !== '_source');
-    let extra = 0;
+
+    // 计算总列数判断是否使用自动宽度
+    const totalColumns = columns.length;
+    const shouldUseAutoWidth = totalColumns > 3;
+
+    let totalWidth = 190; // 时间字段固定宽度
+
+    // 直接累加各列的实际宽度（包括用户手动调整的宽度）
     dynamicCols.forEach((col: any) => {
-      const titleStr = typeof col.title === 'string' ? col.title : col.dataIndex || '';
-      extra += (titleStr.length || 0) * 2;
+      totalWidth += col.width || 150;
     });
-    setScrollX(Math.max(1300, 1300 + extra));
-  }, [columns]);
+
+    // _source列的宽度：如果有其他列则给300px，如果只有_source列则自动撑满
+    const hasOtherColumns = dynamicCols.length > 0;
+    if (hasOtherColumns) {
+      totalWidth += 300;
+    } else {
+      // 如果只有时间字段和_source列，给_source一个最小宽度
+      totalWidth += 400;
+    }
+
+    setScrollX(Math.max(totalWidth, 1300));
+  }, [columns, moduleQueryConfig]);
 
   // 列顺序操作
   const hasSourceColumn = columns.some((col) => col.dataIndex === '_source') && columns.length === 2;

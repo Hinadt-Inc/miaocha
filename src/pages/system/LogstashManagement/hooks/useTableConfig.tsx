@@ -56,11 +56,11 @@ export const useTableConfig = (props: UseTableConfigProps) => {
         </Button>
       ),
     },
-    {
-      title: '进程ID',
-      dataIndex: 'id',
-      key: 'id',
-    },
+    // {
+    //   title: '进程ID',
+    //   dataIndex: 'id',
+    //   key: 'id',
+    // },
     {
       title: '模块',
       dataIndex: 'moduleName',

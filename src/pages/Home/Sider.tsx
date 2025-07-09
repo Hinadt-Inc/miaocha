@@ -16,6 +16,7 @@ interface IProps {
   onActiveColumnsChange?: (activeColumns: string[]) => void; // 激活字段变化回调函数
   onSelectedModuleChange?: (selectedModule: string, datasourceId?: number) => void; // 选中模块变化回调函数
   moduleQueryConfig?: any; // 模块查询配置
+  onCommonColumnsChange?: (commonColumns: string[]) => void; // 普通字段变化回调函数
 }
 
 // 简化的虚拟滚动组件
@@ -87,6 +88,7 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
     onActiveColumnsChange,
     onSelectedModuleChange,
     moduleQueryConfig,
+    onCommonColumnsChange,
   } = props;
   const [columns, setColumns] = useState<ILogColumnsResponse[]>([]); // 日志表字段
   const [selectedModule, setSelectedModule] = useState<string>(''); // 已选模块
@@ -111,6 +113,15 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
       });
 
       setColumns(processedColumns);
+      const _commonColumns = processedColumns
+        .map((item: any) => item.columnName)
+        ?.filter((item: any) => !item.includes('.'));
+
+      // 通知父组件commonColumns变化
+      if (onCommonColumnsChange) {
+        onCommonColumnsChange(_commonColumns || []);
+      }
+
       // 初始加载时也通知父组件列变化
       if (onChangeColumns) {
         onChangeColumns(processedColumns);
@@ -118,6 +129,9 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
     },
     onError: () => {
       setColumns([]);
+      if (onCommonColumnsChange) {
+        onCommonColumnsChange([]);
+      }
     },
   });
 

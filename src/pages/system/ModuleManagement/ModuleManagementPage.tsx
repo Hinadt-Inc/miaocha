@@ -45,6 +45,7 @@ const ModuleManagementPage = () => {
     onExecuteSql: actions.handleExecuteSql,
     onDelete: actions.handleDelete,
     onConfig: actions.handleConfig,
+    onStatusToggle: actions.handleStatusToggle,
   }) as unknown as { columns: any; pagination: any; handleTableChange: any };
 
   const sqlModalTitle = (
@@ -85,7 +86,7 @@ const ModuleManagementPage = () => {
           dataSource={data}
           rowKey="key"
           loading={loading}
-          scroll={{ x: 1300 }}
+          scroll={{ x: 1340 }}
           size="small"
           bordered
           pagination={{

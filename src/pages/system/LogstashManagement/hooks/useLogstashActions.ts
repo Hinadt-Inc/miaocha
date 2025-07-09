@@ -140,19 +140,19 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
         const process = await createLogstashProcess(values);
         showSuccess('创建成功');
 
-        if (!values.jvmOptions || !values.logstashYml) {
-          setTimeout(async () => {
-            try {
-              await updateLogstashConfig(process.id, {
-                jvmOptions: values.jvmOptions || '默认JVM参数',
-                logstashYml: values.logstashYml || '默认Logstash配置',
-              });
-              await fetchData();
-            } catch (err) {
-              console.error('异步更新配置失败:', err);
-            }
-          }, 3000);
-        }
+        // if (!values.jvmOptions || !values.logstashYml) {
+        //   setTimeout(async () => {
+        //     try {
+        //       await updateLogstashConfig(process.id, {
+        //         jvmOptions: values.jvmOptions || '默认JVM参数',
+        //         logstashYml: values.logstashYml || '默认Logstash配置',
+        //       });
+        //       await fetchData();
+        //     } catch (err) {
+        //       console.error('异步更新配置失败:', err);
+        //     }
+        //   }, 3000);
+        // }
       }
       setEditModalVisible(false);
       await fetchData();

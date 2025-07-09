@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, ReactNode, useMemo, useCallback } from 'react';
+import { createContext, useContext, useEffect, ReactNode, useMemo, useCallback, useRef } from 'react';
 import { message, notification } from 'antd';
 import { setGlobalErrorHandler } from '../api/request';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -41,6 +41,11 @@ export function ErrorProvider({ children }: ErrorProviderProps) {
   // 在这里创建 message 和 notification 的实例
   const [messageApi, messageContextHolder] = message.useMessage();
   const [notificationApi, notificationContextHolder] = notification.useNotification();
+
+  // 添加错误去重机制
+  const errorCacheRef = useRef<Map<string, number>>(new Map());
+  const ERROR_CACHE_DURATION = 1000; // 1秒内的相同错误视为重复
+
   // 默认错误消息映射
   const DEFAULT_ERROR_MESSAGES: Record<ErrorType, string> = useMemo(
     () => ({
@@ -85,6 +90,34 @@ export function ErrorProvider({ children }: ErrorProviderProps) {
     [],
   );
 
+  // 生成错误的唯一标识
+  const generateErrorKey = useCallback((error: Error | string): string => {
+    const message = typeof error === 'string' ? error : error.message;
+    const stack = typeof error === 'string' ? '' : error.stack;
+    return `${message}_${stack ? stack.split('\n')[0] : ''}`;
+  }, []);
+
+  // 检查是否为重复错误
+  const isDuplicateError = useCallback((errorKey: string): boolean => {
+    const now = Date.now();
+    const lastTime = errorCacheRef.current.get(errorKey);
+
+    if (lastTime && now - lastTime < ERROR_CACHE_DURATION) {
+      return true;
+    }
+
+    errorCacheRef.current.set(errorKey, now);
+
+    // 清理过期的缓存
+    for (const [key, timestamp] of errorCacheRef.current.entries()) {
+      if (now - timestamp > ERROR_CACHE_DURATION) {
+        errorCacheRef.current.delete(key);
+      }
+    }
+
+    return false;
+  }, []);
+
   // 从错误对象中提取错误码
   const extractErrorCode = useCallback((error: Error): string | null => {
     if (error.message.includes('Network Error') || error.message.includes('网络')) {
@@ -117,6 +150,12 @@ export function ErrorProvider({ children }: ErrorProviderProps) {
   // 处理错误的核心方法
   const handleError = useCallback(
     (error: Error | string, customConfig?: Partial<ErrorConfig>) => {
+      // 检查是否为重复错误
+      const errorKey = generateErrorKey(error);
+      if (isDuplicateError(errorKey)) {
+        return;
+      }
+
       let errorConfig: ErrorConfig;
 
       if (typeof error === 'string') {
@@ -185,7 +224,16 @@ export function ErrorProvider({ children }: ErrorProviderProps) {
         errorConfig.action();
       }
     },
-    [messageApi, notificationApi, ERROR_CODE_MAPPING, DEFAULT_ERROR_MESSAGES, extractErrorCode, getErrorTitle],
+    [
+      messageApi,
+      notificationApi,
+      ERROR_CODE_MAPPING,
+      DEFAULT_ERROR_MESSAGES,
+      extractErrorCode,
+      getErrorTitle,
+      generateErrorKey,
+      isDuplicateError,
+    ],
   );
 
   // 成功消息
@@ -238,7 +286,10 @@ export function ErrorProvider({ children }: ErrorProviderProps) {
     // 监听未捕获的Promise错误
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       console.error('Unhandled promise rejection:', event.reason);
-      handleError(event.reason instanceof Error ? event.reason : new Error(String(event.reason)));
+      // 只处理未被API错误处理器处理的错误
+      if (event.reason instanceof Error && !event.reason.message.includes('API_ERROR_HANDLED')) {
+        handleError(event.reason instanceof Error ? event.reason : new Error(String(event.reason)));
+      }
       // 阻止默认行为，避免在控制台显示错误
       event.preventDefault();
     };
@@ -246,13 +297,17 @@ export function ErrorProvider({ children }: ErrorProviderProps) {
     // 监听全局JavaScript错误
     const handleGlobalError = (event: ErrorEvent) => {
       console.error('Global error:', event.error);
-      handleError(event.error instanceof Error ? event.error : new Error(event.message));
+      // 只处理非资源加载错误
+      if (event.error instanceof Error && !event.error.message.includes('资源加载失败')) {
+        handleError(event.error instanceof Error ? event.error : new Error(event.message));
+      }
     };
 
     // 监听资源加载错误
     const handleResourceError = (event: Event) => {
       const target = event.target as HTMLElement;
-      if (target) {
+      // 只处理真正的资源加载错误（img, script, link等）
+      if (target && target.tagName && ['IMG', 'SCRIPT', 'LINK', 'IFRAME'].includes(target.tagName)) {
         const errorMessage = `资源加载失败: ${target.tagName}`;
         console.error('Resource loading error:', target);
         handleError(new Error(errorMessage));
@@ -261,6 +316,7 @@ export function ErrorProvider({ children }: ErrorProviderProps) {
 
     window.addEventListener('unhandledrejection', handleUnhandledRejection);
     window.addEventListener('error', handleGlobalError);
+    // 使用捕获阶段来处理资源加载错误
     window.addEventListener('error', handleResourceError, true);
 
     return () => {
