@@ -28,9 +28,9 @@ public class LogstashConfigParser {
     private static final Pattern KAFKA_BOOTSTRAP_SERVERS_PATTERN =
             Pattern.compile("bootstrap_servers\\s*=>\\s*[\"']([^\"']+)[\"']", Pattern.DOTALL);
 
-    // 匹配Kafka topics的正则表达式
+    // 匹配Kafka topics的正则表达式 - 支持单个或多个topics
     private static final Pattern KAFKA_TOPICS_PATTERN =
-            Pattern.compile("topics\\s*=>\\s*\\[\\s*[\"']([^\"']+)[\"']\\s*\\]", Pattern.DOTALL);
+            Pattern.compile("topics\\s*=>\\s*\\[\\s*([^\\]]+)\\s*\\]", Pattern.DOTALL);
 
     /**
      * 从Logstash配置中提取Doris表名
@@ -101,8 +101,15 @@ public class LogstashConfigParser {
                         ErrorCode.LOGSTASH_CONFIG_KAFKA_MISSING, "未找到Kafka topics配置");
             }
 
-            String topics = topicsMatcher.group(1);
-            if (!StringUtils.hasText(topics)) {
+            String topicsContent = topicsMatcher.group(1);
+            if (!StringUtils.hasText(topicsContent)) {
+                return ValidationResult.invalid(
+                        ErrorCode.LOGSTASH_CONFIG_KAFKA_MISSING, "Kafka topics不能为空");
+            }
+
+            // 验证topics内容不只是空白字符和逗号
+            String cleanTopics = topicsContent.replaceAll("[\\s,\"']+", "");
+            if (!StringUtils.hasText(cleanTopics)) {
                 return ValidationResult.invalid(
                         ErrorCode.LOGSTASH_CONFIG_KAFKA_MISSING, "Kafka topics不能为空");
             }
