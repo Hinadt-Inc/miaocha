@@ -28,4 +28,7 @@ parsers:
 comment:
   layout: "reach,diff,flags,files,footer"
   behavior: default
-  require_changes: no 
+  require_changes: false  # 即使覆盖率没有变化也显示评论
+  require_base: false     # 不需要base报告也能显示
+  require_head: true      # 必须有head报告才显示
+  hide_project_coverage: false  # 显示项目整体覆盖率，不只是git diff 
