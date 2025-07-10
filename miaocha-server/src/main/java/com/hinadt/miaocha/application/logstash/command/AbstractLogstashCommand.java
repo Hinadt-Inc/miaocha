@@ -69,7 +69,7 @@ public abstract class AbstractLogstashCommand implements LogstashCommand {
             return result;
         } catch (Exception e) {
             logger.error(
-                    "命令 {} 在机器 {} 上执行失败，实例ID: {}, 错误: {}",
+                    "命令 {} 在机器 {} 上执行发生错误，实例ID: {}, 错误: {}",
                     getDescription(),
                     machineInfo.getName(),
                     logstashMachineId,
@@ -96,10 +96,5 @@ public abstract class AbstractLogstashCommand implements LogstashCommand {
     /** 获取当前操作的LogstashMachine实例 */
     protected LogstashMachine getLogstashMachine() {
         return logstashMachineMapper.selectById(logstashMachineId);
-    }
-
-    /** 获取实例ID */
-    protected Long getLogstashMachineId() {
-        return logstashMachineId;
     }
 }

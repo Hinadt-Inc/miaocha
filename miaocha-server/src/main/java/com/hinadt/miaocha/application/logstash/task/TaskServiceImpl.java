@@ -329,7 +329,6 @@ public class TaskServiceImpl implements TaskService {
                         }
                     } catch (Exception e) {
                         // 更新任务状态为失败
-                        logger.error("任务执行失败，任务ID: {}, 错误: {}", taskId, e.getMessage(), e);
                         LogstashTask task = taskMapper.findById(taskId).orElse(null);
                         if (task != null) {
                             String errorMessage = e.getMessage();

@@ -41,7 +41,6 @@ public class CreateDirectoryCommand extends AbstractLogstashCommand {
             logger.info("检查目录 [{}] 存在性: {}", processDir, exists ? "已存在" : "不存在");
             return exists;
         } catch (Exception e) {
-            logger.error("检查目录存在性时发生错误: {}", e.getMessage(), e);
             // 发生异常时，假设目录不存在
             return false;
         }
@@ -71,7 +70,6 @@ public class CreateDirectoryCommand extends AbstractLogstashCommand {
 
             return success;
         } catch (Exception e) {
-            logger.error("创建实例目录时发生错误，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage(), e);
             throw new SshOperationException("创建目录失败: " + e.getMessage(), e);
         }
     }

@@ -140,8 +140,6 @@ public class StartProcessCommand extends AbstractLogstashCommand {
             logger.info("已创建Logstash进程，实例ID: {}, PID: {}，进一步验证将由验证命令完成", logstashMachineId, pid);
             return true;
         } catch (Exception e) {
-            logger.error(
-                    "启动Logstash进程时发生错误，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage(), e);
             throw new SshOperationException("启动进程失败: " + e.getMessage(), e);
         }
     }

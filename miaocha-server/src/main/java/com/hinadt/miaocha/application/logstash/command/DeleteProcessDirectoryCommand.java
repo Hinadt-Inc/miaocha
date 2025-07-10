@@ -60,7 +60,6 @@ public class DeleteProcessDirectoryCommand extends AbstractLogstashCommand {
             }
             return !exists; // 如果不存在，则已经删除
         } catch (Exception e) {
-            logger.warn("检查实例目录是否存在时出错，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage());
             return false; // 出错时假设需要执行删除操作
         }
     }
@@ -105,7 +104,6 @@ public class DeleteProcessDirectoryCommand extends AbstractLogstashCommand {
 
             return success;
         } catch (Exception e) {
-            logger.error("删除实例目录时发生错误，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage(), e);
             throw new SshOperationException("删除目录失败: " + e.getMessage(), e);
         }
     }

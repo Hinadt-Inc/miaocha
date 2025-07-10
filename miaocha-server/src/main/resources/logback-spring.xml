@@ -14,8 +14,8 @@
     <property name="FILE_NAME" value="miaocha"/>
 
     <!-- 日志输出格式 -->
-    <property name="CONSOLE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}%X{logId, ' [%X{logId}] '}- %msg%n"/>
-    <property name="FILE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}%X{logId, ' [%X{logId}] '}- %msg%n"/>
+    <property name="CONSOLE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}%replace(%mdc{logId}){'^.+$', ' [$0] '}- %msg%n"/>
+    <property name="FILE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}%replace(%mdc{logId}){'^.+$', ' [$0] '}- %msg%n"/>
 
     <!-- 彩色日志依赖的渲染类 -->
     <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter"/>
@@ -26,7 +26,7 @@
 
     <!-- 彩色日志格式 -->
     <property name="CONSOLE_LOG_PATTERN_COLOR"
-              value="%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr([%thread]){magenta} %clr(%-5level){green} %clr(%logger{36}){cyan}%clr(%X{logId, ' [%X{logId}] '}){yellow}- %msg%n"/>
+              value="%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr([%thread]){magenta} %clr(%-5level){green} %clr(%logger{36}){cyan}%clr(%replace(%mdc{logId}){'^.+$', ' [$0] '}){yellow}- %msg%n"/>
 
     <!-- 控制台输出 -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">

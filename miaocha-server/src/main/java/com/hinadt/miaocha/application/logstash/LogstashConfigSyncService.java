@@ -138,10 +138,10 @@ public class LogstashConfigSyncService {
                     allInstances.stream()
                             .allMatch(
                                     instance ->
-                                            !LogstashMachineState.INITIALIZING
+                                            LogstashMachineState.NOT_STARTED
                                                             .name()
                                                             .equals(instance.getState())
-                                                    && !LogstashMachineState.INITIALIZE_FAILED
+                                                    || LogstashMachineState.INITIALIZE_FAILED
                                                             .name()
                                                             .equals(instance.getState()));
 

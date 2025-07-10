@@ -297,29 +297,18 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
                     taskService.executeAsync(
                             taskId,
                             () -> {
-                                try {
-                                    boolean success = operation.execute(logstashMachine, taskId);
-                                    log.info(
-                                            "实例 [{}] {}{}",
-                                            logstashMachine.getId(),
-                                            operationDescription,
-                                            success ? "成功" : "失败");
+                                boolean success = operation.execute(logstashMachine, taskId);
+                                log.info(
+                                        "实例 [{}] {}{}",
+                                        logstashMachine.getId(),
+                                        operationDescription,
+                                        success ? "成功" : "失败");
 
-                                    if (!success) {
-                                        throw new RuntimeException(
-                                                String.format(
-                                                        "实例 [%s] %s失败",
-                                                        logstashMachine.getId(),
-                                                        operationDescription));
-                                    }
-                                } catch (Exception e) {
-                                    log.error(
-                                            "实例 [{}] {}失败: {}",
-                                            logstashMachine.getId(),
-                                            operationDescription,
-                                            e.getMessage(),
-                                            e);
-                                    throw e;
+                                if (!success) {
+                                    throw new RuntimeException(
+                                            String.format(
+                                                    "实例 [%s] %s失败",
+                                                    logstashMachine.getId(), operationDescription));
                                 }
                             },
                             null);

@@ -44,7 +44,7 @@ public class ModifySystemConfigCommand extends AbstractLogstashCommand {
 
     @Override
     protected boolean checkAlreadyExecuted(MachineInfo machineInfo) {
-        return false;
+        return super.checkAlreadyExecuted(machineInfo);
     }
 
     @Override
@@ -68,8 +68,6 @@ public class ModifySystemConfigCommand extends AbstractLogstashCommand {
 
             return success;
         } catch (Exception e) {
-            logger.error(
-                    "修改Logstash系统配置时发生错误，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage(), e);
             throw new SshOperationException("修改Logstash系统配置失败: " + e.getMessage(), e);
         }
     }

@@ -47,7 +47,6 @@ public class CreateConfigCommand extends AbstractLogstashCommand {
             }
             return exists;
         } catch (Exception e) {
-            logger.warn("检查配置文件是否存在时出错，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage());
             return false;
         }
     }
@@ -94,8 +93,6 @@ public class CreateConfigCommand extends AbstractLogstashCommand {
 
             return success;
         } catch (Exception e) {
-            logger.error(
-                    "创建Logstash配置文件时发生错误，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage(), e);
             throw new SshOperationException("创建配置文件失败: " + e.getMessage(), e);
         }
     }

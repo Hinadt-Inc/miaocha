@@ -79,7 +79,6 @@ public class UploadPackageCommand extends AbstractLogstashCommand {
 
             return success;
         } catch (Exception e) {
-            logger.error("上传安装包时发生错误，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage(), e);
             throw new SshOperationException("上传安装包失败: " + e.getMessage(), e);
         }
     }

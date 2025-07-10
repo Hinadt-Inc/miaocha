@@ -131,8 +131,6 @@ public class StopProcessCommand extends AbstractLogstashCommand {
 
             return stopped;
         } catch (Exception e) {
-            logger.error(
-                    "停止Logstash进程时发生错误，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage(), e);
             throw new SshOperationException("停止进程失败: " + e.getMessage(), e);
         }
     }

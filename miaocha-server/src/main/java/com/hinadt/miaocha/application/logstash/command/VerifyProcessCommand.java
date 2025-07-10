@@ -125,8 +125,6 @@ public class VerifyProcessCommand extends AbstractLogstashCommand {
             // 这里不应该被执行到，因为在循环中已经处理了所有情况
             return false;
         } catch (Exception e) {
-            logger.error(
-                    "验证Logstash进程时发生错误，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage(), e);
             throw new SshOperationException("验证Logstash进程失败: " + e.getMessage(), e);
         }
     }
