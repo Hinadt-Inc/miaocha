@@ -4,7 +4,6 @@ import com.hinadt.miaocha.application.logstash.enums.LogstashMachineState;
 import com.hinadt.miaocha.application.logstash.task.TaskService;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
-import java.util.concurrent.CompletableFuture;
 
 /** Logstash机器状态处理器接口 使用状态模式处理不同状态下的行为 */
 public interface LogstashMachineStateHandler {
@@ -22,9 +21,9 @@ public interface LogstashMachineStateHandler {
      * @param logstashMachine LogstashMachine实例
      * @param machineInfo 目标机器
      * @param taskId 任务ID，可以为null
-     * @return 异步操作结果
+     * @return 操作结果
      */
-    CompletableFuture<Boolean> handleInitialize(
+    boolean handleInitialize(
             LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId);
 
     /**
@@ -33,10 +32,9 @@ public interface LogstashMachineStateHandler {
      * @param logstashMachine LogstashMachine实例
      * @param machineInfo 目标机器
      * @param taskId 任务ID，可以为null
-     * @return 异步操作结果
+     * @return 操作结果
      */
-    CompletableFuture<Boolean> handleStart(
-            LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId);
+    boolean handleStart(LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId);
 
     /**
      * 处理停止操作
@@ -44,10 +42,9 @@ public interface LogstashMachineStateHandler {
      * @param logstashMachine LogstashMachine实例
      * @param machineInfo 目标机器
      * @param taskId 任务ID，可以为null
-     * @return 异步操作结果
+     * @return 操作结果
      */
-    CompletableFuture<Boolean> handleStop(
-            LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId);
+    boolean handleStop(LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId);
 
     /**
      * 处理强制停止操作 应急停止功能：执行原有的停止逻辑，但无论命令成功与否，都强制将状态更改为未启动 用于应急情况下确保进程状态的一致性
@@ -55,9 +52,9 @@ public interface LogstashMachineStateHandler {
      * @param logstashMachine LogstashMachine实例
      * @param machineInfo 目标机器
      * @param taskId 任务ID，可以为null
-     * @return 异步操作结果
+     * @return 操作结果
      */
-    CompletableFuture<Boolean> handleForceStop(
+    boolean handleForceStop(
             LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId);
 
     /**
@@ -69,9 +66,9 @@ public interface LogstashMachineStateHandler {
      * @param logstashYml logstash.yml配置内容，null表示不更新
      * @param machineInfo 目标机器
      * @param taskId 任务ID，可以为null
-     * @return 异步操作结果
+     * @return 操作结果
      */
-    CompletableFuture<Boolean> handleUpdateConfig(
+    boolean handleUpdateConfig(
             LogstashMachine logstashMachine,
             String configContent,
             String jvmOptions,
@@ -85,9 +82,9 @@ public interface LogstashMachineStateHandler {
      * @param logstashMachine LogstashMachine实例
      * @param machineInfo 目标机器
      * @param taskId 任务ID，可以为null
-     * @return 异步操作结果
+     * @return 操作结果
      */
-    CompletableFuture<Boolean> handleRefreshConfig(
+    boolean handleRefreshConfig(
             LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId);
 
     /**
@@ -95,10 +92,9 @@ public interface LogstashMachineStateHandler {
      *
      * @param logstashMachine LogstashMachine实例
      * @param machineInfo 目标机器
-     * @return 异步操作结果
+     * @return 操作结果
      */
-    CompletableFuture<Boolean> handleDelete(
-            LogstashMachine logstashMachine, MachineInfo machineInfo);
+    boolean handleDelete(LogstashMachine logstashMachine, MachineInfo machineInfo);
 
     /**
      * 判断当前状态是否可以执行初始化操作

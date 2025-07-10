@@ -12,8 +12,6 @@ import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
 import com.hinadt.miaocha.domain.mapper.MachineMapper;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.Getter;
@@ -87,42 +85,42 @@ public class LogstashMachineStateManager {
     // ==================== 实例操作方法 ====================
 
     /** 部署LogstashMachine实例 */
-    public CompletableFuture<Boolean> deployInstance(Long logstashMachineId, String taskId) {
+    public boolean deployInstance(Long logstashMachineId, String taskId) {
         log.info("开始部署LogstashMachine实例: {}", logstashMachineId);
         LogstashMachineContext context = getInstanceContext(logstashMachineId);
         return context.initialize(taskId);
     }
 
     /** 启动LogstashMachine实例 */
-    public CompletableFuture<Boolean> startInstance(Long logstashMachineId, String taskId) {
+    public boolean startInstance(Long logstashMachineId, String taskId) {
         log.info("开始启动LogstashMachine实例: {}", logstashMachineId);
         LogstashMachineContext context = getInstanceContext(logstashMachineId);
         return context.start(taskId);
     }
 
     /** 停止LogstashMachine实例 */
-    public CompletableFuture<Boolean> stopInstance(Long logstashMachineId, String taskId) {
+    public boolean stopInstance(Long logstashMachineId, String taskId) {
         log.info("开始停止LogstashMachine实例: {}", logstashMachineId);
         LogstashMachineContext context = getInstanceContext(logstashMachineId);
         return context.stop(taskId);
     }
 
     /** 强制停止LogstashMachine实例 */
-    public CompletableFuture<Boolean> forceStopInstance(Long logstashMachineId, String taskId) {
+    public boolean forceStopInstance(Long logstashMachineId, String taskId) {
         log.info("开始强制停止LogstashMachine实例: {}", logstashMachineId);
         LogstashMachineContext context = getInstanceContext(logstashMachineId);
         return context.forceStop(taskId);
     }
 
     /** 删除LogstashMachine实例 */
-    public CompletableFuture<Boolean> deleteInstance(Long logstashMachineId) {
+    public boolean deleteInstance(Long logstashMachineId) {
         log.info("开始删除LogstashMachine实例: {}", logstashMachineId);
         LogstashMachineContext context = getInstanceContext(logstashMachineId);
         return context.delete();
     }
 
     /** 更新LogstashMachine实例配置（直接写入配置内容） */
-    public CompletableFuture<Boolean> updateInstanceConfig(
+    public boolean updateInstanceConfig(
             Long logstashMachineId,
             String configContent,
             String jvmOptions,
@@ -134,7 +132,7 @@ public class LogstashMachineStateManager {
     }
 
     /** 刷新LogstashMachine实例配置（从数据库查询配置内容） */
-    public CompletableFuture<Boolean> refreshInstanceConfig(Long logstashMachineId, String taskId) {
+    public boolean refreshInstanceConfig(Long logstashMachineId, String taskId) {
         log.info("开始刷新LogstashMachine实例配置: {}", logstashMachineId);
         LogstashMachineContext context = getInstanceContext(logstashMachineId);
         return context.refreshConfig(taskId);
@@ -177,14 +175,14 @@ public class LogstashMachineStateManager {
     }
 
     /** 安全执行状态转换操作 */
-    private CompletableFuture<Boolean> safeStateTransition(
+    private boolean safeStateTransition(
             Long instanceId,
             LogstashMachineState initialState,
             LogstashMachineState transitionState,
             LogstashMachineState successState,
             LogstashMachineState failureState,
             LogstashMachineStateHandler.OperationType operationType,
-            Function<LogstashMachineStateHandler, CompletableFuture<Boolean>> operation) {
+            Function<LogstashMachineStateHandler, Boolean> operation) {
 
         // 获取初始状态处理器
         LogstashMachineStateHandler handler = getStateHandler(initialState);
@@ -198,30 +196,25 @@ public class LogstashMachineStateManager {
                 initialState.name(),
                 transitionState.name());
 
-        return operation
-                .apply(handler)
-                .thenApply(
-                        success -> {
-                            LogstashMachineState nextState =
-                                    handler.getNextState(operationType, success);
-                            updateInstanceState(instanceId, nextState);
-                            log.info(
-                                    "LogstashMachine实例 [{}] {}操作完成，最终状态设置为 [{}]",
-                                    instanceId,
-                                    operationType.name(),
-                                    nextState.name());
-                            return success;
-                        })
-                .exceptionally(
-                        e -> {
-                            updateInstanceState(instanceId, failureState);
-                            log.error(
-                                    "LogstashMachine实例 [{}] {}操作异常，最终状态设置为 [{}]",
-                                    instanceId,
-                                    operationType.name(),
-                                    failureState.name());
-                            throw new CompletionException(e);
-                        });
+        try {
+            boolean success = operation.apply(handler);
+            LogstashMachineState nextState = handler.getNextState(operationType, success);
+            updateInstanceState(instanceId, nextState);
+            log.info(
+                    "LogstashMachine实例 [{}] {}操作完成，最终状态设置为 [{}]",
+                    instanceId,
+                    operationType.name(),
+                    nextState.name());
+            return success;
+        } catch (Exception e) {
+            updateInstanceState(instanceId, failureState);
+            log.error(
+                    "LogstashMachine实例 [{}] {}操作异常，最终状态设置为 [{}]",
+                    instanceId,
+                    operationType.name(),
+                    failureState.name());
+            throw e;
+        }
     }
 
     /** Logstash机器状态上下文 持有当前状态，并将操作委托给对应的状态处理器 */
@@ -250,7 +243,7 @@ public class LogstashMachineStateManager {
         }
 
         /** 初始化机器上的进程 */
-        public CompletableFuture<Boolean> initialize(String taskId) {
+        public boolean initialize(String taskId) {
             validateOperation(currentHandler::canInitialize, "初始化");
 
             return safeStateTransition(
@@ -264,7 +257,7 @@ public class LogstashMachineStateManager {
         }
 
         /** 启动机器上的进程 */
-        public CompletableFuture<Boolean> start(String taskId) {
+        public boolean start(String taskId) {
             validateOperation(currentHandler::canStart, "启动");
 
             return safeStateTransition(
@@ -278,7 +271,7 @@ public class LogstashMachineStateManager {
         }
 
         /** 停止机器上的进程 */
-        public CompletableFuture<Boolean> stop(String taskId) {
+        public boolean stop(String taskId) {
             validateOperation(currentHandler::canStop, "停止");
 
             return safeStateTransition(
@@ -292,7 +285,7 @@ public class LogstashMachineStateManager {
         }
 
         /** 强制停止机器上的进程 */
-        public CompletableFuture<Boolean> forceStop(String taskId) {
+        public boolean forceStop(String taskId) {
             // 强制停止不检查状态
             stateManager.updateInstanceState(
                     logstashMachine.getId(), LogstashMachineState.STOPPING);
@@ -301,92 +294,80 @@ public class LogstashMachineStateManager {
                     logstashMachine.getId(),
                     currentState.name());
 
-            return currentHandler
-                    .handleForceStop(logstashMachine, machineInfo, taskId)
-                    .thenApply(
-                            success -> {
-                                LogstashMachineState nextState =
-                                        currentHandler.getNextState(
-                                                LogstashMachineStateHandler.OperationType
-                                                        .FORCE_STOP,
-                                                success);
-                                stateManager.updateInstanceState(
-                                        logstashMachine.getId(), nextState);
-                                log.warn(
-                                        "LogstashMachine实例 [{}] 强制停止操作完成，最终状态强制设置为 [{}]",
-                                        logstashMachine.getId(),
-                                        nextState.name());
-                                return true; // 强制停止总是返回成功
-                            })
-                    .exceptionally(
-                            e -> {
-                                stateManager.updateInstanceState(
-                                        logstashMachine.getId(), LogstashMachineState.NOT_STARTED);
-                                log.warn(
-                                        "LogstashMachine实例 [{}] 强制停止操作异常，但仍强制设置为 [NOT_STARTED]: {}",
-                                        logstashMachine.getId(),
-                                        e.getMessage());
-                                return true; // 强制停止总是返回成功
-                            });
+            try {
+                boolean success =
+                        currentHandler.handleForceStop(logstashMachine, machineInfo, taskId);
+                LogstashMachineState nextState =
+                        currentHandler.getNextState(
+                                LogstashMachineStateHandler.OperationType.FORCE_STOP, success);
+                stateManager.updateInstanceState(logstashMachine.getId(), nextState);
+                log.warn(
+                        "LogstashMachine实例 [{}] 强制停止操作完成，最终状态强制设置为 [{}]",
+                        logstashMachine.getId(),
+                        nextState.name());
+                return true; // 强制停止总是返回成功
+            } catch (Exception e) {
+                stateManager.updateInstanceState(
+                        logstashMachine.getId(), LogstashMachineState.NOT_STARTED);
+                log.warn(
+                        "LogstashMachine实例 [{}] 强制停止操作异常，但仍强制设置为 [NOT_STARTED]: {}",
+                        logstashMachine.getId(),
+                        e.getMessage());
+                return true; // 强制停止总是返回成功
+            }
         }
 
         /** 更新机器上的配置（直接写入提供的配置内容） */
-        public CompletableFuture<Boolean> updateConfig(
+        public boolean updateConfig(
                 String configContent, String jvmOptions, String logstashYml, String taskId) {
             validateOperation(currentHandler::canUpdateConfig, "配置更新");
 
-            return currentHandler
-                    .handleUpdateConfig(
-                            logstashMachine,
-                            configContent,
-                            jvmOptions,
-                            logstashYml,
-                            machineInfo,
-                            taskId)
-                    .thenApply(
-                            success -> {
-                                log.info(
-                                        "LogstashMachine实例 [{}] 配置更新操作完成，状态保持为 [{}]",
-                                        logstashMachine.getId(),
-                                        currentState.name());
-                                return success;
-                            })
-                    .exceptionally(
-                            e -> {
-                                log.error(
-                                        "LogstashMachine实例 [{}] 配置更新操作异常，状态保持为 [{}]",
-                                        logstashMachine.getId(),
-                                        currentState.name());
-                                throw new CompletionException(e);
-                            });
+            try {
+                boolean success =
+                        currentHandler.handleUpdateConfig(
+                                logstashMachine,
+                                configContent,
+                                jvmOptions,
+                                logstashYml,
+                                machineInfo,
+                                taskId);
+                log.info(
+                        "LogstashMachine实例 [{}] 配置更新操作完成，状态保持为 [{}]",
+                        logstashMachine.getId(),
+                        currentState.name());
+                return success;
+            } catch (Exception e) {
+                log.error(
+                        "LogstashMachine实例 [{}] 配置更新操作异常，状态保持为 [{}]",
+                        logstashMachine.getId(),
+                        currentState.name());
+                throw e;
+            }
         }
 
         /** 刷新机器上的配置（从数据库查询配置内容） */
-        public CompletableFuture<Boolean> refreshConfig(String taskId) {
+        public boolean refreshConfig(String taskId) {
             validateOperation(currentHandler::canRefreshConfig, "配置刷新");
 
-            return currentHandler
-                    .handleRefreshConfig(logstashMachine, machineInfo, taskId)
-                    .thenApply(
-                            success -> {
-                                log.info(
-                                        "LogstashMachine实例 [{}] 配置刷新操作完成，状态保持为 [{}]",
-                                        logstashMachine.getId(),
-                                        currentState.name());
-                                return success;
-                            })
-                    .exceptionally(
-                            e -> {
-                                log.error(
-                                        "LogstashMachine实例 [{}] 配置刷新操作异常，状态保持为 [{}]",
-                                        logstashMachine.getId(),
-                                        currentState.name());
-                                throw new CompletionException(e);
-                            });
+            try {
+                boolean success =
+                        currentHandler.handleRefreshConfig(logstashMachine, machineInfo, taskId);
+                log.info(
+                        "LogstashMachine实例 [{}] 配置刷新操作完成，状态保持为 [{}]",
+                        logstashMachine.getId(),
+                        currentState.name());
+                return success;
+            } catch (Exception e) {
+                log.error(
+                        "LogstashMachine实例 [{}] 配置刷新操作异常，状态保持为 [{}]",
+                        logstashMachine.getId(),
+                        currentState.name());
+                throw e;
+            }
         }
 
         /** 删除LogstashMachine实例 */
-        public CompletableFuture<Boolean> delete() {
+        public boolean delete() {
             validateOperation(currentHandler::canDelete, "删除");
 
             log.info(
@@ -394,27 +375,23 @@ public class LogstashMachineStateManager {
                     logstashMachine.getId(),
                     currentState.name());
 
-            return currentHandler
-                    .handleDelete(logstashMachine, machineInfo)
-                    .thenApply(
-                            success -> {
-                                log.info(
-                                        "LogstashMachine实例 [{}] 删除操作完成，结果: {}",
-                                        logstashMachine.getId(),
-                                        success ? "成功" : "失败");
-                                // 回调删除
-                                logstashMachineMapper.deleteById(logstashMachine.getId());
-                                return success;
-                            })
-                    .exceptionally(
-                            e -> {
-                                log.error(
-                                        "LogstashMachine实例 [{}] 删除操作异常: {}",
-                                        logstashMachine.getId(),
-                                        e.getMessage(),
-                                        e);
-                                throw new CompletionException(e);
-                            });
+            try {
+                boolean success = currentHandler.handleDelete(logstashMachine, machineInfo);
+                log.info(
+                        "LogstashMachine实例 [{}] 删除操作完成，结果: {}",
+                        logstashMachine.getId(),
+                        success ? "成功" : "失败");
+                // 回调删除
+                logstashMachineMapper.deleteById(logstashMachine.getId());
+                return success;
+            } catch (Exception e) {
+                log.error(
+                        "LogstashMachine实例 [{}] 删除操作异常: {}",
+                        logstashMachine.getId(),
+                        e.getMessage(),
+                        e);
+                throw e;
+            }
         }
 
         /** 验证操作是否被允许 */

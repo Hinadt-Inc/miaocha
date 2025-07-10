@@ -1,7 +1,6 @@
 package com.hinadt.miaocha.application.logstash.command;
 
 import com.hinadt.miaocha.domain.entity.MachineInfo;
-import java.util.concurrent.CompletableFuture;
 
 /** Logstash命令接口 使用命令模式封装对Logstash的各种操作 */
 public interface LogstashCommand {
@@ -10,9 +9,9 @@ public interface LogstashCommand {
      * 执行命令
      *
      * @param machineInfo 目标机器
-     * @return 异步执行结果
+     * @return 执行结果，true表示成功，false表示失败
      */
-    CompletableFuture<Boolean> execute(MachineInfo machineInfo);
+    boolean execute(MachineInfo machineInfo);
 
     /**
      * 获取命令描述

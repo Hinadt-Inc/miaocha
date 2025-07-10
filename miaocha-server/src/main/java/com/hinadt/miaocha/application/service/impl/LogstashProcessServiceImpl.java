@@ -23,7 +23,6 @@ import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -443,10 +442,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             List<LogstashMachine> instances =
                     logstashMachineMapper.selectByLogstashProcessId(processId);
             if (!instances.isEmpty()) {
-                CompletableFuture<Boolean> deleteFuture =
-                        logstashDeployService.deleteInstancesDirectory(instances);
-                boolean success = deleteFuture.get();
-
+                boolean success = logstashDeployService.deleteInstancesDirectory(instances);
                 log.info(
                         success ? "成功删除进程物理目录，进程ID: {}" : "删除进程物理目录出现部分失败，但会继续删除数据库记录，进程ID: {}",
                         processId);
@@ -796,7 +792,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
 
     private void deleteDirectoriesForInstances(List<LogstashMachine> instances) {
         try {
-            logstashDeployService.deleteInstancesDirectory(instances).join();
+            logstashDeployService.deleteInstancesDirectory(instances);
             log.info("已删除{}个LogstashMachine实例的目录", instances.size());
         } catch (Exception e) {
             log.error("批量删除LogstashMachine实例目录时发生错误: {}", e.getMessage(), e);

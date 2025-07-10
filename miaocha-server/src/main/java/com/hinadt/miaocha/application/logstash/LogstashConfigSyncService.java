@@ -11,8 +11,10 @@ import com.hinadt.miaocha.domain.mapper.MachineMapper;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -26,18 +28,21 @@ public class LogstashConfigSyncService {
     private final MachineMapper machineMapper;
     private final LogstashProcessDeployService deployService;
     private final SshClient sshClient;
+    private final Executor logstashTaskExecutor;
 
     public LogstashConfigSyncService(
             LogstashProcessMapper logstashProcessMapper,
             LogstashMachineMapper logstashMachineMapper,
             MachineMapper machineMapper,
             LogstashProcessDeployService deployService,
-            SshClient sshClient) {
+            SshClient sshClient,
+            @Qualifier("logstashTaskExecutor") Executor logstashTaskExecutor) {
         this.logstashProcessMapper = logstashProcessMapper;
         this.logstashMachineMapper = logstashMachineMapper;
         this.machineMapper = machineMapper;
         this.deployService = deployService;
         this.sshClient = sshClient;
+        this.logstashTaskExecutor = logstashTaskExecutor;
     }
 
     /**
@@ -108,7 +113,8 @@ public class LogstashConfigSyncService {
                     } catch (Exception e) {
                         logger.error("同步进程 [{}] 配置文件时发生错误: {}", processId, e.getMessage(), e);
                     }
-                });
+                },
+                logstashTaskExecutor);
     }
 
     /** 等待所有实例初始化完成 */
@@ -132,10 +138,10 @@ public class LogstashConfigSyncService {
                     allInstances.stream()
                             .allMatch(
                                     instance ->
-                                            !LogstashMachineState.INITIALIZING
+                                            LogstashMachineState.NOT_STARTED
                                                             .name()
                                                             .equals(instance.getState())
-                                                    && !LogstashMachineState.INITIALIZE_FAILED
+                                                    || LogstashMachineState.INITIALIZE_FAILED
                                                             .name()
                                                             .equals(instance.getState()));
 

@@ -8,7 +8,6 @@ import com.hinadt.miaocha.application.logstash.enums.StepStatus;
 import com.hinadt.miaocha.application.logstash.task.TaskService;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
-import java.util.concurrent.CompletableFuture;
 import org.springframework.stereotype.Component;
 
 /** 运行中状态处理器 */
@@ -25,7 +24,7 @@ public class RunningStateHandler extends AbstractLogstashMachineStateHandler {
     }
 
     @Override
-    public CompletableFuture<Boolean> handleStop(
+    public boolean handleStop(
             LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId) {
         Long logstashMachineId = logstashMachine.getId();
         Long machineId = machineInfo.getId();
@@ -37,94 +36,77 @@ public class RunningStateHandler extends AbstractLogstashMachineStateHandler {
                 logstashMachineId,
                 LogstashMachineStep.STOP_PROCESS.getId(),
                 StepStatus.RUNNING);
+
         LogstashCommand stopCommand = commandFactory.stopProcessCommand(logstashMachineId);
 
-        return stopCommand
-                .execute(machineInfo)
-                .thenApply(
-                        success -> {
-                            StepStatus status = success ? StepStatus.COMPLETED : StepStatus.FAILED;
-                            String errorMessage = success ? null : "停止Logstash进程失败";
-                            taskService.updateStepStatus(
-                                    taskId,
-                                    logstashMachineId,
-                                    LogstashMachineStep.STOP_PROCESS.getId(),
-                                    status,
-                                    errorMessage);
+        try {
+            boolean success = stopCommand.execute(machineInfo);
+            StepStatus status = success ? StepStatus.COMPLETED : StepStatus.FAILED;
+            String errorMessage = success ? null : "停止Logstash进程失败";
+            taskService.updateStepStatus(
+                    taskId,
+                    logstashMachineId,
+                    LogstashMachineStep.STOP_PROCESS.getId(),
+                    status,
+                    errorMessage);
 
-                            if (!success) {
-                                throw new RuntimeException("停止Logstash进程失败");
-                            }
+            if (!success) {
+                throw new RuntimeException("停止Logstash进程失败");
+            }
 
-                            return success;
-                        })
-                .exceptionally(
-                        ex -> {
-                            String errorMessage = ex.getMessage();
-                            // 异常已在命令层记录，这里只更新任务状态
-                            taskService.updateStepStatus(
-                                    taskId,
-                                    logstashMachineId,
-                                    LogstashMachineStep.STOP_PROCESS.getId(),
-                                    StepStatus.FAILED,
-                                    errorMessage);
+            return success;
+        } catch (Exception ex) {
+            // 更新任务状态为失败，不记录详细日志（由外层处理）
+            taskService.updateStepStatus(
+                    taskId,
+                    logstashMachineId,
+                    LogstashMachineStep.STOP_PROCESS.getId(),
+                    StepStatus.FAILED,
+                    ex.getMessage());
 
-                            // 重新抛出异常，确保异常传递到外层
-                            if (ex instanceof RuntimeException) {
-                                throw (RuntimeException) ex;
-                            } else {
-                                throw new RuntimeException("停止进程时发生异常: " + errorMessage, ex);
-                            }
-                        });
+            throw new RuntimeException(ex.getMessage(), ex);
+        }
     }
 
     @Override
-    public CompletableFuture<Boolean> handleForceStop(
+    public boolean handleForceStop(
             LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId) {
         Long logstashMachineId = logstashMachine.getId();
         Long machineId = machineInfo.getId();
 
-        logger.warn("强制停止机器 [{}] 上的LogstashMachine实例 [{}]", machineId, logstashMachineId);
+        logger.info("强制停止机器 [{}] 上的LogstashMachine实例 [{}]", machineId, logstashMachineId);
 
         taskService.updateStepStatus(
                 taskId,
                 logstashMachineId,
                 LogstashMachineStep.STOP_PROCESS.getId(),
                 StepStatus.RUNNING);
-        LogstashCommand forceStopCommand =
-                commandFactory.forceStopProcessCommand(logstashMachineId);
 
-        return forceStopCommand
-                .execute(machineInfo)
-                .thenApply(
-                        success -> {
-                            // 强制停止总是认为成功
-                            taskService.updateStepStatus(
-                                    taskId,
-                                    logstashMachineId,
-                                    LogstashMachineStep.STOP_PROCESS.getId(),
-                                    StepStatus.COMPLETED,
-                                    "强制停止完成");
+        LogstashCommand stopCommand = commandFactory.stopProcessCommand(logstashMachineId);
 
-                            logger.info(
-                                    "强制停止机器 [{}] 上的LogstashMachine实例 [{}] 完成",
-                                    machineId,
-                                    logstashMachineId);
-                            return true;
-                        })
-                .exceptionally(
-                        ex -> {
-                            // 即使发生异常，强制停止也认为成功
-                            logger.warn("强制停止过程中发生异常，但仍标记为成功: {}", ex.getMessage());
-                            taskService.updateStepStatus(
-                                    taskId,
-                                    logstashMachineId,
-                                    LogstashMachineStep.STOP_PROCESS.getId(),
-                                    StepStatus.COMPLETED,
-                                    "强制停止完成（忽略异常）");
+        try {
+            boolean success = stopCommand.execute(machineInfo);
+            // 即使发生异常，强制停止也认为成功
+            taskService.updateStepStatus(
+                    taskId,
+                    logstashMachineId,
+                    LogstashMachineStep.STOP_PROCESS.getId(),
+                    StepStatus.COMPLETED,
+                    "强制停止完成");
 
-                            return true;
-                        });
+            return true;
+        } catch (Exception ex) {
+            // 即使发生异常，强制停止也认为成功
+            logger.warn("强制停止过程中发生异常，但仍标记为成功: {}", ex.getMessage());
+            taskService.updateStepStatus(
+                    taskId,
+                    logstashMachineId,
+                    LogstashMachineStep.STOP_PROCESS.getId(),
+                    StepStatus.COMPLETED,
+                    "强制停止完成（忽略异常）");
+
+            return true;
+        }
     }
 
     @Override
