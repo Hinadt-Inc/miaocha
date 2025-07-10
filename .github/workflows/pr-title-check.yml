@@ -1,0 +1,78 @@
+name: PR Title Check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+    branches: [ dev ]
+
+jobs:
+  check-pr-title:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: read  # 需要读取issues的权限
+      pull-requests: read  # 需要读取PR的权限
+    steps:
+      - name: Check PR title format
+        id: check-title
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          echo "PR Title: $PR_TITLE"
+          
+          # 检查是否以 [ISSUE #xxx] 开头
+          if [[ ! "$PR_TITLE" =~ ^\[ISSUE\ #[0-9]+\] ]]; then
+            echo "❌ PR标题格式错误！必须以 '[ISSUE #xxx]' 开头"
+            echo "正确格式示例: [ISSUE #17] 支持全局 Trace 日志ID 特性"
+            exit 1
+          fi
+          
+          # 提取issue编号
+          ISSUE_NUMBER=$(echo "$PR_TITLE" | grep -o '#[0-9]*' | grep -o '[0-9]*')
+          echo "Issue Number: $ISSUE_NUMBER"
+          
+          if [ -z "$ISSUE_NUMBER" ]; then
+            echo "❌ 无法从PR标题中提取issue编号"
+            exit 1
+          fi
+          
+          echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
+          echo "✅ PR标题格式正确"
+
+      - name: Check if issue exists and is open
+        id: check-issue
+        run: |
+          ISSUE_NUMBER="${{ steps.check-title.outputs.issue_number }}"
+          
+          # 使用GitHub API检查issue状态
+          ISSUE_RESPONSE=$(curl -s -H "Authorization: token ${{ github.token }}" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/$ISSUE_NUMBER")
+          
+          echo "Issue API Response: $ISSUE_RESPONSE"
+          
+          # 检查issue是否存在
+          if echo "$ISSUE_RESPONSE" | grep -q '"message":"Not Found"'; then
+            echo "❌ Issue #$ISSUE_NUMBER 不存在"
+            exit 1
+          fi
+          
+          # 使用jq解析JSON，提取issue状态
+          ISSUE_STATE=$(echo "$ISSUE_RESPONSE" | jq -r '.state')
+          echo "Issue State: $ISSUE_STATE"
+          
+          if [ "$ISSUE_STATE" != "open" ]; then
+            echo "❌ Issue #$ISSUE_NUMBER 状态不是open (当前状态: $ISSUE_STATE)"
+            exit 1
+          fi
+          
+          # 使用jq解析JSON，提取issue标题
+          ISSUE_TITLE=$(echo "$ISSUE_RESPONSE" | jq -r '.title')
+          echo "Issue Title: $ISSUE_TITLE"
+          
+          echo "✅ Issue #$ISSUE_NUMBER 存在且状态为open"
+          echo "issue_title=$ISSUE_TITLE" >> $GITHUB_OUTPUT
+
+      - name: Success message
+        run: |
+          echo "🎉 PR标题校验通过！"
+          echo "PR标题: ${{ github.event.pull_request.title }}"
+          echo "关联Issue: #${{ steps.check-title.outputs.issue_number }}"
+          echo "Issue标题: ${{ steps.check-issue.outputs.issue_title }}" 
