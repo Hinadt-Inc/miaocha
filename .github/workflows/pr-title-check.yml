@@ -54,8 +54,8 @@ jobs:
             exit 1
           fi
           
-          # 检查issue状态
-          ISSUE_STATE=$(echo "$ISSUE_RESPONSE" | grep -o '"state":"[^"]*"' | cut -d'"' -f4)
+          # 使用jq解析JSON，提取issue状态
+          ISSUE_STATE=$(echo "$ISSUE_RESPONSE" | jq -r '.state')
           echo "Issue State: $ISSUE_STATE"
           
           if [ "$ISSUE_STATE" != "open" ]; then
@@ -63,8 +63,8 @@ jobs:
             exit 1
           fi
           
-          # 获取issue标题用于显示
-          ISSUE_TITLE=$(echo "$ISSUE_RESPONSE" | grep -o '"title":"[^"]*"' | cut -d'"' -f4)
+          # 使用jq解析JSON，提取issue标题
+          ISSUE_TITLE=$(echo "$ISSUE_RESPONSE" | jq -r '.title')
           echo "Issue Title: $ISSUE_TITLE"
           
           echo "✅ Issue #$ISSUE_NUMBER 存在且状态为open"
