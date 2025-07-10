@@ -6,7 +6,6 @@ import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
 import java.io.File;
-import java.util.concurrent.CompletableFuture;
 
 /** 解压Logstash安装包命令 - 重构支持多实例，基于logstashMachineId */
 public class ExtractPackageCommand extends AbstractLogstashCommand {
@@ -30,40 +29,32 @@ public class ExtractPackageCommand extends AbstractLogstashCommand {
     }
 
     @Override
-    protected CompletableFuture<Boolean> checkAlreadyExecuted(MachineInfo machineInfo) {
-        return CompletableFuture.supplyAsync(
-                () -> {
-                    try {
-                        String processDir = getProcessDirectory();
+    protected boolean checkAlreadyExecuted(MachineInfo machineInfo) {
+        try {
+            String processDir = getProcessDirectory();
 
-                        // 检查是否已经解压（检查bin目录和logstash可执行文件）
-                        String checkCommand =
-                                String.format(
-                                        "if [ -d \"%s/bin\" ] && [ -f \"%s/bin/logstash\" ]; then"
-                                            + " echo \"extracted\"; else echo \"not_extracted\";"
-                                            + " fi",
-                                        processDir, processDir);
-                        String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
+            // 检查是否已经解压（检查bin目录和logstash可执行文件）
+            String checkCommand =
+                    String.format(
+                            "if [ -d \"%s/bin\" ] && [ -f \"%s/bin/logstash\" ]; then"
+                                    + " echo \"extracted\"; else echo \"not_extracted\";"
+                                    + " fi",
+                            processDir, processDir);
+            String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
 
-                        boolean extracted = "extracted".equals(checkResult.trim());
-                        if (extracted) {
-                            logger.info("安装包已解压，跳过解压步骤，实例ID: {}", logstashMachineId);
-                        }
-                        return extracted;
-                    } catch (Exception e) {
-                        logger.warn(
-                                "检查安装包是否已解压时出错，实例ID: {}, 错误: {}",
-                                logstashMachineId,
-                                e.getMessage());
-                        return false;
-                    }
-                });
+            boolean extracted = "extracted".equals(checkResult.trim());
+            if (extracted) {
+                logger.info("安装包已解压，跳过解压步骤，实例ID: {}", logstashMachineId);
+            }
+            return extracted;
+        } catch (Exception e) {
+            logger.warn("检查安装包是否已解压时出错，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage());
+            return false;
+        }
     }
 
     @Override
-    protected CompletableFuture<Boolean> doExecute(MachineInfo machineInfo) {
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
-
+    protected boolean doExecute(MachineInfo machineInfo) {
         try {
             String processDir = getProcessDirectory();
             String fileName = new File(localPackagePath).getName();
@@ -96,15 +87,10 @@ public class ExtractPackageCommand extends AbstractLogstashCommand {
                 logger.error("解压Logstash安装包失败，实例ID: {}", logstashMachineId);
             }
 
-            future.complete(success);
+            return success;
         } catch (Exception e) {
-            logger.error(
-                    "解压Logstash安装包时发生错误，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage(), e);
-            future.completeExceptionally(
-                    new SshOperationException("解压安装包失败: " + e.getMessage(), e));
+            throw new SshOperationException("解压安装包失败: " + e.getMessage(), e);
         }
-
-        return future;
     }
 
     @Override

@@ -5,12 +5,12 @@ import com.hinadt.miaocha.application.logstash.enums.LogstashMachineState;
 import com.hinadt.miaocha.application.logstash.task.TaskService;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
-import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** Logstash机器状态处理器抽象基类 */
 public abstract class AbstractLogstashMachineStateHandler implements LogstashMachineStateHandler {
+
     protected final Logger logger = LoggerFactory.getLogger(getClass());
     protected final TaskService taskService;
     protected final LogstashCommandFactory commandFactory;
@@ -22,35 +22,35 @@ public abstract class AbstractLogstashMachineStateHandler implements LogstashMac
     }
 
     @Override
-    public CompletableFuture<Boolean> handleInitialize(
+    public boolean handleInitialize(
             LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId) {
         logger.warn("状态 [{}] 不支持初始化操作", getState().name());
-        return CompletableFuture.completedFuture(false);
+        return false;
     }
 
     @Override
-    public CompletableFuture<Boolean> handleStart(
+    public boolean handleStart(
             LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId) {
         logger.warn("状态 [{}] 不支持启动操作", getState().name());
-        return CompletableFuture.completedFuture(false);
+        return false;
     }
 
     @Override
-    public CompletableFuture<Boolean> handleStop(
+    public boolean handleStop(
             LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId) {
         logger.warn("状态 [{}] 不支持停止操作", getState().name());
-        return CompletableFuture.completedFuture(false);
+        return false;
     }
 
     @Override
-    public CompletableFuture<Boolean> handleForceStop(
+    public boolean handleForceStop(
             LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId) {
         logger.warn("状态 [{}] 不支持强制停止操作", getState().name());
-        return CompletableFuture.completedFuture(false);
+        return false;
     }
 
     @Override
-    public CompletableFuture<Boolean> handleUpdateConfig(
+    public boolean handleUpdateConfig(
             LogstashMachine logstashMachine,
             String configContent,
             String jvmOptions,
@@ -58,21 +58,20 @@ public abstract class AbstractLogstashMachineStateHandler implements LogstashMac
             MachineInfo machineInfo,
             String taskId) {
         logger.warn("状态 [{}] 不支持更新配置操作", getState().name());
-        return CompletableFuture.completedFuture(false);
+        return false;
     }
 
     @Override
-    public CompletableFuture<Boolean> handleRefreshConfig(
+    public boolean handleRefreshConfig(
             LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId) {
         // 默认实现直接返回成功
-        return CompletableFuture.completedFuture(true);
+        return true;
     }
 
     @Override
-    public CompletableFuture<Boolean> handleDelete(
-            LogstashMachine logstashMachine, MachineInfo machineInfo) {
+    public boolean handleDelete(LogstashMachine logstashMachine, MachineInfo machineInfo) {
         logger.warn("状态 [{}] 不支持删除操作", getState().name());
-        return CompletableFuture.completedFuture(false);
+        return false;
     }
 
     @Override

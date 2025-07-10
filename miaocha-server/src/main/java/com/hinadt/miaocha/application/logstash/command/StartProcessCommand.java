@@ -6,7 +6,6 @@ import com.hinadt.miaocha.common.exception.SshOperationException;
 import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
-import java.util.concurrent.CompletableFuture;
 
 /** 启动Logstash进程命令 - 重构支持多实例，基于logstashMachineId */
 public class StartProcessCommand extends AbstractLogstashCommand {
@@ -26,49 +25,40 @@ public class StartProcessCommand extends AbstractLogstashCommand {
     }
 
     @Override
-    protected CompletableFuture<Boolean> checkAlreadyExecuted(MachineInfo machineInfo) {
-        return CompletableFuture.supplyAsync(
-                () -> {
-                    try {
-                        String processDir = getProcessDirectory();
-                        String pidFile =
-                                LogstashPathUtils.buildPidFilePath(processDir, logstashMachineId);
+    protected boolean checkAlreadyExecuted(MachineInfo machineInfo) {
+        try {
+            String processDir = getProcessDirectory();
+            String pidFile = LogstashPathUtils.buildPidFilePath(processDir, logstashMachineId);
 
-                        // 检查PID文件是否存在且进程正在运行
-                        String checkCommand =
-                                String.format(
-                                        "if [ -f \"%s\" ]; then "
-                                                + "  pid=$(cat %s); "
-                                                + "  if ps -p $pid > /dev/null 2>&1; then "
-                                                + "    echo \"running\"; "
-                                                + "  else "
-                                                + "    echo \"not_running\"; "
-                                                + "  fi; "
-                                                + "else "
-                                                + "  echo \"no_pid_file\"; "
-                                                + "fi",
-                                        pidFile, pidFile);
-                        String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
+            // 检查PID文件是否存在且进程正在运行
+            String checkCommand =
+                    String.format(
+                            "if [ -f \"%s\" ]; then "
+                                    + "  pid=$(cat %s); "
+                                    + "  if ps -p $pid > /dev/null 2>&1; then "
+                                    + "    echo \"running\"; "
+                                    + "  else "
+                                    + "    echo \"not_running\"; "
+                                    + "  fi; "
+                                    + "else "
+                                    + "  echo \"no_pid_file\"; "
+                                    + "fi",
+                            pidFile, pidFile);
+            String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
 
-                        boolean running = "running".equals(checkResult.trim());
-                        if (running) {
-                            logger.info("Logstash进程已在运行，跳过启动，实例ID: {}", logstashMachineId);
-                        }
-                        return running;
-                    } catch (Exception e) {
-                        logger.warn(
-                                "检查Logstash进程是否运行时出错，实例ID: {}, 错误: {}",
-                                logstashMachineId,
-                                e.getMessage());
-                        return false;
-                    }
-                });
+            boolean running = "running".equals(checkResult.trim());
+            if (running) {
+                logger.info("Logstash进程已在运行，跳过启动，实例ID: {}", logstashMachineId);
+            }
+            return running;
+        } catch (Exception e) {
+            logger.warn("检查Logstash进程是否运行时出错，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage());
+            return false;
+        }
     }
 
     @Override
-    protected CompletableFuture<Boolean> doExecute(MachineInfo machineInfo) {
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
-
+    protected boolean doExecute(MachineInfo machineInfo) {
         try {
             String processDir = getProcessDirectory();
             String configDir = LogstashPathUtils.buildConfigDirPath(processDir);
@@ -130,8 +120,7 @@ public class StartProcessCommand extends AbstractLogstashCommand {
             boolean pidFileExists = "exists".equals(checkPidResult.trim());
             if (!pidFileExists) {
                 logger.warn("PID文件未生成，Logstash进程启动命令可能执行失败，实例ID: {}", logstashMachineId);
-                future.complete(true);
-                return future;
+                return true;
             }
 
             // 读取PID - 仅确认PID文件非空，不验证进程是否真正运行
@@ -140,8 +129,7 @@ public class StartProcessCommand extends AbstractLogstashCommand {
 
             if (pid.isEmpty()) {
                 logger.warn("PID文件为空，Logstash进程可能启动失败，实例ID: {}", logstashMachineId);
-                future.complete(true);
-                return future;
+                return true;
             }
 
             // 更新数据库中的PID
@@ -150,14 +138,10 @@ public class StartProcessCommand extends AbstractLogstashCommand {
             // 只检查PID是否有效，不检查进程是否实际运行
             // 进程的完整验证将由VerifyProcessCommand执行
             logger.info("已创建Logstash进程，实例ID: {}, PID: {}，进一步验证将由验证命令完成", logstashMachineId, pid);
-            future.complete(true);
+            return true;
         } catch (Exception e) {
-            logger.error(
-                    "启动Logstash进程时发生错误，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage(), e);
-            future.completeExceptionally(new SshOperationException("启动进程失败: " + e.getMessage(), e));
+            throw new SshOperationException("启动进程失败: " + e.getMessage(), e);
         }
-
-        return future;
     }
 
     @Override

@@ -5,7 +5,6 @@ import com.hinadt.miaocha.common.exception.SshOperationException;
 import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
-import java.util.concurrent.CompletableFuture;
 import org.springframework.util.StringUtils;
 
 /** 修改系统配置命令 - 重构支持多实例，基于logstashMachineId 支持修改JVM配置和系统配置 */
@@ -44,36 +43,33 @@ public class ModifySystemConfigCommand extends AbstractLogstashCommand {
     }
 
     @Override
-    protected CompletableFuture<Boolean> doExecute(MachineInfo machineInfo) {
-        return CompletableFuture.supplyAsync(
-                () -> {
-                    try {
-                        boolean success = true;
-                        String processDir = getProcessDirectory();
-                        String configDir = processDir + "/config";
+    protected boolean checkAlreadyExecuted(MachineInfo machineInfo) {
+        return super.checkAlreadyExecuted(machineInfo);
+    }
 
-                        // 确保配置目录存在
-                        String createDirCommand = String.format("mkdir -p %s", configDir);
-                        sshClient.executeCommand(machineInfo, createDirCommand);
+    @Override
+    protected boolean doExecute(MachineInfo machineInfo) {
+        try {
+            boolean success = true;
+            String processDir = getProcessDirectory();
+            String configDir = processDir + "/config";
 
-                        // 1. 修改JVM配置（如果提供）
-                        if (StringUtils.hasText(jvmOptions)) {
-                            success = modifyJvmOptions(machineInfo, configDir) && success;
-                        }
+            // 确保配置目录存在
+            String createDirCommand = String.format("mkdir -p %s", configDir);
+            sshClient.executeCommand(machineInfo, createDirCommand);
 
-                        // 2. 修改系统配置（如果提供，否则使用默认配置）
-                        success = modifyLogstashYml(machineInfo, configDir) && success;
+            // 1. 修改JVM配置（如果提供）
+            if (StringUtils.hasText(jvmOptions)) {
+                success = modifyJvmOptions(machineInfo, configDir) && success;
+            }
 
-                        return success;
-                    } catch (Exception e) {
-                        logger.error(
-                                "修改Logstash系统配置时发生错误，实例ID: {}, 错误: {}",
-                                logstashMachineId,
-                                e.getMessage(),
-                                e);
-                        throw new SshOperationException("修改Logstash系统配置失败: " + e.getMessage(), e);
-                    }
-                });
+            // 2. 修改系统配置（如果提供，否则使用默认配置）
+            success = modifyLogstashYml(machineInfo, configDir) && success;
+
+            return success;
+        } catch (Exception e) {
+            throw new SshOperationException("修改Logstash系统配置失败: " + e.getMessage(), e);
+        }
     }
 
     /** 修改JVM配置文件 */

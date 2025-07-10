@@ -5,7 +5,6 @@ import com.hinadt.miaocha.common.exception.SshOperationException;
 import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * 删除Logstash进程目录命令
@@ -44,40 +43,29 @@ public class DeleteProcessDirectoryCommand extends AbstractLogstashCommand {
     }
 
     @Override
-    protected CompletableFuture<Boolean> checkAlreadyExecuted(MachineInfo machineInfo) {
-        return CompletableFuture.supplyAsync(
-                () -> {
-                    try {
-                        String processDir = getProcessDirectory();
+    protected boolean checkAlreadyExecuted(MachineInfo machineInfo) {
+        try {
+            String processDir = getProcessDirectory();
 
-                        // 检查目录是否存在
-                        String checkCommand =
-                                String.format(
-                                        "if [ -d \"%s\" ]; then echo \"exists\"; else echo"
-                                                + " \"not_exists\"; fi",
-                                        processDir);
-                        String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
+            // 检查目录是否存在
+            String checkCommand =
+                    String.format(
+                            "if [ -d \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi",
+                            processDir);
+            String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
 
-                        boolean exists = "exists".equals(checkResult.trim());
-                        if (!exists) {
-                            logger.info(
-                                    "实例目录不存在，跳过删除，实例ID: {}, 路径: {}", logstashMachineId, processDir);
-                        }
-                        return !exists; // 如果不存在，则已经删除
-                    } catch (Exception e) {
-                        logger.warn(
-                                "检查实例目录是否存在时出错，实例ID: {}, 错误: {}",
-                                logstashMachineId,
-                                e.getMessage());
-                        return false; // 出错时假设需要执行删除操作
-                    }
-                });
+            boolean exists = "exists".equals(checkResult.trim());
+            if (!exists) {
+                logger.info("实例目录不存在，跳过删除，实例ID: {}, 路径: {}", logstashMachineId, processDir);
+            }
+            return !exists; // 如果不存在，则已经删除
+        } catch (Exception e) {
+            return false; // 出错时假设需要执行删除操作
+        }
     }
 
     @Override
-    protected CompletableFuture<Boolean> doExecute(MachineInfo machineInfo) {
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
-
+    protected boolean doExecute(MachineInfo machineInfo) {
         try {
             String processDir = getProcessDirectory();
 
@@ -90,8 +78,7 @@ public class DeleteProcessDirectoryCommand extends AbstractLogstashCommand {
 
             if (!"exists".equals(checkResult.trim())) {
                 logger.info("实例目录不存在，无需删除，实例ID: {}, 路径: {}", logstashMachineId, processDir);
-                future.complete(true);
-                return future;
+                return true;
             }
 
             logger.info("开始删除实例目录，实例ID: {}, 路径: {}", logstashMachineId, processDir);
@@ -115,13 +102,10 @@ public class DeleteProcessDirectoryCommand extends AbstractLogstashCommand {
                 logger.error("删除实例目录失败，实例ID: {}, 路径: {}", logstashMachineId, processDir);
             }
 
-            future.complete(success);
+            return success;
         } catch (Exception e) {
-            logger.error("删除实例目录时发生错误，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage(), e);
-            future.completeExceptionally(new SshOperationException("删除目录失败: " + e.getMessage(), e));
+            throw new SshOperationException("删除目录失败: " + e.getMessage(), e);
         }
-
-        return future;
     }
 
     @Override

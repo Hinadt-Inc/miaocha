@@ -26,7 +26,6 @@ import com.hinadt.miaocha.domain.mapper.MachineMapper;
 import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -202,10 +201,7 @@ class LogstashProcessServiceImplScaleTest {
         when(logstashMachineMapper.selectByLogstashProcessId(processId)).thenReturn(allInstances);
         when(logstashProcessConverter.toResponseDTO(process)).thenReturn(responseDTO);
 
-        // Mock删除目录的异步操作
-        CompletableFuture<Boolean> deleteDirectoryFuture = CompletableFuture.completedFuture(true);
-        when(logstashDeployService.deleteInstancesDirectory(anyList()))
-                .thenReturn(deleteDirectoryFuture);
+        when(logstashDeployService.deleteInstancesDirectory(anyList())).thenReturn(true);
 
         // 执行测试
         LogstashProcessResponseDTO result =
@@ -307,10 +303,7 @@ class LogstashProcessServiceImplScaleTest {
         // Mock强制停止的部署服务调用
         doNothing().when(logstashDeployService).forceStopInstances(anyList());
 
-        // Mock删除目录的异步操作
-        CompletableFuture<Boolean> deleteDirectoryFuture = CompletableFuture.completedFuture(true);
-        when(logstashDeployService.deleteInstancesDirectory(anyList()))
-                .thenReturn(deleteDirectoryFuture);
+        when(logstashDeployService.deleteInstancesDirectory(anyList())).thenReturn(true);
 
         // 执行测试
         LogstashProcessResponseDTO result =

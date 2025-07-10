@@ -241,7 +241,6 @@ public class SshClient {
             SshConfig config = createConfig(machineInfo);
             uploadFile(config, localPath, remotePath);
         } catch (Exception e) {
-            logger.error("上传文件到 {} 失败: {}", machineInfo.getIp(), e.getMessage());
             throw new SshException("文件上传失败: " + e.getMessage(), e);
         }
     }
