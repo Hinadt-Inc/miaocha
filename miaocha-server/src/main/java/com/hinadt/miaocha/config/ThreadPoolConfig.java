@@ -1,5 +1,6 @@
 package com.hinadt.miaocha.config;
 
+import com.hinadt.miaocha.config.task.MdcTaskDecorator;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 import org.springframework.context.annotation.Bean;
@@ -17,7 +18,7 @@ public class ThreadPoolConfig {
     public Executor logstashTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         // 核心线程数
-        executor.setCorePoolSize(5);
+        executor.setCorePoolSize(8);
         // 最大线程数
         executor.setMaxPoolSize(10);
         // 队列容量
@@ -28,6 +29,8 @@ public class ThreadPoolConfig {
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         // 等待所有任务结束后再关闭线程池
         executor.setWaitForTasksToCompleteOnShutdown(true);
+        // 设置任务装饰器，确保 MDC 上下文传播
+        executor.setTaskDecorator(new MdcTaskDecorator());
         // 初始化
         executor.initialize();
         return executor;
@@ -51,6 +54,8 @@ public class ThreadPoolConfig {
         executor.setWaitForTasksToCompleteOnShutdown(true);
         // 等待时间
         executor.setAwaitTerminationSeconds(60);
+        // 设置任务装饰器，确保 MDC 上下文传播
+        executor.setTaskDecorator(new MdcTaskDecorator());
         // 初始化线程池
         executor.initialize();
         return executor;
@@ -74,6 +79,8 @@ public class ThreadPoolConfig {
         executor.setWaitForTasksToCompleteOnShutdown(true);
         // 等待时间
         executor.setAwaitTerminationSeconds(30);
+        // 设置任务装饰器，确保 MDC 上下文传播
+        executor.setTaskDecorator(new MdcTaskDecorator());
         // 初始化线程池
         executor.initialize();
         return executor;
