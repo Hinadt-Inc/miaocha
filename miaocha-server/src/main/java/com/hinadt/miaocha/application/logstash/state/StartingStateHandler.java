@@ -6,7 +6,6 @@ import com.hinadt.miaocha.application.logstash.enums.LogstashMachineState;
 import com.hinadt.miaocha.application.logstash.task.TaskService;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
-import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -34,8 +33,7 @@ public class StartingStateHandler extends AbstractLogstashMachineStateHandler {
     }
 
     @Override
-    public CompletableFuture<Boolean> handleDelete(
-            LogstashMachine logstashMachine, MachineInfo machineInfo) {
+    public boolean handleDelete(LogstashMachine logstashMachine, MachineInfo machineInfo) {
         Long logstashMachineId = logstashMachine.getId();
         Long machineId = machineInfo.getId();
 
@@ -44,33 +42,25 @@ public class StartingStateHandler extends AbstractLogstashMachineStateHandler {
         LogstashCommand deleteCommand =
                 commandFactory.deleteProcessDirectoryCommand(logstashMachineId);
 
-        return deleteCommand
-                .execute(machineInfo)
-                .thenApply(
-                        success -> {
-                            if (success) {
-                                logger.info(
-                                        "成功删除机器 [{}] 上的LogstashMachine实例 [{}] 目录",
-                                        machineId,
-                                        logstashMachineId);
-                            } else {
-                                logger.error(
-                                        "删除机器 [{}] 上的LogstashMachine实例 [{}] 目录失败",
-                                        machineId,
-                                        logstashMachineId);
-                            }
-                            return success;
-                        })
-                .exceptionally(
-                        ex -> {
-                            logger.error(
-                                    "删除机器 [{}] 上的LogstashMachine实例 [{}] 目录时发生异常: {}",
-                                    machineId,
-                                    logstashMachineId,
-                                    ex.getMessage(),
-                                    ex);
-                            return false;
-                        });
+        try {
+            boolean success = deleteCommand.execute(machineInfo);
+            if (success) {
+                logger.info(
+                        "成功删除机器 [{}] 上的LogstashMachine实例 [{}] 目录", machineId, logstashMachineId);
+            } else {
+                logger.error(
+                        "删除机器 [{}] 上的LogstashMachine实例 [{}] 目录失败", machineId, logstashMachineId);
+            }
+            return success;
+        } catch (Exception ex) {
+            logger.error(
+                    "删除机器 [{}] 上的LogstashMachine实例 [{}] 目录时发生异常: {}",
+                    machineId,
+                    logstashMachineId,
+                    ex.getMessage(),
+                    ex);
+            return false;
+        }
     }
 
     @Override

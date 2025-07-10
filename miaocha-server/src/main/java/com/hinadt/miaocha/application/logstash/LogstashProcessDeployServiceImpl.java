@@ -5,7 +5,7 @@ import com.hinadt.miaocha.application.logstash.enums.TaskOperationType;
 import com.hinadt.miaocha.application.logstash.path.LogstashDeployPathManager;
 import com.hinadt.miaocha.application.logstash.state.LogstashMachineStateManager;
 import com.hinadt.miaocha.application.logstash.task.TaskService;
-import com.hinadt.miaocha.common.util.FutureUtils;
+import com.hinadt.miaocha.common.util.FutureUtil;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.LogstashProcess;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
@@ -183,19 +183,41 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
     }
 
     @Override
-    public CompletableFuture<Boolean> deleteInstancesDirectory(
-            List<LogstashMachine> logstashMachines) {
+    public boolean deleteInstancesDirectory(List<LogstashMachine> logstashMachines) {
         if (logstashMachines == null || logstashMachines.isEmpty()) {
             log.warn("批量删除实例目录参数无效: logstashMachines为空");
-            return CompletableFuture.completedFuture(false);
+            return false;
         }
 
         // 并行执行删除操作
-        var futures = logstashMachines.stream().map(this::deleteInstanceDirectoryAsync).toList();
+        List<CompletableFuture<Boolean>> futures =
+                logstashMachines.stream()
+                        .map(
+                                logstashMachine ->
+                                        FutureUtil.supplyAsync(
+                                                () -> deleteInstanceDirectory(logstashMachine),
+                                                e -> {
+                                                    log.error(
+                                                            "删除Logstash实例 [{}] 目录时发生异常: {}",
+                                                            logstashMachine.getId(),
+                                                            e.getMessage(),
+                                                            e);
+                                                    return false;
+                                                }))
+                        .toList();
 
         // 等待所有删除操作完成
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                .thenApply(v -> futures.stream().allMatch(CompletableFuture::join));
+        CompletableFuture<Void> allFutures =
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+
+        try {
+            allFutures.join();
+            // 检查所有操作是否成功
+            return futures.stream().allMatch(CompletableFuture::join);
+        } catch (Exception e) {
+            log.error("批量删除实例目录时发生异常: {}", e.getMessage(), e);
+            return false;
+        }
     }
 
     // ==================== 辅助方法 ====================
@@ -249,7 +271,7 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
     /** 函数式接口：实例操作 */
     @FunctionalInterface
     private interface InstanceOperation {
-        CompletableFuture<Boolean> execute(LogstashMachine logstashMachine, String taskId);
+        boolean execute(LogstashMachine logstashMachine, String taskId);
     }
 
     /** 执行批量实例操作的通用方法 */
@@ -274,18 +296,38 @@ public class LogstashProcessDeployServiceImpl implements LogstashProcessDeploySe
 
                     taskService.executeAsync(
                             taskId,
-                            FutureUtils.toSyncRunnable(
-                                    () -> operation.execute(logstashMachine, taskId),
-                                    "实例",
-                                    operationDescription,
-                                    logstashMachine.getId()),
+                            () -> {
+                                try {
+                                    boolean success = operation.execute(logstashMachine, taskId);
+                                    log.info(
+                                            "实例 [{}] {}{}",
+                                            logstashMachine.getId(),
+                                            operationDescription,
+                                            success ? "成功" : "失败");
+
+                                    if (!success) {
+                                        throw new RuntimeException(
+                                                String.format(
+                                                        "实例 [%s] %s失败",
+                                                        logstashMachine.getId(),
+                                                        operationDescription));
+                                    }
+                                } catch (Exception e) {
+                                    log.error(
+                                            "实例 [{}] {}失败: {}",
+                                            logstashMachine.getId(),
+                                            operationDescription,
+                                            e.getMessage(),
+                                            e);
+                                    throw e;
+                                }
+                            },
                             null);
                 });
     }
 
-    /** 异步删除单个实例目录 */
-    private CompletableFuture<Boolean> deleteInstanceDirectoryAsync(
-            LogstashMachine logstashMachine) {
+    /** 删除单个实例目录 */
+    private boolean deleteInstanceDirectory(LogstashMachine logstashMachine) {
         return machineStateManager.deleteInstance(logstashMachine.getId());
     }
 }

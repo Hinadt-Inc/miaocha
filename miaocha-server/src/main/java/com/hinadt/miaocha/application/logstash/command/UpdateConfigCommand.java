@@ -1,10 +1,10 @@
 package com.hinadt.miaocha.application.logstash.command;
 
 import com.hinadt.miaocha.application.logstash.path.LogstashDeployPathManager;
+import com.hinadt.miaocha.common.exception.SshOperationException;
 import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
-import java.util.concurrent.CompletableFuture;
 import org.springframework.util.StringUtils;
 
 /** 更新Logstash配置文件命令 - 重构支持多实例，基于logstashMachineId 支持更新主配置文件、JVM配置和系统配置 */
@@ -47,43 +47,37 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
     }
 
     @Override
-    protected CompletableFuture<Boolean> doExecute(MachineInfo machineInfo) {
-        return CompletableFuture.supplyAsync(
-                () -> {
-                    try {
-                        boolean success = true;
-                        String processDir = getProcessDirectory();
-                        String configDir = processDir + "/config";
+    protected boolean doExecute(MachineInfo machineInfo) {
+        try {
+            boolean success = true;
+            String processDir = getProcessDirectory();
+            String configDir = processDir + "/config";
 
-                        // 确保配置目录存在
-                        String createDirCommand = String.format("mkdir -p %s", configDir);
-                        sshClient.executeCommand(machineInfo, createDirCommand);
+            // 确保配置目录存在
+            String createDirCommand = String.format("mkdir -p %s", configDir);
+            sshClient.executeCommand(machineInfo, createDirCommand);
 
-                        // 1. 更新主配置文件
-                        if (StringUtils.hasText(configContent)) {
-                            success = updateMainConfig(machineInfo, configDir) && success;
-                        }
+            // 1. 更新主配置文件
+            if (StringUtils.hasText(configContent)) {
+                success = updateMainConfig(machineInfo, configDir) && success;
+            }
 
-                        // 2. 更新JVM配置（如果需要）
-                        if (StringUtils.hasText(jvmOptions)) {
-                            success = updateJvmOptions(machineInfo, configDir) && success;
-                        }
+            // 2. 更新JVM配置（如果需要）
+            if (StringUtils.hasText(jvmOptions)) {
+                success = updateJvmOptions(machineInfo, configDir) && success;
+            }
 
-                        // 3. 更新系统配置（如果需要）
-                        if (StringUtils.hasText(logstashYml)) {
-                            success = updateLogstashYml(machineInfo, configDir) && success;
-                        }
+            // 3. 更新系统配置（如果需要）
+            if (StringUtils.hasText(logstashYml)) {
+                success = updateLogstashYml(machineInfo, configDir) && success;
+            }
 
-                        return success;
-                    } catch (Exception e) {
-                        logger.error(
-                                "更新Logstash配置文件时发生错误，实例ID: {}, 错误: {}",
-                                logstashMachineId,
-                                e.getMessage(),
-                                e);
-                        return false;
-                    }
-                });
+            return success;
+        } catch (Exception e) {
+            logger.error(
+                    "更新Logstash配置文件时发生错误，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage(), e);
+            throw new SshOperationException("更新配置文件失败: " + e.getMessage(), e);
+        }
     }
 
     /** 更新主配置文件 */
@@ -128,10 +122,10 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
     /** 更新JVM配置文件 */
     private boolean updateJvmOptions(MachineInfo machineInfo, String configDir) {
         try {
-            String jvmOptionsPath = configDir + "/jvm.options";
+            String jvmPath = configDir + "/jvm.options";
             String tempFile =
                     String.format(
-                            "/tmp/jvm-options-%d-%d.txt",
+                            "/tmp/jvm-options-%d-%d.options",
                             logstashMachineId, System.currentTimeMillis());
 
             // 将JVM配置写入临时文件
@@ -140,21 +134,21 @@ public class UpdateConfigCommand extends AbstractLogstashCommand {
             sshClient.executeCommand(machineInfo, createJvmCommand);
 
             // 移动到最终位置
-            String moveCommand = String.format("mv %s %s", tempFile, jvmOptionsPath);
+            String moveCommand = String.format("mv %s %s", tempFile, jvmPath);
             sshClient.executeCommand(machineInfo, moveCommand);
 
             // 验证文件是否更新成功
             String verifyCommand =
                     String.format(
                             "if [ -f \"%s\" ]; then echo \"success\"; else echo \"failed\"; fi",
-                            jvmOptionsPath);
+                            jvmPath);
             String verifyResult = sshClient.executeCommand(machineInfo, verifyCommand);
 
             boolean success = "success".equals(verifyResult.trim());
             if (success) {
-                logger.info("成功更新JVM配置文件，实例ID: {}, 路径: {}", logstashMachineId, jvmOptionsPath);
+                logger.info("成功更新JVM配置文件，实例ID: {}, 路径: {}", logstashMachineId, jvmPath);
             } else {
-                logger.error("更新JVM配置文件失败，实例ID: {}, 路径: {}", logstashMachineId, jvmOptionsPath);
+                logger.error("更新JVM配置文件失败，实例ID: {}, 路径: {}", logstashMachineId, jvmPath);
             }
 
             return success;

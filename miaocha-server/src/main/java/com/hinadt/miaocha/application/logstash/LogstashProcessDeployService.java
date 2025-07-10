@@ -4,7 +4,6 @@ import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.LogstashProcess;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 /** Logstash进程部署服务接口 - 基于LogstashMachine实例级操作 */
 public interface LogstashProcessDeployService {
@@ -62,11 +61,12 @@ public interface LogstashProcessDeployService {
     void refreshInstancesConfig(List<LogstashMachine> logstashMachines, LogstashProcess process);
 
     /**
-     * 批量删除LogstashMachine实例目录（并行执行）
+     * 删除多个LogstashMachine实例的目录
      *
      * @param logstashMachines LogstashMachine实例列表
+     * @return 是否全部删除成功
      */
-    CompletableFuture<Boolean> deleteInstancesDirectory(List<LogstashMachine> logstashMachines);
+    boolean deleteInstancesDirectory(List<LogstashMachine> logstashMachines);
 
     // ==================== 辅助方法 ====================
 

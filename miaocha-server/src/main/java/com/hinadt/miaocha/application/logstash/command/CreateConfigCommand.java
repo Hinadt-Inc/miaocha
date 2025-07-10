@@ -5,7 +5,6 @@ import com.hinadt.miaocha.common.exception.SshOperationException;
 import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
-import java.util.concurrent.CompletableFuture;
 
 /** 创建Logstash配置文件命令 - 重构支持多实例，基于logstashMachineId */
 public class CreateConfigCommand extends AbstractLogstashCommand {
@@ -29,42 +28,32 @@ public class CreateConfigCommand extends AbstractLogstashCommand {
     }
 
     @Override
-    protected CompletableFuture<Boolean> checkAlreadyExecuted(MachineInfo machineInfo) {
-        return CompletableFuture.supplyAsync(
-                () -> {
-                    try {
-                        String processDir = getProcessDirectory();
-                        String configDir = processDir + "/config";
-                        String configPath = configDir + "/logstash-" + logstashMachineId + ".conf";
+    protected boolean checkAlreadyExecuted(MachineInfo machineInfo) {
+        try {
+            String processDir = getProcessDirectory();
+            String configDir = processDir + "/config";
+            String configPath = configDir + "/logstash-" + logstashMachineId + ".conf";
 
-                        // 检查配置文件是否已存在
-                        String checkCommand =
-                                String.format(
-                                        "if [ -f \"%s\" ]; then echo \"exists\"; else echo"
-                                                + " \"not_exists\"; fi",
-                                        configPath);
-                        String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
+            // 检查配置文件是否已存在
+            String checkCommand =
+                    String.format(
+                            "if [ -f \"%s\" ]; then echo \"exists\"; else echo \"not_exists\"; fi",
+                            configPath);
+            String checkResult = sshClient.executeCommand(machineInfo, checkCommand);
 
-                        boolean exists = "exists".equals(checkResult.trim());
-                        if (exists) {
-                            logger.info(
-                                    "配置文件已存在，跳过创建，实例ID: {}, 路径: {}", logstashMachineId, configPath);
-                        }
-                        return exists;
-                    } catch (Exception e) {
-                        logger.warn(
-                                "检查配置文件是否存在时出错，实例ID: {}, 错误: {}",
-                                logstashMachineId,
-                                e.getMessage());
-                        return false;
-                    }
-                });
+            boolean exists = "exists".equals(checkResult.trim());
+            if (exists) {
+                logger.info("配置文件已存在，跳过创建，实例ID: {}, 路径: {}", logstashMachineId, configPath);
+            }
+            return exists;
+        } catch (Exception e) {
+            logger.warn("检查配置文件是否存在时出错，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage());
+            return false;
+        }
     }
 
     @Override
-    protected CompletableFuture<Boolean> doExecute(MachineInfo machineInfo) {
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
-
+    protected boolean doExecute(MachineInfo machineInfo) {
         try {
             String processDir = getProcessDirectory();
             String configDir = processDir + "/config";
@@ -103,15 +92,12 @@ public class CreateConfigCommand extends AbstractLogstashCommand {
                 logger.error("创建Logstash配置文件失败，实例ID: {}, 路径: {}", logstashMachineId, configPath);
             }
 
-            future.complete(success);
+            return success;
         } catch (Exception e) {
             logger.error(
                     "创建Logstash配置文件时发生错误，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage(), e);
-            future.completeExceptionally(
-                    new SshOperationException("创建配置文件失败: " + e.getMessage(), e));
+            throw new SshOperationException("创建配置文件失败: " + e.getMessage(), e);
         }
-
-        return future;
     }
 
     @Override

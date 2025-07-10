@@ -8,7 +8,6 @@ import com.hinadt.miaocha.application.logstash.enums.StepStatus;
 import com.hinadt.miaocha.application.logstash.task.TaskService;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
-import java.util.concurrent.CompletableFuture;
 import org.springframework.stereotype.Component;
 
 /** 初始化失败状态处理器 允许重新初始化进程 */
@@ -26,7 +25,7 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
     }
 
     @Override
-    public CompletableFuture<Boolean> handleInitialize(
+    public boolean handleInitialize(
             LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId) {
         Long logstashMachineId = logstashMachine.getId();
         Long machineId = machineInfo.getId();
@@ -36,322 +35,215 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
         // 重置所有初始化步骤的状态
         taskService.resetStepStatuses(taskId, StepStatus.PENDING);
 
-        CompletableFuture<Boolean> result = CompletableFuture.completedFuture(true);
-
         // 先删除进程目录（不计入步骤状态）
-        result =
-                result.thenCompose(
-                        success -> {
-                            if (!success) return CompletableFuture.completedFuture(false);
-
-                            logger.info(
-                                    "删除机器 [{}] 上的LogstashMachine实例 [{}] 目录",
-                                    machineId,
-                                    logstashMachineId);
-                            LogstashCommand deleteCommand =
-                                    commandFactory.deleteProcessDirectoryCommand(logstashMachineId);
-
-                            return deleteCommand
-                                    .execute(machineInfo)
-                                    .exceptionally(
-                                            ex -> {
-                                                // 即使删除失败也继续执行（可能目录不存在）
-                                                logger.warn(
-                                                        "删除进程目录失败，将继续执行初始化: {}", ex.getMessage());
-                                                return true;
-                                            });
-                        });
+        if (!cleanupProcessDirectory(logstashMachine, machineInfo)) {
+            return false;
+        }
 
         // 1. 创建远程目录
-        result =
-                result.thenCompose(
-                        success -> {
-                            if (!success) return CompletableFuture.completedFuture(false);
+        if (!createRemoteDirectory(logstashMachine, machineInfo, taskId)) {
+            return false;
+        }
 
-                            taskService.updateStepStatus(
-                                    taskId,
-                                    logstashMachineId,
-                                    LogstashMachineStep.CREATE_REMOTE_DIR.getId(),
-                                    StepStatus.RUNNING);
-                            LogstashCommand createDirCommand =
-                                    commandFactory.createDirectoryCommand(logstashMachineId);
+        // 2. 上传Logstash压缩包
+        if (!uploadLogstashPackage(logstashMachine, machineInfo, taskId)) {
+            return false;
+        }
 
-                            return createDirCommand
-                                    .execute(machineInfo)
-                                    .thenApply(
-                                            createDirSuccess -> {
-                                                StepStatus status =
-                                                        createDirSuccess
-                                                                ? StepStatus.COMPLETED
-                                                                : StepStatus.FAILED;
-                                                String errorMessage =
-                                                        createDirSuccess ? null : "创建远程目录失败";
-                                                taskService.updateStepStatus(
-                                                        taskId,
-                                                        logstashMachineId,
-                                                        LogstashMachineStep.CREATE_REMOTE_DIR
-                                                                .getId(),
-                                                        status,
-                                                        errorMessage);
-
-                                                if (!createDirSuccess) {
-                                                    throw new RuntimeException("创建远程目录失败");
-                                                }
-
-                                                return createDirSuccess;
-                                            })
-                                    .exceptionally(
-                                            ex -> {
-                                                // 更新任务状态为失败，不记录详细日志（由外层处理）
-                                                taskService.updateStepStatus(
-                                                        taskId,
-                                                        logstashMachineId,
-                                                        LogstashMachineStep.CREATE_REMOTE_DIR
-                                                                .getId(),
-                                                        StepStatus.FAILED,
-                                                        ex.getMessage());
-
-                                                // 重新抛出异常，确保异常传递到外层
-                                                if (ex instanceof RuntimeException) {
-                                                    throw (RuntimeException) ex;
-                                                } else {
-                                                    throw new RuntimeException(ex.getMessage(), ex);
-                                                }
-                                            });
-                        });
-
-        // 2. 上传Logstash安装包
-        result =
-                result.thenCompose(
-                        success -> {
-                            if (!success) return CompletableFuture.completedFuture(false);
-
-                            taskService.updateStepStatus(
-                                    taskId,
-                                    logstashMachineId,
-                                    LogstashMachineStep.UPLOAD_PACKAGE.getId(),
-                                    StepStatus.RUNNING);
-                            LogstashCommand uploadCommand =
-                                    commandFactory.uploadPackageCommand(logstashMachineId);
-
-                            return uploadCommand
-                                    .execute(machineInfo)
-                                    .thenApply(
-                                            uploadSuccess -> {
-                                                StepStatus status =
-                                                        uploadSuccess
-                                                                ? StepStatus.COMPLETED
-                                                                : StepStatus.FAILED;
-                                                String errorMessage =
-                                                        uploadSuccess ? null : "上传Logstash安装包失败";
-                                                taskService.updateStepStatus(
-                                                        taskId,
-                                                        logstashMachineId,
-                                                        LogstashMachineStep.UPLOAD_PACKAGE.getId(),
-                                                        status,
-                                                        errorMessage);
-
-                                                if (!uploadSuccess) {
-                                                    throw new RuntimeException("上传Logstash安装包失败");
-                                                }
-
-                                                return uploadSuccess;
-                                            })
-                                    .exceptionally(
-                                            ex -> {
-                                                // 更新任务状态为失败，不记录详细日志（由外层处理）
-                                                taskService.updateStepStatus(
-                                                        taskId,
-                                                        logstashMachineId,
-                                                        LogstashMachineStep.UPLOAD_PACKAGE.getId(),
-                                                        StepStatus.FAILED,
-                                                        ex.getMessage());
-
-                                                // 重新抛出异常，确保异常传递到外层
-                                                if (ex instanceof RuntimeException) {
-                                                    throw (RuntimeException) ex;
-                                                } else {
-                                                    throw new RuntimeException(ex.getMessage(), ex);
-                                                }
-                                            });
-                        });
-
-        // 3. 解压Logstash安装包
-        result =
-                result.thenCompose(
-                        success -> {
-                            if (!success) return CompletableFuture.completedFuture(false);
-
-                            taskService.updateStepStatus(
-                                    taskId,
-                                    logstashMachineId,
-                                    LogstashMachineStep.EXTRACT_PACKAGE.getId(),
-                                    StepStatus.RUNNING);
-                            LogstashCommand extractCommand =
-                                    commandFactory.extractPackageCommand(logstashMachineId);
-
-                            return extractCommand
-                                    .execute(machineInfo)
-                                    .thenApply(
-                                            extractSuccess -> {
-                                                StepStatus status =
-                                                        extractSuccess
-                                                                ? StepStatus.COMPLETED
-                                                                : StepStatus.FAILED;
-                                                String errorMessage =
-                                                        extractSuccess ? null : "解压Logstash安装包失败";
-                                                taskService.updateStepStatus(
-                                                        taskId,
-                                                        logstashMachineId,
-                                                        LogstashMachineStep.EXTRACT_PACKAGE.getId(),
-                                                        status,
-                                                        errorMessage);
-
-                                                if (!extractSuccess) {
-                                                    throw new RuntimeException("解压Logstash安装包失败");
-                                                }
-
-                                                return extractSuccess;
-                                            })
-                                    .exceptionally(
-                                            ex -> {
-                                                // 更新任务状态为失败，不记录详细日志（由外层处理）
-                                                taskService.updateStepStatus(
-                                                        taskId,
-                                                        logstashMachineId,
-                                                        LogstashMachineStep.EXTRACT_PACKAGE.getId(),
-                                                        StepStatus.FAILED,
-                                                        ex.getMessage());
-
-                                                // 重新抛出异常，确保异常传递到外层
-                                                if (ex instanceof RuntimeException) {
-                                                    throw (RuntimeException) ex;
-                                                } else {
-                                                    throw new RuntimeException(ex.getMessage(), ex);
-                                                }
-                                            });
-                        });
+        // 3. 解压Logstash包
+        if (!extractLogstashPackage(logstashMachine, machineInfo, taskId)) {
+            return false;
+        }
 
         // 4. 创建配置文件
-        result =
-                result.thenCompose(
-                        success -> {
-                            if (!success) return CompletableFuture.completedFuture(false);
-
-                            taskService.updateStepStatus(
-                                    taskId,
-                                    logstashMachineId,
-                                    LogstashMachineStep.CREATE_CONFIG.getId(),
-                                    StepStatus.RUNNING);
-                            LogstashCommand configCommand =
-                                    commandFactory.createConfigCommand(logstashMachine);
-
-                            return configCommand
-                                    .execute(machineInfo)
-                                    .thenApply(
-                                            configSuccess -> {
-                                                StepStatus status =
-                                                        configSuccess
-                                                                ? StepStatus.COMPLETED
-                                                                : StepStatus.FAILED;
-                                                String errorMessage =
-                                                        configSuccess ? null : "创建配置文件失败";
-                                                taskService.updateStepStatus(
-                                                        taskId,
-                                                        logstashMachineId,
-                                                        LogstashMachineStep.CREATE_CONFIG.getId(),
-                                                        status,
-                                                        errorMessage);
-
-                                                if (!configSuccess) {
-                                                    throw new RuntimeException("创建配置文件失败");
-                                                }
-
-                                                return configSuccess;
-                                            })
-                                    .exceptionally(
-                                            ex -> {
-                                                // 更新任务状态为失败，不记录详细日志（由外层处理）
-                                                taskService.updateStepStatus(
-                                                        taskId,
-                                                        logstashMachineId,
-                                                        LogstashMachineStep.CREATE_CONFIG.getId(),
-                                                        StepStatus.FAILED,
-                                                        ex.getMessage());
-
-                                                // 重新抛出异常，确保异常传递到外层
-                                                if (ex instanceof RuntimeException) {
-                                                    throw (RuntimeException) ex;
-                                                } else {
-                                                    throw new RuntimeException(ex.getMessage(), ex);
-                                                }
-                                            });
-                        });
+        if (!createConfigFiles(logstashMachine, machineInfo, taskId)) {
+            return false;
+        }
 
         // 5. 修改系统配置
-        result =
-                result.thenCompose(
-                        success -> {
-                            if (!success) return CompletableFuture.completedFuture(false);
+        return modifySystemConfig(logstashMachine, machineInfo, taskId);
+    }
 
-                            taskService.updateStepStatus(
-                                    taskId,
-                                    logstashMachineId,
-                                    LogstashMachineStep.MODIFY_CONFIG.getId(),
-                                    StepStatus.RUNNING);
+    /**
+     * 清理进程目录
+     *
+     * @param logstashMachine LogstashMachine实例
+     * @param machineInfo 目标机器
+     * @return 操作是否成功
+     */
+    private boolean cleanupProcessDirectory(
+            LogstashMachine logstashMachine, MachineInfo machineInfo) {
+        Long logstashMachineId = logstashMachine.getId();
+        Long machineId = machineInfo.getId();
 
-                            // 获取JVM选项和系统配置，传递给增强的ModifySystemConfigCommand
-                            String jvmOptions = logstashMachine.getJvmOptions();
-                            String logstashYml = logstashMachine.getLogstashYml();
-                            LogstashCommand modifyConfigCommand =
-                                    commandFactory.modifySystemConfigCommand(
-                                            logstashMachineId, jvmOptions, logstashYml);
+        logger.info("删除机器 [{}] 上的LogstashMachine实例 [{}] 目录", machineId, logstashMachineId);
+        LogstashCommand deleteCommand =
+                commandFactory.deleteProcessDirectoryCommand(logstashMachineId);
 
-                            return modifyConfigCommand
-                                    .execute(machineInfo)
-                                    .thenApply(
-                                            modifyConfigSuccess -> {
-                                                StepStatus status =
-                                                        modifyConfigSuccess
-                                                                ? StepStatus.COMPLETED
-                                                                : StepStatus.FAILED;
-                                                String errorMessage =
-                                                        modifyConfigSuccess ? null : "修改系统配置失败";
-                                                taskService.updateStepStatus(
-                                                        taskId,
-                                                        logstashMachineId,
-                                                        LogstashMachineStep.MODIFY_CONFIG.getId(),
-                                                        status,
-                                                        errorMessage);
+        try {
+            boolean success = deleteCommand.execute(machineInfo);
+            if (!success) {
+                // 即使删除失败也继续执行（可能目录不存在）
+                logger.warn("删除进程目录失败，将继续执行初始化");
+            }
+            return true;
+        } catch (Exception ex) {
+            // 即使删除失败也继续执行（可能目录不存在）
+            logger.warn("删除进程目录失败，将继续执行初始化: {}", ex.getMessage());
+            return true;
+        }
+    }
 
-                                                if (!modifyConfigSuccess) {
-                                                    throw new RuntimeException("修改系统配置失败");
-                                                }
+    /**
+     * 创建远程目录
+     *
+     * @param logstashMachine LogstashMachine实例
+     * @param machineInfo 目标机器
+     * @param taskId 任务ID
+     * @return 操作是否成功
+     */
+    private boolean createRemoteDirectory(
+            LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId) {
+        return executeStep(
+                logstashMachine,
+                machineInfo,
+                taskId,
+                LogstashMachineStep.CREATE_REMOTE_DIR,
+                "创建远程目录",
+                () -> commandFactory.createDirectoryCommand(logstashMachine.getId()));
+    }
 
-                                                return modifyConfigSuccess;
-                                            })
-                                    .exceptionally(
-                                            ex -> {
-                                                String errorMessage = ex.getMessage();
-                                                // 异常已在命令层记录，这里只更新任务状态
-                                                taskService.updateStepStatus(
-                                                        taskId,
-                                                        logstashMachineId,
-                                                        LogstashMachineStep.MODIFY_CONFIG.getId(),
-                                                        StepStatus.FAILED,
-                                                        errorMessage);
+    /**
+     * 上传Logstash压缩包
+     *
+     * @param logstashMachine LogstashMachine实例
+     * @param machineInfo 目标机器
+     * @param taskId 任务ID
+     * @return 操作是否成功
+     */
+    private boolean uploadLogstashPackage(
+            LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId) {
+        return executeStep(
+                logstashMachine,
+                machineInfo,
+                taskId,
+                LogstashMachineStep.UPLOAD_PACKAGE,
+                "上传Logstash安装包",
+                () -> commandFactory.uploadPackageCommand(logstashMachine.getId()));
+    }
 
-                                                // 重新抛出异常，确保异常传递到外层
-                                                if (ex instanceof RuntimeException) {
-                                                    throw (RuntimeException) ex;
-                                                } else {
-                                                    throw new RuntimeException(
-                                                            "修改系统配置时发生异常: " + errorMessage, ex);
-                                                }
-                                            });
-                        });
+    /**
+     * 解压Logstash包
+     *
+     * @param logstashMachine LogstashMachine实例
+     * @param machineInfo 目标机器
+     * @param taskId 任务ID
+     * @return 操作是否成功
+     */
+    private boolean extractLogstashPackage(
+            LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId) {
+        return executeStep(
+                logstashMachine,
+                machineInfo,
+                taskId,
+                LogstashMachineStep.EXTRACT_PACKAGE,
+                "解压Logstash安装包",
+                () -> commandFactory.extractPackageCommand(logstashMachine.getId()));
+    }
 
-        return result;
+    /**
+     * 创建配置文件
+     *
+     * @param logstashMachine LogstashMachine实例
+     * @param machineInfo 目标机器
+     * @param taskId 任务ID
+     * @return 操作是否成功
+     */
+    private boolean createConfigFiles(
+            LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId) {
+        return executeStep(
+                logstashMachine,
+                machineInfo,
+                taskId,
+                LogstashMachineStep.CREATE_CONFIG,
+                "创建配置文件",
+                () -> commandFactory.createConfigCommand(logstashMachine));
+    }
+
+    /**
+     * 修改系统配置
+     *
+     * @param logstashMachine LogstashMachine实例
+     * @param machineInfo 目标机器
+     * @param taskId 任务ID
+     * @return 操作是否成功
+     */
+    private boolean modifySystemConfig(
+            LogstashMachine logstashMachine, MachineInfo machineInfo, String taskId) {
+        String jvmOptions = logstashMachine.getJvmOptions();
+        String logstashYml = logstashMachine.getLogstashYml();
+        return executeStep(
+                logstashMachine,
+                machineInfo,
+                taskId,
+                LogstashMachineStep.MODIFY_CONFIG,
+                "修改系统配置",
+                () ->
+                        commandFactory.modifySystemConfigCommand(
+                                logstashMachine.getId(), jvmOptions, logstashYml));
+    }
+
+    /**
+     * 执行初始化步骤
+     *
+     * @param logstashMachine LogstashMachine实例
+     * @param machineInfo 目标机器
+     * @param taskId 任务ID
+     * @param step 步骤枚举
+     * @param operationName 操作名称（用于日志和错误消息）
+     * @param commandSupplier 命令提供者
+     * @return 操作是否成功
+     */
+    private boolean executeStep(
+            LogstashMachine logstashMachine,
+            MachineInfo machineInfo,
+            String taskId,
+            LogstashMachineStep step,
+            String operationName,
+            CommandSupplier commandSupplier) {
+        Long logstashMachineId = logstashMachine.getId();
+        Long machineId = machineInfo.getId();
+
+        taskService.updateStepStatus(taskId, logstashMachineId, step.getId(), StepStatus.RUNNING);
+
+        logger.info(
+                "{}在机器 [{}] LogstashMachine实例 [{}]", operationName, machineId, logstashMachineId);
+
+        try {
+            LogstashCommand command = commandSupplier.get();
+            boolean success = command.execute(machineInfo);
+            StepStatus status = success ? StepStatus.COMPLETED : StepStatus.FAILED;
+            String errorMessage = success ? null : operationName + "失败";
+            taskService.updateStepStatus(
+                    taskId, logstashMachineId, step.getId(), status, errorMessage);
+
+            if (!success) {
+                throw new RuntimeException(operationName + "失败");
+            }
+
+            return true;
+        } catch (Exception ex) {
+            // 更新任务状态为失败，不记录详细日志（由外层处理）
+            taskService.updateStepStatus(
+                    taskId, logstashMachineId, step.getId(), StepStatus.FAILED, ex.getMessage());
+
+            // 重新抛出异常，确保异常传递到外层
+            if (ex instanceof RuntimeException) {
+                throw (RuntimeException) ex;
+            } else {
+                throw new RuntimeException(ex.getMessage(), ex);
+            }
+        }
     }
 
     @Override
@@ -370,8 +262,7 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
     }
 
     @Override
-    public CompletableFuture<Boolean> handleDelete(
-            LogstashMachine logstashMachine, MachineInfo machineInfo) {
+    public boolean handleDelete(LogstashMachine logstashMachine, MachineInfo machineInfo) {
         Long logstashMachineId = logstashMachine.getId();
         Long machineId = machineInfo.getId();
 
@@ -381,37 +272,35 @@ public class InitializeFailedStateHandler extends AbstractLogstashMachineStateHa
         LogstashCommand deleteCommand =
                 commandFactory.deleteProcessDirectoryCommand(logstashMachineId);
 
-        return deleteCommand
-                .execute(machineInfo)
-                .thenApply(
-                        success -> {
-                            if (success) {
-                                logger.info(
-                                        "成功删除机器 [{}] 上的LogstashMachine实例 [{}] 目录",
-                                        machineId,
-                                        logstashMachineId);
-                            } else {
-                                logger.error(
-                                        "删除机器 [{}] 上的LogstashMachine实例 [{}] 目录失败",
-                                        machineId,
-                                        logstashMachineId);
-                            }
-                            return success;
-                        })
-                .exceptionally(
-                        ex -> {
-                            logger.error(
-                                    "删除机器 [{}] 上的LogstashMachine实例 [{}] 目录时发生异常: {}",
-                                    machineId,
-                                    logstashMachineId,
-                                    ex.getMessage(),
-                                    ex);
-                            return false;
-                        });
+        try {
+            boolean success = deleteCommand.execute(machineInfo);
+            if (success) {
+                logger.info(
+                        "成功删除机器 [{}] 上的LogstashMachine实例 [{}] 目录", machineId, logstashMachineId);
+            } else {
+                logger.error(
+                        "删除机器 [{}] 上的LogstashMachine实例 [{}] 目录失败", machineId, logstashMachineId);
+            }
+            return success;
+        } catch (Exception ex) {
+            logger.error(
+                    "删除机器 [{}] 上的LogstashMachine实例 [{}] 目录时发生异常: {}",
+                    machineId,
+                    logstashMachineId,
+                    ex.getMessage(),
+                    ex);
+            return false;
+        }
     }
 
     @Override
     public boolean canDelete() {
         return true;
+    }
+
+    /** 命令提供者函数式接口 */
+    @FunctionalInterface
+    private interface CommandSupplier {
+        LogstashCommand get();
     }
 }
