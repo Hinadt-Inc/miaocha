@@ -8,6 +8,7 @@ import com.hinadt.miaocha.domain.converter.DatasourceConverter;
 import com.hinadt.miaocha.domain.dto.DatasourceConnectionTestResultDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceCreateDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceDTO;
+import com.hinadt.miaocha.domain.dto.DatasourceUpdateDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.entity.ModuleInfo;
 import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
@@ -22,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 /** 数据源服务实现类 */
 @Slf4j
@@ -61,30 +63,35 @@ public class DatasourceServiceImpl implements DatasourceService {
 
     @Override
     @Transactional
-    public DatasourceDTO updateDatasource(Long id, DatasourceCreateDTO dto) {
+    public DatasourceDTO updateDatasource(Long id, DatasourceUpdateDTO dto) {
         // 检查数据源是否存在
         DatasourceInfo existingDatasourceInfo = datasourceMapper.selectById(id);
         if (existingDatasourceInfo == null) {
             throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
         }
 
-        // 检查名称是否与其他数据源重复
-        DatasourceInfo sameNameDatasourceInfo = datasourceMapper.selectByName(dto.getName());
-        if (sameNameDatasourceInfo != null && !sameNameDatasourceInfo.getId().equals(id)) {
-            throw new BusinessException(ErrorCode.DATASOURCE_NAME_EXISTS);
+        // 如果传入了名称，检查是否与其他数据源重复
+        if (StringUtils.hasText(dto.getName())) {
+            DatasourceInfo sameNameDatasourceInfo = datasourceMapper.selectByName(dto.getName());
+            if (sameNameDatasourceInfo != null && !sameNameDatasourceInfo.getId().equals(id)) {
+                throw new BusinessException(ErrorCode.DATASOURCE_NAME_EXISTS);
+            }
         }
 
-        // 测试连接
-        DatasourceConnectionTestResultDTO testResult = testConnection(dto);
-        if (!testResult.isSuccess()) {
-            throw new BusinessException(
-                    ErrorCode.DATASOURCE_CONNECTION_FAILED, testResult.getErrorMessage());
+        // 如果传入了密码或者JDBC URL，需要测试连接。使用更新后的信息进行测试
+        if (StringUtils.hasText(dto.getPassword()) || StringUtils.hasText(dto.getJdbcUrl())) {
+            DatasourceCreateDTO testDto =
+                    datasourceConverter.toCreateDTO(existingDatasourceInfo, dto);
+            DatasourceConnectionTestResultDTO testResult = testConnection(testDto);
+            if (!testResult.isSuccess()) {
+                throw new BusinessException(
+                        ErrorCode.DATASOURCE_CONNECTION_FAILED, testResult.getErrorMessage());
+            }
         }
 
         // 更新数据源
         DatasourceInfo datasourceInfo =
                 datasourceConverter.updateEntity(existingDatasourceInfo, dto);
-        datasourceInfo.setId(id);
         datasourceMapper.update(datasourceInfo);
 
         // 数据源信息已更新，使对应的连接池失效

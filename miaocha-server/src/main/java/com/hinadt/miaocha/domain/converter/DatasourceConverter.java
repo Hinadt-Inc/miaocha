@@ -2,6 +2,7 @@ package com.hinadt.miaocha.domain.converter;
 
 import com.hinadt.miaocha.domain.dto.DatasourceCreateDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceDTO;
+import com.hinadt.miaocha.domain.dto.DatasourceUpdateDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.mapper.UserMapper;
 import org.springframework.stereotype.Component;
@@ -85,6 +86,49 @@ public class DatasourceConverter implements Converter<DatasourceInfo, Datasource
         return dto;
     }
 
+    /**
+     * 合并现有实体和更新DTO，创建一个用于连接测试的创建DTO.
+     *
+     * @param entity the existing entity
+     * @param dto the update DTO
+     * @return a new DatasourceCreateDTO for connection testing
+     */
+    public DatasourceCreateDTO toCreateDTO(DatasourceInfo entity, DatasourceUpdateDTO dto) {
+        if (entity == null || dto == null) {
+            return null;
+        }
+
+        DatasourceCreateDTO createDTO = new DatasourceCreateDTO();
+        createDTO.setName(entity.getName());
+        createDTO.setPassword(dto.getPassword());
+
+        if (dto.getType() != null) {
+            createDTO.setType(dto.getType());
+        } else {
+            createDTO.setType(entity.getType());
+        }
+
+        if (dto.getJdbcUrl() != null) {
+            createDTO.setJdbcUrl(dto.getJdbcUrl());
+        } else {
+            createDTO.setJdbcUrl(entity.getJdbcUrl());
+        }
+
+        if (dto.getUsername() != null) {
+            createDTO.setUsername(dto.getUsername());
+        } else {
+            createDTO.setUsername(entity.getUsername());
+        }
+
+        if (dto.getDescription() != null) {
+            createDTO.setDescription(dto.getDescription());
+        } else {
+            createDTO.setDescription(entity.getDescription());
+        }
+
+        return createDTO;
+    }
+
     /** 使用DTO更新实体 */
     @Override
     public DatasourceInfo updateEntity(DatasourceInfo entity, DatasourceDTO dto) {
@@ -112,6 +156,34 @@ public class DatasourceConverter implements Converter<DatasourceInfo, Datasource
         entity.setUsername(dto.getUsername());
         entity.setPassword(dto.getPassword());
         entity.setDescription(dto.getDescription());
+
+        return entity;
+    }
+
+    /** 使用更新DTO更新实体 */
+    public DatasourceInfo updateEntity(DatasourceInfo entity, DatasourceUpdateDTO dto) {
+        if (entity == null || dto == null) {
+            return entity;
+        }
+
+        if (dto.getName() != null) {
+            entity.setName(dto.getName());
+        }
+        if (dto.getType() != null) {
+            entity.setType(dto.getType());
+        }
+        if (dto.getJdbcUrl() != null) {
+            entity.setJdbcUrl(dto.getJdbcUrl());
+        }
+        if (dto.getUsername() != null) {
+            entity.setUsername(dto.getUsername());
+        }
+        if (dto.getPassword() != null) {
+            entity.setPassword(dto.getPassword());
+        }
+        if (dto.getDescription() != null) {
+            entity.setDescription(dto.getDescription());
+        }
 
         return entity;
     }

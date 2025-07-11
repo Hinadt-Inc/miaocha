@@ -3,6 +3,7 @@ package com.hinadt.miaocha.application.service;
 import com.hinadt.miaocha.domain.dto.DatasourceConnectionTestResultDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceCreateDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceDTO;
+import com.hinadt.miaocha.domain.dto.DatasourceUpdateDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import java.util.List;
 
@@ -13,7 +14,7 @@ public interface DatasourceService {
     DatasourceDTO createDatasource(DatasourceCreateDTO dto);
 
     /** 更新数据源 */
-    DatasourceDTO updateDatasource(Long id, DatasourceCreateDTO dto);
+    DatasourceDTO updateDatasource(Long id, DatasourceUpdateDTO dto);
 
     /** 删除数据源 */
     void deleteDatasource(Long id);
