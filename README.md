@@ -2,7 +2,7 @@
 <img src="docs/images/logo.png" alt="秒查 Logo" width="120" height="120" />
 
 # 🔍 秒查 - 企业级日志管理平台
-
+  
 ## 🚀 基于 Apache Doris 的高性能日志检索系统
 
 [![Version](https://img.shields.io/badge/Version-2.0.0--SNAPSHOT-blue.svg)](https://github.com/Hinadt-Inc/miaocha)
