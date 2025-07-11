@@ -5,6 +5,7 @@ import com.hinadt.miaocha.domain.dto.ApiResponse;
 import com.hinadt.miaocha.domain.dto.DatasourceConnectionTestResultDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceCreateDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceDTO;
+import com.hinadt.miaocha.domain.dto.DatasourceUpdateDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -48,7 +49,7 @@ public class DatasourceEndpoint {
     public ApiResponse<DatasourceDTO> updateDatasource(
             @Parameter(description = "数据源ID", required = true) @PathVariable("id") Long id,
             @Parameter(description = "数据源更新信息", required = true) @Valid @RequestBody
-                    DatasourceCreateDTO dto) {
+                    DatasourceUpdateDTO dto) {
         return ApiResponse.success(datasourceService.updateDatasource(id, dto));
     }
 

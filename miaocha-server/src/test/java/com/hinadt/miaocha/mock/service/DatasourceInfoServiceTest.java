@@ -12,6 +12,7 @@ import com.hinadt.miaocha.domain.converter.DatasourceConverter;
 import com.hinadt.miaocha.domain.dto.DatasourceConnectionTestResultDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceCreateDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceDTO;
+import com.hinadt.miaocha.domain.dto.DatasourceUpdateDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.mapper.DatasourceMapper;
 import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
@@ -20,6 +21,7 @@ import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -50,6 +52,7 @@ class DatasourceInfoServiceTest {
     @Spy @InjectMocks private DatasourceServiceImpl datasourceService;
 
     private DatasourceCreateDTO createDTO;
+    private DatasourceUpdateDTO updateDTO;
     private DatasourceInfo existingDatasourceInfo;
     private DatasourceDTO datasourceDTO;
 
@@ -62,6 +65,15 @@ class DatasourceInfoServiceTest {
         createDTO.setJdbcUrl("jdbc:mysql://localhost:3306/test_db?useSSL=false&serverTimezone=UTC");
         createDTO.setUsername("root");
         createDTO.setPassword("password");
+
+        updateDTO = new DatasourceUpdateDTO();
+        updateDTO.setName("Updated Datasource");
+        updateDTO.setType("MySQL");
+        updateDTO.setJdbcUrl(
+                "jdbc:mysql://localhost:3306/updated_db?useSSL=false&serverTimezone=UTC");
+        updateDTO.setUsername("admin");
+        updateDTO.setPassword("newpassword");
+        updateDTO.setDescription("更新后的数据源");
 
         existingDatasourceInfo = new DatasourceInfo();
         existingDatasourceInfo.setId(1L);
@@ -86,6 +98,9 @@ class DatasourceInfoServiceTest {
                 .thenReturn(existingDatasourceInfo);
         when(datasourceConverter.updateEntity(
                         any(DatasourceInfo.class), any(DatasourceCreateDTO.class)))
+                .thenReturn(existingDatasourceInfo);
+        when(datasourceConverter.updateEntity(
+                        any(DatasourceInfo.class), any(DatasourceUpdateDTO.class)))
                 .thenReturn(existingDatasourceInfo);
     }
 
@@ -145,67 +160,269 @@ class DatasourceInfoServiceTest {
         verify(datasourceMapper, never()).insert(any(DatasourceInfo.class));
     }
 
-    @Test
-    void testUpdateDatasource_Success() {
-        // 模拟数据源存在
-        when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasourceInfo);
-        // 模拟名称不重复
-        when(datasourceMapper.selectByName(anyString())).thenReturn(null);
-        // 模拟连接测试成功
-        doReturn(DatasourceConnectionTestResultDTO.success())
-                .when(datasourceService)
-                .testConnection(any(DatasourceCreateDTO.class));
-        // 模拟更新成功
-        when(datasourceMapper.update(any(DatasourceInfo.class))).thenReturn(1);
+    @Nested
+    @DisplayName("更新数据源测试")
+    class UpdateDatasourceTests {
 
-        DatasourceDTO result = datasourceService.updateDatasource(1L, createDTO);
+        @Test
+        @DisplayName("完整更新数据源 - 成功")
+        void testUpdateDatasource_FullUpdate_Success() {
+            // 模拟数据源存在
+            when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasourceInfo);
+            // 模拟名称不重复
+            when(datasourceMapper.selectByName(anyString())).thenReturn(null);
+            // 模拟连接测试成功
+            DatasourceCreateDTO testDTO = new DatasourceCreateDTO();
+            when(datasourceConverter.toCreateDTO(
+                            any(DatasourceInfo.class), any(DatasourceUpdateDTO.class)))
+                    .thenReturn(testDTO);
+            doReturn(DatasourceConnectionTestResultDTO.success())
+                    .when(datasourceService)
+                    .testConnection(any(DatasourceCreateDTO.class));
+            // 模拟更新成功
+            when(datasourceMapper.update(any(DatasourceInfo.class))).thenReturn(1);
 
-        assertNotNull(result);
-        assertEquals(createDTO.getName(), result.getName());
-        verify(datasourceMapper, times(1)).selectById(anyLong());
-        verify(datasourceMapper, times(1)).selectByName(anyString());
-        verify(datasourceService, times(1)).testConnection(any(DatasourceCreateDTO.class));
-        verify(datasourceMapper, times(1)).update(any(DatasourceInfo.class));
-    }
+            DatasourceDTO result = datasourceService.updateDatasource(1L, updateDTO);
 
-    @Test
-    void testUpdateDatasource_ConnectionFailed() {
-        // 模拟数据源存在
-        when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasourceInfo);
-        // 模拟名称不重复
-        when(datasourceMapper.selectByName(anyString())).thenReturn(null);
-        // 模拟连接测试失败
-        doReturn(DatasourceConnectionTestResultDTO.failure("连接失败"))
-                .when(datasourceService)
-                .testConnection(any(DatasourceCreateDTO.class));
+            assertNotNull(result);
+            verify(datasourceMapper, times(1)).selectById(anyLong());
+            verify(datasourceMapper, times(1)).selectByName(anyString());
+            verify(datasourceService, times(1)).testConnection(any(DatasourceCreateDTO.class));
+            verify(datasourceMapper, times(1)).update(any(DatasourceInfo.class));
+            verify(hikariDatasourceManager, times(1)).invalidateDataSourceById(1L);
+        }
 
-        assertThrows(
-                BusinessException.class,
-                () -> {
-                    datasourceService.updateDatasource(1L, createDTO);
-                });
+        @Test
+        @DisplayName("部分更新数据源 - 仅更新名称")
+        void testUpdateDatasource_PartialUpdate_NameOnly() {
+            DatasourceUpdateDTO partialDTO = new DatasourceUpdateDTO();
+            partialDTO.setName("New Name Only");
 
-        verify(datasourceMapper, times(1)).selectById(anyLong());
-        verify(datasourceMapper, times(1)).selectByName(anyString());
-        verify(datasourceService, times(1)).testConnection(any(DatasourceCreateDTO.class));
-        verify(datasourceMapper, never()).update(any(DatasourceInfo.class));
-    }
+            // 模拟数据源存在
+            when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasourceInfo);
+            // 模拟名称不重复
+            when(datasourceMapper.selectByName(anyString())).thenReturn(null);
+            // 模拟更新成功
+            when(datasourceMapper.update(any(DatasourceInfo.class))).thenReturn(1);
 
-    @Test
-    void testUpdateDatasource_NotFound() {
-        // 模拟数据源不存在
-        when(datasourceMapper.selectById(anyLong())).thenReturn(null);
+            DatasourceDTO result = datasourceService.updateDatasource(1L, partialDTO);
 
-        assertThrows(
-                BusinessException.class,
-                () -> {
-                    datasourceService.updateDatasource(1L, createDTO);
-                });
+            assertNotNull(result);
+            verify(datasourceMapper, times(1)).selectById(anyLong());
+            verify(datasourceMapper, times(1)).selectByName(anyString());
+            // 由于没有更新密码或JDBC URL，不应该进行连接测试
+            verify(datasourceService, never()).testConnection(any(DatasourceCreateDTO.class));
+            verify(datasourceMapper, times(1)).update(any(DatasourceInfo.class));
+            verify(hikariDatasourceManager, times(1)).invalidateDataSourceById(1L);
+        }
 
-        verify(datasourceMapper, times(1)).selectById(anyLong());
-        verify(datasourceMapper, never()).selectByName(anyString());
-        verify(datasourceService, never()).testConnection(any(DatasourceCreateDTO.class));
-        verify(datasourceMapper, never()).update(any(DatasourceInfo.class));
+        @Test
+        @DisplayName("部分更新数据源 - 仅更新描述")
+        void testUpdateDatasource_PartialUpdate_DescriptionOnly() {
+            DatasourceUpdateDTO partialDTO = new DatasourceUpdateDTO();
+            partialDTO.setDescription("新的描述信息");
+
+            // 模拟数据源存在
+            when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasourceInfo);
+            // 模拟更新成功
+            when(datasourceMapper.update(any(DatasourceInfo.class))).thenReturn(1);
+
+            DatasourceDTO result = datasourceService.updateDatasource(1L, partialDTO);
+
+            assertNotNull(result);
+            verify(datasourceMapper, times(1)).selectById(anyLong());
+            // 由于没有更新名称，不需要检查名称重复
+            verify(datasourceMapper, never()).selectByName(anyString());
+            // 由于没有更新密码或JDBC URL，不应该进行连接测试
+            verify(datasourceService, never()).testConnection(any(DatasourceCreateDTO.class));
+            verify(datasourceMapper, times(1)).update(any(DatasourceInfo.class));
+            verify(hikariDatasourceManager, times(1)).invalidateDataSourceById(1L);
+        }
+
+        @Test
+        @DisplayName("更新数据源密码 - 需要连接测试")
+        void testUpdateDatasource_UpdatePassword_RequiresConnectionTest() {
+            DatasourceUpdateDTO partialDTO = new DatasourceUpdateDTO();
+            partialDTO.setPassword("new_password");
+
+            // 模拟数据源存在
+            when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasourceInfo);
+            // 模拟连接测试成功
+            DatasourceCreateDTO testDTO = new DatasourceCreateDTO();
+            when(datasourceConverter.toCreateDTO(
+                            any(DatasourceInfo.class), any(DatasourceUpdateDTO.class)))
+                    .thenReturn(testDTO);
+            doReturn(DatasourceConnectionTestResultDTO.success())
+                    .when(datasourceService)
+                    .testConnection(any(DatasourceCreateDTO.class));
+            // 模拟更新成功
+            when(datasourceMapper.update(any(DatasourceInfo.class))).thenReturn(1);
+
+            DatasourceDTO result = datasourceService.updateDatasource(1L, partialDTO);
+
+            assertNotNull(result);
+            verify(datasourceMapper, times(1)).selectById(anyLong());
+            // 由于没有更新名称，不需要检查名称重复
+            verify(datasourceMapper, never()).selectByName(anyString());
+            // 由于更新了密码，需要进行连接测试
+            verify(datasourceService, times(1)).testConnection(any(DatasourceCreateDTO.class));
+            verify(datasourceMapper, times(1)).update(any(DatasourceInfo.class));
+            verify(hikariDatasourceManager, times(1)).invalidateDataSourceById(1L);
+        }
+
+        @Test
+        @DisplayName("更新数据源JDBC URL - 不同URL需要连接测试")
+        void testUpdateDatasource_UpdateJdbcUrl_RequiresConnectionTest() {
+            DatasourceUpdateDTO partialDTO = new DatasourceUpdateDTO();
+            partialDTO.setJdbcUrl("jdbc:mysql://newhost:3306/newdb"); // 与现有不同
+
+            // 模拟数据源存在
+            when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasourceInfo);
+            // 模拟连接测试成功
+            DatasourceCreateDTO testDTO = new DatasourceCreateDTO();
+            when(datasourceConverter.toCreateDTO(
+                            any(DatasourceInfo.class), any(DatasourceUpdateDTO.class)))
+                    .thenReturn(testDTO);
+            doReturn(DatasourceConnectionTestResultDTO.success())
+                    .when(datasourceService)
+                    .testConnection(any(DatasourceCreateDTO.class));
+            // 模拟更新成功
+            when(datasourceMapper.update(any(DatasourceInfo.class))).thenReturn(1);
+
+            DatasourceDTO result = datasourceService.updateDatasource(1L, partialDTO);
+
+            assertNotNull(result);
+            verify(datasourceMapper, times(1)).selectById(anyLong());
+            // 由于没有更新名称，不需要检查名称重复
+            verify(datasourceMapper, never()).selectByName(anyString());
+            // 由于更新了不同的JDBC URL，需要进行连接测试
+            verify(datasourceService, times(1)).testConnection(any(DatasourceCreateDTO.class));
+            verify(datasourceMapper, times(1)).update(any(DatasourceInfo.class));
+            verify(hikariDatasourceManager, times(1)).invalidateDataSourceById(1L);
+        }
+
+        @Test
+        @DisplayName("更新数据源JDBC URL - 相同URL不需要连接测试")
+        void testUpdateDatasource_SameJdbcUrl_NoConnectionTest() {
+            DatasourceUpdateDTO partialDTO = new DatasourceUpdateDTO();
+            // 设置与现有数据源相同的 JDBC URL
+            partialDTO.setJdbcUrl(
+                    "jdbc:mysql://localhost:3306/test_db?useSSL=false&serverTimezone=UTC");
+
+            // 模拟数据源存在
+            when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasourceInfo);
+            // 模拟更新成功
+            when(datasourceMapper.update(any(DatasourceInfo.class))).thenReturn(1);
+
+            DatasourceDTO result = datasourceService.updateDatasource(1L, partialDTO);
+
+            assertNotNull(result);
+            verify(datasourceMapper, times(1)).selectById(anyLong());
+            // 由于没有更新名称，不需要检查名称重复
+            verify(datasourceMapper, never()).selectByName(anyString());
+            // 由于JDBC URL相同，不需要进行连接测试
+            verify(datasourceService, never()).testConnection(any(DatasourceCreateDTO.class));
+            verify(datasourceMapper, times(1)).update(any(DatasourceInfo.class));
+            verify(hikariDatasourceManager, times(1)).invalidateDataSourceById(1L);
+        }
+
+        @Test
+        @DisplayName("更新数据源 - 连接测试失败")
+        void testUpdateDatasource_ConnectionFailed() {
+            // 模拟数据源存在
+            when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasourceInfo);
+            // 模拟名称不重复
+            when(datasourceMapper.selectByName(anyString())).thenReturn(null);
+            // 模拟连接测试失败
+            DatasourceCreateDTO testDTO = new DatasourceCreateDTO();
+            when(datasourceConverter.toCreateDTO(
+                            any(DatasourceInfo.class), any(DatasourceUpdateDTO.class)))
+                    .thenReturn(testDTO);
+            doReturn(DatasourceConnectionTestResultDTO.failure("连接失败"))
+                    .when(datasourceService)
+                    .testConnection(any(DatasourceCreateDTO.class));
+
+            assertThrows(
+                    BusinessException.class,
+                    () -> {
+                        datasourceService.updateDatasource(1L, updateDTO);
+                    });
+
+            verify(datasourceMapper, times(1)).selectById(anyLong());
+            verify(datasourceMapper, times(1)).selectByName(anyString());
+            verify(datasourceService, times(1)).testConnection(any(DatasourceCreateDTO.class));
+            verify(datasourceMapper, never()).update(any(DatasourceInfo.class));
+            verify(hikariDatasourceManager, never()).invalidateDataSourceById(anyLong());
+        }
+
+        @Test
+        @DisplayName("更新数据源 - 名称重复")
+        void testUpdateDatasource_NameExists() {
+            DatasourceInfo anotherDatasource = new DatasourceInfo();
+            anotherDatasource.setId(2L);
+            anotherDatasource.setName("Updated Datasource");
+
+            // 模拟数据源存在
+            when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasourceInfo);
+            // 模拟名称重复
+            when(datasourceMapper.selectByName(anyString())).thenReturn(anotherDatasource);
+
+            assertThrows(
+                    BusinessException.class,
+                    () -> {
+                        datasourceService.updateDatasource(1L, updateDTO);
+                    });
+
+            verify(datasourceMapper, times(1)).selectById(anyLong());
+            verify(datasourceMapper, times(1)).selectByName(anyString());
+            verify(datasourceService, never()).testConnection(any(DatasourceCreateDTO.class));
+            verify(datasourceMapper, never()).update(any(DatasourceInfo.class));
+            verify(hikariDatasourceManager, never()).invalidateDataSourceById(anyLong());
+        }
+
+        @Test
+        @DisplayName("更新数据源 - 数据源不存在")
+        void testUpdateDatasource_NotFound() {
+            // 模拟数据源不存在
+            when(datasourceMapper.selectById(anyLong())).thenReturn(null);
+
+            assertThrows(
+                    BusinessException.class,
+                    () -> {
+                        datasourceService.updateDatasource(1L, updateDTO);
+                    });
+
+            verify(datasourceMapper, times(1)).selectById(anyLong());
+            verify(datasourceMapper, never()).selectByName(anyString());
+            verify(datasourceService, never()).testConnection(any(DatasourceCreateDTO.class));
+            verify(datasourceMapper, never()).update(any(DatasourceInfo.class));
+            verify(hikariDatasourceManager, never()).invalidateDataSourceById(anyLong());
+        }
+
+        @Test
+        @DisplayName("更新数据源 - 同名但同ID的情况")
+        void testUpdateDatasource_SameNameSameId() {
+            DatasourceUpdateDTO sameNameDTO = new DatasourceUpdateDTO();
+            sameNameDTO.setName("Test Datasource"); // 与现有数据源同名
+
+            // 模拟数据源存在
+            when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasourceInfo);
+            // 模拟查询到同名数据源（但是同一个ID）
+            when(datasourceMapper.selectByName(anyString())).thenReturn(existingDatasourceInfo);
+            // 模拟更新成功
+            when(datasourceMapper.update(any(DatasourceInfo.class))).thenReturn(1);
+
+            // 应该成功，因为是同一个数据源
+            DatasourceDTO result = datasourceService.updateDatasource(1L, sameNameDTO);
+
+            assertNotNull(result);
+            verify(datasourceMapper, times(1)).selectById(anyLong());
+            verify(datasourceMapper, times(1)).selectByName(anyString());
+            // 由于没有更新密码或JDBC URL，不应该进行连接测试
+            verify(datasourceService, never()).testConnection(any(DatasourceCreateDTO.class));
+            verify(datasourceMapper, times(1)).update(any(DatasourceInfo.class));
+            verify(hikariDatasourceManager, times(1)).invalidateDataSourceById(1L);
+        }
     }
 
     @Test
@@ -224,6 +441,7 @@ class DatasourceInfoServiceTest {
 
         verify(datasourceMapper, times(1)).selectById(anyLong());
         verify(moduleInfoMapper, times(1)).existsByDatasourceId(anyLong());
+        verify(hikariDatasourceManager, times(1)).invalidateDataSourceById(1L);
         verify(datasourceMapper, times(1)).deleteById(anyLong());
     }
 
@@ -240,6 +458,7 @@ class DatasourceInfoServiceTest {
 
         verify(datasourceMapper, times(1)).selectById(anyLong());
         verify(moduleInfoMapper, never()).existsByDatasourceId(anyLong());
+        verify(hikariDatasourceManager, never()).invalidateDataSourceById(anyLong());
         verify(datasourceMapper, never()).deleteById(anyLong());
     }
 
@@ -260,6 +479,7 @@ class DatasourceInfoServiceTest {
         assertEquals(ErrorCode.DATASOURCE_IN_USE, exception.getErrorCode());
         verify(datasourceMapper, times(1)).selectById(anyLong());
         verify(moduleInfoMapper, times(1)).existsByDatasourceId(anyLong());
+        verify(hikariDatasourceManager, never()).invalidateDataSourceById(anyLong());
         verify(datasourceMapper, never()).deleteById(anyLong());
     }
 
