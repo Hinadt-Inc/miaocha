@@ -271,10 +271,10 @@ class DatasourceInfoServiceTest {
         }
 
         @Test
-        @DisplayName("更新数据源JDBC URL - 需要连接测试")
+        @DisplayName("更新数据源JDBC URL - 不同URL需要连接测试")
         void testUpdateDatasource_UpdateJdbcUrl_RequiresConnectionTest() {
             DatasourceUpdateDTO partialDTO = new DatasourceUpdateDTO();
-            partialDTO.setJdbcUrl("jdbc:mysql://newhost:3306/newdb");
+            partialDTO.setJdbcUrl("jdbc:mysql://newhost:3306/newdb"); // 与现有不同
 
             // 模拟数据源存在
             when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasourceInfo);
@@ -295,8 +295,33 @@ class DatasourceInfoServiceTest {
             verify(datasourceMapper, times(1)).selectById(anyLong());
             // 由于没有更新名称，不需要检查名称重复
             verify(datasourceMapper, never()).selectByName(anyString());
-            // 由于更新了JDBC URL，需要进行连接测试
+            // 由于更新了不同的JDBC URL，需要进行连接测试
             verify(datasourceService, times(1)).testConnection(any(DatasourceCreateDTO.class));
+            verify(datasourceMapper, times(1)).update(any(DatasourceInfo.class));
+            verify(hikariDatasourceManager, times(1)).invalidateDataSourceById(1L);
+        }
+
+        @Test
+        @DisplayName("更新数据源JDBC URL - 相同URL不需要连接测试")
+        void testUpdateDatasource_SameJdbcUrl_NoConnectionTest() {
+            DatasourceUpdateDTO partialDTO = new DatasourceUpdateDTO();
+            // 设置与现有数据源相同的 JDBC URL
+            partialDTO.setJdbcUrl(
+                    "jdbc:mysql://localhost:3306/test_db?useSSL=false&serverTimezone=UTC");
+
+            // 模拟数据源存在
+            when(datasourceMapper.selectById(anyLong())).thenReturn(existingDatasourceInfo);
+            // 模拟更新成功
+            when(datasourceMapper.update(any(DatasourceInfo.class))).thenReturn(1);
+
+            DatasourceDTO result = datasourceService.updateDatasource(1L, partialDTO);
+
+            assertNotNull(result);
+            verify(datasourceMapper, times(1)).selectById(anyLong());
+            // 由于没有更新名称，不需要检查名称重复
+            verify(datasourceMapper, never()).selectByName(anyString());
+            // 由于JDBC URL相同，不需要进行连接测试
+            verify(datasourceService, never()).testConnection(any(DatasourceCreateDTO.class));
             verify(datasourceMapper, times(1)).update(any(DatasourceInfo.class));
             verify(hikariDatasourceManager, times(1)).invalidateDataSourceById(1L);
         }

@@ -78,8 +78,10 @@ public class DatasourceServiceImpl implements DatasourceService {
             }
         }
 
-        // 如果传入了密码或者JDBC URL，需要测试连接。使用更新后的信息进行测试
-        if (StringUtils.hasText(dto.getPassword()) || StringUtils.hasText(dto.getJdbcUrl())) {
+        // 如果传入了密码或者JDBC URL 不相同，需要测试连接。使用更新后的信息进行测试
+        if (StringUtils.hasText(dto.getPassword())
+                || (dto.getJdbcUrl() != null
+                        && !existingDatasourceInfo.getJdbcUrl().equals(dto.getJdbcUrl()))) {
             DatasourceCreateDTO testDto =
                     datasourceConverter.toCreateDTO(existingDatasourceInfo, dto);
             DatasourceConnectionTestResultDTO testResult = testConnection(testDto);
