@@ -1,0 +1,34 @@
+services:
+  # MySQL 8.0
+  mysql:
+    image: mysql:8.0
+    container_name: miaocha-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: log_manage_system
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: |
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+
+  # Apache Doris
+  doris:
+    image: apache/doris:2.1.9-all
+    container_name: miaocha-doris
+    environment:
+      FE_SERVERS: "miaocha-doris:9010"
+      PRIORITY_NETWORKS: "172.16.0.0/12"
+    ports:
+      - "8030:8030"  # HTTP Server
+      - "8040:8040"  # Stream Load
+      - "9030:9030"  # Query Port
+    volumes:
+      - doris_data:/opt/apache-doris/fe/doris-meta
+
+volumes:
+  mysql_data:
+  doris_data:
