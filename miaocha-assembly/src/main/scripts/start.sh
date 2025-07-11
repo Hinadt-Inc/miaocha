@@ -35,11 +35,24 @@ while [[ $# -gt 0 ]]; do
             DEBUG="true"
             shift
             ;;
+        --mock-doris-data)
+            MOCK_DORIS_HOST="$2"
+            MOCK_DORIS_PORT="$3"
+            MOCK_DORIS_USER="$4"
+            MOCK_DORIS_PASSWORD="$5"
+            MOCK_DORIS_COUNT="$6"
+            MOCK_DORIS_STREAM_LOAD_PORT="$7"
+            MOCK_MODE="true"
+            shift 7
+            ;;
         -h|--help)
             echo "用法: $(basename "$0") [选项]"
             echo "选项:"
             echo "  -e, --env, --profile PROFILE   设置活动环境 (默认: dev)"
             echo "  -d, --debug                    启用调试模式"
+            echo "  --mock-doris-data HOST PORT USER PASSWORD COUNT [STREAM_LOAD_PORT]"
+            echo "                                 Mock Doris日志数据"
+            echo "                                 例如: --mock-doris-data 127.0.0.1 9030 root \"\" 10000 8040"
             echo "  -h, --help                     显示此帮助消息"
             exit 0
             ;;
@@ -53,6 +66,47 @@ done
 # 检查系统环境
 print_info "检查系统环境..."
 check_java
+
+# 如果是Mock模式，执行数据生成工具
+if [ "$MOCK_MODE" = "true" ]; then
+    print_info "启动 Doris 日志数据 Mock 工具..."
+    
+    # 验证参数
+    if [ -z "$MOCK_DORIS_HOST" ]; then
+        print_error "Mock模式需要指定Doris主机地址"
+        exit 1
+    fi
+    
+    # 设置默认值
+    MOCK_DORIS_PORT=${MOCK_DORIS_PORT:-9030}
+    MOCK_DORIS_USER=${MOCK_DORIS_USER:-root}
+    MOCK_DORIS_PASSWORD=${MOCK_DORIS_PASSWORD:-}
+    MOCK_DORIS_COUNT=${MOCK_DORIS_COUNT:-10000}
+    MOCK_DORIS_STREAM_LOAD_PORT=${MOCK_DORIS_STREAM_LOAD_PORT:-8040}
+    
+    print_info "Mock参数: Host=$MOCK_DORIS_HOST, Port=$MOCK_DORIS_PORT, StreamLoadPort=$MOCK_DORIS_STREAM_LOAD_PORT, User=$MOCK_DORIS_USER, Count=$MOCK_DORIS_COUNT"
+    
+    # 构建类路径：config目录 + 主JAR + lib目录的所有JAR
+    CLASSPATH="$CONFIG_DIR:$JAR_FILE:$LIB_DIR/*"
+    
+    # 执行Mock工具
+    java -cp "$CLASSPATH" com.hinadt.miaocha.common.tools.LogSearchDataMockTool \
+        --host="$MOCK_DORIS_HOST" \
+        --port="$MOCK_DORIS_PORT" \
+        --user="$MOCK_DORIS_USER" \
+        --password="$MOCK_DORIS_PASSWORD" \
+        --count="$MOCK_DORIS_COUNT" \
+        --stream-load-port="$MOCK_DORIS_STREAM_LOAD_PORT"
+    
+    if [ $? -eq 0 ]; then
+        print_success "Doris日志数据Mock完成！"
+    else
+        print_error "Doris日志数据Mock失败！"
+        exit 1
+    fi
+    
+    exit 0
+fi
 
 # 检查JAR文件是否存在
 if [ ! -f "$JAR_FILE" ]; then
