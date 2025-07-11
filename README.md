@@ -84,17 +84,17 @@ npm run dev
 
 **`开发相关手册`**
 
-*   [架构设计文档](docs/dev_guide/架构设计.md)
-*   [本地开发指南](docs/dev_guide/本地开发指南.md)
-*   [代码贡献规范](docs/dev_guide/代码贡献规范.md)
-*   [API 接口文档](docs/dev_guide/API接口文档.md)
+*   [架构设计文档](docs/dev_guide/architecture_design.md)
+*   [本地开发指南](docs/dev_guide/local_development_guide.md)
+*   [代码贡献规范](docs/dev_guide/contribution_guide.md)
+*   [API 接口文档](docs/dev_guide/api_reference.md)
 
 **`产品使用手册`**
 
-*   [产品快速入门](docs/user_guide/产品快速入门.md)
-*   [日志接入指南](docs/user_guide/日志接入指南.md)
-*   [查询分析手册](docs/user_guide/查询分析手册.md)
-*   [FAQ 常见问题](docs/user_guide/FAQ.md)
+*   [产品快速入门](docs/user_guide/quick_start.md)
+*   [日志接入指南](docs/user_guide/log_access_guide.md)
+*   [查询分析手册](docs/user_guide/query_and_analysis_guide.md)
+*   [FAQ 常见问题](docs/user_guide/faq.md)
 
 **我们正在努力完善文档，欢迎您通过 [Issue](https://github.com/Hinadt-Inc/miaocha/issues) 或 [Pull Request](https://github.com/Hinadt-Inc/miaocha/pulls) 帮助我们改进！**
 
@@ -105,7 +105,7 @@ npm run dev
 我们是一个开放和友好的社区，欢迎任何形式的贡献！
 
 *   **提 Issue**：[报告 Bug 或提出功能建议](https://github.com/Hinadt-Inc/miaocha/issues/new/choose)。
-*   **贡献代码**：请先阅读我们的 [代码贡献规范](docs/dev_guide/代码贡献规范.md)。
+*   **贡献代码**：请先阅读我们的 [代码贡献规范](docs/dev_guide/contribution_guide.md)。
 *   **完善文档**：帮助我们改进不清晰或有遗漏的文档。
 
 欢迎访问我们的 [GitHub 仓库](https://github.com/Hinadt-Inc/miaocha) 并给项目一个 Star ⭐ 支持！
