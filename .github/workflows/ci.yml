@@ -59,7 +59,6 @@ jobs:
           flags: tests
           name: codecov-umbrella
           fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
           # 添加更多配置确保更好的覆盖率比较
           base: ${{ github.event.pull_request.base.sha }}
