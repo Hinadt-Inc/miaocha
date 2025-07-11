@@ -10,11 +10,15 @@ YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# 获取脚本所在目录和项目根目录
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 # 变量设置
 IMAGE_NAME="miaocha"
 TIMESTAMP=$(date +%Y%m%d%H%M%S)
-VERSION="v1.0-${TIMESTAMP}"
-DOCKERFILE="Dockerfile"
+VERSION="dev-${TIMESTAMP}"
+DOCKERFILE="$PROJECT_ROOT/docker/Dockerfile"
 
 # 打印彩色信息
 info() {
@@ -37,6 +41,7 @@ error() {
 echo "================================================="
 echo "   日志管理系统 Docker 镜像构建脚本"
 echo "================================================="
+echo "项目根目录: $PROJECT_ROOT"
 echo "镜像名称: $IMAGE_NAME"
 echo "版本标签: $VERSION"
 echo
@@ -56,14 +61,17 @@ fi
 # 检查必要的文件
 info "检查项目文件..."
 if [ ! -f "$DOCKERFILE" ]; then
-  error "找不到Dockerfile，请确保在正确的目录中运行此脚本"
+  error "找不到Dockerfile，期望位置: $DOCKERFILE"
   exit 1
 fi
 
-if [ ! -f "miaocha-assembly/src/main/scripts/docker-start.sh" ]; then
+if [ ! -f "$PROJECT_ROOT/miaocha-assembly/src/main/scripts/docker-start.sh" ]; then
   error "找不到Docker专用启动脚本，请确保docker-start.sh位于正确目录"
   exit 1
 fi
+
+# 切换到项目根目录进行Maven构建
+cd "$PROJECT_ROOT"
 
 info "编译Maven项目..."
 if ! mvn clean package -DskipTests; then
@@ -82,7 +90,11 @@ fi
 success "找到压缩包: $TAR_FILE ($(du -h "$TAR_FILE" | cut -f1))"
 
 info "构建Docker镜像: $IMAGE_NAME:$VERSION ..."
-if ! docker build -t "$IMAGE_NAME:$VERSION" .; then
+info "构建上下文: $PROJECT_ROOT"
+info "Dockerfile路径: $DOCKERFILE"
+
+# 使用绝对路径的Dockerfile进行构建
+if ! docker build -f "$DOCKERFILE" -t "$IMAGE_NAME:$VERSION" "$PROJECT_ROOT"; then
   error "Docker镜像构建失败"
   exit 1
 fi
@@ -105,7 +117,7 @@ LOGSTASH_PACKAGE_PATH="/opt/logstash/logstash-9.0.0-linux-x86_64.tar.gz"
 SPRING_PROFILES_ACTIVE="prod"
 
 # 容器名称
-CONTAINER_NAME="log-system"
+CONTAINER_NAME="miaocha"
 
 # 输出分隔线
 echo
@@ -128,7 +140,7 @@ echo "  -e \"JAVA_OPTS=-Xms1g -Xmx2g\" \\"
 echo "  -e \"LOGSTASH_PACKAGE_PATH=${LOGSTASH_PACKAGE_PATH}\" \\"
 echo "  -e \"LOGSTASH_DEPLOY_PATH=${LOGSTASH_DEPLOY_PATH}\" \\"
 echo "  -v \"${LOGSTASH_PATH}:${LOGSTASH_PACKAGE_PATH}\" \\"
-echo "  -v \"./logs:${LOG_PATH}\" \\"
+echo "  -v \"$PROJECT_ROOT/logs:${LOG_PATH}\" \\"
 echo "  $IMAGE_NAME:$VERSION"
 echo
 
@@ -157,7 +169,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     -e "LOGSTASH_PACKAGE_PATH=${LOGSTASH_PACKAGE_PATH}" \
     -e "LOGSTASH_DEPLOY_PATH=${LOGSTASH_DEPLOY_PATH}" \
     -v "${LOGSTASH_PATH}:${LOGSTASH_PACKAGE_PATH}" \
-    -v "./logs:${LOG_PATH}" \
+    -v "$PROJECT_ROOT/logs:${LOG_PATH}" \
     "$IMAGE_NAME:$VERSION"; then
     error "容器启动失败"
     exit 1
