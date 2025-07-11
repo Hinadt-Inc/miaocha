@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       issues: read  # 需要读取issues的权限
-      pull-requests: read  # 需要读取PR的权限
+      pull-requests: write  # 需要写入PR的权限，用于更新PR描述
     steps:
       - name: Check PR title format
         id: check-title
@@ -70,9 +70,50 @@ jobs:
           echo "✅ Issue #$ISSUE_NUMBER 存在且状态为open"
           echo "issue_title=$ISSUE_TITLE" >> $GITHUB_OUTPUT
 
+      - name: Auto link PR to Issue
+        id: link-issue
+        run: |
+          ISSUE_NUMBER="${{ steps.check-title.outputs.issue_number }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          CURRENT_BODY="${{ github.event.pull_request.body }}"
+          
+          echo "当前PR描述: $CURRENT_BODY"
+          
+          # 检查PR描述中是否已经包含关联关键词
+          if echo "$CURRENT_BODY" | grep -qE "(close[sd]?|fix(e[sd])?|resolve[sd]?) #$ISSUE_NUMBER\b"; then
+            echo "✅ PR已经关联到Issue #$ISSUE_NUMBER，无需重复关联"
+            exit 0
+          fi
+          
+          # 构建新的PR描述，在开头添加关联关键词
+          LINK_TEXT="Closes #$ISSUE_NUMBER"
+          
+          if [ -z "$CURRENT_BODY" ] || [ "$CURRENT_BODY" == "null" ]; then
+            NEW_BODY="$LINK_TEXT"
+          else
+            NEW_BODY="$LINK_TEXT"$'\n\n'"$CURRENT_BODY"
+          fi
+          
+          echo "新的PR描述: $NEW_BODY"
+          
+          # 使用GitHub API更新PR描述
+          curl -X PATCH \
+            -H "Authorization: token ${{ github.token }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER" \
+            -d "$(jq -n --arg body "$NEW_BODY" '{body: $body}')"
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ 成功关联PR #$PR_NUMBER 到Issue #$ISSUE_NUMBER"
+          else
+            echo "❌ 关联失败"
+            exit 1
+          fi
+
       - name: Success message
         run: |
-          echo "🎉 PR标题校验通过！"
+          echo "🎉 PR标题校验通过且已自动关联Issue！"
           echo "PR标题: ${{ github.event.pull_request.title }}"
           echo "关联Issue: #${{ steps.check-title.outputs.issue_number }}"
-          echo "Issue标题: ${{ steps.check-issue.outputs.issue_title }}" 
+          echo "Issue标题: ${{ steps.check-issue.outputs.issue_title }}"
+          echo "📎 PR已自动关联到Issue，合并PR时将自动关闭对应的Issue" 
