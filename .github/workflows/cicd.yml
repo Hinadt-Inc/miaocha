@@ -252,6 +252,11 @@ jobs:
 
       - name: Login to private Docker registry
         run: |
+          # 推送时禁用代理
+          unset http_proxy
+          unset https_proxy
+          unset HTTP_PROXY
+          unset HTTPS_PROXY
           echo "${{ secrets.DOCKER_PUSH_PASSWORD }}" | docker login dockerhub.baofu.com -u "${{ secrets.DOCKER_PUSH_USERNAME }}" --password-stdin
 
       - name: Build and push Docker image
@@ -272,6 +277,11 @@ jobs:
 
           # 推送镜像到仓库
           echo "📤 推送镜像到私有仓库..."
+          # 确保推送时不使用代理
+          unset http_proxy
+          unset https_proxy
+          unset HTTP_PROXY
+          unset HTTPS_PROXY
           docker push ${{ steps.docker-tag.outputs.full_image }}
           docker push ${{ steps.docker-tag.outputs.latest_image }}
 
