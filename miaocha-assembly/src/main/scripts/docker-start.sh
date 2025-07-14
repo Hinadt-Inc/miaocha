@@ -27,7 +27,7 @@ echo "[INFO] 使用JAR文件: $JAR_FILE"
 mkdir -p "$LOG_DIR" "$LOG_DIR/archive"
 
 # 显示环境配置信息
-ACTIVE_PROFILE=${SPRING_PROFILES_ACTIVE:-dev}
+ACTIVE_PROFILE=${SPRING_PROFILES_ACTIVE}
 echo "[INFO] 使用环境配置: $ACTIVE_PROFILE"
 echo "[INFO] 日志目录: ${LOG_PATH:-$LOG_DIR}"
 echo "[INFO] JVM参数: ${JAVA_OPTS:--Xms1g -Xmx2g -Dfile.encoding=UTF-8}"

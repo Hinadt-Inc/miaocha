@@ -1,0 +1,164 @@
+name: PR CI/CD
+
+on:
+  pull_request:
+    branches: [ dev ]
+
+jobs:
+  # 检查是否应该跳过 CI
+  check-skip-ci:
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.skip-check.outputs.should_skip }}
+    steps:
+      - name: Check if CI should be skipped
+        id: skip-check
+        run: |
+          if echo '${{ toJson(github.event.pull_request.labels.*.name) }}' | grep -q '"no ci"'; then
+            echo "should_skip=true" >> $GITHUB_OUTPUT
+            echo "🚫 CI 被跳过：发现 'no ci' 标签"
+          else
+            echo "should_skip=false" >> $GITHUB_OUTPUT
+            echo "✅ CI 将正常执行"
+          fi
+
+  # 跳过 CI 的说明 job
+  skip-ci-info:
+    runs-on: ubuntu-latest
+    needs: check-skip-ci
+    if: ${{ needs.check-skip-ci.outputs.should_skip == 'true' }}
+    steps:
+      - name: CI Skipped
+        run: |
+          echo "::notice title=CI跳过::此 PR 包含 'no ci' 标签，CI 检查已被跳过"
+
+  # PR CI 主要测试任务
+  pr-ci:
+    runs-on: ubuntu-latest
+    needs: check-skip-ci
+    if: ${{ needs.check-skip-ci.outputs.should_skip == 'false' }}
+    concurrency:
+      group: pr-ci-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: true  # 自动签出所有子模块
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Run tests and build
+        run: |
+          echo "🚀 开始执行 Maven 测试和构建"
+          mvn clean test -B
+          mvn clean package -DskipTests -B
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.event.pull_request.number }}
+          path: |
+            target/surefire-reports/
+            target/*.jar
+
+  # PR CD 测试环境部署
+  pr-cd-test:
+    runs-on: arc-runner-set
+    needs: pr-ci
+    if: ${{ needs.pr-ci.result == 'success' && contains(github.event.pull_request.labels.*.name, 'deploy to inner test k8s env') }}
+    concurrency:
+      group: pr-cd-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Extract Maven project version
+        id: maven-version
+        run: |
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 项目版本: $VERSION"
+
+      - name: Generate Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: dockerhub.baofu.com/app/miaocha-pr-test
+          tags: |
+            type=raw,value=PR${{ github.event.pull_request.number }}-${{ steps.maven-version.outputs.version }}-{{date 'YYYYMMDDHHmmss'}}
+            type=raw,value=latest-pr${{ github.event.pull_request.number }}
+
+      - name: Login to private Docker registry
+        uses: docker/login-action@v3
+        with:
+          registry: dockerhub.baofu.com
+          username: ${{ secrets.DOCKER_PUSH_USERNAME }}
+          password: ${{ secrets.DOCKER_PUSH_PASSWORD }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Make build script executable
+        run: chmod +x scripts/build-start-docker.sh
+
+      - name: Build Docker image
+        run: |
+          echo "🐳 开始构建 Docker 镜像"
+          echo "镜像名称: miaocha-pr-test"
+          echo "镜像标签: ${{ steps.meta.outputs.tags }}"
+          
+          # 设置环境变量供脚本使用
+          export IMAGE_NAME="miaocha-pr-test"
+          export IMAGE_TAGS="${{ steps.meta.outputs.tags }}"
+          
+          # 执行构建脚本
+          ./scripts/build-start-docker.sh
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Summary
+        run: |
+          echo "## 🚀 PR CD 部署成功" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 镜像信息" >> $GITHUB_STEP_SUMMARY
+          echo "- **仓库**: dockerhub.baofu.com/app/miaocha-pr-test" >> $GITHUB_STEP_SUMMARY
+          echo "- **标签**: " >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" | sed 's/^/  - /' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🎯 使用方法" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "docker pull dockerhub.baofu.com/app/miaocha-pr-test:latest-pr${{ github.event.pull_request.number }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
