@@ -4,6 +4,11 @@ on:
   pull_request:
     branches: [ dev ]
 
+# Workflow级别的并发控制 - 新推送会取消整个前一次workflow
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   # 检查是否应该跳过 CI
   check-skip-ci:
@@ -37,9 +42,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: check-skip-ci
     if: ${{ needs.check-skip-ci.outputs.should_skip == 'false' }}
-    concurrency:
-      group: pr-ci-${{ github.event.pull_request.number }}
-      cancel-in-progress: true
 
     steps:
       - name: Checkout code
@@ -81,9 +83,6 @@ jobs:
     runs-on: arc-runner-set
     needs: pr-ci
     if: ${{ needs.pr-ci.result == 'success' && contains(github.event.pull_request.labels.*.name, 'deploy to inner test k8s env') }}
-    concurrency:
-      group: pr-cd-${{ github.event.pull_request.number }}
-      cancel-in-progress: true
 
     steps:
       - name: Checkout code
@@ -101,8 +100,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2-arc
+          key: ${{ runner.os }}-m2-arc-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2-arc-
 
       - name: Extract Maven project version
         id: maven-version
