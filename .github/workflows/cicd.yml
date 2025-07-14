@@ -111,6 +111,49 @@ jobs:
         with:
           maven-version: '3.9.6'
 
+      - name: Setup local cache directories
+        run: |
+          # 创建本地缓存目录
+          mkdir -p /opt/action-runner/cache/jdk /opt/action-runner/cache/maven
+          echo "📁 本地缓存目录已创建"
+          ls -la /opt/action-runner/cache/
+
+      - name: Restore JDK from local cache
+        run: |
+          echo "🔍 检查JDK本地缓存..."
+          ARCH=$(uname -m)
+          JDK_CACHE_KEY="jdk-17-temurin-${ARCH}"
+          JDK_CACHE_PATH="/opt/action-runner/cache/jdk/${JDK_CACHE_KEY}"
+          
+          if [ -d "$JDK_CACHE_PATH" ] && [ "$(ls -A $JDK_CACHE_PATH 2>/dev/null)" ]; then
+            echo "✅ 发现JDK缓存: $JDK_CACHE_KEY"
+            echo "JDK_CACHE_HIT=true" >> $GITHUB_ENV
+          else
+            echo "❌ JDK缓存未命中，将在构建后保存"
+            echo "JDK_CACHE_HIT=false" >> $GITHUB_ENV
+            echo "JDK_CACHE_KEY=$JDK_CACHE_KEY" >> $GITHUB_ENV
+            echo "JDK_CACHE_PATH=$JDK_CACHE_PATH" >> $GITHUB_ENV
+          fi
+
+      - name: Restore Maven dependencies from local cache
+        run: |
+          echo "🔍 检查Maven依赖本地缓存..."
+          MAVEN_CACHE_KEY="maven-deps-$(find . -name 'pom.xml' -exec sha256sum {} \; | sha256sum | cut -d' ' -f1)"
+          MAVEN_CACHE_FILE="/opt/action-runner/cache/maven/${MAVEN_CACHE_KEY}.tar.gz"
+          
+          echo "MAVEN_CACHE_KEY=$MAVEN_CACHE_KEY" >> $GITHUB_ENV
+          
+          if [ -f "$MAVEN_CACHE_FILE" ]; then
+            echo "✅ 发现Maven依赖缓存: $MAVEN_CACHE_KEY"
+            cd ~
+            tar -xzf "$MAVEN_CACHE_FILE"
+            echo "📦 Maven依赖本地缓存已恢复"
+            echo "MAVEN_CACHE_HIT=true" >> $GITHUB_ENV
+          else
+            echo "❌ Maven依赖缓存未命中，将在构建后保存"
+            echo "MAVEN_CACHE_HIT=false" >> $GITHUB_ENV
+          fi
+
       - name: Verify Java and Maven
         run: |
           echo "🔍 验证Java和Maven安装状态..."
@@ -170,6 +213,30 @@ jobs:
           docker push ${{ steps.docker-tag.outputs.latest_image }}
           
           echo "✅ 镜像推送完成!"
+
+      - name: Save Maven dependencies to local cache
+        if: env.MAVEN_CACHE_HIT == 'false' && always()
+        run: |
+          echo "💾 保存Maven依赖到本地缓存..."
+          if [ -d ~/.m2 ] && [ "$(ls -A ~/.m2 2>/dev/null)" ]; then
+            cd ~
+            tar -czf "/opt/action-runner/cache/maven/$MAVEN_CACHE_KEY.tar.gz" .m2
+            echo "✅ Maven依赖本地缓存已保存: $MAVEN_CACHE_KEY"
+          else
+            echo "⚠️ ~/.m2目录为空，跳过缓存保存"
+          fi
+
+      - name: Save JDK to local cache
+        if: env.JDK_CACHE_HIT == 'false' && always()
+        run: |
+          echo "💾 保存JDK到本地缓存..."
+          if [ -n "$JAVA_HOME" ] && [ -d "$JAVA_HOME" ]; then
+            mkdir -p "$(dirname $JDK_CACHE_PATH)"
+            cp -r "$JAVA_HOME" "$JDK_CACHE_PATH"
+            echo "✅ JDK本地缓存已保存: $JDK_CACHE_KEY"
+          else
+            echo "⚠️ JAVA_HOME未设置或不存在，跳过JDK缓存保存"
+          fi
 
       - name: Summary
         run: |
