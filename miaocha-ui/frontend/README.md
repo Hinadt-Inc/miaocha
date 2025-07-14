@@ -26,6 +26,30 @@
 
 ## 快速开始
 
+### 仅克隆前端代码（推荐）
+
+如果您只需要前端代码，可以使用 sparse-checkout 功能：
+
+```bash
+# 克隆仓库但不检出文件
+git clone --no-checkout https://github.com/Hinadt-Inc/miaocha.git
+cd miaocha
+
+# 启用稀疏检出
+git sparse-checkout init --cone
+
+# 只检出前端目录
+git sparse-checkout set miaocha-ui/frontend
+
+# 检出文件
+git checkout
+
+# 进入前端目录
+cd miaocha-ui/frontend
+```
+
+### 常规开发流程
+
 1. 安装依赖:
 
 ```bash
