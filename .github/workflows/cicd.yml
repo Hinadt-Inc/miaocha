@@ -114,7 +114,7 @@ jobs:
       - name: Setup local cache directories
         run: |
           # 创建本地缓存目录
-          mkdir -p /opt/action-runner/cache/jdk /opt/action-runner/cache/maven
+          mkdir -p /opt/action-runner/cache/jdk /opt/action-runner/cache/maven /opt/action-runner/cache/nodemodules
           echo "📁 本地缓存目录已创建"
           ls -la /opt/action-runner/cache/
 
@@ -152,6 +152,25 @@ jobs:
           else
             echo "❌ Maven依赖缓存未命中，将在构建后保存"
             echo "MAVEN_CACHE_HIT=false" >> $GITHUB_ENV
+          fi
+
+      - name: Restore Node.js dependencies from local cache
+        run: |
+          echo "🔍 检查Node.js依赖本地缓存..."
+          NODEMODULES_CACHE_KEY="nodemodules-$(find miaocha-ui/frontend -name 'package.json' -o -name 'yarn.lock' -o -name 'package-lock.json' | xargs sha256sum | sha256sum | cut -d' ' -f1)"
+          NODEMODULES_CACHE_FILE="/opt/action-runner/cache/nodemodules/${NODEMODULES_CACHE_KEY}.tar.gz"
+          
+          echo "NODEMODULES_CACHE_KEY=$NODEMODULES_CACHE_KEY" >> $GITHUB_ENV
+          
+          if [ -f "$NODEMODULES_CACHE_FILE" ]; then
+            echo "✅ 发现Node.js依赖缓存: $NODEMODULES_CACHE_KEY"
+            cd miaocha-ui/frontend
+            tar -xzf "$NODEMODULES_CACHE_FILE"
+            echo "📦 Node.js依赖本地缓存已恢复"
+            echo "NODEMODULES_CACHE_HIT=true" >> $GITHUB_ENV
+          else
+            echo "❌ Node.js依赖缓存未命中，将在构建后保存"
+            echo "NODEMODULES_CACHE_HIT=false" >> $GITHUB_ENV
           fi
 
       - name: Verify Java and Maven
@@ -236,6 +255,18 @@ jobs:
             echo "✅ JDK本地缓存已保存: $JDK_CACHE_KEY"
           else
             echo "⚠️ JAVA_HOME未设置或不存在，跳过JDK缓存保存"
+          fi
+
+      - name: Save Node.js dependencies to local cache
+        if: env.NODEMODULES_CACHE_HIT == 'false' && always()
+        run: |
+          echo "💾 保存Node.js依赖到本地缓存..."
+          if [ -d "miaocha-ui/frontend/node_modules" ] && [ "$(ls -A miaocha-ui/frontend/node_modules 2>/dev/null)" ]; then
+            cd miaocha-ui/frontend
+            tar -czf "/opt/action-runner/cache/nodemodules/$NODEMODULES_CACHE_KEY.tar.gz" node_modules
+            echo "✅ Node.js依赖本地缓存已保存: $NODEMODULES_CACHE_KEY"
+          else
+            echo "⚠️ node_modules目录为空或不存在，跳过缓存保存"
           fi
 
       - name: Summary
