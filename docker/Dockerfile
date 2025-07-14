@@ -1,5 +1,8 @@
 FROM eclipse-temurin:17-jre-alpine
 
+# 配置 Alpine Linux 国内镜像源
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+
 # 添加必要的系统工具
 RUN apk add --no-cache bash curl procps tzdata && \
     cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \

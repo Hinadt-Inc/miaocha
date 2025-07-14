@@ -113,10 +113,10 @@ jobs:
           ARCH=$(uname -m)
           JDK_CACHE_KEY="jdk-17-temurin-${ARCH}"
           JDK_CACHE_PATH="/opt/action-runner/cache/jdk/${JDK_CACHE_KEY}"
-          
+
           echo "JDK_CACHE_KEY=$JDK_CACHE_KEY" >> $GITHUB_ENV
           echo "JDK_CACHE_PATH=$JDK_CACHE_PATH" >> $GITHUB_ENV
-          
+
           if [ -d "$JDK_CACHE_PATH" ] && [ "$(ls -A $JDK_CACHE_PATH 2>/dev/null)" ]; then
             echo "✅ 发现JDK缓存: $JDK_CACHE_KEY"
             echo "🔧 设置JDK环境变量..."
@@ -132,7 +132,7 @@ jobs:
         if: env.JDK_CACHE_HIT == 'false'
         uses: actions/setup-java@v4
         with:
-          java-version: '17' 
+          java-version: '17'
           distribution: 'temurin'
 
       - name: Set up Maven (if JDK cache miss)
@@ -184,9 +184,9 @@ jobs:
           echo "🔍 检查Maven依赖本地缓存..."
           MAVEN_DEPS_CACHE_KEY="maven-deps-$(find . -name 'pom.xml' -exec sha256sum {} \; | sha256sum | cut -d' ' -f1)"
           MAVEN_DEPS_CACHE_FILE="/opt/action-runner/cache/maven/${MAVEN_DEPS_CACHE_KEY}.tar.gz"
-          
+
           echo "MAVEN_DEPS_CACHE_KEY=$MAVEN_DEPS_CACHE_KEY" >> $GITHUB_ENV
-          
+
           if [ -f "$MAVEN_DEPS_CACHE_FILE" ]; then
             echo "✅ 发现Maven依赖缓存: $MAVEN_DEPS_CACHE_KEY"
             cd ~
@@ -203,9 +203,9 @@ jobs:
           echo "🔍 检查Node.js依赖本地缓存..."
           NODEMODULES_CACHE_KEY="nodemodules-$(find miaocha-ui/frontend -name 'package.json' -o -name 'yarn.lock' -o -name 'package-lock.json' | xargs sha256sum | sha256sum | cut -d' ' -f1)"
           NODEMODULES_CACHE_FILE="/opt/action-runner/cache/nodemodules/${NODEMODULES_CACHE_KEY}.tar.gz"
-          
+
           echo "NODEMODULES_CACHE_KEY=$NODEMODULES_CACHE_KEY" >> $GITHUB_ENV
-          
+
           if [ -f "$NODEMODULES_CACHE_FILE" ]; then
             echo "✅ 发现Node.js依赖缓存: $NODEMODULES_CACHE_KEY"
             cd miaocha-ui/frontend
@@ -259,22 +259,22 @@ jobs:
           echo "🐳 开始构建 Docker 镜像"
           echo "镜像名称: miaocha-pr-test"
           echo "镜像标签: ${{ steps.docker-tag.outputs.image_tag }}"
-          
+
           # 确保脚本可执行
           chmod +x scripts/build-start-docker.sh
-          
+
           # 使用脚本构建镜像（只构建，不运行）
           ./scripts/build-start-docker.sh -b -n miaocha-pr-test -v ${{ steps.docker-tag.outputs.image_tag }}
-          
+
           # 给镜像打上仓库标签
           docker tag miaocha-pr-test:${{ steps.docker-tag.outputs.image_tag }} ${{ steps.docker-tag.outputs.full_image }}
           docker tag miaocha-pr-test:${{ steps.docker-tag.outputs.image_tag }} ${{ steps.docker-tag.outputs.latest_image }}
-          
+
           # 推送镜像到仓库
           echo "📤 推送镜像到私有仓库..."
           docker push ${{ steps.docker-tag.outputs.full_image }}
           docker push ${{ steps.docker-tag.outputs.latest_image }}
-          
+
           echo "✅ 镜像推送完成!"
 
       - name: Save Maven dependencies to local cache
