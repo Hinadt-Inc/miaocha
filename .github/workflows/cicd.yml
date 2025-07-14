@@ -100,17 +100,6 @@ jobs:
         with:
           submodules: true
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17' 
-          distribution: 'temurin'
-
-      - name: Set up Maven
-        uses: stCarolas/setup-maven@v5
-        with:
-          maven-version: '3.9.6'
-
       - name: Setup local cache directories
         run: |
           # 创建本地缓存目录
@@ -125,33 +114,88 @@ jobs:
           JDK_CACHE_KEY="jdk-17-temurin-${ARCH}"
           JDK_CACHE_PATH="/opt/action-runner/cache/jdk/${JDK_CACHE_KEY}"
           
+          echo "JDK_CACHE_KEY=$JDK_CACHE_KEY" >> $GITHUB_ENV
+          echo "JDK_CACHE_PATH=$JDK_CACHE_PATH" >> $GITHUB_ENV
+          
           if [ -d "$JDK_CACHE_PATH" ] && [ "$(ls -A $JDK_CACHE_PATH 2>/dev/null)" ]; then
             echo "✅ 发现JDK缓存: $JDK_CACHE_KEY"
+            echo "🔧 设置JDK环境变量..."
+            echo "JAVA_HOME=$JDK_CACHE_PATH" >> $GITHUB_ENV
+            echo "$JDK_CACHE_PATH/bin" >> $GITHUB_PATH
             echo "JDK_CACHE_HIT=true" >> $GITHUB_ENV
           else
-            echo "❌ JDK缓存未命中，将在构建后保存"
+            echo "❌ JDK缓存未命中，需要安装"
             echo "JDK_CACHE_HIT=false" >> $GITHUB_ENV
-            echo "JDK_CACHE_KEY=$JDK_CACHE_KEY" >> $GITHUB_ENV
-            echo "JDK_CACHE_PATH=$JDK_CACHE_PATH" >> $GITHUB_ENV
+          fi
+
+      - name: Set up JDK 17 (if cache miss)
+        if: env.JDK_CACHE_HIT == 'false'
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17' 
+          distribution: 'temurin'
+
+      - name: Set up Maven (if JDK cache miss)
+        if: env.JDK_CACHE_HIT == 'false'
+        uses: stCarolas/setup-maven@v5
+        with:
+          maven-version: '3.9.6'
+
+      - name: Setup Maven from cache (if JDK cache hit)
+        if: env.JDK_CACHE_HIT == 'true'
+        run: |
+          echo "🔧 JDK从缓存恢复，检查Maven..."
+          if command -v mvn >/dev/null 2>&1; then
+            echo "✅ Maven已可用"
+          else
+            echo "⚠️ Maven不在PATH中，尝试从缓存的Maven二进制查找..."
+            # 尝试从Maven二进制缓存查找
+            MAVEN_BINARY_CACHE_PATH="/opt/action-runner/cache/maven-binary"
+            if [ -d "$MAVEN_BINARY_CACHE_PATH" ]; then
+              echo "✅ 发现Maven二进制缓存"
+              echo "M2_HOME=$MAVEN_BINARY_CACHE_PATH" >> $GITHUB_ENV
+              echo "$MAVEN_BINARY_CACHE_PATH/bin" >> $GITHUB_PATH
+            else
+              echo "❌ 没有缓存的Maven二进制，使用setup-maven action"
+              echo "NEED_MAVEN_INSTALL=true" >> $GITHUB_ENV
+            fi
+          fi
+
+      - name: Install Maven (if needed)
+        if: env.NEED_MAVEN_INSTALL == 'true'
+        uses: stCarolas/setup-maven@v5
+        with:
+          maven-version: '3.9.6'
+
+      - name: Save Maven binary to cache (if installed)
+        if: env.NEED_MAVEN_INSTALL == 'true' && always()
+        run: |
+          echo "💾 保存Maven二进制到本地缓存..."
+          if [ -n "$M2_HOME" ] && [ -d "$M2_HOME" ]; then
+            MAVEN_BINARY_CACHE_PATH="/opt/action-runner/cache/maven-binary"
+            cp -r "$M2_HOME" "$MAVEN_BINARY_CACHE_PATH"
+            echo "✅ Maven二进制本地缓存已保存"
+          else
+            echo "⚠️ M2_HOME未设置，跳过Maven二进制缓存保存"
           fi
 
       - name: Restore Maven dependencies from local cache
         run: |
           echo "🔍 检查Maven依赖本地缓存..."
-          MAVEN_CACHE_KEY="maven-deps-$(find . -name 'pom.xml' -exec sha256sum {} \; | sha256sum | cut -d' ' -f1)"
-          MAVEN_CACHE_FILE="/opt/action-runner/cache/maven/${MAVEN_CACHE_KEY}.tar.gz"
+          MAVEN_DEPS_CACHE_KEY="maven-deps-$(find . -name 'pom.xml' -exec sha256sum {} \; | sha256sum | cut -d' ' -f1)"
+          MAVEN_DEPS_CACHE_FILE="/opt/action-runner/cache/maven/${MAVEN_DEPS_CACHE_KEY}.tar.gz"
           
-          echo "MAVEN_CACHE_KEY=$MAVEN_CACHE_KEY" >> $GITHUB_ENV
+          echo "MAVEN_DEPS_CACHE_KEY=$MAVEN_DEPS_CACHE_KEY" >> $GITHUB_ENV
           
-          if [ -f "$MAVEN_CACHE_FILE" ]; then
-            echo "✅ 发现Maven依赖缓存: $MAVEN_CACHE_KEY"
+          if [ -f "$MAVEN_DEPS_CACHE_FILE" ]; then
+            echo "✅ 发现Maven依赖缓存: $MAVEN_DEPS_CACHE_KEY"
             cd ~
-            tar -xzf "$MAVEN_CACHE_FILE"
+            tar -xzf "$MAVEN_DEPS_CACHE_FILE"
             echo "📦 Maven依赖本地缓存已恢复"
-            echo "MAVEN_CACHE_HIT=true" >> $GITHUB_ENV
+            echo "MAVEN_DEPS_CACHE_HIT=true" >> $GITHUB_ENV
           else
             echo "❌ Maven依赖缓存未命中，将在构建后保存"
-            echo "MAVEN_CACHE_HIT=false" >> $GITHUB_ENV
+            echo "MAVEN_DEPS_CACHE_HIT=false" >> $GITHUB_ENV
           fi
 
       - name: Restore Node.js dependencies from local cache
@@ -234,13 +278,13 @@ jobs:
           echo "✅ 镜像推送完成!"
 
       - name: Save Maven dependencies to local cache
-        if: env.MAVEN_CACHE_HIT == 'false' && always()
+        if: env.MAVEN_DEPS_CACHE_HIT == 'false' && always()
         run: |
           echo "💾 保存Maven依赖到本地缓存..."
           if [ -d ~/.m2 ] && [ "$(ls -A ~/.m2 2>/dev/null)" ]; then
             cd ~
-            tar -czf "/opt/action-runner/cache/maven/$MAVEN_CACHE_KEY.tar.gz" .m2
-            echo "✅ Maven依赖本地缓存已保存: $MAVEN_CACHE_KEY"
+            tar -czf "/opt/action-runner/cache/maven/$MAVEN_DEPS_CACHE_KEY.tar.gz" .m2
+            echo "✅ Maven依赖本地缓存已保存: $MAVEN_DEPS_CACHE_KEY"
           else
             echo "⚠️ ~/.m2目录为空，跳过缓存保存"
           fi
