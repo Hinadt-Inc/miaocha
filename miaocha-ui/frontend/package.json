@@ -9,7 +9,7 @@
     "build:no-tsc": "vite build",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,css,less,json}\"",
-    "prepare": "cd ../../ && husky install",
+    "prepare": "husky install .husky || echo 'husky was failed, skiped'",
     "preview": "vite preview",
     "test": "vitest",
     "clean": "rm -rf node_modules yarn.lock pnpm-lock.yaml"

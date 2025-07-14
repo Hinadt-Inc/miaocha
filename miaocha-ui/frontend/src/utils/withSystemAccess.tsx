@@ -11,9 +11,7 @@ const withSystemAccess = <P extends object>(Component: React.ComponentType<P>): 
   };
 
   // 保留原始组件的显示名称
-  ComponentWithAccess.displayName = `withSystemAccess(${
-    Component.displayName || Component.name || 'Component'
-  })`;
+  ComponentWithAccess.displayName = `withSystemAccess(${Component.displayName || Component.name || 'Component'})`;
 
   return ComponentWithAccess;
 };

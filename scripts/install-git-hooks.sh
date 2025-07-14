@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Install Git pre-commit hooks for code formatting
+# Install Git pre-commit hooks for Java code formatting
 # This script should be run once after cloning the repository
 
 set -e
@@ -10,7 +10,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 echo "Installing Git pre-commit hooks..."
 
-# Create the pre-commit hook
+# Create the pre-commit hook for Java code
 cat > "$PROJECT_ROOT/.git/hooks/pre-commit" << 'EOF'
 #!/bin/bash
 
@@ -79,7 +79,7 @@ fi
 
 # Quick compilation check
 echo "Running quick compilation check..."
-mvn clean compile  -q -Pskip-ui
+mvn clean compile -q -Pskip-ui
 
 if [ $? -ne 0 ]; then
     echo "Error: Code compilation failed. Please fix the issues before committing."
@@ -92,12 +92,16 @@ EOF
 # Make the hook executable
 chmod +x "$PROJECT_ROOT/.git/hooks/pre-commit"
 
+# Configure git to use default hooks directory
+git config --unset core.hookspath || true
+echo "Configured git to use default .git/hooks directory"
+
 echo "Git pre-commit hook installed successfully!"
 echo ""
 echo "The hook will now automatically:"
 echo "  1. Update all submodules to their latest commits"
 echo "  2. Format Java code using Spotless"
-echo "  3. Re-stage formatted files"
-echo "  4. Run a quick compilation check"
+echo "  3. Run compilation check"
 echo ""
+echo "Note: This hook only handles Java code. Frontend code formatting is handled separately."
 echo "To bypass the hook (not recommended), use: git commit --no-verify"
