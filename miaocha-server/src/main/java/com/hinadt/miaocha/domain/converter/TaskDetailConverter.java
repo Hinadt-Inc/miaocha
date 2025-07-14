@@ -65,7 +65,7 @@ public class TaskDetailConverter {
 
         // 计算持续时间
         if (task.getStartTime() != null && task.getEndTime() != null) {
-            dto.setDuration(Duration.between(task.getStartTime(), task.getEndTime()).toMillis());
+            dto.setDuration(Duration.between(task.getStartTime(), task.getEndTime()).toSeconds());
         }
 
         return dto;
@@ -92,7 +92,7 @@ public class TaskDetailConverter {
 
         // 计算持续时间
         if (step.getStartTime() != null && step.getEndTime() != null) {
-            dto.setDuration(Duration.between(step.getStartTime(), step.getEndTime()).toMillis());
+            dto.setDuration(Duration.between(step.getStartTime(), step.getEndTime()).toSeconds());
         }
 
         return dto;
