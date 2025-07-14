@@ -112,50 +112,42 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "📦 项目版本: $VERSION"
 
-      - name: Generate Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: dockerhub.baofu.com/app/miaocha-pr-test
-          tags: |
-            type=raw,value=PR${{ github.event.pull_request.number }}-${{ steps.maven-version.outputs.version }}-{{date 'YYYYMMDDHHmmss'}}
-            type=raw,value=latest-pr${{ github.event.pull_request.number }}
+      - name: Generate Docker tag
+        id: docker-tag
+        run: |
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          IMAGE_TAG="PR${{ github.event.pull_request.number }}-${{ steps.maven-version.outputs.version }}-${TIMESTAMP}"
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "full_image=dockerhub.baofu.com/app/miaocha-pr-test:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "latest_image=dockerhub.baofu.com/app/miaocha-pr-test:latest-pr${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          echo "📦 镜像标签: ${IMAGE_TAG}"
 
       - name: Login to private Docker registry
-        uses: docker/login-action@v3
-        with:
-          registry: dockerhub.baofu.com
-          username: ${{ secrets.DOCKER_PUSH_USERNAME }}
-          password: ${{ secrets.DOCKER_PUSH_PASSWORD }}
+        run: |
+          echo "${{ secrets.DOCKER_PUSH_PASSWORD }}" | docker login dockerhub.baofu.com -u "${{ secrets.DOCKER_PUSH_USERNAME }}" --password-stdin
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Make build script executable
-        run: chmod +x scripts/build-start-docker.sh
-
-      - name: Build Docker image
+      - name: Build and push Docker image
         run: |
           echo "🐳 开始构建 Docker 镜像"
           echo "镜像名称: miaocha-pr-test"
-          echo "镜像标签: ${{ steps.meta.outputs.tags }}"
-
-          # 设置环境变量供脚本使用
-          export IMAGE_NAME="miaocha-pr-test"
-          export IMAGE_TAGS="${{ steps.meta.outputs.tags }}"
-
-          # 执行构建脚本
-          ./scripts/build-start-docker.sh
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          echo "镜像标签: ${{ steps.docker-tag.outputs.image_tag }}"
+          
+          # 确保脚本可执行
+          chmod +x scripts/build-start-docker.sh
+          
+          # 使用脚本构建镜像（只构建，不运行）
+          ./scripts/build-start-docker.sh -b -n miaocha-pr-test -v ${{ steps.docker-tag.outputs.image_tag }}
+          
+          # 给镜像打上仓库标签
+          docker tag miaocha-pr-test:${{ steps.docker-tag.outputs.image_tag }} ${{ steps.docker-tag.outputs.full_image }}
+          docker tag miaocha-pr-test:${{ steps.docker-tag.outputs.image_tag }} ${{ steps.docker-tag.outputs.latest_image }}
+          
+          # 推送镜像到仓库
+          echo "📤 推送镜像到私有仓库..."
+          docker push ${{ steps.docker-tag.outputs.full_image }}
+          docker push ${{ steps.docker-tag.outputs.latest_image }}
+          
+          echo "✅ 镜像推送完成!"
 
       - name: Summary
         run: |
@@ -164,10 +156,11 @@ jobs:
           echo "### 📦 镜像信息" >> $GITHUB_STEP_SUMMARY
           echo "- **仓库**: dockerhub.baofu.com/app/miaocha-pr-test" >> $GITHUB_STEP_SUMMARY
           echo "- **标签**: " >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.meta.outputs.tags }}" | sed 's/^/  - /' >> $GITHUB_STEP_SUMMARY
+          echo "  - ${{ steps.docker-tag.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "  - latest-pr${{ github.event.pull_request.number }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🎯 使用方法" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "docker pull dockerhub.baofu.com/app/miaocha-pr-test:latest-pr${{ github.event.pull_request.number }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ steps.docker-tag.outputs.latest_image }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
