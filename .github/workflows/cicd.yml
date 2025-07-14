@@ -102,8 +102,8 @@ jobs:
         with:
           path: ~/.m2
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
-                
+          restore-keys: ${{ runner.os }}-m2-arc
+
       - name: Extract Maven project version
         id: maven-version
         run: |
