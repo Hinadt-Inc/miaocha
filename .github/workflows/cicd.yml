@@ -101,16 +101,8 @@ jobs:
       - name: Extract Maven project version
         id: maven-version
         run: |
-          # 方法1：尝试使用 Maven
-          if command -v mvn &> /dev/null; then
-            echo "✅ 使用 Maven 获取版本"
-            mvn --version
-            VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout 2>/dev/null)
-          else
-            echo "⚠️ Maven 不可用，使用 XML 解析获取版本"
-            # 方法2：直接解析 pom.xml
-            VERSION=$(grep -m 1 '<version>' pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/' | tr -d ' \t\n')
-          fi
+
+          VERSION=$(grep -m 1 '<version>' pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/' | tr -d ' \t\n')
 
           if [ -z "$VERSION" ]; then
             echo "❌ 无法获取项目版本"
