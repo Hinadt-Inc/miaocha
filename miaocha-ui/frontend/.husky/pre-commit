@@ -1,4 +1,25 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-# npm test
+# 前端代码提交前检查
+echo "运行前端代码检查..."
+
+# 检查是否有 staged 的前端文件
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx|js|jsx|css|less|json)$' || true)
+
+if [ -n "$STAGED_FILES" ]; then
+    echo "发现前端代码变更，运行 ESLint 和 Prettier..."
+    
+    # 运行 ESLint
+    npm run lint
+    
+    # 运行 Prettier 格式化
+    npm run format
+    
+    # 重新添加格式化后的文件
+    echo "$STAGED_FILES" | xargs git add
+    
+    echo "前端代码检查完成"
+else
+    echo "没有前端代码变更，跳过检查"
+fi
