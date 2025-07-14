@@ -100,84 +100,25 @@ jobs:
         with:
           submodules: true
 
-      - name: Cache JDK
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ runner.tool_cache }}/Java_Temurin_jdk
-            ~/.cache/coursier
-            ~/.sdkman
-          key: ${{ runner.os }}-jdk-17-temurin-arc
-          restore-keys: |
-            ${{ runner.os }}-jdk-17-temurin-
-            ${{ runner.os }}-jdk-17-
-
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17' 
           distribution: 'temurin'
-          check-latest: false  # 不检查最新版本，加速setup
 
-      - name: Cache Maven dependencies
-        uses: actions/cache@v4
+      - name: Set up Maven
+        uses: stCarolas/setup-maven@v5
         with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-arc-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2-arc-
+          maven-version: '3.9.6'
 
-      - name: Verify and setup Maven environment
+      - name: Verify Java and Maven
         run: |
           echo "🔍 验证Java和Maven安装状态..."
           echo "Java版本:"
           java -version
           echo
-          echo "JAVA_HOME: $JAVA_HOME"
-          echo "PATH: $PATH"
-          echo
-          
-          # 检查Maven是否可用
-          if command -v mvn >/dev/null 2>&1; then
-            echo "✅ Maven已安装，版本信息:"
-            mvn -version
-          else
-            echo "❌ Maven未找到，尝试查找并设置..."
-            
-            # 在常见位置查找Maven
-            POSSIBLE_MAVEN_HOMES=(
-              "$JAVA_HOME/../maven"
-              "/opt/maven"
-              "/usr/share/maven"
-              "/usr/local/maven"
-              "/opt/hostedtoolcache/maven"
-              "/opt/hostedtoolcache/Maven"
-            )
-            
-            for maven_home in "${POSSIBLE_MAVEN_HOMES[@]}"; do
-              if [ -d "$maven_home" ] && [ -f "$maven_home/bin/mvn" ]; then
-                echo "📍 找到Maven: $maven_home"
-                echo "M2_HOME=$maven_home" >> $GITHUB_ENV
-                echo "$maven_home/bin" >> $GITHUB_PATH
-                echo "✅ Maven环境已设置"
-                export PATH="$maven_home/bin:$PATH"
-                mvn -version
-                break
-              fi
-            done
-            
-            # 如果还是找不到，尝试直接下载Maven
-            if ! command -v mvn >/dev/null 2>&1; then
-              echo "⬇️ 下载并安装Maven..."
-              wget -q https://archive.apache.org/dist/maven/maven-3/3.9.6/binaries/apache-maven-3.9.6-bin.tar.gz
-              tar -xzf apache-maven-3.9.6-bin.tar.gz
-              export M2_HOME=$PWD/apache-maven-3.9.6
-              export PATH=$M2_HOME/bin:$PATH
-              echo "M2_HOME=$M2_HOME" >> $GITHUB_ENV
-              echo "$M2_HOME/bin" >> $GITHUB_PATH
-              echo "✅ Maven手动安装完成"
-              mvn -version
-            fi
-          fi
+          echo "Maven版本:"
+          mvn -version
 
       - name: Extract Maven project version
         id: maven-version
