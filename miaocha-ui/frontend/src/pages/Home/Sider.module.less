@@ -1,0 +1,170 @@
+.layoutSider {
+  height: 100%;
+  overflow: auto;
+  padding: 0 10px;
+  
+  .virtualListContainer {
+    // 确保虚拟滚动容器的样式
+    .scrollableWrapper {
+      border-radius: 4px;
+      border: 1px solid #f0f0f0;
+      
+      // 优化滚动条样式
+      &::-webkit-scrollbar {
+        width: 6px;
+      }
+      
+      &::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+      }
+      
+      &::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+        
+        &:hover {
+          background: #a8a8a8;
+        }
+      }
+    }
+  }
+  
+  :global {
+    .ant-cascader {
+      width: 100%;
+    }
+    .ant-collapse-header {
+      padding: 8px 0 !important;
+    }
+    .ant-collapse-content-box {
+      padding: 0 !important;
+    }
+  }
+  .collapse {
+    .item {
+      cursor: pointer;
+      margin-bottom: 5px;
+      border-color: #0505050f !important;
+
+      :global {
+        .ant-collapse-expand-icon {
+          display: none;
+        }
+        .ant-collapse-header {
+          padding: 5px 7px !important;
+          .ant-tag {
+            padding: 0 4px;
+            font-weight: 700;
+          }
+        }
+        .ant-progress-bg-inner {
+          height: 13px !important;
+        }
+        .ant-progress {
+          line-height: normal;
+        }
+        .ant-progress-bg {
+          background: var(--primary-color);
+
+        }
+        .ant-progress-text {
+          font-size: 10px;
+        }
+        .ant-collapse-content {
+          padding: 10px !important;
+          cursor: default !important;
+          border-color: #0505050f !important;
+        }
+        .ant-collapse-header-text{
+          width: 100%;
+        }
+      }
+      .bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        overflow: hidden;
+        width: 100%;
+        &:hover {
+          transition: all 0.3s ease-in-out;
+          border-color: var(--primary-color) !important;
+          .footBtn {
+            display: block;
+          }
+        }
+        .columnName {
+          flex: 1;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          margin: 0 8px;
+          min-width: 0;
+        }
+        .footBtn {
+          display: none;
+          font-size: 12px;
+          height: auto;
+          padding: 0;
+          flex-shrink: 0;
+        }
+      }
+      .record {
+        font-size: 13px;
+        :global {
+          .ant-typography {
+            font-size: 12px;
+          }
+        }
+        .header {
+          line-height: normal;
+          margin-bottom: 8px;
+        }
+        .ul {
+         .li {
+          &:not(:first-child) {
+            margin-top: 14px;
+          }
+          .one {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 12px;
+            .left {
+              flex: 1;
+              :global {
+                .ant-typography {
+                  margin-bottom: 0;
+                }
+              }
+              
+            }
+            .right {
+              display: flex;
+              :global {
+                .ant-btn {
+                  padding: 0;
+                  height: auto;
+                }
+                .iconfont {
+                  font-size: 14px;
+                }
+              }
+            }
+          }
+          .two {
+            line-height: normal;
+          }
+         }
+        }
+
+      }
+    }
+  }
+  
+}
+:global {
+  .ant-tooltip-inner {
+    font-size: 13px;
+  }
+}

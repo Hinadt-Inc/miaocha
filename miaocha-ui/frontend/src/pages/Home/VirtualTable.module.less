@@ -1,0 +1,86 @@
+.virtualLayout {
+  width: 100%;
+  height: 100%;
+  :global {
+    .ant-table-cell {
+      word-break: break-all;
+      font-size: 12px;
+      font-family: "Lucida Console", Monaco, monospace;
+    }
+    .ant-table-row {
+      max-height: 155px;
+      overflow: hidden;
+    }
+  }
+  .resizeHandle {
+    position: absolute;
+    top: 0;
+    right: -2px;
+    width: 4px;
+    height: 100%;
+    cursor: col-resize;
+    background-color: transparent;
+    transition: all 0.3s;
+    z-index: 1;
+
+    &:hover {
+      background-color: rgba(24, 144, 255, 0.1);
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 1px;
+      height: 20px;
+      background-color: #e8e8e8;
+      transform: translate(-50%, -50%);
+      transition: background-color 0.3s;
+    }
+
+    &:hover::after {
+      background-color: #1890ff;
+    }
+  }
+  .source {
+    display: inline-block;
+    margin: 0;
+    padding: 0;
+    line-height: 2;
+    word-break: break-all;
+    :global {
+      dt {
+        display: inline;
+        background-color: rgba(0, 46, 63, 0.1);
+        color: #000;
+        padding: 1px 5px;
+        margin-right: 5px;
+        word-break: normal;
+        border-radius: 2px;
+      }
+      dd {
+        display: inline;
+        margin: 0 5px 0 0;
+        color: #2d2d2d;
+      }
+    }
+    .highlight {
+      background-color: #ffff00;
+      padding: 0 2px;
+      border-radius: 2px;
+    }
+  }
+  .headerActions {
+    margin-left: 8px;
+    display: flex;
+    align-items: center;
+    :global {
+      .ant-btn {
+        font-size: 10px;
+        padding: 0 1px;
+        height: 20px;
+      }
+    }
+  }
+}

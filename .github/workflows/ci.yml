@@ -5,12 +5,45 @@ on:
     branches: [ dev ]
 
 jobs:
+  # 检查是否应该跳过 CI
+  check-skip-ci:
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.skip-check.outputs.should_skip }}
+    steps:
+      - name: Check if CI should be skipped
+        id: skip-check
+        run: |
+          if echo '${{ toJson(github.event.pull_request.labels.*.name) }}' | grep -q '"no ci"'; then
+            echo "should_skip=true" >> $GITHUB_OUTPUT
+            echo "🚫 CI 被跳过：发现 'no ci' 标签"
+          else
+            echo "should_skip=false" >> $GITHUB_OUTPUT
+            echo "✅ CI 将正常执行"
+          fi
+
+  # 跳过 CI 的说明 job
+  skip-ci-info:
+    runs-on: ubuntu-latest
+    needs: check-skip-ci
+    if: ${{ needs.check-skip-ci.outputs.should_skip == 'true' }}
+    steps:
+      - name: CI Skipped
+        run: |
+          echo "🚫 CI 构建已跳过"
+          echo "原因：PR 包含 'no ci' 标签"
+          echo "如需重新运行 CI，请移除该标签"
+
   pr-ci:
     runs-on: ubuntu-latest
+    needs: check-skip-ci
     # 添加并发控制，同一PR的新提交会取消之前的运行
     concurrency:
       group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
       cancel-in-progress: true
+    
+    # 如果PR包含 "no ci" label，则跳过整个工作流
+    if: ${{ needs.check-skip-ci.outputs.should_skip == 'false' }}
 
     steps:
       - uses: actions/checkout@v4

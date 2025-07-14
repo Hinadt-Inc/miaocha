@@ -1,0 +1,16 @@
+export default {
+  singleQuote: true,
+  arrowParens: 'always',
+  parser: 'typescript',
+  useTabs: false,
+  bracketSpacing: true,
+  endOfLine: 'auto',
+  semi: true,
+  tabWidth: 2,
+  printWidth: 120,
+  trailingComma: 'all',
+  bracketSameLine: false,
+  jsxSingleQuote: false,
+  quoteProps: 'as-needed',
+  htmlWhitespaceSensitivity: 'css',
+};

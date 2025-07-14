@@ -1,0 +1,59 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# React 项目开发规范（.cursor/react.mdc）
+
+## 目录结构
+- 组件、页面、hooks、utils、store、api、types 等分目录管理，保持结构清晰。
+- 页面相关文件统一放在 `src/pages` 下，组件放在 `src/components` 下，样式文件与组件同名同目录。
+
+## 代码风格
+- 使用 TypeScript，类型定义完整，避免使用 `any`，如需使用需加注释说明。
+- 组件、函数、变量命名采用小驼峰（camelCase），类型、接口采用大驼峰（PascalCase）。
+- 组件文件以 `.tsx` 结尾，工具函数以 `.ts` 结尾。
+- 每个 React 组件使用函数式组件（Function Component），优先使用 hooks。
+- 组件 props、state、函数参数、返回值必须声明类型。
+- 组件 props 用接口 `IProps` 或更具体命名，放在文件顶部。
+
+## 代码格式化
+- 统一使用 Prettier 自动格式化，配置见 `.prettierrc.js`。
+  - 单引号 `'
+  - 2 空格缩进
+  - 120 字符换行
+  - 结尾加分号
+  - 箭头函数参数总是加括号
+  - 对象属性间有空格
+  - jsx 属性用双引号
+- 所有代码提交前需通过 Prettier 格式化。
+
+## 代码质量
+- 统一使用 ESLint 进行代码检查，配置见 `eslint.config.js`。
+  - 禁止未使用变量（允许下划线开头变量）
+  - 禁止显式 any（警告）
+  - 禁止未显式返回类型（关闭）
+  - 禁止非空断言（警告）
+  - React 相关规则按推荐配置
+- 代码提交前需通过 ESLint 检查。
+
+## 样式规范
+- 使用 less 作为样式预处理器，样式文件与组件同名同目录。
+- 类名采用小驼峰或短横线分隔，避免全局污染。
+- 组件样式优先使用 CSS Modules。
+
+## 依赖管理
+- 统一使用 pnpm 安装依赖。
+- 只安装实际需要的依赖，避免冗余。
+- 依赖升级需测试兼容性。
+
+## 业务开发
+- 业务逻辑与 UI 组件解耦，复杂逻辑抽离到 hooks 或 utils。
+- 网络请求统一封装在 `src/api`，使用 axios。
+- 状态管理优先使用 react hooks，复杂场景可用 redux/toolkit。
+- 常量、枚举、类型定义统一放在 `src/types` 或 `src/constants`。
+
+## 其他
+- 组件/页面需有必要的注释，复杂逻辑需详细说明。
+- 禁止在主分支直接开发，需使用 feature 分支。
+
