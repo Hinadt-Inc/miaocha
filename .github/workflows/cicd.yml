@@ -250,36 +250,8 @@ jobs:
           echo "latest_image=dockerhub.baofu.com/app/2024091900000066/miaocha-test-pr:latest-pr${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
           echo "📦 镜像标签: ${IMAGE_TAG}"
 
-      - name: Test Docker registry connectivity
-        run: |
-          # 测试到 Docker 仓库的连接
-          export NO_PROXY="dockerhub.baofu.com,localhost,127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
-          echo "🔍 测试 Docker 仓库连接..."
-          echo "标准连接测试:"
-          curl -I https://dockerhub.baofu.com/v2/ || echo "标准连接失败"
-          echo "跳过SSL验证测试:"
-          curl -k -I https://dockerhub.baofu.com/v2/ || echo "SSL跳过连接完成"
-
-      - name: Configure Docker for insecure registry
-        run: |
-          echo "🔧 配置 Docker insecure-registries..."
-          
-          # 配置 Docker daemon.json
-          sudo mkdir -p /etc/docker
-          sudo tee /etc/docker/daemon.json > /dev/null <<EOF
-          {
-            "insecure-registries": ["dockerhub.baofu.com"]
-          }
-          EOF
-          
-          # 重启 Docker 服务
-          sudo systemctl restart docker
-          echo "✅ Docker 配置完成"
-
       - name: Login to private Docker registry
         run: |
-          # 配置 Docker 客户端不对目标仓库使用代理
-          export NO_PROXY="dockerhub.baofu.com,localhost,127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
           echo "${{ secrets.DOCKER_PUSH_PASSWORD }}" | docker login dockerhub.baofu.com -u "${{ secrets.DOCKER_PUSH_USERNAME }}" --password-stdin
 
       - name: Build and push Docker image
