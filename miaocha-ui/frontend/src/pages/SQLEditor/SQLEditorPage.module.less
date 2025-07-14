@@ -1,0 +1,805 @@
+/* SQLEditorPage.module.less - CSS模块化版本 */
+
+/* 关键帧动画定义 */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes slideIn {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.editorHeaderContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  
+  .loadingIndicator {
+    display: flex;
+    align-items: center;
+    color: #1890ff;
+    
+    .loadingText {
+      margin-left: 4px;
+    }
+  }
+}
+
+/* SQL编辑器容器 */
+.sqlEditorContainer {
+  height: 100%;
+  min-height: calc(100vh - 150px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  
+  &.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1000;
+    background-color: #fff;
+    padding: 16px;
+  }
+}
+
+/* Splitter 根容器样式 */
+:global(.ant-splitter) {
+  height: 100%;
+  
+  :global(.ant-splitter-panel) {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  :global(.ant-splitter-bar) {
+    background: #f0f0f0;
+    border-radius: 2px;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      background: #d9d9d9;
+    }
+    
+    &:active {
+      background: #bfbfbf;
+    }
+  }
+  
+  /* 水平分割线样式 */
+  &:global(.ant-splitter-horizontal) :global(.ant-splitter-bar) {
+    cursor: col-resize;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 2px;
+      height: 20px;
+      background: #bfbfbf;
+      border-radius: 1px;
+    }
+  }
+}
+
+/* SQL编辑器头部 */
+.sqlEditorHeader {
+  display: flex;
+  justify-content: end;
+  align-items: center;
+  
+  .sqlEditorActions {
+    display: flex;
+    align-items: center;
+  }
+  
+  .sqlEditorTitle {
+    h4 {
+      margin-bottom: 0;
+    }
+  }
+}
+
+/* SQL编辑器内容区域 */
+.sqlEditorContent {
+  flex: 1;
+  overflow: hidden;
+  
+  .editorResultsContainer {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* 修复flex容器中子元素溢出问题 */
+  }
+  
+  :global(.ant-card-body) {
+    padding: 10px;
+  }
+}
+
+/* 主布局样式 - 匹配HomePage */
+.layoutContent {
+  background: #F6F8F9 !important;
+  height: 100%;
+  min-height: calc(100vh - 180px);
+  
+  &.fullscreen {
+    height: calc(100vh - 100px);
+  }
+}
+
+/* 侧边栏容器样式 - 匹配HomePage */
+.siderContainer {
+  height: 100%;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  
+  :global(.ant-layout-sider-children) {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    flex: 1;
+  }
+  
+  .sqlEditorSidebar {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    
+    .sidebarContent {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+  }
+}
+
+/* Splitter 面板样式 */
+.databaseSchemaPanel {
+  height: 100%;
+  
+  .siderContainer {
+    height: 100%;
+    margin-right: 0;
+    border: 1px solid #f0f0f0;
+    
+    /* 为数据库结构面板添加标题栏 */
+    .sidebarHeader {
+      padding: 12px 16px;
+      border-bottom: 1px solid #f0f0f0;
+      background: #fafafa;
+      font-weight: 500;
+      font-size: 14px;
+      color: #262626;
+    }
+  }
+}
+
+.mainEditorPanel {
+  height: 100%;
+  margin-left: 10px;
+  
+  .layoutInner {
+    height: 100%;
+    background: transparent;
+  }
+  
+  .contentContainer {
+    height: 100%;
+    
+    /* 确保垂直 Splitter 占满高度 */
+    > :global(.ant-splitter) {
+      height: 100%;
+    }
+  }
+}
+
+:global(.ant-layout) {
+  background-color: #F6F8F9 !important;
+  height: 100vh;
+  
+  &.layoutInner {
+    background: transparent !important;
+    height: 100%;
+  }
+}
+
+/* 内容容器样式 - 匹配HomePage */
+.contentContainer {
+  padding: 0;
+  position: relative;
+  flex: 1;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  height: 100%; /* 改为100%，让它充分利用父容器高度 */
+  overflow: hidden; /* 添加overflow hidden确保内容不会溢出 */
+  
+  /* 嵌套 Splitter 样式 */
+  :global(.ant-splitter) {
+    &:global(.ant-splitter-vertical) {
+      :global(.ant-splitter-bar) {
+        cursor: row-resize;
+        height: 8px; /* 增加分割条高度，更容易操作 */
+        background: #f0f0f0;
+        border-radius: 4px;
+        margin: 4px 0; /* 增加上下边距 */
+        position: relative;
+        transition: all 0.2s ease;
+        
+        &:hover {
+          background: #d9d9d9;
+          height: 10px; /* 悬停时稍微增加高度 */
+          margin: 3px 0;
+        }
+        
+        &:active {
+          background: #1890ff;
+        }
+        
+        &::after {
+          content: '';
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: 24px; /* 增加宽度 */
+          height: 3px; /* 增加高度 */
+          background: #bfbfbf;
+          border-radius: 2px;
+          transition: all 0.2s ease;
+        }
+        
+        &:hover::after {
+          background: #1890ff;
+          width: 30px;
+        }
+      }
+    }
+  }
+  
+  .queryPanelContainer {
+    display: flex;
+    flex-direction: column;
+    min-height: 200px;
+    max-height: 60%; /* 限制查询面板最大高度，给结果面板更多空间 */
+    overflow: hidden; /* 防止溢出 */
+    
+    /* 查询面板包装器样式 */
+    .queryPanelWrapper {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    :global(.ant-card) {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      flex: 1; /* 占据剩余空间 */
+      min-height: 0; /* 允许收缩 */
+      
+      :global(.ant-card-body) {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0; /* 重要：允许收缩 */
+      }
+    }
+  }
+  
+  .resultsPanelContainer {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 400px; /* 增加结果面板最小高度 */
+    
+    .resultsCard {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      
+      :global(.ant-card-body) {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        padding: 16px;
+        overflow: hidden;
+        
+        .resultsViewerContainer {
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          
+          .tableWrapper {
+            flex: 1;
+            overflow: auto;
+            
+            &.centeredContent {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/* 结果容器 */
+.resultsContainer {
+  flex: 1;
+  overflow: auto;
+  padding: 0;
+}
+
+/* 查询编辑器卡片 */
+.queryEditorCard {
+  :global(.ant-card-head) {
+    min-height: 48px;
+    padding: 0 12px;
+    
+    :global(.ant-card-head-title) {
+      padding: 8px 0;
+    }
+  }
+}
+
+/* 编辑器卡片 */
+.editorCard {
+  height: 100%; /* 确保卡片占满容器高度 */
+  display: flex;
+  flex-direction: column;
+
+  :global(.ant-card-head) {
+    flex-shrink: 0; /* 头部不收缩 */
+  }
+
+  :global(.ant-card-body) {
+    padding: 10px;
+    flex: 1; /* 内容区域占据剩余空间 */
+    min-height: 0; /* 允许收缩 */
+    overflow: hidden; /* 防止溢出 */
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+/* 表格头部样式 - 匹配HomePage */
+.tableHeader {
+  padding: 8px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+  
+  .resultsTabs {
+    flex: 1;
+  }
+  
+  .viewControls {
+    display: flex;
+    align-items: center;
+  }
+}
+
+/* 查询结果表格 */
+.queryResultsTable {
+  :global(.ant-table-thead > tr > th) {
+    background: #f5f7fa;
+    font-weight: 600;
+    transition: background-color 0.3s;
+    padding: 12px 16px;
+    
+    &:hover {
+      background-color: #e6f7ff !important;
+    }
+  }
+  
+  :global(.ant-table-tbody > tr) {
+    transition: all 0.3s ease;
+    
+    &:hover {
+      background-color: #f0f7ff;
+    }
+    
+    :global(td) {
+      padding: 12px 16px;
+      transition: background-color 0.3s;
+    }
+  }
+}
+
+/* 抽屉样式 */
+.historyDrawer,
+.settingsDrawer {
+  :global(.ant-drawer-body) {
+    padding: 16px;
+  }
+  
+  .drawerTitle {
+    margin-bottom: 16px;
+  }
+  
+  .historyList {
+    .historyItem {
+      margin-bottom: 16px;
+      padding: 12px;
+      border-radius: 4px;
+      border: 1px solid #f0f0f0;
+      transition: all 0.3s ease;
+      
+      &:hover {
+        border-color: #1890ff;
+        box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
+      }
+      
+      .historyItemHeader {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      
+      .historyItemSql {
+        background: #f5f5f5;
+        padding: 8px;
+        border-radius: 4px;
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        font-size: 12px;
+        overflow: auto;
+        max-height: 100px;
+      }
+      
+      .historyItemActions {
+        margin-top: 8px;
+        display: flex;
+        justify-content: flex-end;
+      }
+      
+      &.statusSuccess {
+        border-left: 4px solid #52c41a;
+      }
+      
+      &.statusError {
+        border-left: 4px solid #f5222d;
+      }
+    }
+  }
+}
+
+/* 可视化面板 */
+.visualizationPanel {
+  margin-top: 16px;
+  padding: 24px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(104, 89, 89, 0.06);
+  overflow: hidden;
+  min-height: 500px;
+  
+  .chartControls {
+    padding: 16px;
+    margin-bottom: 16px;
+    background-color: #fafafa;
+    border-radius: 6px;
+    overflow: visible;
+    
+    :global(.ant-form) {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      
+      :global(.ant-form-item) {
+        margin: 0;
+        flex-shrink: 0;
+        
+        :global(.ant-form-item-label) {
+          white-space: nowrap;
+        }
+        
+        :global(.ant-select) {
+          min-width: 160px;
+          height: 32px;
+        }
+      }
+    }
+  }
+  
+  .chartContainer {
+    position: relative;
+    min-height: 400px;
+    border-radius: 6px;
+    background: #fff;
+    
+    :global(.echarts-for-react) {
+      :global(.echarts-container) {
+        :global(canvas) {
+          border-radius: 6px;
+        }
+      }
+    }
+  }
+  
+  .visualizationToolbar {
+    margin-bottom: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    
+    .toolbarGroup {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  }
+}
+
+/* 查询编辑器 */
+.queryEditor {
+  height: 100%;
+  
+  :global(.monaco-editor) {
+    :global(.margin),
+    :global(.monaco-editor-background) {
+      background-color: #fafafa;
+    }
+  }
+}
+
+/* 响应式布局 */
+@media (max-width: 992px) {
+  .sqlEditorHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    
+    .sqlEditorActions {
+      margin-top: 8px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+  }
+  
+  .visualizationToolbar {
+    flex-direction: column;
+    
+    .toolbarGroup {
+      width: 100%;
+    }
+  }
+  
+  /* 中等屏幕下的 Splitter 调整 */
+  .databaseSchemaPanel {
+    min-width: 150px !important;
+  }
+}
+
+/* 平板和小屏幕设备 */
+@media (max-width: 768px) {
+  .layoutContent {
+    height: auto;
+    flex-direction: column;
+  }
+  
+  /* 小屏幕下隐藏数据库结构面板，可以通过按钮切换 */
+  :global(.ant-splitter) {
+    flex-direction: column;
+    
+    .databaseSchemaPanel {
+      min-height: 200px;
+      max-height: 40vh;
+    }
+    
+    .mainEditorPanel {
+      margin-left: 0;
+      margin-top: 10px;
+    }
+    
+    :global(.ant-splitter-bar) {
+      cursor: row-resize;
+      
+      &::after {
+        width: 20px;
+        height: 2px;
+      }
+    }
+  }
+  
+  .editorResultsContainer {
+    flex-direction: column;
+  }
+  
+  .queryEditor {
+    height: 200px;
+  }
+  
+  .resultsContainer {
+    max-height: 400px;
+  }
+}
+
+/* 移动设备 */
+@media (max-width: 576px) {
+  .sqlEditorHeader .sqlEditorActions :global(.ant-space) {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    
+    :global(.ant-space-item) {
+      margin-right: 0 !important;
+      margin-bottom: 8px;
+      width: 100%;
+      
+      :global(.ant-select),
+      :global(.ant-btn) {
+        width: 100%;
+      }
+    }
+  }
+  
+  .tableHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    
+    .resultsTabs {
+      width: 100%;
+      margin-bottom: 8px;
+    }
+    
+    :global(.ant-btn) {
+      width: 100%;
+    }
+  }
+  
+  .visualizationPanel .visualizationToolbar {
+    gap: 8px;
+    
+    :global(.ant-select) {
+      width: 100%;
+    }
+  }
+  
+  .queryEditor {
+    height: 150px;
+  }
+  
+  .resultsContainer {
+    max-height: 300px;
+  }
+}
+
+/* SQL编辑器侧边栏样式 */
+.sqlEditorSidebar {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  
+  .sidebarHeader {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid #f0f0f0;
+    
+    .sidebarTitle {
+      margin-left: 8px;
+      font-weight: 500;
+    }
+  }
+  
+  .sidebarContent {
+    flex: 1;
+    overflow: hidden;
+  }
+}
+
+/* 片段选择器样式 */
+.snippetDescription {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-top: 2px;
+}
+
+/* ResultsViewer 组件样式 */
+.resultsViewerContainer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  
+  .tableWrapper {
+    flex: 1;
+    overflow: auto;
+    
+    &.centeredContent {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+}
+
+.executionInfo {
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 8px;
+  
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+/* 表格拖拽调整列宽样式 */
+:global(.column-resizer) {
+  position: absolute;
+  top: 0;
+  right: -5px;
+  width: 10px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 1;
+  
+  &:hover {
+    background: rgba(24, 144, 255, 0.2);
+  }
+  
+  &.dragging {
+    background: rgba(24, 144, 255, 0.5);
+  }
+}
+
+:global(.dragging) {
+  background: rgba(24, 144, 255, 0.1);
+}
+
+/* 可调整大小的表格样式 */
+.resizableTable {
+  :global(.ant-table-thead > tr > th) {
+    position: relative;
+    background: #f5f7fa;
+    font-weight: 600;
+    transition: background-color 0.3s;
+    padding: 12px 16px;
+    
+    &:hover {
+      background-color: #e6f7ff !important;
+    }
+  }
+  
+  :global(.ant-table-tbody > tr) {
+    transition: all 0.3s ease;
+    
+    &:hover {
+      background-color: #f0f7ff;
+    }
+    
+    :global(td) {
+      padding: 12px 16px;
+      transition: background-color 0.3s;
+    }
+  }
+}

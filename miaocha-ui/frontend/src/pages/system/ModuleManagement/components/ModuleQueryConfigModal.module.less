@@ -1,0 +1,37 @@
+.container {
+  padding: 16px 0;
+}
+
+.keywordFieldRow {
+  display: flex;
+  width: 100%;
+  margin-bottom: 8px;
+  align-items: flex-start;
+  
+  .fieldNameInput {
+    flex: 2;
+    margin-right: 8px;
+    margin-bottom: 0;
+    min-width: 0; // 防止flex收缩问题
+  }
+  
+  .searchMethodSelect {
+    flex: 1;
+    margin-right: 8px;
+    margin-bottom: 0;
+    min-width: 0; // 防止flex收缩问题
+  }
+  
+  .removeButton {
+    color: #ff4d4f;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px;
+    margin-top: 4px; // 由于没有Space的baseline对齐，手动调整位置
+    flex-shrink: 0; // 防止按钮被压缩
+    
+    &:hover {
+      color: #ff7875;
+    }
+  }
+}

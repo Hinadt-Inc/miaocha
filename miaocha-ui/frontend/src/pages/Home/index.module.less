@@ -1,0 +1,32 @@
+.layout {
+  background-color: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100vh;
+  .container {
+    position: relative;
+    display: flex;
+    height: 100%;
+    flex-direction: row;
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    .left {
+      position: relative;
+      height: 100%;
+    }
+    .right {
+      padding: 0 10px;
+      flex: 1;
+      height: 100%;
+    }
+  }
+  :global {
+    .ant-splitter >.ant-splitter-bar .ant-splitter-bar-collapse-bar {
+      opacity: 0.4;
+    }
+  }
+}
+
+

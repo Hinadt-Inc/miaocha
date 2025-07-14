@@ -1,0 +1,21 @@
+declare const styles: {
+  readonly container: string;
+  readonly header: string;
+  readonly searchInput: string;
+  readonly antTable: string;
+  readonly tableActionButtons: string;
+  readonly actionButton: string;
+  readonly sqlModalTitle: string;
+  readonly templateButton: string;
+  readonly sqlContainer: string;
+  readonly sqlPre: string;
+  readonly warningText: string;
+  readonly queryConfigContainer: string;
+  readonly timeFieldSection: string;
+  readonly keywordFieldsSection: string;
+  readonly keywordFieldsList: string;
+  readonly keywordFieldItem: string;
+  readonly searchMethodLabel: string;
+  readonly noConfigText: string;
+};
+export = styles;

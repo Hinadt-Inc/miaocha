@@ -1,0 +1,57 @@
+.virtualListContainer {
+  // 确保容器形成新的层叠上下文
+  isolation: isolate;
+  height: 100%;
+  overflow: visible; // 改为visible，让外层容器处理滚动
+  position: relative;
+}
+
+.virtualListSpacer {
+  position: relative;
+  /* height will be set via style attribute for dynamic content */
+}
+
+.virtualListVisible {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* transform will be set via style attribute for dynamic positioning */
+}
+
+.virtualTable {
+  // 防止表格单元格内容溢出
+  table-layout: fixed;
+  width: 100%;
+
+  td, th {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* 自定义滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.virtualListError {
+  color: red;
+  padding: 16px;
+  text-align: center;
+}

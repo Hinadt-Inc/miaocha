@@ -1,0 +1,49 @@
+/* 查询配置详情样式 */
+.queryConfigContainer {
+  line-height: 1.6;
+}
+
+.configRow {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+  
+  &.fieldsRow {
+    align-items: flex-start;
+  }
+}
+
+.configLabel {
+  font-weight: 500;
+  color: #333;
+  margin-right: 8px;
+  min-width: 120px;
+  flex-shrink: 0;
+}
+
+.keywordFieldsInline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.fieldTag {
+  display: inline-flex;
+  align-items: center;
+}
+
+.searchMethod {
+  margin-left: 4px;
+  color: #666;
+  font-size: 12px;
+}
+
+.noConfigText {
+  color: #999;
+  font-style: italic;
+}

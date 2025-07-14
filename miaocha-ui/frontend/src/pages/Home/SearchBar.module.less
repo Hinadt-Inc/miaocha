@@ -1,0 +1,97 @@
+.searchBar {
+  padding: 0 10px;
+  .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 4px;
+    .left {
+      font-size: 12px;
+      :global {
+        .ant-statistic-content {
+          font-size: 14px;
+          color: #000;
+          font-weight: 600;
+        }
+      }
+
+    }
+    .right {
+      :global {
+        .ant-btn {
+          font-size: 13px;
+        }
+      }
+      // .moveTime {
+      //   padding: 0 ;
+      //   position: relative;
+      //   top: 2px;
+      //   left: 2px;
+      //   &:last-child {
+      //     left: -2px;
+      //   }
+      // }
+    }
+  }
+  .form {
+    display: flex;
+    align-items: center;
+    margin-top: 2px;
+    gap: 8px;
+    .item {
+      min-width: 150px;
+      &:first-child {
+        flex: 1;
+      }
+      &:nth-child(2) {
+        flex: 1;
+      }
+    
+      &:last-child {
+        min-width:0;
+        :global {
+         .ant-btn {
+            font-size: 13px;
+            height: 30px;
+            padding: 0 12px;
+          }
+        }
+      }
+    }
+  }
+  .footer {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 4px;
+    padding-bottom: 8px;
+    .filter {
+      display: flex;
+      flex-wrap: wrap;
+      :global {
+        .ant-space {
+          column-gap: 0;
+          row-gap: 2px;
+        }
+        .ant-tag {
+          // line-height: 18px;
+          padding: 0 6px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+        .tagContent {
+            max-width: 300px;
+            display: inline-block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+        }
+        .ant-tag-close-icon {
+          margin-left: 4px;
+        }
+
+      }
+    }
+  }
+}
