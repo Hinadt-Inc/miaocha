@@ -255,19 +255,17 @@ fi
 success "Docker镜像构建完成!"
 echo "镜像名称: $IMAGE_NAME:$VERSION"
 
-# 设置环境变量（与配置文件一致，允许环境变量文件覆盖）
-DB_HOST="${DB_HOST:-mysql}"                    # 对应配置文件中的 ${DB_HOST:mysql}
-DB_PORT="${DB_PORT:-3306}"                     # 对应配置文件中的 ${DB_PORT:3306}
-DB_NAME="${DB_NAME:-log_manage_system}"        # 对应配置文件中的 ${DB_NAME:log_manage_system}
-DB_USER="${DB_USER:-root}"                     # 对应配置文件中的 ${DB_USER:root}
-DB_PASSWORD="${DB_PASSWORD:-password}"         # 对应配置文件中的 ${DB_PASSWORD:password}
-ENABLE_API_DOCS="${ENABLE_API_DOCS:-false}"    # 对应配置文件中的 ${ENABLE_API_DOCS:false} (生产环境默认关闭)
-ENABLE_SWAGGER_UI="${ENABLE_SWAGGER_UI:-false}"  # 对应配置文件中的 ${ENABLE_SWAGGER_UI:false} (生产环境默认关闭)
-JWT_SECRET="${JWT_SECRET:-8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92}"  # 对应配置文件中的默认值
-LOGSTASH_PATH="${LOGSTASH_PATH:-/opt/logstash/logstash-9.0.0-linux-x86_64.tar.gz}"
-LOG_PATH="${LOG_PATH:-/app/logs}"
-LOGSTASH_DEPLOY_PATH="${LOGSTASH_DEPLOY_PATH:-/opt/logstash}"
-LOGSTASH_PACKAGE_PATH="${LOGSTASH_PACKAGE_PATH:-/opt/logstash/logstash-9.0.0-linux-x86_64.tar.gz}"
+# 设置环境变量（与配置文件对齐）
+DB_HOST="${DB_HOST:-mysql}"                    # 对应 ${DB_HOST:mysql}
+DB_PORT="${DB_PORT:-3306}"                     # 对应 ${DB_PORT:3306}
+DB_NAME="${DB_NAME:-log_manage_system}"        # 对应 ${DB_NAME:log_manage_system}
+DB_USER="${DB_USER:-root}"                     # 对应 ${DB_USER:root}
+DB_PASSWORD="${DB_PASSWORD:-password}"         # 对应 ${DB_PASSWORD:password}
+ENABLE_API_DOCS="${ENABLE_API_DOCS:-false}"    # 对应 ${ENABLE_API_DOCS:false}
+ENABLE_SWAGGER_UI="${ENABLE_SWAGGER_UI:-false}"  # 对应 ${ENABLE_SWAGGER_UI:false}
+JWT_SECRET="${JWT_SECRET:-8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92}"  # 对应 ${JWT_SECRET:...}
+LOGSTASH_PACKAGE_PATH="${LOGSTASH_PACKAGE_PATH:-/opt/logstash/logstash-9.0.0-linux-x86_64.tar.gz}"  # 对应 ${LOGSTASH_PACKAGE_PATH}
+LOGSTASH_DEPLOY_DIR="${LOGSTASH_DEPLOY_DIR:-/opt/logstash}"  # 对应 ${LOGSTASH_DEPLOY_DIR:/opt/logstash}
 SPRING_PROFILES_ACTIVE="${SPRING_PROFILES_ACTIVE:-prod}"
 
 # 容器名称
@@ -286,9 +284,6 @@ run_container() {
   # 运行新容器
   if ! docker run -d -p 8080:8080 --name $CONTAINER_NAME \
     -e "SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}" \
-    -e "SPRING_DATASOURCE_URL=jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai" \
-    -e "SPRING_DATASOURCE_USERNAME=${DB_USER}" \
-    -e "SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}" \
     -e "DB_HOST=${DB_HOST}" \
     -e "DB_PORT=${DB_PORT}" \
     -e "DB_NAME=${DB_NAME}" \
@@ -297,12 +292,11 @@ run_container() {
     -e "ENABLE_API_DOCS=${ENABLE_API_DOCS}" \
     -e "ENABLE_SWAGGER_UI=${ENABLE_SWAGGER_UI}" \
     -e "JWT_SECRET=${JWT_SECRET}" \
-    -e "LOG_PATH=${LOG_PATH}" \
-    -e "JAVA_OPTS=-Xms1g -Xmx2g" \
     -e "LOGSTASH_PACKAGE_PATH=${LOGSTASH_PACKAGE_PATH}" \
-    -e "LOGSTASH_DEPLOY_PATH=${LOGSTASH_DEPLOY_PATH}" \
-    -v "${LOGSTASH_PATH}:${LOGSTASH_PACKAGE_PATH}" \
-    -v "$PROJECT_ROOT/logs:${LOG_PATH}" \
+    -e "LOGSTASH_DEPLOY_DIR=${LOGSTASH_DEPLOY_DIR}" \
+    -e "JAVA_OPTS=-Xms1g -Xmx2g" \
+    -v "${LOGSTASH_PACKAGE_PATH}:${LOGSTASH_PACKAGE_PATH}" \
+    -v "$PROJECT_ROOT/logs:/app/logs" \
     "$IMAGE_NAME:$VERSION"; then
     error "容器启动失败"
     exit 1
@@ -332,9 +326,6 @@ else
   echo "docker rm $CONTAINER_NAME --force"
   echo "docker run -d -p 8080:8080 --name $CONTAINER_NAME \\"
   echo "  -e \"SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}\" \\"
-  echo "  -e \"SPRING_DATASOURCE_URL=jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai\" \\"
-  echo "  -e \"SPRING_DATASOURCE_USERNAME=${DB_USER}\" \\"
-  echo "  -e \"SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}\" \\"
   echo "  -e \"DB_HOST=${DB_HOST}\" \\"
   echo "  -e \"DB_PORT=${DB_PORT}\" \\"
   echo "  -e \"DB_NAME=${DB_NAME}\" \\"
@@ -343,12 +334,11 @@ else
   echo "  -e \"ENABLE_API_DOCS=${ENABLE_API_DOCS}\" \\"
   echo "  -e \"ENABLE_SWAGGER_UI=${ENABLE_SWAGGER_UI}\" \\"
   echo "  -e \"JWT_SECRET=${JWT_SECRET}\" \\"
-  echo "  -e \"LOG_PATH=${LOG_PATH}\" \\"
-  echo "  -e \"JAVA_OPTS=-Xms1g -Xmx2g\" \\"
   echo "  -e \"LOGSTASH_PACKAGE_PATH=${LOGSTASH_PACKAGE_PATH}\" \\"
-  echo "  -e \"LOGSTASH_DEPLOY_PATH=${LOGSTASH_DEPLOY_PATH}\" \\"
-  echo "  -v \"${LOGSTASH_PATH}:${LOGSTASH_PACKAGE_PATH}\" \\"
-  echo "  -v \"$PROJECT_ROOT/logs:${LOG_PATH}\" \\"
+  echo "  -e \"LOGSTASH_DEPLOY_DIR=${LOGSTASH_DEPLOY_DIR}\" \\"
+  echo "  -e \"JAVA_OPTS=-Xms1g -Xmx2g\" \\"
+  echo "  -v \"${LOGSTASH_PACKAGE_PATH}:${LOGSTASH_PACKAGE_PATH}\" \\"
+  echo "  -v \"$PROJECT_ROOT/logs:/app/logs\" \\"
   echo "  $IMAGE_NAME:$VERSION"
   echo
 
