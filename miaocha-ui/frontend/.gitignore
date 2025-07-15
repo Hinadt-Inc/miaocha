@@ -55,6 +55,12 @@ coverage
 .nyc_output
 __snapshots__
 
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
 # 其他
 .thumbs
 Thumbs.db

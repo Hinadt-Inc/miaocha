@@ -18,6 +18,7 @@ import { useLogstashData, useTableConfig, useLogstashActions, useMachineActions 
 import { scaleProcess } from '@/api/logstash';
 import type { LogstashTaskSummary } from '@/types/logstashTypes';
 import styles from './LogstashManagement.module.less';
+import Loading from '@/components/Loading';
 
 const LogstashManagementPage = () => {
   const { data, loading, fetchData, handleReload, messageApi, contextHolder } = useLogstashData();
@@ -107,23 +108,41 @@ const LogstashManagementPage = () => {
       </div>
 
       <div className={styles.antTable}>
-        <Table
-          columns={columns}
-          dataSource={data}
-          size="small"
-          rowKey="id"
-          loading={loading}
-          bordered
-          scroll={{ x: 'max-content' }}
-          pagination={{
-            ...pagination,
-            total: data.length,
-          }}
-          onChange={handleTableChange}
-          expandable={{
-            expandedRowRender: renderExpandedRow,
-          }}
-        />
+        <div style={{ position: 'relative' }}>
+          <Table
+            columns={columns}
+            dataSource={data}
+            size="small"
+            rowKey="id"
+            bordered
+            scroll={{ x: 'max-content' }}
+            pagination={{
+              ...pagination,
+              total: data.length,
+            }}
+            onChange={handleTableChange}
+            expandable={{
+              expandedRowRender: renderExpandedRow,
+            }}
+          />
+          {loading && (
+            <Loading
+              fullScreen={false}
+              size="large"
+              tip="加载Logstash数据..."
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 10,
+                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                backdropFilter: 'blur(2px)',
+              }}
+            />
+          )}
+        </div>
       </div>
 
       {/* 编辑模态框 */}

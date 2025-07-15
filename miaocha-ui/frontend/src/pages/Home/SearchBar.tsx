@@ -1,3 +1,4 @@
+// @ts-ignore
 import { useState, useMemo, useEffect, Suspense, lazy, forwardRef, useImperativeHandle, useRef } from 'react';
 import { AutoComplete, Button, Space, Tag, Popover, Statistic, Tooltip } from 'antd';
 import CountUp from 'react-countup';
@@ -18,9 +19,11 @@ interface IProps {
   getDistributionWithSearchBar?: () => void; // 获取字段分布回调函数
   sortConfig?: any[]; // 排序配置
   commonColumns?: string[]; // 普通字段列表（不含有.的字段）
+  loading?: boolean; // 加载状态
 }
 
-const SearchBar = forwardRef((props: IProps, ref) => {
+const SearchBar = forwardRef((props: IProps, ref: any) => {
+  const { loading = false } = props;
   const searchBarRef = useRef<HTMLDivElement>(null);
   const {
     searchParams,
@@ -100,10 +103,10 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   useImperativeHandle(ref, () => ({
     // 渲染sql
     addSql: (sql: string) => {
-      setSqls((prev) => [...prev, sql]);
+      setSqls((prev: any) => [...prev, sql]);
     },
     removeSql: (sql: string) => {
-      setSqls((prev) => prev.filter((item) => item !== sql));
+      setSqls((prev: any[]) => prev.filter((item: string) => item !== sql));
     },
     // 渲染时间
     setTimeOption,
@@ -173,7 +176,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     setKeyword(item);
     clearKeywordFromLocalStorage(item);
     // 从keywords数组中移除该项
-    setKeywords((prev) => prev.filter((keyword) => keyword !== item));
+    setKeywords((prev: any[]) => prev.filter((keyword: string) => keyword !== item));
   };
 
   // 处理点击sql逻辑
@@ -181,26 +184,26 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     setSql(item);
     clearSqlFromLocalStorage(item);
     // 从sqls数组中移除该项
-    setSqls((prev) => prev.filter((sql) => sql !== item));
+    setSqls((prev: any[]) => prev.filter((sql: string) => sql !== item));
     // 从sider中移除该项
     setWhereSqlsFromSider((prev: any) => prev.filter((sub: any) => sub.label !== item));
   };
 
   // 处理删除关键词
   const handleCloseKeyword = (item: string) => {
-    setKeywords((prev) => prev.filter((keyword) => keyword !== item));
+    setKeywords((prev: any[]) => prev.filter((keyword: string) => keyword !== item));
     clearKeywordFromLocalStorage(item);
     const latestTime = getLatestTime(timeOption);
-    setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
+    setTimeOption((prev: any) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
   };
 
   // 处理删除SQL
   const handleCloseSql = (item: string) => {
-    setSqls((prev) => prev.filter((sub) => sub !== item));
+    setSqls((prev: any[]) => prev.filter((sub: string) => sub !== item));
     clearSqlFromLocalStorage(item);
     setWhereSqlsFromSider((prev: any) => prev.filter((sub: any) => sub.label !== item));
     const latestTime = getLatestTime(timeOption);
-    setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
+    setTimeOption((prev: any) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
   };
 
   // 显示关键词、sql、时间的标签
@@ -313,7 +316,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
       }
       // 添加到关键词列表
       if (!keywords.includes(keywordTrim)) {
-        setKeywords((prev) => [...prev, keywordTrim]);
+        setKeywords((prev: any) => [...prev, keywordTrim]);
       }
     }
 
@@ -325,7 +328,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
         localStorage.setItem('sqlHistory', JSON.stringify(newHistory));
       }
       if (!sqls.includes(sqlTrim)) {
-        setSqls((prev) => [...prev, sqlTrim]);
+        setSqls((prev: any) => [...prev, sqlTrim]);
       }
     }
 
@@ -334,7 +337,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
     setSql('');
 
     const latestTime = getLatestTime(timeOption);
-    setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
+    setTimeOption((prev: any) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
   };
 
   // 左侧渲染内容
@@ -344,7 +347,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
         找到
         <Statistic
           value={totalCount}
-          formatter={(value) => <CountUp end={Number(value)} duration={1} separator="," />}
+          formatter={(value: any) => <CountUp end={Number(value)} duration={1} separator="," />}
         />
         条记录
       </Space>
@@ -469,7 +472,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
   const changeTimeGroup = (text: string) => {
     const latestTime = getLatestTime(timeOption);
     setTimeGroup(text);
-    setTimeOption((prev) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
+    setTimeOption((prev: any) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
     setOpenTimeGroup(false);
   };
 
@@ -513,7 +516,7 @@ const SearchBar = forwardRef((props: IProps, ref) => {
         <div className={styles.item}>{keywordRender}</div>
         <div className={styles.item}>{sqlRender}</div>
         <div className={styles.item}>
-          <Button size="small" type="primary" onClick={handleSubmit}>
+          <Button size="small" type="primary" onClick={handleSubmit} loading={loading}>
             搜索
           </Button>
         </div>

@@ -15,6 +15,7 @@ const ExpandedRow = (props: IProps) => {
   const columns = [
     {
       title: '字段',
+      className: 'field-title',
       dataIndex: 'field',
       width: 150,
     },

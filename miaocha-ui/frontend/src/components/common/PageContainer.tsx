@@ -11,7 +11,13 @@ interface PageContainerProps {
   style?: React.CSSProperties;
 }
 
-const PageContainer: React.FC<PageContainerProps> = ({ title, children, extra, className = '', style = {} }) => {
+const PageContainer: React.FC<PageContainerProps> = ({
+  title,
+  children,
+  extra,
+  className = '',
+  style = {},
+}) => {
   const { isDarkMode } = useTheme();
 
   return (

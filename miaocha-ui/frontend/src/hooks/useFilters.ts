@@ -6,7 +6,7 @@ import { getOperatorsByFieldType } from '../utils/logDataHelpers';
 export const useFilters = (): UseFiltersReturn => {
   const [filters, setFilters] = useState<Filter[]>([
     { id: 'default-source', field: 'source', operator: 'is', value: 'nginx', color: 'blue' },
-    { id: 'default-status', field: 'status', operator: 'is', value: '200', color: 'green' },
+    { id: 'default-status', field: 'status', operator: 'is', value: '200', color: 'green' }
   ]);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedFilterField, setSelectedFilterField] = useState<string>('');
@@ -28,15 +28,15 @@ export const useFilters = (): UseFiltersReturn => {
   };
 
   // 添加过滤器
-  const addFilter = (values: {
-    field: string;
-    operator: FilterOperator;
-    value: string | string[] | [number, number] | null;
+  const addFilter = (values: { 
+    field: string; 
+    operator: FilterOperator; 
+    value: string | string[] | [number, number] | null 
   }) => {
     const { field, operator, value } = values;
     const colors = ['blue', 'green', 'orange', 'red', 'purple', 'cyan', 'magenta', 'gold', 'lime', 'geekblue'];
     const color = colors[Math.floor(Math.random() * colors.length)];
-
+    
     const newFilter: Filter = {
       id: `filter-${Date.now()}`,
       field,
@@ -44,15 +44,15 @@ export const useFilters = (): UseFiltersReturn => {
       value,
       color,
     };
-
-    setFilters((prev) => [...prev, newFilter]);
+    
+    setFilters(prev => [...prev, newFilter]);
     setShowFilterModal(false);
     message.success(`已添加过滤器: ${field}`);
   };
 
   // 删除过滤器
   const removeFilter = (filterId: string) => {
-    setFilters(filters.filter((f) => f.id !== filterId));
+    setFilters(filters.filter(f => f.id !== filterId));
   };
 
   return {
@@ -64,6 +64,6 @@ export const useFilters = (): UseFiltersReturn => {
     openFilterModal,
     handleFilterFieldChange,
     addFilter,
-    removeFilter,
+    removeFilter
   };
 };

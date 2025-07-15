@@ -1,11 +1,19 @@
-import React, { memo, useState, useEffect, useRef } from 'react';
-import { Table, Spin, Empty, Alert, Typography, Button } from 'antd';
+import React, { memo, useState, useEffect, useRef, useCallback } from 'react';
+import { Table, Spin, Empty, Alert, Typography, Button, Tooltip, message } from 'antd';
 import { QueryResult } from '../types';
 import ResizeObserver from 'rc-resize-observer';
 import dayjs from 'dayjs';
 import styles from '../SQLEditorPage.module.less';
+import Loading from '@/components/Loading';
 
 const { Text } = Typography;
+
+// 选中单元格的接口
+interface SelectedCell {
+  rowIndex: number;
+  columnKey: string;
+  value: any;
+}
 
 interface ResultsViewerProps {
   queryResults: QueryResult | null;
@@ -17,7 +25,8 @@ interface ResultsViewerProps {
 // 常量
 const TABLE_HEIGHT = '100%'; // 表格高度
 const PAGE_SIZE_OPTIONS = ['10', '20', '50', '100'];
-const MIN_COLUMN_WIDTH = 100; // 最小列宽  // 可调整宽度的表头组件
+const MIN_COLUMN_WIDTH = 80; // 最小列宽
+const MAX_COLUMN_WIDTH = 300; // 最大列宽，保证表格整齐紧凑  // 可调整宽度的表头组件
 interface ResizableTitleProps extends React.HTMLAttributes<HTMLElement> {
   onResize: (width: number) => void;
   width?: number;
@@ -121,7 +130,8 @@ const formatLogTime = (value: any): React.ReactNode => {
     }
 
     if (date.isValid()) {
-      return date.format('YYYY-MM-DD HH:mm:ss');
+      // 要求到毫秒级
+      return date.format('YYYY-MM-DD HH:mm:ss.SSS');
     }
   } catch (error) {
     console.warn('Failed to format log_time:', value, error);
@@ -132,31 +142,9 @@ const formatLogTime = (value: any): React.ReactNode => {
 };
 
 // 估算列宽的实用函数
-const estimateColumnWidth = (col: string, rows: any[], maxWidth: number = 400): number => {
-  // 根据列名类型调整最大宽度和初始值
-  const lowerCol = col.toLowerCase();
-  const isMessageColumn = lowerCol.includes('message') || lowerCol === 'msg';
-  const isPathColumn = lowerCol.includes('path') || lowerCol.includes('url') || lowerCol.includes('file');
-  const isTimestampColumn = lowerCol.includes('time') || lowerCol.includes('date');
-  const isIdColumn = lowerCol === 'id' || lowerCol.endsWith('_id');
-  const isStatusColumn = lowerCol.includes('status') || lowerCol.includes('state');
-  const isMarkerColumn = lowerCol === 'marker' || lowerCol.includes('marker');
-
-  // 为不同类型的列提供不同的默认宽度
+const estimateColumnWidth = (col: string, rows: any[], maxWidth: number = MAX_COLUMN_WIDTH): number => {
+  // 统一使用最大宽度限制，保证表格整齐
   let columnMaxWidth = maxWidth;
-  if (isMessageColumn) {
-    columnMaxWidth = 800; // message列宽度更大
-  } else if (isPathColumn) {
-    columnMaxWidth = 600; // path列也需要更大宽度
-  } else if (isTimestampColumn) {
-    columnMaxWidth = 180; // 时间列适中宽度
-  } else if (isIdColumn) {
-    columnMaxWidth = 120; // ID列通常较窄
-  } else if (isStatusColumn) {
-    columnMaxWidth = 100; // 状态列通常较窄
-  } else if (isMarkerColumn) {
-    columnMaxWidth = 600; // marker列适中宽度
-  }
 
   // 列名长度本身也是重要参考
   let estimatedWidth = Math.max(col.length * 12, MIN_COLUMN_WIDTH);
@@ -179,42 +167,21 @@ const estimateColumnWidth = (col: string, rows: any[], maxWidth: number = 400): 
       // 布尔值固定宽度
       valueWidth = 60;
     } else if (typeof value === 'string') {
-      // 字符串根据长度和类型估算
+      // 字符串根据长度估算，但都限制在最大宽度内
       const strValue = String(value);
 
-      // 对不同类型的字符串进行不同处理
       if (/^\d{4}-\d{2}-\d{2}/.test(strValue)) {
         // 日期类型
         valueWidth = 150;
       } else if (/^\d{2}:\d{2}:\d{2}/.test(strValue)) {
         // 时间类型
         valueWidth = 100;
-      } else if (isMessageColumn) {
-        // message列特殊处理，给予足够的空间但仍限制上限
-        // 每个字符估计8个像素，计算预估宽度
-        const baseWidth = Math.min(strValue.length * 8, columnMaxWidth);
-
-        // 针对较长的消息提供足够的最小宽度
-        if (strValue.length > 50) {
-          valueWidth = Math.max(baseWidth, 300);
-        } else {
-          valueWidth = baseWidth;
-        }
-      } else if (isMarkerColumn) {
-        // marker列特殊处理，通常内容较短但需要足够显示空间
-        const baseWidth = Math.min(strValue.length * 9, columnMaxWidth);
-        valueWidth = Math.max(baseWidth, 100);
-      } else if (isPathColumn) {
-        // path列特殊处理，给予足够空间显示完整路径
-        // 路径通常有特殊字符和斜杠，需要更多空间
-        const baseWidth = Math.min(strValue.length * 7, columnMaxWidth);
-        valueWidth = Math.max(baseWidth, 200);
       } else if (strValue.length <= 10) {
-        // 短字符串固定宽度
+        // 短字符串
         valueWidth = strValue.length * 10 + 20;
       } else {
-        // 普通字符串，按平均字符宽度计算
-        valueWidth = Math.min(strValue.length * 8, 300);
+        // 普通字符串，按平均字符宽度计算，但限制最大宽度
+        valueWidth = Math.min(strValue.length * 8, columnMaxWidth);
       }
     } else {
       // 对象或其他复杂类型
@@ -230,7 +197,7 @@ const estimateColumnWidth = (col: string, rows: any[], maxWidth: number = 400): 
   // 增加一些边距
   estimatedWidth += 24;
 
-  // 确保列宽在合理范围内
+  // 确保列宽在合理范围内，统一限制最大宽度
   return Math.min(Math.max(estimatedWidth, MIN_COLUMN_WIDTH), columnMaxWidth);
 };
 
@@ -239,23 +206,59 @@ const estimateColumnWidth = (col: string, rows: any[], maxWidth: number = 400): 
  * 以表格形式展示 SQL 查询结果
  */
 const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, formatTableCell }) => {
-  // 添加详细调试日志
-  console.log('ResultsViewer render:', {
-    queryResults,
-    loading,
-    hasQueryResults: !!queryResults,
-    queryResultsType: typeof queryResults,
-    status: queryResults?.status,
-    hasRows: queryResults?.rows?.length,
-    hasColumns: queryResults?.columns?.length,
-    rowsType: typeof queryResults?.rows,
-    columnsType: typeof queryResults?.columns,
-  });
-
   // 组件状态
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [draggingColumn, setDraggingColumn] = useState<string | null>(null);
+  const [selectedCell, setSelectedCell] = useState<SelectedCell | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // 复制选中单元格内容到剪贴板
+  const copySelectedCell = useCallback(async () => {
+    if (!selectedCell) return;
+
+    try {
+      const textValue = String(selectedCell.value || '');
+      await navigator.clipboard.writeText(textValue);
+      message.success('已复制到剪贴板');
+    } catch (error) {
+      console.error('复制失败:', error);
+      message.error('复制失败');
+    }
+  }, [selectedCell]);
+
+  // 键盘事件监听
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // 检查是否按下了 Ctrl+C (或在 Mac 上是 Cmd+C)
+      if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
+        if (selectedCell) {
+          event.preventDefault();
+          copySelectedCell();
+        }
+      }
+      // ESC 键取消选中
+      else if (event.key === 'Escape') {
+        setSelectedCell(null);
+      }
+    };
+
+    // 添加键盘事件监听
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedCell, copySelectedCell]);
+
+  // 处理单元格点击
+  const handleCellClick = useCallback((record: any, rowIndex: number, columnKey: string) => {
+    const value = record[columnKey];
+    setSelectedCell({
+      rowIndex,
+      columnKey,
+      value,
+    });
+  }, []);
 
   // 当查询结果变化时重新计算列宽
   useEffect(() => {
@@ -291,23 +294,8 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
   const handleDoubleClickHeader = (columnKey: string) => {
     if (!queryResults?.rows?.length) return;
 
-    // 检查是否是特殊列
-    const lowerKey = columnKey.toLowerCase();
-    const isMessageColumn = lowerKey.includes('message') || lowerKey === 'msg';
-    const isPathColumn = lowerKey.includes('path') || lowerKey.includes('url') || lowerKey.includes('file');
-    const isMarkerColumn = lowerKey === 'marker' || lowerKey.includes('marker');
-
-    // 重新计算该列的最佳宽度，对于特殊列使用更大的最大宽度
-    let maxWidth = 500;
-    if (isMessageColumn) {
-      maxWidth = 800;
-    } else if (isPathColumn) {
-      maxWidth = 600;
-    } else if (isMarkerColumn) {
-      maxWidth = 200;
-    }
-
-    const optimalWidth = estimateColumnWidth(columnKey, queryResults.rows, maxWidth);
+    // 重新计算该列的最佳宽度，统一使用最大宽度限制
+    const optimalWidth = estimateColumnWidth(columnKey, queryResults.rows, MAX_COLUMN_WIDTH);
 
     // 更新列宽
     setColumnWidths((prev) => ({
@@ -326,7 +314,6 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
     );
 
   if (!queryResults) {
-    console.log('No queryResults - showing empty state');
     return (
       <div className={styles.resultsViewerContainer}>
         <div className={`${styles.tableWrapper} ${styles.centeredContent}`}>
@@ -391,68 +378,90 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
     );
   }
 
+  // 重置所有列宽的函数
+  const resetColumnWidths = () => {
+    if (!queryResults?.rows?.length || !columnList?.length) return;
+
+    const widths: Record<string, number> = {};
+    columnList.forEach((col) => {
+      if (queryResults.rows) {
+        widths[col] = estimateColumnWidth(col, queryResults.rows, MAX_COLUMN_WIDTH);
+      }
+    });
+
+    setColumnWidths(widths);
+  };
+
+  // 创建列配置的辅助函数
+  const createHeaderCellConfig = (col: string, defaultWidth: number) => {
+    const handleResize = (width: number) => {
+      const newWidth = Math.min(Math.max(width, MIN_COLUMN_WIDTH), MAX_COLUMN_WIDTH);
+      setColumnWidths((prev) => ({ ...prev, [col]: newWidth }));
+    };
+
+    return {
+      width: defaultWidth,
+      onResize: handleResize,
+      columnKey: col,
+    };
+  };
+
   const columns = columnList.map((col) => {
     // 检查是否为特殊类型的列
     const lowerCol = col.toLowerCase();
-    const isMessageColumn = lowerCol.includes('message') || lowerCol === 'msg';
-    const isPathColumn = lowerCol.includes('path') || lowerCol.includes('url') || lowerCol.includes('file');
     const isTimeColumn = lowerCol === 'log_time' || lowerCol.includes('timestamp');
-    const isMarkerColumn = lowerCol === 'marker' || lowerCol.includes('marker');
-    const shouldNotEllipsis = isMessageColumn || isPathColumn || isMarkerColumn;
 
-    // 计算默认宽度
-    let defaultWidth = 150;
-    if (isMessageColumn) {
-      defaultWidth = 400;
-    } else if (isPathColumn) {
-      defaultWidth = 300;
-    } else if (isTimeColumn) {
-      defaultWidth = 180;
-    } else if (isMarkerColumn) {
-      defaultWidth = 150;
-    }
-
-    // 计算CSS类名
-    let cellClassName = '';
-    if (isMessageColumn) {
-      cellClassName = 'message-column';
-    } else if (isPathColumn) {
-      cellClassName = 'path-column';
-    } else if (isTimeColumn) {
-      cellClassName = 'time-column';
-    } else if (isMarkerColumn) {
-      cellClassName = 'marker-column';
-    }
+    // 统一使用最大宽度限制，保证表格整齐
+    const defaultWidth = Math.min(columnWidths[col] || 150, MAX_COLUMN_WIDTH);
 
     return {
       title: col,
       dataIndex: col,
       key: col,
-      width: columnWidths[col] || defaultWidth,
-      render: (value: any) => {
+      width: defaultWidth,
+      render: (value: any, record: any, index: number) => {
+        // 检查当前单元格是否被选中
+        const isSelected = selectedCell && selectedCell.rowIndex === index && selectedCell.columnKey === col;
+
         // 对 log_time 列进行特殊时间格式化处理
+        let displayValue;
         if (isTimeColumn && (col.toLowerCase() === 'log_time' || col.toLowerCase().includes('timestamp'))) {
-          return formatLogTime(value);
+          displayValue = formatLogTime(value);
+        } else {
+          displayValue = formatTableCell(value);
         }
-        return formatTableCell(value);
+
+        const cellClassName = `table-cell ${isSelected ? 'selected-cell' : ''}`;
+        const stringValue = String(value || '');
+
+        // 渲染单元格内容
+        const cellContent = (
+          <button
+            type="button"
+            className={cellClassName}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCellClick(record, index, col);
+            }}
+            aria-label={`选择单元格: ${col}, 值: ${stringValue}`}
+            title={stringValue}
+          >
+            {stringValue.length <= 100 ? (
+              displayValue
+            ) : (
+              <Tooltip title={stringValue} placement="topLeft">
+                <span>{displayValue}</span>
+              </Tooltip>
+            )}
+          </button>
+        );
+
+        return cellContent;
       },
-      // 对于特殊类型的列，禁用文本省略
-      ellipsis: !shouldNotEllipsis,
+      // 禁用ellipsis，因为我们使用自定义渲染
+      ellipsis: false,
       sorter: (a: Record<string, unknown>, b: Record<string, unknown>) => compareValues(a[col], b[col]),
-      onHeaderCell: () => ({
-        width: columnWidths[col] || defaultWidth,
-        onResize: (width: number) => {
-          setColumnWidths((prev) => ({
-            ...prev,
-            [col]: Math.max(width, MIN_COLUMN_WIDTH),
-          }));
-        },
-        columnKey: col, // 用于识别列
-      }),
-      // 为特殊类型的列添加特殊样式
-      onCell: () => ({
-        className: cellClassName,
-      }),
+      onHeaderCell: () => createHeaderCellConfig(col, defaultWidth),
     };
   });
 
@@ -463,26 +472,19 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
         {queryResults.executionTimeMs && (
           <Text type="secondary">
             查询执行时间: {queryResults.executionTimeMs}ms | 返回行数: {queryResults.rows.length}
+            {selectedCell && ` | 已选中: ${selectedCell.columnKey}`}
           </Text>
         )}
-        <Button
-          type="link"
-          size="small"
-          onClick={() => {
-            if (!queryResults?.rows?.length || !columnList?.length) return;
-
-            const widths: Record<string, number> = {};
-            columnList.forEach((col) => {
-              if (queryResults.rows) {
-                widths[col] = estimateColumnWidth(col, queryResults.rows);
-              }
-            });
-
-            setColumnWidths(widths);
-          }}
-        >
-          重置所有列宽
-        </Button>
+        <div className={styles.toolbarActions}>
+          {selectedCell && (
+            <Text type="secondary" className={styles.copyHint}>
+              按 Ctrl+C 复制选中内容
+            </Text>
+          )}
+          <Button type="link" size="small" onClick={resetColumnWidths}>
+            重置所有列宽
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -492,50 +494,55 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
       {executionInfo}
       <ResizeObserver>
         <div className={styles.tableWrapper}>
-          <Table
-            dataSource={queryResults.rows.map((row, index) => ({ ...row, key: index }))}
-            columns={columns}
-            scroll={{ x: 'max-content', y: TABLE_HEIGHT }}
-            size="small"
-            bordered={false}
-            pagination={{
-              showSizeChanger: true,
-              showQuickJumper: true,
-              pageSizeOptions: PAGE_SIZE_OPTIONS,
-              showTotal: (total) => `共 ${total} 条记录`,
-            }}
-            className={styles.resizableTable}
-            components={{
-              header: {
-                cell: ResizableTitle,
-              },
-            }}
-            onHeaderRow={(columns) => ({
-              onMouseEnter: () => {
-                // 鼠标悬停在列头上时的效果
-                const columnKey = columns[0]?.key;
-                if (columnKey) {
-                  document.querySelector(`th[data-column-key="${columnKey}"]`)?.classList.add('hover');
-                }
-              },
-              onMouseLeave: () => {
-                // 鼠标离开列头时的效果
-                const columnKey = columns[0]?.key;
-                if (columnKey) {
-                  document.querySelector(`th[data-column-key="${columnKey}"]`)?.classList.remove('hover');
-                }
-              },
-              onDoubleClick: () => {
-                // 双击时自动调整列宽
-                const columnKey = columns[0]?.key;
-                if (columnKey) {
-                  handleDoubleClickHeader(columnKey as string);
-                }
-              },
-              'data-column-key': columns[0]?.key,
-              title: '双击自动调整列宽',
-            })}
-          />
+          <div className={styles.tableContainer}>
+            <Table
+              dataSource={queryResults.rows.map((row, index) => ({ ...row, key: index }))}
+              columns={columns}
+              scroll={{ x: 'max-content', y: TABLE_HEIGHT }}
+              size="small" // 使用小尺寸，更紧凑
+              bordered={true}
+              pagination={{
+                showSizeChanger: true,
+                showQuickJumper: true,
+                pageSizeOptions: PAGE_SIZE_OPTIONS,
+                showTotal: (total) => `共 ${total} 条记录`,
+                size: 'small', // 分页器也使用小尺寸
+              }}
+              className={`${styles.resizableTable} compact-table`}
+              components={{
+                header: {
+                  cell: ResizableTitle,
+                },
+              }}
+              // 设置表格行高更紧凑
+              rowClassName={() => 'compact-row'}
+              onHeaderRow={(columns) => ({
+                onMouseEnter: () => {
+                  const columnKey = columns[0]?.key;
+                  if (columnKey) {
+                    document.querySelector(`th[data-column-key="${columnKey}"]`)?.classList.add('hover');
+                  }
+                },
+                onMouseLeave: () => {
+                  const columnKey = columns[0]?.key;
+                  if (columnKey) {
+                    document.querySelector(`th[data-column-key="${columnKey}"]`)?.classList.remove('hover');
+                  }
+                },
+                onDoubleClick: () => {
+                  const columnKey = columns[0]?.key;
+                  if (columnKey) {
+                    handleDoubleClickHeader(columnKey as string);
+                  }
+                },
+                'data-column-key': columns[0]?.key,
+                title: '双击自动调整列宽',
+              })}
+            />
+            {loading && (
+              <Loading fullScreen={false} size="large" tip="查询执行中..." className={styles.tableLoadingOverlay} />
+            )}
+          </div>
         </div>
       </ResizeObserver>
     </div>

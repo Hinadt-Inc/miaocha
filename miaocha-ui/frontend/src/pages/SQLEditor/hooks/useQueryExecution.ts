@@ -27,12 +27,12 @@ export const useQueryExecution = (
   const [loading, setLoading] = useState(false);
   const [sqlQuery, setSqlQuery] = useState('');
 
-  console.log('useQueryExecution hook state:', {
-    queryResults,
-    loading,
-    selectedSource,
-    sqlQuery: sqlQuery.substring(0, 50) + (sqlQuery.length > 50 ? '...' : ''),
-  });
+  // console.log('useQueryExecution hook state:', {
+  //   queryResults,
+  //   loading,
+  //   selectedSource,
+  //   sqlQuery: sqlQuery.substring(0, 50) + (sqlQuery.length > 50 ? '...' : ''),
+  // });
 
   const executeQuery = useCallback(
     async (options?: ExecuteQueryOptions): Promise<QueryResult> => {
@@ -66,6 +66,9 @@ export const useQueryExecution = (
         // 最后降级到状态中的SQL
         queryToExecute = sqlQuery;
       }
+
+      // 过滤掉结尾的换行符，避免接口报错
+      queryToExecute = queryToExecute.replace(/\n+$/, '');
 
       if (!queryToExecute.trim()) {
         console.error('SQL查询验证失败 - 详细信息:', {

@@ -40,18 +40,18 @@ export const SQLResultsPanel: React.FC<SQLResultsPanelProps> = ({
   fullscreen,
 }) => {
   // 添加详细调试日志
-  console.log('SQLResultsPanel render:', {
-    queryResults,
-    loading,
-    activeTab,
-    hasRows: queryResults?.rows?.length,
-    hasColumns: queryResults?.columns?.length,
-    status: queryResults?.status,
-    message: queryResults?.message,
-    queryResultsType: typeof queryResults,
-    isQueryResultsNull: queryResults === null,
-    isQueryResultsUndefined: queryResults === undefined,
-  });
+  // console.log('SQLResultsPanel render:', {
+  //   queryResults,
+  //   loading,
+  //   activeTab,
+  //   hasRows: queryResults?.rows?.length,
+  //   hasColumns: queryResults?.columns?.length,
+  //   status: queryResults?.status,
+  //   message: queryResults?.message,
+  //   queryResultsType: typeof queryResults,
+  //   isQueryResultsNull: queryResults === null,
+  //   isQueryResultsUndefined: queryResults === undefined,
+  // });
 
   const tabItems = [
     {

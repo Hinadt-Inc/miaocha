@@ -135,7 +135,7 @@ const MachineTasksModal = ({ visible, onClose, machineTasks, loading }: MachineT
       title: '持续时间',
       dataIndex: 'duration',
       key: 'duration',
-      render: (duration: number) => (duration != null ? `${duration}ms` : '-'),
+      render: (duration: number) => (duration != null ? `${duration}s` : '-'),
     },
     {
       title: '错误信息',
@@ -274,7 +274,7 @@ const MachineTasksModal = ({ visible, onClose, machineTasks, loading }: MachineT
                           <Space size="middle" wrap>
                             <span>开始: {dayjs(task.startTime).format('MM-DD HH:mm:ss')}</span>
                             {task.endTime && <span>结束: {dayjs(task.endTime).format('MM-DD HH:mm:ss')}</span>}
-                            <span>耗时: {task.duration != null ? `${(task.duration / 1000).toFixed(1)}s` : '-'}</span>
+                            <span>耗时: {task.duration != null ? `${task.duration}s` : '-'}</span>
                           </Space>
                         </div>
                       </Col>

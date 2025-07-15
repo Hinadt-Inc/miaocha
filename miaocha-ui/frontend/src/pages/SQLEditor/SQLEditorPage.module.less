@@ -281,8 +281,7 @@
   .queryPanelContainer {
     display: flex;
     flex-direction: column;
-    min-height: 200px;
-    max-height: 60%; /* 限制查询面板最大高度，给结果面板更多空间 */
+    min-height: 80px;
     overflow: hidden; /* 防止溢出 */
     
     /* 查询面板包装器样式 */
@@ -312,7 +311,7 @@
     display: flex;
     flex-direction: column;
     flex: 1;
-    min-height: 400px; /* 增加结果面板最小高度 */
+    min-height: 80px; /* 增加结果面板最小高度 */
     
     .resultsCard {
       height: 100%;
@@ -783,7 +782,8 @@
     background: #f5f7fa;
     font-weight: 600;
     transition: background-color 0.3s;
-    padding: 12px 16px;
+    padding: 8px 12px; // 减少padding，更紧凑
+    line-height: 1.2; // 减少行高
     
     &:hover {
       background-color: #e6f7ff !important;
@@ -797,9 +797,68 @@
       background-color: #f0f7ff;
     }
     
+    
     :global(td) {
-      padding: 12px 16px;
+      padding: 0 !important; // 默认padding
       transition: background-color 0.3s;
+      
+      // 所有单元格都应用省略号样式
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 300px; // 限制最大宽度
+    }
+  }
+
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    
+    .toolbarActions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      
+      .copyHint {
+        font-size: 12px;
+      }
+    }
+  }
+
+  // 单元格选中样式
+  :global(.table-cell) {
+    cursor: pointer;
+    -webkit-user-select: text;
+    user-select: text;
+    padding: 4px 8px;
+    height: 100%;
+    width: 100%;
+    border: 2px solid transparent;
+    border-radius: 2px;
+    transition: all 0.2s ease;
+    background: transparent;
+    text-align: left;
+    font-size: inherit;
+    font-family: inherit;
+    line-height: inherit;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &:hover {
+      background-color: #f0f7ff;
+    }
+
+    &:global(.selected-cell) {
+      background-color: #e6f7ff !important;
+      border-color: #1890ff !important;
+    }
+
+    &:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
     }
   }
 }

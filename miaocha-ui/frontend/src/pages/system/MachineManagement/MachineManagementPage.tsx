@@ -2,6 +2,7 @@ import { Table } from 'antd';
 import { MachinePageHeader, MachineFormModal } from './components';
 import { useMachineData, useMachineActions, useTableConfig } from './hooks';
 import withSystemAccess from '@/utils/withSystemAccess';
+import Loading from '@/components/Loading';
 import styles from './MachineManagement.module.less';
 
 const MachineManagementPage = () => {
@@ -23,19 +24,37 @@ const MachineManagementPage = () => {
       </div>
 
       <div className={styles.tableContainer}>
-        <Table
-          dataSource={data}
-          columns={columns}
-          loading={loading}
-          size="small"
-          rowKey="id"
-          pagination={{
-            ...pagination,
-            total: data.length,
-          }}
-          onChange={handleTableChange}
-          bordered
-        />
+        <div style={{ position: 'relative' }}>
+          <Table
+            dataSource={data}
+            columns={columns}
+            size="small"
+            rowKey="id"
+            pagination={{
+              ...pagination,
+              total: data.length,
+            }}
+            onChange={handleTableChange}
+            bordered
+          />
+          {loading && (
+            <Loading
+              fullScreen={false}
+              size="large"
+              tip="加载机器数据..."
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 10,
+                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                backdropFilter: 'blur(2px)',
+              }}
+            />
+          )}
+        </div>
       </div>
 
       {/* 新增机器模态框 */}

@@ -1,8 +1,9 @@
 import React, { useCallback, useMemo, useState, memo, useRef, useEffect } from 'react';
-import { Button, Card, Empty, Space, Spin, Tooltip } from 'antd';
+import { Button, Card, Empty, Space, Tooltip } from 'antd';
 import { CopyOutlined, FileSearchOutlined, ReloadOutlined, TableOutlined } from '@ant-design/icons';
 import { VariableSizeList as List } from 'react-window';
 import { SchemaResult } from '../types';
+import Loading from '@/components/Loading';
 import styles from './VirtualizedSchemaTree.module.less';
 
 // 工具函数：获取CSS类名
@@ -248,6 +249,8 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
     const nodes: TreeNode[] = [];
 
     databaseSchema.tables.forEach((table) => {
+      // 过滤掉带.的字段
+      const tableColumnsNotIncludeDot = table.columns.filter((column) => !column.columnName?.includes('.'));
       // 添加表节点
       const tableNode: TreeNode = {
         title: table.tableName,
@@ -256,7 +259,7 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
         level: 0,
         isTable: true,
         isExpanded: expandedKeys.has(table.tableName),
-        children: table.columns.map((column) => ({
+        children: tableColumnsNotIncludeDot?.map((column) => ({
           title: `${column.columnName} ${column.isPrimaryKey ? '🔑 ' : ''}(${column.dataType})`,
           content: column.columnComment || '',
           key: `${table.tableName}-${column.columnName}`,
@@ -398,7 +401,16 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
           if (loadingSchema) {
             return (
               <div className={styles.loadingContainer}>
-                <Spin />
+                <Loading
+                  size="default"
+                  tip="加载数据库结构..."
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    minHeight: '100px',
+                  }}
+                />
               </div>
             );
           }

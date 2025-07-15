@@ -114,7 +114,9 @@ const FieldListItem: React.FC<IProps> = memo(
                 <Tooltip placement="topLeft" title={column.dataType} arrow={false}>
                   <Tag color={getFieldTypeColor(column.dataType)}>{column.dataType?.substr(0, 1)?.toUpperCase()}</Tag>
                 </Tooltip>
-                <span className={styles.columnName}>{column.columnName}</span>
+                <Tooltip placement="topLeft" title={column.columnName} arrow={false}>
+                  <span className={styles.columnName}>{column.columnName}</span>
+                </Tooltip>
                 {!isTimeField && (
                   <Button
                     color={isSelected ? 'danger' : 'primary'}
