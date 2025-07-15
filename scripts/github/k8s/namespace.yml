@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: miaocha-pr-${PR_NUMBER}
+  labels:
+    name: miaocha-pr-${PR_NUMBER}
+    environment: dev
+    pr-number: "${PR_NUMBER}" 

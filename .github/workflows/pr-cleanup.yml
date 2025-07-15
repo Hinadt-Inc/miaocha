@@ -1,0 +1,128 @@
+name: PR CD Cleanup
+
+on:
+  pull_request:
+    types: [ closed ]
+    branches: [ dev ]
+
+jobs:
+  cleanup-k8s:
+    runs-on: arc-runner-set
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'deploy to inner test k8s env') }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'latest'
+
+      - name: Setup kubectl
+        run: |
+          echo "🔧 配置 kubectl..."
+          # 创建 kubeconfig 文件
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+
+          # 验证连接
+          kubectl cluster-info
+
+      - name: Cleanup Kubernetes resources
+        run: |
+          echo "🧹 开始清理 PR-${{ github.event.pull_request.number }} 的 Kubernetes 资源..."
+
+          # 设置环境变量
+          export PR_NUMBER=${{ github.event.pull_request.number }}
+
+          # 执行清理
+          chmod +x scripts/github/k8s/cleanup.sh
+          ./scripts/github/k8s/cleanup.sh
+
+      - name: Cleanup Docker images (optional)
+        continue-on-error: true
+        run: |
+          echo "🐳 清理 Docker 镜像..."
+
+          # 获取镜像列表
+          IMAGES_TO_DELETE=$(docker images --format "table {{.Repository}}:{{.Tag}}" | grep "miaocha-test-pr" | grep "pr${{ github.event.pull_request.number }}" || true)
+
+          if [ -n "$IMAGES_TO_DELETE" ]; then
+            echo "发现以下镜像需要删除:"
+            echo "$IMAGES_TO_DELETE"
+
+            # 删除本地镜像
+            echo "$IMAGES_TO_DELETE" | xargs -r docker rmi -f
+            echo "✅ 本地镜像清理完成"
+          else
+            echo "未找到需要清理的镜像"
+          fi
+
+      - name: Comment on PR with cleanup info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr_number = context.issue.number;
+            const pr_state = context.payload.pull_request.state;
+            const pr_merged = context.payload.pull_request.merged;
+
+            let status_text = '';
+            let status_icon = '';
+
+            if (pr_merged) {
+              status_text = '已合并';
+              status_icon = '✅';
+            } else if (pr_state === 'closed') {
+              status_text = '已关闭';
+              status_icon = '❌';
+            } else {
+              status_text = '状态变更';
+              status_icon = '🔄';
+            }
+
+            const comment = `## 🧹 内部测试环境已清理
+
+            ${status_icon} **PR #${pr_number}** ${status_text}，内部测试环境已自动清理
+
+            ### 📋 清理内容
+
+            - ✅ Kubernetes namespace: \`miaocha-pr-${pr_number}\`
+            - ✅ 所有 Pod, Service, Deployment
+            - ✅ 本地 Docker 镜像
+            - ✅ 相关网络资源
+
+            ### 📊 清理详情
+
+            - **清理时间**: ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}
+            - **清理原因**: PR ${status_text}
+            - **资源状态**: 已完全清理
+
+            ### 🎉 清理完成
+
+            所有与此 PR 相关的内部测试环境资源已完全清理，不会产生额外费用。
+
+            ---
+            *🤖 此评论由 CI/CD 自动生成*`;
+
+            // 创建清理评论
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr_number,
+              body: comment
+            });
+
+            console.log('✅ 创建了清理完成评论');
+
+      - name: Summary
+        run: |
+          echo "## 🧹 PR 清理完成" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 清理内容" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Kubernetes namespace: miaocha-pr-${{ github.event.pull_request.number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ 所有相关的 Pod, Service, Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ 本地 Docker 镜像" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🎉 资源已完全清理" >> $GITHUB_STEP_SUMMARY
+          echo "PR-${{ github.event.pull_request.number }} 的所有测试环境资源已清理完毕" >> $GITHUB_STEP_SUMMARY

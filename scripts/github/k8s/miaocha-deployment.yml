@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: miaocha
+  namespace: miaocha-pr-${PR_NUMBER}
+  labels:
+    app: miaocha
+    pr-number: "${PR_NUMBER}"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: miaocha
+  template:
+    metadata:
+      labels:
+        app: miaocha
+      annotations:
+        deployment.kubernetes.io/revision: "${DEPLOYMENT_TIMESTAMP}"
+    spec:
+      containers:
+      - name: miaocha
+        image: ${DOCKER_IMAGE}
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "dev"
+        - name: DB_HOST
+          value: "mysql"
+        - name: DB_PORT
+          value: "3306"
+        - name: DB_NAME
+          value: "log_manage_system"
+        - name: DB_USER
+          value: "root"
+        - name: DB_PASSWORD
+          value: "root"
+        - name: JAVA_OPTS
+          value: "-Xms512m -Xmx1g -Dfile.encoding=UTF-8"
+        - name: LOG_PATH
+          value: "/app/logs"
+        - name: LOGSTASH_PACKAGE_PATH
+          value: "/opt/logstash/logstash-9.0.0-linux-x86_64.tar.gz"
+        - name: LOGSTASH_DEPLOY_DIR
+          value: "logstash"
+        ports:
+        - containerPort: 8081
+          name: http
+        volumeMounts:
+        - name: app-logs
+          mountPath: /app/logs
+        - name: logstash-package
+          mountPath: /opt/logstash
+          readOnly: true
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8081
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8081
+          initialDelaySeconds: 120
+          periodSeconds: 30
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+      volumes:
+      - name: app-logs
+        emptyDir: {}
+      - name: logstash-package
+        hostPath:
+          path: /root/logstash-dev
+          type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: miaocha
+  namespace: miaocha-pr-${PR_NUMBER}
+  labels:
+    app: miaocha
+    pr-number: "${PR_NUMBER}"
+spec:
+  type: NodePort
+  ports:
+  - port: 8081
+    targetPort: 8081
+    name: http
+  selector:
+    app: miaocha 
