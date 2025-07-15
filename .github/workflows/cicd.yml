@@ -81,7 +81,7 @@ jobs:
         run: |
           echo "🚀 开始执行 Maven 完整测试和构建"
           echo "包括单元测试和集成测试..."
-          #          mvn clean verify -B
+          mvn clean verify -B
           echo "✅ 所有测试通过，构建完成"
 
       - name: Upload test results
