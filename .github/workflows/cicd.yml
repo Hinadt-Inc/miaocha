@@ -2,7 +2,7 @@ name: PR CI/CD
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+    types: [ opened, synchronize, reopened, labeled, unlabeled ]
     branches: [ dev ]
 
 # Workflow级别的并发控制 - 新推送会取消整个前一次workflow
@@ -14,10 +14,8 @@ concurrency:
 permissions:
   issues: write
   pull-requests: write
-  actions: read  # 添加此行以确保 API 调用成功
 
 jobs:
-  # 检查是否应该跳过 CI
   check-skip-ci:
     runs-on: ubuntu-latest
     outputs:
@@ -48,8 +46,7 @@ jobs:
   pr-ci:
     runs-on: ubuntu-latest
     needs: check-skip-ci
-    if: ${{ needs.check-skip-ci.outputs.should_skip == 'false' }}
-
+    if: ${{ needs.check-skip-ci.outputs.should_skip == 'false' && github.event.action != 'labeled' && github.event.action != 'unlabeled' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -119,42 +116,65 @@ jobs:
           override_commit: ${{ github.event.pull_request.head.sha }}
           override_branch: ${{ github.event.pull_request.head.ref }}
 
-
   check-ci-status:
     runs-on: ubuntu-latest
-    if: ${{ github.event.action == 'labeled' }}  # 仅在标签触发时运行
+    if: ${{ github.event.action == 'labeled' && contains(github.event.pull_request.labels.*.name, 'deploy to inner test k8s env') }}
     outputs:
-      ci_passed: ${{ steps.check-ci.outputs.ci_passed }}  # 输出 CI 是否通过
+      ci_passed: ${{ steps.check-ci.outputs.ci_passed }}
     steps:
       - name: Check if CI has passed for this PR
         id: check-ci
         run: |
-          # 使用 GitHub API 检查该 PR 的最新工作流运行状态
+          # 使用 GitHub API 检查 PR 的最新工作流运行状态
           WORKFLOW_RUNS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=${{ github.event.pull_request.head.sha }}&event=pull_request")
-          
+
           # 检查是否存在成功的 "PR CI/CD" 工作流
-          CI_SUCCESS=$(echo "$WORKFLOW_RUNS" | jq -r '.workflow_runs[] | select(.name == "PR CI/CD") | select(.conclusion == "success") | .id' | head -1)
-          
-          if [ -n "$CI_SUCCESS" ]; then
+          CI_SUCCESS=$(echo "$WORKFLOW_RUNS" | jq -r '.workflow_runs[] | select(.name == "cicd") | select(.conclusion == "success") | .id' | head -1)
+
+          # 如果有 no ci 标签，允许部署，即使无历史 CI
+          if echo '${{ toJson(github.event.pull_request.labels.*.name) }}' | grep -q '"no ci"'; then
+            echo "ci_passed=true" >> $GITHUB_OUTPUT
+            echo "✅ 发现 'no ci' 标签，允许部署"
+          elif [ -n "$CI_SUCCESS" ]; then
             echo "ci_passed=true" >> $GITHUB_OUTPUT
             echo "✅ CI has passed for this PR"
           else
             echo "ci_passed=false" >> $GITHUB_OUTPUT
             echo "❌ CI has not passed for this PR"
+            exit 1  # 无 no ci 标签且 CI 未通过，停止作业
           fi
 
   # PR CD 测试环境部署
   pr-cd-test:
     runs-on: arc-runner-set
-    needs: [pr-ci, check-ci-status]  # 增加对 check-ci-status 的依赖
+    needs: [ check-skip-ci, pr-ci, check-ci-status ]
     if: |
       (
-        (needs.pr-ci.result == 'success' && github.event.action != 'labeled') ||
-        (github.event.action == 'labeled' && needs.check-ci-status.outputs.ci_passed == 'true')
+        (github.event.action != 'labeled' && github.event.action != 'unlabeled' && (needs.pr-ci.result == 'success' || needs.check-skip-ci.outputs.should_skip == 'true')) ||
+        (github.event.action == 'labeled' && needs.check-ci-status.result == 'success')
       ) &&
       contains(github.event.pull_request.labels.*.name, 'deploy to inner test k8s env')
     steps:
+      - name: Check CI status (for label trigger)
+        if: ${{ github.event.action == 'labeled' }}
+        run: |
+          echo "🔍 检查CI状态（标签触发）..."
+
+          # 使用GitHub API检查最新的工作流运行状态
+          WORKFLOW_RUNS=$(curl -s -H "Authorization: token ${{ github.token }}" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=${{ github.event.pull_request.head.sha }}&event=pull_request")
+
+          # 检查CI是否成功
+          CI_SUCCESS=$(echo "$WORKFLOW_RUNS" | jq -r '.workflow_runs[] | select(.name == "PR CI/CD") | select(.conclusion == "success") | .id' | head -1)
+
+          if [ -n "$CI_SUCCESS" ]; then
+            echo "✅ CI已通过，可以进行部署"
+          else
+            echo "❌ CI未通过或仍在运行中，停止部署"
+            exit 1
+          fi
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
