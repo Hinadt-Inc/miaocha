@@ -81,8 +81,7 @@ export const formatTableCell = (value: unknown, column?: string): React.ReactNod
   // 检查列类型
   const lowerColumn = column?.toLowerCase() || '';
   const isMessageField = lowerColumn.includes('message');
-  const isPathField =
-    lowerColumn.includes('path') || lowerColumn.includes('url') || lowerColumn.includes('file');
+  const isPathField = lowerColumn.includes('path') || lowerColumn.includes('url') || lowerColumn.includes('file');
   const isLogTimeField = lowerColumn === 'log_time' || lowerColumn.includes('timestamp');
 
   // 根据数据类型处理
@@ -91,16 +90,12 @@ export const formatTableCell = (value: unknown, column?: string): React.ReactNod
   }
 
   if (typeof value === 'boolean') {
-    return (
-      <Text style={{ color: value ? '#52c41a' : '#ff4d4f', fontWeight: 500 }}>{String(value)}</Text>
-    );
+    return <Text style={{ color: value ? '#52c41a' : '#ff4d4f', fontWeight: 500 }}>{String(value)}</Text>;
   }
 
   if (typeof value === 'number') {
     return (
-      <Text style={{ color: '#1677ff', fontFamily: 'monospace', fontSize: '13px' }}>
-        {value.toLocaleString()}
-      </Text>
+      <Text style={{ color: '#1677ff', fontFamily: 'monospace', fontSize: '13px' }}>{value.toLocaleString()}</Text>
     );
   }
 

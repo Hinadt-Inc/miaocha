@@ -1,0 +1,37 @@
+# 开发环境配置
+server:
+  port: 8081
+
+spring:
+  datasource:
+    # 开发环境使用本地数据库
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:log_manage_system}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:root}
+
+  # 开发环境显示SQL日志
+  jpa:
+    show-sql: true
+
+# 日志配置 - 通过logback-spring.xml中的springProfile配置
+
+# 开发环境特定配置
+sql:
+  query:
+    csv:
+      export:
+        dir: ./sql-exports
+
+# 移除了 Logstash 配置，现在使用 Doris 的 routine_load 方式替代
+
+# JWT配置
+jwt:
+  expiration: 10000000  # 1小时
+  refresh-expiration: 86400000  # 24小时
+
+# Logstash配置
+logstash:
+  # Logstash压缩包路径
+  package-path: ${LOGSTASH_PACKAGE_PATH:/opt/logstash/logstash-9.0.2-linux-x86_64.tar.gz}
+  # 远程部署目录
+  deploy-dir: ${LOGSTASH_DEPLOY_DIR:logstash}

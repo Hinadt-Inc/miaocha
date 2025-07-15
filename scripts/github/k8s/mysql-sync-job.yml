@@ -1,0 +1,106 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mysql-sync-job
+  namespace: miaocha-pr-${PR_NUMBER}
+  labels:
+    app: mysql-sync
+    pr-number: "${PR_NUMBER}"
+spec:
+  template:
+    metadata:
+      labels:
+        app: mysql-sync
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: mysql-sync
+        image: mysql:8.0
+        env:
+        # 源数据库配置（测试环境）
+        - name: SOURCE_DB_HOST
+          value: "10.0.21.34"
+        - name: SOURCE_DB_PORT
+          value: "3306"
+        - name: SOURCE_DB_NAME
+          value: "log_manage_system"
+        - name: SOURCE_DB_USER
+          value: "root"
+        - name: SOURCE_DB_PASSWORD
+          value: "Root@123"
+        # 目标数据库配置（PR 测试环境）
+        - name: TARGET_DB_HOST
+          value: "mysql"
+        - name: TARGET_DB_PORT
+          value: "3306"
+        - name: TARGET_DB_NAME
+          value: "log_manage_system"
+        - name: TARGET_DB_USER
+          value: "root"
+        - name: TARGET_DB_PASSWORD
+          value: "root"
+        command: ["/bin/bash"]
+        args:
+          - -c
+          - |
+            set -e
+            
+            echo "🔄 开始同步测试环境数据到 PR-${PR_NUMBER} 环境"
+            echo "源数据库: $SOURCE_DB_HOST:$SOURCE_DB_PORT/$SOURCE_DB_NAME"
+            echo "目标数据库: $TARGET_DB_HOST:$TARGET_DB_PORT/$TARGET_DB_NAME"
+            
+            # 等待目标数据库就绪
+            echo "⏳ 等待目标数据库就绪..."
+            while ! mysql -h$TARGET_DB_HOST -P$TARGET_DB_PORT -u$TARGET_DB_USER -p$TARGET_DB_PASSWORD -e "SELECT 1" >/dev/null 2>&1; do
+                echo "等待数据库连接..."
+                sleep 5
+            done
+            echo "✅ 目标数据库连接成功"
+            
+            # 检查源数据库连接
+            echo "🔍 检查源数据库连接..."
+            if ! mysql -h$SOURCE_DB_HOST -P$SOURCE_DB_PORT -u$SOURCE_DB_USER -p$SOURCE_DB_PASSWORD -e "SELECT 1" >/dev/null 2>&1; then
+                echo "❌ 无法连接到源数据库，跳过数据同步"
+                exit 0
+            fi
+            echo "✅ 源数据库连接成功"
+            
+            # 导出数据
+            echo "📤 导出测试环境数据..."
+            mysqldump -h$SOURCE_DB_HOST -P$SOURCE_DB_PORT -u$SOURCE_DB_USER -p$SOURCE_DB_PASSWORD \
+                --single-transaction \
+                --routines \
+                --triggers \
+                --databases $SOURCE_DB_NAME > /tmp/source_data.sql
+            
+            if [ $? -eq 0 ]; then
+                echo "✅ 数据导出成功"
+                
+                # 导入数据
+                echo "📥 导入数据到 PR 测试环境..."
+                mysql -h$TARGET_DB_HOST -P$TARGET_DB_PORT -u$TARGET_DB_USER -p$TARGET_DB_PASSWORD < /tmp/source_data.sql
+                
+                if [ $? -eq 0 ]; then
+                    echo "✅ 数据同步完成"
+                else
+                    echo "❌ 数据导入失败"
+                    exit 1
+                fi
+            else
+                echo "❌ 数据导出失败"
+                exit 1
+            fi
+            
+            # 清理临时文件
+            rm -f /tmp/source_data.sql
+            
+            echo "🎉 数据同步任务完成"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 3600  # 1小时后自动清理 Job 

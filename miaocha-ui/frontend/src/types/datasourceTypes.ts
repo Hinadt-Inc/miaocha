@@ -2,12 +2,7 @@
 export interface DataSource {
   id: string;
   name: string;
-  type:
-  | 'mysql'
-  | 'postgresql'
-  | 'sqlserver'
-  | 'oracle'
-  | 'DORIS';
+  type: 'mysql' | 'postgresql' | 'sqlserver' | 'oracle' | 'DORIS';
   ip: string;
   port: number;
   username: string;

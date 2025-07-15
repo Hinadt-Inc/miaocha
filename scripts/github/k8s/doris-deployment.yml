@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: doris
+  namespace: miaocha-pr-${PR_NUMBER}
+  labels:
+    app: doris
+    pr-number: "${PR_NUMBER}"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: doris
+  template:
+    metadata:
+      labels:
+        app: doris
+    spec:
+      containers:
+      - name: doris
+        image: apache/doris:2.1.9-all
+        env:
+        - name: FE_SERVERS
+          value: "doris:9010"
+        - name: PRIORITY_NETWORKS
+          value: "172.16.0.0/12"
+        ports:
+        - containerPort: 8030
+          name: http
+        - containerPort: 8040
+          name: stream-load
+        - containerPort: 9030
+          name: query
+        volumeMounts:
+        - name: doris-data
+          mountPath: /opt/apache-doris/fe/doris-meta
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "1000m"
+      volumes:
+      - name: doris-data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: doris
+  namespace: miaocha-pr-${PR_NUMBER}
+  labels:
+    app: doris
+    pr-number: "${PR_NUMBER}"
+spec:
+  type: NodePort
+  ports:
+  - port: 8030
+    targetPort: 8030
+    name: http
+  - port: 8040
+    targetPort: 8040
+    name: stream-load
+  - port: 9030
+    targetPort: 9030
+    name: query
+  selector:
+    app: doris 

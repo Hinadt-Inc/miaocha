@@ -12,8 +12,6 @@ set "PID_FILE=%APP_HOME%\application.pid"
 rem 默认环境 (优先使用环境变量 SPRING_PROFILES_ACTIVE)
 if defined SPRING_PROFILES_ACTIVE (
     set "ACTIVE_PROFILE=%SPRING_PROFILES_ACTIVE%"
-) else (
-    set "ACTIVE_PROFILE=dev"
 )
 
 rem 获取版本号

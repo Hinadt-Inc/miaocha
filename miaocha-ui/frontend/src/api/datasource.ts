@@ -4,14 +4,14 @@ import type {
   CreateDataSourceParams,
   UpdateDataSourceParams,
   TestConnectionParams,
-  DatasourceConnectionTestResult
+  DatasourceConnectionTestResult,
 } from '../types/datasourceTypes';
 
 // 获取数据源列表
 export function getDataSources(): Promise<DataSource[]> {
   return request({
     url: '/api/datasources',
-    method: 'GET'
+    method: 'GET',
   });
 }
 
@@ -19,7 +19,7 @@ export function getDataSources(): Promise<DataSource[]> {
 export function getDataSource(id: string): Promise<DataSource> {
   return request({
     url: `/api/datasources/${id}`,
-    method: 'GET'
+    method: 'GET',
   });
 }
 
@@ -28,7 +28,7 @@ export function updateDataSource(id: string, data: UpdateDataSourceParams): Prom
   return request({
     url: `/api/datasources/${id}`,
     method: 'PUT',
-    data
+    data,
   });
 }
 
@@ -36,7 +36,7 @@ export function updateDataSource(id: string, data: UpdateDataSourceParams): Prom
 export function deleteDataSource(id: string): Promise<void> {
   return request({
     url: `/api/datasources/${id}`,
-    method: 'DELETE'
+    method: 'DELETE',
   });
 }
 
@@ -44,7 +44,7 @@ export function deleteDataSource(id: string): Promise<void> {
 export function getAllDataSources(): Promise<DataSource[]> {
   return request({
     url: '/api/datasources',
-    method: 'GET'
+    method: 'GET',
   });
 }
 
@@ -53,7 +53,7 @@ export function createDataSource(data: CreateDataSourceParams): Promise<DataSour
   return request({
     url: '/api/datasources',
     method: 'POST',
-    data
+    data,
   });
 }
 
@@ -62,7 +62,7 @@ export function testDataSourceConnection(data: TestConnectionParams): Promise<Da
   return request({
     url: '/api/datasources/test-connection',
     method: 'POST',
-    data
+    data,
   });
 }
 
@@ -70,6 +70,6 @@ export function testDataSourceConnection(data: TestConnectionParams): Promise<Da
 export function testExistingDataSourceConnection(id: string): Promise<DatasourceConnectionTestResult> {
   return request({
     url: `/api/datasources/${id}/test-connection`,
-    method: 'POST'
+    method: 'POST',
   });
 }
