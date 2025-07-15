@@ -405,19 +405,21 @@ jobs:
             | 🗄️ **Doris Query** | ${node_ip}:${doris_query_port} | 查询端口 |
             | 🐬 **MySQL** | ${node_ip}:${mysql_port} | 数据库连接 |
             
-            ### 📦 部署信息
+                         ### 📦 部署信息
+             
+             - **命名空间**: \`miaocha-pr-${pr_number}\`
+             - **Docker 镜像**: \`${docker_image}\`
+             - **环境**: 内部测试环境 (dev)
+             - **部署时间**: ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}
+             - **数据同步**: 已从测试环境同步最新数据
             
-            - **命名空间**: \`miaocha-pr-${pr_number}\`
-            - **Docker 镜像**: \`${docker_image}\`
-            - **环境**: 内部测试环境 (dev)
-            - **部署时间**: ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}
-            
-            ### ⚠️ 注意事项
-            
-            - 这是**内部测试环境**，仅用于开发和测试
-            - 数据存储为临时存储，Pod重启后会丢失
-            - 当 PR 关闭时，所有资源会自动清理
-            - 请不要在测试环境中存储重要数据
+                         ### ⚠️ 注意事项
+             
+             - 这是**内部测试环境**，仅用于开发和测试
+             - 首次部署时会自动从测试环境 (\`10.0.21.34\`) 同步数据
+             - 数据存储为临时存储，Pod重启后会丢失
+             - 当 PR 关闭时，所有资源会自动清理
+             - 请不要在测试环境中存储重要数据
             
             ### 🧹 清理
             

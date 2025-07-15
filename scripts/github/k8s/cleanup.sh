@@ -18,9 +18,9 @@ if kubectl get namespace "$NAMESPACE" >/dev/null 2>&1; then
     
     # 显示将要删除的资源
     echo "📋 即将删除以下资源:"
-    kubectl get all -n "$NAMESPACE" --no-headers 2>/dev/null | head -20
+    kubectl get all,jobs -n "$NAMESPACE" --no-headers 2>/dev/null | head -20
     
-    # 删除 namespace (这会删除其中的所有资源)
+    # 删除 namespace (这会删除其中的所有资源，包括 Job)
     echo "🗑️  删除 namespace 及其所有资源..."
     kubectl delete namespace "$NAMESPACE" --timeout=300s
     

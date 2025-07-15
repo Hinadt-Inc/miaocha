@@ -26,7 +26,7 @@ TEMP_DIR=$(mktemp -d)
 trap "rm -rf $TEMP_DIR" EXIT
 
 # 复制并替换变量
-for file in namespace.yml mysql-deployment.yml doris-deployment.yml miaocha-deployment.yml; do
+for file in namespace.yml mysql-deployment.yml doris-deployment.yml miaocha-deployment.yml mysql-sync-job.yml; do
     if [ -f "scripts/github/k8s/$file" ]; then
         echo "🔧 处理 $file"
         sed -e "s/\${PR_NUMBER}/$PR_NUMBER/g" \
@@ -101,9 +101,28 @@ wait_for_deployment() {
 
 # 等待部署完成
 if [ "$FIRST_DEPLOYMENT" = true ]; then
-    echo "⏳ 等待所有服务部署完成..."
+    echo "⏳ 等待基础服务部署完成..."
     wait_for_deployment "mysql" "$NAMESPACE" 300
     wait_for_deployment "doris" "$NAMESPACE" 300
+    
+    # 首次部署时，启动数据同步任务
+    echo "🔄 启动数据同步任务..."
+    kubectl apply -f "$TEMP_DIR/mysql-sync-job.yml"
+    
+    # 等待数据同步完成
+    echo "⏳ 等待数据同步完成..."
+    kubectl wait --for=condition=complete job/mysql-sync-job -n $NAMESPACE --timeout=600s
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ 数据同步完成"
+    else
+        echo "⚠️ 数据同步可能失败，请检查日志"
+        # 显示 Job 日志
+        kubectl logs -l app=mysql-sync -n $NAMESPACE --tail=20
+    fi
+    
+    # 继续等待应用部署
+    echo "⏳ 等待应用部署完成..."
     wait_for_deployment "miaocha" "$NAMESPACE" 300
 else
     echo "⏳ 等待应用更新完成..."
