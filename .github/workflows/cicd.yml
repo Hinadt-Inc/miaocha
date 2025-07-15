@@ -9,6 +9,11 @@ concurrency:
   group: pr-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
+# 添加权限配置，授予 issues 和 pull-requests 写权限
+permissions:
+  issues: write
+  pull-requests: write
+
 jobs:
   # 检查是否应该跳过 CI
   check-skip-ci:
