@@ -77,21 +77,45 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
+      - name: Configure system for Doris
+        run: |
+          # 关闭swap分区
+          sudo swapoff -a
+
+          # 设置系统参数
+          sudo sysctl -w vm.max_map_count=2000000
+          sudo sysctl -w vm.swappiness=0
+          sudo sysctl -w fs.file-max=655360
+
+          # 验证设置
+          echo "=== System Configuration ==="
+          echo "Swap status:"
+          swapon --show
+          echo "vm.max_map_count: $(cat /proc/sys/vm/max_map_count)"
+          echo "vm.swappiness: $(cat /proc/sys/vm/swappiness)"
+          echo "fs.file-max: $(cat /proc/sys/fs/file-max)"
+
       - name: Run tests and build
         run: |
           echo "🚀 开始执行 Maven 完整测试和构建"
           echo "包括单元测试和集成测试..."
-                    mvn clean verify -B
+          mvn clean verify
           echo "✅ 所有测试通过，构建完成"
 
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
         with:
-          name: test-results-${{ github.event.pull_request.number }}
-          path: |
-            target/surefire-reports/
-            target/*.jar
+          file: ./miaocha-server/target/site/jacoco-aggregate/jacoco.xml
+          flags: tests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+          token: '41b29712-7ac0-4837-ba28-e3a755b03952'
+          verbose: true
+          # 添加更多配置确保更好的覆盖率比较
+          base: ${{ github.event.pull_request.base.sha }}
+          head: ${{ github.event.pull_request.head.sha }}
+          override_commit: ${{ github.event.pull_request.head.sha }}
+          override_branch: ${{ github.event.pull_request.head.ref }}
 
   # PR CD 测试环境部署
   pr-cd-test:
