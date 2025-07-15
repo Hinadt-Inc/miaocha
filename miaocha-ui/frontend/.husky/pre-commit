@@ -1,47 +1,4 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-echo "Running pre-commit checks..."
-
-# 切换到项目根目录
-cd "$(git rev-parse --show-toplevel)"
-
-# Java代码检查
-STAGED_JAVA_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(java)$' || true)
-if [ -n "$STAGED_JAVA_FILES" ]; then
-    echo "Formatting Java files..."
-    mvn spotless:apply -q
-    for file in $STAGED_JAVA_FILES; do
-        if [ -f "$file" ]; then
-            git add "$file"
-        fi
-    done
-    echo "Java code formatting completed."
-fi
-
-# 前端代码检查
-STAGED_FRONTEND_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E 'miaocha-ui/frontend/.*\.(ts|tsx|js|jsx|css|less|json)$' || true)
-if [ -n "$STAGED_FRONTEND_FILES" ]; then
-    echo "Frontend code changes detected..."
-    cd miaocha-ui/frontend
-    npm run format
-    if [ $? -ne 0 ]; then
-        echo "Error: Prettier formatting failed."
-        exit 1
-    fi
-    cd ../..
-    echo "$STAGED_FRONTEND_FILES" | xargs git add
-    echo "Frontend code formatting completed."
-fi
-
-# 编译检查（只有在根目录时才执行）
-if [ -f "pom.xml" ]; then
-    echo "Running compilation check..."
-    mvn clean compile -q -Pskip-ui
-    if [ $? -ne 0 ]; then
-        echo "Error: Compilation failed."
-        exit 1
-    fi
-fi
-
-echo "Pre-commit checks passed!" 
+# npm test

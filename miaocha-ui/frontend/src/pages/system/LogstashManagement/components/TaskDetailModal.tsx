@@ -68,7 +68,7 @@ const TaskDetailModal = ({ visible, onClose, selectedTask }: TaskDetailModalProp
             {selectedTask.endTime ? dayjs(selectedTask.endTime).format('YYYY-MM-DD HH:mm:ss') : '-'}
           </Descriptions.Item>
           <Descriptions.Item label="持续时间">
-            {selectedTask.duration != null ? `${selectedTask.duration}ms` : '-'}
+            {selectedTask.duration != null ? `${selectedTask.duration}s` : '-'}
           </Descriptions.Item>
           <Descriptions.Item label="错误信息" span={2}>
             {selectedTask.errorMessage || '无'}

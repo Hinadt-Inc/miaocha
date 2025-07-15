@@ -73,7 +73,12 @@ const StatCard: React.FC<StatCardProps> = ({
   };
 
   return (
-    <Card className={`stat-card ${isDarkMode ? 'dark' : ''}`} loading={loading} onClick={onClick} hoverable={!!onClick}>
+    <Card
+      className={`stat-card ${isDarkMode ? 'dark' : ''}`}
+      loading={loading}
+      onClick={onClick}
+      hoverable={!!onClick}
+    >
       <div className="stat-card-content">
         {icon && <div className="stat-card-icon">{icon}</div>}
         <div className="stat-card-data">
@@ -82,7 +87,9 @@ const StatCard: React.FC<StatCardProps> = ({
           {trend && (
             <div className={`stat-card-trend stat-card-trend-${trend}`}>
               {trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→'}
-              <span className="trend-text">{trend === 'up' ? '上升' : trend === 'down' ? '下降' : '稳定'}</span>
+              <span className="trend-text">
+                {trend === 'up' ? '上升' : trend === 'down' ? '下降' : '稳定'}
+              </span>
             </div>
           )}
         </div>

@@ -9,6 +9,7 @@ import {
   ModuleQueryConfigModal,
 } from './components';
 import { useModuleData, useTableConfig, useModuleActions } from './hooks';
+import Loading from '@/components/Loading';
 import styles from './ModuleManagement.module.less';
 
 const ModuleManagementPage = () => {
@@ -81,20 +82,38 @@ const ModuleManagementPage = () => {
       </div>
 
       <div className={styles.antTable}>
-        <Table
-          columns={columns}
-          dataSource={data}
-          rowKey="key"
-          loading={loading}
-          scroll={{ x: 1340 }}
-          size="small"
-          bordered
-          pagination={{
-            ...pagination,
-            total: data.length,
-          }}
-          onChange={handleTableChange}
-        />
+        <div style={{ position: 'relative' }}>
+          <Table
+            columns={columns}
+            dataSource={data}
+            rowKey="key"
+            scroll={{ x: 1340 }}
+            size="small"
+            bordered
+            pagination={{
+              ...pagination,
+              total: data.length,
+            }}
+            onChange={handleTableChange}
+          />
+          {loading && (
+            <Loading
+              fullScreen={false}
+              size="large"
+              tip="加载模块数据..."
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 10,
+                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                backdropFilter: 'blur(2px)',
+              }}
+            />
+          )}
+        </div>
       </div>
 
       {/* 表单模态框 */}

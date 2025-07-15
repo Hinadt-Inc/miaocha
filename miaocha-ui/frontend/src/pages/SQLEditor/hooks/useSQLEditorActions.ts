@@ -110,6 +110,9 @@ export const useSQLEditorActions = (editorState: SQLEditorState) => {
         queryToExecute = sqlQuery;
       }
 
+      // 过滤掉结尾的换行符，避免接口报错
+      queryToExecute = queryToExecute.replace(/\n+$/, '');
+
       // 验证SQL非空
       if (!validateSQL(queryToExecute)) return;
 
@@ -260,16 +263,7 @@ export const useSQLEditorActions = (editorState: SQLEditorState) => {
 
       try {
         if (!sqlContext.isSelectQuery || editor.getModel()?.getValue().trim() === '') {
-          if (columns.length > 0) {
-            const fieldList = generateColumnList(columns, {
-              addComments: true,
-              indentSize: 4,
-              multiline: true,
-            });
-            insertTextToEditor(editor, `SELECT\n${fieldList}\nFROM ${safeTableName};`);
-          } else {
-            insertTextToEditor(editor, `SELECT * FROM ${safeTableName};`);
-          }
+          insertTextToEditor(editor, `SELECT * FROM ${safeTableName};`);
           return;
         }
 

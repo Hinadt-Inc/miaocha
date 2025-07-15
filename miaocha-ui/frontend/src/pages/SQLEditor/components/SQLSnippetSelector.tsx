@@ -15,6 +15,8 @@ export interface SQLSnippetSelectorProps {
 export const SQLSnippetSelector: React.FC<SQLSnippetSelectorProps> = ({ onSelect }) => {
   const { sqlSnippets } = useSQLSnippets();
 
+  const DORIS_URL = 'https://doris.apache.org/zh-CN/docs/sql-manual/basic-element/sql-data-types/data-type-overview';
+
   const menuItems: MenuProps['items'] = sqlSnippets.map((snippet) => ({
     key: snippet.label,
     label: (
@@ -27,8 +29,11 @@ export const SQLSnippetSelector: React.FC<SQLSnippetSelectorProps> = ({ onSelect
   }));
 
   return (
-    <Dropdown menu={{ items: menuItems }} placement="bottomLeft" trigger={['click']}>
-      <Button size="small">插入SQL模板</Button>
-    </Dropdown>
+    <Button size="small" onClick={() => window.open(DORIS_URL, '_blank')}>
+      帮助文档
+    </Button>
+    // <Dropdown menu={{ items: menuItems }} placement="bottomLeft" trigger={['click']}>
+    //   <Button size="small">插入SQL模板</Button>
+    // </Dropdown>
   );
 };

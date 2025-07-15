@@ -1,6 +1,7 @@
 import { Table } from 'antd';
 import { UserPageHeader, UserFormModal, PasswordModal, ModulePermissionModal } from './components';
 import { useUserData, useTableConfig, useUserActions } from './hooks';
+import Loading from '@/components/Loading';
 import styles from './UserManagement.module.less';
 
 const UserManagementPage = () => {
@@ -35,20 +36,38 @@ const UserManagementPage = () => {
       </div>
 
       <div className={styles.antTable}>
-        <Table
-          columns={columns}
-          dataSource={data}
-          rowKey="key"
-          pagination={{
-            ...pagination,
-            total: data.length,
-          }}
-          loading={loading}
-          scroll={{ x: 1300 }}
-          onChange={handleTableChange}
-          size="small"
-          bordered
-        />
+        <div style={{ position: 'relative' }}>
+          <Table
+            columns={columns}
+            dataSource={data}
+            rowKey="key"
+            pagination={{
+              ...pagination,
+              total: data.length,
+            }}
+            scroll={{ x: 1300 }}
+            onChange={handleTableChange}
+            size="small"
+            bordered
+          />
+          {loading && (
+            <Loading
+              fullScreen={false}
+              size="large"
+              tip="加载用户数据..."
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 10,
+                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                backdropFilter: 'blur(2px)',
+              }}
+            />
+          )}
+        </div>
       </div>
 
       {/* 用户表单模态框 */}

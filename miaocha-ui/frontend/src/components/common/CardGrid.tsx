@@ -9,13 +9,18 @@ interface CardGridProps {
   style?: React.CSSProperties;
 }
 
-const CardGrid: React.FC<CardGridProps> = ({ children, gutter = 16, className = '', style = {} }) => {
+const CardGrid: React.FC<CardGridProps> = ({
+  children,
+  gutter = 16,
+  className = '',
+  style = {},
+}) => {
   return (
-    <div
+    <div 
       className={`card-grid ${className}`}
-      style={{
+      style={{ 
         gap: gutter,
-        ...style,
+        ...style 
       }}
     >
       {children}

@@ -82,15 +82,15 @@ export const routes: RouteConfig[] = [
         access: ['ADMIN', 'SUPER_ADMIN'],
       },
       {
-        path: '/system/logstash',
-        name: 'Logstash管理',
-        element: withSuspense(LogstashManagementPage),
-        access: ['ADMIN', 'SUPER_ADMIN'],
-      },
-      {
         path: '/system/module',
         name: '模块管理',
         element: withSuspense(ModuleManagementPage),
+        access: ['ADMIN', 'SUPER_ADMIN'],
+      },
+      {
+        path: '/system/logstash',
+        name: 'Logstash管理',
+        element: withSuspense(LogstashManagementPage),
         access: ['ADMIN', 'SUPER_ADMIN'],
       },
     ],

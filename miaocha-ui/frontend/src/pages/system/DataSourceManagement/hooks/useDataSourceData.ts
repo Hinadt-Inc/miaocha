@@ -44,6 +44,9 @@ export const useDataSourceData = () => {
     __: Record<string, (string | number)[] | null>,
   ) => Promise<RequestData<DataSourceItem>> = async (params) => {
     try {
+      // 设置loading状态
+      setLoading((prev) => ({ ...prev, table: true }));
+
       const data = await getAllDataSources();
       if (!data) {
         return {
@@ -87,6 +90,9 @@ export const useDataSourceData = () => {
         success: false,
         total: 0,
       };
+    } finally {
+      // 无论成功还是失败，都要关闭loading
+      setLoading((prev) => ({ ...prev, table: false }));
     }
   };
 

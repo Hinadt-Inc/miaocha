@@ -29,6 +29,8 @@ const HomePage = () => {
   const [moduleQueryConfig, setModuleQueryConfig] = useState<any>(null); // 存储完整的模块查询配置
   const [isInitialized, setIsInitialized] = useState(false); // 标记是否已经初始化
   const lastCallParamsRef = useRef<string>('');
+  const requestTimerRef = useRef<NodeJS.Timeout | null>(null); // 新增：用于延迟请求的定时器
+  const isInitializingRef = useRef(false); // 新增：标记是否正在初始化过程中
 
   // 默认的搜索参数
   const defaultSearchParams: ILogSearchParams = {
@@ -58,18 +60,31 @@ const HomePage = () => {
   };
 
   // 获取模块列表
-  useRequest(api.fetchMyModules, {
+  const fetchModulesRequest = useRequest(api.fetchMyModules, {
+    onBefore: () => {
+      isInitializingRef.current = true;
+    },
     onSuccess: (res) => {
       const moduleOptions = generateModuleOptions(res);
-      // 设置默认数据源和模块
+      setModuleOptions(moduleOptions);
+
+      // 只在初始化时设置默认模块，避免重复设置
       if ((!searchParams.datasourceId || !searchParams.module) && moduleOptions[0]) {
+        const favoriteModule = localStorage.getItem('favoriteModule');
+        const defaultModule = favoriteModule || moduleOptions[0].module;
+        const defaultOption = moduleOptions.find((opt) => opt.module === defaultModule) || moduleOptions[0];
+
+        // 批量更新状态，避免多次渲染
+        setSelectedModule(defaultOption.module);
         setSearchParams((prev) => ({
           ...prev,
-          datasourceId: Number(moduleOptions[0].datasourceId),
-          module: localStorage.getItem('favoriteModule') || moduleOptions[0].module,
+          datasourceId: Number(defaultOption.datasourceId),
+          module: defaultOption.module,
         }));
       }
-      setModuleOptions(moduleOptions);
+    },
+    onError: () => {
+      isInitializingRef.current = false;
     },
   });
 
@@ -134,9 +149,29 @@ const HomePage = () => {
     },
   );
 
+  // 执行数据请求的函数
+  const executeDataRequest = useCallback((params: ILogSearchParams) => {
+    // 取消之前的请求
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+
+    abortRef.current = new AbortController();
+    const requestParams = { ...params, signal: abortRef.current.signal };
+
+    getDetailData.run(requestParams);
+    getHistogramData.run(requestParams);
+  }, []);
+
+  // 主要的数据请求逻辑
   useEffect(() => {
     // 检查是否满足调用条件
     if (!searchParams.datasourceId || !searchParams.module || !moduleQueryConfig) {
+      return;
+    }
+
+    // 如果正在初始化中，跳过请求
+    if (isInitializingRef.current) {
       return;
     }
 
@@ -151,21 +186,33 @@ const HomePage = () => {
       keywords: searchParams.keywords,
       offset: searchParams.offset,
       fields: searchParams.fields,
-      sortFields: searchParams.sortFields, // 添加排序字段到参数标识
+      sortFields: searchParams.sortFields,
       moduleQueryConfigTimeField: moduleQueryConfig?.timeField,
     });
 
+    // 如果参数没有变化，则不执行请求
     if (lastCallParamsRef.current === currentCallParams) {
       return;
     }
 
+    // 清除之前的定时器
+    if (requestTimerRef.current) {
+      clearTimeout(requestTimerRef.current);
+    }
+
     // 延迟执行，避免快速连续调用
-    const timer = setTimeout(() => {
-      // 初始化调用或参数变化后的调用
-      if (abortRef.current) abortRef.current.abort(); // 取消上一次
-      abortRef.current = new AbortController();
-      getDetailData.run({ ...searchParams, signal: abortRef.current.signal });
-      getHistogramData.run({ ...searchParams, signal: abortRef.current.signal });
+    requestTimerRef.current = setTimeout(() => {
+      // 再次检查条件，确保在延迟期间状态没有变化导致条件不满足
+      if (!searchParams.datasourceId || !searchParams.module || !moduleQueryConfig) {
+        return;
+      }
+
+      // 再次检查是否正在初始化
+      if (isInitializingRef.current) {
+        return;
+      }
+
+      executeDataRequest(searchParams);
 
       // 更新最后调用的参数标识
       lastCallParamsRef.current = currentCallParams;
@@ -174,10 +221,14 @@ const HomePage = () => {
       if (!isInitialized) {
         setIsInitialized(true);
       }
-    }, 100); // 延迟100ms执行
+    }, 300); // 增加延迟时间到500ms，确保状态完全稳定
 
-    return () => clearTimeout(timer);
-  }, [searchParams, moduleQueryConfig]);
+    return () => {
+      if (requestTimerRef.current) {
+        clearTimeout(requestTimerRef.current);
+      }
+    };
+  }, [searchParams, moduleQueryConfig, executeDataRequest, isInitialized]);
 
   // 处理列变化
   const handleChangeColumns = (columns: ILogColumnsResponse[]) => {
@@ -220,18 +271,25 @@ const HomePage = () => {
   };
 
   // 处理选中模块变化
-  const handleSelectedModuleChange = useCallback((selectedModule: string, datasourceId?: number) => {
-    setSelectedModule(selectedModule);
-    // 如果提供了datasourceId，同时更新搜索参数
-    if (selectedModule && datasourceId) {
-      setSearchParams((prev) => ({
-        ...prev,
-        datasourceId: datasourceId,
-        module: selectedModule,
-        offset: 0,
-      }));
-    }
-  }, []);
+  const handleSelectedModuleChange = useCallback(
+    (selectedModule: string, datasourceId?: number) => {
+      setSelectedModule(selectedModule);
+      // 只有当提供了datasourceId且与当前不同时才更新搜索参数
+      if (
+        selectedModule &&
+        datasourceId &&
+        (searchParams.datasourceId !== datasourceId || searchParams.module !== selectedModule)
+      ) {
+        setSearchParams((prev) => ({
+          ...prev,
+          datasourceId: datasourceId,
+          module: selectedModule,
+          offset: 0,
+        }));
+      }
+    },
+    [searchParams.datasourceId, searchParams.module],
+  );
 
   // 处理排序配置变化
   const handleSortChange = useCallback((newSortConfig: any[]) => {
@@ -320,24 +378,55 @@ const HomePage = () => {
     manual: true,
     onSuccess: (res) => {
       setModuleQueryConfig(res);
+
+      // 清除初始化标记，允许数据请求执行
+      setTimeout(() => {
+        isInitializingRef.current = false;
+      }, 100); // 延迟100ms清除标记，确保状态更新完成
     },
     onError: () => {
       setModuleQueryConfig(null);
+
+      // 即使失败也要清除初始化标记
+      isInitializingRef.current = false;
     },
   });
 
   // 当selectedModule变化时，获取模块查询配置
   useEffect(() => {
     if (selectedModule) {
-      setIsInitialized(false); // 重置初始化状态
-      lastCallParamsRef.current = ''; // 重置调用参数标识
-      getModuleQueryConfig.run(selectedModule);
+      // 只有当模块真正变化时才重置状态和获取配置
+      if (selectedModule !== moduleQueryConfig?.module) {
+        setIsInitialized(false);
+        lastCallParamsRef.current = '';
+        setModuleQueryConfig(null); // 先清空配置，避免使用旧配置
+
+        // 重新设置初始化标记
+        isInitializingRef.current = true;
+
+        getModuleQueryConfig.run(selectedModule);
+      }
     } else {
       setModuleQueryConfig(null);
       setIsInitialized(false);
-      lastCallParamsRef.current = ''; // 重置调用参数标识
+      lastCallParamsRef.current = '';
+      isInitializingRef.current = false;
     }
-  }, [selectedModule]);
+  }, [selectedModule, moduleQueryConfig?.module]);
+
+  // 组件卸载时清理定时器
+  useEffect(() => {
+    return () => {
+      if (requestTimerRef.current) {
+        clearTimeout(requestTimerRef.current);
+      }
+      if (abortRef.current) {
+        abortRef.current.abort();
+      }
+      // 清理初始化标记
+      isInitializingRef.current = false;
+    };
+  }, []);
 
   // 搜索栏组件props
   const searchBarProps = useMemo(
@@ -352,6 +441,7 @@ const HomePage = () => {
       getDistributionWithSearchBar,
       sortConfig,
       commonColumns,
+      loading: getDetailData.loading, // 新增
     }),
     [
       searchParams,
@@ -363,6 +453,7 @@ const HomePage = () => {
       getDistributionWithSearchBar,
       sortConfig,
       commonColumns,
+      getDetailData.loading, // 新增
     ],
   );
 

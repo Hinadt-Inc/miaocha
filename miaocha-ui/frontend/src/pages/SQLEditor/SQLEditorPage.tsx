@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Layout, Splitter } from 'antd';
 import {
   SQLEditorHeader,
@@ -85,10 +85,17 @@ const SQLEditorPage: React.FC = () => {
     handleInsertTable,
   } = editorActions;
 
-  // 处理SQL查询状态更新的包装函数
-  const handleSqlQueryChange = (value: string | undefined) => {
-    setSqlQuery(value ?? '');
-  };
+  // 处理SQL查询状态更新的包装函数 - 使用useCallback优化性能
+  const handleSqlQueryChange = useCallback(
+    (value: string | undefined) => {
+      const newValue = value ?? '';
+      // 避免不必要的状态更新
+      if (newValue !== sqlQuery) {
+        setSqlQuery(newValue);
+      }
+    },
+    [sqlQuery, setSqlQuery],
+  );
 
   // 处理图表类型变化的包装函数
   const handleChartTypeChange = (type: 'bar' | 'line' | 'pie') => {
@@ -119,7 +126,7 @@ const SQLEditorPage: React.FC = () => {
             <Content className={styles.contentContainer}>
               <Splitter layout="vertical" style={{ height: '100%' }}>
                 {/* 查询编辑器区域 - 简化高度管理，使用100% */}
-                <Splitter.Panel defaultSize="35%" min={200} className={styles.queryPanelContainer}>
+                <Splitter.Panel defaultSize="35%" className={styles.queryPanelContainer}>
                   <SQLQueryPanel
                     sqlQuery={sqlQuery}
                     onChange={handleSqlQueryChange}
