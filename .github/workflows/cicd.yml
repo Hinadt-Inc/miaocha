@@ -252,7 +252,7 @@ jobs:
 
       - name: Login to private Docker registry
         run: |
-          echo "${{ secrets.DOCKER_PUSH_PASSWORD }}" | docker login crpi-5x5i70hcgjeg1z8k.cn-shanghai.personal.cr.aliyuncs.com -u "${{ secrets.DOCKER_PUSH_USERNAME }}" --password-stdin
+          echo "${{ secrets.DOCKER_PUSH_PASSWORD }}" | docker login --username="${{ secrets.DOCKER_PUSH_USERNAME }}" crpi-5x5i70hcgjeg1z8k.cn-shanghai.personal.cr.aliyuncs.com  --password-stdin
 
       - name: Build and push Docker image
         run: |
