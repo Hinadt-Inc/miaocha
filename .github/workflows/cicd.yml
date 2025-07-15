@@ -246,13 +246,13 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           IMAGE_TAG="PR${{ github.event.pull_request.number }}-${{ steps.maven-version.outputs.version }}-${TIMESTAMP}"
           echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
-          echo "full_image=dockerhub.baofu.com/app/2024091900000066/miaocha-test-pr:${IMAGE_TAG}" >> $GITHUB_OUTPUT
-          echo "latest_image=dockerhub.baofu.com/app/2024091900000066/miaocha-test-pr:latest-pr${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          echo "full_image=crpi-5x5i70hcgjeg1z8k.cn-shanghai.personal.cr.aliyuncs.com/miaocha-github-dev/miaocha-test-pr:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "latest_image=crpi-5x5i70hcgjeg1z8k.cn-shanghai.personal.cr.aliyuncs.com/miaocha-github-dev/miaocha-test-pr:latest-pr${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
           echo "📦 镜像标签: ${IMAGE_TAG}"
 
       - name: Login to private Docker registry
         run: |
-          echo "${{ secrets.DOCKER_PUSH_PASSWORD }}" | docker login dockerhub.baofu.com -u "${{ secrets.DOCKER_PUSH_USERNAME }}" --password-stdin
+          echo "${{ secrets.DOCKER_PUSH_PASSWORD }}" | docker login crpi-5x5i70hcgjeg1z8k.cn-shanghai.personal.cr.aliyuncs.com -u "${{ secrets.DOCKER_PUSH_USERNAME }}" --password-stdin
 
       - name: Build and push Docker image
         run: |
@@ -273,7 +273,6 @@ jobs:
           # 推送镜像到仓库
           echo "📤 推送镜像到私有仓库..."
           # 配置 Docker 客户端不对目标仓库使用代理
-          export NO_PROXY="dockerhub.baofu.com,localhost,127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
           docker push ${{ steps.docker-tag.outputs.full_image }}
           docker push ${{ steps.docker-tag.outputs.latest_image }}
 
@@ -320,7 +319,7 @@ jobs:
           echo "## 🚀 PR CD 部署成功" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📦 镜像信息" >> $GITHUB_STEP_SUMMARY
-          echo "- **仓库**: dockerhub.baofu.com/app/2024091900000066/miaocha-test-pr" >> $GITHUB_STEP_SUMMARY
+          echo "- **仓库**: crpi-5x5i70hcgjeg1z8k.cn-shanghai.personal.cr.aliyuncs.com/miaocha-github-dev/miaocha-test-pr" >> $GITHUB_STEP_SUMMARY
           echo "- **标签**: " >> $GITHUB_STEP_SUMMARY
           echo "  - ${{ steps.docker-tag.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "  - latest-pr${{ github.event.pull_request.number }}" >> $GITHUB_STEP_SUMMARY
