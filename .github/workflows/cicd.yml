@@ -2,6 +2,7 @@ name: PR CI/CD
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     branches: [ dev ]
 
 # Workflow级别的并发控制 - 新推送会取消整个前一次workflow
@@ -13,6 +14,7 @@ concurrency:
 permissions:
   issues: write
   pull-requests: write
+  actions: read  # 添加此行以确保 API 调用成功
 
 jobs:
   # 检查是否应该跳过 CI
@@ -117,12 +119,41 @@ jobs:
           override_commit: ${{ github.event.pull_request.head.sha }}
           override_branch: ${{ github.event.pull_request.head.ref }}
 
+
+  check-ci-status:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.action == 'labeled' }}  # 仅在标签触发时运行
+    outputs:
+      ci_passed: ${{ steps.check-ci.outputs.ci_passed }}  # 输出 CI 是否通过
+    steps:
+      - name: Check if CI has passed for this PR
+        id: check-ci
+        run: |
+          # 使用 GitHub API 检查该 PR 的最新工作流运行状态
+          WORKFLOW_RUNS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=${{ github.event.pull_request.head.sha }}&event=pull_request")
+          
+          # 检查是否存在成功的 "PR CI/CD" 工作流
+          CI_SUCCESS=$(echo "$WORKFLOW_RUNS" | jq -r '.workflow_runs[] | select(.name == "PR CI/CD") | select(.conclusion == "success") | .id' | head -1)
+          
+          if [ -n "$CI_SUCCESS" ]; then
+            echo "ci_passed=true" >> $GITHUB_OUTPUT
+            echo "✅ CI has passed for this PR"
+          else
+            echo "ci_passed=false" >> $GITHUB_OUTPUT
+            echo "❌ CI has not passed for this PR"
+          fi
+
   # PR CD 测试环境部署
   pr-cd-test:
     runs-on: arc-runner-set
-    needs: pr-ci
-    if: ${{ needs.pr-ci.result == 'success' && contains(github.event.pull_request.labels.*.name, 'deploy to inner test k8s env') }}
-
+    needs: [pr-ci, check-ci-status]  # 增加对 check-ci-status 的依赖
+    if: |
+      (
+        (needs.pr-ci.result == 'success' && github.event.action != 'labeled') ||
+        (github.event.action == 'labeled' && needs.check-ci-status.outputs.ci_passed == 'true')
+      ) &&
+      contains(github.event.pull_request.labels.*.name, 'deploy to inner test k8s env')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
