@@ -150,11 +150,13 @@ jobs:
     runs-on: arc-runner-set
     needs: [ check-skip-ci, pr-ci, check-ci-status ]
     if: |
+      always() &&
+      contains(github.event.pull_request.labels.*.name, 'deploy to inner test k8s env') &&
       (
-        (github.event.action != 'labeled' && github.event.action != 'unlabeled' && (needs.pr-ci.result == 'success' || needs.check-skip-ci.outputs.should_skip == 'true')) ||
+        (github.event.action != 'labeled' && github.event.action != 'unlabeled' && (needs.pr-ci.result == 'success' || (needs.check-skip-ci.result == 'success' && needs.check-skip-ci.outputs.should_skip == 'true'))) ||
         (github.event.action == 'labeled' && needs.check-ci-status.result == 'success')
       ) &&
-      contains(github.event.pull_request.labels.*.name, 'deploy to inner test k8s env')
+      !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
     # Job级别的并发控制 - 新推送会取消正在运行的 CI/CD 作业
     concurrency:
       group: pr-cicd-${{ github.event.pull_request.number }}
