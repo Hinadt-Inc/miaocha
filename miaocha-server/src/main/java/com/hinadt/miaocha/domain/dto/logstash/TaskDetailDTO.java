@@ -37,7 +37,7 @@ public class TaskDetailDTO {
     @Schema(description = "创建时间")
     private LocalDateTime createTime;
 
-    @Schema(description = "耗时(毫秒)")
+    @Schema(description = "耗时(秒)")
     private Long duration;
 
     @Schema(description = "步骤总数")
@@ -115,7 +115,7 @@ public class TaskDetailDTO {
         @Schema(description = "结束时间")
         private LocalDateTime endTime;
 
-        @Schema(description = "耗时(毫秒)")
+        @Schema(description = "耗时(秒)")
         private Long duration;
 
         @Schema(description = "错误信息")
