@@ -42,7 +42,7 @@ jobs:
   pr-ci:
     runs-on: ubuntu-latest
     needs: check-skip-ci
-    if: ${{ needs.check-skip-ci.outputs.should_skip == 'false' && github.event.action != 'labeled' && github.event.action != 'unlabeled' }}
+    if: ${{ needs.check-skip-ci.outputs.should_skip == 'false' }}
     # Job级别的并发控制 - 新推送会取消正在运行的 CI/CD 作业
     concurrency:
       group: pr-cicd-${{ github.event.pull_request.number }}
@@ -130,7 +130,7 @@ jobs:
             "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=${{ github.event.pull_request.head.sha }}&event=pull_request")
 
           # 检查是否存在成功的 "PR CI/CD" 工作流
-          CI_SUCCESS=$(echo "$WORKFLOW_RUNS" | jq -r '.workflow_runs[] | select(.name == "cicd") | select(.conclusion == "success") | .id' | head -1)
+          CI_SUCCESS=$(echo "$WORKFLOW_RUNS" | jq -r '.workflow_runs[] | select(.name == "PR CI/CD") | select(.conclusion == "success") | .id' | head -1)
 
           # 如果有 no ci 标签，允许部署，即使无历史 CI
           if echo '${{ toJson(github.event.pull_request.labels.*.name) }}' | grep -q '"no ci"'; then
