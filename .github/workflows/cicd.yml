@@ -294,7 +294,7 @@ jobs:
           # 创建 kubeconfig 文件
           mkdir -p ~/.kube
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
-          
+
           # 验证连接
           kubectl cluster-info
 
@@ -302,11 +302,11 @@ jobs:
         id: k8s-deploy
         run: |
           echo "🚀 开始部署到 Kubernetes..."
-          
+
           # 设置环境变量
           export PR_NUMBER=${{ github.event.pull_request.number }}
           export DOCKER_IMAGE="${{ steps.docker-tag.outputs.latest_image }}"
-          
+
           # 执行部署
           chmod +x scripts/github/k8s/deploy.sh
           ./scripts/github/k8s/deploy.sh
@@ -315,29 +315,29 @@ jobs:
         id: k8s-status
         run: |
           echo "📊 获取部署状态..."
-          
+
           NAMESPACE="miaocha-pr-${{ github.event.pull_request.number }}"
-          
+
           # 获取节点 IP
           NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="ExternalIP")].address}')
           if [ -z "$NODE_IP" ]; then
             NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
           fi
-          
+
           # 获取服务端口
           MIAOCHA_PORT=$(kubectl get svc miaocha -n $NAMESPACE -o jsonpath='{.spec.ports[0].nodePort}')
           MYSQL_PORT=$(kubectl get svc mysql -n $NAMESPACE -o jsonpath='{.spec.ports[0].nodePort}')
           DORIS_HTTP_PORT=$(kubectl get svc doris -n $NAMESPACE -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
           DORIS_STREAM_PORT=$(kubectl get svc doris -n $NAMESPACE -o jsonpath='{.spec.ports[?(@.name=="stream-load")].nodePort}')
           DORIS_QUERY_PORT=$(kubectl get svc doris -n $NAMESPACE -o jsonpath='{.spec.ports[?(@.name=="query")].nodePort}')
-          
+
           echo "node_ip=$NODE_IP" >> $GITHUB_OUTPUT
           echo "miaocha_port=$MIAOCHA_PORT" >> $GITHUB_OUTPUT
           echo "mysql_port=$MYSQL_PORT" >> $GITHUB_OUTPUT
           echo "doris_http_port=$DORIS_HTTP_PORT" >> $GITHUB_OUTPUT
           echo "doris_stream_port=$DORIS_STREAM_PORT" >> $GITHUB_OUTPUT
           echo "doris_query_port=$DORIS_QUERY_PORT" >> $GITHUB_OUTPUT
-          
+
           echo "✅ 部署状态获取完成"
 
       - name: Comment on PR with deployment failure
@@ -347,31 +347,31 @@ jobs:
           script: |
             const pr_number = context.issue.number;
             const docker_image = '${{ steps.docker-tag.outputs.latest_image }}';
-            
+
             const comment = `## ❌ 内部测试环境部署失败
-            
+
             **PR #${pr_number}** 部署到内部测试环境时发生错误
-            
+
             ### 🚨 部署信息
-            
+
             - **Docker 镜像**: \`${docker_image}\`
             - **失败时间**: ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}
             - **命名空间**: \`miaocha-pr-${pr_number}\`
-            
+
             ### 🔍 排查步骤
-            
+
             1. 检查 GitHub Actions 日志获取详细错误信息
             2. 确认 Kubernetes 集群状态正常
             3. 检查资源配额是否足够
             4. 验证 Docker 镜像是否正确推送
-            
+
             ### 🛠️ 重新部署
-            
+
             修复问题后，重新推送代码将自动触发重新部署。
-            
+
             ---
             *🤖 此评论由 CI/CD 自动生成*`;
-            
+
             // 创建失败评论
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -379,7 +379,7 @@ jobs:
               issue_number: pr_number,
               body: comment
             });
-            
+
             console.log('✅ 创建了部署失败评论');
 
       - name: Comment on PR with deployment info
@@ -395,13 +395,13 @@ jobs:
             const doris_stream_port = '${{ steps.k8s-status.outputs.doris_stream_port }}';
             const doris_query_port = '${{ steps.k8s-status.outputs.doris_query_port }}';
             const docker_image = '${{ steps.docker-tag.outputs.latest_image }}';
-            
+
             const comment = `## 🚀 内部测试环境部署成功
-            
+
             **PR #${pr_number}** 已成功部署到内部测试环境
-            
+
             ### 🌐 访问地址
-            
+
             | 服务 | 访问地址 | 说明 |
             |------|----------|------|
             | 🖥️ **Miaocha 应用** | http://${node_ip}:${miaocha_port} | 主应用入口 |
@@ -409,45 +409,48 @@ jobs:
             | 🔄 **Doris Stream Load** | http://${node_ip}:${doris_stream_port} | 数据导入端口 |
             | 🗄️ **Doris Query** | ${node_ip}:${doris_query_port} | 查询端口 |
             | 🐬 **MySQL** | ${node_ip}:${mysql_port} | 数据库连接 |
-            
-                         ### 📦 部署信息
-             
+
+
+            ### 📦 部署信息
+
              - **命名空间**: \`miaocha-pr-${pr_number}\`
              - **Docker 镜像**: \`${docker_image}\`
              - **环境**: 内部测试环境 (dev)
              - **部署时间**: ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}
              - **数据同步**: 已从测试环境同步最新数据
-            
-                         ### ⚠️ 注意事项
-             
+
+
+            ### ⚠️ 注意事项
+
              - 这是**内部测试环境**，仅用于开发和测试
              - 首次部署时会自动从测试环境 (\`10.0.21.34\`) 同步数据
              - 数据存储为临时存储，Pod重启后会丢失
              - 当 PR 关闭时，所有资源会自动清理
              - 请不要在测试环境中存储重要数据
-            
+
+
             ### 🧹 清理
-            
+
             PR 关闭时会自动清理所有资源，也可以手动清理：
             \`\`\`bash
             kubectl delete namespace miaocha-pr-${pr_number}
             \`\`\`
-            
+
             ---
             *🤖 此评论由 CI/CD 自动生成*`;
-            
+
             // 查找是否已有部署评论
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: pr_number
             });
-            
-            const existingComment = comments.find(comment => 
-              comment.body.includes('🚀 内部测试环境部署成功') && 
+
+            const existingComment = comments.find(comment =>
+              comment.body.includes('🚀 内部测试环境部署成功') &&
               comment.user.type === 'Bot'
             );
-            
+
             if (existingComment) {
               // 更新现有评论
               await github.rest.issues.updateComment({
