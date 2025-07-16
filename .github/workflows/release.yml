@@ -251,7 +251,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Generate RocketMQ-style release notes
+      - name: Generate release notes
         id: notes
         run: |
           version="${{ needs.prepare.outputs.version }}"
@@ -259,7 +259,6 @@ jobs:
           # 获取上一个标签
           last_tag=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
           
-          # 生成RocketMQ风格的release notes
           cat > release_notes.md << 'EOF'
           ## What's Changed
           
@@ -268,33 +267,21 @@ jobs:
           EOF
           
           if [ -n "$last_tag" ]; then
-            # 统计信息
-            total_commits=$(git rev-list --count "$last_tag..HEAD" 2>/dev/null || echo "0")
-            issue_count=$(git log --oneline "$last_tag..HEAD" | grep -c "\[ISSUE" || echo "0")
-            echo "**Stats**: $total_commits commits, $issue_count issues addressed" >> release_notes.md
-            echo "" >> release_notes.md
-            
-            # 获取merge commits (通常包含[ISSUE #xx]格式) - 这是重点！
             merge_commits=$(git log --merges --oneline --pretty=format:"* %s" "$last_tag..HEAD" | grep -E "\[ISSUE.*\]" || echo "")
             all_issue_commits=$(git log --oneline --pretty=format:"* %s" "$last_tag..HEAD" | grep -E "\[ISSUE.*\]" || echo "")
             
-            # 优先使用merge commits（这些通常是PR合并到dev分支的记录）
             issue_commits=""
             if [ -n "$merge_commits" ]; then
               issue_commits="$merge_commits"
-              echo "<!-- 基于merge commits (PR合并记录) 生成 -->" >> release_notes.md
             else
-              issue_commits="$all_issue_commits"  
-              echo "<!-- 基于[ISSUE #xx]提交生成 -->" >> release_notes.md
+              issue_commits="$all_issue_commits"
             fi
             
-            # 直接列出所有变更，真实RocketMQ格式（不分类）
             if [ -n "$issue_commits" ]; then
               echo "$issue_commits" >> release_notes.md
               echo "" >> release_notes.md
             fi
             
-            # 如果还有其他格式的提交，也列出来  
             other_commits=$(git log --oneline --pretty=format:"* %s" "$last_tag..HEAD" | grep -v -E "\[ISSUE.*\]" | head -10)
             if [ -n "$other_commits" ]; then
               echo "$other_commits" >> release_notes.md
