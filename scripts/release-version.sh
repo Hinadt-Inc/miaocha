@@ -169,27 +169,23 @@ validate_build() {
     fi
 }
 
-# 生成RocketMQ风格更新日志
+# 生成更新日志
 generate_changelog() {
     local version=$1
     local dry_run=$2
     
-    log_info "生成RocketMQ风格的版本 $version 更新日志"
+    log_info "生成版本 $version 更新日志"
     
     if [ "$dry_run" = "true" ]; then
-        log_warning "[DRY RUN] 将生成RocketMQ风格更新日志"
+        log_warning "[DRY RUN] 将生成更新日志"
         return 0
     fi
     
-    # 获取最新的tag
     local last_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
     local changelog_file="CHANGELOG-$version.md"
     local release_notes_file="RELEASE-NOTES-$version.md"
     
-    # 生成GitHub Release Notes格式
     generate_github_release_notes "$version" "$last_tag" "$release_notes_file"
-    
-    # 生成传统changelog
     echo "# 版本 $version 更新日志" > "$changelog_file"
     echo "" >> "$changelog_file"
     echo "发布日期: $(date '+%Y-%m-%d')" >> "$changelog_file"
@@ -242,11 +238,10 @@ generate_changelog() {
         echo "- ✨ 基础功能实现完成" >> "$changelog_file"
     fi
     
-    log_success "RocketMQ风格更新日志已生成: $changelog_file"
-    log_success "GitHub Release Notes已生成: $release_notes_file"
+    log_success "更新日志已生成: $changelog_file"
+    log_success "Release Notes已生成: $release_notes_file"
 }
 
-# 生成GitHub Release Notes格式
 generate_github_release_notes() {
     local version=$1
     local last_tag=$2
@@ -259,27 +254,21 @@ generate_github_release_notes() {
         echo ""
         
         if [ -n "$last_tag" ]; then
-            # 获取所有merge commits (通常包含[ISSUE #xx]格式)
             local merge_commits=$(git log --merges --oneline --pretty=format:"* %s" "$last_tag..HEAD" | grep -E "\[ISSUE.*\]" || echo "")
             local all_issue_commits=$(git log --oneline --pretty=format:"* %s" "$last_tag..HEAD" | grep -E "\[ISSUE.*\]" || echo "")
             
-            # 优先使用merge commits，如果没有则使用所有[ISSUE #xx]格式的提交
             local issue_commits=""
             if [ -n "$merge_commits" ]; then
                 issue_commits="$merge_commits"
-                echo "<!-- 基于merge commits生成 -->" >> "$output_file"
             else
                 issue_commits="$all_issue_commits"
-                echo "<!-- 基于[ISSUE #xx]提交生成 -->" >> "$output_file"
             fi
             
-            # 直接列出所有变更，不分类（真实RocketMQ格式）
             if [ -n "$issue_commits" ]; then
                 echo "$issue_commits"
                 echo ""
             fi
             
-            # 如果还有其他格式的提交，也列出来
             local other_commits=$(git log --oneline --pretty=format:"* %s" "$last_tag..HEAD" | grep -v -E "\[ISSUE.*\]" | head -10)
             if [ -n "$other_commits" ]; then
                 echo "$other_commits"
