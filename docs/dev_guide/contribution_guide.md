@@ -25,9 +25,9 @@
 
 1. 访问 [Miaocha GitHub 仓库](https://github.com/Hinadt-Inc/miaocha)。
 2. 点击右上角的 **Fork** 按钮，将主仓库复刻到您自己的账户下。
-3. 使用 `git clone` 命令将您复刻的仓库克隆到本地（注意，本项目包含子模块）：
+3. 使用 `git clone` 命令将您复刻的仓库克隆到本地：
    ```bash
-   git clone --recurse-submodules https://github.com/YOUR_USERNAME/miaocha.git
+   git clone https://github.com/YOUR_USERNAME/miaocha.git
    cd miaocha
    ```
 4. 将主仓库添加为上游远程仓库，方便后续同步更新：
