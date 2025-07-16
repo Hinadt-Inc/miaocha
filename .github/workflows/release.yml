@@ -1,4 +1,4 @@
-name: Release
+name: Release Automation
 
 on:
   push:
@@ -8,105 +8,105 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
-    
+
     # 声明必要的权限
     permissions:
       contents: write
       packages: write
-      
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
-    - name: Verify tag is from release branch
-      run: |
-        TAG_NAME=${GITHUB_REF#refs/tags/}
-        echo "检查 tag: $TAG_NAME"
-        
-        # 获取 tag 指向的 commit
-        TAG_COMMIT=$(git rev-list -n 1 $TAG_NAME)
-        
-        # 检查包含此 commit 的 release-* 分支
-        RELEASE_BRANCHES=$(git branch -r --contains $TAG_COMMIT | grep -E "origin/release-" | head -1)
-        
-        if [ -z "$RELEASE_BRANCHES" ]; then
-          echo "❌ Error: Tag '$TAG_NAME' 不是从 release-* 分支推送的"
-          echo "包含此 commit 的分支:"
-          git branch -r --contains $TAG_COMMIT
-          exit 1
-        fi
-        
-        echo "✅ Tag '$TAG_NAME' 来自有效的 release 分支: $RELEASE_BRANCHES"
-    
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-    
-    - name: Cache Maven dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-    
-    - name: Get version from tag
-      id: version
-      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-    
-    - name: Generate Release Notes
-      id: release_notes
-      run: |
-        # 使用脚本生成Release Notes，避免重复代码
-        release_notes=$(./scripts/release-version.sh --generate-release-notes-only ${{ steps.version.outputs.VERSION }})
-        
-        # 输出到GitHub Actions
-        {
-          echo 'RELEASE_NOTES<<EOF'
-          echo "$release_notes"
-          echo 'EOF'
-        } >> $GITHUB_OUTPUT
-    
-    - name: Build and test
-      run: mvn clean package
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-    
-    - name: Log in to GitHub Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: docker/Dockerfile
-        platforms: linux/amd64,linux/arm64
-        push: true
-        tags: |
-          ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
-          ghcr.io/${{ github.repository }}:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-    
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
-      with:
-        body: ${{ steps.release_notes.outputs.RELEASE_NOTES }}
-        files: |
-          target/*.jar
-        token: ${{ secrets.GITHUB_TOKEN }}
-        
-    - name: Release Summary
-      run: |
-        echo "## 🎉 发布成功!" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "- **版本**: v${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Docker镜像**: ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Release页面**: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY 
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify tag is from release branch
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "检查 tag: $TAG_NAME"
+
+          # 获取 tag 指向的 commit
+          TAG_COMMIT=$(git rev-list -n 1 $TAG_NAME)
+
+          # 检查包含此 commit 的 release-* 分支
+          RELEASE_BRANCHES=$(git branch -r --contains $TAG_COMMIT | grep -E "origin/release-" | head -1)
+
+          if [ -z "$RELEASE_BRANCHES" ]; then
+            echo "❌ Error: Tag '$TAG_NAME' 不是从 release-* 分支推送的"
+            echo "包含此 commit 的分支:"
+            git branch -r --contains $TAG_COMMIT
+            exit 1
+          fi
+
+          echo "✅ Tag '$TAG_NAME' 来自有效的 release 分支: $RELEASE_BRANCHES"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Generate Release Notes
+        id: release_notes
+        run: |
+          # 使用脚本生成Release Notes，避免重复代码
+          release_notes=$(./scripts/release-version.sh --generate-release-notes-only ${{ steps.version.outputs.VERSION }})
+
+          # 输出到GitHub Actions
+          {
+            echo 'RELEASE_NOTES<<EOF'
+            echo "$release_notes"
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
+
+      - name: Build and test
+        run: mvn clean package
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
+            ghcr.io/${{ github.repository }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body: ${{ steps.release_notes.outputs.RELEASE_NOTES }}
+          files: |
+            target/*.jar
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release Summary
+        run: |
+          echo "## 🎉 发布成功!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **版本**: v${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Docker镜像**: ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release页面**: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
