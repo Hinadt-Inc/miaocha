@@ -52,13 +52,15 @@ jobs:
       - name: List build artifacts
         run: |
           echo "=== Build Artifacts ==="
-          find miaocha-assembly/target -type f -name "*.zip" -o -name "*.tar.gz" -o -name "*.jar" | head -20
+          find dist -type f -name "*.zip" -o -name "*.tar.gz" -o -name "*.jar" | head -20
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: miaocha-distribution-${{ github.sha }}
           path: |
-            miaocha-assembly/target/*.zip
-            miaocha-assembly/target/*.tar.gz
+            dist/miaocha-*-bin.zip
+            dist/miaocha-*-bin.tar.gz
+            dist/miaocha-*-source.zip
+            dist/miaocha-*-source.tar.gz
           retention-days: 30
