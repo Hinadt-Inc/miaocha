@@ -24,6 +24,59 @@ function show_usage() {
     exit 1
 }
 
+function get_repository_info() {
+    # 获取远程仓库URL并解析为changelog URL
+    local remote_url=$(git remote get-url origin 2>/dev/null || echo "")
+    
+    if [ -z "$remote_url" ]; then
+        return
+    fi
+    
+    # 标准化URL格式，移除.git后缀
+    remote_url=$(echo "$remote_url" | sed 's/\.git$//')
+    
+    local base_url=""
+    local repo_path=""
+    
+    # 处理不同的URL格式
+    case "$remote_url" in
+        # GitHub HTTPS格式: https://github.com/owner/repo
+        https://github.com/*)
+            base_url="https://github.com"
+            repo_path="${remote_url#https://github.com/}"
+            ;;
+        # GitHub SSH格式: git@github.com:owner/repo  
+        git@github.com:*)
+            base_url="https://github.com"
+            repo_path="${remote_url#git@github.com:}"
+            ;;
+        # GitLab HTTPS格式: https://gitlab.com/owner/repo
+        https://gitlab.com/*)
+            base_url="https://gitlab.com"
+            repo_path="${remote_url#https://gitlab.com/}"
+            ;;
+        # GitLab SSH格式: git@gitlab.com:owner/repo
+        git@gitlab.com:*)
+            base_url="https://gitlab.com"
+            repo_path="${remote_url#git@gitlab.com:}"
+            ;;
+        # 其他HTTPS格式，尝试直接使用
+        https://*)
+            echo "$remote_url"
+            return
+            ;;
+        # 未知格式，返回空
+        *)
+            return
+            ;;
+    esac
+    
+    # 验证repo_path格式 (应该是 owner/repo 或 group/subgroup/repo)
+    if [[ "$repo_path" =~ ^[a-zA-Z0-9._-]+/[a-zA-Z0-9._/-]+$ ]]; then
+        echo "$base_url/$repo_path"
+    fi
+}
+
 function get_current_version() {
     if [ ! -f "$PROJECT_ROOT/pom.xml" ]; then
         echo "错误: 未找到 pom.xml 文件" >&2
@@ -148,8 +201,12 @@ This version includes several improvements and bug fixes based on community feed
 "
     fi
     
-    release_notes="$release_notes
-**Full Changelog**: https://github.com/$(git remote get-url origin | sed 's/.*github.com[:/]\([^/]*\/[^/]*\)\.git/\1/')/compare/$last_tag...v$version"
+    # 获取仓库信息，支持多种URL格式
+    local repo_info=$(get_repository_info)
+    if [ -n "$repo_info" ]; then
+        release_notes="$release_notes
+**Full Changelog**: $repo_info/compare/$last_tag...v$version"
+    fi
     
     if [ "$only_generate" = "true" ]; then
         # 仅输出到stdout，供GitHub Actions使用
