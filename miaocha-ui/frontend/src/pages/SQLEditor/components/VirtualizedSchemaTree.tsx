@@ -215,6 +215,18 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   const listRef = useRef<List>(null);
 
+  // 使用ref来追踪上一次的loading状态，用于检测刷新完成
+  const prevLoadingSchemaRef = useRef<boolean>(false);
+
+  // 监听刷新完成，重置展开状态
+  useEffect(() => {
+    // 当loadingSchema从true变为false时，表示刚刚完成了一次刷新
+    if (prevLoadingSchemaRef.current && !loadingSchema) {
+      setExpandedKeys(new Set());
+    }
+    prevLoadingSchemaRef.current = loadingSchema;
+  }, [loadingSchema]);
+
   // 添加滚动防抖优化，减少快速滚动时的渲染压力
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 

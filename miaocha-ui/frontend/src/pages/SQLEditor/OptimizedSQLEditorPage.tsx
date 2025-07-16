@@ -78,6 +78,7 @@ const OptimizedSQLEditorPage: React.FC = () => {
 
     // 其他操作
     fetchDatabaseSchema,
+    fetchDatabaseTables,
     handleDownloadResults,
     loadFromHistory,
     copyToClipboard,
@@ -87,14 +88,16 @@ const OptimizedSQLEditorPage: React.FC = () => {
     handleInsertTable,
   } = editorActions;
 
-  // 处理SQL查询状态更新的包装函数 - 优化性能，移除不必要的依赖
+  // 处理SQL查询状态更新的包装函数 - 使用useCallback优化性能
   const handleSqlQueryChange = useCallback(
     (value: string | undefined) => {
       const newValue = value ?? '';
-      // 直接调用setSqlQuery，由React内部处理状态比较优化
-      setSqlQuery(newValue);
+      // 避免不必要的状态更新
+      if (newValue !== sqlQuery) {
+        setSqlQuery(newValue);
+      }
     },
-    [setSqlQuery], // 只依赖setSqlQuery，避免因sqlQuery变化导致回调重建
+    [sqlQuery, setSqlQuery],
   );
 
   // 处理图表类型变化的包装函数
@@ -102,7 +105,7 @@ const OptimizedSQLEditorPage: React.FC = () => {
     setChartType(type as any);
   };
 
-  // 处理表结构按需加载 - 使用更稳定的回调
+  // 处理表结构按需加载 - 修复：正确传递fetchTableSchema的当前引用
   const handleFetchTableSchema = useCallback(
     async (tableName: string) => {
       if (selectedSource) {
@@ -110,15 +113,15 @@ const OptimizedSQLEditorPage: React.FC = () => {
       }
       return null;
     },
-    [selectedSource] // 移除fetchTableSchema依赖，因为它已经在actions中稳定了
+    [selectedSource, fetchTableSchema] // 修复：添加fetchTableSchema依赖，确保使用最新的函数引用
   );
 
-  // 处理数据库结构刷新 - 使用稳定的回调
+  // 处理数据库结构刷新 - 修复：使用快速表列表加载而不是完整结构加载
   const handleRefreshSchema = useCallback(() => {
     if (selectedSource) {
-      fetchDatabaseSchema(selectedSource);
+      fetchDatabaseTables(selectedSource);
     }
-  }, [selectedSource]); // 移除fetchDatabaseSchema依赖
+  }, [selectedSource, fetchDatabaseTables]); // 修复：使用fetchDatabaseTables进行快速刷新
 
   return (
     <Layout style={{ height: '100vh', padding: '10px' }}>

@@ -48,18 +48,30 @@ const OptimizedSchemaTree: React.FC<OptimizedSchemaTreeProps> = ({
   handleInsertTable,
   handleInsertField,
   collapsed = false,
-  toggleSider,
+  // toggleSider, // 暂未使用，先注释
 }) => {
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
   const [treeHeight, setTreeHeight] = useState<number>(500); // 默认高度
-  
-  // 使用ref来存储当前的expandedKeys，避免在useCallback中产生依赖循环
-  const expandedKeysRef = useRef<React.Key[]>([]);
-  expandedKeysRef.current = expandedKeys;
+
+  // 性能优化：限制同时展开的表数量
+  const MAX_EXPANDED_TABLES = 10;
 
   // 容器ref用于计算高度
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // 使用ref来追踪上一次的loading状态，用于检测刷新完成
+  const prevLoadingSchemaRef = useRef<boolean>(false);
+
+  // 监听刷新完成，重置展开状态
+  useEffect(() => {
+    // 当loadingSchema从true变为false时，表示刚刚完成了一次刷新
+    if (prevLoadingSchemaRef.current && !loadingSchema) {
+      setExpandedKeys([]);
+      setSelectedKeys([]);
+    }
+    prevLoadingSchemaRef.current = loadingSchema;
+  }, [loadingSchema]);
 
   // 动态计算树组件高度
   useEffect(() => {
@@ -87,7 +99,84 @@ const OptimizedSchemaTree: React.FC<OptimizedSchemaTreeProps> = ({
     };
   }, [databaseSchema]); // 当数据源变化时重新计算高度
 
-  // 转换数据为Antd Tree所需的格式
+// 优化：拆分出独立的表节点组件，使用 memo 避免不必要的重渲染
+const TableNodeComponent = memo(({ 
+  table, 
+  isLoading, 
+  isLoaded, 
+  handleInsertTable 
+}: {
+  table: any;
+  isLoading: boolean;
+  isLoaded: boolean;
+  handleInsertTable: (tableName: string, columns?: any) => void;
+}) => (
+  <div className={styles.tableNode}>
+    <div className={styles.nodeContent}>
+      <Space size={4}>
+        <TableOutlined />
+        <Tooltip title={table.tableComment || '点击展开查看字段'}>
+          <span className={styles.tableName}>{table.tableName}</span>
+        </Tooltip>
+        {isLoading && <Spin size="small" />}
+        {isLoaded && (
+          <span className={styles.loadedHint}>✓</span>
+        )}
+      </Space>
+    </div>
+    <div className={styles.nodeActions}>
+      <Tooltip title="插入表和字段">
+        <CopyOutlined 
+          className={styles.actionIcon}
+          onClick={(e) => {
+            e.stopPropagation();
+            const columns = table.isLoaded ? table.columns : undefined;
+            handleInsertTable(table.tableName, columns);
+          }}
+        />
+      </Tooltip>
+    </div>
+  </div>
+));
+
+// 优化：拆分出独立的字段节点组件
+const ColumnNodeComponent = memo(({ 
+  column, 
+  handleInsertField 
+}: {
+  column: any;
+  handleInsertField?: (fieldName: string) => void;
+}) => (
+  <div className={styles.columnNode}>
+    <div className={styles.nodeContent}>
+      <Space size={4}>
+        {column.isPrimaryKey && <span className={styles.primaryKey}>🔑</span>}
+        <span className={styles.columnName}>{column.columnName}</span>
+        <span className={styles.dataType}>({column.dataType})</span>
+      </Space>
+      {column.columnComment && (
+        <Tooltip title={column.columnComment}>
+          <span className={styles.columnComment}>{column.columnComment}</span>
+        </Tooltip>
+      )}
+    </div>
+    <div className={styles.nodeActions}>
+      <Tooltip title="插入字段">
+        <CopyOutlined 
+          className={styles.actionIcon}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (handleInsertField) {
+              handleInsertField(column.columnName);
+            }
+          }}
+        />
+      </Tooltip>
+    </div>
+  </div>
+));
+
+// 转换数据为Antd Tree所需的格式
   const treeData = useMemo((): ExtendedDataNode[] => {
     if (loadingSchema || !databaseSchema || 'error' in databaseSchema) {
       return [];
@@ -99,62 +188,21 @@ const OptimizedSchemaTree: React.FC<OptimizedSchemaTreeProps> = ({
       const isLoading = table.isLoading;        
       const node: ExtendedDataNode = {
           title: (
-            <div className={styles.tableNode}>
-              <div className={styles.nodeContent}>
-                <Space size={4}>
-                  <TableOutlined />
-                  <Tooltip title={table.tableComment}>
-                    <span className={styles.tableName}>{table.tableName}</span>
-                  </Tooltip>
-                  {isLoading && <Spin size="small" />}
-                </Space>
-              </div>
-              <div className={styles.nodeActions}>
-                <Tooltip title="插入表和字段">
-                  <CopyOutlined 
-                    className={styles.actionIcon}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // 支持随时插入表名，无需等待列加载
-                      const columns = table.isLoaded ? table.columns : undefined;
-                      handleInsertTable(table.tableName, columns);
-                    }}
-                  />
-                </Tooltip>
-              </div>
-            </div>
+            <TableNodeComponent
+              table={table}
+              isLoading={isLoading || false}
+              isLoaded={isLoaded || false}
+              handleInsertTable={handleInsertTable}
+            />
           ),
         key: tableKey,
         isLeaf: false,
         children: isLoaded && table.columns ? table.columns.map((column) => ({
           title: (
-            <div className={styles.columnNode}>
-              <div className={styles.nodeContent}>
-                <Space size={4}>
-                  {column.isPrimaryKey && <span className={styles.primaryKey}>🔑</span>}
-                  <span className={styles.columnName}>{column.columnName}</span>
-                  <span className={styles.dataType}>({column.dataType})</span>
-                </Space>
-                {column.columnComment && (
-                  <Tooltip title={column.columnComment}>
-                    <span className={styles.columnComment}>{column.columnComment}</span>
-                  </Tooltip>
-                )}
-              </div>
-              <div className={styles.nodeActions}>
-                <Tooltip title="插入字段">
-                  <CopyOutlined 
-                    className={styles.actionIcon}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (handleInsertField) {
-                        handleInsertField(column.columnName);
-                      }
-                    }}
-                  />
-                </Tooltip>
-              </div>
-            </div>
+            <ColumnNodeComponent
+              column={column}
+              handleInsertField={handleInsertField}
+            />
           ),
           key: `column-${table.tableName}-${column.columnName}`,
           isLeaf: true,
@@ -172,37 +220,52 @@ const OptimizedSchemaTree: React.FC<OptimizedSchemaTreeProps> = ({
 
       return node;
     });
-  }, [databaseSchema, loadingSchema]);
+  }, [databaseSchema, loadingSchema, handleInsertTable, handleInsertField]);
 
-  // 处理树节点展开
+  // 处理树节点展开 - 添加性能优化
   const handleExpand = useCallback(
     async (expandedKeysValue: React.Key[]) => {
-      // 检查是否有新展开的表节点需要加载数据
-      const newExpandedKeys = expandedKeysValue.filter(key => !expandedKeysRef.current.includes(key));
+      // 性能优化：限制同时展开的表数量
+      const tableKeys = expandedKeysValue.filter(key => 
+        typeof key === 'string' && key.startsWith('table-')
+      );
       
+      if (tableKeys.length > MAX_EXPANDED_TABLES) {
+        // 警告用户并移除最旧的展开项
+        console.warn(`⚠️ 为了性能考虑，最多同时展开 ${MAX_EXPANDED_TABLES} 个表`);
+        const limitedKeys = [...tableKeys.slice(-MAX_EXPANDED_TABLES)];
+        expandedKeysValue = expandedKeysValue.filter(key => 
+          !key.toString().startsWith('table-') || limitedKeys.includes(key)
+        );
+      }
+
       // 先更新展开状态
       setExpandedKeys(expandedKeysValue);
       
-      for (const key of newExpandedKeys) {
-        if (typeof key === 'string' && key.startsWith('table-')) {
-          const tableName = key.replace('table-', '');
+      // 检查是否有新展开的表节点需要加载数据
+      const expandedTableKeys = expandedKeysValue.filter(key => 
+        typeof key === 'string' && key.startsWith('table-')
+      );
+      
+      for (const key of expandedTableKeys) {
+        const tableName = (key as string).replace('table-', '');
+        
+        if (databaseSchema && 'tables' in databaseSchema && selectedSource) {
+          const table = databaseSchema.tables.find(t => t.tableName === tableName);
           
-          if (databaseSchema && 'tables' in databaseSchema && selectedSource) {
-            const table = databaseSchema.tables.find(t => t.tableName === tableName);
-            
-            if (table && !table.isLoaded && !table.isLoading) {
-              // 按需加载表结构
-              try {
-                await fetchTableSchema(tableName);
-              } catch (error) {
-                console.error(`加载表 ${tableName} 结构失败:`, error);
-              }
+          // 修复：无论是新展开的还是刷新后重新展开的，只要表未加载且未正在加载，都要加载
+          if (table && !table.isLoaded && !table.isLoading) {
+            // 按需加载表结构
+            try {
+              await fetchTableSchema(tableName);
+            } catch (error) {
+              console.error(`加载表 ${tableName} 结构失败:`, error);
             }
           }
         }
       }
     },
-    [databaseSchema, selectedSource, fetchTableSchema] // 使用ref避免expandedKeys依赖循环
+    [databaseSchema, selectedSource, fetchTableSchema, MAX_EXPANDED_TABLES]
   );
 
   // 处理节点选择
@@ -213,10 +276,13 @@ const OptimizedSchemaTree: React.FC<OptimizedSchemaTreeProps> = ({
       const { node } = info;
       if (node?.data) {
         if (node.key.startsWith('table-')) {
-          // 表节点被选中，可以进行插入操作
-          const { table } = node.data;
-          if (table.isLoaded && table.columns) {
-            // 这里可以添加快速插入表名的逻辑
+          // 表节点被选中，自动展开如果未展开
+          const tableKey = node.key;
+          if (!expandedKeys.includes(tableKey)) {
+            const newExpandedKeys = [...expandedKeys, tableKey];
+            setExpandedKeys(newExpandedKeys);
+            // 手动触发展开处理逻辑
+            handleExpand(newExpandedKeys);
           }
         } else if (node.key.startsWith('column-')) {
           // 字段节点被选中
@@ -227,7 +293,7 @@ const OptimizedSchemaTree: React.FC<OptimizedSchemaTreeProps> = ({
         }
       }
     },
-    [handleInsertField]
+    [handleInsertField, expandedKeys, handleExpand]
   );
 
   // 右键菜单处理
@@ -252,7 +318,23 @@ const OptimizedSchemaTree: React.FC<OptimizedSchemaTreeProps> = ({
     [handleInsertTable, handleInsertField]
   );
 
-  // 渲染内容
+// 性能提示组件
+const PerformanceTip = memo(() => {
+  const expandedCount = expandedKeys.filter(key => 
+    typeof key === 'string' && key.startsWith('table-')
+  ).length;
+  
+  if (expandedCount >= 8) {
+    return (
+      <div className={styles.performanceTip}>
+        💡 已展开 {expandedCount} 个表，建议关闭不需要的表以提升性能
+      </div>
+    );
+  }
+  return null;
+});
+
+// 渲染内容
   const renderContent = () => {
     if (loadingSchema) {
       return <Loading tip="加载数据库结构中..." />;
@@ -304,19 +386,24 @@ const OptimizedSchemaTree: React.FC<OptimizedSchemaTreeProps> = ({
     }
 
     return (
-      <Tree
-        className={styles.schemaTree}
-        treeData={treeData as DataNode[]}
-        expandedKeys={expandedKeys}
-        selectedKeys={selectedKeys}
-        onExpand={handleExpand}
-        onSelect={handleSelect}
-        onRightClick={handleRightClick}
-        showLine={{ showLeafIcon: false }}
-        switcherIcon={<DownOutlined />}
-        virtual
-        height={treeHeight} // 使用动态计算的高度撑满父容器，启用虚拟滚动提高性能
-      />
+      <div>
+        <PerformanceTip />
+        <Tree
+          className={styles.schemaTree}
+          treeData={treeData as DataNode[]}
+          expandedKeys={expandedKeys}
+          selectedKeys={selectedKeys}
+          onExpand={handleExpand}
+          onSelect={handleSelect}
+          onRightClick={handleRightClick}
+          showLine={{ showLeafIcon: false }}
+          switcherIcon={<DownOutlined />}
+          selectable={true}
+          blockNode={true} // 使节点占据整行，增加点击区域
+          virtual
+          height={treeHeight} // 使用动态计算的高度撑满父容器，启用虚拟滚动提高性能
+        />
+      </div>
     );
   };
 

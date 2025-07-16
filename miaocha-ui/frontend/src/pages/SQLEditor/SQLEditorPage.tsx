@@ -101,7 +101,7 @@ const SQLEditorPage: React.FC = () => {
     [sqlQuery, setSqlQuery],
   );
 
-  // 处理表结构按需加载
+  // 处理表结构按需加载 - 修复：正确传递fetchTableSchema的当前引用
   const handleFetchTableSchema = useCallback(
     async (tableName: string) => {
       if (selectedSource) {
@@ -109,15 +109,15 @@ const SQLEditorPage: React.FC = () => {
       }
       return null;
     },
-    [selectedSource] // 移除fetchTableSchema依赖，避免循环引用
+    [selectedSource, fetchTableSchema] // 修复：添加fetchTableSchema依赖，确保使用最新的函数引用
   );
 
-  // 处理数据库表列表刷新
+  // 处理数据库表列表刷新 - 修复：正确传递fetchDatabaseTables的当前引用
   const handleRefreshSchema = useCallback(() => {
     if (selectedSource) {
       fetchDatabaseTables(selectedSource);
     }
-  }, [selectedSource]); // 移除fetchDatabaseTables依赖，避免循环引用
+  }, [selectedSource, fetchDatabaseTables]); // 修复：添加fetchDatabaseTables依赖，确保使用最新的函数引用
 
   // 处理图表类型变化的包装函数
   const handleChartTypeChange = (type: 'bar' | 'line' | 'pie') => {
