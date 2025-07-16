@@ -66,7 +66,7 @@ docker-compose -f docker/compose/Infrastructure.yml up -d
 ```
 
 启动成功后，您可以通过 `docker ps` 命令检查容器是否成功运行，如下图所示：
-<img src="../images/infrastucture.png" width="900"  alt="基础设施容器启动状态"/>
+<img src="../images/infrastructure.png" width="900"  alt="基础设施容器启动状态"/>
 
 #### 3.3 故障排除
 

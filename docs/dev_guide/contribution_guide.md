@@ -51,7 +51,7 @@ git checkout -b feature/your-cool-feature upstream/dev
 * `fix/`：Bug 修复
 * `docs/`：文档修改
 * `refactor/`：代码重构
-* `perf/`: 功能&代码优化
+* `perf/`：功能&代码优化
 
 ### c. 开发与提交
 
