@@ -259,28 +259,44 @@ generate_github_release_notes() {
         echo ""
         
         if [ -n "$last_tag" ]; then
-            # 新功能和优化
-            local features=$(git log --oneline --pretty=format:"* %s" "$last_tag..HEAD" | grep -E "\[ISSUE.*\].*(新增|feat|feature|完善|优化|enhancement|支持)" || echo "")
-            if [ -n "$features" ]; then
-                echo "### 🚀 New Features & Enhancements"
-                echo "$features"
-                echo ""
+            # 获取所有merge commits (通常包含[ISSUE #xx]格式)
+            local merge_commits=$(git log --merges --oneline --pretty=format:"* %s" "$last_tag..HEAD" | grep -E "\[ISSUE.*\]" || echo "")
+            local all_issue_commits=$(git log --oneline --pretty=format:"* %s" "$last_tag..HEAD" | grep -E "\[ISSUE.*\]" || echo "")
+            
+            # 优先使用merge commits，如果没有则使用所有[ISSUE #xx]格式的提交
+            local issue_commits=""
+            if [ -n "$merge_commits" ]; then
+                issue_commits="$merge_commits"
+                echo "<!-- 基于merge commits生成 -->" >> "$output_file"
+            else
+                issue_commits="$all_issue_commits"
+                echo "<!-- 基于[ISSUE #xx]提交生成 -->" >> "$output_file"
             fi
             
-            # 错误修复
-            local bugfixes=$(git log --oneline --pretty=format:"* %s" "$last_tag..HEAD" | grep -E "\[ISSUE.*\].*(修复|fix|bug|解决)" || echo "")
-            if [ -n "$bugfixes" ]; then
-                echo "### 🐛 Bug Fixes"
-                echo "$bugfixes"
-                echo ""
-            fi
-            
-            # 文档等其他变更
-            local docs=$(git log --oneline --pretty=format:"* %s" "$last_tag..HEAD" | grep -E "\[ISSUE.*\].*(文档|doc|补充|更新|chore)" || echo "")
-            if [ -n "$docs" ]; then
-                echo "### 📚 Documentation & Others"
-                echo "$docs"
-                echo ""
+            if [ -n "$issue_commits" ]; then
+                # 新功能和优化
+                local features=$(echo "$issue_commits" | grep -E "\[ISSUE.*\].*(新增|feat|feature|完善|优化|enhancement|支持)" || echo "")
+                if [ -n "$features" ]; then
+                    echo "### 🚀 New Features & Enhancements"
+                    echo "$features"
+                    echo ""
+                fi
+                
+                # 错误修复
+                local bugfixes=$(echo "$issue_commits" | grep -E "\[ISSUE.*\].*(修复|fix|bug|解决)" || echo "")
+                if [ -n "$bugfixes" ]; then
+                    echo "### 🐛 Bug Fixes"
+                    echo "$bugfixes"
+                    echo ""
+                fi
+                
+                # 文档等其他变更
+                local docs=$(echo "$issue_commits" | grep -E "\[ISSUE.*\].*(文档|doc|补充|更新|chore)" || echo "")
+                if [ -n "$docs" ]; then
+                    echo "### 📚 Documentation & Others"
+                    echo "$docs"
+                    echo ""
+                fi
             fi
             
             echo "### 📝 All Changes"
