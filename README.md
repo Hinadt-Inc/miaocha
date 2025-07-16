@@ -1,24 +1,20 @@
 <div align="center">
-<img src="docs/images/logo.png" alt="秒查 Logo" width="120" height="120" />
+<img src="docs/images/logo.png" alt="秒查 Logo" width="100" height="100" />
 
 # 🔍 秒查 - 企业级日志管理平台
 
 ## 🚀 基于 Apache Doris 的高性能日志检索系统
 
 <!-- 版本和状态信息 -->
-[![Latest Release](https://img.shields.io/github/v/release/Hinadt-Inc/miaocha?style=for-the-badge&label=Latest%20Release&color=2ea44f)](https://github.com/Hinadt-Inc/miaocha/releases/latest)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/Hinadt-Inc/miaocha/release.yml?style=for-the-badge&branch=main)](https://github.com/Hinadt-Inc/miaocha/actions)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
-
-<!-- 技术栈信息 -->
-[![Java Version](https://img.shields.io/badge/Java-17+-orange.svg?style=for-the-badge)](https://www.oracle.com/java/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.4-brightgreen.svg?style=for-the-badge)](https://spring.io/projects/spring-boot)
-[![React Version](https://img.shields.io/badge/React-19-blue.svg?style=for-the-badge&logo=react)](https://react.dev/)
-
-<!-- 社区信息 -->
-[![GitHub Stars](https://img.shields.io/github/stars/Hinadt-Inc/miaocha?style=for-the-badge&color=yellow)](https://github.com/Hinadt-Inc/miaocha/stargazers)
-[![GitHub Forks](https://img.shields.io/github/forks/Hinadt-Inc/miaocha?style=for-the-badge&color=blue)](https://github.com/Hinadt-Inc/miaocha/network/members)
-[![Contributors](https://img.shields.io/github/contributors/Hinadt-Inc/miaocha?style=for-the-badge&color=green)](https://github.com/Hinadt-Inc/miaocha/graphs/contributors)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
+[![Latest Release](https://img.shields.io/github/v/release/Hinadt-Inc/miaocha?style=flat-square&label=Latest%20Release&color=2ea44f)](https://github.com/Hinadt-Inc/miaocha/releases/latest)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/Hinadt-Inc/miaocha/release.yml?style=flat-square&branch=main)](https://github.com/Hinadt-Inc/miaocha/actions)
+[![Java Version](https://img.shields.io/badge/Java-17+-orange.svg?style=flat-square)](https://www.oracle.com/java/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.4-brightgreen.svg?style=flat-square)](https://spring.io/projects/spring-boot)
+[![React Version](https://img.shields.io/badge/React-19-blue.svg?style=flat-square&logo=react)](https://react.dev/)
+[![GitHub Stars](https://img.shields.io/github/stars/Hinadt-Inc/miaocha?style=flat-square&color=yellow)](https://github.com/Hinadt-Inc/miaocha/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/Hinadt-Inc/miaocha?style=flat-square&color=blue)](https://github.com/Hinadt-Inc/miaocha/network/members)
+[![Contributors](https://img.shields.io/github/contributors/Hinadt-Inc/miaocha?style=flat-square&color=green)](https://github.com/Hinadt-Inc/miaocha/graphs/contributors)
 
 </div>
 
