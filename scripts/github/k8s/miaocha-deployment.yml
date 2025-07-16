@@ -21,6 +21,7 @@ spec:
       containers:
         - name: miaocha
           image: ${DOCKER_IMAGE}
+          imagePullPolicy: Always
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "dev"
