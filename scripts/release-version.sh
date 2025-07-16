@@ -389,8 +389,8 @@ function main() {
         fi
     fi
     
-    if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        echo "错误: 版本号格式不正确，应为 x.y.z"
+    if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then
+        echo "错误: 版本号格式不正确，应为 x.y.z 或 x.y.z-suffix (如: 2.0.0-rc.1, 2.0.0-hotfix, 2.0.0-test-auto)"
         exit 1
     fi
     
