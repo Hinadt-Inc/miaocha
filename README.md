@@ -1,5 +1,5 @@
 <div align="center">
-<img src="docs/images/logo.png" alt="秒查 Logo" width="120" height="120" />
+<img src="docs/images/logo.png" alt="秒查 Logo" width="100" height="100" />
 
 # 🔍 秒查 - 企业级日志管理平台
 
