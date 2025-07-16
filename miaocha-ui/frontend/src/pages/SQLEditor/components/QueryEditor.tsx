@@ -128,18 +128,22 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
           folding: true,
           lineNumbers: 'on',
           fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace',
-          // 智能提示配置 - 恢复但使用更保守的设置
-          quickSuggestions: editorSettings?.autoComplete ?? true,
+          // 智能提示配置 - 优化性能，减少频繁触发
+          quickSuggestions: {
+            other: editorSettings?.autoComplete ?? true,
+            comments: false, // 注释中不触发建议
+            strings: false, // 字符串中不触发建议
+          },
           suggestOnTriggerCharacters: editorSettings?.autoComplete ?? true,
           acceptSuggestionOnCommitCharacter: true,
           acceptSuggestionOnEnter: 'on',
-          // 自动格式化 - 恢复但减少频率
-          formatOnPaste: false, // 粘贴时不格式化，避免大文本问题
-          formatOnType: false, // 输入时不格式化，减少Promise rejection
-          // Hover提示 - 恢复但设置合理的延迟
+          // 自动格式化 - 全部禁用，避免性能问题
+          formatOnPaste: false,
+          formatOnType: false,
+          // Hover提示 - 增加延迟，减少频繁触发
           hover: {
             enabled: true,
-            delay: 500, // 增加hover延迟，减少频繁触发
+            delay: 800, // 增加hover延迟到800ms，减少频繁触发
           },
           // 参数提示 - 恢复
           parameterHints: { enabled: true },
@@ -169,7 +173,7 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
 
         editorRef.current = editor;
 
-        // 监听内容变化 - 添加防抖处理并避免循环更新
+        // 监听内容变化 - 优化防抖处理，提升响应速度
         let changeTimeout: NodeJS.Timeout;
 
         const handleContentChange = () => {
@@ -181,19 +185,18 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
           if (changeTimeout) {
             clearTimeout(changeTimeout);
           }
+          // 减少防抖时间，提升输入响应速度
           changeTimeout = setTimeout(() => {
             if (isMounted && editorRef.current && !isUpdatingFromState.current) {
               try {
                 const value = editor.getValue();
-                // 避免不必要的状态更新
-                if (value !== lastExternalUpdate.current) {
-                  onChange(value);
-                }
+                // React内部会处理状态比较，直接调用onChange
+                onChange(value);
               } catch (error) {
                 console.warn('获取编辑器内容失败:', error);
               }
             }
-          }, 150); // 增加防抖时间，减少频繁更新
+          }, 50); // 减少防抖时间从150ms到50ms，提升响应速度
         };
 
         const changeDisposable = editor.onDidChangeModelContent(handleContentChange);
@@ -301,10 +304,10 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
       } catch (error) {
         console.warn('更新编辑器内容失败:', error);
       } finally {
-        // 重置标志位
+        // 重置标志位 - 减少延迟时间，提升响应速度
         setTimeout(() => {
           isUpdatingFromState.current = false;
-        }, 50); // 减少延迟时间
+        }, 20); // 减少延迟时间从50ms到20ms
       }
     }
   }, [sqlQuery]);

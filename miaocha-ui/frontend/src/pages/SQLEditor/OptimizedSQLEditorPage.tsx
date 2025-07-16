@@ -87,16 +87,14 @@ const OptimizedSQLEditorPage: React.FC = () => {
     handleInsertTable,
   } = editorActions;
 
-  // 处理SQL查询状态更新的包装函数 - 使用useCallback优化性能
+  // 处理SQL查询状态更新的包装函数 - 优化性能，移除不必要的依赖
   const handleSqlQueryChange = useCallback(
     (value: string | undefined) => {
       const newValue = value ?? '';
-      // 避免不必要的状态更新
-      if (newValue !== sqlQuery) {
-        setSqlQuery(newValue);
-      }
+      // 直接调用setSqlQuery，由React内部处理状态比较优化
+      setSqlQuery(newValue);
     },
-    [sqlQuery, setSqlQuery],
+    [setSqlQuery], // 只依赖setSqlQuery，避免因sqlQuery变化导致回调重建
   );
 
   // 处理图表类型变化的包装函数

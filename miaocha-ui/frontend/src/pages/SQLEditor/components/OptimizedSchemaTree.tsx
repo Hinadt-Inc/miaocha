@@ -103,14 +103,11 @@ const OptimizedSchemaTree: React.FC<OptimizedSchemaTreeProps> = ({
               <div className={styles.nodeContent}>
                 <Space size={4}>
                   <TableOutlined />
-                  <span className={styles.tableName}>{table.tableName}</span>
+                  <Tooltip title={table.tableComment}>
+                    <span className={styles.tableName}>{table.tableName}</span>
+                  </Tooltip>
                   {isLoading && <Spin size="small" />}
                 </Space>
-                {table.tableComment && (
-                  <Tooltip title={table.tableComment}>
-                    <span className={styles.tableComment}>({table.tableComment})</span>
-                  </Tooltip>
-                )}
               </div>
               <div className={styles.nodeActions}>
                 <Tooltip title="插入表和字段">
@@ -347,16 +344,6 @@ const OptimizedSchemaTree: React.FC<OptimizedSchemaTreeProps> = ({
                 loading={loadingSchema}
               />
             </Tooltip>
-            {toggleSider && (
-              <Tooltip title={collapsed ? "展开" : "收起"}>
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<CopyOutlined style={{ transform: collapsed ? 'rotate(180deg)' : 'none' }} />}
-                  onClick={toggleSider}
-                />
-              </Tooltip>
-            )}
           </Space>
         </div>
       }
