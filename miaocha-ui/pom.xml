@@ -82,6 +82,18 @@
                                 </configuration>
                             </execution>
 
+                            <!-- 同步Maven版本号到package.json -->
+                            <execution>
+                                <id>sync-version</id>
+                                <goals>
+                                    <goal>yarn</goal>
+                                </goals>
+                                <phase>generate-resources</phase>
+                                <configuration>
+                                    <arguments>version --new-version ${project.version} --no-git-tag-version</arguments>
+                                </configuration>
+                            </execution>
+
                             <!-- 安装依赖 -->
                             <execution>
                                 <id>yarn-install</id>
