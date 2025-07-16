@@ -80,6 +80,12 @@ jobs:
           # 使用脚本生成Release Notes，避免重复代码
           release_notes=$(./scripts/release-version.sh --generate-release-notes-only ${{ steps.version.outputs.VERSION }})
 
+          # 打印Release Notes到日志中供查看
+          echo "## 📋 生成的 Release Notes:"
+          echo "========================================"
+          echo "$release_notes"
+          echo "========================================"
+
           # 输出到GitHub Actions
           {
             echo 'RELEASE_NOTES<<EOF'
