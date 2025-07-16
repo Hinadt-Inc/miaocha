@@ -215,6 +215,18 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   const listRef = useRef<List>(null);
 
+  // 使用ref来追踪上一次的loading状态，用于检测刷新完成
+  const prevLoadingSchemaRef = useRef<boolean>(false);
+
+  // 监听刷新完成，重置展开状态
+  useEffect(() => {
+    // 当loadingSchema从true变为false时，表示刚刚完成了一次刷新
+    if (prevLoadingSchemaRef.current && !loadingSchema) {
+      setExpandedKeys(new Set());
+    }
+    prevLoadingSchemaRef.current = loadingSchema;
+  }, [loadingSchema]);
+
   // 添加滚动防抖优化，减少快速滚动时的渲染压力
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -249,8 +261,8 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
     const nodes: TreeNode[] = [];
 
     databaseSchema.tables.forEach((table) => {
-      // 过滤掉带.的字段
-      const tableColumnsNotIncludeDot = table.columns.filter((column) => !column.columnName?.includes('.'));
+      // 过滤掉带.的字段，并确保columns存在
+      const tableColumnsNotIncludeDot = table.columns?.filter((column) => !column.columnName?.includes('.')) || [];
       // 添加表节点
       const tableNode: TreeNode = {
         title: table.tableName,
@@ -292,14 +304,17 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
     });
   }, []);
 
-  // 处理插入表
+  // 处理插入表 - 支持随时插入，无需预先加载列信息
   const handleInsertTableClick = useCallback(
     (tableName: string) => {
+      // 直接调用插入表方法，无论是否有列信息
       if (databaseSchema && 'tables' in databaseSchema) {
         const table = databaseSchema.tables.find((t) => t.tableName === tableName);
-        if (table) {
-          handleInsertTable(tableName, table.columns);
-        }
+        // 传递列信息（如果有的话），如果没有也没关系
+        handleInsertTable(tableName, table?.columns);
+      } else {
+        // 即使没有数据库结构信息，也能插入表名，传递undefined作为第二个参数
+        handleInsertTable(tableName, undefined);
       }
     },
     [databaseSchema, handleInsertTable],

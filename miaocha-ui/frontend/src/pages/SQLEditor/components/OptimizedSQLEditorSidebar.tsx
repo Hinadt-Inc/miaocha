@@ -1,21 +1,18 @@
 import React from 'react';
-import VirtualizedSchemaTree from './VirtualizedSchemaTree';
-import { SchemaResult } from '../types';
+import OptimizedSchemaTree from './OptimizedSchemaTree';
+import { ExtendedSchemaResult } from '../types';
 import styles from '../SQLEditorPage.module.less';
 
-export interface SQLEditorSidebarProps {
-  databaseSchema: SchemaResult | { error: string } | null;
+export interface OptimizedSQLEditorSidebarProps {
+  databaseSchema: ExtendedSchemaResult | { error: string } | null;
   loadingSchema: boolean;
+  loadingTables: Set<string>;
   refreshSchema: () => void;
+  fetchTableSchema: (tableName: string) => Promise<any>;
+  selectedSource?: string;
   onInsertTable: (
     tableName: string,
-    columns?: {
-      columnName: string;
-      dataType: string;
-      columnComment: string;
-      isPrimaryKey: boolean;
-      isNullable: boolean;
-    }[],
+    columns?: ExtendedSchemaResult['tables'][0]['columns'],
   ) => void;
   onInsertField: (fieldName: string) => void;
   collapsed: boolean;
@@ -23,13 +20,16 @@ export interface SQLEditorSidebarProps {
 }
 
 /**
- * SQL编辑器侧边栏组件
- * 包含数据库结构树和折叠功能
+ * 优化的SQL编辑器侧边栏组件
+ * 包含优化的数据库结构树和折叠功能
  */
-export const SQLEditorSidebar: React.FC<SQLEditorSidebarProps> = ({
+export const OptimizedSQLEditorSidebar: React.FC<OptimizedSQLEditorSidebarProps> = ({
   databaseSchema,
   loadingSchema,
+  loadingTables,
   refreshSchema,
+  fetchTableSchema,
+  selectedSource,
   onInsertTable,
   onInsertField,
   collapsed,
@@ -38,10 +38,13 @@ export const SQLEditorSidebar: React.FC<SQLEditorSidebarProps> = ({
   return (
     <div className={styles.sqlEditorSidebar}>
       <div className={styles.sidebarContent}>
-        <VirtualizedSchemaTree
+        <OptimizedSchemaTree
           databaseSchema={databaseSchema}
           loadingSchema={loadingSchema}
+          loadingTables={loadingTables}
           refreshSchema={refreshSchema}
+          fetchTableSchema={fetchTableSchema}
+          selectedSource={selectedSource}
           handleInsertTable={onInsertTable}
           handleInsertField={onInsertField}
           collapsed={collapsed}

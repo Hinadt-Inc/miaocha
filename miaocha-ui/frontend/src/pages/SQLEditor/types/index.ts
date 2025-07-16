@@ -28,8 +28,29 @@ export interface QueryResult extends ExecuteSQLResult {
   message?: string;
 }
 
-// 数据库结构类型
+// 数据库结构类型（扩展版本，支持按需加载）
 export interface SchemaResult {
+  databaseName: string;
+  tables: {
+    tableName: string;
+    tableComment: string;
+    // 字段信息可能为空，表示尚未加载
+    columns?: {
+      columnName: string;
+      dataType: string;
+      columnComment: string;
+      isPrimaryKey: boolean;
+      isNullable: boolean;
+    }[];
+    // 标记是否已加载详细信息
+    isLoaded?: boolean;
+    // 标记是否正在加载
+    isLoading?: boolean;
+  }[];
+}
+
+// 兼容旧版本的完整结构类型
+export interface LegacySchemaResult {
   databaseName: string;
   tables: {
     tableName: string;
@@ -43,6 +64,31 @@ export interface SchemaResult {
     }[];
   }[];
 }
+
+// 新增：数据库表列表类型
+export interface DatabaseTableList {
+  databaseName: string;
+  tables: {
+    tableName: string;
+    tableComment: string;
+  }[];
+}
+
+// 新增：单个表结构类型
+export interface TableSchema {
+  tableName: string;
+  tableComment: string;
+  columns: {
+    columnName: string;
+    dataType: string;
+    columnComment: string;
+    isPrimaryKey: boolean;
+    isNullable: boolean;
+  }[];
+}
+
+// 新增：扩展的数据库结构类型别名（向后兼容）
+export type ExtendedSchemaResult = SchemaResult;
 
 // 查询历史记录类型
 export interface QueryHistory {

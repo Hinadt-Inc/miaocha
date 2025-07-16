@@ -42,20 +42,42 @@ public class SqlEditorQueryEndpoint {
     }
 
     /**
-     * 获取数据库表结构
+     * 获取数据库表列表
      *
      * @param user 当前用户
      * @param datasourceId 数据源ID
-     * @return 表结构信息
+     * @return 数据库表列表
      */
-    @GetMapping("/schema/{datasourceId}")
-    @Operation(summary = "获取数据库结构", description = "获取指定数据源的数据库结构信息，包括表和字段")
-    public ApiResponse<SchemaInfoDTO> getSchemaInfo(
+    @GetMapping("/tables/{datasourceId}")
+    @Operation(summary = "获取数据库表列表", description = "获取指定数据源的数据库表列表，不包含字段信息")
+    public ApiResponse<DatabaseTableListDTO> getDatabaseTableList(
             @CurrentUser UserDTO user,
             @Parameter(description = "数据源ID", required = true) @PathVariable("datasourceId")
                     Long datasourceId) {
-        SchemaInfoDTO schema = sqlQueryService.getSchemaInfo(user.getId(), datasourceId);
-        return ApiResponse.success(schema);
+        DatabaseTableListDTO tableList =
+                sqlQueryService.getDatabaseTableList(user.getId(), datasourceId);
+        return ApiResponse.success(tableList);
+    }
+
+    /**
+     * 获取指定表的字段信息
+     *
+     * @param user 当前用户
+     * @param datasourceId 数据源ID
+     * @param tableName 表名
+     * @return 表字段信息
+     */
+    @GetMapping("/table-schema/{datasourceId}")
+    @Operation(summary = "获取表字段信息", description = "获取指定数据源和表名的字段信息")
+    public ApiResponse<TableSchemaDTO> getTableSchema(
+            @CurrentUser UserDTO user,
+            @Parameter(description = "数据源ID", required = true) @PathVariable("datasourceId")
+                    Long datasourceId,
+            @Parameter(description = "表名", required = true) @RequestParam("tableName")
+                    String tableName) {
+        TableSchemaDTO tableSchema =
+                sqlQueryService.getTableSchema(user.getId(), datasourceId, tableName);
+        return ApiResponse.success(tableSchema);
     }
 
     /**
