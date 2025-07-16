@@ -72,20 +72,21 @@ jobs:
 
       - name: Check if PR is already linked to Issue
         id: check-link
+        env:
+          CURRENT_BODY: ${{ github.event.pull_request.body }}
         run: |
           ISSUE_NUMBER="${{ steps.check-title.outputs.issue_number }}"
           PR_NUMBER="${{ github.event.pull_request.number }}"
-          CURRENT_BODY="${{ github.event.pull_request.body }}"
           
           echo "🔍 检查PR是否已经关联到Issue #$ISSUE_NUMBER"
-          echo "当前PR描述: $CURRENT_BODY"
+          echo "当前PR描述: (内容已安全处理)"
           
           # 初始化关联状态
           IS_LINKED=false
           LINK_REASON=""
           
           # 方法1：检查PR描述中是否包含关联关键词
-          if echo "$CURRENT_BODY" | grep -qEi "(close[sd]?|fix(e[sd])?|resolve[sd]?) #$ISSUE_NUMBER\b"; then
+          if printf '%s' "$CURRENT_BODY" | grep -qEi "(close[sd]?|fix(e[sd])?|resolve[sd]?) #$ISSUE_NUMBER\b"; then
             IS_LINKED=true
             LINK_REASON="PR描述中包含关联关键词"
             echo "✅ 检测到关联：$LINK_REASON"
@@ -121,7 +122,7 @@ jobs:
           
           # 方法4：检查PR描述中是否有其他引用格式
           if [ "$IS_LINKED" = false ]; then
-            if echo "$CURRENT_BODY" | grep -qE "#$ISSUE_NUMBER\b"; then
+            if printf '%s' "$CURRENT_BODY" | grep -qE "#$ISSUE_NUMBER\b"; then
               IS_LINKED=true
               LINK_REASON="PR描述中引用了Issue"
               echo "✅ 检测到关联：$LINK_REASON"
@@ -140,10 +141,11 @@ jobs:
       - name: Auto link PR to Issue
         id: link-issue
         if: ${{ steps.check-link.outputs.is_linked == 'false' }}
+        env:
+          CURRENT_BODY: ${{ github.event.pull_request.body }}
         run: |
           ISSUE_NUMBER="${{ steps.check-title.outputs.issue_number }}"
           PR_NUMBER="${{ github.event.pull_request.number }}"
-          CURRENT_BODY="${{ github.event.pull_request.body }}"
           
           echo "🔗 开始自动关联PR #$PR_NUMBER 到Issue #$ISSUE_NUMBER"
           
@@ -157,7 +159,7 @@ jobs:
             NEW_BODY="$LINK_TEXT"$'\n\n'"$CURRENT_BODY"
           fi
           
-          echo "新的PR描述: $NEW_BODY"
+          echo "新的PR描述: (内容已安全处理)"
           
           # 使用GitHub API更新PR描述
           UPDATE_RESPONSE=$(curl -s -w "%{http_code}" -X PATCH \

@@ -9,12 +9,15 @@ import com.hinadt.miaocha.application.service.export.FileExporterFactory;
 import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
+import com.hinadt.miaocha.domain.converter.SchemaConverter;
 import com.hinadt.miaocha.domain.converter.SqlQueryHistoryConverter;
+import com.hinadt.miaocha.domain.dto.DatabaseTableListDTO;
 import com.hinadt.miaocha.domain.dto.SchemaInfoDTO;
 import com.hinadt.miaocha.domain.dto.SqlHistoryQueryDTO;
 import com.hinadt.miaocha.domain.dto.SqlHistoryResponseDTO;
 import com.hinadt.miaocha.domain.dto.SqlQueryDTO;
 import com.hinadt.miaocha.domain.dto.SqlQueryResultDTO;
+import com.hinadt.miaocha.domain.dto.TableSchemaDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.entity.SqlQueryHistory;
 import com.hinadt.miaocha.domain.entity.User;
@@ -82,6 +85,8 @@ public class SqlQueryServiceImpl implements SqlQueryService {
             Pattern.compile("\\bFROM\\s+[\"'`]?([\\w\\d_\\.]+)[\"'`]?", Pattern.CASE_INSENSITIVE);
 
     @Autowired private SqlQueryHistoryConverter sqlQueryHistoryConverter;
+
+    @Autowired private SchemaConverter schemaConverter;
 
     /** 获取线程执行器，如果注入的执行器为空（如在测试环境中），则使用公共线程池 */
     private Executor getExecutor() {
@@ -212,71 +217,6 @@ public class SqlQueryServiceImpl implements SqlQueryService {
     }
 
     @Override
-    public SchemaInfoDTO getSchemaInfo(Long userId, Long datasourceId) {
-        // 获取数据源
-        DatasourceInfo datasourceInfo = datasourceMapper.selectById(datasourceId);
-        if (datasourceInfo == null) {
-            throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
-        }
-
-        // 获取用户信息
-        User user = userMapper.selectById(userId);
-        if (user == null) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
-
-        SchemaInfoDTO schemaInfo = new SchemaInfoDTO();
-        schemaInfo.setDatabaseName(DatasourceType.extractDatabaseName(datasourceInfo.getJdbcUrl()));
-
-        try {
-            // 统一同步执行
-            return getSchemaInfoSync(user, userId, datasourceInfo, schemaInfo);
-        } catch (Exception e) {
-            if (e instanceof BusinessException) {
-                throw (BusinessException) e;
-            }
-            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "获取数据库结构失败: " + e.getMessage());
-        }
-    }
-
-    /** 同步获取schema信息 */
-    private SchemaInfoDTO getSchemaInfoSync(
-            User user, Long userId, DatasourceInfo datasourceInfo, SchemaInfoDTO schemaInfo) {
-        try (Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo)) {
-            // 获取对应数据库类型的元数据服务
-            DatabaseMetadataService metadataService =
-                    metadataServiceFactory.getService(datasourceInfo.getType());
-
-            List<SchemaInfoDTO.TableInfoDTO> tables = new ArrayList<>();
-            List<String> permittedTables;
-
-            // 如果是管理员，则可以查看所有表
-            if (user.getRole().equals(UserRole.ADMIN.name())
-                    || user.getRole().equals(UserRole.SUPER_ADMIN.name())) {
-                permittedTables = metadataService.getAllTables(conn);
-            } else {
-                // 获取用户有权限的表
-                permittedTables =
-                        permissionChecker.getPermittedTables(userId, datasourceInfo.getId(), conn);
-            }
-
-            // 获取表信息
-            for (String tableName : permittedTables) {
-                SchemaInfoDTO.TableInfoDTO tableInfo = new SchemaInfoDTO.TableInfoDTO();
-                tableInfo.setTableName(tableName);
-                tableInfo.setTableComment(metadataService.getTableComment(conn, tableName));
-                tableInfo.setColumns(metadataService.getColumnInfo(conn, tableName));
-                tables.add(tableInfo);
-            }
-
-            schemaInfo.setTables(tables);
-            return schemaInfo;
-        } catch (Exception e) {
-            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "获取数据库结构失败: " + e.getMessage());
-        }
-    }
-
-    @Override
     public Resource getQueryResult(Long queryId) {
         // 查询历史记录
         SqlQueryHistory history = sqlQueryHistoryMapper.selectById(queryId);
@@ -394,5 +334,104 @@ public class SqlQueryServiceImpl implements SqlQueryService {
 
         response.setRecords(records);
         return response;
+    }
+
+    @Override
+    public DatabaseTableListDTO getDatabaseTableList(Long userId, Long datasourceId) {
+        // 获取数据源
+        DatasourceInfo datasourceInfo = datasourceMapper.selectById(datasourceId);
+        if (datasourceInfo == null) {
+            throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
+        }
+
+        // 获取用户信息
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        DatabaseTableListDTO tableListDTO = new DatabaseTableListDTO();
+        tableListDTO.setDatabaseName(
+                DatasourceType.extractDatabaseName(datasourceInfo.getJdbcUrl()));
+
+        try (Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo)) {
+            // 获取对应数据库类型的元数据服务
+            DatabaseMetadataService metadataService =
+                    metadataServiceFactory.getService(datasourceInfo.getType());
+
+            List<String> permittedTables;
+
+            // 如果是管理员，则可以查看所有表
+            if (user.getRole().equals(UserRole.ADMIN.name())
+                    || user.getRole().equals(UserRole.SUPER_ADMIN.name())) {
+                permittedTables = metadataService.getAllTables(conn);
+            } else {
+                // 获取用户有权限的表
+                permittedTables =
+                        permissionChecker.getPermittedTables(userId, datasourceInfo.getId(), conn);
+            }
+
+            // 使用 converter 创建表基本信息列表
+            List<DatabaseTableListDTO.TableBasicInfoDTO> tables =
+                    schemaConverter.createTableBasicInfoList(permittedTables);
+
+            tableListDTO.setTables(tables);
+            return tableListDTO;
+        } catch (Exception e) {
+            if (e instanceof BusinessException) {
+                throw (BusinessException) e;
+            }
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "获取数据库表列表失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public TableSchemaDTO getTableSchema(Long userId, Long datasourceId, String tableName) {
+        // 获取数据源
+        DatasourceInfo datasourceInfo = datasourceMapper.selectById(datasourceId);
+        if (datasourceInfo == null) {
+            throw new BusinessException(ErrorCode.DATASOURCE_NOT_FOUND);
+        }
+
+        // 获取用户信息
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        try (Connection conn = jdbcQueryExecutor.getConnection(datasourceInfo)) {
+            // 获取对应数据库类型的元数据服务
+            DatabaseMetadataService metadataService =
+                    metadataServiceFactory.getService(datasourceInfo.getType());
+
+            // 验证用户是否有权限访问该表
+            List<String> permittedTables;
+            if (user.getRole().equals(UserRole.ADMIN.name())
+                    || user.getRole().equals(UserRole.SUPER_ADMIN.name())) {
+                permittedTables = metadataService.getAllTables(conn);
+            } else {
+                permittedTables =
+                        permissionChecker.getPermittedTables(userId, datasourceInfo.getId(), conn);
+            }
+
+            if (!permittedTables.contains(tableName)) {
+                throw new BusinessException(ErrorCode.PERMISSION_DENIED, "无权限访问表: " + tableName);
+            }
+
+            // 获取表的元数据信息
+            String databaseName = DatasourceType.extractDatabaseName(datasourceInfo.getJdbcUrl());
+            String tableComment = metadataService.getTableComment(conn, tableName);
+            List<SchemaInfoDTO.ColumnInfoDTO> columns =
+                    metadataService.getColumnInfo(conn, tableName);
+
+            // 使用 converter 创建表schema信息
+            return schemaConverter.createTableSchema(
+                    databaseName, tableName, tableComment, columns);
+        } catch (Exception e) {
+            if (e instanceof BusinessException) {
+                throw (BusinessException) e;
+            }
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "获取表字段信息失败: " + e.getMessage());
+        }
     }
 }

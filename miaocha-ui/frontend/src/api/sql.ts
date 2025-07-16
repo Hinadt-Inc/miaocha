@@ -19,7 +19,8 @@ export interface ExecuteSQLResult {
   downloadUrl?: string;
 }
 
-export interface SchemaResult {
+// 向后兼容的完整结构类型
+export interface LegacySchemaResult {
   databaseName: string;
   tables: Array<{
     tableName: string;
@@ -34,6 +35,46 @@ export interface SchemaResult {
   }>;
 }
 
+// 主要使用的扩展结构类型（支持按需加载）
+export interface SchemaResult {
+  databaseName: string;
+  tables: Array<{
+    tableName: string;
+    tableComment: string;
+    columns?: Array<{
+      columnName: string;
+      dataType: string;
+      columnComment: string;
+      isPrimaryKey: boolean;
+      isNullable: boolean;
+    }>;
+    isLoaded?: boolean;
+    isLoading?: boolean;
+  }>;
+}
+
+// 新增：数据库表列表DTO
+export interface DatabaseTableListDTO {
+  databaseName: string;
+  tables: Array<{
+    tableName: string;
+    tableComment: string;
+  }>;
+}
+
+// 新增：单个表结构DTO
+export interface TableSchemaDTO {
+  tableName: string;
+  tableComment: string;
+  columns: Array<{
+    columnName: string;
+    dataType: string;
+    columnComment: string;
+    isPrimaryKey: boolean;
+    isNullable: boolean;
+  }>;
+}
+
 /**
  * 执行SQL查询
  * @param params 执行参数
@@ -44,12 +85,54 @@ export async function executeSQL(params: ExecuteSQLParams): Promise<ExecuteSQLRe
 }
 
 /**
- * 获取数据库结构
+ * 获取数据库结构（向后兼容接口）
  * @param datasourceId 数据源ID
- * @returns 数据库结构
+ * @returns 完整数据库结构
+ * @deprecated 建议使用 getDatabaseTables 和 getTableSchema 的组合
+ */
+export async function getLegacySchema(datasourceId: string): Promise<LegacySchemaResult> {
+  return get<LegacySchemaResult>(`/api/sql/schema/${datasourceId}`);
+}
+
+/**
+ * 获取数据库结构（新版本，返回扩展格式）
+ * 优先使用快速表列表，按需加载详情
+ * @param datasourceId 数据源ID
+ * @returns 扩展的数据库结构
  */
 export async function getSchema(datasourceId: string): Promise<SchemaResult> {
-  return get<SchemaResult>(`/api/sql/schema/${datasourceId}`);
+  // 先获取表列表
+  const tableList = await getDatabaseTables(datasourceId);
+  
+  // 转换为扩展格式
+  return {
+    databaseName: tableList.databaseName,
+    tables: tableList.tables.map(table => ({
+      tableName: table.tableName,
+      tableComment: table.tableComment,
+      isLoaded: false,
+      isLoading: false,
+    })),
+  };
+}
+
+/**
+ * 获取数据库表列表（不包含字段信息）- 新增接口
+ * @param datasourceId 数据源ID
+ * @returns 数据库表列表
+ */
+export async function getDatabaseTables(datasourceId: string): Promise<DatabaseTableListDTO> {
+  return get<DatabaseTableListDTO>(`/api/sql/tables/${datasourceId}`);
+}
+
+/**
+ * 获取单个表的结构信息 - 新增接口
+ * @param datasourceId 数据源ID
+ * @param tableName 表名
+ * @returns 表结构信息
+ */
+export async function getTableSchema(datasourceId: string, tableName: string): Promise<TableSchemaDTO> {
+  return get<TableSchemaDTO>(`/api/sql/table-schema/${datasourceId}?tableName=${encodeURIComponent(tableName)}`);
 }
 
 export interface QueryHistoryItem {

@@ -144,24 +144,143 @@ export const initMonacoEditorLocally = (): typeof monaco => {
 
         // 设置基本的SQL语法高亮
         monaco.languages.setMonarchTokensProvider('sql', {
+          defaultToken: '',
+          tokenPostfix: '.sql',
+          ignoreCase: true,
+
+          brackets: [
+            { open: '(', close: ')', token: 'delimiter.parenthesis' },
+            { open: '[', close: ']', token: 'delimiter.square' },
+          ],
+
+          keywords: [
+            'SELECT', 'FROM', 'WHERE', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'DROP', 'ALTER',
+            'JOIN', 'INNER', 'LEFT', 'RIGHT', 'FULL', 'OUTER', 'ON', 'AS', 'AND', 'OR', 'NOT', 'NULL',
+            'TRUE', 'FALSE', 'DISTINCT', 'ORDER', 'BY', 'GROUP', 'HAVING', 'LIMIT', 'OFFSET',
+            'INTO', 'VALUES', 'SET', 'TABLE', 'INDEX', 'VIEW', 'DATABASE', 'SCHEMA',
+            'PRIMARY', 'KEY', 'FOREIGN', 'REFERENCES', 'UNIQUE', 'CHECK', 'DEFAULT',
+            'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'CASE', 'WHEN', 'THEN', 'ELSE', 'END',
+            'UNION', 'ALL', 'EXISTS', 'IN', 'BETWEEN', 'LIKE', 'IS', 'ISNULL'
+          ],
+
+          operators: ['=', '>', '<', '!', '~', '?', ':', '==', '<=', '>=', '!=', '<>', '+=', '-=', '*=', '/=', '%=', '|=', '&=', '^=', '>>=', '<<='],
+
+          builtinFunctions: [
+            'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'CONCAT', 'SUBSTRING', 'LENGTH', 'UPPER', 'LOWER',
+            'TRIM', 'LTRIM', 'RTRIM', 'REPLACE', 'CAST', 'CONVERT', 'COALESCE', 'NULLIF',
+            'DATE', 'TIME', 'DATETIME', 'NOW', 'CURRENT_TIMESTAMP', 'YEAR', 'MONTH', 'DAY'
+          ],
+
+          builtinVariables: [],
+          
           tokenizer: {
             root: [
-              [/\b(SELECT|FROM|WHERE|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER)\b/i, 'keyword'],
-              [/\b(JOIN|INNER|LEFT|RIGHT|ON|AS|AND|OR|NOT|NULL)\b/i, 'keyword'],
-              [/\b(TRUE|FALSE|DISTINCT|ORDER|BY|GROUP|HAVING|LIMIT|OFFSET)\b/i, 'keyword'],
-              [/\b(VARCHAR|INT|INTEGER|TEXT|DATE|DATETIME|TIMESTAMP|DECIMAL|FLOAT|BOOLEAN|CHAR)\b/i, 'type'],
-              [/'[^']*'/, 'string'],
-              [/"[^"]*"/, 'string'],
-              [/--.*$/, 'comment'],
-              [/\/\*[\s\S]*?\*\//, 'comment'],
-              [/\b\d+(\.\d+)?\b/, 'number'],
+              { include: '@comments' },
+              { include: '@whitespace' },
+              { include: '@numbers' },
+              { include: '@strings' },
+              { include: '@complexIdentifiers' },
+              [/[;,.]/, 'delimiter'],
+              [/[()]/, '@brackets'],
+              [
+                /[\w@#$]+/,
+                {
+                  cases: {
+                    '@keywords': 'keyword',
+                    '@operators': 'operator',
+                    '@builtinFunctions': 'predefined',
+                    '@builtinVariables': 'predefined',
+                    '@default': 'identifier'
+                  }
+                }
+              ],
+              [/[<>=!%&+\-*/|~^]/, 'operator'],
             ],
+
+            whitespace: [[/\s+/, 'white']],
+
+            comments: [
+              [/--+.*/, 'comment'],
+              [/\/\*/, { token: 'comment.quote', next: '@comment' }]
+            ],
+
+            comment: [
+              [/[^*/]+/, 'comment'],
+              [/\*\//, { token: 'comment.quote', next: '@pop' }],
+              [/./, 'comment']
+            ],
+
+            numbers: [
+              [/0[xX][0-9a-fA-F]*/, 'number'],
+              [/[$][+-]*\d*(\.\d*)?/, 'number'],
+              [/((\d+(\.\d*)?)|(\.\d+))([eE][\-+]?\d+)?/, 'number']
+            ],
+
+            strings: [
+              [/N?'/, { token: 'string', next: '@string' }],
+              [/N?"/, { token: 'string', next: '@stringDouble' }]
+            ],
+
+            string: [
+              [/[^']+/, 'string'],
+              [/''/, 'string'],
+              [/'/, { token: 'string', next: '@pop' }]
+            ],
+
+            stringDouble: [
+              [/[^"]+/, 'string'],
+              [/""/, 'string'],
+              [/"/, { token: 'string', next: '@pop' }]
+            ],
+
+            complexIdentifiers: [
+              [/\[/, { token: 'identifier.quote', next: '@bracketedIdentifier' }],
+              [/`/, { token: 'identifier.quote', next: '@quotedIdentifier' }]
+            ],
+
+            bracketedIdentifier: [
+              [/[^\]]+/, 'identifier'],
+              [/]]/, 'identifier'],
+              [/]/, { token: 'identifier.quote', next: '@pop' }]
+            ],
+
+            quotedIdentifier: [
+              [/[^`]+/, 'identifier'],
+              [/``/, 'identifier'],
+              [/`/, { token: 'identifier.quote', next: '@pop' }]
+            ]
+          }
+        });
+
+        // 设置SQL语言配置
+        monaco.languages.setLanguageConfiguration('sql', {
+          comments: {
+            lineComment: '--',
+            blockComment: ['/*', '*/']
           },
+          brackets: [
+            ['(', ')'],
+            ['[', ']']
+          ],
+          autoClosingPairs: [
+            { open: '(', close: ')' },
+            { open: '[', close: ']' },
+            { open: "'", close: "'" },
+            { open: '"', close: '"' }
+          ],
+          surroundingPairs: [
+            { open: '(', close: ')' },
+            { open: '[', close: ']' },
+            { open: "'", close: "'" },
+            { open: '"', close: '"' }
+          ]
         });
 
         // SQL补全提供器将在组件中通过 useSQLCompletion hook 注册
         // 这样可以访问到数据库结构信息和上下文状态
         console.log('✅ SQL语言支持已注册，等待补全提供器注册');
+      } else {
+        console.log('✅ SQL语言已存在，跳过注册');
       }
     } catch (sqlError) {
       console.warn('SQL语言配置失败:', sqlError);

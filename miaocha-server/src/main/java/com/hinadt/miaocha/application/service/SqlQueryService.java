@@ -1,10 +1,11 @@
 package com.hinadt.miaocha.application.service;
 
-import com.hinadt.miaocha.domain.dto.SchemaInfoDTO;
+import com.hinadt.miaocha.domain.dto.DatabaseTableListDTO;
 import com.hinadt.miaocha.domain.dto.SqlHistoryQueryDTO;
 import com.hinadt.miaocha.domain.dto.SqlHistoryResponseDTO;
 import com.hinadt.miaocha.domain.dto.SqlQueryDTO;
 import com.hinadt.miaocha.domain.dto.SqlQueryResultDTO;
+import com.hinadt.miaocha.domain.dto.TableSchemaDTO;
 import org.springframework.core.io.Resource;
 
 /** SQL查询服务接口 */
@@ -18,15 +19,6 @@ public interface SqlQueryService {
      * @return 查询结果
      */
     SqlQueryResultDTO executeQuery(Long userId, SqlQueryDTO dto);
-
-    /**
-     * 获取指定数据源的表结构信息
-     *
-     * @param userId 用户ID
-     * @param datasourceId 数据源ID
-     * @return 表结构信息列表
-     */
-    SchemaInfoDTO getSchemaInfo(Long userId, Long datasourceId);
 
     /**
      * 获取查询结果文件
@@ -44,4 +36,23 @@ public interface SqlQueryService {
      * @return 分页查询结果
      */
     SqlHistoryResponseDTO getQueryHistory(Long userId, SqlHistoryQueryDTO dto);
+
+    /**
+     * 获取指定数据源的表列表（不包含字段信息）
+     *
+     * @param userId 用户ID
+     * @param datasourceId 数据源ID
+     * @return 数据库表列表
+     */
+    DatabaseTableListDTO getDatabaseTableList(Long userId, Long datasourceId);
+
+    /**
+     * 获取指定表的字段信息
+     *
+     * @param userId 用户ID
+     * @param datasourceId 数据源ID
+     * @param tableName 表名
+     * @return 表字段信息
+     */
+    TableSchemaDTO getTableSchema(Long userId, Long datasourceId, String tableName);
 }

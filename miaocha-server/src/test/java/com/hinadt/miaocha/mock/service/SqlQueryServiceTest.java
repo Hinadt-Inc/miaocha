@@ -8,6 +8,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.hinadt.miaocha.application.service.TableValidationService;
+import com.hinadt.miaocha.application.service.database.DatabaseMetadataService;
+import com.hinadt.miaocha.application.service.database.DatabaseMetadataServiceFactory;
 import com.hinadt.miaocha.application.service.export.FileExporter;
 import com.hinadt.miaocha.application.service.export.FileExporterFactory;
 import com.hinadt.miaocha.application.service.impl.QueryPermissionChecker;
@@ -15,8 +17,12 @@ import com.hinadt.miaocha.application.service.impl.SqlQueryServiceImpl;
 import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
+import com.hinadt.miaocha.domain.converter.SchemaConverter;
+import com.hinadt.miaocha.domain.dto.DatabaseTableListDTO;
+import com.hinadt.miaocha.domain.dto.SchemaInfoDTO;
 import com.hinadt.miaocha.domain.dto.SqlQueryDTO;
 import com.hinadt.miaocha.domain.dto.SqlQueryResultDTO;
+import com.hinadt.miaocha.domain.dto.TableSchemaDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.entity.SqlQueryHistory;
 import com.hinadt.miaocha.domain.entity.User;
@@ -27,8 +33,11 @@ import com.hinadt.miaocha.domain.mapper.UserMapper;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -69,6 +78,14 @@ public class SqlQueryServiceTest {
     @Mock private QueryPermissionChecker permissionChecker;
 
     @Mock private TableValidationService tableValidationService;
+
+    @Mock private DatabaseMetadataServiceFactory metadataServiceFactory;
+
+    @Mock private DatabaseMetadataService metadataService;
+
+    @Mock private SchemaConverter schemaConverter;
+
+    @Mock private Connection connection;
 
     @InjectMocks private SqlQueryServiceImpl sqlQueryService;
 
@@ -136,6 +153,19 @@ public class SqlQueryServiceTest {
         lenient()
                 .when(tableValidationService.processSqlWithLimit(anyString()))
                 .thenAnswer(invocation -> invocation.getArgument(0)); // 默认返回原SQL
+
+        // 设置DatabaseMetadataServiceFactory的默认行为
+        lenient().when(metadataServiceFactory.getService(anyString())).thenReturn(metadataService);
+
+        // 设置JdbcQueryExecutor的默认行为
+        try {
+            lenient()
+                    .when(jdbcQueryExecutor.getConnection(any(DatasourceInfo.class)))
+                    .thenReturn(connection);
+        } catch (SQLException e) {
+            // 这不应该发生，因为这是mock设置
+            throw new RuntimeException("Mock setup failed", e);
+        }
     }
 
     @Test
@@ -366,5 +396,207 @@ public class SqlQueryServiceTest {
 
         // 验证后续流程正常
         verify(jdbcQueryExecutor).executeQuery(eq(testDatasourceInfo), eq(processedSql));
+    }
+
+    // ==================== 数据库表列表获取测试 ====================
+
+    @Test
+    @DisplayName("获取数据库表列表 - 成功")
+    void testGetDatabaseTableList_Success() throws SQLException {
+        // 准备测试数据
+        List<String> tableNames = Arrays.asList("users", "orders", "products");
+
+        List<DatabaseTableListDTO.TableBasicInfoDTO> expectedTables = new ArrayList<>();
+        for (String tableName : tableNames) {
+            DatabaseTableListDTO.TableBasicInfoDTO table =
+                    new DatabaseTableListDTO.TableBasicInfoDTO();
+            table.setTableName(tableName);
+            expectedTables.add(table);
+        }
+
+        DatabaseTableListDTO expectedResult = new DatabaseTableListDTO();
+        expectedResult.setDatabaseName("test_db");
+        expectedResult.setTables(expectedTables);
+
+        // Mock 行为
+        when(metadataService.getAllTables(connection)).thenReturn(tableNames);
+        when(metadataService.getTableComment(connection, "users")).thenReturn("用户表");
+        when(metadataService.getTableComment(connection, "orders")).thenReturn("订单表");
+        when(metadataService.getTableComment(connection, "products")).thenReturn("产品表");
+        when(schemaConverter.createTableBasicInfoList(tableNames)).thenReturn(expectedTables);
+
+        // 执行测试
+        DatabaseTableListDTO result =
+                sqlQueryService.getDatabaseTableList(testUser.getId(), testDatasourceInfo.getId());
+
+        // 验证结果
+        assertNotNull(result);
+        assertEquals("test_db", result.getDatabaseName());
+        assertEquals(3, result.getTables().size());
+
+        // 验证调用
+        verify(datasourceMapper).selectById(testDatasourceInfo.getId());
+        verify(userMapper).selectById(testUser.getId());
+        verify(jdbcQueryExecutor).getConnection(testDatasourceInfo);
+        verify(metadataServiceFactory).getService(testDatasourceInfo.getType());
+        verify(metadataService).getAllTables(connection);
+        verify(schemaConverter).createTableBasicInfoList(eq(tableNames));
+    }
+
+    @Test
+    @DisplayName("获取数据库表列表 - 数据源不存在")
+    void testGetDatabaseTableList_DatasourceNotFound() {
+        // Mock 行为
+        when(datasourceMapper.selectById(anyLong())).thenReturn(null);
+
+        // 执行测试并验证异常
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> sqlQueryService.getDatabaseTableList(testUser.getId(), 999L));
+
+        assertEquals(ErrorCode.DATASOURCE_NOT_FOUND, exception.getErrorCode());
+        verify(datasourceMapper).selectById(999L);
+        verify(userMapper, never()).selectById(anyLong());
+    }
+
+    @Test
+    @DisplayName("获取数据库表列表 - 用户不存在")
+    void testGetDatabaseTableList_UserNotFound() {
+        // Mock 行为
+        when(userMapper.selectById(anyLong())).thenReturn(null);
+
+        // 执行测试并验证异常
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () ->
+                                sqlQueryService.getDatabaseTableList(
+                                        999L, testDatasourceInfo.getId()));
+
+        assertEquals(ErrorCode.USER_NOT_FOUND, exception.getErrorCode());
+        verify(datasourceMapper).selectById(testDatasourceInfo.getId());
+        verify(userMapper).selectById(999L);
+    }
+
+    // ==================== 表字段信息获取测试 ====================
+
+    @Test
+    @DisplayName("获取表字段信息 - 成功")
+    void testGetTableSchema_Success() throws SQLException {
+        // 准备测试数据
+        String tableName = "users";
+        String tableComment = "用户表";
+        List<String> permittedTables = Arrays.asList("users", "orders");
+
+        List<SchemaInfoDTO.ColumnInfoDTO> columns = new ArrayList<>();
+        SchemaInfoDTO.ColumnInfoDTO column1 = new SchemaInfoDTO.ColumnInfoDTO();
+        column1.setColumnName("id");
+        column1.setDataType("BIGINT");
+        column1.setIsPrimaryKey(true);
+        column1.setIsNullable(false);
+        columns.add(column1);
+
+        SchemaInfoDTO.ColumnInfoDTO column2 = new SchemaInfoDTO.ColumnInfoDTO();
+        column2.setColumnName("name");
+        column2.setDataType("VARCHAR");
+        column2.setIsPrimaryKey(false);
+        column2.setIsNullable(true);
+        columns.add(column2);
+
+        TableSchemaDTO expectedResult = new TableSchemaDTO();
+        expectedResult.setDatabaseName("test_db");
+        expectedResult.setTableName(tableName);
+        expectedResult.setTableComment(tableComment);
+
+        // Mock 行为
+        when(metadataService.getAllTables(connection)).thenReturn(permittedTables);
+        when(metadataService.getTableComment(connection, tableName)).thenReturn(tableComment);
+        when(metadataService.getColumnInfo(connection, tableName)).thenReturn(columns);
+        when(schemaConverter.createTableSchema("test_db", tableName, tableComment, columns))
+                .thenReturn(expectedResult);
+
+        // 执行测试
+        TableSchemaDTO result =
+                sqlQueryService.getTableSchema(
+                        testUser.getId(), testDatasourceInfo.getId(), tableName);
+
+        // 验证结果
+        assertNotNull(result);
+        assertEquals("test_db", result.getDatabaseName());
+        assertEquals(tableName, result.getTableName());
+        assertEquals(tableComment, result.getTableComment());
+
+        // 验证调用
+        verify(datasourceMapper).selectById(testDatasourceInfo.getId());
+        verify(userMapper).selectById(testUser.getId());
+        verify(jdbcQueryExecutor).getConnection(testDatasourceInfo);
+        verify(metadataServiceFactory).getService(testDatasourceInfo.getType());
+        verify(metadataService).getAllTables(connection);
+        verify(metadataService).getTableComment(connection, tableName);
+        verify(metadataService).getColumnInfo(connection, tableName);
+        verify(schemaConverter).createTableSchema("test_db", tableName, tableComment, columns);
+    }
+
+    @Test
+    @DisplayName("获取表字段信息 - 无权限访问表")
+    void testGetTableSchema_PermissionDenied() throws SQLException {
+        // 准备测试数据
+        String tableName = "restricted_table";
+        List<String> permittedTables = Arrays.asList("users", "orders"); // 不包含 restricted_table
+
+        // Mock 行为
+        when(metadataService.getAllTables(connection)).thenReturn(permittedTables);
+
+        // 执行测试并验证异常
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () ->
+                                sqlQueryService.getTableSchema(
+                                        testUser.getId(), testDatasourceInfo.getId(), tableName));
+
+        assertEquals(ErrorCode.PERMISSION_DENIED, exception.getErrorCode());
+        assertTrue(exception.getMessage().contains("无权限访问表"));
+        verify(datasourceMapper).selectById(testDatasourceInfo.getId());
+        verify(userMapper).selectById(testUser.getId());
+        verify(jdbcQueryExecutor).getConnection(testDatasourceInfo);
+        verify(metadataServiceFactory).getService(testDatasourceInfo.getType());
+        verify(metadataService).getAllTables(connection);
+        verify(metadataService, never()).getTableComment(any(), any());
+        verify(metadataService, never()).getColumnInfo(any(), any());
+    }
+
+    @Test
+    @DisplayName("获取表字段信息 - 普通用户权限检查")
+    void testGetTableSchema_NormalUserPermission() throws SQLException {
+        // 准备普通用户
+        User normalUser = new User();
+        normalUser.setId(2L);
+        normalUser.setRole(UserRole.USER.name());
+        normalUser.setEmail("user@hinadt.com");
+
+        String tableName = "users";
+        List<String> permittedTables = Arrays.asList("users");
+
+        // Mock 行为
+        when(userMapper.selectById(2L)).thenReturn(normalUser);
+        when(permissionChecker.getPermittedTables(2L, testDatasourceInfo.getId(), connection))
+                .thenReturn(permittedTables);
+        when(metadataService.getTableComment(connection, tableName)).thenReturn("用户表");
+        when(metadataService.getColumnInfo(connection, tableName)).thenReturn(new ArrayList<>());
+        when(schemaConverter.createTableSchema(anyString(), anyString(), anyString(), any()))
+                .thenReturn(new TableSchemaDTO());
+
+        // 执行测试
+        TableSchemaDTO result =
+                sqlQueryService.getTableSchema(2L, testDatasourceInfo.getId(), tableName);
+
+        // 验证结果
+        assertNotNull(result);
+
+        // 验证调用了权限检查器而不是直接获取所有表
+        verify(permissionChecker).getPermittedTables(2L, testDatasourceInfo.getId(), connection);
+        verify(metadataService, never()).getAllTables(connection);
     }
 }
