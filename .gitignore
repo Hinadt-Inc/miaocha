@@ -107,3 +107,5 @@ coverage-report
 version.txt
 
 k6/bin
+
+.history/
