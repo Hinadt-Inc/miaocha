@@ -228,15 +228,18 @@ else
 fi
 
 info "检查构建结果..."
-TAR_FILE=$(ls miaocha-assembly/target/miaocha-assembly-*-distribution.tar.gz 2>/dev/null || echo "")
+# 查找最新的bin.tar.gz文件（按修改时间排序，选择最新的）
+TAR_FILE=$(ls -t dist/*-bin.tar.gz 2>/dev/null | head -1 || echo "")
 
 if [ -z "$TAR_FILE" ] || [ ! -f "$TAR_FILE" ]; then
   error "找不到打包的tar.gz文件"
   if [ "$SKIP_MAVEN" = true ]; then
     error "由于跳过了Maven构建，请先执行完整构建或移除 -m 选项"
   else
-    error "请确认miaocha-assembly模块配置正确"
+    error "请确认Maven构建正常完成，构建产物应在dist目录中"
   fi
+  echo "当前dist目录内容:"
+  ls -la dist/ 2>/dev/null || echo "dist目录不存在"
   exit 1
 fi
 
