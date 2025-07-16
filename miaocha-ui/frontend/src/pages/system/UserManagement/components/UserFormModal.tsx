@@ -27,6 +27,8 @@ const roleOptions = [
 ];
 
 const UserFormModal: React.FC<UserFormModalProps> = ({ visible, selectedRecord, onSubmit, onCancel, form }) => {
+  const isSuperAdmin = selectedRecord?.role === 'SUPER_ADMIN';
+  
   useEffect(() => {
     if (visible) {
       form.resetFields();
@@ -40,12 +42,14 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ visible, selectedRecord, 
 
   return (
     <Modal
-      title={selectedRecord ? '编辑用户' : '添加用户'}
+      title={selectedRecord ? (isSuperAdmin ? '查看用户信息 (超级管理员不可编辑)' : '编辑用户') : '添加用户'}
       open={visible}
       onOk={onSubmit}
       onCancel={onCancel}
       width={600}
       maskClosable={false}
+      okButtonProps={{ disabled: isSuperAdmin }}
+      okText={isSuperAdmin ? '确定' : undefined}
     >
       <Form form={form} layout="vertical">
         <Row gutter={16}>
@@ -58,7 +62,11 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ visible, selectedRecord, 
                 { max: 128, message: '昵称长度不能超过128个字符' },
               ]}
             >
-              <Input placeholder="请输入昵称" maxLength={128} />
+              <Input 
+                placeholder="请输入昵称" 
+                maxLength={128} 
+                disabled={isSuperAdmin}
+              />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -71,7 +79,11 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ visible, selectedRecord, 
                 { max: 128, message: '邮箱长度不能超过128个字符' },
               ]}
             >
-              <Input placeholder="请输入邮箱" maxLength={128} />
+              <Input 
+                placeholder="请输入邮箱" 
+                maxLength={128} 
+                disabled={isSuperAdmin}
+              />
             </Form.Item>
           </Col>
         </Row>
@@ -79,7 +91,11 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ visible, selectedRecord, 
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="role" label="角色" rules={[{ required: true, message: '请选择角色' }]}>
-              <Select options={roleOptions} placeholder="请选择角色" />
+              <Select 
+                options={roleOptions} 
+                placeholder="请选择角色" 
+                disabled={isSuperAdmin}
+              />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -90,6 +106,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ visible, selectedRecord, 
                   { value: 0, label: '禁用' },
                 ]}
                 placeholder="请选择状态"
+                disabled={isSuperAdmin}
               />
             </Form.Item>
           </Col>

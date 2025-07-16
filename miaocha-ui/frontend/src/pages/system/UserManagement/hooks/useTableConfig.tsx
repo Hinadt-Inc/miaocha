@@ -122,21 +122,25 @@ export const useTableConfig = ({ onEdit, onDelete, onChangePassword, onOpenModul
       key: 'action',
       fixed: 'right',
       width: 200,
-      render: (_, record) => (
-        <Space size={0}>
-          <Button type="link" onClick={() => onEdit(record)} style={{ padding: '0 8px' }}>
-            编辑
-          </Button>
-          {record.role === 'USER' && (
-            <Button type="link" onClick={() => onOpenModuleDrawer(record)} style={{ padding: '0 8px' }}>
-              授权
-            </Button>
-          )}
-          {
-            <>
-              <Button type="link" onClick={() => onChangePassword(record)} style={{ padding: '0 8px' }}>
-                改密码
+      render: (_, record) => {
+        const isSuperAdmin = record.role === 'SUPER_ADMIN';
+        
+        return (
+          <Space size={0}>
+            {!isSuperAdmin && (
+              <Button type="link" onClick={() => onEdit(record)} style={{ padding: '0 8px' }}>
+                编辑
               </Button>
+            )}
+            {record.role === 'USER' && (
+              <Button type="link" onClick={() => onOpenModuleDrawer(record)} style={{ padding: '0 8px' }}>
+                授权
+              </Button>
+            )}
+            <Button type="link" onClick={() => onChangePassword(record)} style={{ padding: '0 8px' }}>
+              改密码
+            </Button>
+            {!isSuperAdmin && (
               <Popconfirm
                 title="确定要删除此用户吗？"
                 description="此操作不可撤销"
@@ -150,10 +154,10 @@ export const useTableConfig = ({ onEdit, onDelete, onChangePassword, onOpenModul
                   删除
                 </Button>
               </Popconfirm>
-            </>
-          }
-        </Space>
-      ),
+            )}
+          </Space>
+        );
+      },
     },
   ];
 

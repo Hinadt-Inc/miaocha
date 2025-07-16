@@ -34,6 +34,16 @@ export const useUserActions = ({ setData, data, originalDataRef, moduleList, fet
   // 处理删除用户
   const handleDelete = async (key: string) => {
     try {
+      // 检查是否为超级管理员
+      const user = data.find(item => item.key === key);
+      if (user?.role === 'SUPER_ADMIN') {
+        handleError('超级管理员用户不能被删除', {
+          type: ErrorType.VALIDATION,
+          showType: 'message',
+        });
+        return;
+      }
+      
       await deleteUser(key);
       setData(data.filter((item) => item.key !== key));
       showSuccess('用户删除成功');
@@ -60,6 +70,15 @@ export const useUserActions = ({ setData, data, originalDataRef, moduleList, fet
       };
 
       if (selectedRecord) {
+        // 检查是否为超级管理员
+        if (selectedRecord.role === 'SUPER_ADMIN') {
+          handleError('超级管理员用户信息不能被修改', {
+            type: ErrorType.VALIDATION,
+            showType: 'message',
+          });
+          return;
+        }
+        
         // 编辑现有用户
         await updateUser({
           id: selectedRecord.key,
