@@ -73,17 +73,36 @@
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>3.7.1</version>
                 <configuration>
-                    <descriptors>
-                        <descriptor>src/assembly/assembly.xml</descriptor>
-                    </descriptors>
+                    <!-- 设置输出目录到项目根目录的dist文件夹 -->
+                    <outputDirectory>${project.parent.basedir}/dist</outputDirectory>
+                    <finalName>miaocha-${project.version}</finalName>
                 </configuration>
                 <executions>
+                    <!-- 构建二进制包 -->
                     <execution>
-                        <id>make-assembly</id>
+                        <id>make-bin-assembly</id>
                         <goals>
                             <goal>single</goal>
                         </goals>
                         <phase>package</phase>
+                        <configuration>
+                            <descriptors>
+                                <descriptor>src/assembly/assembly.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                    </execution>
+                    <!-- 构建源码包 -->
+                    <execution>
+                        <id>make-source-assembly</id>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <phase>package</phase>
+                        <configuration>
+                            <descriptors>
+                                <descriptor>src/assembly/source.xml</descriptor>
+                            </descriptors>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

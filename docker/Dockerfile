@@ -25,7 +25,7 @@ RUN mkdir -p /app/logs /app/logs/archive /opt/logstash && \
     chmod -R 755 /app/logs /opt/logstash
 
 # 复制打包后的tar.gz文件
-COPY miaocha-assembly/target/*-distribution.tar.gz /tmp/application.tar.gz
+COPY dist/*-bin.tar.gz /tmp/application.tar.gz
 
 # 解压应用文件到工作目录
 RUN tar -xzf /tmp/application.tar.gz -C /app --strip-components=1 && \

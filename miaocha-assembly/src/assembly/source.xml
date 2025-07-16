@@ -1,0 +1,88 @@
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.1.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.1.0 http://maven.apache.org/xsd/assembly-2.1.0.xsd">
+    <id>source</id>
+    <formats>
+        <format>zip</format>
+        <format>tar.gz</format>
+    </formats>
+    <includeBaseDirectory>true</includeBaseDirectory>
+    <baseDirectory>miaocha-${project.version}-source</baseDirectory>
+
+    <fileSets>
+        <!-- 项目根目录文件 -->
+        <fileSet>
+            <directory>${project.parent.basedir}</directory>
+            <outputDirectory>.</outputDirectory>
+            <includes>
+                <include>README.md</include>
+                <include>LICENSE*</include>
+                <include>pom.xml</include>
+                <include>.gitignore</include>
+                <include>*.md</include>
+            </includes>
+        </fileSet>
+
+        <!-- 源代码 -->
+        <fileSet>
+            <directory>${project.parent.basedir}/miaocha-server</directory>
+            <outputDirectory>miaocha-server</outputDirectory>
+            <includes>
+                <include>pom.xml</include>
+                <include>src/**</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <directory>${project.parent.basedir}/miaocha-ui</directory>
+            <outputDirectory>miaocha-ui</outputDirectory>
+            <includes>
+                <include>pom.xml</include>
+                <include>src/**</include>
+                <include>frontend/**</include>
+            </includes>
+            <excludes>
+                <exclude>frontend/node_modules/**</exclude>
+                <exclude>frontend/dist/**</exclude>
+                <exclude>frontend/.vite/**</exclude>
+                <exclude>frontend/.yarn/**</exclude>
+                <exclude>frontend/yarn-error.log</exclude>
+            </excludes>
+        </fileSet>
+
+        <fileSet>
+            <directory>${project.parent.basedir}/miaocha-assembly</directory>
+            <outputDirectory>miaocha-assembly</outputDirectory>
+            <includes>
+                <include>pom.xml</include>
+                <include>src/**</include>
+            </includes>
+        </fileSet>
+
+        <!-- 脚本和配置文件 -->
+        <fileSet>
+            <directory>${project.parent.basedir}/scripts</directory>
+            <outputDirectory>scripts</outputDirectory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <directory>${project.parent.basedir}/docker</directory>
+            <outputDirectory>docker</outputDirectory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </fileSet>
+
+        <!-- GitHub工作流 -->
+        <fileSet>
+            <directory>${project.parent.basedir}/.github</directory>
+            <outputDirectory>.github</outputDirectory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </fileSet>
+    </fileSets>
+</assembly>
