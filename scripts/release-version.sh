@@ -189,17 +189,42 @@ This version includes several improvements and bug fixes based on community feed
     
     # 获取[ISSUE #xx]格式的提交
     local issue_commits=""
+    local contributors_info=""
+    
     if [ -z "$last_tag" ]; then
         # 没有标签时，获取所有符合格式的提交
-        issue_commits=$(git log --oneline --pretty=format:"* %s" --grep="\[ISSUE.*\]" | head -30 || echo "")
+        contributors_info=$(git log --oneline --pretty=format:"%h|%s|%an|%ae" | grep -E "\[ISSUE #[0-9]+\]" | head -30 || echo "")
     else
-        # 有标签时，获取自上次标签以来的merge commits
-        issue_commits=$(git log --merges --oneline --pretty=format:"* %s" "$commit_range" | grep -E "\[ISSUE.*\]" || echo "")
+        # 有标签时，获取自上次标签以来的commits
+        contributors_info=$(git log --oneline --pretty=format:"%h|%s|%an|%ae" "$commit_range" | grep -E "\[ISSUE #[0-9]+\]" || echo "")
     fi
     
-    if [ -n "$issue_commits" ]; then
+    if [ -n "$contributors_info" ]; then
+        # 处理每个ISSUE提交，添加贡献者信息
+        while IFS='|' read -r hash subject author email; do
+            # 跳过内部用户（hinadt.com邮箱）
+            if [[ "$email" =~ @hinadt\.com$ ]]; then
+                issue_commits="$issue_commits* $subject
+"
+                continue
+            fi
+            
+            # 从GitHub邮箱提取用户名
+            local github_user=""
+            if [[ "$email" =~ ^[0-9]+\+([^@]+)@users\.noreply\.github\.com$ ]]; then
+                github_user="${BASH_REMATCH[1]}"
+            elif [[ "$email" =~ ^([^@]+)@users\.noreply\.github\.com$ ]]; then
+                github_user="${BASH_REMATCH[1]}"
+            else
+                # 如果不是GitHub邮箱，使用作者名
+                github_user="$author"
+            fi
+            
+            issue_commits="$issue_commits* $subject by @$github_user
+"
+        done <<< "$contributors_info"
+        
         release_notes="$release_notes$issue_commits
-
 "
     fi
     
@@ -211,6 +236,52 @@ This version includes several improvements and bug fixes based on community feed
             release_notes="$release_notes$other_commits
 
 "
+        fi
+    fi
+    
+    # 生成贡献者统计
+    if [ -n "$contributors_info" ]; then
+        local unique_contributors=""
+        local new_contributors=""
+        
+        # 收集所有贡献者
+        while IFS='|' read -r hash subject author email; do
+            # 跳过内部用户（hinadt.com邮箱）
+            if [[ "$email" =~ @hinadt\.com$ ]]; then
+                continue
+            fi
+            
+            local github_user=""
+            if [[ "$email" =~ ^[0-9]+\+([^@]+)@users\.noreply\.github\.com$ ]]; then
+                github_user="${BASH_REMATCH[1]}"
+            elif [[ "$email" =~ ^([^@]+)@users\.noreply\.github\.com$ ]]; then
+                github_user="${BASH_REMATCH[1]}"
+            else
+                github_user="$author"
+            fi
+            
+            # 检查是否为新贡献者（在这个范围内首次出现）
+            if [[ ! "$unique_contributors" =~ "$github_user" ]]; then
+                if [ -z "$unique_contributors" ]; then
+                    unique_contributors="$github_user"
+                else
+                    unique_contributors="$unique_contributors,$github_user"
+                fi
+                
+                # 获取此贡献者的第一个ISSUE提交
+                local first_issue=$(echo "$contributors_info" | grep "$email" | tail -1 | cut -d'|' -f2)
+                if [[ "$first_issue" =~ \(#([0-9]+)\) ]]; then
+                    local pr_number="${BASH_REMATCH[1]}"
+                    new_contributors="$new_contributors* @$github_user made their first contribution in #$pr_number
+"
+                fi
+            fi
+        done <<< "$contributors_info"
+        
+        if [ -n "$new_contributors" ]; then
+            release_notes="$release_notes
+## New Contributors
+$new_contributors"
         fi
     fi
     
