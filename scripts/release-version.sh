@@ -25,11 +25,25 @@ function show_usage() {
 }
 
 function get_current_version() {
-    if [ -f "$PROJECT_ROOT/pom.xml" ]; then
-        grep -o '<version>[^<]*</version>' "$PROJECT_ROOT/pom.xml" | head -1 | sed 's/<version>\|<\/version>//g'
-    else
-        echo "1.0.0"
+    if [ ! -f "$PROJECT_ROOT/pom.xml" ]; then
+        echo "错误: 未找到 pom.xml 文件" >&2
+        exit 1
     fi
+    
+    # 使用Maven help:evaluate获取准确的项目版本
+    cd "$PROJECT_ROOT"
+    local version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout 2>/dev/null)
+    
+    if [ -z "$version" ] || [ "$version" = "null" ]; then
+        echo "错误: 无法从 pom.xml 获取项目版本" >&2
+        echo "请确保："
+        echo "  1. Maven 已正确安装"
+        echo "  2. pom.xml 文件有效"
+        echo "  3. 项目根目录存在 <version> 标签"
+        exit 1
+    fi
+    
+    echo "$version"
 }
 
 function calculate_next_version() {
@@ -71,12 +85,24 @@ function update_version() {
     fi
     
     if [ -f "$PROJECT_ROOT/pom.xml" ]; then
-        sed -i "0,/<version>/{s/<version>[^<]*<\/version>/<version>$new_version<\/version>/}" "$PROJECT_ROOT/pom.xml"
+        # 使用Maven versions插件更新版本，避免sed跨平台兼容性问题
+        cd "$PROJECT_ROOT"
+        if ! mvn versions:set -DnewVersion="$new_version" -DgenerateBackupPoms=false -q; then
+            echo "错误: 无法更新 pom.xml 版本" >&2
+            exit 1
+        fi
         echo "更新 pom.xml 版本到 $new_version"
     fi
     
     if [ -f "$PROJECT_ROOT/package.json" ]; then
-        sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$new_version\"/" "$PROJECT_ROOT/package.json"
+        # 跨平台兼容的sed写法
+        if sed --version 2>/dev/null | grep -q "GNU"; then
+            # GNU sed (Linux)
+            sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$new_version\"/" "$PROJECT_ROOT/package.json"
+        else
+            # BSD sed (macOS)
+            sed -i "" "s/\"version\": \"[^\"]*\"/\"version\": \"$new_version\"/" "$PROJECT_ROOT/package.json"
+        fi
         echo "更新 package.json 版本到 $new_version"
     fi
 }
