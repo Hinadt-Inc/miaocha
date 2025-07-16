@@ -207,13 +207,13 @@ This version includes several improvements and bug fixes based on community feed
     
     if [ -z "$last_tag" ]; then
         # 没有标签时，获取所有符合格式的提交
-        contributors_info=$(git log --oneline --pretty=format:"%h|%s|%an|%ae" | grep -E "\[ISSUE #[0-9]+\]" | head -30 || echo "")
+        contributors_info=$(git log --oneline --pretty=format:"%h|%s|%an|%ae" | grep -E "\[ISSUE #[0-9]+\]" | head -30 2>/dev/null || echo "")
     elif [[ "$commit_range" == *".."* ]]; then
         # 标签范围比较，获取范围内的commits
         contributors_info=$(git log --oneline --pretty=format:"%h|%s|%an|%ae" "$commit_range" | grep -E "\[ISSUE #[0-9]+\]" || echo "")
     else
         # 单个标签，获取到该标签的所有提交
-        contributors_info=$(git log --oneline --pretty=format:"%h|%s|%an|%ae" "$commit_range" | grep -E "\[ISSUE #[0-9]+\]" | head -30 || echo "")
+        contributors_info=$(git log --oneline --pretty=format:"%h|%s|%an|%ae" "$commit_range" | grep -E "\[ISSUE #[0-9]+\]" | head -30 2>/dev/null || echo "")
     fi
     
     if [ -n "$contributors_info" ]; then
@@ -252,15 +252,15 @@ This version includes several improvements and bug fixes based on community feed
     if [ -z "$last_tag" ]; then
         # 第一个标签，获取所有非ISSUE格式的提交
         other_commits_count=$(git log --oneline --pretty=format:"%s" | grep -v -E "\[ISSUE.*\]|\[RELEASE PREPARE\]" | grep -v "^$" | wc -l)
-        other_commits=$(git log --oneline --pretty=format:"- %s" | grep -v -E "\[ISSUE.*\]|\[RELEASE PREPARE\]" | head -10 || echo "")
+        other_commits=$(git log --oneline --pretty=format:"- %s" | grep -v -E "\[ISSUE.*\]|\[RELEASE PREPARE\]" | head -10 2>/dev/null || echo "")
     elif [[ "$commit_range" == *".."* ]]; then
         # 标签范围比较，先获取总数，再获取前10条
         other_commits_count=$(git log --oneline --pretty=format:"%s" "$commit_range" | grep -v -E "\[ISSUE.*\]|\[RELEASE PREPARE\]" | grep -v "^$" | wc -l)
-        other_commits=$(git log --oneline --pretty=format:"- %s" "$commit_range" | grep -v -E "\[ISSUE.*\]|\[RELEASE PREPARE\]" | head -10 || echo "")
+        other_commits=$(git log --oneline --pretty=format:"- %s" "$commit_range" | grep -v -E "\[ISSUE.*\]|\[RELEASE PREPARE\]" | head -10 2>/dev/null || echo "")
     else
         # 单个标签，先获取总数，再获取前10条
         other_commits_count=$(git log --oneline --pretty=format:"%s" "$commit_range" | grep -v -E "\[ISSUE.*\]|\[RELEASE PREPARE\]" | grep -v "^$" | wc -l)
-        other_commits=$(git log --oneline --pretty=format:"- %s" "$commit_range" | grep -v -E "\[ISSUE.*\]|\[RELEASE PREPARE\]" | head -10 || echo "")
+        other_commits=$(git log --oneline --pretty=format:"- %s" "$commit_range" | grep -v -E "\[ISSUE.*\]|\[RELEASE PREPARE\]" | head -10 2>/dev/null || echo "")
     fi
         
     if [ -n "$other_commits" ]; then
