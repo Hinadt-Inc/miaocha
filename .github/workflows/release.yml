@@ -1,0 +1,439 @@
+name: Release Automation
+
+on:
+  # 手动触发发版
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '发布版本号 (如: 2.1.0)'
+        required: true
+        type: string
+      version_type:
+        description: '版本类型'
+        required: false
+        type: choice
+        default: 'manual'
+        options:
+          - manual
+          - patch
+          - minor
+          - major
+      pre_release:
+        description: '是否为预发布版本'
+        required: false
+        type: boolean
+        default: false
+      skip_tests:
+        description: '跳过测试 (仅用于紧急发版)'
+        required: false
+        type: boolean
+        default: false
+
+  # 当创建v*标签时自动触发
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+  issues: write
+  pull-requests: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # 版本验证和准备
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
+      should_build: ${{ steps.changes.outputs.should_build }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ inputs.version_type }}" != "manual" ]; then
+              # 自动计算版本
+              current_version=$(grep -m 1 '<version>' pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/' | tr -d ' \t\n' | sed 's/-SNAPSHOT//')
+              major=$(echo "$current_version" | cut -d. -f1)
+              minor=$(echo "$current_version" | cut -d. -f2)
+              patch=$(echo "$current_version" | cut -d. -f3)
+              
+              case "${{ inputs.version_type }}" in
+                "patch")
+                  version="$major.$minor.$((patch + 1))"
+                  ;;
+                "minor")
+                  version="$major.$((minor + 1)).0"
+                  ;;
+                "major")
+                  version="$((major + 1)).0.0"
+                  ;;
+              esac
+            else
+              version="${{ inputs.version }}"
+            fi
+            is_prerelease="${{ inputs.pre_release }}"
+          else
+            # 从标签获取版本
+            version="${GITHUB_REF#refs/tags/v}"
+            # 检查是否为预发布版本
+            if [[ "$version" =~ -[a-zA-Z] ]]; then
+              is_prerelease="true"
+            else
+              is_prerelease="false"
+            fi
+          fi
+          
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "is_prerelease=$is_prerelease" >> $GITHUB_OUTPUT
+          echo "🚀 发布版本: $version"
+          echo "📦 预发布: $is_prerelease"
+
+      - name: Check for significant changes
+        id: changes
+        run: |
+          # 检查是否有实质性变更（排除文档和配置文件）
+          if git tag --list | grep -q "v"; then
+            last_tag=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+            if [ -n "$last_tag" ]; then
+              changes=$(git diff --name-only "$last_tag..HEAD" | grep -v -E '(README|\.md$|\.yml$|\.yaml$|\.json$|docs/|\.github/)' || true)
+              if [ -n "$changes" ]; then
+                echo "should_build=true" >> $GITHUB_OUTPUT
+                echo "✅ 检测到代码变更，将构建发布资产"
+              else
+                echo "should_build=false" >> $GITHUB_OUTPUT
+                echo "ℹ️ 仅文档变更，跳过构建"
+              fi
+            else
+              echo "should_build=true" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          fi
+
+  # 构建和测试
+  build-and-test:
+    runs-on: ubuntu-latest
+    needs: prepare
+    if: needs.prepare.outputs.should_build == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Configure system for Doris
+        run: |
+          sudo swapoff -a
+          sudo sysctl -w vm.max_map_count=2000000
+          sudo sysctl -w vm.swappiness=0
+          sudo sysctl -w fs.file-max=655360
+
+      - name: Update version in POM
+        run: |
+          mvn versions:set -DnewVersion="${{ needs.prepare.outputs.version }}" -DgenerateBackupPoms=false
+
+      - name: Run tests
+        if: ${{ !inputs.skip_tests }}
+        run: |
+          echo "🧪 运行完整测试套件"
+          mvn clean verify
+
+      - name: Build without tests
+        if: ${{ inputs.skip_tests }}
+        run: |
+          echo "⚠️ 跳过测试的紧急构建"
+          mvn clean package -DskipTests
+
+      - name: Build distribution
+        run: |
+          echo "📦 构建发布分发包"
+          mvn clean verify -DskipTests
+          
+          # 列出构建产物
+          echo "=== 构建产物 ==="
+          find dist -type f -name "*.zip" -o -name "*.tar.gz" | head -10
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts-${{ needs.prepare.outputs.version }}
+          path: |
+            dist/miaocha-*-bin.zip
+            dist/miaocha-*-bin.tar.gz
+            dist/miaocha-*-src.zip
+          retention-days: 30
+
+  # 构建和推送Docker镜像
+  build-docker:
+    runs-on: ubuntu-latest
+    needs: [prepare, build-and-test]
+    if: needs.prepare.outputs.should_build == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Update version in POM
+        run: |
+          mvn versions:set -DnewVersion="${{ needs.prepare.outputs.version }}" -DgenerateBackupPoms=false
+
+      - name: Build application
+        run: |
+          mvn clean package -DskipTests
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=tag
+            type=raw,value=${{ needs.prepare.outputs.version }}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # 生成Release Notes
+  generate-release-notes:
+    runs-on: ubuntu-latest
+    needs: prepare
+    outputs:
+      release_notes: ${{ steps.notes.outputs.release_notes }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate RocketMQ-style release notes
+        id: notes
+        run: |
+          version="${{ needs.prepare.outputs.version }}"
+          
+          # 获取上一个标签
+          last_tag=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+          
+          # 生成RocketMQ风格的release notes
+          cat > release_notes.md << 'EOF'
+          ## What's Changed
+          
+          This version includes several improvements and bug fixes based on community feedback.
+          
+          EOF
+          
+          if [ -n "$last_tag" ]; then
+            # 统计信息
+            total_commits=$(git rev-list --count "$last_tag..HEAD" 2>/dev/null || echo "0")
+            issue_count=$(git log --oneline "$last_tag..HEAD" | grep -c "\[ISSUE" || echo "0")
+            echo "**Stats**: $total_commits commits, $issue_count issues addressed" >> release_notes.md
+            echo "" >> release_notes.md
+            
+            # 新功能和优化 - 匹配[ISSUE #xx]格式
+            features=$(git log --oneline --pretty=format:"* %s" "$last_tag..HEAD" | grep -E "\[ISSUE.*\].*(新增|feat|feature|完善|优化|enhancement|支持)" || echo "")
+            if [ -n "$features" ]; then
+              echo "### 🚀 New Features & Enhancements" >> release_notes.md
+              echo "$features" >> release_notes.md
+              echo "" >> release_notes.md
+            fi
+            
+            # 错误修复 - 匹配[ISSUE #xx]格式
+            bugfixes=$(git log --oneline --pretty=format:"* %s" "$last_tag..HEAD" | grep -E "\[ISSUE.*\].*(修复|fix|bug|解决)" || echo "")
+            if [ -n "$bugfixes" ]; then
+              echo "### 🐛 Bug Fixes" >> release_notes.md
+              echo "$bugfixes" >> release_notes.md
+              echo "" >> release_notes.md
+            fi
+            
+            # 文档等其他变更 - 匹配[ISSUE #xx]格式
+            docs=$(git log --oneline --pretty=format:"* %s" "$last_tag..HEAD" | grep -E "\[ISSUE.*\].*(文档|doc|补充|更新|chore)" || echo "")
+            if [ -n "$docs" ]; then
+              echo "### 📚 Documentation & Others" >> release_notes.md
+              echo "$docs" >> release_notes.md
+              echo "" >> release_notes.md
+            fi
+            
+            # 所有[ISSUE #xx]格式的变更
+            all_issues=$(git log --oneline --pretty=format:"* %s" "$last_tag..HEAD" | grep -E "\[ISSUE.*\]" | head -50)
+            if [ -n "$all_issues" ]; then
+              echo "### 📝 All Changes" >> release_notes.md
+              echo "$all_issues" >> release_notes.md
+              echo "" >> release_notes.md
+            fi
+            
+            # 新贡献者
+            echo "### 👥 New Contributors" >> release_notes.md
+            contributors=$(git log --pretty=format:"%an" "$last_tag..HEAD" | sort | uniq)
+            if [ -n "$contributors" ]; then
+              echo "$contributors" | sed 's/^/* @/' >> release_notes.md
+            else
+              echo "* No new contributors in this release" >> release_notes.md
+            fi
+            echo "" >> release_notes.md
+            
+            echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$last_tag...v$version" >> release_notes.md
+          else
+            echo "### 🎉 Initial Release" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "* Initial release of 秒查系统 (MiaoCha System)" >> release_notes.md
+            echo "* Core functionality implementation completed" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "### 👥 Contributors" >> release_notes.md
+            git log --pretty=format:"%an" | sort | uniq | sed 's/^/* @/' >> release_notes.md
+          fi
+          
+          cat >> release_notes.md << EOF
+          
+          ### 📦 安装方式
+          
+          #### Docker
+          \`\`\`bash
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$version
+          \`\`\`
+          
+          #### 源码编译
+          \`\`\`bash
+          git clone https://github.com/${{ github.repository }}.git
+          cd miaocha
+          git checkout v$version
+          mvn clean package
+          \`\`\`
+          
+          ### 🔗 相关链接
+          - 📖 [文档](https://github.com/${{ github.repository }}/tree/v$version/docs)
+          - 🐛 [问题反馈](https://github.com/${{ github.repository }}/issues)
+          - 💬 [讨论区](https://github.com/${{ github.repository }}/discussions)
+          
+          ---
+          **完整更改日志**: [\`$last_tag...v$version\`](https://github.com/${{ github.repository }}/compare/$last_tag...v$version)
+          EOF
+          
+          # 输出到GitHub Actions
+          {
+            echo 'release_notes<<EOF'
+            cat release_notes.md
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
+
+      - name: Upload release notes
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes-${{ needs.prepare.outputs.version }}
+          path: release_notes.md
+
+  # 创建GitHub Release
+  create-release:
+    runs-on: ubuntu-latest
+    needs: [prepare, build-and-test, build-docker, generate-release-notes]
+    if: always() && (needs.build-and-test.result == 'success' || needs.build-and-test.result == 'skipped')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        if: needs.prepare.outputs.should_build == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts-${{ needs.prepare.outputs.version }}
+          path: ./release-assets
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ needs.prepare.outputs.version }}
+          release_name: 🚀 秒查系统 v${{ needs.prepare.outputs.version }}
+          body: ${{ needs.generate-release-notes.outputs.release_notes }}
+          draft: false
+          prerelease: ${{ needs.prepare.outputs.is_prerelease }}
+
+      - name: Upload Release Assets
+        if: needs.prepare.outputs.should_build == 'true'
+        run: |
+          for file in release-assets/*; do
+            if [ -f "$file" ]; then
+              echo "上传资产: $(basename "$file")"
+              gh release upload "v${{ needs.prepare.outputs.version }}" "$file" --clobber
+            fi
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # 发布后通知
+  post-release:
+    runs-on: ubuntu-latest
+    needs: [prepare, create-release]
+    if: always() && needs.create-release.result == 'success'
+    steps:
+      - name: Post-release summary
+        run: |
+          echo "## 🎉 发布成功!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 发布信息" >> $GITHUB_STEP_SUMMARY
+          echo "- **版本**: v${{ needs.prepare.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **类型**: ${{ needs.prepare.outputs.is_prerelease == 'true' && '预发布' || '正式发布' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **发布时间**: $(date '+%Y年%m月%d日 %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 访问链接" >> $GITHUB_STEP_SUMMARY
+          echo "- [📋 Release页面](https://github.com/${{ github.repository }}/releases/tag/v${{ needs.prepare.outputs.version }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [🐳 Docker镜像](${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.version }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [📦 下载页面](https://github.com/${{ github.repository }}/releases/latest)" >> $GITHUB_STEP_SUMMARY
+
+      # 可选：发送通知到其他平台（如钉钉、企业微信等）
+      # - name: Send notification
+      #   run: |
+      #     curl -X POST "https://your-webhook-url" \
+      #       -H "Content-Type: application/json" \
+      #       -d '{
+      #         "msg_type": "text",
+      #         "content": {
+      #           "text": "🚀 秒查系统 v${{ needs.prepare.outputs.version }} 已发布！"
+      #         }
+      #       }' 
