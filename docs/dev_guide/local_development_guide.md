@@ -6,7 +6,7 @@
 
 在开始之前，请确保您的开发环境中已安装以下软件，并满足版本要求：
 
-* **Java**: `17` 或更高版本
+* **Java**: `17` 建议使用 JDK17 ,其余版本尚未测试
 * **Maven**: `3.8` 或更高版本
 * **Docker** 和 **Docker Compose**: 用于运行项目依赖的基础设施
 
@@ -21,7 +21,44 @@ cd miaocha
 
 ### 3. 启动基础设施 (Start Infrastructure)
 
-项目依赖 MySQL 和 Apache Doris 作为核心数据存储。我们提供了一个 Docker Compose 配置文件，可以一键启动所有必需的基础设施服务。
+项目依赖 MySQL 和 Apache Doris 作为核心数据存储。在启动基础设施服务之前，需要先配置系统参数以确保 Doris 能够正常运行。
+
+#### 3.1 配置系统参数 (必须步骤)
+
+Doris 对系统参数有特定要求，启动前必须进行以下配置：
+
+```bash
+# 关闭swap分区
+sudo swapoff -a
+
+# 设置系统参数
+sudo sysctl -w vm.max_map_count=2000000
+sudo sysctl -w vm.swappiness=0
+sudo sysctl -w fs.file-max=655360
+
+# 验证设置
+echo "=== System Configuration ==="
+echo "Swap status:"
+swapon --show
+echo "vm.max_map_count: $(cat /proc/sys/vm/max_map_count)"
+echo "vm.swappiness: $(cat /proc/sys/vm/swappiness)"
+echo "fs.file-max: $(cat /proc/sys/fs/file-max)"
+```
+
+**参数说明：**
+
+- `vm.max_map_count=2000000`: 增加内存映射区域数量上限，Doris 需要大量内存映射
+- `vm.swappiness=0`: 禁用交换分区使用，提高性能
+- `fs.file-max=655360`: 增加系统文件描述符上限
+
+**重要提示：**
+
+- 这些设置在系统重启后会失效，如需永久生效，请将参数添加到 `/etc/sysctl.conf` 文件中
+- 如果不进行这些配置，Doris 容器可能无法正常启动或运行异常
+
+#### 3.2 启动容器服务
+
+系统参数配置完成后，使用 Docker Compose 启动所有必需的基础设施服务：
 
 ```bash
 # 进入项目根目录，执行以下命令
@@ -30,6 +67,14 @@ docker-compose -f docker/compose/Infrastructure.yml up -d
 
 启动成功后，您可以通过 `docker ps` 命令检查容器是否成功运行，如下图所示：
 <img src="../images/infrastucture.png" width="900"  alt="基础设施容器启动状态"/>
+
+#### 3.3 故障排除
+
+如果 Doris 容器启动失败，请检查：
+
+1. **系统参数是否正确设置**：重新执行步骤 3.1 中的配置命令
+2. **容器日志**：使用 `docker logs <container_name>` 查看具体错误信息
+3. **资源限制**：确保系统有足够的内存和磁盘空间
 
 ### 4. 本地集成开发 (Backend & Frontend Integrated)
 
