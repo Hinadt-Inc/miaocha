@@ -166,13 +166,6 @@ function generate_release_notes() {
     local only_generate="$3"
     local last_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
     
-    if [ -z "$last_tag" ]; then
-        if [ "$only_generate" != "true" ]; then
-            echo "没有找到上一个标签，跳过Release Notes生成"
-        fi
-        return
-    fi
-    
     if [ "$only_generate" != "true" ]; then
         echo "生成 Release Notes..."
     fi
@@ -183,8 +176,26 @@ This version includes several improvements and bug fixes based on community feed
 
 "
     
-    # 获取[ISSUE #xx]格式的merge commits
-    local issue_commits=$(git log --merges --oneline --pretty=format:"* %s" "$last_tag..HEAD" | grep -E "\[ISSUE.*\]" || echo "")
+    local commit_range=""
+    if [ -z "$last_tag" ]; then
+        # 没有找到上一个标签，基于所有符合格式的提交生成Release Notes
+        if [ "$only_generate" != "true" ]; then
+            echo "没有找到上一个标签，基于符合 [ISSUE #xx] 格式的提交生成Release Notes"
+        fi
+        commit_range="HEAD"
+    else
+        commit_range="$last_tag..HEAD"
+    fi
+    
+    # 获取[ISSUE #xx]格式的提交
+    local issue_commits=""
+    if [ -z "$last_tag" ]; then
+        # 没有标签时，获取所有符合格式的提交
+        issue_commits=$(git log --oneline --pretty=format:"* %s" --grep="\[ISSUE.*\]" | head -30 || echo "")
+    else
+        # 有标签时，获取自上次标签以来的merge commits
+        issue_commits=$(git log --merges --oneline --pretty=format:"* %s" "$commit_range" | grep -E "\[ISSUE.*\]" || echo "")
+    fi
     
     if [ -n "$issue_commits" ]; then
         release_notes="$release_notes$issue_commits
@@ -192,20 +203,25 @@ This version includes several improvements and bug fixes based on community feed
 "
     fi
     
-    # 获取其他提交
-    local other_commits=$(git log --oneline --pretty=format:"* %s" "$last_tag..HEAD" | grep -v -E "\[ISSUE.*\]" | head -10 || echo "")
-    
-    if [ -n "$other_commits" ]; then
-        release_notes="$release_notes$other_commits
+    # 获取其他提交（只有在有标签时才显示其他提交）
+    if [ -n "$last_tag" ]; then
+        local other_commits=$(git log --oneline --pretty=format:"* %s" "$commit_range" | grep -v -E "\[ISSUE.*\]" | head -10 || echo "")
+        
+        if [ -n "$other_commits" ]; then
+            release_notes="$release_notes$other_commits
 
 "
+        fi
     fi
     
     # 获取仓库信息，支持多种URL格式
     local repo_info=$(get_repository_info)
-    if [ -n "$repo_info" ]; then
+    if [ -n "$repo_info" ] && [ -n "$last_tag" ]; then
         release_notes="$release_notes
 **Full Changelog**: $repo_info/compare/$last_tag...v$version"
+    elif [ -n "$repo_info" ] && [ -z "$last_tag" ]; then
+        release_notes="$release_notes
+**Project Repository**: $repo_info"
     fi
     
     if [ "$only_generate" = "true" ]; then
@@ -319,7 +335,7 @@ function main() {
         echo "[DRY RUN] 当前分支: $(git branch --show-current)"
         update_version "$version" "$dry_run"
         generate_release_notes "$version" "$dry_run" "false"
-        echo "[DRY RUN] 提交：[maven-release-plugin] prepare release miaocha-$version"
+        echo "[DRY RUN] 提交：[RELEASE PREPARE] prepare release miaocha-$version"
         echo ""
         echo "预览完成。使用不带 --dry-run 的命令执行实际操作。"
         exit 0
@@ -336,7 +352,7 @@ function main() {
     
     # 提交版本更改
     git add .
-    git commit -m "[maven-release-plugin] prepare release miaocha-$version"
+    git commit -m "[RELEASE PREPARE] prepare release miaocha-$version"
     
     echo ""
     echo "版本升级完成: v$version"
