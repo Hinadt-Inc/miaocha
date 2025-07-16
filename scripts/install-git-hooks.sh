@@ -22,40 +22,6 @@ if [ ! -f "pom.xml" ]; then
     exit 1
 fi
 
-# Update submodules to latest version
-echo "Updating submodules to latest version..."
-if [ -f ".gitmodules" ]; then
-    # Initialize submodules if not already done
-    git submodule update --init --recursive
-    
-    # Update each submodule to the latest commit from their respective branches
-    git submodule foreach '
-        echo "Updating submodule: $name"
-        
-        # Get the configured branch or default to main/master
-        BRANCH=$(git config -f $toplevel/.gitmodules submodule.$name.branch)
-        if [ -z "$BRANCH" ]; then
-            # Try to determine the default branch
-            BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed "s@^refs/remotes/origin/@@" || echo "main")
-        fi
-        
-        echo "  Fetching latest changes from branch: $BRANCH"
-        git fetch origin
-        git checkout $BRANCH
-        git pull origin $BRANCH
-        
-        echo "  Submodule $name updated to latest commit: $(git rev-parse --short HEAD)"
-    '
-    
-    # Stage the updated submodule references
-    git add .gitmodules
-    git submodule foreach 'git add -A'
-    
-    echo "Submodules updated successfully!"
-else
-    echo "No .gitmodules file found, skipping submodule update."
-fi
-
 # Get list of staged Java files
 STAGED_JAVA_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(java)$' || true)
 
@@ -99,9 +65,8 @@ echo "Configured git to use default .git/hooks directory"
 echo "Git pre-commit hook installed successfully!"
 echo ""
 echo "The hook will now automatically:"
-echo "  1. Update all submodules to their latest commits"
-echo "  2. Format Java code using Spotless"
-echo "  3. Run compilation check"
+echo "  1. Format Java code using Spotless"
+echo "  2. Run compilation check"
 echo ""
 echo "Note: This hook only handles Java code. Frontend code formatting is handled separately."
 echo "To bypass the hook (not recommended), use: git commit --no-verify"
