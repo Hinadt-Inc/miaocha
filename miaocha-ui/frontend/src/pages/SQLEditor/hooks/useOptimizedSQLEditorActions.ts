@@ -239,16 +239,43 @@ export const useOptimizedSQLEditorActions = (editorState: OptimizedSQLEditorStat
       editorRef.current = editor;
       monacoRef.current = monaco;
 
-      // 注册SQL补全功能
-      if (compatibleSchema) {
-        if (completionProviderRef.current) {
-          completionProviderRef.current.dispose();
-        }
-        completionProviderRef.current = registerCompletionProvider();
+      // 添加快捷键：Ctrl+Enter 执行查询
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+        executeQuery();
+      });
+
+      // 立即注册SQL补全功能（即使没有数据库结构也提供基础补全）
+      if (completionProviderRef.current) {
+        completionProviderRef.current.dispose();
       }
+      completionProviderRef.current = registerCompletionProvider();
+      console.log('✅ SQL补全提供器已注册');
     },
-    [compatibleSchema, registerCompletionProvider],
+    [registerCompletionProvider, executeQuery],
   );
+
+  // 监听数据库结构变化，重新注册补全提供器
+  useEffect(() => {
+    if (editorRef.current && monacoRef.current) {
+      // 当数据库结构变化时，重新注册补全提供器以获取最新的表和字段信息
+      if (completionProviderRef.current) {
+        completionProviderRef.current.dispose();
+      }
+      completionProviderRef.current = registerCompletionProvider();
+      console.log('🔄 SQL补全提供器已更新（数据库结构变化）');
+    }
+  }, [compatibleSchema, registerCompletionProvider]);
+
+  // 清理补全提供器
+  useEffect(() => {
+    return () => {
+      if (completionProviderRef.current) {
+        completionProviderRef.current.dispose();
+        completionProviderRef.current = null;
+        console.log('🧹 SQL补全提供器已清理');
+      }
+    };
+  }, []);
 
   // 保存编辑器设置
   const saveEditorSettings = useCallback(

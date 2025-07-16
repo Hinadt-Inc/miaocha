@@ -121,11 +121,11 @@ export const useSQLCompletion = (databaseSchema?: any) => {
       if (!databaseSchema?.tables) return [];
 
       return databaseSchema.tables.map((table: any) => ({
-        label: table.name,
+        label: table.tableName || table.name, // 兼容两种格式
         kind: monaco.languages.CompletionItemKind.Class,
-        insertText: table.name,
-        detail: `表: ${table.comment || ''}`,
-        documentation: `表 ${table.name}，包含 ${table.columns?.length || 0} 个列`,
+        insertText: table.tableName || table.name,
+        detail: `表: ${table.tableComment || table.comment || ''}`,
+        documentation: `表 ${table.tableName || table.name}，包含 ${table.columns?.length || 0} 个列`,
         range,
       }));
     },
@@ -141,21 +141,26 @@ export const useSQLCompletion = (databaseSchema?: any) => {
 
       if (tableName) {
         // 特定表的列
-        const table = databaseSchema.tables.find((t: any) => t.name.toLowerCase() === tableName.toLowerCase());
+        const table = databaseSchema.tables.find((t: any) => 
+          (t.tableName || t.name)?.toLowerCase() === tableName.toLowerCase()
+        );
         columns = table?.columns || [];
       } else {
         // 所有表的列
         columns = databaseSchema.tables.flatMap((table: any) =>
-          (table.columns || []).map((col: any) => ({ ...col, tableName: table.name })),
+          (table.columns || []).map((col: any) => ({ 
+            ...col, 
+            tableName: table.tableName || table.name 
+          })),
         );
       }
 
       return columns.map((column: any) => ({
-        label: column.tableName ? `${column.tableName}.${column.name}` : column.name,
+        label: column.tableName ? `${column.tableName}.${column.columnName || column.name}` : (column.columnName || column.name),
         kind: monaco.languages.CompletionItemKind.Field,
-        insertText: column.name,
-        detail: `${column.type} - ${column.comment || ''}`,
-        documentation: `列: ${column.name} (${column.type})${column.comment ? ` - ${column.comment}` : ''}`,
+        insertText: column.columnName || column.name,
+        detail: `${column.dataType || column.type} - ${column.columnComment || column.comment || ''}`,
+        documentation: `列: ${column.columnName || column.name} (${column.dataType || column.type})${(column.columnComment || column.comment) ? ` - ${column.columnComment || column.comment}` : ''}`,
         range,
       }));
     },
@@ -201,6 +206,12 @@ export const useSQLCompletion = (databaseSchema?: any) => {
       model: monaco.editor.ITextModel,
       position: monaco.Position,
     ): monaco.languages.ProviderResult<monaco.languages.CompletionList> => {
+      console.log('🔍 SQL补全被触发', { 
+        position: `${position.lineNumber}:${position.column}`,
+        hasSchema: !!databaseSchema,
+        tableCount: databaseSchema?.tables?.length || 0
+      });
+      
       const word = model.getWordUntilPosition(position);
       const range: monaco.IRange = {
         startLineNumber: position.lineNumber,
@@ -217,26 +228,49 @@ export const useSQLCompletion = (databaseSchema?: any) => {
       // 根据上下文提供不同的补全
       if (context.isAfterFrom || context.isAfterJoin) {
         // FROM 或 JOIN 后面，提供表名
-        suggestions.push(...getTableSuggestions(range));
+        const tableSuggestions = getTableSuggestions(range);
+        suggestions.push(...tableSuggestions);
+        console.log(`📋 提供表名补全 (${tableSuggestions.length} 个表)`);
       } else if (context.isAfterSelect || context.isInSelectClause) {
         // SELECT 后面，提供列名和函数
-        suggestions.push(...getColumnSuggestions(range));
-        suggestions.push(...getFunctionSuggestions(range));
+        const columnSuggestions = getColumnSuggestions(range);
+        const functionSuggestions = getFunctionSuggestions(range);
+        suggestions.push(...columnSuggestions);
+        suggestions.push(...functionSuggestions);
+        console.log(`📋 提供列名和函数补全 (${columnSuggestions.length} 个列, ${functionSuggestions.length} 个函数)`);
       } else if (context.isInWhereClause || context.isAfterOn) {
         // WHERE 或 ON 条件中，提供列名
-        suggestions.push(...getColumnSuggestions(range));
+        const columnSuggestions = getColumnSuggestions(range);
+        suggestions.push(...columnSuggestions);
+        console.log(`📋 提供WHERE/ON条件补全 (${columnSuggestions.length} 个列)`);
       }
 
-      // 总是提供关键字和函数补全
-      suggestions.push(...getKeywordSuggestions(range, context));
+      // 总是提供关键字补全
+      const keywordSuggestions = getKeywordSuggestions(range, context);
+      suggestions.push(...keywordSuggestions);
 
-      // 如果没有特定的上下文补全，提供函数补全
-      if (suggestions.length === sqlKeywords.length) {
-        suggestions.push(...getFunctionSuggestions(range));
+      // 如果没有特定的上下文补全，提供所有类型的补全
+      const hasSpecificSuggestions = context.isAfterFrom || context.isAfterJoin || 
+                                   context.isAfterSelect || context.isInSelectClause ||
+                                   context.isInWhereClause || context.isAfterOn;
+      
+      if (!hasSpecificSuggestions) {
+        const tableSuggestions = getTableSuggestions(range);
+        const columnSuggestions = getColumnSuggestions(range);
+        const functionSuggestions = getFunctionSuggestions(range);
+        suggestions.push(...tableSuggestions);
+        suggestions.push(...columnSuggestions);
+        suggestions.push(...functionSuggestions);
+        console.log(`📋 提供全面补全 (${tableSuggestions.length} 个表, ${columnSuggestions.length} 个列, ${functionSuggestions.length} 个函数, ${keywordSuggestions.length} 个关键字)`);
+      } else {
+        console.log(`📋 提供上下文补全 (${keywordSuggestions.length} 个关键字)`);
       }
+
+      const totalSuggestions = suggestions.length;
+      console.log(`✅ 总共提供 ${totalSuggestions} 个补全建议`);
 
       return {
-        suggestions: suggestions.slice(0, 50), // 限制建议数量
+        suggestions: suggestions.slice(0, 100), // 增加限制数量到100
       };
     },
     [
@@ -246,6 +280,7 @@ export const useSQLCompletion = (databaseSchema?: any) => {
       getKeywordSuggestions,
       getFunctionSuggestions,
       sqlKeywords,
+      databaseSchema,
     ],
   );
 
