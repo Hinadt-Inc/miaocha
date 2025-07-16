@@ -3,6 +3,7 @@ import { Form } from 'antd';
 import { createUser, updateUser, deleteUser, changeUserPassword, changeMyPassword } from '@/api/user';
 import { batchAuthorizeModules } from '@/api/modules';
 import { useErrorContext, ErrorType } from '@/providers/ErrorProvider';
+import { useSelector } from 'react-redux';
 import type { UserData } from '../components';
 
 interface UseUserActionsProps {
@@ -14,6 +15,9 @@ interface UseUserActionsProps {
 }
 
 export const useUserActions = ({ setData, data, originalDataRef, moduleList, fetchUsers }: UseUserActionsProps) => {
+  // 获取当前用户信息
+  const currentUser = useSelector((state: { user: { role: string; userId: number } }) => state.user);
+  
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
   const [moduleDrawerVisible, setModuleDrawerVisible] = useState(false);
@@ -34,6 +38,35 @@ export const useUserActions = ({ setData, data, originalDataRef, moduleList, fet
   // 处理删除用户
   const handleDelete = async (key: string) => {
     try {
+      // 检查是否为超级管理员
+      const user = data.find(item => item.key === key);
+      if (user?.role === 'SUPER_ADMIN') {
+        handleError('超级管理员用户不能被删除', {
+          type: ErrorType.VALIDATION,
+          showType: 'message',
+        });
+        return;
+      }
+      
+      // 检查是否试图删除自己
+      const isEditingSelf = currentUser.userId && key === currentUser.userId.toString();
+      if (isEditingSelf) {
+        handleError('不能删除自己的账号', {
+          type: ErrorType.VALIDATION,
+          showType: 'message',
+        });
+        return;
+      }
+      
+      // 检查当前用户权限：管理员不能删除其他管理员
+      if (currentUser.role === 'ADMIN' && user?.role === 'ADMIN') {
+        handleError('管理员不能删除其他管理员用户', {
+          type: ErrorType.VALIDATION,
+          showType: 'message',
+        });
+        return;
+      }
+      
       await deleteUser(key);
       setData(data.filter((item) => item.key !== key));
       showSuccess('用户删除成功');
@@ -60,6 +93,27 @@ export const useUserActions = ({ setData, data, originalDataRef, moduleList, fet
       };
 
       if (selectedRecord) {
+        // 检查是否为超级管理员
+        if (selectedRecord.role === 'SUPER_ADMIN') {
+          handleError('超级管理员用户信息不能被修改', {
+            type: ErrorType.VALIDATION,
+            showType: 'message',
+          });
+          return;
+        }
+        
+        // 检查是否编辑自己
+        const isEditingSelf = currentUser.userId && selectedRecord.key === currentUser.userId.toString();
+        
+        // 检查当前用户权限：管理员不能编辑其他管理员，但可以编辑自己
+        if (currentUser.role === 'ADMIN' && selectedRecord.role === 'ADMIN' && !isEditingSelf) {
+          handleError('管理员不能编辑其他管理员的用户信息', {
+            type: ErrorType.VALIDATION,
+            showType: 'message',
+          });
+          return;
+        }
+        
         // 编辑现有用户
         await updateUser({
           id: selectedRecord.key,
@@ -107,6 +161,19 @@ export const useUserActions = ({ setData, data, originalDataRef, moduleList, fet
       const values = await passwordForm.validateFields();
       if (selectedRecord) {
         const isSuperAdmin = selectedRecord.role === 'SUPER_ADMIN';
+        const isCurrentUserAdmin = currentUser.role === 'ADMIN';
+        const isTargetUserAdmin = selectedRecord.role === 'ADMIN';
+        const isEditingSelf = currentUser.userId && selectedRecord.key === currentUser.userId.toString();
+        
+        // 权限检查：管理员不能修改超级管理员和其他管理员的密码，但可以修改自己的密码
+        if (isCurrentUserAdmin && (isSuperAdmin || isTargetUserAdmin) && !isEditingSelf) {
+          handleError('管理员不能修改超级管理员和其他管理员的密码', {
+            type: ErrorType.VALIDATION,
+            showType: 'message',
+          });
+          return;
+        }
+        
         if (isSuperAdmin) {
           await changeMyPassword({
             oldPassword: values.oldPassword,
