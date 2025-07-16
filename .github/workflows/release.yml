@@ -90,6 +90,10 @@ jobs:
       - name: Build and package distribution
         run: mvn clean verify
 
+      - name: Get lowercase repository name
+        id: repo
+        run: echo "REPOSITORY=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -108,8 +112,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
-            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ steps.repo.outputs.REPOSITORY }}:${{ steps.version.outputs.VERSION }}
+            ghcr.io/${{ steps.repo.outputs.REPOSITORY }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -129,7 +133,7 @@ jobs:
           echo "## 🎉 发布成功!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **版本**: v${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Docker镜像**: ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Docker镜像**: ghcr.io/${{ steps.repo.outputs.REPOSITORY }}:${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "- **分发包**: miaocha-${{ steps.version.outputs.VERSION }}-bin.zip/tar.gz" >> $GITHUB_STEP_SUMMARY
           echo "- **源码包**: miaocha-${{ steps.version.outputs.VERSION }}-source.zip/tar.gz" >> $GITHUB_STEP_SUMMARY
           echo "- **Release页面**: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
