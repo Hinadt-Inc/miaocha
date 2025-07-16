@@ -371,15 +371,9 @@ public class SqlQueryServiceImpl implements SqlQueryService {
                         permissionChecker.getPermittedTables(userId, datasourceInfo.getId(), conn);
             }
 
-            // 批量获取表注释，提升性能
-            Map<String, String> tableComments = new HashMap<>();
-            for (String tableName : permittedTables) {
-                tableComments.put(tableName, metadataService.getTableComment(conn, tableName));
-            }
-
             // 使用 converter 创建表基本信息列表
             List<DatabaseTableListDTO.TableBasicInfoDTO> tables =
-                    schemaConverter.createTableBasicInfoList(permittedTables, tableComments);
+                    schemaConverter.createTableBasicInfoList(permittedTables);
 
             tableListDTO.setTables(tables);
             return tableListDTO;

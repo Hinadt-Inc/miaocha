@@ -19,12 +19,13 @@ public class DorisMetadataService implements DatabaseMetadataService {
     @Override
     public List<String> getAllTables(Connection connection) throws SQLException {
         List<String> tables = new ArrayList<>();
-        DatabaseMetaData metaData = connection.getMetaData();
 
-        try (ResultSet rs =
-                metaData.getTables(connection.getCatalog(), null, "%", new String[] {"TABLE"})) {
+        try (Statement stmt = connection.createStatement();
+                ResultSet rs = stmt.executeQuery("SHOW TABLES")) {
             while (rs.next()) {
-                tables.add(rs.getString("TABLE_NAME"));
+                // 使用索引获取第一列，这是最稳健的方式
+                // 无论Doris返回的列名是什么格式（Tables_in_database、table_name等），第一列都是表名
+                tables.add(rs.getString(1));
             }
         }
 

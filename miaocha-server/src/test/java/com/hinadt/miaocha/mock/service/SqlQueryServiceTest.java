@@ -38,7 +38,6 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -406,17 +405,12 @@ public class SqlQueryServiceTest {
     void testGetDatabaseTableList_Success() throws SQLException {
         // 准备测试数据
         List<String> tableNames = Arrays.asList("users", "orders", "products");
-        Map<String, String> tableComments = new HashMap<>();
-        tableComments.put("users", "用户表");
-        tableComments.put("orders", "订单表");
-        tableComments.put("products", "产品表");
 
         List<DatabaseTableListDTO.TableBasicInfoDTO> expectedTables = new ArrayList<>();
         for (String tableName : tableNames) {
             DatabaseTableListDTO.TableBasicInfoDTO table =
                     new DatabaseTableListDTO.TableBasicInfoDTO();
             table.setTableName(tableName);
-            table.setTableComment(tableComments.get(tableName));
             expectedTables.add(table);
         }
 
@@ -429,8 +423,7 @@ public class SqlQueryServiceTest {
         when(metadataService.getTableComment(connection, "users")).thenReturn("用户表");
         when(metadataService.getTableComment(connection, "orders")).thenReturn("订单表");
         when(metadataService.getTableComment(connection, "products")).thenReturn("产品表");
-        when(schemaConverter.createTableBasicInfoList(tableNames, tableComments))
-                .thenReturn(expectedTables);
+        when(schemaConverter.createTableBasicInfoList(tableNames)).thenReturn(expectedTables);
 
         // 执行测试
         DatabaseTableListDTO result =
@@ -447,7 +440,7 @@ public class SqlQueryServiceTest {
         verify(jdbcQueryExecutor).getConnection(testDatasourceInfo);
         verify(metadataServiceFactory).getService(testDatasourceInfo.getType());
         verify(metadataService).getAllTables(connection);
-        verify(schemaConverter).createTableBasicInfoList(eq(tableNames), any(Map.class));
+        verify(schemaConverter).createTableBasicInfoList(eq(tableNames));
     }
 
     @Test
