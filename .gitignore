@@ -107,3 +107,6 @@ coverage-report
 version.txt
 
 k6/bin
+
+# UI 本地历史
+.history/

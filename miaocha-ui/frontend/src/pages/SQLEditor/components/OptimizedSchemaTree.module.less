@@ -1,0 +1,225 @@
+.schemaTreeCard {
+  height: 100%;
+  border: 1px solid #f0f0f0;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+
+  .cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  &.collapsed {
+    .cardHeader {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+    }
+  }
+
+  :global(.ant-card-head) {
+    flex-shrink: 0;
+    min-height: 56px;
+  }
+
+  :global(.ant-card-body) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    padding: 8px 0;
+  }
+}
+
+.schemaTree {
+  height: 100%;
+  overflow: auto;
+  
+  :global(.ant-tree) {
+    background: transparent;
+  }
+  
+  :global(.ant-tree-node-content-wrapper) {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 2px 4px;
+    
+    &:hover {
+      background-color: #f5f5f5;
+    }
+    
+    &:global(.ant-tree-node-selected) {
+      background-color: #bae7ff;
+    }
+  }
+  
+  :global(.ant-tree-switcher) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.tableNode {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  
+  .nodeContent {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0; // 防止内容溢出
+  }
+  
+  .nodeActions {
+    display: flex;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    margin-left: 8px;
+    
+    .actionIcon {
+      color: #1890ff;
+      cursor: pointer;
+      padding: 2px;
+      border-radius: 2px;
+      
+      &:hover {
+        background-color: #e6f7ff;
+        color: #0050b3;
+      }
+    }
+  }
+  
+  &:hover .nodeActions {
+    opacity: 1;
+  }
+  
+  .tableName {
+    font-weight: 500;
+    color: #1890ff;
+    margin-right: 4px;
+  }
+  
+  .tableComment {
+    font-size: 12px;
+    color: #999;
+    margin-left: 8px;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.columnNode {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  
+  .nodeContent {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0; // 防止内容溢出
+  }
+  
+  .nodeActions {
+    display: flex;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    margin-left: 8px;
+    
+    .actionIcon {
+      color: #52c41a;
+      cursor: pointer;
+      padding: 2px;
+      border-radius: 2px;
+      font-size: 12px;
+      
+      &:hover {
+        background-color: #f6ffed;
+        color: #389e0d;
+      }
+    }
+  }
+  
+  &:hover .nodeActions {
+    opacity: 1;
+  }
+  
+  .primaryKey {
+    font-size: 12px;
+    margin-right: 4px;
+  }
+  
+  .columnName {
+    font-weight: 400;
+    color: #333;
+    margin-right: 4px;
+  }
+  
+  .dataType {
+    font-size: 12px;
+    color: #666;
+    font-family: 'Courier New', monospace;
+  }
+  
+  .columnComment {
+    font-size: 11px;
+    color: #999;
+    margin-left: 8px;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.errorContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .tableNode {
+    .tableComment {
+      display: none;
+    }
+  }
+  
+  .columnNode {
+    .columnComment {
+      display: none;
+    }
+  }
+}
+
+// 暗色主题支持
+@media (prefers-color-scheme: dark) {
+  .schemaTreeCard {
+    border-color: #303030;
+    background-color: #141414;
+    
+    :global(.ant-card-head) {
+      border-bottom-color: #303030;
+    }
+  }
+  
+  .tableNode {
+    .tableName {
+      color: #40a9ff;
+    }
+  }
+}
