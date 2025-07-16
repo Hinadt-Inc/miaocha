@@ -2,7 +2,7 @@
 <img src="docs/images/logo.png" alt="秒查 Logo" width="120" height="120" />
 
 # 🔍 秒查 - 企业级日志管理平台
-  
+
 ## 🚀 基于 Apache Doris 的高性能日志检索系统
 
 [![Version](https://img.shields.io/badge/Version-2.0.0--SNAPSHOT-blue.svg)](https://github.com/Hinadt-Inc/miaocha)
@@ -59,15 +59,12 @@ cd miaocha
 # 3. 构建项目
 mvn clean package
 
-# 4. 启动后端
-cd miaocha-server
-mvn spring-boot:run -Dspring-boot.run.profiles=dev
+# 4. 启动
+cp miaocha-assembly/target/miaocha-assembly-*.gz ./
+tar -zxvf miaocha-assembly-*.gz 
+cd miaocha-assembly-xxxx
+./bin/start.sh
 
-# 5. 启动前端
-cd miaocha-ui/frontend
-npm install
-npm run dev
-```
 
 ### Docker 部署
 
