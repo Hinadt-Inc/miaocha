@@ -23,8 +23,8 @@ git merge --no-ff feature/github-actions -m "[ISSUE #32] Github Action 支持PR�
 ### 3. 发版时自动生成Release Notes
 脚本会：
 1. **优先检查merge commits** (包含`[ISSUE #xx]`格式)
-2. **按类型分类变更** (新功能、Bug修复、文档等)
-3. **生成RocketMQ风格的Release Notes**
+2. **简单列出所有变更** (不分类，真实RocketMQ风格)
+3. **生成与Apache RocketMQ完全相同的Release Notes**
 
 ---
 
@@ -37,34 +37,21 @@ git merge --no-ff feature/github-actions -m "[ISSUE #32] Github Action 支持PR�
 
 This version includes several improvements and bug fixes based on community feedback.
 
-**Stats**: 15 commits, 4 issues addressed
-
-### 🚀 New Features & Enhancements
-* [ISSUE #35] 同步前端代码
-* [ISSUE #32] Github Action 支持PR设置 label 根据PR改动自动部署测试环境
-* [ISSUE #29] 合并秒查前端仓库
-
-### 🐛 Bug Fixes  
-* [ISSUE #28] 优化LogStash任务耗时信息
-* [ISSUE #22] 编辑数据源时按需更改信息,验证数据源连接
-
-### 📚 Documentation & Others
 * [ISSUE #40] 完善环境搭建，本地开发文档
-* [ISSUE #25] 补充项目开发相关文档
-
-### 📝 All Changes
-* [ISSUE #40] 完善环境搭建，本地开发文档
-* [ISSUE #35] 同步前端代码
+* [ISSUE #35] 同步前端代码  
 * [ISSUE #32] Github Action 支持PR设置 label 根据PR改动自动部署测试环境
 * [ISSUE #29] 合并秒查前端仓库
 * [ISSUE #28] 优化LogStash任务耗时信息
 * [ISSUE #25] 补充项目开发相关文档
 * [ISSUE #22] 编辑数据源时按需更改信息,验证数据源连接
+* Fix unstable test in BrokerOuterAPITest
+* Optimize the log output of tlsHelper
+* Update dependencies to latest versions
 
-### 👥 New Contributors
-* @张三
-* @李四
-* @王五
+### New Contributors
+* @张三 made their first contribution in #123
+* @李四 made their first contribution in #124  
+* @王五 made their first contribution in #125
 
 **Full Changelog**: https://github.com/your-org/miaocha/compare/v2.0.0...v2.1.0
 ```
@@ -98,8 +85,7 @@ Additionally, this minor version includes several general bug fixes.
 ### 我们的Release Notes (基于相同格式)
 ✅ **相同的专业格式**  
 ✅ **相同的[ISSUE #xx]条目格式**  
-✅ **相同的分类组织方式**  
-✅ **相同的统计信息展示**  
+✅ **相同的简单列表方式**（不分类）  
 ✅ **相同的贡献者列表**  
 ✅ **相同的Full Changelog链接**
 
@@ -116,16 +102,13 @@ merge_commits=$(git log --merges --oneline --pretty=format:"* %s" "$last_tag..HE
 all_issue_commits=$(git log --oneline --pretty=format:"* %s" "$last_tag..HEAD" | grep -E "\[ISSUE.*\]")
 ```
 
-### 2. 智能分类识别
+### 2. 简单列表生成
 ```bash
-# 新功能：识别关键词
-features=$(echo "$issue_commits" | grep -E "\[ISSUE.*\].*(新增|feat|feature|完善|优化|enhancement|支持)")
+# 直接列出所有[ISSUE #xx]格式的变更，不分类（真实RocketMQ格式）
+issue_commits=$(git log --merges --oneline --pretty=format:"* %s" "$last_tag..HEAD" | grep -E "\[ISSUE.*\]")
 
-# Bug修复：识别关键词  
-bugfixes=$(echo "$issue_commits" | grep -E "\[ISSUE.*\].*(修复|fix|bug|解决)")
-
-# 文档等：识别关键词
-docs=$(echo "$issue_commits" | grep -E "\[ISSUE.*\].*(文档|doc|补充|更新|chore)")
+# 如果还有其他格式的提交，也列出来
+other_commits=$(git log --oneline --pretty=format:"* %s" "$last_tag..HEAD" | grep -v -E "\[ISSUE.*\]")
 ```
 
 ### 3. 自动化触发

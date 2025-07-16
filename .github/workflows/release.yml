@@ -288,30 +288,17 @@ jobs:
               echo "<!-- 基于[ISSUE #xx]提交生成 -->" >> release_notes.md
             fi
             
+            # 直接列出所有变更，真实RocketMQ格式（不分类）
             if [ -n "$issue_commits" ]; then
-              # 新功能和优化 - 基于merge commits
-              features=$(echo "$issue_commits" | grep -E "\[ISSUE.*\].*(新增|feat|feature|完善|优化|enhancement|支持)" || echo "")
-              if [ -n "$features" ]; then
-                echo "### 🚀 New Features & Enhancements" >> release_notes.md
-                echo "$features" >> release_notes.md
-                echo "" >> release_notes.md
-              fi
-              
-              # 错误修复 - 基于merge commits
-              bugfixes=$(echo "$issue_commits" | grep -E "\[ISSUE.*\].*(修复|fix|bug|解决)" || echo "")
-              if [ -n "$bugfixes" ]; then
-                echo "### 🐛 Bug Fixes" >> release_notes.md
-                echo "$bugfixes" >> release_notes.md
-                echo "" >> release_notes.md
-              fi
-              
-              # 文档等其他变更 - 基于merge commits
-              docs=$(echo "$issue_commits" | grep -E "\[ISSUE.*\].*(文档|doc|补充|更新|chore)" || echo "")
-              if [ -n "$docs" ]; then
-                echo "### 📚 Documentation & Others" >> release_notes.md
-                echo "$docs" >> release_notes.md
-                echo "" >> release_notes.md
-              fi
+              echo "$issue_commits" >> release_notes.md
+              echo "" >> release_notes.md
+            fi
+            
+            # 如果还有其他格式的提交，也列出来  
+            other_commits=$(git log --oneline --pretty=format:"* %s" "$last_tag..HEAD" | grep -v -E "\[ISSUE.*\]" | head -10)
+            if [ -n "$other_commits" ]; then
+              echo "$other_commits" >> release_notes.md
+              echo "" >> release_notes.md
             fi
             
             # 所有[ISSUE #xx]格式的变更

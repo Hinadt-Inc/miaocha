@@ -273,30 +273,17 @@ generate_github_release_notes() {
                 echo "<!-- 基于[ISSUE #xx]提交生成 -->" >> "$output_file"
             fi
             
+            # 直接列出所有变更，不分类（真实RocketMQ格式）
             if [ -n "$issue_commits" ]; then
-                # 新功能和优化
-                local features=$(echo "$issue_commits" | grep -E "\[ISSUE.*\].*(新增|feat|feature|完善|优化|enhancement|支持)" || echo "")
-                if [ -n "$features" ]; then
-                    echo "### 🚀 New Features & Enhancements"
-                    echo "$features"
-                    echo ""
-                fi
-                
-                # 错误修复
-                local bugfixes=$(echo "$issue_commits" | grep -E "\[ISSUE.*\].*(修复|fix|bug|解决)" || echo "")
-                if [ -n "$bugfixes" ]; then
-                    echo "### 🐛 Bug Fixes"
-                    echo "$bugfixes"
-                    echo ""
-                fi
-                
-                # 文档等其他变更
-                local docs=$(echo "$issue_commits" | grep -E "\[ISSUE.*\].*(文档|doc|补充|更新|chore)" || echo "")
-                if [ -n "$docs" ]; then
-                    echo "### 📚 Documentation & Others"
-                    echo "$docs"
-                    echo ""
-                fi
+                echo "$issue_commits"
+                echo ""
+            fi
+            
+            # 如果还有其他格式的提交，也列出来
+            local other_commits=$(git log --oneline --pretty=format:"* %s" "$last_tag..HEAD" | grep -v -E "\[ISSUE.*\]" | head -10)
+            if [ -n "$other_commits" ]; then
+                echo "$other_commits"
+                echo ""
             fi
             
             echo "### 📝 All Changes"
