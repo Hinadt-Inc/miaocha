@@ -12,7 +12,7 @@ export interface OptimizedSQLEditorSidebarProps {
   selectedSource?: string;
   onInsertTable: (
     tableName: string,
-    columns: ExtendedSchemaResult['tables'][0]['columns'],
+    columns?: ExtendedSchemaResult['tables'][0]['columns'],
   ) => void;
   onInsertField: (fieldName: string) => void;
   collapsed: boolean;

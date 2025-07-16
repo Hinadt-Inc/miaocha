@@ -9,7 +9,7 @@ export interface SQLEditorSidebarProps {
   refreshSchema: () => void;
   onInsertTable: (
     tableName: string,
-    columns: {
+    columns?: {
       columnName: string;
       dataType: string;
       columnComment: string;

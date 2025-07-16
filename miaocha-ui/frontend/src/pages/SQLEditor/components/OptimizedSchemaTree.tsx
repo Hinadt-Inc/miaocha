@@ -29,7 +29,7 @@ interface OptimizedSchemaTreeProps {
   refreshSchema: () => void;
   fetchTableSchema: (tableName: string) => Promise<any>;
   selectedSource?: string;
-  handleInsertTable: (tableName: string, columns: ExtendedSchemaResult['tables'][0]['columns']) => void;
+  handleInsertTable: (tableName: string, columns?: ExtendedSchemaResult['tables'][0]['columns']) => void;
   handleInsertField?: (fieldName: string) => void;
   collapsed?: boolean;
   toggleSider?: () => void;
@@ -118,9 +118,9 @@ const OptimizedSchemaTree: React.FC<OptimizedSchemaTreeProps> = ({
                     className={styles.actionIcon}
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (table.isLoaded && table.columns) {
-                        handleInsertTable(table.tableName, table.columns);
-                      }
+                      // 支持随时插入表名，无需等待列加载
+                      const columns = table.isLoaded ? table.columns : undefined;
+                      handleInsertTable(table.tableName, columns);
                     }}
                   />
                 </Tooltip>
@@ -241,9 +241,9 @@ const OptimizedSchemaTree: React.FC<OptimizedSchemaTreeProps> = ({
       if (node?.data) {
         if (node.key.startsWith('table-')) {
           const { table } = node.data;
-          if (table.isLoaded && table.columns) {
-            handleInsertTable(table.tableName, table.columns);
-          }
+          // 支持随时插入表名，无需等待列加载
+          const columns = table.isLoaded ? table.columns : undefined;
+          handleInsertTable(table.tableName, columns);
         } else if (node.key.startsWith('column-')) {
           const { columnName } = node.data;
           if (handleInsertField) {
