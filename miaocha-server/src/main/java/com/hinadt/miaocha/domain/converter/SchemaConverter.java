@@ -46,7 +46,6 @@ public class SchemaConverter {
         DatabaseTableListDTO.TableBasicInfoDTO basicInfo =
                 new DatabaseTableListDTO.TableBasicInfoDTO();
         basicInfo.setTableName(tableInfo.getTableName());
-        basicInfo.setTableComment(tableInfo.getTableComment());
         return basicInfo;
     }
 
@@ -98,11 +97,10 @@ public class SchemaConverter {
      * 创建表基本信息列表 用于从权限表列表和元数据服务结果创建表列表
      *
      * @param tableNames 表名列表
-     * @param tableComments 表注释映射（表名 -> 注释）
      * @return 表基本信息列表
      */
     public List<DatabaseTableListDTO.TableBasicInfoDTO> createTableBasicInfoList(
-            List<String> tableNames, java.util.Map<String, String> tableComments) {
+            List<String> tableNames) {
         if (tableNames == null) {
             return null;
         }
@@ -113,8 +111,6 @@ public class SchemaConverter {
                             DatabaseTableListDTO.TableBasicInfoDTO tableInfo =
                                     new DatabaseTableListDTO.TableBasicInfoDTO();
                             tableInfo.setTableName(tableName);
-                            tableInfo.setTableComment(
-                                    tableComments != null ? tableComments.get(tableName) : null);
                             return tableInfo;
                         })
                 .collect(Collectors.toList());

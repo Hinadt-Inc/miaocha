@@ -20,8 +20,5 @@ public class DatabaseTableListDTO {
     public static class TableBasicInfoDTO {
         @Schema(description = "表名")
         private String tableName;
-
-        @Schema(description = "表注释")
-        private String tableComment;
     }
 }
