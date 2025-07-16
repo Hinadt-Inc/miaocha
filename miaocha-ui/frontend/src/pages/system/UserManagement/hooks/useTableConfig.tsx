@@ -4,6 +4,7 @@ import { UserOutlined } from '@ant-design/icons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import dayjs from 'dayjs';
+import { useSelector } from 'react-redux';
 import type { UserData } from '../components';
 
 // 角色选项
@@ -20,6 +21,9 @@ interface UseTableConfigProps {
 }
 
 export const useTableConfig = ({ onEdit, onDelete, onChangePassword, onOpenModuleDrawer }: UseTableConfigProps) => {
+  // 获取当前用户信息
+  const currentUser = useSelector((state: { user: { role: string; userId: number } }) => state.user);
+  
   const [pagination, setPagination] = useState<TablePaginationConfig>({
     current: 1,
     pageSize: 10,
@@ -124,10 +128,21 @@ export const useTableConfig = ({ onEdit, onDelete, onChangePassword, onOpenModul
       width: 200,
       render: (_, record) => {
         const isSuperAdmin = record.role === 'SUPER_ADMIN';
+        const isCurrentUserAdmin = currentUser.role === 'ADMIN';
+        const isTargetUserAdmin = record.role === 'ADMIN';
+        const isEditingSelf = currentUser.userId && record.key === currentUser.userId.toString();
+        
+        // 权限检查：如果当前用户是管理员，且目标用户也是管理员，则不能编辑或删除
+        // 但是可以编辑自己的信息，不能删除自己的账号
+        const canEditOrDelete = !isSuperAdmin && (!(isCurrentUserAdmin && isTargetUserAdmin) || isEditingSelf);
+        const canDelete = canEditOrDelete && !isEditingSelf; // 不能删除自己的账号
+        
+        // 密码修改权限：管理员不能修改超级管理员和其他管理员的密码，但可以修改自己的密码
+        const canChangePassword = !(isCurrentUserAdmin && (isSuperAdmin || isTargetUserAdmin)) || isEditingSelf;
         
         return (
           <Space size={0}>
-            {!isSuperAdmin && (
+            {canEditOrDelete && (
               <Button type="link" onClick={() => onEdit(record)} style={{ padding: '0 8px' }}>
                 编辑
               </Button>
@@ -137,10 +152,12 @@ export const useTableConfig = ({ onEdit, onDelete, onChangePassword, onOpenModul
                 授权
               </Button>
             )}
-            <Button type="link" onClick={() => onChangePassword(record)} style={{ padding: '0 8px' }}>
-              改密码
-            </Button>
-            {!isSuperAdmin && (
+            {canChangePassword && (
+              <Button type="link" onClick={() => onChangePassword(record)} style={{ padding: '0 8px' }}>
+                改密码
+              </Button>
+            )}
+            {canDelete && (
               <Popconfirm
                 title="确定要删除此用户吗？"
                 description="此操作不可撤销"

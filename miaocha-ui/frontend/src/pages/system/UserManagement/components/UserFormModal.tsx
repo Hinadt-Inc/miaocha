@@ -1,5 +1,6 @@
 import { Modal, Form, Input, Select, Row, Col } from 'antd';
 import { useEffect } from 'react';
+import { useSelector } from 'react-redux';
 
 export interface UserData {
   key: string;
@@ -27,7 +28,17 @@ const roleOptions = [
 ];
 
 const UserFormModal: React.FC<UserFormModalProps> = ({ visible, selectedRecord, onSubmit, onCancel, form }) => {
+  // 获取当前用户信息
+  const currentUser = useSelector((state: { user: { role: string; userId: number } }) => state.user);
+  
   const isSuperAdmin = selectedRecord?.role === 'SUPER_ADMIN';
+  const isCurrentUserAdmin = currentUser.role === 'ADMIN';
+  const isTargetUserAdmin = selectedRecord?.role === 'ADMIN';
+  const isEditingSelf = currentUser.userId && selectedRecord?.key === currentUser.userId.toString();
+  
+  // 权限检查：如果当前用户是管理员，且目标用户也是管理员，则不可编辑
+  // 但是可以编辑自己的信息
+  const isReadOnly = isSuperAdmin || (isCurrentUserAdmin && isTargetUserAdmin && !isEditingSelf);
   
   useEffect(() => {
     if (visible) {
@@ -40,16 +51,25 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ visible, selectedRecord, 
     }
   }, [visible, selectedRecord, form]);
 
+  // 生成模态框标题
+  const getModalTitle = () => {
+    if (!selectedRecord) return '添加用户';
+    if (isSuperAdmin) return '查看用户信息 (超级管理员不可编辑)';
+    if (isEditingSelf) return '编辑我的信息';
+    if (isCurrentUserAdmin && isTargetUserAdmin) return '查看用户信息 (管理员不能编辑其他管理员)';
+    return '编辑用户';
+  };
+
   return (
     <Modal
-      title={selectedRecord ? (isSuperAdmin ? '查看用户信息 (超级管理员不可编辑)' : '编辑用户') : '添加用户'}
+      title={getModalTitle()}
       open={visible}
       onOk={onSubmit}
       onCancel={onCancel}
       width={600}
       maskClosable={false}
-      okButtonProps={{ disabled: isSuperAdmin }}
-      okText={isSuperAdmin ? '确定' : undefined}
+      okButtonProps={{ disabled: isReadOnly }}
+      okText={isReadOnly ? '确定' : undefined}
     >
       <Form form={form} layout="vertical">
         <Row gutter={16}>
@@ -65,7 +85,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ visible, selectedRecord, 
               <Input 
                 placeholder="请输入昵称" 
                 maxLength={128} 
-                disabled={isSuperAdmin}
+                disabled={isReadOnly}
               />
             </Form.Item>
           </Col>
@@ -82,7 +102,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ visible, selectedRecord, 
               <Input 
                 placeholder="请输入邮箱" 
                 maxLength={128} 
-                disabled={isSuperAdmin}
+                disabled={isReadOnly}
               />
             </Form.Item>
           </Col>
@@ -94,7 +114,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ visible, selectedRecord, 
               <Select 
                 options={roleOptions} 
                 placeholder="请选择角色" 
-                disabled={isSuperAdmin}
+                disabled={isReadOnly}
               />
             </Form.Item>
           </Col>
@@ -106,7 +126,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ visible, selectedRecord, 
                   { value: 0, label: '禁用' },
                 ]}
                 placeholder="请选择状态"
-                disabled={isSuperAdmin}
+                disabled={isReadOnly}
               />
             </Form.Item>
           </Col>
