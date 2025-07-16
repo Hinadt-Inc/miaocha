@@ -1,11 +1,9 @@
 <div align="center">
-  <img src="docs/images/logo.png" alt="秒查 Logo" width="150" height="150" />
+<img src="docs/images/logo.png" alt="秒查 Logo" width="120" height="120" />
 
-# **🔍 秒查 - 企业级日志管理平台**
+# 🔍 秒查 - 企业级日志管理平台
 
-**🚀 基于 Apache Doris 的高性能日志检索系统**
-
-秒查是一个高效的企业级日志管理与检索平台，基于 Apache Doris 提供高性能查询与分析。
+## 🚀 基于 Apache Doris 的高性能日志检索系统
 
 [![Latest Release](https://img.shields.io/github/v/release/Hinadt-Inc/miaocha?style=flat-square&label=Latest%20Release&color=2ea44f)](https://github.com/Hinadt-Inc/miaocha/releases/latest)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/Hinadt-Inc/miaocha/release.yml?style=flat-square&branch=main)](https://github.com/Hinadt-Inc/miaocha/actions)
