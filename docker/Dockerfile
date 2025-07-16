@@ -1,16 +1,17 @@
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:17-jre-jammy
 
-# 配置 Alpine Linux 国内镜像源 - 使用多个备选源
-RUN echo "https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.21/main" > /etc/apk/repositories && \
-    echo "https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.21/community" >> /etc/apk/repositories && \
-    echo "https://mirrors.ustc.edu.cn/alpine/v3.21/main" >> /etc/apk/repositories && \
-    echo "https://mirrors.ustc.edu.cn/alpine/v3.21/community" >> /etc/apk/repositories
+# 使用官方 Ubuntu 镜像源，确保 ARM64 平台支持
+# 国内镜像源对 ARM64 支持不完整，使用官方源最稳定
+RUN cp /etc/apt/sources.list /etc/apt/sources.list.bak
 
-# 添加必要的系统工具
-RUN apk add --no-cache bash curl procps tzdata && \
-    cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+# 更新包管理器和安装必要工具 (Ubuntu/Debian 系统)
+RUN apt-get update && \
+    apt-get install -y bash curl procps tzdata && \
+    ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
     echo "Asia/Shanghai" > /etc/timezone && \
-    apk del tzdata
+    dpkg-reconfigure -f noninteractive tzdata && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # 设置工作目录
 WORKDIR /app
