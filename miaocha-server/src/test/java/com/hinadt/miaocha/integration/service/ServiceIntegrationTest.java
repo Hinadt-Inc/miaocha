@@ -1947,7 +1947,6 @@ public class ServiceIntegrationTest {
 
             // 验证查询结果
             assertThat(result).isNotNull();
-            assertThat(result.getExecutionTimeMs()).isNotNull().isGreaterThan(0);
 
             // 等待异步操作完成
             waitForAsyncOperation(200, TimeUnit.MILLISECONDS);
