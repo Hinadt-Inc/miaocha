@@ -16,7 +16,8 @@ const HomePage = () => {
   const [logTableColumns, setLogTableColumns] = useState<ILogColumnsResponse[]>([]); // 日志字段列表
   const [histogramData, setHistogramData] = useState<ILogHistogramData | null>(null); // 日志时间分布列表
   const [whereSqlsFromSider, setWhereSqlsFromSider] = useState<IStatus[]>([]); // 侧边栏的where条件
-  const [sqls, setSqls] = useState<string[]>([]); // SQL语句列表
+  const [keywords, setKeywords] = useState<string[]>([]); // 新增
+  const [sqls, setSqls] = useState<string[]>([]); // 新增
   const [activeColumns, setActiveColumns] = useState<string[]>([]); // 激活的字段列表
   const [selectedModule, setSelectedModule] = useState<string>(''); // 当前选中的模块
   const [sortConfig, setSortConfig] = useState<any[]>([]); // 排序配置
@@ -274,6 +275,8 @@ const HomePage = () => {
   const handleSelectedModuleChange = useCallback(
     (selectedModule: string, datasourceId?: number) => {
       setSelectedModule(selectedModule);
+      setKeywords([]); // 新增：切换模块时重置
+      setSqls([]); // 新增：切换模块时重置
       // 只有当提供了datasourceId且与当前不同时才更新搜索参数
       if (
         selectedModule &&
@@ -442,6 +445,11 @@ const HomePage = () => {
       sortConfig,
       commonColumns,
       loading: getDetailData.loading, // 新增
+      keywords, // 新增
+      setKeywords, // 新增
+      sqls, // 新增
+      setSqls, // 新增
+      setWhereSqlsFromSiderArr: whereSqlsFromSider, // 新增
     }),
     [
       searchParams,
@@ -454,6 +462,9 @@ const HomePage = () => {
       sortConfig,
       commonColumns,
       getDetailData.loading, // 新增
+      keywords, // 新增
+      sqls, // 新增
+      whereSqlsFromSider, // 新增
     ],
   );
 
