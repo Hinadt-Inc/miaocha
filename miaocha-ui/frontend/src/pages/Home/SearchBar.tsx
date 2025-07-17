@@ -374,7 +374,12 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
         placement="bottomRight"
         content={
           <Suspense fallback={<SpinIndicator />}>
-            <TimePicker activeTab={activeTab} setActiveTab={setActiveTab} onSubmit={submitTime} />
+            <TimePicker 
+              activeTab={activeTab} 
+              setActiveTab={setActiveTab} 
+              onSubmit={submitTime}
+              currentTimeOption={timeOption}
+            />
           </Suspense>
         }
       >
