@@ -3,10 +3,14 @@ package com.hinadt.miaocha.domain.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 /** 数据源创建DTO，用于接收创建请求 */
 @Data
 @Schema(description = "数据源创建/更新请求对象")
+@SuperBuilder
+@NoArgsConstructor
 public class DatasourceCreateDTO {
     @Schema(description = "数据源名称", example = "测试Doris", required = true)
     @NotBlank(message = "数据源名称不能为空")

@@ -2,10 +2,14 @@ package com.hinadt.miaocha.domain.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 /** 数据源更新DTO，用于接收更新请求 */
 @Data
 @Schema(description = "数据源更新请求对象")
+@SuperBuilder
+@NoArgsConstructor
 public class DatasourceUpdateDTO {
     @Schema(description = "新的数据源名称", example = "测试Doris-更新")
     private String name;

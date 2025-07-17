@@ -4,10 +4,14 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 /** SQL查询历史分页请求DTO */
 @Data
 @Schema(description = "SQL查询历史分页请求对象")
+@SuperBuilder
+@NoArgsConstructor
 public class SqlHistoryQueryDTO {
 
     @Schema(description = "页码，从1开始", example = "1")
