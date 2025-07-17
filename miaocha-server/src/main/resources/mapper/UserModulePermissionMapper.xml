@@ -64,7 +64,7 @@
 
     <!-- 批量更新模块名称 -->
     <update id="updateModuleName">
-        UPDATE user_module_permission 
+        UPDATE user_module_permission
         SET module = #{newModuleName}, update_time = NOW()
         WHERE module = #{oldModuleName} AND datasource_id = #{datasourceId}
     </update>

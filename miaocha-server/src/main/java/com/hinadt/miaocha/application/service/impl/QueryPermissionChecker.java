@@ -47,8 +47,9 @@ public class QueryPermissionChecker {
      *
      * @param user 用户信息
      * @param sql SQL查询语句
+     * @param datasourceId 数据源ID
      */
-    public void checkQueryPermission(User user, String sql) {
+    public void checkQueryPermission(User user, String sql, Long datasourceId) {
         // 超级管理员和管理员有所有权限
         if (UserRole.SUPER_ADMIN.name().equals(user.getRole())
                 || UserRole.ADMIN.name().equals(user.getRole())) {
@@ -58,14 +59,35 @@ public class QueryPermissionChecker {
         // 普通用户只能执行SELECT查询
         checkSelectOnly(sql);
 
-        // 使用 TableValidationService 提取所有表名并检查权限
-        Set<String> tableNames = tableValidationService.extractTableNames(sql);
-        for (String tableName : tableNames) {
-            // 检查模块权限
-            if (!modulePermissionService.hasModulePermission(user.getId(), tableName)) {
-                throw new BusinessException(ErrorCode.PERMISSION_DENIED, "没有访问模块的权限: " + tableName);
+        // 提取SQL中涉及的所有表名
+        Set<String> sqlTableNames = tableValidationService.extractTableNames(sql);
+        if (sqlTableNames.isEmpty()) {
+            return; // 如果没有提取到表名，直接通过
+        }
+
+        // 获取用户有权限访问的表名集合
+        List<String> permittedTableNames =
+                userModulePermissionMapper.selectPermittedTableNames(user.getId(), datasourceId);
+        Set<String> permittedTableSet = new HashSet<>(permittedTableNames);
+
+        // 检查SQL中的每个表名是否都在用户有权限的表名集合中
+        for (String tableName : sqlTableNames) {
+            if (!permittedTableSet.contains(tableName)) {
+                throw new BusinessException(ErrorCode.PERMISSION_DENIED, "没有访问表的权限: " + tableName);
             }
         }
+    }
+
+    /**
+     * 检查用户是否有权限执行指定的查询（兼容方法，数据源ID为null时检查所有数据源）
+     *
+     * @param user 用户信息
+     * @param sql SQL查询语句
+     * @deprecated 建议使用 {@link #checkQueryPermission(User, String, Long)} 并提供具体的数据源ID
+     */
+    @Deprecated
+    public void checkQueryPermission(User user, String sql) {
+        checkQueryPermission(user, sql, null);
     }
 
     /**
