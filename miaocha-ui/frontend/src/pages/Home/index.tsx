@@ -39,9 +39,9 @@ const HomePage = () => {
     pageSize: 1000,
     datasourceId: null,
     module: null,
-    startTime: QUICK_RANGES.last_5m.from().format(DATE_FORMAT_THOUSOND),
-    endTime: QUICK_RANGES.last_5m.to().format(DATE_FORMAT_THOUSOND),
-    timeRange: 'last_5m',
+    startTime: QUICK_RANGES.last_15m.from().format(DATE_FORMAT_THOUSOND),
+    endTime: QUICK_RANGES.last_15m.to().format(DATE_FORMAT_THOUSOND),
+    timeRange: 'last_15m',
     timeGrouping: 'auto',
   };
   // 日志检索请求参数
@@ -383,33 +383,10 @@ const HomePage = () => {
       setModuleQueryConfig(res);
 
       // 清除初始化标记，允许数据请求执行
+      // 移除手动触发请求的逻辑，避免重复请求
+      // 让主要的 useEffect 负责监听 searchParams 变化并触发请求
       setTimeout(() => {
         isInitializingRef.current = false;
-        // 在配置加载完成后，如果条件满足则立即触发数据请求
-        if (searchParams.datasourceId && searchParams.module && res) {
-          const currentCallParams = JSON.stringify({
-            datasourceId: searchParams.datasourceId,
-            module: searchParams.module,
-            startTime: searchParams.startTime,
-            endTime: searchParams.endTime,
-            timeRange: searchParams.timeRange,
-            whereSqls: searchParams.whereSqls,
-            keywords: searchParams.keywords,
-            offset: searchParams.offset,
-            fields: searchParams.fields,
-            sortFields: searchParams.sortFields,
-            moduleQueryConfigTimeField: res?.timeField,
-          });
-          
-          // 如果参数有变化，执行请求
-          if (lastCallParamsRef.current !== currentCallParams) {
-            executeDataRequest(searchParams);
-            lastCallParamsRef.current = currentCallParams;
-            if (!isInitialized) {
-              setIsInitialized(true);
-            }
-          }
-        }
       }, 100); // 延迟100ms清除标记，确保状态更新完成
     },
     onError: () => {

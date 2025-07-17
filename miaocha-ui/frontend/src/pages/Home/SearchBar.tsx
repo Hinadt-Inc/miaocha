@@ -92,7 +92,7 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
               label: QUICK_RANGES[params.timeRange]?.label || '自定义时间',
               type: QUICK_RANGES[params.timeRange] ? ('quick' as const) : ('absolute' as const),
             };
-            // setTimeOption(timeOption); // This line was removed as per the edit hint
+            setTimeOption(timeOption);
           }
         } catch (error) {
           console.error('恢复查询条件失败:', error);
@@ -106,20 +106,29 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
   useImperativeHandle(ref, () => ({
     // 渲染sql
     addSql: (sql: string) => {
-      setSqls((prev: any) => [...prev, sql]);
+      setSqls([...sqls, sql]);
     },
     removeSql: (sql: string) => {
-      setSqls((prev: any[]) => prev.filter((item: string) => item !== sql));
+      setSqls(sqls.filter((item: string) => item !== sql));
     },
     // 渲染时间
     // setTimeOption, // This line was removed as per the edit hint
-  }));
+  }), [sqls]); // 添加 sqls 依赖，确保方法中使用的是最新状态
 
   // 获取默认时间选项配置
   const getDefaultTimeOption = () => {
     const { timeRange } = searchParams as any;
     const isQuick = QUICK_RANGES[timeRange];
-    if (!isQuick) return {};
+    if (!isQuick) {
+      // 如果没有有效的时间范围，默认使用最近15分钟
+      const defaultRange = QUICK_RANGES['last_15m'];
+      return {
+        value: 'last_15m',
+        range: [defaultRange.from().format(defaultRange.format[0]), defaultRange.to().format(defaultRange.format[1])],
+        ...defaultRange,
+        type: 'quick',
+      } as any;
+    }
     const { from, to, format } = isQuick;
     return {
       value: timeRange,
