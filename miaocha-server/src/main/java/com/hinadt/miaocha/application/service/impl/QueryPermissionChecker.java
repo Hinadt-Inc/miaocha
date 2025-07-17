@@ -1,6 +1,5 @@
 package com.hinadt.miaocha.application.service.impl;
 
-import com.hinadt.miaocha.application.service.ModulePermissionService;
 import com.hinadt.miaocha.application.service.TableValidationService;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
@@ -23,19 +22,16 @@ import org.springframework.stereotype.Component;
 @Component
 public class QueryPermissionChecker {
 
-    private final ModulePermissionService modulePermissionService;
     private final TableValidationService tableValidationService;
     private final UserModulePermissionMapper userModulePermissionMapper;
     private final UserMapper userMapper;
     private final ModuleInfoMapper moduleInfoMapper;
 
     public QueryPermissionChecker(
-            ModulePermissionService modulePermissionService,
             TableValidationService tableValidationService,
             UserModulePermissionMapper userModulePermissionMapper,
             UserMapper userMapper,
             ModuleInfoMapper moduleInfoMapper) {
-        this.modulePermissionService = modulePermissionService;
         this.tableValidationService = tableValidationService;
         this.userModulePermissionMapper = userModulePermissionMapper;
         this.userMapper = userMapper;
@@ -76,31 +72,6 @@ public class QueryPermissionChecker {
                 throw new BusinessException(ErrorCode.PERMISSION_DENIED, "没有访问表的权限: " + tableName);
             }
         }
-    }
-
-    /**
-     * 检查用户是否有权限执行指定的查询（兼容方法，数据源ID为null时检查所有数据源）
-     *
-     * @param user 用户信息
-     * @param sql SQL查询语句
-     * @deprecated 建议使用 {@link #checkQueryPermission(User, String, Long)} 并提供具体的数据源ID
-     */
-    @Deprecated
-    public void checkQueryPermission(User user, String sql) {
-        checkQueryPermission(user, sql, null);
-    }
-
-    /**
-     * 获取用户有权限访问的所有表
-     *
-     * @param userId 用户ID
-     * @param conn 数据库连接
-     * @return 有权限的表列表
-     * @deprecated 使用 {@link #getPermittedTables(Long, Long, Connection)} 替代
-     */
-    @Deprecated
-    public List<String> getPermittedTables(Long userId, Connection conn) throws SQLException {
-        return getPermittedTables(userId, null, conn);
     }
 
     /**

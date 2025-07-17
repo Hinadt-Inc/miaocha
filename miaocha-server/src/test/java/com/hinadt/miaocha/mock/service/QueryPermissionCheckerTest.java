@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import com.hinadt.miaocha.application.service.ModulePermissionService;
 import com.hinadt.miaocha.application.service.TableValidationService;
 import com.hinadt.miaocha.application.service.impl.QueryPermissionChecker;
 import com.hinadt.miaocha.common.exception.BusinessException;
@@ -40,8 +39,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @DisplayName("查询权限检查器测试")
 @ExtendWith(MockitoExtension.class)
 class QueryPermissionCheckerTest {
-
-    @Mock private ModulePermissionService modulePermissionService;
     @Mock private TableValidationService tableValidationService;
     @Mock private UserModulePermissionMapper userModulePermissionMapper;
     @Mock private UserMapper userMapper;
@@ -61,7 +58,6 @@ class QueryPermissionCheckerTest {
         // 使用构造函数注入创建实例
         queryPermissionChecker =
                 new QueryPermissionChecker(
-                        modulePermissionService,
                         tableValidationService,
                         userModulePermissionMapper,
                         userMapper,
