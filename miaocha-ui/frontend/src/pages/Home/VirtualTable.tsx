@@ -169,7 +169,19 @@ const VirtualTable = (props: IProps) => {
   const [columns, setColumns] = useState<any[]>([]);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [scrollX, setScrollX] = useState(1300);
-  const [sortConfig, setSortConfig] = useState<any[]>([]);
+  const [localSortConfig, setLocalSortConfig] = useState<any[]>([]);
+
+  // 不支持排序的字段类型
+  const unsortableFieldTypes = [
+    'LONGTEXT', 'MEDIUMTEXT', 'TINYTEXT', 'JSON', 'BLOB',
+    'BITMAP', 'ARRAY', 'MAP', 'STRUCT', 'JSONB', 'VARIANT'
+  ];
+
+  // 检查字段是否可以排序
+  const isFieldSortable = (dataType: string) => {
+    // 检查数据类型是否支持排序
+    return !unsortableFieldTypes.includes(dataType.toUpperCase());
+  };
 
   // 处理sqls数据，根据SQL语法提取字段名和值
   const sqlFilterValue = useMemo(() => {
@@ -286,8 +298,8 @@ const VirtualTable = (props: IProps) => {
     const _columns: any[] = [];
 
     // 计算总列数（包括时间字段和_source字段）
-    const totalColumns = 1 + (otherColumns?.length || 0) + 1; // 时间字段 + 动态列 + _source列
-    const shouldUseAutoWidth = totalColumns > 3;
+    // const totalColumns = 1 + (otherColumns?.length || 0) + 1; // 时间字段 + 动态列 + _source列
+    // const shouldUseAutoWidth = totalColumns > 3;
 
     if (otherColumns && otherColumns.length > 0) {
       otherColumns.forEach((item: ILogColumnsResponse) => {
@@ -298,12 +310,9 @@ const VirtualTable = (props: IProps) => {
         if (columnWidths[columnName]) {
           // 如果用户手动调整过宽度，则使用用户设置的宽度
           columnWidth = columnWidths[columnName];
-        } else if (shouldUseAutoWidth) {
-          // 如果没有手动调整过且列数较多，使用自动计算的宽度
-          columnWidth = getAutoColumnWidth(columnName);
         } else {
-          // 默认使用固定宽度
-          columnWidth = 150;
+          // 默认使用自动计算的宽度
+          columnWidth = getAutoColumnWidth(columnName);
         }
 
         _columns.push({
@@ -311,6 +320,20 @@ const VirtualTable = (props: IProps) => {
           dataIndex: columnName,
           width: columnWidth,
           render: (text: string) => highlightText(text, keyWordsFormat || []),
+          // 只有可排序的字段才添加排序器
+          ...(isFieldSortable(item.dataType) ? {
+            sorter: {
+              compare: (a: any, b: any) => {
+                const valueA = a[columnName];
+                const valueB = b[columnName];
+                if (typeof valueA === 'string' && typeof valueB === 'string') {
+                  return valueA.localeCompare(valueB);
+                }
+                return (valueA || '').toString().localeCompare((valueB || '').toString());
+              },
+              multiple: otherColumns.findIndex(col => col.columnName === columnName) + 2, // 动态列排序优先级依次递减，从2开始（时间字段优先级为1）
+            }
+          } : {}),
         });
       });
     }
@@ -439,28 +462,14 @@ const VirtualTable = (props: IProps) => {
         if (columnWidths[column.dataIndex]) {
           // 如果用户手动调整过宽度，则使用用户设置的宽度
           columnWidth = columnWidths[column.dataIndex];
-        } else if (shouldUseAutoWidth) {
-          // 如果没有手动调整过且列数较多，使用之前计算好的自动宽度
-          columnWidth = column.width;
         } else {
-          // 默认情况：最后一列自动撑满，其他列使用固定宽度
-          columnWidth = isLast ? undefined : 150;
+          // 使用之前计算好的自动宽度，最后一列自动撑满
+          columnWidth = isLast ? undefined : (column.width || 150);
         }
 
         return {
           ...column,
           width: columnWidth,
-          sorter: {
-            compare: (a: any, b: any) => {
-              const valueA = a[column.dataIndex];
-              const valueB = b[column.dataIndex];
-              if (typeof valueA === 'string' && typeof valueB === 'string') {
-                return valueA.localeCompare(valueB);
-              }
-              return (valueA || '').toString().localeCompare((valueB || '').toString());
-            },
-            multiple: idx + 2, // 动态列排序优先级依次递减，从2开始（时间字段优先级为1）
-          },
           render: (text: string) => {
             return highlightText(text, [
               ...(keyWordsFormat || []),
@@ -564,10 +573,6 @@ const VirtualTable = (props: IProps) => {
     const timeField = moduleQueryConfig?.timeField || 'log_time';
     const dynamicCols = columns.filter((col: any) => col.dataIndex !== timeField && col.dataIndex !== '_source');
 
-    // 计算总列数判断是否使用自动宽度
-    const totalColumns = columns.length;
-    const shouldUseAutoWidth = totalColumns > 3;
-
     let totalWidth = 190; // 时间字段固定宽度
 
     // 直接累加各列的实际宽度（包括用户手动调整的宽度）
@@ -622,7 +627,7 @@ const VirtualTable = (props: IProps) => {
     setColumns(newCols);
   };
   // 触发多列字段排序
-  const handleTableChange = (pagination: any, filters: any, sorter: any) => {
+  const handleTableChange = (_pagination: any, _filters: any, sorter: any) => {
     let resultSorter: any[] = [];
     // 处理排序信息
     if (sorter) {
@@ -646,7 +651,7 @@ const VirtualTable = (props: IProps) => {
         }
       }
     }
-    setSortConfig(resultSorter);
+    setLocalSortConfig(resultSorter);
 
     // 通知父组件排序配置变化
     if (onSortChange) {
