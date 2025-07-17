@@ -279,7 +279,7 @@ class ModuleInfoServiceTest {
                 assertThrows(
                         BusinessException.class, () -> moduleInfoService.updateModule(updateDTO));
 
-        assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
+        assertEquals(ErrorCode.MODULE_NOT_FOUND, exception.getErrorCode());
     }
 
     @Test
@@ -292,7 +292,7 @@ class ModuleInfoServiceTest {
                 assertThrows(
                         BusinessException.class, () -> moduleInfoService.deleteModule(999L, false));
 
-        assertEquals(ErrorCode.VALIDATION_ERROR, exception.getErrorCode());
+        assertEquals(ErrorCode.MODULE_NOT_FOUND, exception.getErrorCode());
     }
 
     @Test

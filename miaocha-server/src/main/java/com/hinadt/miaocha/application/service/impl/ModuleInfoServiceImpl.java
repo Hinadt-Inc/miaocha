@@ -338,7 +338,7 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
     private ModuleInfo getModuleOrThrow(Long id) {
         ModuleInfo moduleInfo = moduleInfoMapper.selectById(id);
         if (moduleInfo == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "模块不存在");
+            throw new BusinessException(ErrorCode.MODULE_NOT_FOUND, "模块不存在");
         }
         return moduleInfo;
     }

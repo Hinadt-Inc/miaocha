@@ -4,10 +4,14 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 /** 更新模块信息请求DTO */
 @Data
 @Schema(description = "更新模块信息请求")
+@SuperBuilder
+@NoArgsConstructor
 public class ModuleInfoUpdateDTO {
 
     @NotNull(message = "模块ID不能为空") @Schema(description = "模块ID", example = "1", required = true)
