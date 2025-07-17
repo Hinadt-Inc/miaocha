@@ -1,4 +1,4 @@
-import { useState, useMemo, lazy, Suspense } from 'react';
+import { useState, useMemo, lazy, Suspense, useEffect } from 'react';
 import { Tabs, Tag, DatePicker, Button, Space } from 'antd';
 import SpinIndicator from '@/components/SpinIndicator';
 import styles from './TimePicker.module.less';
@@ -12,12 +12,29 @@ interface IProps {
   activeTab: string; // 选中的选项卡
   setActiveTab: any; // 设置选中的选项卡
   onSubmit: (params: ILogTimeSubmitParams) => void; // 提交时间
+  currentTimeOption?: ILogTimeSubmitParams; // 当前选择的时间选项
 }
 
 const TimePicker = (props: IProps) => {
-  const { activeTab, setActiveTab, onSubmit } = props;
-  const [selectedTag, setSelectedTag] = useState<string>('last_15m'); // 选中的标签
+  const { activeTab, setActiveTab, onSubmit, currentTimeOption } = props;
+  
+  // 根据当前时间选项初始化选中的标签
+  const getInitialSelectedTag = () => {
+    if (currentTimeOption?.type === 'quick' && currentTimeOption?.value && QUICK_RANGES[currentTimeOption.value]) {
+      return currentTimeOption.value;
+    }
+    return 'last_15m';
+  };
+  
+  const [selectedTag, setSelectedTag] = useState<string>(getInitialSelectedTag); // 选中的标签
   const [absoluteOption, setAbsoluteOption] = useState<ILogTimeSubmitParams>(); // 绝对时间
+
+  // 当currentTimeOption变化时，同步更新selectedTag
+  useEffect(() => {
+    if (currentTimeOption?.type === 'quick' && currentTimeOption?.value && QUICK_RANGES[currentTimeOption.value]) {
+      setSelectedTag(currentTimeOption.value);
+    }
+  }, [currentTimeOption]);
 
   // 切换标签
   const changeTag = (value: string) => {
