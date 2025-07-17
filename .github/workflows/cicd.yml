@@ -2,7 +2,7 @@ name: PR CI/CD
 
 on:
   pull_request:
-    types: [ opened, synchronize, reopened, labeled, unlabeled ]
+    types: [ opened, synchronize, reopened, labeled ]
     branches: [ dev ]
 
 # 添加权限配置，授予 issues 和 pull-requests 写权限
@@ -13,7 +13,7 @@ permissions:
 jobs:
   check-skip-ci:
     runs-on: ubuntu-latest
-    if: ${{ github.event.action != 'labeled' && github.event.action != 'unlabeled' }}
+    if: ${{ github.event.action != 'labeled'  }}
     outputs:
       should_skip: ${{ steps.skip-check.outputs.should_skip }}
     steps:
@@ -45,7 +45,7 @@ jobs:
     if: ${{ needs.check-skip-ci.outputs.should_skip == 'false' }}
     # Job级别的并发控制 - 新推送会取消正在运行的 CI/CD 作业
     concurrency:
-      group: pr-cicd-${{ github.event.pull_request.number }}
+      group: pr-ci-${{ github.event.pull_request.number }}
       cancel-in-progress: true
     steps:
       - name: Checkout code
@@ -159,7 +159,7 @@ jobs:
       !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
     # Job级别的并发控制 - 新推送会取消正在运行的 CI/CD 作业
     concurrency:
-      group: pr-cicd-${{ github.event.pull_request.number }}
+      group: pr-cd-${{ github.event.pull_request.number }}
       cancel-in-progress: true
     steps:
       - name: Check CI status (for label trigger)
