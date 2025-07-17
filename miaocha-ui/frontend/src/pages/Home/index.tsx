@@ -161,7 +161,7 @@ const HomePage = () => {
 
     getDetailData.run(requestParams);
     getHistogramData.run(requestParams);
-  }, []);
+  }, [getDetailData, getHistogramData]);
 
   // 主要的数据请求逻辑
   useEffect(() => {
@@ -382,6 +382,31 @@ const HomePage = () => {
       // 清除初始化标记，允许数据请求执行
       setTimeout(() => {
         isInitializingRef.current = false;
+        // 在配置加载完成后，如果条件满足则立即触发数据请求
+        if (searchParams.datasourceId && searchParams.module && res) {
+          const currentCallParams = JSON.stringify({
+            datasourceId: searchParams.datasourceId,
+            module: searchParams.module,
+            startTime: searchParams.startTime,
+            endTime: searchParams.endTime,
+            timeRange: searchParams.timeRange,
+            whereSqls: searchParams.whereSqls,
+            keywords: searchParams.keywords,
+            offset: searchParams.offset,
+            fields: searchParams.fields,
+            sortFields: searchParams.sortFields,
+            moduleQueryConfigTimeField: res?.timeField,
+          });
+          
+          // 如果参数有变化，执行请求
+          if (lastCallParamsRef.current !== currentCallParams) {
+            executeDataRequest(searchParams);
+            lastCallParamsRef.current = currentCallParams;
+            if (!isInitialized) {
+              setIsInitialized(true);
+            }
+          }
+        }
       }, 100); // 延迟100ms清除标记，确保状态更新完成
     },
     onError: () => {
