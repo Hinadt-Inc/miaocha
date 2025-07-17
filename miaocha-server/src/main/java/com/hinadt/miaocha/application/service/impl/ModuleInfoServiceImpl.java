@@ -102,9 +102,26 @@ public class ModuleInfoServiceImpl implements ModuleInfoService {
         // 获取数据源信息
         DatasourceInfo datasourceInfo = getDatasourceOrThrow(request.getDatasourceId());
 
+        // 检查模块名是否发生变化，如果变化则同步更新权限表中的模块名
+        String oldModuleName = existingModule.getName();
+        String newModuleName = request.getName();
+        boolean moduleNameChanged = !oldModuleName.equals(newModuleName);
+
         // 更新模块
         ModuleInfo moduleInfo = moduleInfoConverter.updateEntity(existingModule, request);
         updateModuleOrThrow(moduleInfo);
+
+        // 如果模块名发生变化，同步更新权限表中的模块名
+        if (moduleNameChanged) {
+            int updatedPermissions =
+                    userModulePermissionMapper.updateModuleName(
+                            oldModuleName, newModuleName, existingModule.getDatasourceId());
+            log.debug(
+                    "模块名从 '{}' 更新为 '{}'，同步更新了 {} 条权限记录",
+                    oldModuleName,
+                    newModuleName,
+                    updatedPermissions);
+        }
 
         // 重新查询获取最新数据
         ModuleInfo updatedModule = getModuleOrThrow(request.getId());
