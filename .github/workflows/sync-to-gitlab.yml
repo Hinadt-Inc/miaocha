@@ -24,8 +24,20 @@ jobs:
         run: |
           echo "🔗 添加 GitLab 远程仓库..."
           
+          # 检查认证信息是否存在
+          if [ -z "${{ secrets.GITLAB_USERNAME }}" ] || [ -z "${{ secrets.GITLAB_TOKEN }}" ]; then
+            echo "❌ GitLab 认证信息未配置，请检查 GitHub Secrets"
+            exit 1
+          fi
+          
+          # URL 编码认证信息（处理特殊字符）
+          GITLAB_USERNAME=$(python3 -c "import urllib.parse; print(urllib.parse.quote('${{ secrets.GITLAB_USERNAME }}', safe=''))")
+          GITLAB_TOKEN=$(python3 -c "import urllib.parse; print(urllib.parse.quote('${{ secrets.GITLAB_TOKEN }}', safe=''))")
+          
           # 构建包含认证信息的 GitLab URL
-          GITLAB_URL="http://${{ secrets.GITLAB_USERNAME }}:${{ secrets.GITLAB_TOKEN }}@git.hinadt.com/middle-software/log-manage-system.git"
+          GITLAB_URL="http://${GITLAB_USERNAME}:${GITLAB_TOKEN}@git.hinadt.com/middle-software/log-manage-system.git"
+          
+          echo "🔍 GitLab URL 格式检查完成"
           
           # 添加 GitLab 远程仓库
           git remote add gitlab "$GITLAB_URL" || git remote set-url gitlab "$GITLAB_URL"
