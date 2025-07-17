@@ -4,10 +4,14 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 /** 模块信息创建请求DTO */
 @Data
 @Schema(description = "模块信息创建请求")
+@SuperBuilder
+@NoArgsConstructor
 public class ModuleInfoCreateDTO {
 
     @NotBlank(message = "模块名称不能为空")

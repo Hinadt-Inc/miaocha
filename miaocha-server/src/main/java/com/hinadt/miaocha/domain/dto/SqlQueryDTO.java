@@ -4,10 +4,14 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 /** SQL查询请求DTO */
 @Data
 @Schema(description = "SQL查询请求对象")
+@SuperBuilder
+@NoArgsConstructor
 public class SqlQueryDTO {
     @Schema(description = "数据源ID", example = "1", required = true)
     @NotNull(message = "数据源ID不能为空") private Long datasourceId;

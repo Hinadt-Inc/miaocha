@@ -62,6 +62,13 @@
         DELETE FROM user_module_permission WHERE module = #{moduleName}
     </delete>
 
+    <!-- 批量更新模块名称 -->
+    <update id="updateModuleName">
+        UPDATE user_module_permission
+        SET module = #{newModuleName}, update_time = NOW()
+        WHERE module = #{oldModuleName} AND datasource_id = #{datasourceId}
+    </update>
+
     <!-- 获取用户有权限访问的所有表名 -->
     <!-- 通过联查用户模块权限表和模块信息表，获取用户实际可以访问的表名列表 -->
     <select id="selectPermittedTableNames" resultType="java.lang.String">

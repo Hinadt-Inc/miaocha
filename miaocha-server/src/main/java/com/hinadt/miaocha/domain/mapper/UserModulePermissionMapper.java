@@ -93,6 +93,19 @@ public interface UserModulePermissionMapper {
     int deleteByModuleName(@Param("moduleName") String moduleName);
 
     /**
+     * 批量更新模块名称 当模块名称发生变化时，同步更新权限表中的模块名称
+     *
+     * @param oldModuleName 旧模块名称
+     * @param newModuleName 新模块名称
+     * @param datasourceId 数据源ID
+     * @return 影响的行数
+     */
+    int updateModuleName(
+            @Param("oldModuleName") String oldModuleName,
+            @Param("newModuleName") String newModuleName,
+            @Param("datasourceId") Long datasourceId);
+
+    /**
      * 获取用户有权限访问的所有表名 通过联查用户模块权限表和模块信息表，获取用户实际可以访问的表名列表
      *
      * @param userId 用户ID

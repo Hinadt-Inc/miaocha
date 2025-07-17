@@ -141,7 +141,7 @@ public class SqlQueryServiceTest {
         lenient()
                 .doNothing()
                 .when(permissionChecker)
-                .checkQueryPermission(any(User.class), anyString());
+                .checkQueryPermission(any(User.class), anyString(), anyLong());
         lenient().when(datasourceMapper.selectById(anyLong())).thenReturn(testDatasourceInfo);
         lenient().when(userMapper.selectById(anyLong())).thenReturn(testUser);
         lenient()
@@ -179,7 +179,9 @@ public class SqlQueryServiceTest {
         verify(userMapper).selectById(testUser.getId());
         verify(jdbcQueryExecutor).executeQuery(eq(testDatasourceInfo), eq(testQueryDTO.getSql()));
         verify(sqlQueryHistoryMapper).insert(any(SqlQueryHistory.class));
-        verify(permissionChecker).checkQueryPermission(testUser, testQueryDTO.getSql());
+        verify(permissionChecker)
+                .checkQueryPermission(
+                        testUser, testQueryDTO.getSql(), testQueryDTO.getDatasourceId());
     }
 
     @Test
@@ -204,7 +206,9 @@ public class SqlQueryServiceTest {
         verify(exporterFactory).getExporter("xlsx");
         verify(fileExporter).exportToFile(any(), anyString());
         verify(sqlQueryHistoryMapper).insert(any(SqlQueryHistory.class));
-        verify(permissionChecker).checkQueryPermission(testUser, testQueryDTO.getSql());
+        verify(permissionChecker)
+                .checkQueryPermission(
+                        testUser, testQueryDTO.getSql(), testQueryDTO.getDatasourceId());
     }
 
     @Test
@@ -224,7 +228,7 @@ public class SqlQueryServiceTest {
         assertEquals(ErrorCode.DATASOURCE_NOT_FOUND, exception.getErrorCode());
         verify(datasourceMapper).selectById(testQueryDTO.getDatasourceId());
         verify(userMapper, never()).selectById(anyLong());
-        verify(permissionChecker, never()).checkQueryPermission(any(), any());
+        verify(permissionChecker, never()).checkQueryPermission(any(), any(), any());
     }
 
     @Test
@@ -250,7 +254,7 @@ public class SqlQueryServiceTest {
         verify(datasourceMapper).selectById(testQueryDTO.getDatasourceId());
         verify(userMapper).selectById(999L);
         // 因为用户不存在，所以不会调用权限检查
-        verify(permissionChecker, never()).checkQueryPermission(any(), any());
+        verify(permissionChecker, never()).checkQueryPermission(any(), any(), any());
     }
 
     @Test
@@ -261,7 +265,7 @@ public class SqlQueryServiceTest {
         // 模拟权限检查器抛出异常
         doThrow(new BusinessException(ErrorCode.VALIDATION_ERROR, "SQL语句不能为空"))
                 .when(permissionChecker)
-                .checkQueryPermission(any(), eq(""));
+                .checkQueryPermission(any(), eq(""), anyLong());
 
         // 执行测试并验证异常
         BusinessException exception =
@@ -275,7 +279,8 @@ public class SqlQueryServiceTest {
         assertEquals("SQL语句不能为空", exception.getMessage());
         verify(userMapper).selectById(testUser.getId());
         verify(datasourceMapper).selectById(testQueryDTO.getDatasourceId());
-        verify(permissionChecker).checkQueryPermission(testUser, "");
+        verify(permissionChecker)
+                .checkQueryPermission(testUser, "", testQueryDTO.getDatasourceId());
         verify(jdbcQueryExecutor, never()).executeQuery(any(DatasourceInfo.class), anyString());
     }
 
@@ -302,7 +307,9 @@ public class SqlQueryServiceTest {
         verify(jdbcQueryExecutor).executeQuery(eq(testDatasourceInfo), eq(testQueryDTO.getSql()));
         verify(exporterFactory).getExporter("xlsx");
         verify(fileExporter).exportToFile(any(), anyString());
-        verify(permissionChecker).checkQueryPermission(testUser, testQueryDTO.getSql());
+        verify(permissionChecker)
+                .checkQueryPermission(
+                        testUser, testQueryDTO.getSql(), testQueryDTO.getDatasourceId());
     }
 
     @Test
