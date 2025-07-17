@@ -46,13 +46,19 @@ const FieldListItem: React.FC<IProps> = memo(
             onActiveColumns(newActiveColumns);
             onDistribution(columnName, newActiveColumns, '');
           }
+          const localActiveColumns = JSON.parse(localStorage.getItem('activeColumns') || '[]');
+          localStorage.setItem('activeColumns', JSON.stringify([...new Set([...localActiveColumns, ...key])]));
         } else {
           // 移除
           const newActiveColumns = activeColumns.filter((item) => item !== columnName);
           onActiveColumns(newActiveColumns);
           onDistribution(columnName, newActiveColumns, '');
+          const localActiveColumns = JSON.parse(localStorage.getItem('activeColumns') || '[]');
+          const newLocalActiveColumns = localActiveColumns.filter((item: string) => item !== columnName);
+          localStorage.setItem('activeColumns', JSON.stringify([...new Set([...newLocalActiveColumns, ...key])]));
         }
-        setActiveKey(key as string[]);
+
+        setActiveKey(key);
       },
       [activeColumns, column.columnName, onActiveColumns, onDistribution],
     );
@@ -148,7 +154,7 @@ const FieldListItem: React.FC<IProps> = memo(
                                 ellipsis={{
                                   rows: 1,
                                   tooltip: true,
-                                  onEllipsis: () => {},
+                                  onEllipsis: () => { },
                                 }}
                               >
                                 {sub.value}
@@ -197,7 +203,7 @@ const FieldListItem: React.FC<IProps> = memo(
       prevProps.column.columnName === nextProps.column.columnName &&
       prevProps.column.selected === nextProps.column.selected &&
       prevProps.fieldData.distributions[prevProps.column.columnName as string] ===
-        nextProps.fieldData.distributions[nextProps.column.columnName as string] &&
+      nextProps.fieldData.distributions[nextProps.column.columnName as string] &&
       prevProps.fieldData.searchParams === nextProps.fieldData.searchParams
     );
   },

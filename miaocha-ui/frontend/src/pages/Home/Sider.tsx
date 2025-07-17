@@ -1,5 +1,4 @@
-// @ts-ignore
-import { useState, useEffect, useMemo, forwardRef, useImperativeHandle, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, forwardRef, useImperativeHandle, useRef, useCallback, ReactElement, ReactNode, ReactPortal, JSXElementConstructor } from 'react';
 import { Collapse, Select, Input } from 'antd';
 import { StarOutlined, StarFilled } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
@@ -80,20 +79,7 @@ const VirtualFieldList: React.FC<{
 };
 
 const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
-  (
-    props: {
-      modules: any;
-      onChangeColumns: any;
-      onSearch: any;
-      searchParams: any;
-      setWhereSqlsFromSider: any;
-      onActiveColumnsChange: any;
-      onSelectedModuleChange: any;
-      moduleQueryConfig: any;
-      onCommonColumnsChange: any;
-    },
-    ref: any,
-  ) => {
+  (props, ref) => {
     const {
       modules,
       onChangeColumns,
@@ -153,6 +139,10 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
     // 获取指定字段的TOP5分布数据
     const queryDistribution = useRequest(
       async (params: ILogSearchParams & { signal?: AbortSignal }) => {
+        const localActiveColumns = JSON.parse(localStorage.getItem('activeColumns') || '[]');
+        if (localActiveColumns.length > 0) {
+          params.fields = localActiveColumns;
+        }
         const requestParams: any = {
           ...params,
         };
@@ -207,12 +197,24 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
 
     // 初始化收藏状态
     useEffect(() => {
+      localStorage.removeItem('activeColumns');
       const favorite = getFavoriteModule();
       setFavoriteModule(favorite);
     }, []);
 
     // 选择模块时触发，避免重复请求和状态更新
     const changeModules = (value: string) => {
+      const savedSearchParams = localStorage.getItem('searchBarParams');
+      localStorage.removeItem('activeColumns');
+      if (savedSearchParams) {
+        const params = JSON.parse(savedSearchParams);
+        localStorage.setItem('searchBarParams', JSON.stringify({
+          ...params,
+          keywords: [],
+          whereSqls: []
+        }))
+        // setActiveColumns([])
+      }
       if (!value) {
         setSelectedModule('');
         setHasCalledGetColumns(''); // 重置调用标识
@@ -221,7 +223,7 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
         }
         return;
       }
-      const datasourceId = modules.find((item: { value: string }) => item.value === value)?.datasourceId;
+      const datasourceId = modules.find((item: IStatus) => item.value === value)?.datasourceId;
       // 解析value：datasourceId-module
       setSelectedModule(value);
       // 重置调用标识，允许新模块重新调用getColumns
@@ -247,7 +249,7 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
 
         // 优先选择收藏的模块
         if (favorite) {
-          targetModule = modules.find((item: { module: string }) => item.module === favorite);
+          targetModule = modules.find((item: IStatus) => item.module === favorite);
         }
 
         // 如果没有收藏或收藏的模块不存在，选择第一个
@@ -283,7 +285,7 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
     // 当moduleQueryConfig和selectedModule都准备好时，调用getColumns
     useEffect(() => {
       if (selectedModule && moduleQueryConfig !== undefined && modulesRef.current.length > 0) {
-        const targetModule = modulesRef.current.find((item: { value: any }) => item.value === selectedModule);
+        const targetModule = modulesRef.current.find((item: IStatus) => item.value === selectedModule);
         if (targetModule) {
           const datasourceId = targetModule.datasourceId;
           // 生成唯一标识，避免重复调用
@@ -302,7 +304,7 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
     // 切换字段选中状态
     const toggleColumn = (data: ILogColumnsResponse) => {
       const index = columns.findIndex(
-        (item: { columnName: string | undefined }) => item.columnName === data.columnName,
+        (item: ILogColumnsResponse) => item.columnName === data.columnName,
       );
       // 如果是时间字段，不允许取消选择（使用moduleQueryConfig中的timeField）
       const timeField = moduleQueryConfig?.timeField || 'log_time';
@@ -322,8 +324,8 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
       // if (data?.columnName?.includes('.')) {
       // 添加或者移除的时候，计算新的激活字段列表
       const newActiveColumns = columns
-        .filter((item: { selected: any }) => item.selected)
-        .map((item: { columnName: any }) => item.columnName)
+        .filter((item: ILogColumnsResponse) => item.selected)
+        .map((item: ILogColumnsResponse) => item.columnName)
         .filter(Boolean) as string[];
 
       // 更新本地搜索参数
@@ -347,7 +349,7 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
 
       // 排序
       const sortedColumns = columns.sort(
-        (a: { _createTime: any }, b: { _createTime: any }) => (a._createTime || 0) - (b._createTime || 0),
+        (a: ILogColumnsResponse, b: ILogColumnsResponse) => (a._createTime || 0) - (b._createTime || 0),
       );
       const updatedColumns = [...sortedColumns];
       setColumns(updatedColumns);
@@ -387,10 +389,11 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
         params.whereSqls = [...(searchParams?.whereSqls || []), sql];
       }
       _setSearchParams(params);
-
       if (abortRef.current) abortRef.current.abort(); // 取消上一次
       abortRef.current = new AbortController();
-      queryDistribution.run({ ...params, signal: abortRef.current.signal });
+      setTimeout(() => {
+        queryDistribution.run({ ...params, signal: abortRef.current.signal });
+      }, 500);
     };
 
     const fieldListProps = useMemo(() => {
@@ -408,23 +411,13 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
 
     // 根据搜索文本过滤可用字段
     const filteredAvailableColumns = useMemo(() => {
-      const availableColumns = columns?.filter((item: { selected: any }) => !item.selected);
+      const availableColumns = columns?.filter((item: ILogColumnsResponse) => !item.selected);
       if (!searchText.trim()) {
         return availableColumns;
-        // return availableColumns?.sort((a: { columnName: string }, b: { columnName: any }) => {
-        //   if (!a.columnName) return -1;
-        //   if (!b.columnName) return 1;
-        //   return a.columnName.localeCompare(b.columnName);
-        // });
       }
-      return availableColumns?.filter((item: { columnName: string }) =>
+      return availableColumns?.filter((item: ILogColumnsResponse) =>
         item.columnName?.toLowerCase().includes(searchText.toLowerCase()),
       );
-      // ?.sort((a: { columnName: string }, b: { columnName: any }) => {
-      //   if (!a.columnName) return -1;
-      //   if (!b.columnName) return 1;
-      //   return a.columnName.localeCompare(b.columnName);
-      // });
     }, [columns, searchText]);
 
     // 虚拟列表的渲染函数
@@ -474,30 +467,7 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
           onChange={changeModules}
           optionLabelProp="title"
           options={modules?.map(
-            (item: {
-              label:
-                | string
-                | number
-                | bigint
-                | boolean
-                | ReactElement<unknown, string | JSXElementConstructor<any>>
-                | Iterable<ReactNode>
-                | ReactPortal
-                | Promise<
-                    | string
-                    | number
-                    | bigint
-                    | boolean
-                    | ReactPortal
-                    | ReactElement<unknown, string | JSXElementConstructor<any>>
-                    | Iterable<ReactNode>
-                    | null
-                    | undefined
-                  >
-                | null
-                | undefined;
-              module: string;
-            }) => ({
+            (item: any) => ({
               ...item,
               title: item.label,
               label: (
@@ -539,9 +509,9 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
               key: 'selected',
               label: '已选字段',
               children: columns
-                ?.filter((item: { selected: any }) => item.selected)
+                ?.filter((item: ILogColumnsResponse) => item.selected)
                 ?.sort(
-                  (a: { _createTime: any }, b: { _createTime: any }) => (a._createTime || 0) - (b._createTime || 0),
+                  (a: ILogColumnsResponse, b: ILogColumnsResponse) => (a._createTime || 0) - (b._createTime || 0),
                 )
                 ?.map((item: ILogColumnsResponse, index: number) => (
                   <FieldListItem
