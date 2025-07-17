@@ -27,17 +27,17 @@ function show_usage() {
 function get_repository_info() {
     # 获取远程仓库URL并解析为changelog URL
     local remote_url=$(git remote get-url origin 2>/dev/null || echo "")
-    
+
     if [ -z "$remote_url" ]; then
         return
     fi
-    
+
     # 标准化URL格式，移除.git后缀
     remote_url=$(echo "$remote_url" | sed 's/\.git$//')
-    
+
     local base_url=""
     local repo_path=""
-    
+
     # 处理不同的URL格式
     case "$remote_url" in
         # GitHub HTTPS格式: https://github.com/owner/repo
@@ -45,7 +45,7 @@ function get_repository_info() {
             base_url="https://github.com"
             repo_path="${remote_url#https://github.com/}"
             ;;
-        # GitHub SSH格式: git@github.com:owner/repo  
+        # GitHub SSH格式: git@github.com:owner/repo
         git@github.com:*)
             base_url="https://github.com"
             repo_path="${remote_url#git@github.com:}"
@@ -70,7 +70,7 @@ function get_repository_info() {
             return
             ;;
     esac
-    
+
     # 验证repo_path格式 (应该是 owner/repo 或 group/subgroup/repo)
     if [[ "$repo_path" =~ ^[a-zA-Z0-9._-]+/[a-zA-Z0-9._/-]+$ ]]; then
         echo "$base_url/$repo_path"
@@ -82,11 +82,11 @@ function get_current_version() {
         echo "错误: 未找到 pom.xml 文件" >&2
         exit 1
     fi
-    
+
     # 使用Maven help:evaluate获取准确的项目版本
     cd "$PROJECT_ROOT"
     local version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout 2>/dev/null)
-    
+
     if [ -z "$version" ] || [ "$version" = "null" ]; then
         echo "错误: 无法从 pom.xml 获取项目版本" >&2
         echo "请确保："
@@ -95,22 +95,22 @@ function get_current_version() {
         echo "  3. 项目根目录存在 <version> 标签"
         exit 1
     fi
-    
+
     echo "$version"
 }
 
 function calculate_next_version() {
     local current_version="$1"
     local version_type="$2"
-    
+
     # 移除SNAPSHOT后缀
     local clean_version=$(echo "$current_version" | sed 's/-SNAPSHOT//')
-    
+
     # 分解版本号
     local major=$(echo "$clean_version" | cut -d. -f1)
     local minor=$(echo "$clean_version" | cut -d. -f2)
     local patch=$(echo "$clean_version" | cut -d. -f3)
-    
+
     case $version_type in
         "patch")
             echo "$major.$minor.$((patch + 1))"
@@ -131,12 +131,12 @@ function calculate_next_version() {
 function update_version() {
     local new_version="$1"
     local dry_run="$2"
-    
+
     if [ "$dry_run" = "true" ]; then
         echo "[DRY RUN] 将更新版本到 $new_version"
         return
     fi
-    
+
     if [ -f "$PROJECT_ROOT/pom.xml" ]; then
         # 使用Maven versions插件更新版本，避免sed跨平台兼容性问题
         cd "$PROJECT_ROOT"
@@ -146,7 +146,7 @@ function update_version() {
         fi
         echo "更新 pom.xml 版本到 $new_version"
     fi
-    
+
     if [ -f "$PROJECT_ROOT/package.json" ]; then
         # 跨平台兼容的sed写法
         if sed --version 2>/dev/null | grep -q "GNU"; then
@@ -165,17 +165,17 @@ function generate_release_notes() {
     local dry_run="$2"
     local only_generate="$3"
     local last_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-    
+
     if [ "$only_generate" != "true" ]; then
         echo "生成 Release Notes..."
     fi
-    
+
     local release_notes="## What's Changed
 
 This version includes several improvements and bug fixes based on community feedback.
 
 "
-    
+
     local commit_range=""
     if [ -z "$last_tag" ]; then
         # 没有找到上一个标签，基于所有符合格式的提交生成Release Notes
@@ -200,11 +200,11 @@ This version includes several improvements and bug fixes based on community feed
             fi
         fi
     fi
-    
+
     # 获取[ISSUE #xx]格式的提交
     local issue_commits=""
     local contributors_info=""
-    
+
     if [ -z "$last_tag" ]; then
         # 没有标签时，获取所有符合格式的提交
         contributors_info=$(git log --oneline --pretty=format:"%h|%s|%an|%ae" | grep -E "\[ISSUE #[0-9]+\]" | head -30 2>/dev/null || echo "")
@@ -215,7 +215,7 @@ This version includes several improvements and bug fixes based on community feed
         # 单个标签，获取到该标签的所有提交
         contributors_info=$(git log --oneline --pretty=format:"%h|%s|%an|%ae" "$commit_range" | grep -E "\[ISSUE #[0-9]+\]" | head -30 2>/dev/null || echo "")
     fi
-    
+
     if [ -n "$contributors_info" ]; then
         # 处理每个ISSUE提交，添加贡献者信息
         while IFS='|' read -r hash subject author email; do
@@ -225,7 +225,7 @@ This version includes several improvements and bug fixes based on community feed
 "
                 continue
             fi
-            
+
             # 从GitHub邮箱提取用户名
             local github_user=""
             if [[ "$email" =~ ^[0-9]+\+([^@]+)@users\.noreply\.github\.com$ ]]; then
@@ -236,19 +236,19 @@ This version includes several improvements and bug fixes based on community feed
                 # 如果不是GitHub邮箱，使用作者名
                 github_user="$author"
             fi
-            
+
             issue_commits="$issue_commits* $subject by @$github_user
 "
         done <<< "$contributors_info"
-        
+
         release_notes="$release_notes$issue_commits
 "
     fi
-    
+
     # 获取其他提交
     local other_commits=""
     local other_commits_count=0
-    
+
     if [ -z "$last_tag" ]; then
         # 第一个标签，获取所有非ISSUE格式的提交
         other_commits_count=$(git log --oneline --pretty=format:"%s" | grep -v -E "\[ISSUE.*\]|\[RELEASE PREPARE\]" | grep -v "^$" | wc -l)
@@ -262,12 +262,12 @@ This version includes several improvements and bug fixes based on community feed
         other_commits_count=$(git log --oneline --pretty=format:"%s" "$commit_range" | grep -v -E "\[ISSUE.*\]|\[RELEASE PREPARE\]" | grep -v "^$" | wc -l)
         other_commits=$(git log --oneline --pretty=format:"- %s" "$commit_range" | grep -v -E "\[ISSUE.*\]|\[RELEASE PREPARE\]" | head -10 2>/dev/null || echo "")
     fi
-        
+
     if [ -n "$other_commits" ]; then
             release_notes="$release_notes## Other Changes
 
 $other_commits"
-            
+
             # 如果有超过10条其他提交，添加提示和链接
             if [ "$other_commits_count" -gt 10 ]; then
                 local remaining_count=$((other_commits_count - 10))
@@ -288,24 +288,24 @@ $other_commits"
 ... and $remaining_count more commits."
                 fi
             fi
-            
+
             release_notes="$release_notes
 
 "
         fi
-    
+
     # 生成贡献者统计
     if [ -n "$contributors_info" ]; then
         local unique_contributors=""
         local new_contributors=""
-        
+
         # 收集所有贡献者
         while IFS='|' read -r hash subject author email; do
             # 跳过内部用户（hinadt.com邮箱）
             if [[ "$email" =~ @hinadt\.com$ ]]; then
                 continue
             fi
-            
+
             local github_user=""
             if [[ "$email" =~ ^[0-9]+\+([^@]+)@users\.noreply\.github\.com$ ]]; then
                 github_user="${BASH_REMATCH[1]}"
@@ -314,7 +314,7 @@ $other_commits"
             else
                 github_user="$author"
             fi
-            
+
             # 检查是否为新贡献者（在这个范围内首次出现）
             if [[ ! "$unique_contributors" =~ "$github_user" ]]; then
                 if [ -z "$unique_contributors" ]; then
@@ -322,7 +322,7 @@ $other_commits"
                 else
                     unique_contributors="$unique_contributors,$github_user"
                 fi
-                
+
                 # 获取此贡献者的第一个ISSUE提交
                 local first_issue=$(echo "$contributors_info" | grep "$email" | tail -1 | cut -d'|' -f2)
                 if [[ "$first_issue" =~ \(#([0-9]+)\) ]]; then
@@ -332,14 +332,14 @@ $other_commits"
                 fi
             fi
         done <<< "$contributors_info"
-        
+
         if [ -n "$new_contributors" ]; then
             release_notes="$release_notes
 ## New Contributors
 $new_contributors"
         fi
     fi
-    
+
     # 获取仓库信息，支持多种URL格式
     local repo_info=$(get_repository_info)
     if [ -n "$repo_info" ] && [ -n "$last_tag" ]; then
@@ -357,7 +357,7 @@ $new_contributors"
         release_notes="$release_notes
 **Project Repository**: $repo_info"
     fi
-    
+
     if [ "$only_generate" = "true" ]; then
         # 仅输出到stdout，供GitHub Actions使用
         echo "$release_notes"
@@ -381,7 +381,7 @@ function main() {
     local next_minor="false"
     local next_major="false"
     local only_generate="false"
-    
+
     # 解析参数
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -422,14 +422,14 @@ function main() {
                 ;;
         esac
     done
-    
+
     local current_version=$(get_current_version)
-    
+
     if [ "$current_only" = "true" ]; then
         echo "当前版本: $current_version"
         exit 0
     fi
-    
+
     # 计算新版本
     if [ "$next_patch" = "true" ]; then
         version=$(calculate_next_version "$current_version" "patch")
@@ -441,7 +441,7 @@ function main() {
         version=$(calculate_next_version "$current_version" "major")
         echo "自动计算下一个major版本: $current_version -> $version"
     fi
-    
+
     if [ -z "$version" ]; then
         if [ "$only_generate" != "true" ]; then
             echo "当前版本: $current_version"
@@ -451,18 +451,18 @@ function main() {
             exit 1
         fi
     fi
-    
+
     if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then
         echo "错误: 版本号格式不正确，应为 x.y.z 或 x.y.z-suffix (如: 2.0.0-rc.1, 2.0.0-hotfix, 2.0.0-test-auto)"
         exit 1
     fi
-    
+
     # 仅生成Release Notes
     if [ "$only_generate" = "true" ]; then
         generate_release_notes "$version" "false" "true"
         exit 0
     fi
-    
+
     if [ "$dry_run" = "true" ]; then
         echo "=== 预览模式 v$version ==="
         echo ""
@@ -474,20 +474,21 @@ function main() {
         echo "预览完成。使用不带 --dry-run 的命令执行实际操作。"
         exit 0
     fi
-    
+
     local current_branch=$(git branch --show-current)
     echo "在分支 $current_branch 上升级版本: $version"
-    
+
     # 更新版本号
     update_version "$version" "$dry_run"
-    
+
     # 生成Release Notes
     generate_release_notes "$version" "$dry_run" "false"
-    
-    # 提交版本更改
+
+    # 提交,推送,版本更改
     git add .
     git commit -m "[RELEASE PREPARE] prepare release miaocha-$version"
-    
+    git push --set-upstream origin $current_branch
+
     echo ""
     echo "版本升级完成: v$version"
     echo "下一步手动操作:"
@@ -495,4 +496,4 @@ function main() {
     echo "  git push origin v$version"
 }
 
-main "$@" 
+main "$@"
