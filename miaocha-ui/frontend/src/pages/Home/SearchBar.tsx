@@ -20,10 +20,15 @@ interface IProps {
   sortConfig?: any[]; // 排序配置
   commonColumns?: string[]; // 普通字段列表（不含有.的字段）
   loading?: boolean; // 加载状态
+  keywords: string[]; // 新增
+  setKeywords: (k: string[]) => void; // 新增
+  sqls: string[]; // 新增
+  setSqls: (s: string[]) => void; // 新增
+  setWhereSqlsFromSiderArr: any[]; // 新增
 }
 
 const SearchBar = forwardRef((props: IProps, ref: any) => {
-  const { loading = false } = props;
+  const { loading = false, keywords, setKeywords, sqls, setSqls, setWhereSqlsFromSiderArr } = props;
   const searchBarRef = useRef<HTMLDivElement>(null);
   const {
     searchParams,
@@ -40,14 +45,12 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
 
   const [timeGroup, setTimeGroup] = useState<string>('auto'); // 时间分组
   const [activeTab, setActiveTab] = useState('quick'); // 选项卡值
-  const [keywords, setKeywords] = useState<string[]>([]); // 关键词列表
   const [keyword, setKeyword] = useState<string>(''); // 当前输入的关键词
   const [keywordHistory, setKeywordHistory] = useState<string[]>(() => {
     const saved = localStorage.getItem('keywordHistory');
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [sqls, setSqls] = useState<string[]>([]); // sql列表
   const [sql, setSql] = useState<string>(''); // sql字符串
 
   const [sqlHistory, setSqlHistory] = useState<string[]>(() => {
@@ -89,7 +92,7 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
               label: QUICK_RANGES[params.timeRange]?.label || '自定义时间',
               type: QUICK_RANGES[params.timeRange] ? ('quick' as const) : ('absolute' as const),
             };
-            setTimeOption(timeOption);
+            // setTimeOption(timeOption); // This line was removed as per the edit hint
           }
         } catch (error) {
           console.error('恢复查询条件失败:', error);
@@ -97,7 +100,7 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
       }
       setInitialized(true);
     }
-  }, [initialized]);
+  }, [initialized, setKeywords, setSqls]);
 
   // 暴露给父组件的方法
   useImperativeHandle(ref, () => ({
@@ -109,7 +112,7 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
       setSqls((prev: any[]) => prev.filter((item: string) => item !== sql));
     },
     // 渲染时间
-    setTimeOption,
+    // setTimeOption, // This line was removed as per the edit hint
   }));
 
   // 获取默认时间选项配置
@@ -176,7 +179,7 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
     setKeyword(item);
     clearKeywordFromLocalStorage(item);
     // 从keywords数组中移除该项
-    setKeywords((prev: any[]) => prev.filter((keyword: string) => keyword !== item));
+    setKeywords(keywords.filter((keyword: string) => keyword !== item));
   };
 
   // 处理点击sql逻辑
@@ -184,14 +187,14 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
     setSql(item);
     clearSqlFromLocalStorage(item);
     // 从sqls数组中移除该项
-    setSqls((prev: any[]) => prev.filter((sql: string) => sql !== item));
+    setSqls(sqls.filter((sql: string) => sql !== item));
     // 从sider中移除该项
-    setWhereSqlsFromSider((prev: any) => prev.filter((sub: any) => sub.label !== item));
+    setWhereSqlsFromSider(setWhereSqlsFromSiderArr.filter((sub: any) => sub.label !== item));
   };
 
   // 处理删除关键词
   const handleCloseKeyword = (item: string) => {
-    setKeywords((prev: any[]) => prev.filter((keyword: string) => keyword !== item));
+    setKeywords(keywords.filter((keyword: string) => keyword !== item));
     clearKeywordFromLocalStorage(item);
     const latestTime = getLatestTime(timeOption);
     setTimeOption((prev: any) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
@@ -199,9 +202,9 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
 
   // 处理删除SQL
   const handleCloseSql = (item: string) => {
-    setSqls((prev: any[]) => prev.filter((sub: string) => sub !== item));
+    setSqls(sqls.filter((sub: string) => sub !== item));
     clearSqlFromLocalStorage(item);
-    setWhereSqlsFromSider((prev: any) => prev.filter((sub: any) => sub.label !== item));
+    setWhereSqlsFromSider(setWhereSqlsFromSiderArr.filter((sub: any) => sub.label !== item));
     const latestTime = getLatestTime(timeOption);
     setTimeOption((prev: any) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
   };
@@ -224,7 +227,7 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
               </Tag>
             </Tooltip>
           ))}
-          {sqls.map((item: string) => (
+          {[...new Set(sqls)].map((item: string) => (
             <Tooltip key={item} placement="topLeft" title={item}>
               <Tag
                 color="success"
@@ -300,7 +303,7 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
     if (getDistributionWithSearchBar) {
       getDistributionWithSearchBar();
     }
-  }, [timeOption, timeGroup, activeColumns, sortConfig, onSqlsChange, initialized, commonColumns]);
+  }, [timeOption, timeGroup, activeColumns, sortConfig, onSqlsChange, initialized, commonColumns, keywords, sqls]);
 
   // 处理关键词和SQL搜索
   const handleSubmit = () => {
@@ -316,7 +319,7 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
       }
       // 添加到关键词列表
       if (!keywords.includes(keywordTrim)) {
-        setKeywords((prev: any) => [...prev, keywordTrim]);
+        setKeywords([...keywords, keywordTrim]);
       }
     }
 
@@ -328,7 +331,7 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
         localStorage.setItem('sqlHistory', JSON.stringify(newHistory));
       }
       if (!sqls.includes(sqlTrim)) {
-        setSqls((prev: any) => [...prev, sqlTrim]);
+        setSqls([...sqls, sqlTrim]);
       }
     }
 
@@ -425,8 +428,8 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
     const currentWord = getCurrentInputWord(sql);
     const filteredColumns = currentWord
       ? (columns || []).filter(
-          (column) => column.columnName && column.columnName.toLowerCase().includes(currentWord.toLowerCase()),
-        )
+        (column) => column.columnName && column.columnName.toLowerCase().includes(currentWord.toLowerCase()),
+      )
       : columns || [];
 
     return (
