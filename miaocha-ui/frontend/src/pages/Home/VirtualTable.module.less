@@ -6,10 +6,28 @@
       word-break: break-all;
       font-size: 12px;
       font-family: "Lucida Console", Monaco, monospace;
+      
+      // 在小屏幕上优化单元格显示
+      @media (max-width: 1200px) {
+        padding: 4px 8px; // 减小padding节省空间
+        font-size: 11px; // 稍微减小字体
+      }
     }
     .ant-table-row {
       max-height: 155px;
       overflow: hidden;
+    }
+    
+    // 小屏幕上的表格容器优化
+    @media (max-width: 1200px) {
+      .ant-table-container {
+        overflow-x: auto;
+      }
+      
+      // 表格内容区域优化
+      .ant-table-body {
+        overflow-x: auto;
+      }
     }
   }
   .resizeHandle {
@@ -49,6 +67,30 @@
     padding: 0;
     line-height: 2;
     word-break: break-all;
+    -webkit-user-select: text; // Safari 兼容性
+    user-select: text; // 确保文本可选择
+    // 在小屏幕上增加最大宽度并允许滚动
+    @media (max-width: 1200px) {
+      max-width: 100%;
+      overflow-x: auto;
+      white-space: nowrap;
+      
+      // 自定义滚动条样式，使其更易于操作
+      &::-webkit-scrollbar {
+        height: 8px;
+      }
+      &::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+      }
+      &::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 4px;
+        &:hover {
+          background: #a8a8a8;
+        }
+      }
+    }
     :global {
       dt {
         display: inline;
@@ -58,11 +100,15 @@
         margin-right: 5px;
         word-break: normal;
         border-radius: 2px;
+        -webkit-user-select: text; // Safari 兼容性
+        user-select: text; // 确保标签可选择
       }
       dd {
         display: inline;
         margin: 0 5px 0 0;
         color: #2d2d2d;
+        -webkit-user-select: text; // Safari 兼容性
+        user-select: text; // 确保内容可选择
       }
     }
     .highlight {
