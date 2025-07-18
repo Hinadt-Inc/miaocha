@@ -98,7 +98,20 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
     const [searchText, setSearchText] = useState<string>(''); // 字段搜索文本
     const [favoriteModule, setFavoriteModule] = useState<string>(''); // 收藏的模块
     const [_searchParams, _setSearchParams] = useState<ILogSearchParams>(searchParams); // 临时查询参数，供searchBar查询调用
+    const [distributionLoading, setDistributionLoading] = useState<Record<string, boolean>>({}); // 字段分布加载状态
     const abortRef = useRef<AbortController | null>(null);
+    
+    // 使用 ref 来追踪上一次的查询条件，避免循环请求
+    const lastQueryConditionsRef = useRef<string>('');
+
+    // 当 searchParams 变化时，完全同步 _searchParams，确保删除的条件也能正确更新
+    useEffect(() => {
+      _setSearchParams(prev => ({
+        ...prev,
+        ...searchParams,
+        fields: prev.fields, // 保留 _searchParams 中的 fields，这是专门为字段分布查询准备的
+      }));
+    }, [searchParams]);
 
     // 获取日志字段
     const getColumns = useRequest(api.fetchColumns, {
@@ -160,9 +173,19 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
             target[fieldName] = { ...item, sampleSize };
           });
           setDistributions(target);
+          
+          // 清除loading状态
+          const fields = Object.keys(target);
+          const newLoadingState: Record<string, boolean> = {};
+          fields.forEach((field: string) => {
+            newLoadingState[field] = false;
+          });
+          setDistributionLoading(prev => ({ ...prev, ...newLoadingState }));
         },
         onError: () => {
           setDistributions({});
+          // 清除所有loading状态
+          setDistributionLoading({});
         },
       },
     );
@@ -361,17 +384,59 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
     };
 
     // 获取字段值分布
-    const getDistributionWithSearchBar = () => {
+    const getDistributionWithSearchBar = useCallback(() => {
       // 有字段的时候调用
       if (_searchParams?.fields?.length) {
+        // 生成当前查询条件的标识符
+        const currentConditions = JSON.stringify({
+          whereSqls: searchParams.whereSqls || [],
+          keywords: searchParams.keywords || [],
+          startTime: searchParams.startTime,
+          endTime: searchParams.endTime,
+          fields: _searchParams.fields || []
+        });
+        
+        // 如果查询条件与上次相同，则不发起重复请求
+        if (currentConditions === lastQueryConditionsRef.current) {
+          return;
+        }
+        
+        lastQueryConditionsRef.current = currentConditions;
+        
+        // 立即设置相关字段的loading状态
+        const newLoadingState: Record<string, boolean> = {};
+        _searchParams.fields.forEach((field: string) => {
+          newLoadingState[field] = true;
+        });
+        setDistributionLoading(prev => ({ ...prev, ...newLoadingState }));
+        
         if (abortRef.current) abortRef.current.abort(); // 取消上一次
         abortRef.current = new AbortController();
-        queryDistribution.run({ ..._searchParams, signal: abortRef.current.signal });
+        // 使用最新的 searchParams 而不是 _searchParams，确保包含最新的 whereSqls
+        const params = {
+          ...searchParams,
+          fields: _searchParams.fields,
+        };
+        queryDistribution.run({ ...params, signal: abortRef.current.signal });
       }
-    };
+    }, [searchParams, _searchParams?.fields, queryDistribution]);
+
+    // 当 searchParams 的关键查询条件变化时，自动重新获取字段分布数据
+    useEffect(() => {
+      // 只有当有激活字段时才重新获取分布数据
+      if (_searchParams?.fields?.length) {
+        // 添加短暂延迟，避免频繁请求
+        const timer = setTimeout(() => {
+          getDistributionWithSearchBar();
+        }, 300);
+        
+        return () => clearTimeout(timer);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchParams.whereSqls, searchParams.keywords, searchParams.startTime, searchParams.endTime]);
 
     // 获取字段值分布
-    const getDistribution = (columnName: string, newActiveColumns: string[], sql: string) => {
+    const getDistribution = useCallback((columnName: string, newActiveColumns: string[], sql: string) => {
       // 折叠的时候重新赋值
       if (!newActiveColumns.includes(columnName)) {
         _setSearchParams({
@@ -380,6 +445,10 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
         });
         return;
       }
+      
+      // 立即设置loading状态
+      setDistributionLoading(prev => ({ ...prev, [columnName]: true }));
+      
       const params: ILogSearchParams = {
         ...searchParams,
         fields: newActiveColumns,
@@ -389,17 +458,37 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
         params.whereSqls = [...(searchParams?.whereSqls || []), sql];
       }
       _setSearchParams(params);
+      
+      // 生成当前查询条件的标识符，与useEffect中的逻辑保持一致
+      const currentConditions = JSON.stringify({
+        whereSqls: params.whereSqls || [],
+        keywords: searchParams.keywords || [],
+        startTime: searchParams.startTime,
+        endTime: searchParams.endTime,
+        fields: newActiveColumns || []
+      });
+      
+      // 如果查询条件与上次相同，则不发起重复请求
+      if (currentConditions === lastQueryConditionsRef.current) {
+        return;
+      }
+      
+      lastQueryConditionsRef.current = currentConditions;
+      
       if (abortRef.current) abortRef.current.abort(); // 取消上一次
       abortRef.current = new AbortController();
       setTimeout(() => {
-        queryDistribution.run({ ...params, signal: abortRef.current.signal });
+        if (abortRef.current) {
+          queryDistribution.run({ ...params, signal: abortRef.current.signal });
+        }
       }, 500);
-    };
+    }, [searchParams, _searchParams, queryDistribution]);
 
     const fieldListProps = useMemo(() => {
       return {
         searchParams,
         distributions,
+        distributionLoading,
         activeColumns,
         onToggle: toggleColumn,
         setWhereSqlsFromSider,
@@ -407,7 +496,7 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
         onDistribution: (columnName: string, newActiveColumns: string[], sql: string) =>
           getDistribution(columnName, newActiveColumns, sql),
       };
-    }, [searchParams, distributions, activeColumns, toggleColumn, getDistribution, setWhereSqlsFromSider]);
+    }, [searchParams, distributions, distributionLoading, activeColumns, toggleColumn, getDistribution, setWhereSqlsFromSider]);
 
     // 根据搜索文本过滤可用字段
     const filteredAvailableColumns = useMemo(() => {
