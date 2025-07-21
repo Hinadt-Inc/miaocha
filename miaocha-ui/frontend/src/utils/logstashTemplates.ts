@@ -73,11 +73,11 @@ http.port: 9600
 
 export const DORIS_TEMPLATE = `CREATE TABLE \`create_table_template\` (
   \`log_time\` datetime(3) NOT NULL,
-  \`host\` text NULL COMMENT "hostname or ip",
-  \`source\` text NULL COMMENT "log path",
-  \`log_offset\` text NULL COMMENT "日志所在kafka主题偏移量",
+  \`host\` varchar(255) NULL COMMENT "hostname or ip",
+  \`source\` varchar(255) NULL COMMENT "log path",
+  \`log_offset\` bigint NULL COMMENT "日志所在kafka主题偏移量",
   \`message\` variant NULL,  -- 消息内容
-  \`message_text\` text NULL, -- 消息内容文本,用于倒排索引,关键字检索加速
+  \`message_text\` string NULL, -- 消息内容文本,用于倒排索引,关键字检索加速
    
   -- 添加或者删除字段 ....
 
