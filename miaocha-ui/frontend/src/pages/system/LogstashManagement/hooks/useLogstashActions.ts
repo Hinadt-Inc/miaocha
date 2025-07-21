@@ -131,28 +131,33 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
   const handleSubmit = async (values: Partial<LogstashProcess>) => {
     try {
       if (currentProcess) {
+        // 编辑模式：更新元数据和配置信息
         await updateLogstashProcessMetadata(currentProcess.id, {
           name: values.name || currentProcess.name,
           moduleId: values.moduleId || currentProcess.moduleId,
         });
+
+        // 如果有配置相关的更新，也调用配置更新API
+        const configData: {
+          configContent?: string;
+          jvmOptions?: string;
+          logstashYml?: string;
+        } = {};
+        
+        // 注意：编辑模式下不更新 machineIds，因为部署机器不可编辑
+        if (values.configContent) configData.configContent = values.configContent;
+        if (values.jvmOptions) configData.jvmOptions = values.jvmOptions;
+        if (values.logstashYml) configData.logstashYml = values.logstashYml;
+
+        // 只有当有配置更新时才调用配置API
+        if (Object.keys(configData).length > 0) {
+          await updateLogstashConfig(currentProcess.id, configData);
+        }
+
         showSuccess('更新成功');
       } else {
-        const process = await createLogstashProcess(values);
+        await createLogstashProcess(values);
         showSuccess('创建成功');
-
-        // if (!values.jvmOptions || !values.logstashYml) {
-        //   setTimeout(async () => {
-        //     try {
-        //       await updateLogstashConfig(process.id, {
-        //         jvmOptions: values.jvmOptions || '默认JVM参数',
-        //         logstashYml: values.logstashYml || '默认Logstash配置',
-        //       });
-        //       await fetchData();
-        //     } catch (err) {
-        //       console.error('异步更新配置失败:', err);
-        //     }
-        //   }, 3000);
-        // }
       }
       setEditModalVisible(false);
       await fetchData();

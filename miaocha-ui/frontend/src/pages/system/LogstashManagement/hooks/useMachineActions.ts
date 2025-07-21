@@ -27,6 +27,8 @@ export const useMachineActions = ({ fetchData }: UseMachineActionsProps) => {
     logstashYml?: string;
     logstashMachineId?: number;
     processId?: number;
+    moduleName?: string;
+    processName?: string;
   } | null>(null);
   const [machineConfigModalVisible, setMachineConfigModalVisible] = useState(false);
   const [machineDetailModalVisible, setMachineDetailModalVisible] = useState(false);
@@ -120,12 +122,15 @@ export const useMachineActions = ({ fetchData }: UseMachineActionsProps) => {
   const handleEditMachineConfig = async (machineId: number, processId: number, data: any[]) => {
     try {
       const machineDetail = await getLogstashProcess(machineId);
+      const process = data.find((p: any) => p.id === processId);
       setCurrentMachine({
         logstashMachineId: machineId,
         processId: processId,
         configContent: machineDetail.configContent,
         jvmOptions: machineDetail.jvmOptions,
         logstashYml: machineDetail.logstashYml,
+        moduleName: process?.moduleName,
+        processName: process?.name,
       });
       setMachineConfigModalVisible(true);
     } catch {
@@ -137,14 +142,20 @@ export const useMachineActions = ({ fetchData }: UseMachineActionsProps) => {
         configContent: process?.configContent,
         jvmOptions: process?.jvmOptions,
         logstashYml: process?.logstashYml,
+        moduleName: process?.moduleName,
+        processName: process?.name,
       });
       setMachineConfigModalVisible(true);
     }
   };
 
-  const handleShowMachineDetail = async (machineId: number) => {
+  const handleShowMachineDetail = async (machineId: number, moduleName?: string) => {
     try {
       const detail = await getLogstashProcess(machineId);
+      // 如果传递了 moduleName，使用它覆盖 API 返回的模块信息
+      if (moduleName) {
+        detail.moduleName = moduleName;
+      }
       setCurrentMachineDetail(detail);
       setMachineDetailModalVisible(true);
     } catch {
