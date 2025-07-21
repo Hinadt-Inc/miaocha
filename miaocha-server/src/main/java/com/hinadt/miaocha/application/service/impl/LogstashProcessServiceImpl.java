@@ -253,26 +253,40 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
 
     @Override
     @Transactional
-    public LogstashProcessResponseDTO updateLogstashProcessMetadata(
-            Long id, LogstashProcessUpdateDTO dto) {
+    public LogstashProcessResponseDTO updateLogstashProcessMetadataAndConfig(
+            Long id, LogstashProcessMetadataUpdateDTO dto) {
         validateProcessExists(id);
         validateModuleExists(dto.getModuleId());
+
+        // 验证配置内容
+        if (StringUtils.hasText(dto.getConfigContent())) {
+            validateLogstashConfig(dto.getConfigContent());
+        }
 
         // 通过上下文获取当前用户
         String currentUser = UserContextUtil.getCurrentUserEmail();
 
+        // 处理配置字段，空字符串和null都当作null处理（不更新对应字段）
+        String configContent =
+                StringUtils.hasText(dto.getConfigContent()) ? dto.getConfigContent() : null;
+        String jvmOptions = StringUtils.hasText(dto.getJvmOptions()) ? dto.getJvmOptions() : null;
+        String logstashYml =
+                StringUtils.hasText(dto.getLogstashYml()) ? dto.getLogstashYml() : null;
+
         int updateResult =
-                logstashProcessMapper.updateMetadataOnly(
-                        id, dto.getName(), dto.getModuleId(), currentUser);
+                logstashProcessMapper.updateMetadataAndConfig(
+                        id,
+                        dto.getName(),
+                        dto.getModuleId(),
+                        configContent,
+                        jvmOptions,
+                        logstashYml,
+                        currentUser);
+
         if (updateResult == 0) {
-            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "更新进程信息失败");
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "更新进程完整元信息失败");
         }
 
-        log.info(
-                "成功更新Logstash进程[{}]的元信息: name={}, moduleId={}",
-                id,
-                dto.getName(),
-                dto.getModuleId());
         return toResponseDTO(id);
     }
 

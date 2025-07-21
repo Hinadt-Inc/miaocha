@@ -3,9 +3,9 @@ package com.hinadt.miaocha.application.service;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashMachineDetailDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessConfigUpdateRequestDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessCreateDTO;
+import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessMetadataUpdateDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessResponseDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessScaleRequestDTO;
-import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessUpdateDTO;
 import java.util.List;
 
 /** Logstash进程管理服务接口 - 重构支持多实例，基于logstashMachineId */
@@ -20,13 +20,14 @@ public interface LogstashProcessService {
     LogstashProcessResponseDTO createLogstashProcess(LogstashProcessCreateDTO dto);
 
     /**
-     * 更新Logstash进程元信息 只能更新name和moduleId字段
+     * 更新Logstash进程完整元信息（包括基础信息和配置信息） 只更新数据库，不同步到实例，不执行部署操作
      *
      * @param id Logstash进程ID
-     * @param dto 更新请求DTO
+     * @param dto 完整元信息更新请求DTO
      * @return 更新后的Logstash进程信息
      */
-    LogstashProcessResponseDTO updateLogstashProcessMetadata(Long id, LogstashProcessUpdateDTO dto);
+    LogstashProcessResponseDTO updateLogstashProcessMetadataAndConfig(
+            Long id, LogstashProcessMetadataUpdateDTO dto);
 
     /**
      * 更新Logstash配置 支持同时更新主配置、JVM配置、系统配置中的任意组合 可以针对全部实例或指定实例
