@@ -14,10 +14,10 @@ import type { Machine } from '@/types/machineTypes';
 import type { Module } from '@/api/modules';
 
 interface LogstashEditModalProps {
-  visible: boolean;
-  onCancel: () => void;
-  onOk: (values: Partial<LogstashProcess>) => Promise<void>;
-  initialValues?: LogstashProcess | null;
+  readonly visible: boolean;
+  readonly onCancel: () => void;
+  readonly onOk: (values: Partial<LogstashProcess>) => Promise<void>;
+  readonly initialValues?: LogstashProcess | null;
 }
 
 export default function LogstashEditModal({ visible, onCancel, onOk, initialValues }: LogstashEditModalProps) {
@@ -63,11 +63,15 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
       const values = await form.validateFields();
 
       if (initialValues) {
-        // 编辑模式 - 使用metadata接口更新
+        // 编辑模式 - 传递配置字段但不包含 machineIds（部署机器不可编辑）和 customDeployPath（编辑时不显示）
         await onOk({
           id: initialValues.id,
           name: values.name,
           moduleId: values.moduleId,
+          configContent: values.configContent,
+          jvmOptions: values.jvmOptions,
+          logstashYml: values.logstashYml,
+          // 注意：不传递 machineIds、customDeployPath 和 description，因为这些字段在编辑模式下不可更改
           updateUser: 'admin', // 这里应该从用户上下文获取实际用户
         });
       } else {
@@ -153,12 +157,11 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
                   ))}
                 </Select>
               </Form.Item>
-              <Form.Item name="description" label="描述">
-                <Input.TextArea rows={2} placeholder="请输入Logstash进程描述信息" disabled={!!initialValues} />
-              </Form.Item>
-              <Form.Item name="customDeployPath" label="自定义部署路径">
-                <Input placeholder="例如：/opt/custom/logstash" disabled={!!initialValues} />
-              </Form.Item>
+              {!initialValues && (
+                <Form.Item name="customDeployPath" label="自定义部署路径">
+                  <Input placeholder="例如：/opt/custom/logstash" />
+                </Form.Item>
+              )}
             </div>
           </div>
 
@@ -180,7 +183,6 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
             extra="模板包含Kafka输入和Doris输出的标准配置"
           >
             <Input.TextArea
-              disabled={!!initialValues}
               rows={6}
               style={{ width: '100%' }}
               placeholder="请输入Logstash配置文件内容，例如：input { beats { port => 5044 } }"
@@ -204,7 +206,6 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
             extra="模板包含基础JVM参数和专家级配置选项"
           >
             <Input.TextArea
-              disabled={!!initialValues}
               rows={4}
               style={{ width: '100%' }}
               placeholder="请输入JVM参数，例如：-Xms1g -Xmx1g -XX:+HeapDumpOnOutOfMemoryError"
@@ -228,7 +229,6 @@ export default function LogstashEditModal({ visible, onCancel, onOk, initialValu
             extra="模板包含基础Logstash配置参数"
           >
             <Input.TextArea
-              disabled={!!initialValues}
               rows={4}
               style={{ width: '100%' }}
               placeholder="请输入logstash.yml配置内容，例如：http.host: 0.0.0.0"

@@ -114,6 +114,15 @@ export const useUserActions = ({ setData, data, originalDataRef, moduleList, fet
           return;
         }
         
+        // 检查当前用户权限：管理员不能将普通用户提升为管理员
+        if (currentUser.role === 'ADMIN' && selectedRecord.role === 'USER' && values.role === 'ADMIN') {
+          handleError('管理员不能将用户设置为管理员角色', {
+            type: ErrorType.VALIDATION,
+            showType: 'message',
+          });
+          return;
+        }
+        
         // 编辑现有用户
         await updateUser({
           id: selectedRecord.key,
@@ -127,6 +136,15 @@ export const useUserActions = ({ setData, data, originalDataRef, moduleList, fet
         // 添加新用户
         if (!values.password) {
           handleError('创建新用户时密码不能为空', {
+            type: ErrorType.VALIDATION,
+            showType: 'message',
+          });
+          return;
+        }
+
+        // 检查当前用户权限：管理员不能创建管理员用户，只能创建普通用户
+        if (currentUser.role === 'ADMIN' && values.role === 'ADMIN') {
+          handleError('管理员不能创建其他管理员用户，只能创建普通用户', {
             type: ErrorType.VALIDATION,
             showType: 'message',
           });

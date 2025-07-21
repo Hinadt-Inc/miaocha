@@ -6,16 +6,18 @@ import { updateLogstashMachineConfig } from '@/api/logstash';
 import { safeCopy } from '@/utils/clipboard';
 
 interface LogstashMachineConfigModalProps {
-  visible: boolean;
-  onCancel: () => void;
-  logstashMachineId: number;
-  processId: number;
-  initialConfig?: {
+  readonly visible: boolean;
+  readonly onCancel: () => void;
+  readonly logstashMachineId: number;
+  readonly processId: number;
+  readonly initialConfig?: {
     configContent?: string;
     jvmOptions?: string;
     logstashYml?: string;
   };
-  onSuccess?: () => void; // 添加成功回调
+  readonly onSuccess?: () => void; // 添加成功回调
+  readonly moduleName?: string; // 添加模块名称
+  readonly processName?: string; // 添加进程名称
 }
 
 export default function LogstashMachineConfigModal({
@@ -25,6 +27,8 @@ export default function LogstashMachineConfigModal({
   logstashMachineId,
   processId,
   onSuccess,
+  moduleName,
+  processName,
 }: LogstashMachineConfigModalProps) {
   const [form] = Form.useForm();
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -107,7 +111,7 @@ export default function LogstashMachineConfigModal({
     <Modal
       title={
         <span>
-          编辑实例配置 (进程ID: {processId}, 实例ID: {logstashMachineId})
+          编辑实例配置 - {moduleName ? `模块: ${moduleName}` : ''} {processName ? `进程: ${processName}` : `进程ID: ${processId}`} (实例ID: {logstashMachineId})
         </span>
       }
       open={visible}
