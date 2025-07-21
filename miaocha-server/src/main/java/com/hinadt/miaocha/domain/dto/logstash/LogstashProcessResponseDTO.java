@@ -37,9 +37,6 @@ public class LogstashProcessResponseDTO {
     @Schema(description = "Logstash YML配置文件内容")
     private String logstashYml;
 
-    @Schema(description = "自定义的Logstash安装包路径")
-    private String customPackagePath;
-
     @Schema(description = "创建时间")
     private LocalDateTime createTime;
 
