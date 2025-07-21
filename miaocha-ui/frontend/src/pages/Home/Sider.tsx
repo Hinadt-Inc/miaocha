@@ -276,6 +276,7 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
     // 添加状态来跟踪是否已经调用过getColumns，避免重复调用
     const [hasCalledGetColumns, setHasCalledGetColumns] = useState<string>('');
     const modulesRef = useRef<IStatus[]>([]);
+    const getColumnsTimeoutRef = useRef<NodeJS.Timeout | null>(null); // 新增：防抖定时器
 
     // 更新modules的引用
     useEffect(() => {
@@ -284,6 +285,11 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
 
     // 当moduleQueryConfig和selectedModule都准备好时，调用getColumns
     useEffect(() => {
+      // 清除之前的定时器
+      if (getColumnsTimeoutRef.current) {
+        clearTimeout(getColumnsTimeoutRef.current);
+      }
+
       if (selectedModule && moduleQueryConfig !== undefined && modulesRef.current.length > 0) {
         const targetModule = modulesRef.current.find((item: IStatus) => item.value === selectedModule);
         if (targetModule) {
@@ -292,14 +298,23 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
           const callKey = `${selectedModule}_${datasourceId}_${moduleQueryConfig?.timeField || 'default'}`;
 
           // 只有当标识发生变化时才调用getColumns
-          if (hasCalledGetColumns !== callKey) {
-            setHasCalledGetColumns(callKey);
-            // datasourceId: Number(datasourceId),
-            getColumns.run({ module: selectedModule });
+          if (hasCalledGetColumns !== callKey && !getColumns.loading) {
+            // 使用防抖机制，延迟200ms执行，避免快速连续调用
+            getColumnsTimeoutRef.current = setTimeout(() => {
+              setHasCalledGetColumns(callKey);
+              getColumns.run({ module: selectedModule });
+            }, 200);
           }
         }
       }
-    }, [selectedModule, moduleQueryConfig, hasCalledGetColumns]);
+
+      // 清理函数
+      return () => {
+        if (getColumnsTimeoutRef.current) {
+          clearTimeout(getColumnsTimeoutRef.current);
+        }
+      };
+    }, [selectedModule, moduleQueryConfig]); // 移除 hasCalledGetColumns 依赖，避免循环触发
 
     // 切换字段选中状态
     const toggleColumn = (data: ILogColumnsResponse) => {
@@ -453,6 +468,20 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
     // 计算虚拟滚动容器高度
     const virtualContainerHeight = useMemo(() => {
       return 700; // 固定高度700px
+    }, []);
+
+    // 组件卸载时的清理工作
+    useEffect(() => {
+      return () => {
+        // 清理定时器
+        if (getColumnsTimeoutRef.current) {
+          clearTimeout(getColumnsTimeoutRef.current);
+        }
+        // 清理网络请求
+        if (abortRef.current) {
+          abortRef.current.abort();
+        }
+      };
     }, []);
 
     return (
