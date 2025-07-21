@@ -19,10 +19,44 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install kubectl
+      - name: Restore kubectl from local cache
+        run: |
+          echo "🔍 检查kubectl本地缓存..."
+          KUBECTL_VERSION="v1.29.0"  # 使用固定版本以便缓存
+          KUBECTL_CACHE_KEY="kubectl-${KUBECTL_VERSION}-$(uname -m)"
+          KUBECTL_CACHE_PATH="/opt/action-runner/cache/kubectl/${KUBECTL_CACHE_KEY}"
+          
+          # 创建缓存目录
+          mkdir -p /opt/action-runner/cache/kubectl
+          
+          if [ -f "$KUBECTL_CACHE_PATH/kubectl" ]; then
+            echo "✅ 发现kubectl缓存: $KUBECTL_CACHE_KEY"
+            sudo cp "$KUBECTL_CACHE_PATH/kubectl" /usr/local/bin/kubectl
+            sudo chmod +x /usr/local/bin/kubectl
+            echo "KUBECTL_CACHE_HIT=true" >> $GITHUB_ENV
+          else
+            echo "❌ kubectl缓存未命中，需要下载"
+            echo "KUBECTL_CACHE_HIT=false" >> $GITHUB_ENV
+            echo "KUBECTL_CACHE_PATH=$KUBECTL_CACHE_PATH" >> $GITHUB_ENV
+          fi
+
+      - name: Install kubectl (if cache miss)
+        if: env.KUBECTL_CACHE_HIT == 'false'
         uses: azure/setup-kubectl@v4
         with:
-          version: 'latest'
+          version: 'v1.29.0'  # 使用固定版本
+
+      - name: Save kubectl to local cache
+        if: env.KUBECTL_CACHE_HIT == 'false' && always()
+        run: |
+          echo "💾 保存kubectl到本地缓存..."
+          if command -v kubectl >/dev/null 2>&1; then
+            mkdir -p "$(dirname $KUBECTL_CACHE_PATH)"
+            cp "$(which kubectl)" "$KUBECTL_CACHE_PATH/kubectl"
+            echo "✅ kubectl本地缓存已保存: $KUBECTL_CACHE_KEY"
+          else
+            echo "⚠️ kubectl未找到，跳过缓存保存"
+          fi
 
       - name: Setup kubectl
         run: |
