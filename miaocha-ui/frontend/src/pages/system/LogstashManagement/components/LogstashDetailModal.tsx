@@ -96,12 +96,6 @@ const LogstashDetailModal = ({ visible, onClose, detail, styles: customStyles }:
           <Descriptions.Item label="更新人" span={1}>
             {detail.updateUserName || '未知'}
           </Descriptions.Item>
-          <Descriptions.Item label="描述" span={2}>
-            {detail.description || '无描述'}
-          </Descriptions.Item>
-          <Descriptions.Item label="自定义包路径" span={2}>
-            {detail.customPackagePath || '未设置'}
-          </Descriptions.Item>
         </Descriptions>
         <div className={customStyles?.configSection || 'config-section'}>
           <div className={customStyles?.configHeader || 'config-header'}>
