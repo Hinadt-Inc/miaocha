@@ -11,7 +11,7 @@ interface ExpandedRowRendererProps {
     handleReinitializeMachine: (machineId: number) => void;
     handleForceStopMachine: (processId: number, machineId: number) => void;
     handleEditMachineConfig: (machineId: number, processId: number, data: LogstashProcess[]) => void;
-    handleShowMachineDetail: (machineId: number) => void;
+    handleShowMachineDetail: (machineId: number, moduleName?: string) => void;
     showMachineTasks: (processId: number, machineId: number) => void;
     handleShowLog: (machineId: number, isBottom?: boolean) => void;
     handleDeleteMachine: (processId: number, machineId: number) => void;

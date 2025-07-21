@@ -200,6 +200,8 @@ const LogstashManagementPage = () => {
         onCancel={() => machineActions.setMachineConfigModalVisible(false)}
         processId={machineActions.currentMachine?.processId || 0}
         logstashMachineId={machineActions.currentMachine?.logstashMachineId || 0}
+        moduleName={machineActions.currentMachine?.moduleName}
+        processName={machineActions.currentMachine?.processName}
         initialConfig={{
           configContent: machineActions.currentMachine?.configContent,
           jvmOptions: machineActions.currentMachine?.jvmOptions,

@@ -12,7 +12,7 @@ interface MachineTableProps {
   onReinitializeMachine: (machineId: number) => void;
   onForceStopMachine: (processId: number, machineId: number) => void;
   onEditMachineConfig: (machineId: number, processId: number, data: LogstashProcess[]) => void;
-  onShowMachineDetail: (machineId: number) => void;
+  onShowMachineDetail: (machineId: number, moduleName?: string) => void;
   onShowMachineTasks: (processId: number, machineId: number) => void;
   onShowLog: (machineId: number, isBottom?: boolean) => void;
   onDeleteMachine: (processId: number, machineId: number) => void;
@@ -38,7 +38,7 @@ const MachineTable = ({
       dataIndex: 'logstashMachineId',
       key: 'logstashMachineId',
       render: (logstashMachineId: number) => (
-        <Button type="link" onClick={() => onShowMachineDetail(logstashMachineId)}>
+        <Button type="link" onClick={() => onShowMachineDetail(logstashMachineId, record.moduleName)}>
           {logstashMachineId}
         </Button>
       ),

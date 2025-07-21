@@ -37,6 +37,7 @@ export default function LogstashMachineDetailModal({ visible, onCancel, detail }
       >
         <Descriptions bordered column={2}>
           <Descriptions.Item label="实例ID">{detail.id}</Descriptions.Item>
+          <Descriptions.Item label="模块名称">{detail.moduleName || '未知'}</Descriptions.Item>
           <Descriptions.Item label="机器名称">{detail.machineName}</Descriptions.Item>
           <Descriptions.Item label="IP地址">{detail.machineIp}</Descriptions.Item>
           <Descriptions.Item label="端口">{detail.machinePort}</Descriptions.Item>

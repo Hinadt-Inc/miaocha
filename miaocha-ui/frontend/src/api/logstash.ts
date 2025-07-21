@@ -198,7 +198,7 @@ export function updateLogstashProcessMetadata(
   },
 ): Promise<void> {
   return request({
-    url: `/api/logstash/processes/${id}/metadata`,
+    url: `/api/logstash/processes/${id}/metadata-and-config`,
     method: 'PUT',
     data,
   });
