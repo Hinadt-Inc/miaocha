@@ -17,12 +17,21 @@ const getTextWidth = (text: string, fontSize: number = 14, fontFamily: string = 
 };
 
 // 计算列的自适应宽度
-const getAutoColumnWidth = (columnName: string, minWidth: number = 120, maxWidth: number = 400): number => {
+const getAutoColumnWidth = (columnName: string, screenWidth: number, minWidth: number = 120, maxWidth: number = 400): number => {
   const textWidth = getTextWidth(columnName, 14, '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto');
   // 添加padding和排序图标空间：
   // 左右padding各16px，排序图标20px，删除/移动按钮空间40px，安全余量20px
   const totalWidth = textWidth + 112;
-  return Math.min(Math.max(totalWidth, minWidth), maxWidth);
+  
+  // 在小屏幕上进一步限制最大宽度
+  let adjustedMaxWidth = maxWidth;
+  
+  if (screenWidth < 1200) {
+    // 小屏幕上，根据屏幕宽度动态调整最大宽度
+    adjustedMaxWidth = Math.min(maxWidth, Math.floor((screenWidth - 300) / 4)); // 留出300px给时间列和操作空间，剩余空间平均分配
+  }
+  
+  return Math.min(Math.max(totalWidth, minWidth), adjustedMaxWidth);
 };
 
 interface IProps {
@@ -170,6 +179,17 @@ const VirtualTable = (props: IProps) => {
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [scrollX, setScrollX] = useState(1300);
   const [localSortConfig, setLocalSortConfig] = useState<any[]>([]);
+  const [screenWidth, setScreenWidth] = useState(window.innerWidth); // 添加屏幕宽度状态
+
+  // 监听窗口大小变化
+  useEffect(() => {
+    const handleResize = () => {
+      setScreenWidth(window.innerWidth);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // 不支持排序的字段类型
   const unsortableFieldTypes = [
@@ -302,17 +322,26 @@ const VirtualTable = (props: IProps) => {
     // const shouldUseAutoWidth = totalColumns > 3;
 
     if (otherColumns && otherColumns.length > 0) {
+      // 在小屏幕上，计算每列的最大允许宽度
+      const isSmallScreen = screenWidth < 1200;
+      
       otherColumns.forEach((item: ILogColumnsResponse) => {
         const { columnName = '' } = item;
 
-        // 优先使用用户手动调整的宽度，其次根据列数决定使用自动宽度还是固定宽度
+        // 优先使用用户手动调整的宽度，其次根据屏幕大小动态计算
         let columnWidth;
         if (columnWidths[columnName]) {
           // 如果用户手动调整过宽度，则使用用户设置的宽度
           columnWidth = columnWidths[columnName];
         } else {
-          // 默认使用自动计算的宽度
-          columnWidth = getAutoColumnWidth(columnName);
+          // 在小屏幕上使用更严格的宽度限制
+          if (isSmallScreen) {
+            const availableWidth = screenWidth - 250; // 减去时间列、操作按钮等固定空间
+            const maxWidthPerColumn = Math.floor(availableWidth / Math.max(otherColumns.length, 2));
+            columnWidth = Math.min(getAutoColumnWidth(columnName, screenWidth), maxWidthPerColumn);
+          } else {
+            columnWidth = getAutoColumnWidth(columnName, screenWidth);
+          }
         }
 
         _columns.push({
@@ -399,9 +428,23 @@ const VirtualTable = (props: IProps) => {
       {
         title: '_source',
         dataIndex: '_source',
-        width: undefined,
+        width: (() => {
+          const isSmallScreen = screenWidth < 1200;
+          
+          if (isSmallScreen) {
+            // 小屏幕上，只有在没有其他列时才计算宽度
+            const hasOtherColumns = _columns.length > 0;
+            if (!hasOtherColumns) {
+              // 只有_source列时，给它更多空间但仍然限制最大宽度
+              return Math.min(600, screenWidth - 300);
+            }
+          }
+          
+          // 大屏幕上或有其他列时保持原有逻辑：undefined表示自动宽度
+          return undefined;
+        })(),
         ellipsis: false,
-        hidden: _columns.length > 0,
+        hidden: _columns.length > 0, // 恢复原有逻辑：有其他列时隐藏_source列
         render: (_: any, record: ILogColumnsResponse) => {
           // const { keywords = [] } = searchParams;
           // 1. 提取所有 whereSqlsFromSider 的字段和值
@@ -479,7 +522,7 @@ const VirtualTable = (props: IProps) => {
         };
       }),
     ];
-  }, [dynamicColumns, keyWordsFormat, columnWidths, whereSqlsFromSider, sqls]);
+  }, [dynamicColumns, keyWordsFormat, columnWidths, whereSqlsFromSider, sqls, screenWidth]);
 
   // console.log('columnWidths', columnWidths);
 
@@ -569,28 +612,39 @@ const VirtualTable = (props: IProps) => {
 
   // 动态计算scroll.x
   useEffect(() => {
+    const isSmallScreen = screenWidth < 1200;
+    
     // 只统计动态列（不含时间字段/_source）
     const timeField = moduleQueryConfig?.timeField || 'log_time';
     const dynamicCols = columns.filter((col: any) => col.dataIndex !== timeField && col.dataIndex !== '_source');
+    const sourceCol = columns.find((col: any) => col.dataIndex === '_source');
 
     let totalWidth = 190; // 时间字段固定宽度
-
-    // 直接累加各列的实际宽度（包括用户手动调整的宽度）
+    
+    // 累加动态列的实际宽度
     dynamicCols.forEach((col: any) => {
       totalWidth += col.width || 150;
     });
 
-    // _source列的宽度：如果有其他列则给300px，如果只有_source列则自动撑满
+    // 添加_source列的宽度（只有在没有其他列且_source列不隐藏时）
     const hasOtherColumns = dynamicCols.length > 0;
-    if (hasOtherColumns) {
-      totalWidth += 300;
-    } else {
-      // 如果只有时间字段和_source列，给_source一个最小宽度
-      totalWidth += 400;
+    if (!hasOtherColumns && sourceCol && sourceCol.width) {
+      totalWidth += sourceCol.width;
+    } else if (!hasOtherColumns) {
+      // 如果只有时间字段和_source列，给_source一个默认宽度
+      totalWidth += isSmallScreen ? Math.min(600, screenWidth - 300) : 400;
     }
 
-    setScrollX(Math.max(totalWidth, 1300));
-  }, [columns, moduleQueryConfig]);
+    // 添加展开按钮的宽度
+    totalWidth += 26;
+
+    // 在小屏幕上，如果计算出的宽度超过屏幕宽度，就使用屏幕宽度
+    if (isSmallScreen && totalWidth > screenWidth) {
+      setScrollX(screenWidth);
+    } else {
+      setScrollX(Math.max(totalWidth, 800)); // 最小宽度800px
+    }
+  }, [columns, moduleQueryConfig, screenWidth]);
 
   // 列顺序操作
   const hasSourceColumn = columns.some((col) => col.dataIndex === '_source') && columns.length === 2;
