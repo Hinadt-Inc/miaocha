@@ -7,9 +7,9 @@ import com.hinadt.miaocha.domain.dto.ApiResponse;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashMachineDetailDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessConfigUpdateRequestDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessCreateDTO;
+import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessMetadataUpdateDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessResponseDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessScaleRequestDTO;
-import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessUpdateDTO;
 import com.hinadt.miaocha.domain.dto.logstash.TaskDetailDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -246,22 +246,23 @@ public class LogstashProcessEndpoint {
     }
 
     /**
-     * 更新Logstash进程元信息
+     * 更新Logstash进程完整元信息（包括基础信息和配置信息） 只更新数据库，不同步到实例，不执行部署操作
      *
      * @param id Logstash进程数据库ID
-     * @param dto 元信息更新请求DTO
+     * @param dto 完整元信息更新请求DTO
      * @return 更新后的Logstash进程
      */
-    @PutMapping("/{id}/metadata")
+    @PutMapping("/{id}/metadata-and-config")
     @Operation(
-            summary = "更新Logstash进程元信息",
-            description = "更新Logstash进程的基本元信息，包括进程名称和模块名称。模块名称需要保证唯一性。")
-    public ApiResponse<LogstashProcessResponseDTO> updateLogstashProcessMetadata(
+            summary = "更新Logstash进程完整元信息",
+            description = "更新Logstash进程的完整元信息，包括进程名称、模块ID和所有配置信息（主配置、JVM配置、系统配置）。只更新数据库，不同步到实例。")
+    public ApiResponse<LogstashProcessResponseDTO> updateLogstashProcessMetadataAndConfig(
             @Parameter(description = "Logstash进程数据库ID", required = true) @PathVariable("id")
                     Long id,
-            @Parameter(description = "元信息更新请求", required = true) @Valid @RequestBody
-                    LogstashProcessUpdateDTO dto) {
-        return ApiResponse.success(logstashProcessService.updateLogstashProcessMetadata(id, dto));
+            @Parameter(description = "完整元信息更新请求", required = true) @Valid @RequestBody
+                    LogstashProcessMetadataUpdateDTO dto) {
+        return ApiResponse.success(
+                logstashProcessService.updateLogstashProcessMetadataAndConfig(id, dto));
     }
 
     /**

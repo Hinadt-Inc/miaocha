@@ -4,12 +4,16 @@
 
     <!-- Logstash进程表所有字段 -->
     <sql id="logstashProcessColumns">
-        id, name, module_id, config_content, jvm_options, logstash_yml, create_time, update_time, create_user, update_user
+        id
+        , name, module_id, config_content, jvm_options, logstash_yml, create_time, update_time, create_user, update_user
     </sql>
 
     <!-- Logstash进程表所有字段（带lp别名） -->
     <sql id="logstashProcessColumnsWithAlias">
-        lp.id, lp.name, lp.module_id, lp.config_content, lp.jvm_options, lp.logstash_yml, lp.create_time, lp.update_time, lp.create_user, lp.update_user
+        lp
+        .
+        id
+        , lp.name, lp.module_id, lp.config_content, lp.jvm_options, lp.logstash_yml, lp.create_time, lp.update_time, lp.create_user, lp.update_user
     </sql>
 
     <!-- 插入 Logstash 进程记录 -->
@@ -31,19 +35,31 @@
         WHERE id = #{id}
     </update>
 
-    <!-- 仅更新元信息 -->
-    <update id="updateMetadataOnly">
-        UPDATE logstash_process
-        SET name=#{name},
-            module_id=#{moduleId},
-            update_user=#{updateUser}
-        WHERE id = #{id}
-    </update>
 
     <!-- 仅更新配置信息 -->
     <update id="updateConfigOnly">
         UPDATE logstash_process
         <set>
+            <if test="configContent != null">
+                config_content=#{configContent},
+            </if>
+            <if test="jvmOptions != null">
+                jvm_options=#{jvmOptions},
+            </if>
+            <if test="logstashYml != null">
+                logstash_yml=#{logstashYml},
+            </if>
+            update_user=#{updateUser}
+        </set>
+        WHERE id=#{id}
+    </update>
+
+    <!-- 更新进程的完整元信息（包括基础信息和配置信息） -->
+    <update id="updateMetadataAndConfig">
+        UPDATE logstash_process
+        <set>
+            name=#{name},
+            module_id=#{moduleId},
             <if test="configContent != null">
                 config_content=#{configContent},
             </if>
@@ -67,7 +83,8 @@
 
     <!-- 删除所有进程 -->
     <delete id="deleteAll">
-        DELETE FROM logstash_process
+        DELETE
+        FROM logstash_process
     </delete>
 
     <!-- 根据ID查询 -->
