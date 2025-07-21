@@ -22,23 +22,51 @@ interface UserFormModalProps {
   form: any;
 }
 
-const roleOptions = [
-  { value: 'ADMIN', label: '管理员' },
-  { value: 'USER', label: '普通用户' },
-];
-
 const UserFormModal: React.FC<UserFormModalProps> = ({ visible, selectedRecord, onSubmit, onCancel, form }) => {
   // 获取当前用户信息
   const currentUser = useSelector((state: { user: { role: string; userId: number } }) => state.user);
   
   const isSuperAdmin = selectedRecord?.role === 'SUPER_ADMIN';
   const isCurrentUserAdmin = currentUser.role === 'ADMIN';
+  const isCurrentUserSuperAdmin = currentUser.role === 'SUPER_ADMIN';
   const isTargetUserAdmin = selectedRecord?.role === 'ADMIN';
   const isEditingSelf = currentUser.userId && selectedRecord?.key === currentUser.userId.toString();
+  const isAddingNewUser = !selectedRecord;
   
   // 权限检查：如果当前用户是管理员，且目标用户也是管理员，则不可编辑
   // 但是可以编辑自己的信息
   const isReadOnly = isSuperAdmin || (isCurrentUserAdmin && isTargetUserAdmin && !isEditingSelf);
+  
+  // 根据当前用户角色动态生成角色选项
+  const getRoleOptions = () => {
+    const allRoles = [
+      { value: 'ADMIN', label: '管理员' },
+      { value: 'USER', label: '普通用户' },
+    ];
+    
+    // 如果当前用户是超级管理员，可以设置所有角色
+    if (isCurrentUserSuperAdmin) {
+      return allRoles;
+    }
+    
+    // 如果当前用户是管理员，只能设置普通用户角色（新增用户时）
+    // 编辑现有用户时，如果是管理员编辑自己，可以保持管理员角色
+    if (isCurrentUserAdmin) {
+      if (isAddingNewUser) {
+        // 新增用户时，管理员只能创建普通用户
+        return [{ value: 'USER', label: '普通用户' }];
+      } else if (isEditingSelf) {
+        // 管理员编辑自己时，可以保持管理员角色
+        return allRoles;
+      } else {
+        // 管理员编辑其他用户时，只能设置为普通用户
+        return [{ value: 'USER', label: '普通用户' }];
+      }
+    }
+    
+    // 普通用户不应该有权限到达这里，但为了安全起见
+    return [{ value: 'USER', label: '普通用户' }];
+  };
   
   useEffect(() => {
     if (visible) {
@@ -47,13 +75,24 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ visible, selectedRecord, 
         form.setFieldsValue({
           ...selectedRecord,
         });
+      } else if (isCurrentUserAdmin && !isCurrentUserSuperAdmin) {
+        // 管理员新增用户时，默认设置为普通用户角色
+        form.setFieldsValue({
+          role: 'USER',
+          status: 1,
+        });
       }
     }
-  }, [visible, selectedRecord, form]);
+  }, [visible, selectedRecord, form, isCurrentUserAdmin, isCurrentUserSuperAdmin]);
 
   // 生成模态框标题
   const getModalTitle = () => {
-    if (!selectedRecord) return '添加用户';
+    if (!selectedRecord) {
+      if (isCurrentUserAdmin && !isCurrentUserSuperAdmin) {
+        return '添加用户 (仅可创建普通用户)';
+      }
+      return '添加用户';
+    }
     if (isSuperAdmin) return '查看用户信息 (超级管理员不可编辑)';
     if (isEditingSelf) return '编辑我的信息';
     if (isCurrentUserAdmin && isTargetUserAdmin) return '查看用户信息 (管理员不能编辑其他管理员)';
@@ -112,7 +151,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ visible, selectedRecord, 
           <Col span={12}>
             <Form.Item name="role" label="角色" rules={[{ required: true, message: '请选择角色' }]}>
               <Select 
-                options={roleOptions} 
+                options={getRoleOptions()} 
                 placeholder="请选择角色" 
                 disabled={isReadOnly}
               />
