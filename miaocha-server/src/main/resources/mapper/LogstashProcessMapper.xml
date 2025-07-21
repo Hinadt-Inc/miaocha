@@ -10,10 +10,7 @@
 
     <!-- Logstash进程表所有字段（带lp别名） -->
     <sql id="logstashProcessColumnsWithAlias">
-        lp
-        .
-        id
-        , lp.name, lp.module_id, lp.config_content, lp.jvm_options, lp.logstash_yml, lp.create_time, lp.update_time, lp.create_user, lp.update_user
+        lp.id, lp.name, lp.module_id, lp.config_content, lp.jvm_options, lp.logstash_yml, lp.create_time, lp.update_time, lp.create_user, lp.update_user
     </sql>
 
     <!-- 插入 Logstash 进程记录 -->
