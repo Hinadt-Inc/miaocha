@@ -395,7 +395,7 @@ jobs:
         run: |
           echo "💾 保存kubectl到本地缓存..."
           if command -v kubectl >/dev/null 2>&1; then
-            mkdir -p "$(dirname $KUBECTL_CACHE_PATH)"
+            mkdir -p "$KUBECTL_CACHE_PATH"
             cp "$(which kubectl)" "$KUBECTL_CACHE_PATH/kubectl"
             echo "✅ kubectl本地缓存已保存: $KUBECTL_CACHE_KEY"
           else
