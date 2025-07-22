@@ -14,193 +14,325 @@ jobs:
     steps:
       - name: Check PR title format
         id: check-title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
-          PR_TITLE="${{ github.event.pull_request.title }}"
           echo "PR Title: $PR_TITLE"
           
-          # 检查是否以 [ISSUE #xxx] 开头
-          if [[ ! "$PR_TITLE" =~ ^\[ISSUE\ #[0-9]+\] ]]; then
-            echo "❌ PR标题格式错误！必须以 '[ISSUE #xxx]' 开头"
-            echo "正确格式示例: [ISSUE #17] 支持全局 Trace 日志ID 特性"
-            exit 1
-          fi
+          # 使用 Python 脚本进行更安全的字符串处理
+          python3 << 'EOF'
+          import os
+          import re
+          import sys
           
-          # 提取issue编号
-          ISSUE_NUMBER=$(echo "$PR_TITLE" | grep -o '#[0-9]*' | grep -o '[0-9]*')
-          echo "Issue Number: $ISSUE_NUMBER"
+          # 从环境变量获取 PR 标题，避免 shell 注入
+          pr_title = os.environ.get('PR_TITLE', '')
+          print(f"Processing PR Title: {repr(pr_title)}")
           
-          if [ -z "$ISSUE_NUMBER" ]; then
-            echo "❌ 无法从PR标题中提取issue编号"
-            exit 1
-          fi
+          # 检查标题格式：必须以 [ISSUE #数字] 开头
+          pattern = r'^\[ISSUE #(\d+)\]'
+          match = re.match(pattern, pr_title)
           
-          echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
-          echo "✅ PR标题格式正确"
+          if not match:
+              print("❌ PR标题格式错误！必须以 '[ISSUE #xxx]' 开头")
+              print("正确格式示例: [ISSUE #17] 支持全局 Trace 日志ID 特性")
+              print(f"当前标题: {pr_title}")
+              sys.exit(1)
+          
+          # 提取 issue 编号
+          issue_number = match.group(1)
+          print(f"Issue Number: {issue_number}")
+          
+          # 将结果写入 GitHub Actions 输出
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"issue_number={issue_number}\n")
+          
+          print("✅ PR标题格式正确")
+          EOF
 
       - name: Check if issue exists and is open
         id: check-issue
+        env:
+          ISSUE_NUMBER: ${{ steps.check-title.outputs.issue_number }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          ISSUE_NUMBER="${{ steps.check-title.outputs.issue_number }}"
+          echo "Checking Issue #$ISSUE_NUMBER"
           
-          # 使用GitHub API检查issue状态
-          ISSUE_RESPONSE=$(curl -s -H "Authorization: token ${{ github.token }}" \
-            "https://api.github.com/repos/${{ github.repository }}/issues/$ISSUE_NUMBER")
+          # 使用 Python 进行 API 调用和 JSON 处理
+          python3 << 'EOF'
+          import os
+          import json
+          import urllib.request
+          import urllib.error
+          import sys
           
-          echo "Issue API Response: $ISSUE_RESPONSE"
+          issue_number = os.environ['ISSUE_NUMBER']
+          github_token = os.environ['GITHUB_TOKEN']
+          github_repo = os.environ['GITHUB_REPOSITORY']
           
-          # 检查issue是否存在
-          if echo "$ISSUE_RESPONSE" | grep -q '"message":"Not Found"'; then
-            echo "❌ Issue #$ISSUE_NUMBER 不存在"
-            exit 1
-          fi
+          # 构建 API URL
+          api_url = f"https://api.github.com/repos/{github_repo}/issues/{issue_number}"
           
-          # 使用jq解析JSON，提取issue状态
-          ISSUE_STATE=$(echo "$ISSUE_RESPONSE" | jq -r '.state')
-          echo "Issue State: $ISSUE_STATE"
+          # 创建请求
+          req = urllib.request.Request(api_url)
+          req.add_header('Authorization', f'token {github_token}')
+          req.add_header('Accept', 'application/vnd.github.v3+json')
           
-          if [ "$ISSUE_STATE" != "open" ]; then
-            echo "❌ Issue #$ISSUE_NUMBER 状态不是open (当前状态: $ISSUE_STATE)"
-            exit 1
-          fi
-          
-          # 使用jq解析JSON，提取issue标题
-          ISSUE_TITLE=$(echo "$ISSUE_RESPONSE" | jq -r '.title')
-          echo "Issue Title: $ISSUE_TITLE"
-          
-          echo "✅ Issue #$ISSUE_NUMBER 存在且状态为open"
-          echo "issue_title=$ISSUE_TITLE" >> $GITHUB_OUTPUT
+          try:
+              # 发送请求
+              with urllib.request.urlopen(req) as response:
+                  issue_data = json.loads(response.read().decode())
+              
+              print(f"Issue #{issue_number} found")
+              
+              # 检查 issue 状态
+              state = issue_data.get('state', '')
+              title = issue_data.get('title', '')
+              
+              print(f"Issue State: {state}")
+              print(f"Issue Title: {title}")
+              
+              if state != 'open':
+                  print(f"❌ Issue #{issue_number} 状态不是open (当前状态: {state})")
+                  sys.exit(1)
+              
+              print(f"✅ Issue #{issue_number} 存在且状态为open")
+              
+              # 安全地处理标题中的特殊字符
+              safe_title = title.replace('\n', '\\n').replace('\r', '\\r')
+              
+              # 写入输出
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write(f"issue_title={safe_title}\n")
+                  
+          except urllib.error.HTTPError as e:
+              if e.code == 404:
+                  print(f"❌ Issue #{issue_number} 不存在")
+              else:
+                  print(f"❌ API 请求失败: HTTP {e.code}")
+              sys.exit(1)
+          except Exception as e:
+              print(f"❌ 处理过程中发生错误: {str(e)}")
+              sys.exit(1)
+          EOF
 
       - name: Check if PR is already linked to Issue
         id: check-link
         env:
           CURRENT_BODY: ${{ github.event.pull_request.body }}
+          ISSUE_NUMBER: ${{ steps.check-title.outputs.issue_number }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          ISSUE_NUMBER="${{ steps.check-title.outputs.issue_number }}"
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          
           echo "🔍 检查PR是否已经关联到Issue #$ISSUE_NUMBER"
-          echo "当前PR描述: (内容已安全处理)"
+          
+          # 使用 Python 进行安全的字符串处理和 API 调用
+          python3 << 'EOF'
+          import os
+          import json
+          import urllib.request
+          import urllib.error
+          import re
+          import sys
+          
+          current_body = os.environ.get('CURRENT_BODY', '')
+          issue_number = os.environ['ISSUE_NUMBER']
+          pr_number = os.environ['PR_NUMBER']
+          github_token = os.environ['GITHUB_TOKEN']
+          github_repo = os.environ['GITHUB_REPOSITORY']
+          
+          print("当前PR描述: (内容已安全处理)")
           
           # 初始化关联状态
-          IS_LINKED=false
-          LINK_REASON=""
+          is_linked = False
+          link_reason = ""
           
           # 方法1：检查PR描述中是否包含关联关键词
-          if printf '%s' "$CURRENT_BODY" | grep -qEi "(close[sd]?|fix(e[sd])?|resolve[sd]?) #$ISSUE_NUMBER\b"; then
-            IS_LINKED=true
-            LINK_REASON="PR描述中包含关联关键词"
-            echo "✅ 检测到关联：$LINK_REASON"
-          fi
+          if current_body:
+              # 匹配各种关联关键词
+              link_patterns = [
+                  rf'\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#{issue_number}\b',
+                  rf'#{issue_number}\b'
+              ]
+              
+              for pattern in link_patterns:
+                  if re.search(pattern, current_body, re.IGNORECASE):
+                      is_linked = True
+                      link_reason = "PR描述中包含关联关键词"
+                      print(f"✅ 检测到关联：{link_reason}")
+                      break
           
-          # 方法2：检查PR的时间线事件，看是否有connected事件
-          if [ "$IS_LINKED" = false ]; then
-            echo "🔍 检查PR时间线事件..."
-            TIMELINE_RESPONSE=$(curl -s -H "Authorization: token ${{ github.token }}" \
-              -H "Accept: application/vnd.github.v3+json" \
-              "https://api.github.com/repos/${{ github.repository }}/issues/$PR_NUMBER/timeline")
-            
-            if echo "$TIMELINE_RESPONSE" | jq -e ".[] | select(.event == \"connected_event\" and .source.issue.number == $ISSUE_NUMBER)" > /dev/null 2>&1; then
-              IS_LINKED=true
-              LINK_REASON="检测到GitHub连接事件"
-              echo "✅ 检测到关联：$LINK_REASON"
-            fi
-          fi
+          # 方法2：检查PR的时间线事件
+          if not is_linked:
+              print("🔍 检查PR时间线事件...")
+              try:
+                  timeline_url = f"https://api.github.com/repos/{github_repo}/issues/{pr_number}/timeline"
+                  req = urllib.request.Request(timeline_url)
+                  req.add_header('Authorization', f'token {github_token}')
+                  req.add_header('Accept', 'application/vnd.github.v3+json')
+                  
+                  with urllib.request.urlopen(req) as response:
+                      timeline_data = json.loads(response.read().decode())
+                  
+                  for event in timeline_data:
+                      if (event.get('event') == 'connected_event' and 
+                          event.get('source', {}).get('issue', {}).get('number') == int(issue_number)):
+                          is_linked = True
+                          link_reason = "检测到GitHub连接事件"
+                          print(f"✅ 检测到关联：{link_reason}")
+                          break
+              except Exception as e:
+                  print(f"⚠️ 检查PR时间线时出错: {str(e)}")
           
-          # 方法3：检查Issue的时间线，看是否被这个PR关联
-          if [ "$IS_LINKED" = false ]; then
-            echo "🔍 检查Issue时间线事件..."
-            ISSUE_TIMELINE=$(curl -s -H "Authorization: token ${{ github.token }}" \
-              -H "Accept: application/vnd.github.v3+json" \
-              "https://api.github.com/repos/${{ github.repository }}/issues/$ISSUE_NUMBER/timeline")
-            
-            if echo "$ISSUE_TIMELINE" | jq -e ".[] | select(.event == \"connected_event\" and .source.issue.number == $PR_NUMBER)" > /dev/null 2>&1; then
-              IS_LINKED=true
-              LINK_REASON="Issue时间线显示已连接"
-              echo "✅ 检测到关联：$LINK_REASON"
-            fi
-          fi
+          # 方法3：检查Issue的时间线
+          if not is_linked:
+              print("🔍 检查Issue时间线事件...")
+              try:
+                  issue_timeline_url = f"https://api.github.com/repos/{github_repo}/issues/{issue_number}/timeline"
+                  req = urllib.request.Request(issue_timeline_url)
+                  req.add_header('Authorization', f'token {github_token}')
+                  req.add_header('Accept', 'application/vnd.github.v3+json')
+                  
+                  with urllib.request.urlopen(req) as response:
+                      issue_timeline_data = json.loads(response.read().decode())
+                  
+                  for event in issue_timeline_data:
+                      if (event.get('event') == 'connected_event' and 
+                          event.get('source', {}).get('issue', {}).get('number') == int(pr_number)):
+                          is_linked = True
+                          link_reason = "Issue时间线显示已连接"
+                          print(f"✅ 检测到关联：{link_reason}")
+                          break
+              except Exception as e:
+                  print(f"⚠️ 检查Issue时间线时出错: {str(e)}")
           
-          # 方法4：检查PR描述中是否有其他引用格式
-          if [ "$IS_LINKED" = false ]; then
-            if printf '%s' "$CURRENT_BODY" | grep -qE "#$ISSUE_NUMBER\b"; then
-              IS_LINKED=true
-              LINK_REASON="PR描述中引用了Issue"
-              echo "✅ 检测到关联：$LINK_REASON"
-            fi
-          fi
+          # 写入输出
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"is_linked={'true' if is_linked else 'false'}\n")
+              f.write(f"link_reason={link_reason}\n")
           
-          echo "is_linked=$IS_LINKED" >> $GITHUB_OUTPUT
-          echo "link_reason=$LINK_REASON" >> $GITHUB_OUTPUT
-          
-          if [ "$IS_LINKED" = true ]; then
-            echo "✅ PR已经关联到Issue #$ISSUE_NUMBER ($LINK_REASON)"
-          else
-            echo "ℹ️ PR尚未关联到Issue #$ISSUE_NUMBER，将自动添加关联"
-          fi
+          if is_linked:
+              print(f"✅ PR已经关联到Issue #{issue_number} ({link_reason})")
+          else:
+              print(f"ℹ️ PR尚未关联到Issue #{issue_number}，将自动添加关联")
+          EOF
 
       - name: Auto link PR to Issue
         id: link-issue
         if: ${{ steps.check-link.outputs.is_linked == 'false' }}
         env:
           CURRENT_BODY: ${{ github.event.pull_request.body }}
+          ISSUE_NUMBER: ${{ steps.check-title.outputs.issue_number }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          ISSUE_NUMBER="${{ steps.check-title.outputs.issue_number }}"
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          
           echo "🔗 开始自动关联PR #$PR_NUMBER 到Issue #$ISSUE_NUMBER"
           
+          # 使用 Python 进行安全的字符串处理和 API 调用
+          python3 << 'EOF'
+          import os
+          import json
+          import urllib.request
+          import urllib.error
+          import sys
+          
+          current_body = os.environ.get('CURRENT_BODY', '')
+          issue_number = os.environ['ISSUE_NUMBER']
+          pr_number = os.environ['PR_NUMBER']
+          github_token = os.environ['GITHUB_TOKEN']
+          github_repo = os.environ['GITHUB_REPOSITORY']
+          
           # 构建关联文本
-          LINK_TEXT="Closes #$ISSUE_NUMBER"
+          link_text = f"Closes #{issue_number}"
           
           # 构建新的PR描述
-          if [ -z "$CURRENT_BODY" ] || [ "$CURRENT_BODY" == "null" ]; then
-            NEW_BODY="$LINK_TEXT"
-          else
-            NEW_BODY="$LINK_TEXT"$'\n\n'"$CURRENT_BODY"
-          fi
+          if not current_body or current_body.strip() == '' or current_body == 'null':
+              new_body = link_text
+          else:
+              new_body = f"{link_text}\n\n{current_body}"
           
-          echo "新的PR描述: (内容已安全处理)"
+          print("新的PR描述: (内容已安全处理)")
+          
+          # 准备API请求数据
+          data = {
+              'body': new_body
+          }
           
           # 使用GitHub API更新PR描述
-          UPDATE_RESPONSE=$(curl -s -w "%{http_code}" -X PATCH \
-            -H "Authorization: token ${{ github.token }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER" \
-            -d "$(jq -n --arg body "$NEW_BODY" '{body: $body}')")
+          api_url = f"https://api.github.com/repos/{github_repo}/pulls/{pr_number}"
           
-          HTTP_CODE="${UPDATE_RESPONSE: -3}"
-          
-          if [ "$HTTP_CODE" -eq 200 ]; then
-            echo "✅ 成功关联PR #$PR_NUMBER 到Issue #$ISSUE_NUMBER"
-            echo "link_added=true" >> $GITHUB_OUTPUT
-          else
-            echo "❌ 关联失败，HTTP状态码: $HTTP_CODE"
-            echo "响应: ${UPDATE_RESPONSE%???}"
-            echo "link_added=false" >> $GITHUB_OUTPUT
-            exit 1
-          fi
+          try:
+              req = urllib.request.Request(api_url, method='PATCH')
+              req.add_header('Authorization', f'token {github_token}')
+              req.add_header('Accept', 'application/vnd.github.v3+json')
+              req.add_header('Content-Type', 'application/json')
+              
+              json_data = json.dumps(data).encode('utf-8')
+              
+              with urllib.request.urlopen(req, data=json_data) as response:
+                  response_data = json.loads(response.read().decode())
+              
+              print(f"✅ 成功关联PR #{pr_number} 到Issue #{issue_number}")
+              
+              # 写入输出
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write("link_added=true\n")
+                  
+          except urllib.error.HTTPError as e:
+              print(f"❌ 关联失败，HTTP状态码: {e.code}")
+              try:
+                  error_response = e.read().decode()
+                  print(f"错误响应: {error_response}")
+              except:
+                  pass
+              
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write("link_added=false\n")
+              sys.exit(1)
+              
+          except Exception as e:
+              print(f"❌ 处理过程中发生错误: {str(e)}")
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write("link_added=false\n")
+              sys.exit(1)
+          EOF
 
       - name: Success message
+        env:
+          ISSUE_NUMBER: ${{ steps.check-title.outputs.issue_number }}
+          ISSUE_TITLE: ${{ steps.check-issue.outputs.issue_title }}
+          IS_LINKED: ${{ steps.check-link.outputs.is_linked }}
+          LINK_REASON: ${{ steps.check-link.outputs.link_reason }}
+          LINK_ADDED: ${{ steps.link-issue.outputs.link_added }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
-          ISSUE_NUMBER="${{ steps.check-title.outputs.issue_number }}"
-          ISSUE_TITLE="${{ steps.check-issue.outputs.issue_title }}"
-          IS_LINKED="${{ steps.check-link.outputs.is_linked }}"
-          LINK_REASON="${{ steps.check-link.outputs.link_reason }}"
-          LINK_ADDED="${{ steps.link-issue.outputs.link_added }}"
+          # 使用 Python 进行安全的字符串处理
+          python3 << 'EOF'
+          import os
           
-          echo "🎉 PR标题校验通过！"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "📋 PR标题: ${{ github.event.pull_request.title }}"
-          echo "🔗 关联Issue: #$ISSUE_NUMBER"
-          echo "📝 Issue标题: $ISSUE_TITLE"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          issue_number = os.environ['ISSUE_NUMBER']
+          issue_title = os.environ.get('ISSUE_TITLE', '')
+          is_linked = os.environ['IS_LINKED']
+          link_reason = os.environ.get('LINK_REASON', '')
+          link_added = os.environ.get('LINK_ADDED', '')
+          pr_title = os.environ['PR_TITLE']
           
-          if [ "$IS_LINKED" = "true" ]; then
-            echo "✅ 关联状态: 已关联 ($LINK_REASON)"
-            echo "💡 无需重复操作，PR已正确关联到Issue"
-          elif [ "$LINK_ADDED" = "true" ]; then
-            echo "✅ 关联状态: 已自动添加关联"
-            echo "📎 PR已自动关联到Issue，合并PR时将自动关闭对应的Issue"
-          else
-            echo "⚠️ 关联状态: 关联失败"
-          fi 
+          print("🎉 PR标题校验通过！")
+          print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+          print(f"📋 PR标题: {pr_title}")
+          print(f"🔗 关联Issue: #{issue_number}")
+          print(f"📝 Issue标题: {issue_title}")
+          print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+          
+          if is_linked == "true":
+              print(f"✅ 关联状态: 已关联 ({link_reason})")
+              print("💡 无需重复操作，PR已正确关联到Issue")
+          elif link_added == "true":
+              print("✅ 关联状态: 已自动添加关联")
+              print("📎 PR已自动关联到Issue，合并PR时将自动关闭对应的Issue")
+          else:
+              print("⚠️ 关联状态: 关联失败")
+          EOF 
