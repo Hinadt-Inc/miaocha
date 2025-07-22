@@ -2,7 +2,7 @@ package com.hinadt.miaocha.mock.service.sql.builder;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.hinadt.miaocha.application.service.sql.builder.FieldExpressionParser;
+import com.hinadt.miaocha.application.service.sql.expression.FieldExpressionParser;
 import com.hinadt.miaocha.application.service.sql.search.SearchMethod;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

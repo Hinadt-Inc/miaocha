@@ -1,8 +1,8 @@
 package com.hinadt.miaocha.application.service.sql.processor;
 
-import static com.hinadt.miaocha.application.service.sql.builder.SqlFragment.COUNT_ALIAS;
-import static com.hinadt.miaocha.application.service.sql.builder.SqlFragment.TIME_ALIAS;
-import static com.hinadt.miaocha.application.service.sql.builder.SqlFragment.TOTAL_ALIAS;
+import static com.hinadt.miaocha.application.service.sql.expression.SqlFragment.COUNT_ALIAS;
+import static com.hinadt.miaocha.application.service.sql.expression.SqlFragment.TIME_ALIAS;
+import static com.hinadt.miaocha.application.service.sql.expression.SqlFragment.TOTAL_ALIAS;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

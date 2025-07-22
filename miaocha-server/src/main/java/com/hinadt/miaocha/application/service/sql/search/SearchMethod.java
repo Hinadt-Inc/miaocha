@@ -1,6 +1,6 @@
 package com.hinadt.miaocha.application.service.sql.search;
 
-import com.hinadt.miaocha.application.service.sql.builder.FieldExpressionParser;
+import com.hinadt.miaocha.application.service.sql.expression.FieldExpressionParser;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import lombok.Getter;
@@ -69,6 +69,17 @@ public enum SearchMethod implements SearchMethodHandler {
      * @return SQL条件字符串
      */
     public abstract String buildSingleCondition(String fieldName, String keyword);
+
+    /**
+     * 生成单个字段的NOT条件SQL
+     *
+     * @param fieldName 字段名
+     * @param keyword 已转义的关键字
+     * @return NOT SQL条件字符串
+     */
+    public String buildNotCondition(String fieldName, String keyword) {
+        return "NOT " + buildSingleCondition(fieldName, keyword);
+    }
 
     /** 根据搜索方法名称获取对应的枚举 */
     public static SearchMethod fromString(String searchMethod) {

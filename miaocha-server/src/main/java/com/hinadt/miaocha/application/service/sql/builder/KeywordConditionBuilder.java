@@ -2,19 +2,25 @@ package com.hinadt.miaocha.application.service.sql.builder;
 
 import com.hinadt.miaocha.application.service.impl.logsearch.validator.QueryConfigValidationService;
 import com.hinadt.miaocha.application.service.sql.converter.VariantFieldConverter;
+import com.hinadt.miaocha.application.service.sql.expression.FieldExpressionParser;
+import com.hinadt.miaocha.application.service.sql.expression.SqlFragment;
 import com.hinadt.miaocha.application.service.sql.search.SearchMethod;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import com.hinadt.miaocha.domain.dto.module.QueryConfigDTO.KeywordFieldConfigDTO;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * 关键字条件构建器
+ * 关键字条件构建器 - 重构版本
  *
- * <p>处理基于keywords字段的查询条件构建，支持： - 自动应用模块配置中的所有关键字字段 - 配置驱动的搜索方法（LIKE, MATCH_PHRASE, MATCH_ANY,
- * MATCH_ALL） - 复杂表达式解析（&& 和 || 运算符，括号嵌套） - 自动处理 variant 字段转换 - 多个关键字之间使用AND连接，每个关键字对所有配置字段使用OR连接
+ * <p>职责清晰： - 使用 FieldExpressionParser 进行表达式分析 - 使用 SqlFragment 统一括号规范 - 根据分析结果构建 SQL 条件
  */
 @Component
 public class KeywordConditionBuilder {
@@ -22,127 +28,214 @@ public class KeywordConditionBuilder {
     @Autowired private QueryConfigValidationService queryConfigValidationService;
     @Autowired private VariantFieldConverter variantFieldConverter;
 
-    /**
-     * 构建关键字查询条件
-     *
-     * <p>处理keywords字段，自动应用模块配置中的所有关键字字段
-     */
-    public String buildKeywords(LogSearchDTO dto) {
-        if (dto.getKeywords() == null || dto.getKeywords().isEmpty()) {
+    /** 构建关键字查询条件 */
+    public String buildKeywords(LogSearchDTO logSearchDTO) {
+        if (CollectionUtils.isEmpty(logSearchDTO.getKeywords())) {
             return "";
         }
 
-        String module = dto.getModule();
-
-        // 获取模块配置的关键字字段（包含variant转换）
-        List<KeywordFieldConfigDTO> keywordFields = getKeywordFieldsWithVariantConversion(module);
-        if (keywordFields.isEmpty()) {
-            return ""; // 没有配置关键字字段，不处理
+        List<KeywordFieldConfigDTO> keywordFields =
+                getKeywordFieldsWithVariantConversion(logSearchDTO.getModule());
+        if (CollectionUtils.isEmpty(keywordFields)) {
+            return "";
         }
 
-        StringBuilder condition = new StringBuilder();
-        boolean isFirstKeyword = true;
+        // 检查是否包含负向条件
+        boolean hasNegativeTerms =
+                logSearchDTO.getKeywords().stream()
+                        .anyMatch(FieldExpressionParser::containsNegativeTerms);
 
-        // 处理每个关键字
+        if (hasNegativeTerms) {
+            return buildComplexKeywords(logSearchDTO, keywordFields);
+        } else {
+            return buildSimpleKeywords(logSearchDTO, keywordFields);
+        }
+    }
+
+    /** 构建复杂关键字查询（包含负向条件） */
+    private String buildComplexKeywords(
+            LogSearchDTO logSearchDTO, List<KeywordFieldConfigDTO> keywordFields) {
+        FieldExpressionParser.ExpressionSeparationResult separationResult =
+                FieldExpressionParser.separateKeywordExpressions(logSearchDTO.getKeywords());
+
+        List<String> conditions = new ArrayList<>();
+
+        // 处理正向条件
+        if (separationResult.hasPositiveExpressions()) {
+            String positiveCondition =
+                    buildPositiveConditions(keywordFields, separationResult.positiveExpressions());
+            if (StringUtils.isNotBlank(positiveCondition)) {
+                conditions.add(positiveCondition);
+            }
+        }
+
+        // 处理负向条件
+        if (separationResult.hasNegativeExpressions()) {
+            String negativeCondition =
+                    buildNegativeConditions(keywordFields, separationResult.negativeExpressions());
+            if (StringUtils.isNotBlank(negativeCondition)) {
+                conditions.add(negativeCondition);
+            }
+        }
+
+        return SqlFragment.formatMultiKeywordAnd(conditions);
+    }
+
+    /** 构建简单关键字查询（不包含负向条件） */
+    private String buildSimpleKeywords(
+            LogSearchDTO dto, List<KeywordFieldConfigDTO> keywordFields) {
+        List<String> keywordConditions = new ArrayList<>();
+
         for (String keyword : dto.getKeywords()) {
             if (StringUtils.isBlank(keyword)) {
                 continue;
             }
 
-            String trimmedKeyword = keyword.trim();
-            StringBuilder keywordCondition = new StringBuilder();
-            boolean isFirstField = true;
-
-            // 对每个配置的字段应用关键字
-            for (KeywordFieldConfigDTO fieldConfig : keywordFields) {
-                String fieldName = fieldConfig.getFieldName();
-                String searchMethodName = fieldConfig.getSearchMethod();
-
-                // 获取搜索方法并解析表达式
-                SearchMethod searchMethod = SearchMethod.fromString(searchMethodName);
-                String parsedCondition = searchMethod.parseExpression(fieldName, trimmedKeyword);
-
-                if (StringUtils.isNotBlank(parsedCondition)) {
-                    if (!isFirstField) {
-                        keywordCondition.append(" OR ");
-                    }
-                    // 每个字段条件都用括号包围
-                    keywordCondition.append("(").append(parsedCondition).append(")");
-                    isFirstField = false;
-                }
-            }
-
-            String currentKeywordCondition = keywordCondition.toString();
-            if (StringUtils.isNotBlank(currentKeywordCondition)) {
-                if (!isFirstKeyword) {
-                    condition.append(" AND ");
-                }
-
-                // 如果是多字段，需要外层括号；单字段直接使用
-                if (keywordFields.size() > 1) {
-                    condition.append("(").append(currentKeywordCondition).append(")");
-                } else {
-                    condition.append(currentKeywordCondition);
-                }
-                isFirstKeyword = false;
+            String keywordCondition = buildSingleKeywordCondition(keywordFields, keyword.trim());
+            if (StringUtils.isNotBlank(keywordCondition)) {
+                keywordConditions.add(keywordCondition);
             }
         }
 
-        String result = condition.toString();
-
-        // 只有多个关键字时才需要最外层括号
-        if (StringUtils.isNotBlank(result) && dto.getKeywords().size() > 1) {
-            // 计算实际有效关键字的数量
-            long validKeywordCount =
-                    dto.getKeywords().stream().filter(StringUtils::isNotBlank).count();
-
-            if (validKeywordCount > 1) {
-                return "(" + result + ")";
-            }
-        }
-
-        return result;
+        return SqlFragment.formatMultiKeywordAnd(keywordConditions);
     }
 
-    /**
-     * 获取模块配置的关键字字段，并处理 variant 转换
-     *
-     * @param module 模块名
-     * @return 关键字字段配置列表（字段名已处理 variant 转换）
-     */
-    private List<KeywordFieldConfigDTO> getKeywordFieldsWithVariantConversion(String module) {
+    /** 构建单个关键字的多字段条件 */
+    private String buildSingleKeywordCondition(
+            List<KeywordFieldConfigDTO> keywordFields, String keyword) {
+        List<String> fieldConditions = new ArrayList<>();
 
-        // 验证并获取查询配置
+        for (KeywordFieldConfigDTO fieldConfig : keywordFields) {
+            String fieldName = fieldConfig.getFieldName();
+            String searchMethodName = fieldConfig.getSearchMethod();
+
+            SearchMethod searchMethod = SearchMethod.fromString(searchMethodName);
+            String parsedCondition = searchMethod.parseExpression(fieldName, keyword);
+
+            if (StringUtils.isNotBlank(parsedCondition)) {
+                fieldConditions.add(parsedCondition);
+            }
+        }
+
+        return SqlFragment.formatMultiFieldOr(fieldConditions);
+    }
+
+    /** 构建正向条件 */
+    private String buildPositiveConditions(
+            List<KeywordFieldConfigDTO> keywordFields, List<String> positiveExpressions) {
+        if (positiveExpressions.isEmpty()) {
+            return "";
+        }
+
+        String combinedExpression = combineExpressions(positiveExpressions);
+
+        List<String> fieldConditions =
+                keywordFields.stream()
+                        .map(field -> buildFieldExpressionCondition(field, combinedExpression))
+                        .filter(StringUtils::isNotBlank)
+                        .toList();
+
+        return SqlFragment.formatMultiFieldOr(fieldConditions);
+    }
+
+    /** 构建负向条件 */
+    private String buildNegativeConditions(
+            List<KeywordFieldConfigDTO> keywordFields, List<String> negativeExpressions) {
+        if (negativeExpressions.isEmpty()) {
+            return "";
+        }
+
+        // 提取所有负向条件中的关键词
+        Set<String> negativeTerms = new LinkedHashSet<>();
+        for (String expression : negativeExpressions) {
+            negativeTerms.addAll(
+                    FieldExpressionParser.extractNegativeTermsFromExpression(expression));
+        }
+
+        if (negativeTerms.isEmpty()) {
+            return "";
+        }
+
+        // 为每个负向关键词构建所有字段的条件
+        List<String> allFieldConditions = new ArrayList<>();
+        for (String term : negativeTerms) {
+            for (KeywordFieldConfigDTO field : keywordFields) {
+                String condition = buildTermCondition(field, term);
+                if (StringUtils.isNotBlank(condition)) {
+                    allFieldConditions.add(condition);
+                }
+            }
+        }
+
+        return SqlFragment.formatNotCondition(allFieldConditions);
+    }
+
+    /** 为单个字段构建表达式条件 */
+    private String buildFieldExpressionCondition(KeywordFieldConfigDTO field, String expression) {
+        String fieldName = field.getFieldName();
+        String searchMethodName = field.getSearchMethod();
+
+        SearchMethod searchMethod = SearchMethod.fromString(searchMethodName);
+        return searchMethod.parseExpression(fieldName, expression);
+    }
+
+    /** 为字段和关键词构建单个条件 */
+    private String buildTermCondition(KeywordFieldConfigDTO field, String term) {
+        String fieldName = field.getFieldName();
+        String searchMethodName = field.getSearchMethod();
+
+        SearchMethod searchMethod = SearchMethod.fromString(searchMethodName);
+        return searchMethod.buildSingleCondition(fieldName, escapeSpecialCharacters(term));
+    }
+
+    /** 组合多个表达式 */
+    private String combineExpressions(List<String> expressions) {
+        if (expressions.isEmpty()) {
+            return "";
+        }
+        if (expressions.size() == 1) {
+            return expressions.get(0);
+        }
+        return expressions.stream()
+                .map(
+                        expr ->
+                                """
+                    (%s)
+                    """
+                                        .formatted(expr)
+                                        .trim())
+                .collect(Collectors.joining(" AND "));
+    }
+
+    /** 转义特殊字符防止SQL注入 */
+    private String escapeSpecialCharacters(String input) {
+        if (input == null) return "";
+        return input.replace("'", "''").replace("\\", "\\\\");
+    }
+
+    /** 获取模块配置的关键字字段，并处理 variant 转换 */
+    private List<KeywordFieldConfigDTO> getKeywordFieldsWithVariantConversion(String module) {
         var queryConfig = queryConfigValidationService.validateAndGetQueryConfig(module);
         List<KeywordFieldConfigDTO> keywordFields = queryConfig.getKeywordFields();
 
         if (keywordFields == null || keywordFields.isEmpty()) {
-            // 如果没有配置关键字字段，返回空列表，不抛异常
             return List.of();
         }
 
-        // 处理 variant 字段转换
         return keywordFields.stream().map(this::convertVariantField).toList();
     }
 
-    /**
-     * 转换单个字段配置中的 variant 字段
-     *
-     * @param original 原始字段配置
-     * @return 转换后的字段配置
-     */
+    /** 转换单个字段配置中的 variant 字段 */
     private KeywordFieldConfigDTO convertVariantField(KeywordFieldConfigDTO original) {
         String fieldName = original.getFieldName();
 
-        // 检查是否需要 variant 转换
         if (variantFieldConverter.needsVariantConversion(fieldName)) {
-            // 创建新的配置对象，转换字段名
             KeywordFieldConfigDTO converted = new KeywordFieldConfigDTO();
             converted.setFieldName(variantFieldConverter.convertTopnField(fieldName));
             converted.setSearchMethod(original.getSearchMethod());
             return converted;
         }
 
-        return original; // 不需要转换，返回原始对象
+        return original;
     }
 }
