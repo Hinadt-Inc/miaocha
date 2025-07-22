@@ -104,24 +104,26 @@ public class ExpressionTokenizer {
 
     private boolean isNotOperator() {
         // NOT操作符的条件：
-        // 1. 在行首，或者
-        // 2. 前面是空格或左括号，并且
-        // 3. 后面是空格、左括号或字母
+        // 1. 后面必须有有效内容（空格、左括号、字母或引号）
+        // 2. 在行首，或者前面是空格或左括号
+
+        // 首先检查后面是否有有效内容
+        if (position + 1 >= input.length()) {
+            return false; // 后面没有内容，不能是NOT操作符
+        }
+
+        char next = input.charAt(position + 1);
+        if (!(next == ' ' || next == '(' || Character.isLetterOrDigit(next) || next == '\'')) {
+            return false; // 后面不是有效的内容
+        }
+
+        // 检查位置条件
         if (position == 0) {
-            return true;
+            return true; // 在行首且后面有有效内容
         }
 
         char prev = input.charAt(position - 1);
-        if (prev != ' ' && prev != '(') {
-            return false;
-        }
-
-        if (position + 1 < input.length()) {
-            char next = input.charAt(position + 1);
-            return next == ' ' || next == '(' || Character.isLetterOrDigit(next) || next == '\'';
-        }
-
-        return false;
+        return prev == ' ' || prev == '('; // 前面是空格或左括号
     }
 
     private ExpressionToken parseAndOperator() {

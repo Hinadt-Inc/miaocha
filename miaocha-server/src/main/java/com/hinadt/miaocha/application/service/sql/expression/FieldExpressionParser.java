@@ -339,7 +339,8 @@ public class FieldExpressionParser {
             return null;
         }
 
-        String escapedTerm = escapeSpecialCharacters(term.trim());
+        String trimmedTerm = term.trim();
+        String escapedTerm = escapeSpecialCharacters(trimmedTerm);
         return searchMethod.buildSingleCondition(fieldName, escapedTerm);
     }
 
@@ -366,17 +367,49 @@ public class FieldExpressionParser {
 
     // ==================== 新增的表达式分析方法 ====================
 
-    /** 检查表达式是否包含负向条件 */
+    /** 检查表达式是否包含负向条件 使用词法分析器进行精确检查，避免误判普通连字符 */
     public static boolean containsNegativeTerms(String expression) {
-        return expression != null && expression.contains("-");
+        if (expression == null || expression.trim().isEmpty()) {
+            return false;
+        }
+
+        // 使用词法分析器解析表达式
+        ExpressionTokenizer tokenizer = new ExpressionTokenizer(expression);
+        List<ExpressionToken> tokens = tokenizer.tokenize();
+
+        // 检查是否存在NOT类型的Token
+        return tokens.stream().anyMatch(token -> token.type() == ExpressionToken.TokenType.NOT);
     }
 
-    /** 检查表达式是否只包含负向条件 */
+    /** 检查表达式是否只包含负向条件 使用词法分析器进行精确检查 */
     public static boolean containsOnlyNegativeTerms(String expression) {
         if (expression == null || expression.trim().isEmpty()) {
             return false;
         }
-        return expression.trim().matches("^\\s*(-\\s*\\w+)(\\s*(\\|\\||&&)\\s*(-\\s*\\w+))*\\s*$");
+
+        // 使用词法分析器解析表达式
+        ExpressionTokenizer tokenizer = new ExpressionTokenizer(expression);
+        List<ExpressionToken> tokens = tokenizer.tokenize();
+
+        boolean hasNegativeTerms = false;
+        boolean hasPositiveTerms = false;
+
+        for (int i = 0; i < tokens.size(); i++) {
+            ExpressionToken token = tokens.get(i);
+
+            if (token.type() == ExpressionToken.TokenType.NOT) {
+                hasNegativeTerms = true;
+                // 跳过下一个TERM token，因为它是被NOT修饰的
+                if (i + 1 < tokens.size()
+                        && tokens.get(i + 1).type() == ExpressionToken.TokenType.TERM) {
+                    i++; // 跳过下一个token
+                }
+            } else if (token.type() == ExpressionToken.TokenType.TERM) {
+                hasPositiveTerms = true;
+            }
+        }
+
+        return hasNegativeTerms && !hasPositiveTerms;
     }
 
     /** 检查表达式是否包含逻辑操作符 */

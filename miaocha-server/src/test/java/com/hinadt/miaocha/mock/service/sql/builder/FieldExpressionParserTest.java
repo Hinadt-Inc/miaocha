@@ -442,4 +442,90 @@ class FieldExpressionParserTest {
                     result);
         }
     }
+
+    @Nested
+    @DisplayName("表达式分析方法测试")
+    class ExpressionAnalysisTests {
+
+        @Nested
+        @DisplayName("containsNegativeTerms 方法测试")
+        class ContainsNegativeTermsTests {
+
+            @Test
+            @DisplayName("正确识别负向条件")
+            void testContainsNegativeTerms_WithNegativeConditions() {
+                assertTrue(FieldExpressionParser.containsNegativeTerms("-error"));
+                assertTrue(FieldExpressionParser.containsNegativeTerms("success && -error"));
+                assertTrue(FieldExpressionParser.containsNegativeTerms("-error || -warning"));
+                assertTrue(FieldExpressionParser.containsNegativeTerms("(-error && warning)"));
+            }
+
+            @Test
+            @DisplayName("不误判包含连字符的普通字符串")
+            void testContainsNegativeTerms_WithHyphenatedWords() {
+                assertFalse(FieldExpressionParser.containsNegativeTerms("test-data"));
+                assertFalse(FieldExpressionParser.containsNegativeTerms("user-name"));
+                assertFalse(FieldExpressionParser.containsNegativeTerms("log-file"));
+                assertFalse(FieldExpressionParser.containsNegativeTerms("api-request"));
+            }
+
+            @Test
+            @DisplayName("不误判UUID等特殊格式")
+            void testContainsNegativeTerms_WithSpecialFormats() {
+                assertFalse(
+                        FieldExpressionParser.containsNegativeTerms(
+                                "123e4567-e89b-12d3-a456-426614174000"));
+                assertFalse(FieldExpressionParser.containsNegativeTerms("2023-12-25"));
+                assertFalse(FieldExpressionParser.containsNegativeTerms("app-v1.2.3"));
+            }
+
+            @Test
+            @DisplayName("正确处理复杂表达式")
+            void testContainsNegativeTerms_WithComplexExpressions() {
+                assertTrue(FieldExpressionParser.containsNegativeTerms("test-data && -error"));
+                assertTrue(
+                        FieldExpressionParser.containsNegativeTerms(
+                                "user-name || (-warning && success)"));
+                assertFalse(FieldExpressionParser.containsNegativeTerms("test-data && user-name"));
+            }
+
+            @Test
+            @DisplayName("处理边界情况")
+            void testContainsNegativeTerms_EdgeCases() {
+                assertFalse(FieldExpressionParser.containsNegativeTerms(null));
+                assertFalse(FieldExpressionParser.containsNegativeTerms(""));
+                assertFalse(FieldExpressionParser.containsNegativeTerms("   "));
+                assertFalse(FieldExpressionParser.containsNegativeTerms("-")); // 单独的连字符
+            }
+        }
+
+        @Nested
+        @DisplayName("containsOnlyNegativeTerms 方法测试")
+        class ContainsOnlyNegativeTermsTests {
+
+            @Test
+            @DisplayName("正确识别纯负向表达式")
+            void testContainsOnlyNegativeTerms_PureNegative() {
+                assertTrue(FieldExpressionParser.containsOnlyNegativeTerms("-error"));
+                assertTrue(FieldExpressionParser.containsOnlyNegativeTerms("-error && -warning"));
+                assertTrue(FieldExpressionParser.containsOnlyNegativeTerms("-error || -warning"));
+            }
+
+            @Test
+            @DisplayName("正确识别混合表达式")
+            void testContainsOnlyNegativeTerms_Mixed() {
+                assertFalse(FieldExpressionParser.containsOnlyNegativeTerms("success && -error"));
+                assertFalse(FieldExpressionParser.containsOnlyNegativeTerms("-error || success"));
+                assertFalse(FieldExpressionParser.containsOnlyNegativeTerms("success"));
+            }
+
+            @Test
+            @DisplayName("不误判连字符词汇")
+            void testContainsOnlyNegativeTerms_HyphenatedWords() {
+                assertFalse(FieldExpressionParser.containsOnlyNegativeTerms("test-data"));
+                assertFalse(
+                        FieldExpressionParser.containsOnlyNegativeTerms("user-name && log-file"));
+            }
+        }
+    }
 }

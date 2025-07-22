@@ -369,7 +369,7 @@ class KeywordConditionBuilderTest {
         }
 
         @Test
-        @DisplayName("NOT-边界-001: 减号后面跟空字符串")
+        @DisplayName("NOT-边界-001: 减号作为普通搜索词")
         void testMinusFollowedByEmptyString() {
             mockModuleConfig("test", createKeywordField("message", "MATCH_PHRASE"));
 
@@ -377,8 +377,8 @@ class KeywordConditionBuilderTest {
 
             String result = keywordConditionBuilder.buildKeywords(dto);
 
-            // 减号后面没有内容，应该返回空条件
-            assertEquals("", result);
+            // 单独的减号应该被当作普通搜索词
+            assertEquals("(message MATCH_PHRASE '-')", result);
         }
 
         @Test
