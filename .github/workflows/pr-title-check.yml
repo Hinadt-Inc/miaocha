@@ -335,4 +335,4 @@ jobs:
               print("📎 PR已自动关联到Issue，合并PR时将自动关闭对应的Issue")
           else:
               print("⚠️ 关联状态: 关联失败")
-          EOF 
+          EOF
