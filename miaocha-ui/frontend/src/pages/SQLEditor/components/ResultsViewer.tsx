@@ -96,13 +96,34 @@ const ResizableTitle: React.FC<ResizableTitleProps> = (props) => {
 
 // 比较值的工具函数，用于排序
 const compareValues = (a: unknown, b: unknown): number => {
+  // 处理 null、undefined 等空值
+  if (a === null || a === undefined) {
+    if (b === null || b === undefined) return 0;
+    return -1; // 空值排在前面
+  }
+  if (b === null || b === undefined) {
+    return 1;
+  }
+
+  // 如果都是数字类型，按数字比较
   if (typeof a === 'number' && typeof b === 'number') {
     return a - b;
   }
+
+  // 尝试将值转换为数字进行比较（适用于数字字符串）
+  const numA = Number(a);
+  const numB = Number(b);
+  if (!isNaN(numA) && !isNaN(numB)) {
+    return numA - numB;
+  }
+
+  // 字符串比较
   if (typeof a === 'string' && typeof b === 'string') {
     return a.localeCompare(b);
   }
-  return 0;
+
+  // 其他类型转换为字符串比较
+  return String(a).localeCompare(String(b));
 };
 
 // 时间格式化函数
