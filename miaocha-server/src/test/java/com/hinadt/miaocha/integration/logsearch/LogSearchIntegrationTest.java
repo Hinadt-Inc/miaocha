@@ -404,6 +404,110 @@ public class LogSearchIntegrationTest {
                     hostResult.getTotalCount(),
                     levelResult.getTotalCount());
         }
+
+        @Test
+        @Order(11)
+        @DisplayName("KW-011: NOT操作符复杂集成验证 - 基于真实测试数据的业务场景")
+        void testNotOperatorComplexIntegration() {
+            log.info("🔍 测试NOT操作符复杂集成");
+
+            LogSearchDTO searchRequest = createBaseSearchRequest();
+
+            // 基于真实测试数据分布的合理查询：查找包含处理或请求相关内容，但排除调试级别的日志
+            searchRequest.setKeywords(
+                    List.of(
+                            "('processing' || 'request') && - 'DEBUG' && - 'debug' && -"
+                                    + " 'debugMode'"));
+
+            LogDetailResultDTO result = logSearchService.searchDetails(searchRequest);
+
+            // 验证查询结果
+            assertThat(result).isNotNull();
+            assertThat(result.getRows()).isEmpty();
+            assertThat(result.getTotalCount()).isEqualTo(0);
+
+            log.info("✅ NOT操作符复杂集成验证通过 - 查询到{}条记录，符合业务逻辑", result.getTotalCount());
+        }
+
+        @Test
+        @Order(12)
+        @DisplayName("KW-012: NOT操作符与WHERE条件组合验证 - 多维度过滤集成")
+        void testNotOperatorWithWhereConditionIntegration() {
+            log.info("🔍 测试NOT操作符与WHERE条件组合");
+
+            LogSearchDTO searchRequest = createBaseSearchRequest();
+
+            // 多关键字AND连接：排除空指针异常但包含错误级别
+            searchRequest.setKeywords(
+                    List.of(
+                            "ERROR && - 'NullPointerException'", // 第一个关键字：包含ERROR但排除空指针异常
+                            "'172.20.61'" // 第二个关键字：特定主机段的日志
+                            ));
+
+            // WHERE条件：限制在特定时间范围和服务类型
+            searchRequest.setWhereSqls(
+                    List.of(
+                            "log_time >= DATE_SUB(NOW(), INTERVAL 25 HOUR)",
+                            "source LIKE '%cloud-engine%'"));
+
+            LogDetailResultDTO result = logSearchService.searchDetails(searchRequest);
+
+            // 验证查询结果
+            assertThat(result).isNotNull();
+            assertThat(result.getTotalCount()).isGreaterThan(0);
+
+            // 验证返回记录符合多维度过滤逻辑：条件间AND连接，字段间OR连接
+            boolean foundMatch =
+                    result.getRows().stream()
+                            .anyMatch(
+                                    row -> {
+                                        Object host = row.get("host");
+                                        Object source = row.get("source");
+                                        Object messageText = row.get("message_text");
+                                        Object message = row.get("message");
+
+                                        String hostStr = host != null ? host.toString() : "";
+                                        String sourceStr = source != null ? source.toString() : "";
+                                        String messageTextStr =
+                                                messageText != null ? messageText.toString() : "";
+                                        String messageStr =
+                                                message != null ? message.toString() : "";
+
+                                        String allContent =
+                                                hostStr
+                                                        + " "
+                                                        + sourceStr
+                                                        + " "
+                                                        + messageTextStr
+                                                        + " "
+                                                        + messageStr;
+
+                                        // 验证第一个关键字条件：包含ERROR但不包含NullPointerException
+                                        // 在所有配置字段中搜索：message_text, host, source, message.level等
+                                        boolean hasError =
+                                                allContent.toUpperCase().contains("ERROR");
+                                        boolean notNullPointer =
+                                                !allContent.contains("NullPointerException");
+                                        boolean firstConditionMatch = hasError && notNullPointer;
+
+                                        // 验证第二个关键字条件：包含'172.20.61'
+                                        boolean secondConditionMatch =
+                                                allContent.contains("172.20.61");
+
+                                        // 验证WHERE条件：source必须包含cloud-engine
+                                        boolean whereConditionMatch =
+                                                sourceStr.contains("cloud-engine");
+
+                                        // 所有条件都必须满足（关键字间AND连接）
+                                        return firstConditionMatch
+                                                && secondConditionMatch
+                                                && whereConditionMatch;
+                                    });
+
+            assertThat(foundMatch).isTrue();
+
+            log.info("✅ NOT操作符与WHERE条件组合验证通过 - 查询到{}条记录，多维度过滤正确", result.getTotalCount());
+        }
     }
 
     // ==================== WHERE条件查询功能组 ====================

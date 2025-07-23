@@ -1,4 +1,4 @@
-package com.hinadt.miaocha.application.service.sql.builder;
+package com.hinadt.miaocha.application.service.sql.expression;
 
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import java.util.ArrayList;
@@ -148,4 +148,96 @@ public class SqlFragment {
 
     /** 排序字段封装类 */
     public record OrderField(String fieldName, String direction) {}
+
+    // ==================== 统一括号规范 ====================
+
+    /** 统一的字段条件格式化 规范：(fieldName OPERATOR 'value') 避免双重括号：如果已经有括号就不再加括号 */
+    public static String formatFieldCondition(String condition) {
+        if (StringUtils.isBlank(condition)) {
+            return "";
+        }
+
+        // 如果条件已经有完整的括号包围，就不再添加
+        String trimmed = condition.trim();
+        if (trimmed.startsWith("(") && trimmed.endsWith(")")) {
+            return trimmed;
+        }
+
+        return "(" + condition + ")";
+    }
+
+    /** 统一的多字段OR连接格式化 规范：((field1 condition) OR (field2 condition)) 或 (field condition) 当只有一个字段时 */
+    public static String formatMultiFieldOr(List<String> fieldConditions) {
+        if (fieldConditions == null || fieldConditions.isEmpty()) {
+            return "";
+        }
+
+        List<String> validConditions =
+                fieldConditions.stream().filter(StringUtils::isNotBlank).toList();
+
+        if (validConditions.isEmpty()) {
+            return "";
+        }
+
+        if (validConditions.size() == 1) {
+            // 单字段时只加一层括号
+            return formatFieldCondition(validConditions.get(0));
+        }
+
+        // 多字段时，每个字段加括号，然后整体再加括号
+        List<String> formattedConditions =
+                validConditions.stream().map(SqlFragment::formatFieldCondition).toList();
+
+        return """
+            (%s)
+            """
+                .formatted(String.join(" OR ", formattedConditions))
+                .trim();
+    }
+
+    /** 统一的多关键字AND连接格式化 规范：((keyword1 condition) AND (keyword2 condition)) */
+    public static String formatMultiKeywordAnd(List<String> keywordConditions) {
+        if (keywordConditions == null || keywordConditions.isEmpty()) {
+            return "";
+        }
+
+        List<String> validConditions =
+                keywordConditions.stream().filter(StringUtils::isNotBlank).toList();
+
+        if (validConditions.isEmpty()) {
+            return "";
+        }
+
+        if (validConditions.size() == 1) {
+            return validConditions.get(0);
+        }
+
+        return """
+            (%s)
+            """
+                .formatted(String.join(" AND ", validConditions))
+                .trim();
+    }
+
+    /** 统一的NOT条件格式化 规范：NOT (condition1 OR condition2 OR ...) */
+    public static String formatNotCondition(List<String> conditions) {
+        if (conditions == null || conditions.isEmpty()) {
+            return "";
+        }
+
+        List<String> validConditions = conditions.stream().filter(StringUtils::isNotBlank).toList();
+
+        if (validConditions.isEmpty()) {
+            return "";
+        }
+
+        String combinedCondition =
+                validConditions.size() == 1
+                        ? validConditions.get(0)
+                        : String.join(" OR ", validConditions);
+
+        return """
+            NOT (%s)
+            """.formatted(combinedCondition).trim();
+    }
 }
