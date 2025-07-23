@@ -718,7 +718,7 @@ class TableValidationServiceImplTest {
                     "DELETE FROM users WHERE id = 1",
                     "CREATE TABLE test_table (id INT, name VARCHAR(50))"
                 })
-        @DisplayName("LIMIT处理 - 非SELECT语句保���不变")
+        @DisplayName("LIMIT处理 - 非SELECT语句保持不变")
         void testProcessSqlWithLimit_NonSelectStatements(String sql) {
             String result = tableValidationService.processSqlWithLimit(sql);
 
@@ -726,7 +726,7 @@ class TableValidationServiceImplTest {
         }
 
         @Test
-        @DisplayName("LIMIT处理 - 已有��法LIMIT保持不变")
+        @DisplayName("LIMIT处理 - 已有合法LIMIT保持不变")
         void testProcessSqlWithLimit_ExistingValidLimit() {
             String sqlWithLimit = "SELECT * FROM users LIMIT 500";
             String result = tableValidationService.processSqlWithLimit(sqlWithLimit);

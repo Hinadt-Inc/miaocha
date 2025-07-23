@@ -578,7 +578,7 @@ public class TableValidationServiceImpl implements TableValidationService {
                 }
             }
 
-            // 如果在字符串或标识符内，直接添��字符
+            // 如果在字符串或标识符内，直接添加字符
             if (inSingleQuotes || inDoubleQuotes || inBackticks) {
                 if (!inLineComment && !inBlockComment) {
                     result.append(current);
