@@ -355,10 +355,44 @@ const VirtualTable = (props: IProps) => {
               compare: (a: any, b: any) => {
                 const valueA = a[columnName];
                 const valueB = b[columnName];
-                if (typeof valueA === 'string' && typeof valueB === 'string') {
-                  return valueA.localeCompare(valueB);
+                
+                // 处理 null、undefined 等空值
+                if (valueA === null || valueA === undefined) {
+                  if (valueB === null || valueB === undefined) return 0;
+                  return -1; // 空值排在前面
                 }
-                return (valueA || '').toString().localeCompare((valueB || '').toString());
+                if (valueB === null || valueB === undefined) {
+                  return 1;
+                }
+
+                // 检查数据类型，针对数字类型进行特殊处理
+                const dataType = item.dataType?.toUpperCase();
+                const isNumericType = ['INT', 'INTEGER', 'BIGINT', 'TINYINT', 'SMALLINT', 
+                                     'FLOAT', 'DOUBLE', 'DECIMAL', 'NUMERIC'].includes(dataType);
+
+                if (isNumericType) {
+                  // 数字类型字段：尝试转换为数字进行比较
+                  const numA = parseFloat(valueA);
+                  const numB = parseFloat(valueB);
+                  
+                  // 如果都能转换为有效数字，按数字比较
+                  if (!isNaN(numA) && !isNaN(numB)) {
+                    return numA - numB;
+                  }
+                  
+                  // 如果有一个不是有效数字，无效数字排在后面
+                  if (isNaN(numA) && !isNaN(numB)) return 1;
+                  if (!isNaN(numA) && isNaN(numB)) return -1;
+                  
+                  // 如果都不是有效数字，按字符串比较
+                  return String(valueA).localeCompare(String(valueB));
+                } else {
+                  // 非数字类型：按字符串比较
+                  if (typeof valueA === 'string' && typeof valueB === 'string') {
+                    return valueA.localeCompare(valueB);
+                  }
+                  return (valueA || '').toString().localeCompare((valueB || '').toString());
+                }
               },
               multiple: otherColumns.findIndex(col => col.columnName === columnName) + 2, // 动态列排序优先级依次递减，从2开始（时间字段优先级为1）
             }
