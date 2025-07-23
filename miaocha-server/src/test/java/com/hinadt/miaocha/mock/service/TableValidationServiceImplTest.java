@@ -797,5 +797,30 @@ class TableValidationServiceImplTest {
             tableNames = tableValidationService.extractTableNames(null);
             assertTrue(tableNames.isEmpty());
         }
+
+        @Test
+        @DisplayName("带注释和空行的复杂SELECT语句检测")
+        void testIsSelectStatement_WithCommentsAndBlanks() {
+            String sql =
+                    """
+                -- 用于模板中携带最后一条message和查询时间范围
+
+                SELECT
+                    message[\"msg\"] AS \"raw_message\",
+                    CONCAT(
+                        DATE_FORMAT(NOW() - INTERVAL 10 minute, '%Y-%m-%d %H:%i:%S'),
+                        ' 至 ',
+                        DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%S')
+                    ) AS raw_time_range,
+                    1 as \"value\"
+                FROM log_db.log_xunxin_pro
+                WHERE
+                    log_time >= NOW() - INTERVAL 10 MINUTE
+                    and message[\"msg\"] LIKE '%集群,批次记录新增失败%'
+                ORDER BY log_time DESC
+                LIMIT 1
+                """;
+            assertTrue(tableValidationService.isSelectStatement(sql), "带注释和空行的复杂SELECT语句应该被识别");
+        }
     }
 }

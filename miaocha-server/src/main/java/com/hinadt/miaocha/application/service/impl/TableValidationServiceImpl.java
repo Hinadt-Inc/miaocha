@@ -533,7 +533,36 @@ public class TableValidationServiceImpl implements TableValidationService {
         if (sql == null || sql.trim().isEmpty()) {
             return false;
         }
-        return SELECT_PATTERN.matcher(sql.trim()).find();
+        // 先去除前置注释和空白行
+        String cleaned = removeLeadingCommentsAndBlanks(sql);
+        return SELECT_PATTERN.matcher(cleaned).find();
+    }
+
+    /** 去除SQL前的注释和空白行 */
+    private String removeLeadingCommentsAndBlanks(String sql) {
+        String[] lines = sql.split("\\r?\\n");
+        StringBuilder sb = new StringBuilder();
+        boolean inBlockComment = false;
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (!inBlockComment) {
+                if (trimmed.startsWith("--") || trimmed.isEmpty()) {
+                    continue;
+                }
+                if (trimmed.startsWith("/*")) {
+                    inBlockComment = true;
+                    continue;
+                }
+            }
+            if (inBlockComment) {
+                if (trimmed.endsWith("*/")) {
+                    inBlockComment = false;
+                }
+                continue;
+            }
+            sb.append(trimmed).append(" ");
+        }
+        return sb.toString().trim();
     }
 
     @Override
