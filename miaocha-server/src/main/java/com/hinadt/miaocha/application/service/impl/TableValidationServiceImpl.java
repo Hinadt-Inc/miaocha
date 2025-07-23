@@ -43,17 +43,7 @@ public class TableValidationServiceImpl implements TableValidationService {
                     "^\\s*CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?",
                     Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
 
-    /** 字段定义的正则表达式 - 匹配字段名、类型等 */
-    private static final Pattern FIELD_DEFINITION_PATTERN =
-            Pattern.compile(
-                    "\\s*(?:`([^`]+)`|([a-zA-Z_][a-zA-Z0-9_]*))\\s+([a-zA-Z0-9_()\\s,]+?)(?:,|\\s*\\)|$)",
-                    Pattern.CASE_INSENSITIVE);
-
     // ==================== SQL 语句处理相关常量 ====================
-
-    /** SELECT 语句检测正则 */
-    private static final Pattern SELECT_PATTERN =
-            Pattern.compile("^\\s*SELECT\\s+", Pattern.CASE_INSENSITIVE);
 
     /** LIMIT 子句检测正则 */
     private static final Pattern LIMIT_PATTERN =
@@ -533,7 +523,151 @@ public class TableValidationServiceImpl implements TableValidationService {
         if (sql == null || sql.trim().isEmpty()) {
             return false;
         }
-        return SELECT_PATTERN.matcher(sql.trim()).find();
+
+        // 使用更完善的注释清理逻辑
+        String cleaned = removeCommentsAndWhitespace(sql);
+
+        // 使用更宽松的 SELECT 语句检测
+        return isSelectStatementInternal(cleaned);
+    }
+
+    /** 完善的 SQL 注释和空白字符清理逻辑 正确处理： 1. 单行注释 (--) 2. 块注释 (斜杠星号 星号斜杠) 3. 字符串字面量中的注释符号 4. 转义字符 5. 嵌套注释 */
+    private String removeCommentsAndWhitespace(String sql) {
+        if (sql == null || sql.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder result = new StringBuilder();
+        char[] chars = sql.toCharArray();
+        int length = chars.length;
+
+        boolean inSingleQuotes = false; // 单引号字符串
+        boolean inDoubleQuotes = false; // 双引号字符串
+        boolean inBackticks = false; // 反引号标识符
+        boolean inLineComment = false; // 单行注释
+        boolean inBlockComment = false; // 块注释
+        int blockCommentDepth = 0; // 嵌套块注释深度
+
+        for (int i = 0; i < length; i++) {
+            char current = chars[i];
+            char next = (i + 1 < length) ? chars[i + 1] : '\0';
+            char prev = (i > 0) ? chars[i - 1] : '\0';
+
+            // 处理转义字符
+            if (prev == '\\' && (inSingleQuotes || inDoubleQuotes)) {
+                if (!inLineComment && !inBlockComment) {
+                    result.append(current);
+                }
+                continue;
+            }
+
+            // 处理字符串和标识符边界
+            if (!inLineComment && !inBlockComment) {
+                if (current == '\'' && !inDoubleQuotes && !inBackticks) {
+                    inSingleQuotes = !inSingleQuotes;
+                    result.append(current);
+                    continue;
+                } else if (current == '"' && !inSingleQuotes && !inBackticks) {
+                    inDoubleQuotes = !inDoubleQuotes;
+                    result.append(current);
+                    continue;
+                } else if (current == '`' && !inSingleQuotes && !inDoubleQuotes) {
+                    inBackticks = !inBackticks;
+                    result.append(current);
+                    continue;
+                }
+            }
+
+            // 如果在字符串或标识符内，直接添加字符
+            if (inSingleQuotes || inDoubleQuotes || inBackticks) {
+                if (!inLineComment && !inBlockComment) {
+                    result.append(current);
+                }
+                continue;
+            }
+
+            // 处理注释开始
+            if (!inLineComment && !inBlockComment) {
+                // 检测单行注释
+                if (current == '-' && next == '-') {
+                    inLineComment = true;
+                    i++; // 跳过下一个 '-'
+                    continue;
+                }
+
+                // 检测块注释开始
+                if (current == '/' && next == '*') {
+                    inBlockComment = true;
+                    blockCommentDepth = 1;
+                    i++; // 跳过下一个 '*'
+                    continue;
+                }
+            }
+
+            // 处理块注释中的嵌套
+            if (inBlockComment) {
+                if (current == '/' && next == '*') {
+                    blockCommentDepth++;
+                    i++; // 跳过下一个 '*'
+                    continue;
+                } else if (current == '*' && next == '/') {
+                    blockCommentDepth--;
+                    if (blockCommentDepth == 0) {
+                        inBlockComment = false;
+                    }
+                    i++; // 跳过下一个 '/'
+                    continue;
+                }
+                // 在块注释中，跳过所有字符
+                continue;
+            }
+
+            // 处理单行注释结束
+            if (inLineComment) {
+                if (current == '\n' || current == '\r') {
+                    inLineComment = false;
+                    // 保留换行符用于后续处理
+                    result.append(' ');
+                }
+                continue;
+            }
+
+            // 正常字符处理：标准化空白字符
+            if (Character.isWhitespace(current)) {
+                // 将连续的空白字符压缩为单个空格
+                if (result.length() > 0 && result.charAt(result.length() - 1) != ' ') {
+                    result.append(' ');
+                }
+            } else {
+                result.append(current);
+            }
+        }
+
+        return result.toString().trim();
+    }
+
+    /**
+     * 更宽松的 SELECT 语句检测逻辑 支持检测： 1. 标准 SELECT 语句 2. WITH 子句开头的 CTE 查询 3. 括号包围的 SELECT 语句 4. 复杂的嵌套查询结构
+     */
+    private boolean isSelectStatementInternal(String cleanedSql) {
+        if (cleanedSql == null || cleanedSql.isEmpty()) {
+            return false;
+        }
+
+        String upperSql = cleanedSql.toUpperCase().trim();
+
+        // 移除开头的括号
+        while (upperSql.startsWith("(")) {
+            upperSql = upperSql.substring(1).trim();
+        }
+
+        // 检测各种 SELECT 语句模式
+        return upperSql.startsWith("SELECT ")
+                || upperSql.startsWith("WITH ")
+                || // CTE 查询
+                upperSql.startsWith("(SELECT ")
+                || // 括号包围的查询
+                upperSql.matches("^\\s*\\(\\s*WITH\\s+.*"); // 括号包围的 CTE
     }
 
     @Override

@@ -125,7 +125,7 @@ public class UserServiceImpl implements UserService {
         } catch (Exception e) {
             // 处理其他异常
             log.error("Error during token refresh: {}", e.getMessage());
-            throw new BusinessException(ErrorCode.INVALID_TOKEN, "无�的刷新令牌");
+            throw new BusinessException(ErrorCode.INVALID_TOKEN, "无效的刷新令牌");
         }
     }
 
