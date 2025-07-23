@@ -1,7 +1,8 @@
 package com.hinadt.miaocha.application.service.sql.builder;
 
-import static com.hinadt.miaocha.application.service.sql.builder.SqlFragment.*;
+import static com.hinadt.miaocha.application.service.sql.expression.SqlFragment.*;
 
+import com.hinadt.miaocha.application.service.sql.expression.SqlFragment;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTODecorator;
 import java.util.ArrayList;

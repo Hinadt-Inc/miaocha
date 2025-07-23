@@ -126,9 +126,6 @@ class KeywordConditionBuilderTest {
         @DisplayName("不同搜索方法测试")
         @CsvSource({
             "LIKE, error, '(message LIKE ''%error%'')'",
-            "MATCH_PHRASE, 'java exception', '(message MATCH_PHRASE ''java exception'')'",
-            "MATCH_ANY, 'urgent critical', '(message MATCH_ANY ''urgent critical'')'",
-            "MATCH_ALL, 'payment success', '(message MATCH_ALL ''payment success'')'"
         })
         void testDifferentSearchMethods(String searchMethod, String keyword, String expected) {
             mockModuleConfig("test", createKeywordField("message", searchMethod));
@@ -138,6 +135,42 @@ class KeywordConditionBuilderTest {
             String result = keywordConditionBuilder.buildKeywords(dto);
 
             assertEquals(expected, result);
+        }
+
+        @Test
+        @DisplayName("MATCH_PHRASE搜索方法测试 - 带空格的关键字")
+        void testMatchPhraseSearchMethod() {
+            mockModuleConfig("test", createKeywordField("message", "MATCH_PHRASE"));
+
+            LogSearchDTO dto = createLogSearchDTO("test", List.of("'java exception'"));
+
+            String result = keywordConditionBuilder.buildKeywords(dto);
+
+            assertEquals("(message MATCH_PHRASE 'java exception')", result);
+        }
+
+        @Test
+        @DisplayName("MATCH_ANY搜索方法测试 - 带空格的关键字")
+        void testMatchAnySearchMethod() {
+            mockModuleConfig("test", createKeywordField("message", "MATCH_ANY"));
+
+            LogSearchDTO dto = createLogSearchDTO("test", List.of("'urgent critical'"));
+
+            String result = keywordConditionBuilder.buildKeywords(dto);
+
+            assertEquals("(message MATCH_ANY 'urgent critical')", result);
+        }
+
+        @Test
+        @DisplayName("MATCH_ALL搜索方法测试 - 带空格的关键字")
+        void testMatchAllSearchMethod() {
+            mockModuleConfig("test", createKeywordField("message", "MATCH_ALL"));
+
+            LogSearchDTO dto = createLogSearchDTO("test", List.of("'payment success'"));
+
+            String result = keywordConditionBuilder.buildKeywords(dto);
+
+            assertEquals("(message MATCH_ALL 'payment success')", result);
         }
 
         @Test
@@ -334,6 +367,32 @@ class KeywordConditionBuilderTest {
 
             assertEquals("(message LIKE '%error%')", result);
         }
+
+        @Test
+        @DisplayName("NOT-边界-001: 减号作为普通搜索词")
+        void testMinusFollowedByEmptyString() {
+            mockModuleConfig("test", createKeywordField("message", "MATCH_PHRASE"));
+
+            LogSearchDTO dto = createLogSearchDTO("test", List.of("- "));
+
+            String result = keywordConditionBuilder.buildKeywords(dto);
+
+            // 单独的减号应该被当作普通搜索词
+            assertEquals("(message MATCH_PHRASE '-')", result);
+        }
+
+        @Test
+        @DisplayName("NOT-边界-002: 减号在单词中间")
+        void testMinusInMiddleOfWord() {
+            mockModuleConfig("test", createKeywordField("message", "MATCH_PHRASE"));
+
+            LogSearchDTO dto = createLogSearchDTO("test", List.of("test-data"));
+
+            String result = keywordConditionBuilder.buildKeywords(dto);
+
+            // 单词中间的减号应该被当作普通字符
+            assertEquals("(message MATCH_PHRASE 'test-data')", result);
+        }
     }
 
     @Nested
@@ -377,6 +436,149 @@ class KeywordConditionBuilderTest {
             String result = keywordConditionBuilder.buildKeywords(dto);
 
             assertEquals("((message LIKE '%error%') AND (message LIKE '%warning%'))", result);
+        }
+    }
+
+    @Nested
+    @DisplayName("NOT操作符功能测试")
+    class NotOperatorFunctionTests {
+
+        @Test
+        @DisplayName("NOT-001: 基础NOT操作符测试")
+        void testBasicNotOperator() {
+            mockModuleConfig("test", createKeywordField("message", "MATCH_PHRASE"));
+
+            LogSearchDTO dto = createLogSearchDTO("test", List.of("- error"));
+
+            String result = keywordConditionBuilder.buildKeywords(dto);
+
+            // 单字段NOT条件，保留表达式逻辑结构
+            assertEquals("NOT (message MATCH_PHRASE 'error')", result);
+        }
+
+        @Test
+        @DisplayName("NOT-002: NOT操作符多字段测试")
+        void testNotOperatorMultiField() {
+            mockModuleConfig(
+                    "test",
+                    createKeywordField("message", "MATCH_PHRASE"),
+                    createKeywordField("source", "LIKE"));
+
+            LogSearchDTO dto = createLogSearchDTO("test", List.of("- error"));
+
+            String result = keywordConditionBuilder.buildKeywords(dto);
+
+            // 全局排除逻辑：NOT (任何字段包含term)
+            assertEquals("NOT (message MATCH_PHRASE 'error' OR source LIKE '%error%')", result);
+        }
+
+        @Test
+        @DisplayName("用户需求示例：复杂混合逻辑")
+        void testUserRequirementExample() {
+            mockModuleConfig(
+                    "test",
+                    createKeywordField("message_text", "MATCH_PHRASE"),
+                    createKeywordField("source", "MATCH_PHRASE"));
+
+            LogSearchDTO dto =
+                    createLogSearchDTO(
+                            "test",
+                            List.of(
+                                    "( engine || service ) && hina-cloud && ( - module || - engine"
+                                            + " )"));
+
+            String result = keywordConditionBuilder.buildKeywords(dto);
+
+            // 期望：((正向条件) AND NOT (负向条件))
+            // 正向：( engine || service ) && hina-cloud 应用到两个字段
+            // 负向：( - module || - engine ) 全局排除
+            assertEquals(
+                    """
+                    (((( message_text MATCH_PHRASE 'engine' OR message_text MATCH_PHRASE 'service' ) \
+                    AND message_text MATCH_PHRASE 'hina-cloud') OR \
+                    (( source MATCH_PHRASE 'engine' OR source MATCH_PHRASE 'service' ) \
+                    AND source MATCH_PHRASE 'hina-cloud')) AND \
+                    NOT (message_text MATCH_PHRASE 'module' OR source MATCH_PHRASE 'module' OR \
+                    message_text MATCH_PHRASE 'engine' OR source MATCH_PHRASE 'engine'))
+                    """
+                            .trim(),
+                    result);
+        }
+
+        @Test
+        @DisplayName("NOT-004: NOT与正常关键字混合")
+        void testNotOperatorMixedWithNormalKeywords() {
+            mockModuleConfig("test", createKeywordField("message", "MATCH_PHRASE"));
+
+            LogSearchDTO dto = createLogSearchDTO("test", List.of("error", "- debug"));
+
+            String result = keywordConditionBuilder.buildKeywords(dto);
+
+            // 多个关键字AND连接，每个关键字保留自己的逻辑结构
+            assertEquals(
+                    "((message MATCH_PHRASE 'error') AND NOT (message MATCH_PHRASE 'debug'))",
+                    result);
+        }
+
+        @Test
+        @DisplayName("NOT-005: 引号内的减号不被当作NOT操作符")
+        void testMinusInQuotesNotTreatedAsNotOperator() {
+            mockModuleConfig("test", createKeywordField("message", "MATCH_PHRASE"));
+
+            LogSearchDTO dto = createLogSearchDTO("test", List.of("'test-data' && - error"));
+
+            String result = keywordConditionBuilder.buildKeywords(dto);
+
+            // 引号内的减号作为普通字符，表达式外的减号作为NOT操作符
+            assertEquals(
+                    "((message MATCH_PHRASE 'test-data') AND NOT (message MATCH_PHRASE 'error'))",
+                    result);
+        }
+
+        @Test
+        @DisplayName("NOT-006: NOT操作符的Variant字段转换")
+        void testNotOperatorWithVariantFieldConversion() {
+            mockModuleConfig("test", createKeywordField("message.level", "MATCH_PHRASE"));
+
+            LogSearchDTO dto = createLogSearchDTO("test", List.of("- ERROR"));
+
+            String result = keywordConditionBuilder.buildKeywords(dto);
+
+            // 验证Variant字段转换：message.level -> message['level']
+            assertEquals("NOT (message['level'] MATCH_PHRASE 'ERROR')", result);
+        }
+
+        @Test
+        @DisplayName("NOT-007: 复杂混合表达式 - 引号包围的负向条件")
+        void testComplexMixedExpressionWithQuotedNegativeTerms() {
+            mockModuleConfig(
+                    "test",
+                    createKeywordField("message_text", "MATCH_PHRASE"),
+                    createKeywordField("source", "MATCH_PHRASE"));
+
+            LogSearchDTO dto =
+                    createLogSearchDTO(
+                            "test",
+                            List.of(
+                                    "( engine || service ) && hina-cloud && - 'module' && -"
+                                            + " 'engine'"));
+
+            String result = keywordConditionBuilder.buildKeywords(dto);
+
+            // 期望：正向条件 AND 全局排除条件
+            // 正向：( engine || service ) && hina-cloud 应用到两个字段
+            // 负向：- 'module' && - 'engine' 全局排除 module 和 engine
+            assertEquals(
+                    """
+                    (((( message_text MATCH_PHRASE 'engine' OR message_text MATCH_PHRASE 'service' ) \
+                    AND message_text MATCH_PHRASE 'hina-cloud') OR \
+                    (( source MATCH_PHRASE 'engine' OR source MATCH_PHRASE 'service' ) \
+                    AND source MATCH_PHRASE 'hina-cloud')) AND \
+                    NOT (message_text MATCH_PHRASE 'module' OR source MATCH_PHRASE 'module' OR \
+                    message_text MATCH_PHRASE 'engine' OR source MATCH_PHRASE 'engine'))
+                    """
+                            .trim(),
+                    result);
         }
     }
 
