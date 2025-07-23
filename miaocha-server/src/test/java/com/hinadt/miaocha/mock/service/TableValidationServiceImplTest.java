@@ -718,7 +718,7 @@ class TableValidationServiceImplTest {
                     "DELETE FROM users WHERE id = 1",
                     "CREATE TABLE test_table (id INT, name VARCHAR(50))"
                 })
-        @DisplayName("LIMIT处理 - 非SELECT语句保持不变")
+        @DisplayName("LIMIT处理 - 非SELECT语句保���不变")
         void testProcessSqlWithLimit_NonSelectStatements(String sql) {
             String result = tableValidationService.processSqlWithLimit(sql);
 
@@ -726,7 +726,7 @@ class TableValidationServiceImplTest {
         }
 
         @Test
-        @DisplayName("LIMIT处理 - 已有合法LIMIT保持不变")
+        @DisplayName("LIMIT处理 - 已有��法LIMIT保持不变")
         void testProcessSqlWithLimit_ExistingValidLimit() {
             String sqlWithLimit = "SELECT * FROM users LIMIT 500";
             String result = tableValidationService.processSqlWithLimit(sqlWithLimit);
@@ -821,6 +821,218 @@ class TableValidationServiceImplTest {
                 LIMIT 1
                 """;
             assertTrue(tableValidationService.isSelectStatement(sql), "带注释和空行的复杂SELECT语句应该被识别");
+        }
+
+        @Nested
+        @DisplayName("复杂 SQL 语句类型检测测试")
+        class ComplexSqlStatementDetectionTest {
+
+            @ParameterizedTest
+            @ValueSource(
+                    strings = {
+                        // CTE (公用表表达式) 查询
+                        "WITH user_stats AS (SELECT user_id, COUNT(*) as cnt FROM logs GROUP BY"
+                                + " user_id) SELECT * FROM user_stats WHERE cnt > 10",
+
+                        // 多层嵌套 CTE
+                        "WITH RECURSIVE t(n) AS (VALUES (1) UNION ALL SELECT n+1 FROM t WHERE n <"
+                                + " 100) SELECT sum(n) FROM t",
+
+                        // 括号包围的 SELECT
+                        "(SELECT id, name FROM users WHERE active = 1)",
+
+                        // 嵌套子查询
+                        "SELECT u.name, (SELECT COUNT(*) FROM orders o WHERE o.user_id = u.id) as"
+                                + " order_count FROM users u",
+
+                        // 括号包围的 CTE
+                        "(WITH top_users AS (SELECT * FROM users ORDER BY score DESC LIMIT 10)"
+                                + " SELECT * FROM top_users)",
+
+                        // 复杂的 UNION 查询
+                        "SELECT 'active' as status, COUNT(*) FROM users WHERE active = 1 UNION ALL"
+                                + " SELECT 'inactive', COUNT(*) FROM users WHERE active = 0"
+                    })
+            @DisplayName("CTE 和复杂嵌套查询检测")
+            void testIsSelectStatement_ComplexQueries(String sql) {
+                assertTrue(tableValidationService.isSelectStatement(sql), "应该正确识别复杂查询类型: " + sql);
+            }
+
+            @ParameterizedTest
+            @ValueSource(
+                    strings = {
+                        // 带有复杂注释的 SELECT
+                        """
+                /* 多行注释
+                   查询用户统计信息
+                   创建日期: 2025-01-23 */
+                SELECT user_id, COUNT(*) as total
+                FROM user_actions -- 行尾注释
+                WHERE action_date >= '2025-01-01'
+                GROUP BY user_id
+                """,
+
+                        // 字符中包含注释符号
+                        "SELECT '-- 这不是注释' as comment_text, '/* 这也不是注释 */' as block_comment FROM"
+                                + " dual",
+
+                        // 混合注释类型
+                        """
+                -- 单行注释
+                /* 块注释 */ SELECT
+                    field1, -- 另一个单行注释
+                    field2 /* 行内块注释 */
+                FROM table1
+                /*
+                   多行块注释
+                   包含多行内容
+                */
+                WHERE condition = 'value -- 字符串中的注释符号'
+                """,
+
+                        // 注释中包含 SQL 关键字
+                        """
+                -- INSERT INTO fake_table VALUES (1)
+                /* DELETE FROM another_table WHERE id = 1 */
+                SELECT real_field FROM real_table
+                """,
+
+                        // 嵌套注释（如果数据库支持）
+                        """
+                /* 外层注释
+                   /* 内层注释 */
+                   外层注释继续
+                */
+                SELECT nested_comment_test FROM test_table
+                """
+                    })
+            @DisplayName("带有各种复杂注释的 SELECT 语句检测")
+            void testIsSelectStatement_ComplexComments(String sql) {
+                assertTrue(
+                        tableValidationService.isSelectStatement(sql),
+                        "应该正确处理复杂注释并识别 SELECT 语句: " + sql);
+            }
+
+            @ParameterizedTest
+            @ValueSource(
+                    strings = {
+                        // 带转义字符的查询
+                        "SELECT 'It\\'s a test' as escaped_quote, \"He said \\\"Hello\\\"\" as"
+                                + " escaped_double FROM test",
+
+                        // 反引号标识符
+                        "SELECT `user`.`name`, `user`.`email` FROM `user_table` `user`",
+
+                        // 复杂的字符串处理
+                        "SELECT CONCAT('SELECT * FROM users; -- ', 'This is not a real query') as"
+                                + " fake_query FROM dual",
+
+                        // 包含各种引号的复杂查询
+                        """
+                SELECT
+                    field1,
+                    'Single quote string with -- comment symbols',
+                    "Double quote string with /* comment */ symbols",
+                    `backtick_field`,
+                    CONCAT('String with \\' escaped quote')
+                FROM complex_table
+                WHERE description LIKE '%-- not a comment%'
+                """
+                    })
+            @DisplayName("字符串转义和引号处理测试")
+            void testIsSelectStatement_StringEscaping(String sql) {
+                assertTrue(tableValidationService.isSelectStatement(sql), "应该正确处理字符串转义和引号: " + sql);
+            }
+
+            @ParameterizedTest
+            @ValueSource(
+                    strings = {
+                        // 前面有多个空行和注释
+                        """
+
+
+                -- 注释1
+
+                /* 注释2 */
+
+
+                SELECT * FROM table1
+                """,
+
+                        // 复杂的空白字符
+                        "\t\n\r  \t  SELECT   field1  \t\n  FROM  \r\n  table2  \t",
+
+                        // 混合空白和注释
+                        """
+                \t-- 制表符开头的注释
+                \r\n/* 换行符和回车符 */\r
+                \n\t  SELECT * FROM mixed_whitespace  \t\r\n
+                """
+                    })
+            @DisplayName("复杂空白字符和格式处理")
+            void testIsSelectStatement_ComplexWhitespace(String sql) {
+                assertTrue(
+                        tableValidationService.isSelectStatement(sql), "应该正确处理复杂的空白字符格式: " + sql);
+            }
+
+            @ParameterizedTest
+            @ValueSource(
+                    strings = {
+                        // 伪装成 SELECT 的非查询语句
+                        "UPDATE users SET description = 'SELECT * FROM fake' WHERE id = 1",
+
+                        // 注释中的 SELECT
+                        "-- SELECT * FROM commented_table\nINSERT INTO real_table VALUES (1)",
+
+                        // 字符串中的 SELECT
+                        "INSERT INTO logs (message) VALUES ('User executed: SELECT * FROM users')",
+
+                        // 复杂的非 SELECT 语句
+                        """
+                /* 这个注释包含 SELECT 关键字
+                   SELECT * FROM fake_table
+                */
+                CREATE TABLE test_table (
+                    id INT,
+                    query_text VARCHAR(255) DEFAULT 'SELECT * FROM default_table'
+                )
+                """,
+
+                        // EXPLAIN 等查询分析语句
+                        "EXPLAIN SELECT * FROM users WHERE id = 1",
+                        "DESCRIBE users",
+                        "SHOW TABLES LIKE 'user_%'"
+                    })
+            @DisplayName("易混淆的非 SELECT 语句检测")
+            void testIsSelectStatement_FalsePositives(String sql) {
+                assertFalse(
+                        tableValidationService.isSelectStatement(sql),
+                        "应该正确识别非 SELECT 语句，避免误判: " + sql);
+            }
+
+            @Test
+            @DisplayName("边界条件测试")
+            void testIsSelectStatement_EdgeCases() {
+                // null 和空字符串
+                assertFalse(tableValidationService.isSelectStatement(null), "null 输入应该返回 false");
+                assertFalse(tableValidationService.isSelectStatement(""), "空字符串应该返回 false");
+                assertFalse(tableValidationService.isSelectStatement("   "), "纯空白字符应该返回 false");
+
+                // 只有注释
+                assertFalse(
+                        tableValidationService.isSelectStatement("-- 只有注释"), "只有注释的输入应该返回 false");
+                assertFalse(
+                        tableValidationService.isSelectStatement("/* 只有块注释 */"),
+                        "只有块注释的输入应该返回 false");
+
+                // 不完整的 SELECT
+                assertFalse(
+                        tableValidationService.isSelectStatement("SELECT"),
+                        "不完整的 SELECT 语句应该返回 false");
+                assertFalse(
+                        tableValidationService.isSelectStatement("SELEC * FROM table"),
+                        "拼写错误的 SELECT 应该返回 false");
+            }
         }
     }
 }
