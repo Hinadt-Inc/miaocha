@@ -4,6 +4,7 @@ setlocal enabledelayedexpansion
 rem 设置应用根目录
 set "APP_HOME=%~dp0.."
 set "LIB_DIR=%APP_HOME%\lib"
+set "PLUGINS_DIR=%APP_HOME%\plugins"
 set "CONFIG_DIR=%APP_HOME%\config"
 set "JAR_FILE=%APP_HOME%\miaocha-server.jar"
 set "LOG_DIR=%APP_HOME%\logs"
@@ -163,8 +164,16 @@ rem 创建启动批处理
 set "STARTUP_BAT=%TEMP%\start_%RANDOM%.bat"
 echo @echo off > "%STARTUP_BAT%"
 echo cd /d "%APP_HOME%" >> "%STARTUP_BAT%"
-rem 构建完整的类路径：config目录 + 主JAR + lib目录的所有JAR
+rem 构建完整的类路径：config目录 + 主JAR + lib目录的所有JAR + plugins目录的所有JAR
 set "CLASSPATH=%CONFIG_DIR%;%JAR_FILE%;%LIB_DIR%\*"
+rem 如果plugins目录存在且不为空，则添加到类路径
+if exist "%PLUGINS_DIR%" (
+    dir /b "%PLUGINS_DIR%\*.jar" >nul 2>nul
+    if !ERRORLEVEL! EQU 0 (
+        set "CLASSPATH=!CLASSPATH!;%PLUGINS_DIR%\*"
+        echo 信息: 已加载插件目录: %PLUGINS_DIR%
+    )
+)
 rem 使用主类启动，因为这不是fat jar
 echo start "秒查系统" /b java %JAVA_OPTS% -cp "%CLASSPATH%" com.hinadt.miaocha.MiaoChaApp ^> "%LOG_DIR%\startup.log" 2^>^&1 >> "%STARTUP_BAT%"
 echo for /f "tokens=2" %%%%p in ('tasklist /fi "IMAGENAME eq java.exe" /fi "WINDOWTITLE eq 秒查系统" /fo list ^| find "PID:"') do echo %%%%p ^> "%PID_FILE%" >> "%STARTUP_BAT%"
