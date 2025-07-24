@@ -7,17 +7,6 @@ import com.hinadt.miaocha.spi.model.OAuthUserInfo;
 public interface OAuthProvider {
 
     /**
-     * 获取提供者名称
-     *
-     * @return 提供者名称，如"Mandao"
-     * @deprecated 使用 {@link #getProviderInfo()} 替代
-     */
-    @Deprecated
-    default String getProviderName() {
-        return getProviderInfo().getProviderId();
-    }
-
-    /**
      * 获取提供者元信息
      *
      * @return 提供者元信息对象
