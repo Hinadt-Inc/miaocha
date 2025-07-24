@@ -63,9 +63,7 @@ public class SecurityConfig {
                                         .permitAll()
 
                                         // 公开接口
-                                        .requestMatchers("/api/auth/login")
-                                        .permitAll()
-                                        .requestMatchers("/api/auth/refresh")
+                                        .requestMatchers("/api/auth/**")
                                         .permitAll()
                                         .requestMatchers(
                                                 "/v3/api-docs/**",

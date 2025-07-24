@@ -117,4 +117,14 @@ public interface UserService {
      * @return 用户实体
      */
     User getUserEntityByUid(String uid);
+
+    /**
+     * OAuth 登录
+     *
+     * @param providerId 提供者ID
+     * @param code 授权码
+     * @param redirectUri 重定向URI
+     * @return 登录响应
+     */
+    LoginResponseDTO oauthLogin(String providerId, String code, String redirectUri);
 }
