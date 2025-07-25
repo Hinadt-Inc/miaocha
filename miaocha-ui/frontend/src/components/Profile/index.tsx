@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { Form, Input, Modal } from 'antd';
 import { changeMyPassword, ChangePasswordParams } from '@/api/user';
+import { getOAuthProviders, logoutToOAuthProvider } from '@/api/auth';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, Dropdown, Button, Typography, Space, Spin, Tooltip, Card, Row, Col, Divider, Tag, App } from 'antd';
 import type { MenuProps } from 'antd';
 import { UserOutlined, LogoutOutlined, ReloadOutlined, LockOutlined } from '@ant-design/icons';
-import { fetchUserInfo, logout } from '@/store/userSlice';
+import { fetchUserInfo, logoutUser } from '@/store/userSlice';
 import type { AppDispatch } from '@/store/store';
 import styles from './index.module.less';
 
@@ -34,7 +35,26 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
       cancelText: '取消',
       onOk: async () => {
         try {
-          await dispatch(logout());
+          // 先调用后端退出接口
+          await dispatch(logoutUser());
+          
+          // 判断登录类型，决定退出方式
+          if (user.loginType === 'mandao') {
+            console.log('mandao用户退出，跳转到第三方退出页面');
+            // mandao用户需要跳转到第三方退出
+            try {
+              const providers = await getOAuthProviders();
+              const mandaoProvider = providers?.find(p => p.providerId === 'mandao');
+              if (mandaoProvider?.revocationEndpoint) {
+                logoutToOAuthProvider(mandaoProvider.revocationEndpoint);
+                return; // 不执行navigate('/login')，因为会跳转到第三方
+              }
+            } catch (error) {
+              console.error('获取OAuth提供者信息失败:', error);
+            }
+          }
+          
+          // system用户或mandao用户获取provider失败时的处理
           navigate('/login');
         } catch (error) {
           navigate('/login');
@@ -42,7 +62,7 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
         }
       },
     });
-  }, [dispatch, modal, navigate]);
+  }, [dispatch, modal, navigate, user.loginType]);
 
   const handleRetryFetchUserInfo = useCallback(() => {
     dispatch(fetchUserInfo());

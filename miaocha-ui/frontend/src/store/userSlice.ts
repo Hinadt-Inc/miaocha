@@ -11,6 +11,7 @@ const initialState: IStoreUser = {
   loading: false,
   error: null,
   sessionChecked: false,
+  loginType: undefined,
 };
 
 // 异步获取用户信息
@@ -39,7 +40,7 @@ export const logoutUser = createAsyncThunk('user/logoutUser', async () => {
 
 // 清除令牌的辅助函数
 const clearTokens = () => {
-  const tokenKeys = ['accessToken', 'refreshToken', 'tokenExpiresAt', 'refreshTokenExpiresAt'];
+  const tokenKeys = ['accessToken', 'refreshToken', 'tokenExpiresAt', 'refreshTokenExpiresAt', 'loginType'];
   tokenKeys.forEach((key) => localStorage.removeItem(key));
 };
 
@@ -77,11 +78,22 @@ export const restoreSession = createAsyncThunk('user/restoreSession', async (_, 
       return { restored: false };
     }
 
+    // 获取loginType
+    const loginType = localStorage.getItem('loginType');
+
     // 恢复登录状态
     dispatch({
       type: 'user/setTokensAndLogin',
       payload: tokens,
     });
+
+    // 恢复loginType
+    if (loginType) {
+      dispatch({
+        type: 'user/updateUserInfo',
+        payload: { loginType },
+      });
+    }
 
     // 如果不是登录页，获取用户信息
     if (window.location.pathname !== '/login') {
@@ -114,6 +126,7 @@ export const userSlice: any = createSlice({
         name: string;
         role: string;
         tokens: ITokens;
+        loginType?: string;
       }>,
     ) => {
       state.userId = action.payload.userId;
@@ -122,11 +135,16 @@ export const userSlice: any = createSlice({
       state.isLoggedIn = true;
       state.tokens = action.payload.tokens;
       state.sessionChecked = true;
+      state.loginType = action.payload.loginType;
       // 存储token到localStorage
       localStorage.setItem('accessToken', action.payload.tokens.accessToken);
       localStorage.setItem('refreshToken', action.payload.tokens.refreshToken);
       localStorage.setItem('tokenExpiresAt', action.payload.tokens.expiresAt.toString());
       localStorage.setItem('refreshTokenExpiresAt', action.payload.tokens.refreshExpiresAt.toString());
+      // 存储loginType到localStorage
+      if (action.payload.loginType) {
+        localStorage.setItem('loginType', action.payload.loginType);
+      }
     },
     logout: (state) => {
       state.userId = 0;
@@ -138,11 +156,13 @@ export const userSlice: any = createSlice({
       state.isLoggedIn = false;
       state.tokens = undefined;
       state.sessionChecked = true;
-      // 清除localStorage中的token
+      state.loginType = undefined;
+      // 清除localStorage中的token和loginType
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('tokenExpiresAt');
       localStorage.removeItem('refreshTokenExpiresAt');
+      localStorage.removeItem('loginType');
       localStorage.removeItem('siderCollapsed');
     },
     setTokens: (state, action: PayloadAction<ITokens>) => {
@@ -195,11 +215,13 @@ export const userSlice: any = createSlice({
         state.isLoggedIn = false;
         state.tokens = undefined;
         state.sessionChecked = true;
-        // 清除localStorage中的token
+        state.loginType = undefined;
+        // 清除localStorage中的token和loginType
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('tokenExpiresAt');
         localStorage.removeItem('refreshTokenExpiresAt');
+        localStorage.removeItem('loginType');
       })
       // 处理恢复会话
       .addCase(restoreSession.pending, (state) => {
