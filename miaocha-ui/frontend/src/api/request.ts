@@ -3,6 +3,7 @@ import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import NProgress from 'nprogress';
 import { setTokens } from '../store/userSlice';
 import { store } from '../store/store';
+import { ENV_CONFIG } from '../config/env';
 import 'nprogress/nprogress.css';
 
 // 定义全局错误处理器
@@ -18,6 +19,7 @@ NProgress.configure({
 
 // 创建axios实例
 const service: AxiosInstance = axios.create({
+  baseURL: ENV_CONFIG.API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
