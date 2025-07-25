@@ -20,13 +20,31 @@ import org.springframework.stereotype.Component;
 @Component
 public class NumericOperatorConverter {
 
-    /** 用于匹配variant字段与数字比较的正则表达式 匹配模式：字段名 运算符 数字 例如：message.data.count > 100 */
+    // Regular expression components for matching variant fields and numeric comparisons
+    private static final String FIELD_NAME_PATTERN =
+            "\\b[a-zA-Z_][a-zA-Z0-9_]*\\.[a-zA-Z0-9_.]+"; // Matches variant field names (e.g.,
+    // message.data.count)
+    private static final String OPERATOR_PATTERN =
+            "\\s*(?:>=|<=|!=|>|<|=)\\s*"; // Matches comparison operators with optional surrounding
+    // spaces
+    private static final String NUMBER_PATTERN =
+            "-?\\d+(?:\\.\\d+)?"; // Matches integers or decimals, including negative numbers
+    private static final String NEGATIVE_LOOKAHEAD_PATTERN =
+            "(?![*/+\\-eE]|\\d)"; // Ensures the number is not followed by invalid characters
+
+    // Combined regular expression for matching variant fields and numeric comparisons
     private static final Pattern VARIANT_NUMERIC_PATTERN =
             Pattern.compile(
-                    "(\\b[a-zA-Z_][a-zA-Z0-9_]*\\.[a-zA-Z0-9_.]+)(\\s*(?:>=|<=|!=|>|<|=)\\s*)(-?\\d+(?:\\.\\d+)?)(?![*/+\\-eE]|\\d)");
+                    String.format(
+                            "(%s)(%s)(%s)%s",
+                            FIELD_NAME_PATTERN,
+                            OPERATOR_PATTERN,
+                            NUMBER_PATTERN,
+                            NEGATIVE_LOOKAHEAD_PATTERN));
 
-    // 用于检测字符串是否在引号内的辅助模式
-    private static final Pattern QUOTE_PATTERN = Pattern.compile("['\"].*?['\"]|['\"][^'\"]*$");
+    // 用于检测字符串是否在引号内的辅助模式，支持转义引号和嵌套引号
+    private static final Pattern QUOTE_PATTERN =
+            Pattern.compile("(['\"])(?:\\\\\\\\.|(?!\\1).)*\\1|(['\"])(?:\\\\\\\\.|(?!\\2).)*$");
 
     /**
      * 转换WHERE条件中的数字运算符
@@ -87,7 +105,7 @@ public class NumericOperatorConverter {
         }
 
         Matcher matcher = VARIANT_NUMERIC_PATTERN.matcher(text);
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
 
         while (matcher.find()) {
             String fieldName = matcher.group(1);

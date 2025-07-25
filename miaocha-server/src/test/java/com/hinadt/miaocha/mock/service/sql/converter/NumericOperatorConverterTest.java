@@ -152,4 +152,148 @@ class NumericOperatorConverterTest {
                                 + " like 'value = 1e5 and count > 999' AND message.stats.ratio !="
                                 + " 0.75"));
     }
+
+    @Test
+    void testNestedAndEscapedQuotes() {
+        // 测试转义引号处理
+        assertEquals(
+                "message.data.value > 100*1 AND message.text = 'He said \\\"Hello\\\"'",
+                converter.convertNumericOperators(
+                        "message.data.value > 100 AND message.text = 'He said \\\"Hello\\\"'"));
+
+        // 测试单引号内的转义单引号
+        assertEquals(
+                "message.data.count >= 50*1 AND message.msg = 'It\\\'s working'",
+                converter.convertNumericOperators(
+                        "message.data.count >= 50 AND message.msg = 'It\\\'s working'"));
+
+        // 测试双引号内的转义双引号
+        assertEquals(
+                "message.data.size < 200*1 AND message.json = \"{\\\"key\\\":\\\"value\\\"}\"",
+                converter.convertNumericOperators(
+                        "message.data.size < 200 AND message.json ="
+                                + " \"{\\\"key\\\":\\\"value\\\"}\""));
+
+        // 测试复杂的转义场景：引号内包含反斜杠和引号
+        assertEquals(
+                "message.data.level = 3*1 AND message.path = 'C:\\\\folder\\\\file.txt'",
+                converter.convertNumericOperators(
+                        "message.data.level = 3 AND message.path = 'C:\\\\folder\\\\file.txt'"));
+
+        // 测试混合转义：单引号内有转义双引号，双引号内有转义单引号
+        assertEquals(
+                "message.data.score > 90*1 AND message.quote1 = 'Say \\\"Hi\\\"' AND message.quote2"
+                        + " = \"Don\\\'t worry\"",
+                converter.convertNumericOperators(
+                        "message.data.score > 90 AND message.quote1 = 'Say \\\"Hi\\\"' AND"
+                                + " message.quote2 = \"Don\\\'t worry\""));
+
+        // 测试不完整的引号（未闭合的引号）
+        assertEquals(
+                "message.data.value > 100*1 AND message.text = 'unclosed quote",
+                converter.convertNumericOperators(
+                        "message.data.value > 100 AND message.text = 'unclosed quote"));
+
+        // 测试连续的转义字符
+        assertEquals(
+                "message.data.count < 50*1 AND message.escape = 'test\\\\\\\\end'",
+                converter.convertNumericOperators(
+                        "message.data.count < 50 AND message.escape = 'test\\\\\\\\end'"));
+
+        // 测试引号内包含数字比较表达式但不应被转换
+        assertEquals(
+                "message.data.actual > 100*1 AND message.condition = 'if (value >= 200) return"
+                        + " true'",
+                converter.convertNumericOperators(
+                        "message.data.actual > 100 AND message.condition = 'if (value >= 200)"
+                                + " return true'"));
+
+        // 测试嵌套引号场景：外层单引号，内层双引号
+        assertEquals(
+                "message.data.priority = 1*1 AND message.nested = 'outer \\\"inner content\\\""
+                        + " text'",
+                converter.convertNumericOperators(
+                        "message.data.priority = 1 AND message.nested = 'outer \\\"inner"
+                                + " content\\\" text'"));
+
+        // 测试嵌套引号场景：外层双引号，内层单引号
+        assertEquals(
+                "message.data.status != 0*1 AND message.nested = \"outer \\\'inner content\\\'"
+                        + " text\"",
+                converter.convertNumericOperators(
+                        "message.data.status != 0 AND message.nested = \"outer \\\'inner"
+                                + " content\\\' text\""));
+
+        // 测试复杂的SQL场景：包含LIKE、IN和转义引号
+        assertEquals(
+                "message.data.code = 404*1 AND message.sql LIKE 'SELECT * FROM table WHERE name ="
+                        + " \\\'John\\\'' AND message.data.type IN ('A', 'B')",
+                converter.convertNumericOperators(
+                        "message.data.code = 404 AND message.sql LIKE 'SELECT * FROM table WHERE"
+                                + " name = \\\'John\\\'' AND message.data.type IN ('A', 'B')"));
+
+        // 测试极端情况：多层转义和嵌套
+        assertEquals(
+                "message.data.depth >= 5*1 AND message.complex = 'level1 \\\"level2"
+                        + " \\\\\\\'level3\\\\\\\' back2\\\" back1'",
+                converter.convertNumericOperators(
+                        "message.data.depth >= 5 AND message.complex = 'level1 \\\"level2"
+                                + " \\\\\\\'level3\\\\\\\' back2\\\" back1'"));
+    }
+
+    @Test
+    void testQuotePatternEdgeCases() {
+        // 测试空引号
+        assertEquals(
+                "message.data.value > 100*1 AND message.empty = ''",
+                converter.convertNumericOperators(
+                        "message.data.value > 100 AND message.empty = ''"));
+
+        // 测试只包含空格的引号
+        assertEquals(
+                "message.data.count < 50*1 AND message.spaces = '   '",
+                converter.convertNumericOperators(
+                        "message.data.count < 50 AND message.spaces = '   '"));
+
+        // 测试引号紧邻数字比较
+        assertEquals(
+                "message.data.score>=90*1AND message.text='test'",
+                converter.convertNumericOperators("message.data.score>=90AND message.text='test'"));
+
+        // 测试多个连续的引号对
+        assertEquals(
+                "message.data.value > 100*1 AND message.a = 'first' AND message.b = 'second' AND"
+                        + " message.data.count < 50*1",
+                converter.convertNumericOperators(
+                        "message.data.value > 100 AND message.a = 'first' AND message.b = 'second'"
+                                + " AND message.data.count < 50"));
+
+        // 测试引号内包含特殊字符
+        assertEquals(
+                "message.data.level = 1*1 AND message.special = 'test@#$%^&*()_+-=[]{}|;:,.<>?'",
+                converter.convertNumericOperators(
+                        "message.data.level = 1 AND message.special ="
+                                + " 'test@#$%^&*()_+-=[]{}|;:,.<>?'"));
+
+        // 测试引号内包含换行符和制表符
+        assertEquals(
+                "message.data.code = 200*1 AND message.multiline = 'line1\\nline2\\tindented'",
+                converter.convertNumericOperators(
+                        "message.data.code = 200 AND message.multiline = 'line1\\n"
+                                + "line2\\tindented'"));
+
+        // 测试Unicode字符在引号内
+        assertEquals(
+                "message.data.priority >= 5*1 AND message.unicode = '测试中文字符'",
+                converter.convertNumericOperators(
+                        "message.data.priority >= 5 AND message.unicode = '测试中文字符'"));
+
+        // 测试引号内包含SQL关键字
+        assertEquals(
+                "message.data.status != 0*1 AND message.sql = 'SELECT COUNT(*) FROM table WHERE id"
+                        + " > 100'",
+                converter.convertNumericOperators(
+                        "message.data.status != 0 AND message.sql = 'SELECT COUNT(*) FROM table"
+                                + " WHERE id > 100'"));
+    }
 }

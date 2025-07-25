@@ -92,7 +92,7 @@ public class LogSearchDTOConverter {
         }
 
         // 应用转换链：先进行数字运算符转换，再进行variant字段转换
-        List<String> convertedClauses = new ArrayList<>();
+        List<String> convertedClauses = new ArrayList<>(whereClauses.size());
         for (String clause : whereClauses) {
             String processedClause = clause;
 
