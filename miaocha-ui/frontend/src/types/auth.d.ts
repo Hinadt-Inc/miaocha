@@ -15,6 +15,7 @@ declare global {
     role: string;
     token: string;
     userId: number;
+    loginType: string; // 登录类型：system或mandao
   }
 
   // 刷新token
@@ -78,5 +79,6 @@ declare global {
     loading: boolean;
     error: string | null;
     sessionChecked: boolean;
+    loginType?: string; // 登录类型：system或mandao
   }
 }

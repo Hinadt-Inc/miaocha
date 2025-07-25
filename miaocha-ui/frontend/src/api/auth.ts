@@ -1,4 +1,5 @@
 import { get, post } from './request';
+import { getOAuthLogoutCallbackUrl } from '../config/env';
 
 // 用户登录接口
 export const login = (data: ILoginParams) => {
@@ -28,4 +29,11 @@ export const getOAuthProviders = () => {
 // OAuth回调处理
 export const oAuthCallback = (params: IOAuthCallbackParams) => {
   return get<ILoginResponse>('/api/auth/oauth/callback', { params });
+};
+
+// 退出登录到第三方服务
+export const logoutToOAuthProvider = (revocationEndpoint: string) => {
+  const service = encodeURIComponent(getOAuthLogoutCallbackUrl());
+  const logoutUrl = `${revocationEndpoint}?service=${service}`;
+  window.location.href = logoutUrl;
 };

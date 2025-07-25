@@ -5,6 +5,8 @@ import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { login } from '@/store/userSlice';
 import { login as apiLogin, oAuthCallback } from '@/api/auth';
+import { getOAuthRedirectUri } from '@/config/env';
+import { OAuthStorageHelper } from '@/utils/secureStorage';
 import OAuthButtons from '@/components/OAuthButtons/index';
 import login_bg_poster from '@/assets/login/banner-bg.png';
 import login_bg_video from '@/assets/login/banner.mp4';
@@ -29,34 +31,56 @@ const LoginPage = () => {
     }
   }, [location.state]);
 
-  // 处理CAS回调
+  // 处理OAuth回调（包括CAS、OAuth2等）
   useEffect(() => {
-    const handleCASCallback = async () => {
-      const ticket = searchParams.get('ticket');
+    const handleOAuthCallback = async () => {
+      // 检查URL参数中是否有授权码或票据
+      const ticket = searchParams.get('ticket'); // CAS协议
+      const code = searchParams.get('code'); // OAuth2协议
+      const state = searchParams.get('state'); // OAuth2 state参数
+      const error = searchParams.get('error'); // 错误信息
       
-      if (ticket) {
+      // 如果有错误参数，直接显示错误
+      if (error) {
+        setError(`第三方登录失败: ${searchParams.get('error_description') || error}`);
+        return;
+      }
+      
+      // 获取授权码（CAS使用ticket，OAuth2使用code）
+      const authCode = ticket || code;
+      
+      if (authCode) {
         setCasLoading(true);
         try {
           // 构造回调URL
-          const redirectUri = `${window.location.origin}/login`;
+          const redirectUri = getOAuthRedirectUri();
           
-          // 从sessionStorage获取provider信息
-          const providerId = sessionStorage.getItem('oauthProvider') || 'mandao';
+          // 从安全存储或state参数获取provider信息
+          let providerId = OAuthStorageHelper.getProvider();
+          if (!providerId && state) {
+            providerId = state; // OAuth2可能通过state参数传递providerId
+          }
+          providerId = providerId || 'mandao'; // 默认provider
+          
+          console.log('处理OAuth回调:', { providerId, authCode: authCode.substring(0, 10) + '...' });
           
           // 调用后端回调接口
           const response = await oAuthCallback({
             provider: providerId,
-            code: ticket,
+            code: authCode,
             redirect_uri: redirectUri,
           });
 
           if (response) {
+            console.log('OAuth登录成功:', { userId: response.userId, nickname: response.nickname });
+            
             // 登录成功，更新用户状态
             dispatch(
               login({
                 userId: response.userId,
                 name: response.nickname,
                 role: response.role,
+                loginType: response.loginType,
                 tokens: {
                   accessToken: response.token,
                   refreshToken: response.refreshToken,
@@ -66,29 +90,45 @@ const LoginPage = () => {
               }),
             );
 
-            // 清理sessionStorage中的provider信息
-            sessionStorage.removeItem('oauthProvider');
+            // 清理安全存储中的provider信息
+            OAuthStorageHelper.removeProvider();
             
             // 跳转到首页或用户原本要访问的页面
-            const returnUrl = sessionStorage.getItem('returnUrl') || '/';
-            sessionStorage.removeItem('returnUrl');
-            navigate(returnUrl);
+            let returnUrl = OAuthStorageHelper.getReturnUrl() || '/';
+            OAuthStorageHelper.removeReturnUrl();
+            
+            // 确保不会跳转回登录页面
+            if (returnUrl === '/login') {
+              returnUrl = '/';
+            }
+            
+            console.log('OAuth登录完成，即将跳转到:', returnUrl);
+            
+            // 使用setTimeout确保Redux状态更新完成后再跳转
+            setTimeout(() => {
+              navigate(returnUrl, { replace: true });
+            }, 100);
+          } else {
+            throw new Error('OAuth回调返回空响应');
           }
-        } catch (casError) {
-          console.error('CAS回调处理失败:', casError);
+        } catch (oauthError) {
+          console.error('OAuth回调处理失败:', oauthError);
           setError('第三方登录失败，请重试');
-          
-          // 移除URL中的ticket参数
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.delete('ticket');
-          window.history.replaceState({}, '', newUrl.toString());
         } finally {
           setCasLoading(false);
+          // 清理URL参数，避免重复处理
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('ticket');
+          newUrl.searchParams.delete('code');
+          newUrl.searchParams.delete('state');
+          newUrl.searchParams.delete('error');
+          newUrl.searchParams.delete('error_description');
+          window.history.replaceState({}, '', newUrl.toString());
         }
       }
     };
 
-    handleCASCallback();
+    handleOAuthCallback();
   }, [searchParams, dispatch, navigate]);
 
   const onFinish = async (values: { username: string; password: string }) => {
@@ -107,6 +147,7 @@ const LoginPage = () => {
           userId: response.userId,
           name: response.nickname,
           role: response.role,
+          loginType: response.loginType,
           tokens: {
             accessToken: response.token,
             refreshToken: response.refreshToken,
@@ -115,7 +156,10 @@ const LoginPage = () => {
           },
         }),
       );
-      navigate('/');
+      
+      // 跳转到首页
+      console.log('普通登录成功，跳转到首页');
+      navigate('/', { replace: true });
     } catch (loginError) {
       console.error('登录失败:', loginError);
       setError('登录失败，请检查用户名和密码');
@@ -158,6 +202,16 @@ const LoginPage = () => {
             />
           )}
           
+          {/* OAuth回调处理中的提示 */}
+          {casLoading && (
+            <Alert 
+              message="正在处理第三方登录，请稍候..." 
+              type="info" 
+              showIcon 
+              style={{ marginBottom: 16 }}
+            />
+          )}
+          
           <Form form={form} onFinish={onFinish} size="large" layout="vertical" className={styles.loginForm}>
             <Form.Item
               name="username"
@@ -176,8 +230,19 @@ const LoginPage = () => {
             </Form.Item>
 
             <Form.Item>
-              <Button type="primary" htmlType="submit" block size="large" loading={loading || casLoading}>
-                登录
+              <Button 
+                type="primary" 
+                htmlType="submit" 
+                block 
+                size="large" 
+                loading={loading || casLoading}
+                disabled={loading || casLoading}
+              >
+                {(() => {
+                  if (casLoading) return '正在处理第三方登录...';
+                  if (loading) return '登录中...';
+                  return '登录';
+                })()}
               </Button>
             </Form.Item>
           </Form>
