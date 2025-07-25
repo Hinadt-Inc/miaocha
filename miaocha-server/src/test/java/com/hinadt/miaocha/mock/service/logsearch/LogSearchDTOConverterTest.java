@@ -3,6 +3,7 @@ package com.hinadt.miaocha.mock.service.logsearch;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.hinadt.miaocha.application.service.sql.converter.LogSearchDTOConverter;
+import com.hinadt.miaocha.application.service.sql.converter.NumericOperatorConverter;
 import com.hinadt.miaocha.application.service.sql.converter.VariantFieldConverter;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTODecorator;
@@ -33,9 +34,10 @@ class LogSearchDTOConverterTest {
 
     @BeforeEach
     void setUp() {
-        // 使用真实的VariantFieldConverter，不使用Mock
+        // 使用真实的VariantFieldConverter和NumericOperatorConverter，不使用Mock
         variantFieldConverter = new VariantFieldConverter();
-        converter = new LogSearchDTOConverter(variantFieldConverter);
+        NumericOperatorConverter numericOperatorConverter = new NumericOperatorConverter();
+        converter = new LogSearchDTOConverter(variantFieldConverter, numericOperatorConverter);
     }
 
     // ==================== 基本转换测试 ====================
