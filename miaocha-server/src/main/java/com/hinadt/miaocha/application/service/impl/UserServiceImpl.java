@@ -105,11 +105,7 @@ public class UserServiceImpl implements UserService {
             // 验证刷新token是否有效
             jwtUtils.validateToken(refreshToken);
 
-            // 检查登录方式，只有系统登录的用户才能刷新token
             String loginType = jwtUtils.getLoginTypeFromToken(refreshToken);
-            if (!SYSTEM_LOGIN_TYPE.equals(loginType)) {
-                throw new BusinessException(ErrorCode.OAUTH_USER_CANNOT_REFRESH_TOKEN);
-            }
 
             // 从刷新token中获取uid，然后查询数据库获取最新用户信息
             String uid = jwtUtils.getUidFromToken(refreshToken);
