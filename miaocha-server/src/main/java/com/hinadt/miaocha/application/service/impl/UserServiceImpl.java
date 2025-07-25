@@ -39,6 +39,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class UserServiceImpl implements UserService {
 
+    private static final String SYSTEM_LOGIN_TYPE = "system";
+
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
@@ -76,8 +78,9 @@ public class UserServiceImpl implements UserService {
             throw new BusinessException(ErrorCode.USER_PASSWORD_ERROR);
         }
 
-        String token = jwtUtils.generateTokenWithUserInfo(user);
-        String refreshToken = jwtUtils.generateRefreshTokenWithUserInfo(user);
+        String loginType = SYSTEM_LOGIN_TYPE;
+        String token = jwtUtils.generateTokenWithUserInfo(user, loginType);
+        String refreshToken = jwtUtils.generateRefreshTokenWithUserInfo(user, loginType);
 
         long expiresAt = jwtUtils.getExpirationFromToken(token);
         long refreshExpiresAt = jwtUtils.getExpirationFromToken(refreshToken);
@@ -90,6 +93,7 @@ public class UserServiceImpl implements UserService {
                 .userId(user.getId())
                 .nickname(user.getNickname())
                 .role(user.getRole())
+                .loginType(loginType)
                 .build();
     }
 
@@ -98,18 +102,18 @@ public class UserServiceImpl implements UserService {
         String refreshToken = refreshTokenRequest.getRefreshToken();
 
         try {
-            // 判断是否是刷新token
-
             // 验证刷新token是否有效
             jwtUtils.validateToken(refreshToken);
+
+            String loginType = jwtUtils.getLoginTypeFromToken(refreshToken);
 
             // 从刷新token中获取uid，然后查询数据库获取最新用户信息
             String uid = jwtUtils.getUidFromToken(refreshToken);
             User user = getUserEntityByUid(uid);
 
             // 使用最新的用户信息生成新的token和刷新令牌
-            String newToken = jwtUtils.generateTokenWithUserInfo(user);
-            String newRefreshToken = jwtUtils.generateRefreshTokenWithUserInfo(user);
+            String newToken = jwtUtils.generateTokenWithUserInfo(user, loginType);
+            String newRefreshToken = jwtUtils.generateRefreshTokenWithUserInfo(user, loginType);
 
             // 获取过期时间
             long expiresAt = jwtUtils.getExpirationFromToken(newToken);
@@ -123,6 +127,7 @@ public class UserServiceImpl implements UserService {
                     .userId(user.getId())
                     .nickname(user.getNickname())
                     .role(user.getRole())
+                    .loginType(loginType)
                     .build();
         } catch (ExpiredJwtException e) {
             // 特殊处理刷新令牌过期的情况
@@ -457,8 +462,8 @@ public class UserServiceImpl implements UserService {
             userMapper.insert(user);
         }
 
-        String token = jwtUtils.generateTokenWithUserInfo(user);
-        String refreshToken = jwtUtils.generateRefreshTokenWithUserInfo(user);
+        String token = jwtUtils.generateTokenWithUserInfo(user, providerId);
+        String refreshToken = jwtUtils.generateRefreshTokenWithUserInfo(user, providerId);
 
         long expiresAt = jwtUtils.getExpirationFromToken(token);
         long refreshExpiresAt = jwtUtils.getExpirationFromToken(refreshToken);
@@ -471,6 +476,7 @@ public class UserServiceImpl implements UserService {
                 .userId(user.getId())
                 .nickname(user.getNickname())
                 .role(user.getRole())
+                .loginType(providerId)
                 .build();
     }
 }
