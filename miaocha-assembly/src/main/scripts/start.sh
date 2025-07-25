@@ -3,6 +3,7 @@
 # 设置应用根目录
 APP_HOME=$(cd "$(dirname "$0")/.." || exit; pwd)
 LIB_DIR="$APP_HOME/lib"
+PLUGINS_DIR="$APP_HOME/plugins"
 CONFIG_DIR="$APP_HOME/config"
 JAR_FILE="$APP_HOME/miaocha-server.jar"
 SCRIPTS_DIR="$APP_HOME/bin"
@@ -86,8 +87,12 @@ if [ "$MOCK_MODE" = "true" ]; then
 
     print_info "Mock参数: Host=$MOCK_DORIS_HOST, Port=$MOCK_DORIS_PORT, StreamLoadPort=$MOCK_DORIS_STREAM_LOAD_PORT, User=$MOCK_DORIS_USER, Count=$MOCK_DORIS_COUNT"
 
-    # 构建类路径：config目录 + 主JAR + lib目录的所有JAR
+    # 构建类路径：config目录 + 主JAR + lib目录的所有JAR + plugins目录的所有JAR
     CLASSPATH="$CONFIG_DIR:$JAR_FILE:$LIB_DIR/*"
+    # 如果plugins目录存在且不为空，则添加到类路径
+    if [ -d "$PLUGINS_DIR" ] && [ "$(ls -A "$PLUGINS_DIR" 2>/dev/null)" ]; then
+        CLASSPATH="$CLASSPATH:$PLUGINS_DIR/*"
+    fi
 
     # 执行Mock工具
     java -cp "$CLASSPATH" com.hinadt.miaocha.common.tools.LogSearchDataMockTool \
@@ -144,8 +149,13 @@ print_info "JVM参数: $JAVA_OPTS"
 
 # 启动应用
 print_info "正在启动应用..."
-# 构建完整的类路径：config目录 + 主JAR + lib目录的所有JAR
+# 构建完整的类路径：config目录 + 主JAR + lib目录的所有JAR + plugins目录的所有JAR
 CLASSPATH="$CONFIG_DIR:$JAR_FILE:$LIB_DIR/*"
+# 如果plugins目录存在且不为空，则添加到类路径
+if [ -d "$PLUGINS_DIR" ] && [ "$(ls -A "$PLUGINS_DIR" 2>/dev/null)" ]; then
+    CLASSPATH="$CLASSPATH:$PLUGINS_DIR/*"
+    print_info "已加载插件目录: $PLUGINS_DIR"
+fi
 # 使用主类启动，因为这不是fat jar
 nohup java $JAVA_OPTS -cp "$CLASSPATH" com.hinadt.miaocha.MiaoChaApp > "$LOG_DIR/startup.log" 2>&1 & APP_PID=$!
 

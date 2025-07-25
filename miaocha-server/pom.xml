@@ -18,9 +18,16 @@
     </properties>
 
     <dependencies>
+
         <dependency>
             <groupId>com.aventrix.jnanoid</groupId>
             <artifactId>jnanoid</artifactId>
+        </dependency>
+        <!-- SPI 规范模块 -->
+        <dependency>
+            <groupId>com.hinadt.miaocha</groupId>
+            <artifactId>miaocha-spi</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.jcraft</groupId>
@@ -237,6 +244,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <mainClass>${main.class}</mainClass>
+                    <layout>ZIP</layout>
                 </configuration>
                 <executions>
                     <execution>

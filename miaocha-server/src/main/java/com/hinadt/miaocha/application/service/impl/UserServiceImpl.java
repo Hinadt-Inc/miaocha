@@ -20,9 +20,15 @@ import com.hinadt.miaocha.domain.entity.User;
 import com.hinadt.miaocha.domain.entity.enums.UserRole;
 import com.hinadt.miaocha.domain.mapper.UserMapper;
 import com.hinadt.miaocha.domain.mapper.UserModulePermissionMapper;
+import com.hinadt.miaocha.spi.OAuthProvider;
+import com.hinadt.miaocha.spi.model.OAuthUserInfo;
 import io.jsonwebtoken.ExpiredJwtException;
 import java.util.List;
+import java.util.Optional;
+import java.util.ServiceLoader;
+import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -125,7 +131,7 @@ public class UserServiceImpl implements UserService {
         } catch (Exception e) {
             // 处理其他异常
             log.error("Error during token refresh: {}", e.getMessage());
-            throw new BusinessException(ErrorCode.INVALID_TOKEN, "无�的刷新令牌");
+            throw new BusinessException(ErrorCode.INVALID_TOKEN, "无效的刷新令牌");
         }
     }
 
@@ -401,5 +407,70 @@ public class UserServiceImpl implements UserService {
         } catch (IllegalArgumentException e) {
             return false;
         }
+    }
+
+    @Override
+    public LoginResponseDTO oauthLogin(String providerId, String code, String redirectUri) {
+        ServiceLoader<OAuthProvider> loader = ServiceLoader.load(OAuthProvider.class);
+
+        Optional<OAuthProvider> providerOpt =
+                StreamSupport.stream(loader.spliterator(), false)
+                        .filter(
+                                p ->
+                                        p.getProviderInfo()
+                                                .getProviderId()
+                                                .equalsIgnoreCase(providerId))
+                        .filter(OAuthProvider::isAvailable)
+                        .findFirst();
+
+        if (providerOpt.isEmpty()) {
+            throw new BusinessException(
+                    ErrorCode.VALIDATION_ERROR, "Unsupported provider: " + providerId);
+        }
+
+        OAuthProvider provider = providerOpt.get();
+        OAuthUserInfo userInfo = provider.authenticate(code, redirectUri);
+
+        if (userInfo == null || userInfo.getEmail() == null || userInfo.getEmail().isEmpty()) {
+            throw new BusinessException(
+                    ErrorCode.VALIDATION_ERROR, "Authentication failed or invalid user info");
+        }
+
+        User user = userMapper.selectByEmail(userInfo.getEmail());
+        if (user == null) {
+            // Create new user
+            user = new User();
+            user.setUid(userInfo.getUid() != null ? userInfo.getUid() : generateUid());
+            user.setEmail(userInfo.getEmail());
+
+            // 优先使用SPI提供的nickname，否则使用邮箱前缀
+            String nickname = userInfo.getNickname();
+            if (nickname == null || nickname.isEmpty()) {
+                nickname = userInfo.getEmail().substring(0, userInfo.getEmail().indexOf('@'));
+            }
+            user.setNickname(nickname);
+
+            user.setRole(UserRole.USER.name());
+            user.setStatus(1);
+            user.setPassword(
+                    passwordEncoder.encode(UUID.randomUUID().toString())); // Random password
+            userMapper.insert(user);
+        }
+
+        String token = jwtUtils.generateTokenWithUserInfo(user);
+        String refreshToken = jwtUtils.generateRefreshTokenWithUserInfo(user);
+
+        long expiresAt = jwtUtils.getExpirationFromToken(token);
+        long refreshExpiresAt = jwtUtils.getExpirationFromToken(refreshToken);
+
+        return LoginResponseDTO.builder()
+                .token(token)
+                .refreshToken(refreshToken)
+                .expiresAt(expiresAt)
+                .refreshExpiresAt(refreshExpiresAt)
+                .userId(user.getId())
+                .nickname(user.getNickname())
+                .role(user.getRole())
+                .build();
     }
 }
