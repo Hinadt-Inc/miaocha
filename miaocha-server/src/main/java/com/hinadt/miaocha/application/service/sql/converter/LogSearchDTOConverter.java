@@ -2,6 +2,7 @@ package com.hinadt.miaocha.application.service.sql.converter;
 
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTODecorator;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,10 +16,14 @@ import org.springframework.stereotype.Service;
 public class LogSearchDTOConverter {
 
     private final VariantFieldConverter variantFieldConverter;
+    private final NumericOperatorConverter numericOperatorConverter;
 
     @Autowired
-    public LogSearchDTOConverter(VariantFieldConverter variantFieldConverter) {
+    public LogSearchDTOConverter(
+            VariantFieldConverter variantFieldConverter,
+            NumericOperatorConverter numericOperatorConverter) {
         this.variantFieldConverter = variantFieldConverter;
+        this.numericOperatorConverter = numericOperatorConverter;
     }
 
     /**
@@ -75,14 +80,36 @@ public class LogSearchDTOConverter {
             return whereClauses;
         }
 
-        // 检查是否需要转换
-        boolean needsConversion = whereClauses.stream().anyMatch(this::containsVariantFields);
+        // 检查是否需要variant字段转换或数字运算符转换
+        boolean needsVariantConversion =
+                whereClauses.stream().anyMatch(this::containsVariantFields);
+        boolean needsNumericConversion =
+                whereClauses.stream()
+                        .anyMatch(numericOperatorConverter::needsNumericOperatorConversion);
 
-        if (!needsConversion) {
+        if (!needsVariantConversion && !needsNumericConversion) {
             return whereClauses; // 返回原始对象，避免不必要的复制
         }
 
-        return variantFieldConverter.convertWhereClauses(whereClauses);
+        // 应用转换链：先进行数字运算符转换，再进行variant字段转换
+        List<String> convertedClauses = new ArrayList<>(whereClauses.size());
+        for (String clause : whereClauses) {
+            String processedClause = clause;
+
+            // 1. 先进行数字运算符转换
+            if (numericOperatorConverter.needsNumericOperatorConversion(processedClause)) {
+                processedClause = numericOperatorConverter.convertNumericOperators(processedClause);
+            }
+
+            // 2. 再进行variant字段转换
+            if (containsVariantFields(processedClause)) {
+                processedClause = variantFieldConverter.convertWhereClause(processedClause);
+            }
+
+            convertedClauses.add(processedClause);
+        }
+
+        return convertedClauses;
     }
 
     /**
