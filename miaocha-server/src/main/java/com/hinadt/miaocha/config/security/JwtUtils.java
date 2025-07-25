@@ -39,36 +39,26 @@ public class JwtUtils {
     }
 
     /**
-     * 生成JWT token（包含用户信息）
+     * 生成JWT token（包含用户信息和登录方式）
      *
      * @param user 用户对象
+     * @param loginType 登录方式
      * @return JWT token
      */
-    public String generateTokenWithUserInfo(User user) {
-        Map<String, Object> claims = buildUserClaims(user);
+    public String generateTokenWithUserInfo(User user, String loginType) {
+        Map<String, Object> claims = buildUserClaims(user, loginType);
         return buildToken(user.getUid(), claims, jwtExpirationMs);
     }
 
     /**
-     * 生成刷新token
-     *
-     * @param uid 用户ID
-     * @return refresh token
-     */
-    public String generateRefreshToken(String uid) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("type", "refresh");
-        return buildToken(uid, claims, refreshTokenExpirationMs);
-    }
-
-    /**
-     * 生成刷新token（包含用户信息）
+     * 生成刷新token（包含用户信息和登录方式）
      *
      * @param user 用户对象
+     * @param loginType 登录方式
      * @return refresh token
      */
-    public String generateRefreshTokenWithUserInfo(User user) {
-        Map<String, Object> claims = buildUserClaims(user);
+    public String generateRefreshTokenWithUserInfo(User user, String loginType) {
+        Map<String, Object> claims = buildUserClaims(user, loginType);
         claims.put("type", "refresh");
         return buildToken(user.getUid(), claims, refreshTokenExpirationMs);
     }
@@ -241,6 +231,23 @@ public class JwtUtils {
     }
 
     /**
+     * 从token中获取登录方式
+     *
+     * @param token JWT token
+     * @return 登录方式
+     */
+    public String getLoginTypeFromToken(String token) {
+        Claims claims =
+                Jwts.parser()
+                        .verifyWith(getSigningKey())
+                        .build()
+                        .parseSignedClaims(token)
+                        .getPayload();
+        String loginType = (String) claims.get("loginType");
+        return loginType != null ? loginType : "system"; // 默认为系统登录
+    }
+
+    /**
      * 验证token是否有效
      *
      * @param token JWT token
@@ -253,9 +260,10 @@ public class JwtUtils {
      * 构建用户信息claims
      *
      * @param user 用户对象
+     * @param loginType 登录方式
      * @return claims map
      */
-    private Map<String, Object> buildUserClaims(User user) {
+    private Map<String, Object> buildUserClaims(User user, String loginType) {
         Map<String, Object> claims = new HashMap<>();
         claims.put(User.Fields.id, user.getId());
         claims.put(User.Fields.uid, user.getUid());
@@ -263,6 +271,7 @@ public class JwtUtils {
         claims.put(User.Fields.email, user.getEmail());
         claims.put(User.Fields.role, user.getRole());
         claims.put(User.Fields.status, user.getStatus());
+        claims.put("loginType", loginType);
         return claims;
     }
 
