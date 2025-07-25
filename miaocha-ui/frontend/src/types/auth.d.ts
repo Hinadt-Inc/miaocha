@@ -41,6 +41,31 @@ declare global {
     refreshExpiresAt: number;
   }
 
+  // 第三方登录提供者信息
+  interface IOAuthProvider {
+    providerId: string;
+    displayName: string;
+    description: string;
+    version: string;
+    authorizationEndpoint: string;
+    tokenEndpoint: string;
+    userinfoEndpoint: string | null;
+    revocationEndpoint: string;
+    iconUrl: string | null;
+    enabled: boolean;
+    sortOrder: number;
+    supportedScopes: string;
+    supportedResponseTypes: string;
+    supportedGrantTypes: string;
+  }
+
+  // OAuth回调参数
+  interface IOAuthCallbackParams {
+    provider: string;
+    code: string;
+    redirect_uri: string;
+  }
+
   interface IStoreUser {
     userId: number;
     name: string;

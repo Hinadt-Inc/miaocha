@@ -19,3 +19,13 @@ export const getUserInfo = () => {
 export const logout = () => {
   return post('/api/auth/logout');
 };
+
+// 获取第三方登录提供者列表
+export const getOAuthProviders = () => {
+  return get<IOAuthProvider[]>('/api/auth/providers');
+};
+
+// OAuth回调处理
+export const oAuthCallback = (params: IOAuthCallbackParams) => {
+  return get<ILoginResponse>('/api/auth/oauth/callback', { params });
+};
