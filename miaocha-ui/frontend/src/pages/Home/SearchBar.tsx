@@ -102,19 +102,6 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
     }
   }, [initialized, setKeywords, setSqls]);
 
-  // 暴露给父组件的方法
-  useImperativeHandle(ref, () => ({
-    // 渲染sql
-    addSql: (sql: string) => {
-      setSqls([...sqls, sql]);
-    },
-    removeSql: (sql: string) => {
-      setSqls(sqls.filter((item: string) => item !== sql));
-    },
-    // 渲染时间
-    // setTimeOption, // This line was removed as per the edit hint
-  }), [sqls]); // 添加 sqls 依赖，确保方法中使用的是最新状态
-
   // 获取默认时间选项配置
   const getDefaultTimeOption = () => {
     const { timeRange } = searchParams as any;
@@ -140,6 +127,19 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
   const [timeOption, setTimeOption] = useState<ILogTimeSubmitParams>(getDefaultTimeOption); // 时间选项
   const [openTimeRange, setOpenTimeRange] = useState<boolean>(false); // 显隐浮层
   const [openTimeGroup, setOpenTimeGroup] = useState<boolean>(false); // 显隐浮层-时间分组
+
+  // 暴露给父组件的方法
+  useImperativeHandle(ref, () => ({
+    // 渲染sql
+    addSql: (sql: string) => {
+      setSqls([...sqls, sql]);
+    },
+    removeSql: (sql: string) => {
+      setSqls(sqls.filter((item: string) => item !== sql));
+    },
+    // 渲染时间
+    setTimeOption,
+  }), [sqls]);
 
   // 处理关键词输入变化
   const changeKeyword = (value: string) => {
