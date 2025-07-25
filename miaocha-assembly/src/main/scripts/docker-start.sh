@@ -41,8 +41,14 @@ fi
 
 # 使用exec确保Java进程接收容器的信号
 echo "[INFO] 正在启动应用..."
-# 构建完整的类路径：config目录 + 主JAR + lib目录的所有JAR
+# 构建完整的类路径：config目录 + 主JAR + lib目录的所有JAR + plugins目录的所有JAR
 CLASSPATH="$CONFIG_DIR:$JAR_FILE:$APP_HOME/lib/*"
+
+# 如果plugins目录存在且不为空，则添加到类路径
+if [ -d "$APP_HOME/plugins" ] && [ "$(ls -A "$APP_HOME/plugins" 2>/dev/null)" ]; then
+    CLASSPATH="$CLASSPATH:$APP_HOME/plugins/*"
+    echo "[INFO] 已加载插件目录: $APP_HOME/plugins"
+fi
 # 使用主类启动，因为这不是fat jar
 exec java ${JAVA_OPTS:--Xms1g -Xmx2g -Dfile.encoding=UTF-8} \
   -Dspring.profiles.active=$ACTIVE_PROFILE \
