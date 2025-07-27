@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.reset;
 
+import com.hinadt.miaocha.application.service.LdapAuthenticationService;
 import com.hinadt.miaocha.application.service.ModulePermissionService;
 import com.hinadt.miaocha.application.service.impl.UserServiceImpl;
 import com.hinadt.miaocha.common.exception.BusinessException;
@@ -53,6 +54,8 @@ public class UserServiceTest {
 
     @Mock private UserModulePermissionMapper userModulePermissionMapper;
 
+    @Mock private LdapAuthenticationService ldapAuthenticationService;
+
     private UserServiceImpl userService;
 
     private User testUser;
@@ -71,7 +74,8 @@ public class UserServiceTest {
                 jwtUtils,
                 userConverter,
                 modulePermissionService,
-                userModulePermissionMapper);
+                userModulePermissionMapper,
+                ldapAuthenticationService);
 
         // 手动创建UserServiceImpl，注入所有mock对象
         userService =
@@ -81,7 +85,8 @@ public class UserServiceTest {
                         jwtUtils,
                         userConverter,
                         modulePermissionService,
-                        userModulePermissionMapper);
+                        userModulePermissionMapper,
+                        ldapAuthenticationService);
 
         // 准备测试用户
         testUser = createTestUser();
