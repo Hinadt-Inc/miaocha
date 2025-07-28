@@ -45,10 +45,6 @@ public class MdcTaskDecorator implements TaskDecorator {
                 // 执行原始任务
                 runnable.run();
 
-            } catch (Exception e) {
-                // 记录异步任务执行异常，但不影响 MDC 清理
-                log.error("异步任务执行失败", e);
-                throw e;
             } finally {
                 // 清理当前线程的 MDC 上下文，避免线程复用时的数据污染
                 MDC.clear();

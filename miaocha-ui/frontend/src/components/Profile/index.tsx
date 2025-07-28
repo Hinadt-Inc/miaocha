@@ -35,7 +35,7 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
       cancelText: '取消',
       onOk: async () => {
         try {
-          // 先调用后端退出接口
+          // 执行本地退出登录（不再调用后端接口）
           await dispatch(logoutUser());
           
           // 判断登录类型，决定退出方式
