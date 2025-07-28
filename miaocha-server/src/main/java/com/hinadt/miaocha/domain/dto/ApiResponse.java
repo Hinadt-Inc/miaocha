@@ -1,6 +1,7 @@
 package com.hinadt.miaocha.domain.dto;
 
 import com.hinadt.miaocha.common.exception.ErrorCode;
+import com.hinadt.miaocha.common.util.LogIdContext;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,10 +20,14 @@ public class ApiResponse<T> {
     @Schema(description = "响应数据")
     private T data;
 
-    private ApiResponse(String code, String message, T data) {
+    @Schema(description = "日志追踪ID", example = "1704067245123-a1b2c3d4")
+    private String logId;
+
+    private ApiResponse(String code, String message, T data, String logId) {
         this.code = code;
         this.message = message;
         this.data = data;
+        this.logId = logId;
     }
 
     /**
@@ -33,7 +38,11 @@ public class ApiResponse<T> {
      * @return 结果
      */
     public static <T> ApiResponse<T> success(T data) {
-        return new ApiResponse<>(ErrorCode.SUCCESS.getCode(), ErrorCode.SUCCESS.getMessage(), data);
+        return new ApiResponse<>(
+                ErrorCode.SUCCESS.getCode(),
+                ErrorCode.SUCCESS.getMessage(),
+                data,
+                LogIdContext.getLogId());
     }
 
     /**
@@ -54,7 +63,7 @@ public class ApiResponse<T> {
      * @return 结果
      */
     public static <T> ApiResponse<T> error(String code, String message) {
-        return new ApiResponse<>(code, message, null);
+        return new ApiResponse<>(code, message, null, LogIdContext.getLogId());
     }
 
     /**
