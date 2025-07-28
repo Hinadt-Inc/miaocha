@@ -69,9 +69,9 @@
                         <configuration>
                             <workingDirectory>frontend</workingDirectory>
                             <installDirectory>target</installDirectory>
-                            <nodeDownloadRoot>https://registry.npmmirror.com/node/</nodeDownloadRoot>
-                            <!-- 阿里云镜像 -->
-                            <yarnDownloadRoot>https://registry.npmmirror.com/yarn/</yarnDownloadRoot>
+                            <!-- 华为云镜像 -->
+                            <nodeDownloadRoot>https://mirrors.huaweicloud.com/nodejs/</nodeDownloadRoot>
+                            <yarnDownloadRoot>https://mirrors.huaweicloud.com/yarn/</yarnDownloadRoot>
                         </configuration>
                         <executions>
                             <!-- 安装 Node.js 和 Yarn -->
