@@ -32,7 +32,6 @@ public class GlobalExceptionHandler {
     /** 业务异常处理 */
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
-        log.error("业务异常: {}", e.getMessage());
         ApiResponse<Void> response = ApiResponse.error(e.getErrorCode().getCode(), e.getMessage());
         return createResponseEntityWithUtf8(response, HttpStatus.BAD_REQUEST);
     }
@@ -76,7 +75,6 @@ public class GlobalExceptionHandler {
                                     .map(FieldError::getDefaultMessage)
                                     .collect(Collectors.joining(", "));
         }
-        log.error("参数校验异常: {}", message);
         ApiResponse<Void> response =
                 ApiResponse.error(ErrorCode.VALIDATION_ERROR.getCode(), message);
         return createResponseEntityWithUtf8(response, HttpStatus.BAD_REQUEST);
@@ -85,37 +83,21 @@ public class GlobalExceptionHandler {
     /** 权限不足异常处理 */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(AccessDeniedException e) {
-        log.error("权限不足异常: {}", e.getMessage());
         ApiResponse<Void> response =
                 ApiResponse.error(ErrorCode.PERMISSION_DENIED.getCode(), "没有操作权限");
         return createResponseEntityWithUtf8(response, HttpStatus.FORBIDDEN);
     }
 
-    /** 日志管理系统异常处理 */
-    @ExceptionHandler(MiaoChaException.class)
-    public ResponseEntity<ApiResponse<Void>> handleLogManageException(MiaoChaException e) {
-        log.error("日志管理异常: ", e);
-
-        ApiResponse<Void> response;
-        // 根据异常类型处理
-        if (e instanceof SshOperationException) {
-            response = ApiResponse.error(ErrorCode.SSH_OPERATION_FAILED.getCode(), e.getMessage());
-        } else if (e instanceof LogstashException) {
-            response =
-                    ApiResponse.error(ErrorCode.LOGSTASH_DEPLOY_FAILED.getCode(), e.getMessage());
-        } else if (e instanceof TaskExecutionException) {
-            response = ApiResponse.error(ErrorCode.TASK_EXECUTION_FAILED.getCode(), e.getMessage());
-        } else {
-            response = ApiResponse.error(ErrorCode.INTERNAL_ERROR.getCode(), e.getMessage());
-        }
-
+    @ExceptionHandler(SshOperationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleLogManageException(SshOperationException e) {
+        ApiResponse<Void> response =
+                ApiResponse.error(ErrorCode.SSH_OPERATION_FAILED.getCode(), e.getMessage());
         return createResponseEntityWithUtf8(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     /** SSH异常处理 */
     @ExceptionHandler(SshException.class)
     public ResponseEntity<ApiResponse<Void>> handleSshException(SshException e) {
-        log.error("SSH异常: ", e);
         ApiResponse<Void> response =
                 ApiResponse.error(ErrorCode.SSH_COMMAND_FAILED.getCode(), e.getMessage());
         return createResponseEntityWithUtf8(response, HttpStatus.SERVICE_UNAVAILABLE);
