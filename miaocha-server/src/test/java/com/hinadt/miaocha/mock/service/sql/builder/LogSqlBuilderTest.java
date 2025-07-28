@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 import com.hinadt.miaocha.application.service.impl.logsearch.validator.QueryConfigValidationService;
 import com.hinadt.miaocha.application.service.sql.builder.*;
 import com.hinadt.miaocha.application.service.sql.converter.LogSearchDTOConverter;
+import com.hinadt.miaocha.application.service.sql.converter.NumericOperatorConverter;
 import com.hinadt.miaocha.application.service.sql.converter.VariantFieldConverter;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTODecorator;
@@ -73,7 +74,8 @@ class LogSqlBuilderTest {
 
         // 创建DTO转换器用于测试
         VariantFieldConverter variantFieldConverter = new VariantFieldConverter();
-        dtoConverter = new LogSearchDTOConverter(variantFieldConverter);
+        NumericOperatorConverter numericOperatorConverter = new NumericOperatorConverter();
+        dtoConverter = new LogSearchDTOConverter(variantFieldConverter, numericOperatorConverter);
     }
 
     @Nested

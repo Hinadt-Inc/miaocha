@@ -34,4 +34,7 @@ public class LoginResponseDTO {
 
     @Schema(description = "用户角色", example = "ADMIN")
     private String role;
+
+    @Schema(description = "登录方式", example = "system")
+    private String loginType;
 }

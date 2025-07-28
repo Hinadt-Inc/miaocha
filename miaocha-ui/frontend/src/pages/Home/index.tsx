@@ -1,6 +1,10 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Splitter } from 'antd';
 import { useRequest } from 'ahooks';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { login } from '@/store/userSlice';
+import { oAuthCallback } from '@/api/auth';
 import * as api from '@/api/logs';
 import * as modulesApi from '@/api/modules';
 import SearchBar from './SearchBar';
@@ -11,6 +15,10 @@ import styles from './index.module.less';
 import dayjs from 'dayjs';
 
 const HomePage = () => {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const [urlSearchParams] = useSearchParams();
+  
   const [moduleOptions, setModuleOptions] = useState<IStatus[]>([]); // 模块名称列表，用于字段选择等组件
   const [detailData, setDetailData] = useState<ILogDetailsResponse | null>(null); // 日志数据
   const [logTableColumns, setLogTableColumns] = useState<ILogColumnsResponse[]>([]); // 日志字段列表
@@ -28,6 +36,63 @@ const HomePage = () => {
 
   // 查询配置相关状态
   const [moduleQueryConfig, setModuleQueryConfig] = useState<any>(null); // 存储完整的模块查询配置
+
+  // 处理CAS回调
+  useEffect(() => {
+    const handleCASCallback = async () => {
+      const ticket = urlSearchParams.get('ticket');
+      
+      if (ticket) {
+        try {
+          // 构造回调URL
+          const redirectUri = `${window.location.origin}`;
+          
+          // 从sessionStorage获取provider信息
+          const providerId = sessionStorage.getItem('oauthProvider') || 'mandao';
+          
+          // 调用后端回调接口
+          const response = await oAuthCallback({
+            provider: providerId,
+            code: ticket,
+            redirect_uri: redirectUri,
+          });
+
+          if (response) {
+            // 登录成功，更新用户状态
+            dispatch(
+              login({
+                userId: response.userId,
+                name: response.nickname,
+                role: response.role,
+                tokens: {
+                  accessToken: response.token,
+                  refreshToken: response.refreshToken,
+                  expiresAt: response.expiresAt,
+                  refreshExpiresAt: response.refreshExpiresAt,
+                },
+              }),
+            );
+
+            // 清理sessionStorage中的provider信息和ticket参数
+            sessionStorage.removeItem('oauthProvider');
+            
+            // 移除URL中的ticket参数并保持其他参数
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.delete('ticket');
+            window.history.replaceState({}, '', newUrl.toString());
+            
+            // 可以显示成功提示
+            console.log('CAS登录成功');
+          }
+        } catch (error) {
+          console.error('CAS回调处理失败:', error);
+          // 可以显示错误提示
+        }
+      }
+    };
+
+    handleCASCallback();
+  }, [urlSearchParams, dispatch]);
   const [isInitialized, setIsInitialized] = useState(false); // 标记是否已经初始化
   const lastCallParamsRef = useRef<string>('');
   const requestTimerRef = useRef<NodeJS.Timeout | null>(null); // 新增：用于延迟请求的定时器

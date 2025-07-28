@@ -29,6 +29,7 @@ public enum ErrorCode {
     TOKEN_EXPIRED("3102", "令牌已过期，请刷新"),
     REFRESH_TOKEN_EXPIRED("3103", "刷新令牌已过期，请重新登录"),
     UNAUTHORIZED("3104", "未授权的访问，请登录"),
+    OAUTH_USER_CANNOT_REFRESH_TOKEN("3105", "第三方登录用户不支持刷新令牌，请重新登录"),
 
     // 权限相关错误码
     PERMISSION_DENIED("4001", "权限不足"),
