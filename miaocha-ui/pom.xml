@@ -69,8 +69,9 @@
                         <configuration>
                             <workingDirectory>frontend</workingDirectory>
                             <installDirectory>target</installDirectory>
+                            <!-- 淘宝镜像 -->
+                            <nodeDownloadRoot>https://npmmirror.com/mirrors/node/</nodeDownloadRoot>
                             <!-- 华为云镜像 -->
-                            <nodeDownloadRoot>https://mirrors.huaweicloud.com/nodejs/</nodeDownloadRoot>
                             <yarnDownloadRoot>https://mirrors.huaweicloud.com/yarn/</yarnDownloadRoot>
                         </configuration>
                         <executions>
