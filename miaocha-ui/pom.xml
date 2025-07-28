@@ -15,11 +15,11 @@
         <frontend.maven.plugin.version>1.15.0</frontend.maven.plugin.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        <node.version>v23.9.0</node.version>
+        <node.version>23.9.0</node.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <skipFrontend>false</skipFrontend>
         <skipTests>true</skipTests>
-        <yarn.version>v1.22.22</yarn.version>
+        <yarn.version>1.22.22</yarn.version>
     </properties>
 
     <build>
@@ -69,7 +69,8 @@
                         <configuration>
                             <workingDirectory>frontend</workingDirectory>
                             <installDirectory>target</installDirectory>
-                            <nodeDownloadRoot>https://npmmirror.com/mirrors/node/</nodeDownloadRoot> <!-- 淘宝镜像 -->
+                            <nodeDownloadRoot>https://npmmirror.com/mirrors/node/</nodeDownloadRoot>
+                            <!-- 淘宝镜像 -->
                             <yarnDownloadRoot>https://npmmirror.com/mirrors/yarn/</yarnDownloadRoot>
                         </configuration>
                         <executions>
