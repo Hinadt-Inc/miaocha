@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
-import { getUserInfo, logout as apiLogout } from '@/api/auth';
+import { getUserInfo } from '@/api/auth';
 
 const initialState: IStoreUser = {
   userId: 0,
@@ -29,7 +29,8 @@ export const fetchUserInfo: any = createAsyncThunk('user/fetchUserInfo', async (
 // 异步退出登录
 export const logoutUser = createAsyncThunk('user/logoutUser', async () => {
   try {
-    await apiLogout();
+    // 不再调用后端logout接口，直接返回成功
+    console.log('执行本地退出登录，不调用后端接口');
     return true;
   } catch (error: unknown) {
     console.error('退出登录失败:', error);
