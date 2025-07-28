@@ -302,30 +302,7 @@ jobs:
             echo "❌ Node.js依赖缓存未命中，将在构建后保存"
             echo "NODEMODULES_CACHE_HIT=false" >> $GITHUB_ENV
           fi
-
-
-      - name: Configure Maven proxy via Action
-        uses: whelk-io/maven-settings-xml-action@v22
-        with:
-          proxies: |
-            [
-              {
-                "id": "proxy-http",
-                "active": "true",
-                "protocol": "http",
-                "host": "10.0.21.34",
-                "port": "7890"
-              },
-              {
-                "id": "proxy-https",
-                "active": "true",
-                "protocol": "https",
-                "host": "10.0.21.34",
-                "port": "7890"
-              }
-            ]
-
-
+          
       - name: Verify Java and Maven
         run: |
           echo "🔍 验证Java和Maven安装状态..."

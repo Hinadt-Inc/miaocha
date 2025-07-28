@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.hinadt.miaocha</groupId>
@@ -68,6 +69,8 @@
                         <configuration>
                             <workingDirectory>frontend</workingDirectory>
                             <installDirectory>target</installDirectory>
+                            <nodeDownloadRoot>https://npmmirror.com/mirrors/node/</nodeDownloadRoot> <!-- 淘宝镜像 -->
+                            <yarnDownloadRoot>https://npmmirror.com/mirrors/yarn/</yarnDownloadRoot>
                         </configuration>
                         <executions>
                             <!-- 安装 Node.js 和 Yarn -->
