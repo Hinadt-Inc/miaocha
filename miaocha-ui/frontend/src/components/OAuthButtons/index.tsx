@@ -1,4 +1,4 @@
-import { Button, Divider } from 'antd';
+import { Divider } from 'antd';
 import { useState, useEffect } from 'react';
 import { getOAuthProviders } from '../../api/auth';
 import { getOAuthRedirectUri } from '../../config/env';
@@ -31,6 +31,7 @@ const OAuthButtons = ({ onError }: OAuthButtonsProps) => {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [initiatingLogin, setInitiatingLogin] = useState<string | null>(null);
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     const fetchProviders = async () => {
@@ -55,6 +56,15 @@ const OAuthButtons = ({ onError }: OAuthButtonsProps) => {
 
     fetchProviders();
   }, [onError]);
+
+  // 防抖处理鼠标悬停状态
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+  };
 
   const handleOAuthLogin = (provider: Provider) => {
     try {
@@ -111,41 +121,44 @@ const OAuthButtons = ({ onError }: OAuthButtonsProps) => {
     return null; // 没有可用的第三方登录提供者
   }
 
+  // 如果有多个提供者，只显示第一个（优先级最高的）
+  const primaryProvider = providers[0];
+
   return (
     <div className={styles.oauthContainer}>
       <Divider className={styles.divider}>或</Divider>
       
       <div className={styles.providersContainer}>
-        {providers.map((provider) => (
-          <Button
-            key={provider.providerId}
-            size="large"
-            block
-            className={styles.oauthButton}
-            onClick={() => handleOAuthLogin(provider)}
-            loading={initiatingLogin === provider.providerId}
-            disabled={!!initiatingLogin}
-          >
-            {provider.iconUrl && !initiatingLogin && (
-              <img 
-                src={provider.iconUrl} 
-                alt={provider.displayName}
-                className={styles.providerIcon}
-              />
-            )}
-            {initiatingLogin === provider.providerId 
-              ? `正在跳转到 ${provider.displayName}...` 
-              : `使用 ${provider.displayName} 登录`
+        <button
+          className={`${styles.compactOAuthButton} ${initiatingLogin === primaryProvider.providerId ? styles.loading : ''} ${isHovered ? styles.hovered : ''}`}
+          onClick={() => handleOAuthLogin(primaryProvider)}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          disabled={!!initiatingLogin}
+          aria-label={`使用 ${primaryProvider.displayName} 登录`}
+        >
+          {primaryProvider.iconUrl && (
+            <img 
+              src={primaryProvider.iconUrl} 
+              alt={primaryProvider.displayName}
+              className={styles.compactIcon}
+            />
+          )}
+          <span className={styles.buttonText}>
+            {initiatingLogin === primaryProvider.providerId 
+              ? `正在跳转到 ${primaryProvider.displayName}...` 
+              : `使用 ${primaryProvider.displayName}`
             }
-          </Button>
-        ))}
+          </span>
+          {initiatingLogin === primaryProvider.providerId && (
+            <div className={styles.loadingSpinner} />
+          )}
+        </button>
       </div>
       
-      {providers.length > 0 && (
-        <div className={styles.description}>
-          点击上方按钮将跳转到第三方登录页面
-        </div>
-      )}
+      <div className={styles.description}>
+        点击图标进行第三方登录
+      </div>
     </div>
   );
 };
