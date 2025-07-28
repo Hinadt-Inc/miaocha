@@ -164,7 +164,7 @@ function generate_release_notes() {
     local version="$1"
     local dry_run="$2"
     local only_generate="$3"
-    local last_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+    local last_tag=$(git tag --sort=-version:refname | head -1 2>/dev/null || echo "")
 
     if [ "$only_generate" != "true" ]; then
         echo "生成 Release Notes..."
@@ -178,26 +178,16 @@ This version includes several improvements and bug fixes based on community feed
 
     local commit_range=""
     if [ -z "$last_tag" ]; then
-        # 没有找到上一个标签，基于所有符合格式的提交生成Release Notes
+        # 没有找到标签，统计所有历史提交
         if [ "$only_generate" != "true" ]; then
-            echo "没有找到上一个标签，基于符合 [ISSUE #xx] 格式的提交生成Release Notes"
+            echo "没有找到标签，统计所有历史提交"
         fi
         commit_range="HEAD"
     else
-        # 查找上一个标签（在 last_tag 之前的标签）
-        local prev_tag=$(git tag --sort=-version:refname | grep -A1 "^${last_tag}$" | tail -1)
-        if [ -n "$prev_tag" ] && [ "$prev_tag" != "$last_tag" ]; then
-            # 有上一个标签，比较标签之间的差异
-            commit_range="$prev_tag..$last_tag"
-            if [ "$only_generate" != "true" ]; then
-                echo "比较标签范围: $prev_tag..$last_tag"
-            fi
-        else
-            # 这是第一个标签，使用所有历史提交到该标签
-            commit_range="$last_tag"
-            if [ "$only_generate" != "true" ]; then
-                echo "这是第一个标签，使用到 $last_tag 的所有提交"
-            fi
+        # 有标签，统计从最新标签到HEAD的提交
+        commit_range="$last_tag..HEAD"
+        if [ "$only_generate" != "true" ]; then
+            echo "统计范围: $last_tag..HEAD"
         fi
     fi
 
@@ -208,12 +198,9 @@ This version includes several improvements and bug fixes based on community feed
     if [ -z "$last_tag" ]; then
         # 没有标签时，获取所有符合格式的提交
         contributors_info=$(git log --oneline --pretty=format:"%h|%s|%an|%ae" | grep -E "\[ISSUE #[0-9]+\]" | head -30 2>/dev/null || echo "")
-    elif [[ "$commit_range" == *".."* ]]; then
-        # 标签范围比较，获取范围内的commits
-        contributors_info=$(git log --oneline --pretty=format:"%h|%s|%an|%ae" "$commit_range" | grep -E "\[ISSUE #[0-9]+\]" || echo "")
     else
-        # 单个标签，获取到该标签的所有提交
-        contributors_info=$(git log --oneline --pretty=format:"%h|%s|%an|%ae" "$commit_range" | grep -E "\[ISSUE #[0-9]+\]" | head -30 2>/dev/null || echo "")
+        # 有标签时，获取从标签到HEAD的commits
+        contributors_info=$(git log --oneline --pretty=format:"%h|%s|%an|%ae" "$commit_range" | grep -E "\[ISSUE #[0-9]+\]" || echo "")
     fi
 
     if [ -n "$contributors_info" ]; then
@@ -250,15 +237,11 @@ This version includes several improvements and bug fixes based on community feed
     local other_commits_count=0
 
     if [ -z "$last_tag" ]; then
-        # 第一个标签，获取所有非ISSUE格式的提交
+        # 没有标签时，获取所有非ISSUE格式的提交
         other_commits_count=$(git log --oneline --pretty=format:"%s" | grep -v -E "\[ISSUE.*\]|\[RELEASE PREPARE\]" | grep -v "^$" | wc -l)
         other_commits=$(git log --oneline --pretty=format:"- %s" | grep -v -E "\[ISSUE.*\]|\[RELEASE PREPARE\]" | head -10 2>/dev/null || echo "")
-    elif [[ "$commit_range" == *".."* ]]; then
-        # 标签范围比较，先获取总数，再获取前10条
-        other_commits_count=$(git log --oneline --pretty=format:"%s" "$commit_range" | grep -v -E "\[ISSUE.*\]|\[RELEASE PREPARE\]" | grep -v "^$" | wc -l)
-        other_commits=$(git log --oneline --pretty=format:"- %s" "$commit_range" | grep -v -E "\[ISSUE.*\]|\[RELEASE PREPARE\]" | head -10 2>/dev/null || echo "")
     else
-        # 单个标签，先获取总数，再获取前10条
+        # 有标签时，获取从标签到HEAD的非ISSUE格式提交
         other_commits_count=$(git log --oneline --pretty=format:"%s" "$commit_range" | grep -v -E "\[ISSUE.*\]|\[RELEASE PREPARE\]" | grep -v "^$" | wc -l)
         other_commits=$(git log --oneline --pretty=format:"- %s" "$commit_range" | grep -v -E "\[ISSUE.*\]|\[RELEASE PREPARE\]" | head -10 2>/dev/null || echo "")
     fi
@@ -273,13 +256,12 @@ $other_commits"
                 local remaining_count=$((other_commits_count - 10))
                 local repo_info=$(get_repository_info)
                 if [ -n "$repo_info" ]; then
-                    if [[ "$commit_range" == *".."* ]]; then
-                        # 标签范围比较
-                        local prev_tag=$(echo "$commit_range" | cut -d'.' -f1)
+                    if [ -n "$last_tag" ]; then
+                        # 有标签时，生成从上一个标签到新版本的比较链接
                         release_notes="$release_notes
-... and $remaining_count more commits. [View all changes]($repo_info/compare/$prev_tag...v$version)"
+... and $remaining_count more commits. [View all changes]($repo_info/compare/$last_tag...v$version)"
                     else
-                        # 单个标签
+                        # 没有标签时，显示到新版本的所有提交
                         release_notes="$release_notes
 ... and $remaining_count more commits. [View all changes]($repo_info/commits/v$version)"
                     fi
@@ -294,68 +276,18 @@ $other_commits"
 "
         fi
 
-    # 生成贡献者统计
-    if [ -n "$contributors_info" ]; then
-        local unique_contributors=""
-        local new_contributors=""
-
-        # 收集所有贡献者
-        while IFS='|' read -r hash subject author email; do
-            # 跳过内部用户（hinadt.com邮箱）
-            if [[ "$email" =~ @hinadt\.com$ ]]; then
-                continue
-            fi
-
-            local github_user=""
-            if [[ "$email" =~ ^[0-9]+\+([^@]+)@users\.noreply\.github\.com$ ]]; then
-                github_user="${BASH_REMATCH[1]}"
-            elif [[ "$email" =~ ^([^@]+)@users\.noreply\.github\.com$ ]]; then
-                github_user="${BASH_REMATCH[1]}"
-            else
-                github_user="$author"
-            fi
-
-            # 检查是否为新贡献者（在这个范围内首次出现）
-            if [[ ! "$unique_contributors" =~ "$github_user" ]]; then
-                if [ -z "$unique_contributors" ]; then
-                    unique_contributors="$github_user"
-                else
-                    unique_contributors="$unique_contributors,$github_user"
-                fi
-
-                # 获取此贡献者的第一个ISSUE提交
-                local first_issue=$(echo "$contributors_info" | grep "$email" | tail -1 | cut -d'|' -f2)
-                if [[ "$first_issue" =~ \(#([0-9]+)\) ]]; then
-                    local pr_number="${BASH_REMATCH[1]}"
-                    new_contributors="$new_contributors* @$github_user made their first contribution in #$pr_number
-"
-                fi
-            fi
-        done <<< "$contributors_info"
-
-        if [ -n "$new_contributors" ]; then
-            release_notes="$release_notes
-## New Contributors
-$new_contributors"
-        fi
-    fi
-
     # 获取仓库信息，支持多种URL格式
     local repo_info=$(get_repository_info)
-    if [ -n "$repo_info" ] && [ -n "$last_tag" ]; then
-        if [[ "$commit_range" == *".."* ]]; then
-            # 标签范围比较，生成比较链接
-            local prev_tag=$(echo "$commit_range" | cut -d'.' -f1)
+    if [ -n "$repo_info" ]; then
+        if [ -n "$last_tag" ]; then
+            # 有标签时，生成从上一个标签到新版本的比较链接
             release_notes="$release_notes
-**Full Changelog**: $repo_info/compare/$prev_tag...v$version"
+**Full Changelog**: $repo_info/compare/$last_tag...v$version"
         else
-            # 第一个标签，生成到该标签的提交链接
+            # 没有标签时，显示项目仓库链接
             release_notes="$release_notes
-**Full Changelog**: $repo_info/commits/v$version"
-        fi
-    elif [ -n "$repo_info" ] && [ -z "$last_tag" ]; then
-        release_notes="$release_notes
 **Project Repository**: $repo_info"
+        fi
     fi
 
     if [ "$only_generate" = "true" ]; then
