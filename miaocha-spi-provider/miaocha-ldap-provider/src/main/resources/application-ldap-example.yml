@@ -1,0 +1,84 @@
+# LDAP配置示例
+# 请根据您的LDAP服务器配置调整以下参数
+
+miaocha:
+  ldap:
+    # 是否启用LDAP认证
+    enabled: true
+    
+    # LDAP服务器URL
+    url: ldap://your-ldap-server:389
+    # 对于LDAPS，使用: ldaps://your-ldap-server:636
+    
+    # 基础DN
+    base-dn: dc=example,dc=com
+    
+    # 用户搜索DN
+    user-dn: ou=users
+    
+    # 管理员DN，用于搜索和绑定
+    manager-dn: cn=admin,dc=example,dc=com
+    
+    # 管理员密码
+    manager-password: admin_password
+    
+    # 用户搜索过滤器，{0}会被替换为用户输入的登录标识符
+    user-search-filter: "(uid={0})"
+    
+    # 用户对象类
+    user-object-class: inetOrgPerson
+    
+    # 属性映射配置
+    email-attribute: mail
+    nickname-attribute: cn
+    real-name-attribute: displayName
+    department-attribute: department
+    position-attribute: title
+    organizational-unit-attribute: ou
+    
+    # 连接超时配置（毫秒）
+    connect-timeout: 5000
+    read-timeout: 5000
+    
+    # 连接池配置
+    pool:
+      enabled: true
+      min-idle: 1
+      max-active: 8
+      max-wait: 5000
+
+# 常见LDAP配置示例：
+
+# Active Directory配置示例:
+# miaocha:
+#   ldap:
+#     enabled: true
+#     url: ldap://ad.example.com:389
+#     base-dn: dc=example,dc=com
+#     user-dn: cn=Users
+#     manager-dn: cn=ldap_reader,cn=Users,dc=example,dc=com
+#     manager-password: reader_password
+#     user-search-filter: "(sAMAccountName={0})"
+#     user-object-class: user
+#     email-attribute: userPrincipalName
+#     nickname-attribute: displayName
+#     real-name-attribute: name
+#     department-attribute: department
+#     position-attribute: title
+
+# OpenLDAP配置示例:
+# miaocha:
+#   ldap:
+#     enabled: true
+#     url: ldap://openldap.example.com:389
+#     base-dn: dc=example,dc=com
+#     user-dn: ou=people
+#     manager-dn: cn=admin,dc=example,dc=com
+#     manager-password: admin_password
+#     user-search-filter: "(uid={0})"
+#     user-object-class: inetOrgPerson
+#     email-attribute: mail
+#     nickname-attribute: cn
+#     real-name-attribute: displayName
+#     department-attribute: departmentNumber
+#     position-attribute: title 

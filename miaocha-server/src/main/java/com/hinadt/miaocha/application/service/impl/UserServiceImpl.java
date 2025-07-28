@@ -1,14 +1,12 @@
 package com.hinadt.miaocha.application.service.impl;
 
 import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
-import com.hinadt.miaocha.application.service.LdapAuthenticationService;
 import com.hinadt.miaocha.application.service.ModulePermissionService;
 import com.hinadt.miaocha.application.service.UserService;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.config.security.JwtUtils;
 import com.hinadt.miaocha.domain.converter.UserConverter;
-import com.hinadt.miaocha.domain.dto.auth.LdapUserDTO;
 import com.hinadt.miaocha.domain.dto.auth.LoginRequestDTO;
 import com.hinadt.miaocha.domain.dto.auth.LoginResponseDTO;
 import com.hinadt.miaocha.domain.dto.auth.RefreshTokenRequestDTO;
@@ -32,7 +30,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,16 +41,12 @@ public class UserServiceImpl implements UserService {
 
     private static final String SYSTEM_LOGIN_TYPE = "system";
 
-    @Value("${ldap.enabled:false}")
-    private boolean ldapEnabled;
-
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
     private final UserConverter userConverter;
     private final ModulePermissionService modulePermissionService;
     private final UserModulePermissionMapper userModulePermissionMapper;
-    private final LdapAuthenticationService ldapAuthenticationService;
 
     public UserServiceImpl(
             UserMapper userMapper,
@@ -61,125 +54,28 @@ public class UserServiceImpl implements UserService {
             JwtUtils jwtUtils,
             UserConverter userConverter,
             ModulePermissionService modulePermissionService,
-            UserModulePermissionMapper userModulePermissionMapper,
-            LdapAuthenticationService ldapAuthenticationService) {
+            UserModulePermissionMapper userModulePermissionMapper) {
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtils = jwtUtils;
         this.userConverter = userConverter;
         this.modulePermissionService = modulePermissionService;
         this.userModulePermissionMapper = userModulePermissionMapper;
-        this.ldapAuthenticationService = ldapAuthenticationService;
     }
 
     @Override
     public LoginResponseDTO login(LoginRequestDTO loginRequest) {
-        String loginIdentifier = loginRequest.getEmail();
-        User user = userMapper.selectByEmail(loginIdentifier);
-        boolean isLdapAuth = false;
-
-        if (ldapEnabled) {
-            // LDAP功能启用时的认证逻辑
-
-            // 检查是否为LDAP用户（密码字段为"LDAP_USER"）
-            if (user != null && "LDAP_USER".equals(user.getPassword())) {
-                // LDAP用户：直接使用LDAP认证
-                log.info("Detected LDAP user, attempting LDAP authentication: {}", loginIdentifier);
-
-                try {
-                    LdapUserDTO ldapUser =
-                            ldapAuthenticationService.authenticate(
-                                    loginIdentifier, loginRequest.getPassword());
-
-                    if (ldapUser != null) {
-                        isLdapAuth = true;
-                        log.info("LDAP authentication successful for user: {}", loginIdentifier);
-
-                        // 更新用户信息（如果有变化）
-                        updateUserFromLdap(user, ldapUser);
-                    } else {
-                        log.warn("LDAP authentication failed for user: {}", loginIdentifier);
-                        throw new BusinessException(ErrorCode.USER_PASSWORD_ERROR);
-                    }
-                } catch (Exception e) {
-                    log.error(
-                            "LDAP authentication error for user {}: {}",
-                            loginIdentifier,
-                            e.getMessage());
-                    throw new BusinessException(ErrorCode.USER_PASSWORD_ERROR);
-                }
-
-            } else if (user != null) {
-                // 本地用户：使用密码验证
-                log.info("Local user authentication for: {}", loginIdentifier);
-
-                if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
-                    throw new BusinessException(ErrorCode.USER_PASSWORD_ERROR);
-                }
-                log.info("Local database authentication successful for user: {}", loginIdentifier);
-
-            } else {
-                // 用户不存在，尝试LDAP认证（可能是新的LDAP用户）
-                log.info(
-                        "User not found locally, attempting LDAP authentication: {}",
-                        loginIdentifier);
-
-                try {
-                    LdapUserDTO ldapUser =
-                            ldapAuthenticationService.authenticate(
-                                    loginIdentifier, loginRequest.getPassword());
-
-                    if (ldapUser != null) {
-                        isLdapAuth = true;
-                        log.info(
-                                "LDAP authentication successful for new user: {}", loginIdentifier);
-
-                        // 创建新的本地用户记录
-                        String userEmail =
-                                ldapUser.getEmail() != null ? ldapUser.getEmail() : loginIdentifier;
-                        user = createUserFromLdap(ldapUser, userEmail);
-                    } else {
-                        log.warn(
-                                "User not found and LDAP authentication failed: {}",
-                                loginIdentifier);
-                        throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-                    }
-                } catch (BusinessException e) {
-                    throw e;
-                } catch (Exception e) {
-                    log.error(
-                            "LDAP authentication error for new user {}: {}",
-                            loginIdentifier,
-                            e.getMessage());
-                    throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-                }
-            }
-        } else {
-            // LDAP功能关闭时的认证逻辑（仅本地认证）
-            log.info("LDAP is disabled, using local authentication only for: {}", loginIdentifier);
-
-            if (user != null) {
-                // 如果是LDAP用户但LDAP功能关闭，不允许登录
-                if ("LDAP_USER".equals(user.getPassword())) {
-                    log.warn("LDAP user attempted login but LDAP is disabled: {}", loginIdentifier);
-                    throw new BusinessException(ErrorCode.USER_PASSWORD_ERROR, "LDAP认证已禁用，请联系管理员");
-                }
-
-                // 本地用户：使用密码验证
-                if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
-                    throw new BusinessException(ErrorCode.USER_PASSWORD_ERROR);
-                }
-                log.info("Local database authentication successful for user: {}", loginIdentifier);
-            } else {
-                // 用户不存在且LDAP功能关闭
-                log.warn("User not found and LDAP is disabled: {}", loginIdentifier);
-                throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-            }
+        User user = userMapper.selectByEmail(loginRequest.getEmail());
+        if (user == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
-        // 检查用户状态
         if (user.getStatus() == 0) {
             throw new BusinessException(ErrorCode.USER_FORBIDDEN);
+        }
+
+        if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
+            throw new BusinessException(ErrorCode.USER_PASSWORD_ERROR);
         }
 
         String loginType = SYSTEM_LOGIN_TYPE;
@@ -515,65 +411,6 @@ public class UserServiceImpl implements UserService {
             return true;
         } catch (IllegalArgumentException e) {
             return false;
-        }
-    }
-
-    /**
-     * 从LDAP用户信息创建本地用户记录
-     *
-     * @param ldapUser LDAP用户信息
-     * @param loginEmail 登录邮箱
-     * @return 创建的用户
-     */
-    @Transactional
-    protected User createUserFromLdap(LdapUserDTO ldapUser, String loginEmail) {
-        log.info("Creating new user from LDAP: {}", ldapUser.getUsername());
-
-        User user = new User();
-        user.setUid(generateUid());
-        user.setEmail(ldapUser.getEmail() != null ? ldapUser.getEmail() : loginEmail);
-        user.setNickname(
-                ldapUser.getDisplayName() != null
-                        ? ldapUser.getDisplayName()
-                        : ldapUser.getUsername());
-        user.setPassword("LDAP_USER"); // LDAP用户使用特殊密码标识
-        user.setRole(UserRole.USER.name()); // 默认为普通用户角色
-        user.setStatus(1); // 启用状态
-
-        userMapper.insert(user);
-        log.info("Created new user from LDAP with ID: {}", user.getId());
-        return user;
-    }
-
-    /**
-     * 使用LDAP信息更新本地用户记录
-     *
-     * @param user 本地用户
-     * @param ldapUser LDAP用户信息
-     */
-    @Transactional
-    protected void updateUserFromLdap(User user, LdapUserDTO ldapUser) {
-        boolean needUpdate = false;
-
-        // 更新邮箱
-        if (ldapUser.getEmail() != null && !ldapUser.getEmail().equals(user.getEmail())) {
-            user.setEmail(ldapUser.getEmail());
-            needUpdate = true;
-        }
-
-        // 更新昵称
-        String displayName =
-                ldapUser.getDisplayName() != null
-                        ? ldapUser.getDisplayName()
-                        : ldapUser.getUsername();
-        if (displayName != null && !displayName.equals(user.getNickname())) {
-            user.setNickname(displayName);
-            needUpdate = true;
-        }
-
-        if (needUpdate) {
-            userMapper.update(user);
-            log.info("Updated user information from LDAP for user ID: {}", user.getId());
         }
     }
 
