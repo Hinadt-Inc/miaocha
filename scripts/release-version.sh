@@ -380,6 +380,8 @@ function main() {
             echo ""
             show_usage
         else
+            echo "错误: --generate-release-notes-only 需要指定版本号" >&2
+            echo "用法: $0 --generate-release-notes-only <version>" >&2
             exit 1
         fi
     fi

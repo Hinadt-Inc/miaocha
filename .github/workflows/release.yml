@@ -74,22 +74,25 @@ jobs:
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      - name: Generate Release Notes
+      - name: Get Release Notes
         id: release_notes
         run: |
-          # 使用脚本生成Release Notes，避免重复代码
-          release_notes=$(./scripts/release-version.sh --generate-release-notes-only ${{ steps.version.outputs.VERSION }})
-
-          # 打印Release Notes到日志中供查看
-          echo "## 📋 生成的 Release Notes:"
+          # 检查RELEASE_NOTES.md文件是否存在
+          if [ ! -f "RELEASE_NOTES.md" ]; then
+            echo "❌ 错误: 未找到 RELEASE_NOTES.md 文件"
+            echo "请在发布前运行 release-version.sh 脚本生成 Release Notes"
+            exit 1
+          fi
+          
+          echo "## 📋 使用现成的 Release Notes 文件:"
           echo "========================================"
-          echo "$release_notes"
+          cat RELEASE_NOTES.md
           echo "========================================"
-
+          
           # 输出到GitHub Actions
           {
             echo 'RELEASE_NOTES<<EOF'
-            echo "$release_notes"
+            cat RELEASE_NOTES.md
             echo 'EOF'
           } >> $GITHUB_OUTPUT
 
