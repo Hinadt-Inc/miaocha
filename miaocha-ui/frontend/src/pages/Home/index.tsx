@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Splitter } from 'antd';
 import { useRequest } from 'ahooks';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { login } from '@/store/userSlice';
 import { oAuthCallback } from '@/api/auth';
@@ -15,7 +15,6 @@ import styles from './index.module.less';
 import dayjs from 'dayjs';
 
 const HomePage = () => {
-  const navigate = useNavigate();
   const dispatch = useDispatch();
   const [urlSearchParams] = useSearchParams();
   
@@ -297,9 +296,21 @@ const HomePage = () => {
   }, [searchParams, moduleQueryConfig, executeDataRequest, isInitialized]);
 
   // 处理列变化
-  const handleChangeColumns = (columns: ILogColumnsResponse[]) => {
+  const handleChangeColumns = useCallback((columns: ILogColumnsResponse[]) => {
     setLogTableColumns(columns);
-  };
+    
+    // 更新搜索参数中的fields字段，触发detail接口调用
+    const selectedColumns = columns
+      .filter((item) => item.selected && item.columnName)
+      .map((item) => item.columnName!)
+      .filter((name): name is string => Boolean(name));
+    
+    setSearchParams((prev) => ({
+      ...prev,
+      fields: selectedColumns.length > 0 ? selectedColumns : undefined,
+      offset: 0, // 重置分页
+    }));
+  }, []);
 
   const handleSetWhereSqlsFromSider = (flag: '=' | '!=', columnName: string, value: string) => {
     const sql = `${columnName} ${flag} '${value}'`;
@@ -403,13 +414,57 @@ const HomePage = () => {
   };
 
   // 处理列变化
-  const handleChangeColumnsByLog = (col: any) => {
+  const handleChangeColumnsByLog = useCallback((col: any) => {
+    
     const index = logTableColumns.findIndex((item) => item.columnName === col.title);
-    if (index === -1) return;
+    
+    if (index === -1) {
+      return;
+    }
+    
+    // 更新列状态
     logTableColumns[index].selected = false;
     delete logTableColumns[index]._createTime;
-    setLogTableColumns([...logTableColumns]);
-  };
+    
+    // 计算移除该列后的选中列列表
+    const selectedColumns = logTableColumns
+      .filter((item) => item.selected && item.columnName)
+      .map((item) => item.columnName!)
+      .filter((name): name is string => Boolean(name));
+    
+    // 更新本地搜索参数
+    const _savedSearchParams = localStorage.getItem('searchBarParams');
+    if (_savedSearchParams) {
+      const savedSearchParams = JSON.parse(_savedSearchParams);
+      localStorage.setItem(
+        'searchBarParams',
+        JSON.stringify({
+          ...savedSearchParams,
+          fields: selectedColumns,
+        }),
+      );
+    }
+    
+    // 通知父组件激活字段变化
+    setActiveColumns(selectedColumns);
+    
+    // 排序并更新列状态
+    const sortedColumns = logTableColumns.sort(
+      (a: ILogColumnsResponse, b: ILogColumnsResponse) => (a._createTime || 0) - (b._createTime || 0),
+    );
+    const updatedColumns = [...sortedColumns];
+    setLogTableColumns(updatedColumns);
+    
+    // 更新搜索参数中的fields字段，触发detail接口调用
+    setSearchParams((prev) => {
+      const newParams = {
+        ...prev,
+        fields: selectedColumns.length > 0 ? selectedColumns : undefined,
+        offset: 0, // 重置分页
+      };
+      return newParams;
+    });
+  }, [logTableColumns]);
 
   // 优化log组件的props
   const logProps: any = useMemo(
@@ -437,6 +492,7 @@ const HomePage = () => {
       sqls,
       moduleQueryConfig,
       handleSortChange,
+      handleChangeColumnsByLog, // 添加这个依赖
       sortConfig, // 添加sortConfig到依赖数组
     ],
   );
