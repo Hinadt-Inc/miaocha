@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hinadt.miaocha.domain.mapper.SystemCacheConfigMapper">
+
+    <!-- 系统缓存配置表所有字段 -->
+    <sql id="systemCacheConfigColumns">
+        id, cache_group, cache_key, content, create_time, create_user
+    </sql>
+
+    <!-- 插入缓存配置 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO system_cache_config (cache_group, cache_key, content, create_user)
+        VALUES (#{cacheGroup}, #{cacheKey}, #{content}, #{createUser})
+    </insert>
+
+    <!-- 批量插入缓存配置 -->
+    <insert id="batchInsert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO system_cache_config (cache_group, cache_key, content, create_user)
+        VALUES
+        <foreach collection="configs" item="config" separator=",">
+            (#{config.cacheGroup}, #{config.cacheKey}, #{config.content}, #{config.createUser})
+        </foreach>
+    </insert>
+
+    <!-- 根据ID查询缓存配置 -->
+    <select id="selectById" resultType="com.hinadt.miaocha.domain.entity.SystemCacheConfig">
+        SELECT
+        <include refid="systemCacheConfigColumns"/>
+        FROM system_cache_config WHERE id = #{id}
+    </select>
+
+    <!-- 根据缓存组和键查询配置 -->
+    <select id="selectByGroupAndKey" resultType="com.hinadt.miaocha.domain.entity.SystemCacheConfig">
+        SELECT
+        <include refid="systemCacheConfigColumns"/>
+        FROM system_cache_config
+        WHERE cache_group = #{cacheGroup} AND cache_key = #{cacheKey}
+    </select>
+
+    <!-- 根据缓存组查询所有配置 -->
+    <select id="selectByGroup" resultType="com.hinadt.miaocha.domain.entity.SystemCacheConfig">
+        SELECT
+        <include refid="systemCacheConfigColumns"/>
+        FROM system_cache_config
+        WHERE cache_group = #{cacheGroup}
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 根据缓存组和键列表批量查询 -->
+    <select id="selectByGroupAndKeys" resultType="com.hinadt.miaocha.domain.entity.SystemCacheConfig">
+        SELECT
+        <include refid="systemCacheConfigColumns"/>
+        FROM system_cache_config
+        WHERE cache_group = #{cacheGroup}
+        <if test="cacheKeys != null and cacheKeys.size() > 0">
+            AND cache_key IN
+            <foreach collection="cacheKeys" item="key" open="(" separator="," close=")">
+                #{key}
+            </foreach>
+        </if>
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 查询所有缓存配置 -->
+    <select id="selectAll" resultType="com.hinadt.miaocha.domain.entity.SystemCacheConfig">
+        SELECT
+        <include refid="systemCacheConfigColumns"/>
+        FROM system_cache_config
+        ORDER BY cache_group, create_time DESC
+    </select>
+
+    <!-- 根据缓存组和创建人查询配置（利用组合索引） -->
+    <select id="selectByGroupAndCreateUser" resultType="com.hinadt.miaocha.domain.entity.SystemCacheConfig">
+        SELECT
+        <include refid="systemCacheConfigColumns"/>
+        FROM system_cache_config
+        WHERE cache_group = #{cacheGroup} AND create_user = #{createUser}
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 根据ID删除缓存配置 -->
+    <delete id="deleteById">
+        DELETE FROM system_cache_config WHERE id = #{id}
+    </delete>
+
+    <!-- 根据缓存组和键删除配置 -->
+    <delete id="deleteByGroupAndKey">
+        DELETE FROM system_cache_config
+        WHERE cache_group = #{cacheGroup} AND cache_key = #{cacheKey}
+    </delete>
+
+    <!-- 根据缓存组删除所有配置 -->
+    <delete id="deleteByGroup">
+        DELETE FROM system_cache_config WHERE cache_group = #{cacheGroup}
+    </delete>
+
+    <!-- 根据ID列表批量删除 -->
+    <delete id="batchDeleteByIds">
+        DELETE FROM system_cache_config
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <!-- 根据缓存组和键列表批量删除 -->
+    <delete id="batchDeleteByGroupAndKeys">
+        DELETE FROM system_cache_config
+        WHERE cache_group = #{cacheGroup}
+        <if test="cacheKeys != null and cacheKeys.size() > 0">
+            AND cache_key IN
+            <foreach collection="cacheKeys" item="key" open="(" separator="," close=")">
+                #{key}
+            </foreach>
+        </if>
+    </delete>
+
+    <!-- 统计指定缓存组的配置数量 -->
+    <select id="countByGroup" resultType="int">
+        SELECT COUNT(*) FROM system_cache_config WHERE cache_group = #{cacheGroup}
+    </select>
+
+    <!-- 统计总配置数量 -->
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*) FROM system_cache_config
+    </select>
+
+    <!-- 根据ID更新缓存内容 -->
+    <update id="updateContent">
+        UPDATE system_cache_config
+        SET content = #{content}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

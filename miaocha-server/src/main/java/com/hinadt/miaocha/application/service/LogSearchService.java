@@ -41,4 +41,12 @@ public interface LogSearchService {
      * @return 表结构信息（包含列名、数据类型、是否主键等详细信息）
      */
     List<SchemaInfoDTO.ColumnInfoDTO> getTableColumns(String module);
+
+    /**
+     * 保存用户个性化的日志搜索条件
+     *
+     * @param searchCondition 日志搜索条件
+     * @return 生成的缓存键
+     */
+    String saveSearchCondition(LogSearchDTO searchCondition);
 }

@@ -97,4 +97,21 @@ public class LogSearchEndpoint {
         List<SchemaInfoDTO.ColumnInfoDTO> columns = logSearchService.getTableColumns(module);
         return ApiResponse.success(columns);
     }
+
+    /**
+     * 保存用户个性化的日志搜索条件
+     *
+     * @param user 当前用户
+     * @param dto 日志搜索条件
+     * @return 生成的缓存键
+     */
+    @PostMapping("/search/save-condition")
+    @Operation(summary = "保存搜索条件", description = "保存用户个性化的日志搜索条件，返回生成的缓存键")
+    public ApiResponse<String> saveSearchCondition(
+            @CurrentUser UserDTO user,
+            @Parameter(description = "日志搜索条件", required = true) @Valid @RequestBody
+                    LogSearchDTO dto) {
+        String cacheKey = logSearchService.saveSearchCondition(dto);
+        return ApiResponse.success(cacheKey);
+    }
 }

@@ -11,15 +11,18 @@ import com.hinadt.miaocha.application.service.DatasourceService;
 import com.hinadt.miaocha.application.service.ModuleInfoService;
 import com.hinadt.miaocha.application.service.ModulePermissionService;
 import com.hinadt.miaocha.application.service.SqlQueryService;
+import com.hinadt.miaocha.application.service.SystemCacheService;
 import com.hinadt.miaocha.application.service.database.DatabaseMetadataService;
 import com.hinadt.miaocha.application.service.database.DatabaseMetadataServiceFactory;
 import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.dto.*;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import com.hinadt.miaocha.domain.dto.module.*;
 import com.hinadt.miaocha.domain.dto.permission.*;
 import com.hinadt.miaocha.domain.entity.*;
+import com.hinadt.miaocha.domain.entity.enums.CacheGroup;
 import com.hinadt.miaocha.domain.entity.enums.UserRole;
 import com.hinadt.miaocha.domain.mapper.*;
 import com.hinadt.miaocha.integration.data.IntegrationTestDataInitializer;
@@ -254,6 +257,7 @@ public class ServiceIntegrationTest {
     @Autowired private ModulePermissionService modulePermissionService;
     @Autowired private SqlQueryService sqlQueryService;
     @Autowired private DatabaseMetadataService databaseMetadataService;
+    @Autowired private SystemCacheService systemCacheService;
 
     // ==================== Mapper依赖注入 ====================
 
@@ -2331,6 +2335,353 @@ public class ServiceIntegrationTest {
             }
 
             log.info("✅ 系统限制验证测试通过");
+        }
+    }
+
+    // ==================== 系统缓存测试组 ====================
+
+    @Nested
+    @DisplayName("系统缓存测试组")
+    @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+    class SystemCacheIntegrationTest {
+
+        private static final String testCacheKey = "test_log_search_condition_integration_test";
+        private final String testCreateUser = "test_cache_user";
+
+        @Test
+        @Order(1)
+        @DisplayName("CACHE-001: 保存缓存 - 正常流程")
+        void testSaveCacheNormalFlow() {
+            log.info("🔍 测试保存缓存正常流程");
+
+            // 创建测试用的 LogSearchDTO 数据
+            LogSearchDTO logSearchData = new LogSearchDTO();
+            logSearchData.setModule("test-module");
+            logSearchData.setKeywords(List.of("error", "warning"));
+            logSearchData.setWhereSqls(List.of("level = 'ERROR'", "service_name = 'user-service'"));
+            logSearchData.setStartTime("2023-06-01 10:00:00.000");
+            logSearchData.setEndTime("2023-06-01 11:00:00.000");
+            logSearchData.setTimeRange("last_1h");
+            logSearchData.setPageSize(100);
+            logSearchData.setOffset(0);
+            logSearchData.setFields(List.of("log_time", "level", "message"));
+
+            // 保存缓存
+            assertDoesNotThrow(
+                    () -> {
+                        systemCacheService.saveCache(
+                                CacheGroup.LOG_SEARCH_CONDITION, testCacheKey, logSearchData);
+                    });
+
+            log.info("✅ 保存缓存正常流程测试通过");
+        }
+
+        @Test
+        @Order(2)
+        @DisplayName("CACHE-002: 获取缓存 - 正常流程")
+        void testGetCacheNormalFlow() {
+            log.info("🔍 测试获取缓存正常流程");
+
+            // 获取缓存
+            Optional<LogSearchDTO> retrievedDataOpt =
+                    systemCacheService.getCache(
+                            CacheGroup.LOG_SEARCH_CONDITION, testCacheKey, LogSearchDTO.class);
+
+            // 验证缓存存在
+            assertThat(retrievedDataOpt).isPresent();
+            LogSearchDTO retrievedData = retrievedDataOpt.get();
+
+            // 验证结果
+            assertThat(retrievedData).isNotNull();
+            assertThat(retrievedData.getModule()).isEqualTo("test-module");
+            assertThat(retrievedData.getKeywords()).containsExactly("error", "warning");
+            assertThat(retrievedData.getWhereSqls())
+                    .containsExactly("level = 'ERROR'", "service_name = 'user-service'");
+            assertThat(retrievedData.getStartTime()).isEqualTo("2023-06-01 10:00:00.000");
+            assertThat(retrievedData.getEndTime()).isEqualTo("2023-06-01 11:00:00.000");
+            assertThat(retrievedData.getTimeRange()).isEqualTo("last_1h");
+            assertThat(retrievedData.getPageSize()).isEqualTo(100);
+            assertThat(retrievedData.getOffset()).isEqualTo(0);
+            assertThat(retrievedData.getFields()).containsExactly("log_time", "level", "message");
+
+            log.info("✅ 获取缓存正常流程测试通过");
+        }
+
+        @Test
+        @Order(3)
+        @DisplayName("CACHE-003: 获取用户缓存列表")
+        void testGetUserCaches() {
+            log.info("🔍 测试获取用户缓存列表");
+
+            // 获取用户缓存列表
+            List<SystemCacheConfig> userCaches =
+                    systemCacheService.getUserCaches(CacheGroup.LOG_SEARCH_CONDITION);
+
+            // 验证结果
+            assertThat(userCaches).isNotNull();
+            assertThat(userCaches).isNotEmpty();
+
+            // 验证包含我们创建的缓存
+            boolean containsTestCache =
+                    userCaches.stream().anyMatch(cache -> cache.getCacheKey().equals(testCacheKey));
+            assertThat(containsTestCache).isTrue();
+
+            // 验证缓存内容
+            SystemCacheConfig testCache =
+                    userCaches.stream()
+                            .filter(cache -> cache.getCacheKey().equals(testCacheKey))
+                            .findFirst()
+                            .orElse(null);
+
+            assertThat(testCache).isNotNull();
+            assertThat(testCache.getCacheGroup()).isEqualTo(CacheGroup.LOG_SEARCH_CONDITION.name());
+            // 在集成测试环境中，由于没有认证上下文，UserContextUtil.getCurrentUserEmail() 返回 "anonymous"
+            // 这是正常的行为，因为测试环境中没有设置 SecurityContext
+            assertThat(testCache.getCreateUser()).isEqualTo("anonymous");
+            assertThat(testCache.getContent()).isNotNull();
+
+            log.info("✅ 获取用户缓存列表测试通过 - 共{}个缓存", userCaches.size());
+        }
+
+        @Test
+        @Order(4)
+        @DisplayName("CACHE-004: 更新缓存 - 覆盖保存")
+        void testUpdateCacheOverwrite() {
+            log.info("🔍 测试更新缓存覆盖保存");
+
+            // 创建新的测试数据
+            LogSearchDTO updatedLogSearchData = new LogSearchDTO();
+            updatedLogSearchData.setModule("updated-module");
+            updatedLogSearchData.setKeywords(List.of("fatal", "critical"));
+            updatedLogSearchData.setWhereSqls(List.of("level = 'FATAL'"));
+            updatedLogSearchData.setStartTime("2023-06-02 10:00:00.000");
+            updatedLogSearchData.setEndTime("2023-06-02 11:00:00.000");
+            updatedLogSearchData.setTimeRange("last_2h");
+            updatedLogSearchData.setPageSize(200);
+            updatedLogSearchData.setOffset(10);
+            updatedLogSearchData.setFields(List.of("log_time", "level", "message", "host"));
+
+            // 更新缓存（覆盖保存）
+            assertDoesNotThrow(
+                    () -> {
+                        systemCacheService.saveCache(
+                                CacheGroup.LOG_SEARCH_CONDITION,
+                                testCacheKey,
+                                updatedLogSearchData);
+                    });
+
+            // 验证更新后的数据
+            Optional<LogSearchDTO> retrievedDataOpt =
+                    systemCacheService.getCache(
+                            CacheGroup.LOG_SEARCH_CONDITION, testCacheKey, LogSearchDTO.class);
+
+            // 验证缓存存在
+            assertThat(retrievedDataOpt).isPresent();
+            LogSearchDTO retrievedData = retrievedDataOpt.get();
+
+            assertThat(retrievedData).isNotNull();
+            assertThat(retrievedData.getModule()).isEqualTo("updated-module");
+            assertThat(retrievedData.getKeywords()).containsExactly("fatal", "critical");
+            assertThat(retrievedData.getWhereSqls()).containsExactly("level = 'FATAL'");
+            assertThat(retrievedData.getTimeRange()).isEqualTo("last_2h");
+            assertThat(retrievedData.getPageSize()).isEqualTo(200);
+            assertThat(retrievedData.getOffset()).isEqualTo(10);
+            assertThat(retrievedData.getFields())
+                    .containsExactly("log_time", "level", "message", "host");
+
+            log.info("✅ 更新缓存覆盖保存测试通过");
+        }
+
+        @Test
+        @Order(5)
+        @DisplayName("CACHE-005: 获取不存在的缓存")
+        void testGetNonExistentCache() {
+            log.info("🔍 测试获取不存在的缓存");
+
+            String nonExistentKey = "non_existent_key_" + System.currentTimeMillis();
+
+            // 获取不存在的缓存
+            Optional<LogSearchDTO> result =
+                    systemCacheService.getCache(
+                            CacheGroup.LOG_SEARCH_CONDITION, nonExistentKey, LogSearchDTO.class);
+
+            // 验证结果为空
+            assertThat(result).isEmpty();
+
+            log.info("✅ 获取不存在的缓存测试通过");
+        }
+
+        @Test
+        @Order(6)
+        @DisplayName("CACHE-006: 删除缓存")
+        void testDeleteCache() {
+            log.info("🔍 测试删除缓存");
+
+            // 删除缓存
+            assertDoesNotThrow(
+                    () -> {
+                        systemCacheService.deleteCache(
+                                CacheGroup.LOG_SEARCH_CONDITION, testCacheKey);
+                    });
+
+            // 验证缓存已被删除
+            Optional<LogSearchDTO> result =
+                    systemCacheService.getCache(
+                            CacheGroup.LOG_SEARCH_CONDITION, testCacheKey, LogSearchDTO.class);
+            assertThat(result).isEmpty();
+
+            // 验证用户缓存列表中不再包含该缓存
+            List<SystemCacheConfig> userCaches =
+                    systemCacheService.getUserCaches(CacheGroup.LOG_SEARCH_CONDITION);
+            boolean containsTestCache =
+                    userCaches.stream().anyMatch(cache -> cache.getCacheKey().equals(testCacheKey));
+            assertThat(containsTestCache).isFalse();
+
+            log.info("✅ 删除缓存测试通过");
+        }
+
+        @Test
+        @Order(7)
+        @DisplayName("CACHE-007: 删除不存在的缓存")
+        void testDeleteNonExistentCache() {
+            log.info("🔍 测试删除不存在的缓存");
+
+            String nonExistentKey = "non_existent_key_" + System.currentTimeMillis();
+
+            // 删除不存在的缓存应该不抛出异常
+            assertDoesNotThrow(
+                    () -> {
+                        systemCacheService.deleteCache(
+                                CacheGroup.LOG_SEARCH_CONDITION, nonExistentKey);
+                    });
+
+            log.info("✅ 删除不存在的缓存测试通过");
+        }
+
+        @Test
+        @Order(8)
+        @DisplayName("CACHE-008: 数据类型验证 - 错误类型")
+        void testDataTypeValidation() {
+            log.info("🔍 测试数据类型验证");
+
+            // 尝试保存错误类型的数据（String 而不是 LogSearchDTO）
+            String wrongTypeData = "This is a string, not LogSearchDTO";
+
+            // 验证抛出业务异常
+            assertBusinessException(
+                    () ->
+                            systemCacheService.saveCache(
+                                    CacheGroup.LOG_SEARCH_CONDITION,
+                                    "wrong_type_key",
+                                    wrongTypeData),
+                    ErrorCode.VALIDATION_ERROR);
+
+            log.info("✅ 数据类型验证测试通过");
+        }
+
+        @Test
+        @Order(9)
+        @DisplayName("CACHE-009: 参数验证 - 空值检查")
+        void testParameterValidation() {
+            log.info("🔍 测试参数验证");
+
+            LogSearchDTO validData = new LogSearchDTO();
+            validData.setModule("test-module");
+
+            // 测试空的缓存组
+            assertBusinessException(
+                    () -> systemCacheService.saveCache(null, "test_key", validData),
+                    ErrorCode.VALIDATION_ERROR);
+
+            // 测试空的缓存键
+            assertBusinessException(
+                    () ->
+                            systemCacheService.saveCache(
+                                    CacheGroup.LOG_SEARCH_CONDITION, null, validData),
+                    ErrorCode.VALIDATION_ERROR);
+
+            // 测试空的数据
+            assertBusinessException(
+                    () ->
+                            systemCacheService.saveCache(
+                                    CacheGroup.LOG_SEARCH_CONDITION, "test_key", null),
+                    ErrorCode.VALIDATION_ERROR);
+
+            log.info("✅ 参数验证测试通过");
+        }
+
+        @Test
+        @Order(10)
+        @DisplayName("CACHE-010: 并发保存缓存测试")
+        void testConcurrentCacheSave()
+                throws InterruptedException, ExecutionException, TimeoutException {
+            log.info("🔍 测试并发保存缓存");
+
+            String concurrentCacheKey = "concurrent_test_key_" + System.currentTimeMillis();
+            int threadCount = 5;
+            ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+            List<Exception> exceptions = Collections.synchronizedList(new ArrayList<>());
+            List<Boolean> successResults = Collections.synchronizedList(new ArrayList<>());
+
+            try {
+                // 创建多个并发任务
+                List<CompletableFuture<Void>> futures = new ArrayList<>();
+                for (int i = 0; i < threadCount; i++) {
+                    final int threadIndex = i;
+                    CompletableFuture<Void> future =
+                            CompletableFuture.runAsync(
+                                    () -> {
+                                        try {
+                                            LogSearchDTO data = new LogSearchDTO();
+                                            data.setModule("concurrent-module-" + threadIndex);
+                                            data.setKeywords(List.of("thread-" + threadIndex));
+                                            data.setPageSize(threadIndex * 10 + 10);
+
+                                            systemCacheService.saveCache(
+                                                    CacheGroup.LOG_SEARCH_CONDITION,
+                                                    concurrentCacheKey,
+                                                    data);
+                                            successResults.add(true);
+                                            log.debug("线程 {} 成功保存缓存", threadIndex);
+                                        } catch (Exception e) {
+                                            exceptions.add(e);
+                                            log.debug(
+                                                    "线程 {} 保存缓存失败: {}",
+                                                    threadIndex,
+                                                    e.getMessage());
+                                        }
+                                    },
+                                    executor);
+                    futures.add(future);
+                }
+
+                // 等待所有任务完成
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                        .get(10, TimeUnit.SECONDS);
+
+                // 验证并发行为：由于唯一约束，只有一个线程能成功保存
+                log.info("成功保存数量: {}, 异常数量: {}", successResults.size(), exceptions.size());
+                assertThat(successResults.size()).isEqualTo(1); // 只有一个成功
+                assertThat(exceptions.size()).isEqualTo(threadCount - 1); // 其他都失败
+
+                // 验证最终只有一个缓存记录存在
+                Optional<LogSearchDTO> finalResultOpt =
+                        systemCacheService.getCache(
+                                CacheGroup.LOG_SEARCH_CONDITION,
+                                concurrentCacheKey,
+                                LogSearchDTO.class);
+                assertThat(finalResultOpt).isPresent();
+                LogSearchDTO finalResult = finalResultOpt.get();
+                assertThat(finalResult.getModule()).startsWith("concurrent-module-");
+
+                log.info("✅ 并发保存缓存测试通过 - 最终结果: {}", finalResult.getModule());
+
+                // 清理测试数据
+                systemCacheService.deleteCache(CacheGroup.LOG_SEARCH_CONDITION, concurrentCacheKey);
+
+            } finally {
+                executor.shutdown();
+            }
         }
     }
 }
