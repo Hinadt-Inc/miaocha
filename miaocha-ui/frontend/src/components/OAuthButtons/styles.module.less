@@ -14,10 +14,213 @@
 
 .providersContainer {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  padding: 8px; // 增加内边距，防止边缘触发
 }
 
+// 紧凑的OAuth按钮样式
+.compactOAuthButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 12px;
+  border-radius: 50px;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  background: rgba(255, 255, 255, 0.6);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  overflow: hidden;
+  width: 48px; // 初始宽度，只显示图标
+  height: 48px;
+  white-space: nowrap;
+  
+  // 添加稳定的外边距，避免边缘触发问题
+  margin: 4px;
+  
+  // 分别为不同属性设置不同的过渡效果，延长延迟时间避免快速触发
+  transition: 
+    width 0.4s cubic-bezier(0.23, 1, 0.32, 1) 0.1s,
+    padding 0.4s cubic-bezier(0.23, 1, 0.32, 1) 0.1s,
+    border-color 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    background 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    box-shadow 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  
+  // 在收起状态时增加反向延迟，防止快速闪烁
+  &:not(:hover):not(.hovered) {
+    transition-delay: 
+      0.2s, // width
+      0.2s, // padding
+      0s,   // border-color
+      0s,   // background
+      0s,   // box-shadow
+      0s;   // transform
+  }
+  
+  // 重置button的默认样式
+  outline: none;
+  font-family: inherit;
+  font-size: inherit;
+  
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+  
+  // 背景光效
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.15), transparent);
+    transition: left 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    z-index: 1;
+  }
+  
+  // 文字遮罩效果
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 20px;
+    height: 100%;
+    background: linear-gradient(to left, rgba(255, 255, 255, 0.9), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 2;
+  }
+  
+  &:hover,
+  &.hovered {
+    width: 230px; // 稍微加大宽度给文字更多空间
+    padding: 12px 24px;
+    border-color: rgba(139, 92, 246, 0.5);
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 
+      0 8px 25px rgba(139, 92, 246, 0.2),
+      0 0 0 1px rgba(139, 92, 246, 0.1);
+    transform: translateY(-2px);
+    
+    // 增加过渡延迟，确保hover状态稳定
+    transition-delay: 0s;
+    
+    &::before {
+      left: 100%;
+    }
+    
+    &::after {
+      opacity: 1;
+    }
+    
+    .buttonText {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+      visibility: visible;
+      color: #8b5cf6;
+      max-width: 180px;
+      transition-delay: 0.05s;
+    }
+    
+    .compactIcon {
+      filter: brightness(1) saturate(1.2);
+      margin-right: 12px;
+      transition-delay: 0s;
+    }
+  }
+  
+  &:focus {
+    outline: none;
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+  }
+  
+  &:active {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.25);
+  }
+  
+  &.loading {
+    width: 230px;
+    padding: 12px 24px;
+    pointer-events: none;
+    
+    &::after {
+      opacity: 1;
+    }
+    
+    .buttonText {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+      visibility: visible;
+      max-width: 180px;
+    }
+    
+    .compactIcon {
+      margin-right: 12px;
+      filter: brightness(1);
+    }
+  }
+}
+
+.compactIcon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: brightness(0.8) saturate(0.9);
+  margin-right: 0;
+  transition: 
+    filter 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    margin-right 0.4s cubic-bezier(0.23, 1, 0.32, 1) 0.05s;
+  z-index: 3;
+  position: relative;
+}
+
+.buttonText {
+  color: #333;
+  font-size: 15px;
+  font-weight: 500;
+  opacity: 0;
+  transform: translateX(-12px) scale(0.95);
+  visibility: hidden;
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 0;
+  position: relative;
+  z-index: 3;
+  transition: 
+    opacity 0.3s cubic-bezier(0.23, 1, 0.32, 1) 0.1s,
+    transform 0.3s cubic-bezier(0.23, 1, 0.32, 1) 0.1s,
+    visibility 0.3s cubic-bezier(0.23, 1, 0.32, 1) 0.1s,
+    max-width 0.4s cubic-bezier(0.23, 1, 0.32, 1) 0.05s,
+    color 0.2s ease 0.15s;
+}
+
+.loadingSpinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(139, 92, 246, 0.2);
+  border-top: 2px solid #8b5cf6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+// 保留原有的传统按钮样式（向后兼容）
 .oauthButton {
   height: 48px !important;
   border-radius: 28px !important;
@@ -88,5 +291,4 @@
   font-size: 12px;
   color: #999;
   padding: 8px 16px;
-  border-radius: 16px;
 }

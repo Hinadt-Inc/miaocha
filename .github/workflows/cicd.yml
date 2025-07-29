@@ -302,7 +302,7 @@ jobs:
             echo "❌ Node.js依赖缓存未命中，将在构建后保存"
             echo "NODEMODULES_CACHE_HIT=false" >> $GITHUB_ENV
           fi
-
+          
       - name: Verify Java and Maven
         run: |
           echo "🔍 验证Java和Maven安装状态..."
@@ -370,10 +370,10 @@ jobs:
           KUBECTL_VERSION="v1.29.0"  # 使用固定版本以便缓存
           KUBECTL_CACHE_KEY="kubectl-${KUBECTL_VERSION}-$(uname -m)"
           KUBECTL_CACHE_PATH="/opt/action-runner/cache/kubectl/${KUBECTL_CACHE_KEY}"
-          
+
           echo "KUBECTL_CACHE_KEY=$KUBECTL_CACHE_KEY" >> $GITHUB_ENV
           echo "KUBECTL_CACHE_PATH=$KUBECTL_CACHE_PATH" >> $GITHUB_ENV
-          
+
           if [ -f "$KUBECTL_CACHE_PATH/kubectl" ]; then
             echo "✅ 发现kubectl缓存: $KUBECTL_CACHE_KEY"
             sudo cp "$KUBECTL_CACHE_PATH/kubectl" /usr/local/bin/kubectl
