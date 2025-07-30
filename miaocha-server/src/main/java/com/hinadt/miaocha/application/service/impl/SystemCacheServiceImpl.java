@@ -6,6 +6,7 @@ import com.hinadt.miaocha.application.service.SystemCacheService;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.common.util.UserContextUtil;
+import com.hinadt.miaocha.domain.dto.cache.SystemCacheDTO;
 import com.hinadt.miaocha.domain.entity.SystemCacheConfig;
 import com.hinadt.miaocha.domain.entity.enums.CacheGroup;
 import com.hinadt.miaocha.domain.mapper.SystemCacheConfigMapper;
@@ -55,14 +56,16 @@ public class SystemCacheServiceImpl implements SystemCacheService {
     }
 
     @Override
-    public <T> Optional<T> getCache(CacheGroup cacheGroup, String cacheKey, Class<T> clazz) {
-        validateGetParams(cacheGroup, cacheKey, clazz);
+    public <T> Optional<T> getCache(CacheGroup cacheGroup, String cacheKey) {
+        validateGetParams(cacheGroup, cacheKey);
 
         return findExistingCache(cacheGroup.name(), cacheKey)
                 .filter(cache -> StringUtils.hasText(cache.getContent()))
                 .map(
                         cache -> {
-                            T data = deserializeFromJson(cache.getContent(), clazz);
+                            @SuppressWarnings("unchecked")
+                            Class<T> dataType = (Class<T>) cacheGroup.getDataType();
+                            T data = deserializeFromJson(cache.getContent(), dataType);
                             log.debug(LOG_CACHE_OPERATION, cacheGroup.getName(), cacheKey, "获取");
                             return data;
                         })
@@ -70,31 +73,6 @@ public class SystemCacheServiceImpl implements SystemCacheService {
                         () -> {
                             log.debug(LOG_CACHE_OPERATION, cacheGroup.getName(), cacheKey, "未找到");
                             return Optional.empty();
-                        });
-    }
-
-    @Override
-    public List<SystemCacheConfig> getUserCaches(CacheGroup cacheGroup) {
-        validateCacheGroup(cacheGroup);
-
-        return getCurrentUserEmail()
-                .map(
-                        userEmail -> {
-                            List<SystemCacheConfig> userCaches =
-                                    systemCacheConfigMapper.selectByGroupAndCreateUser(
-                                            cacheGroup.name(), userEmail);
-                            log.debug(
-                                    LOG_USER_CACHE_OPERATION,
-                                    cacheGroup.getName(),
-                                    userEmail,
-                                    "获取",
-                                    userCaches.size());
-                            return userCaches;
-                        })
-                .orElseGet(
-                        () -> {
-                            log.warn("无法获取当前用户信息，返回空列表");
-                            return Collections.emptyList();
                         });
     }
 
@@ -110,6 +88,58 @@ public class SystemCacheServiceImpl implements SystemCacheService {
         log.debug(LOG_CACHE_OPERATION, cacheGroup.getName(), cacheKey, operation);
 
         return deleted;
+    }
+
+    @Override
+    public <T> List<SystemCacheDTO<T>> getUserCacheData(CacheGroup cacheGroup) {
+        validateCacheGroup(cacheGroup);
+
+        return getCurrentUserEmail()
+                .map(
+                        userEmail -> {
+                            List<SystemCacheConfig> userCaches =
+                                    systemCacheConfigMapper.selectByGroupAndCreateUser(
+                                            cacheGroup.name(), userEmail);
+
+                            // 转换为SystemCacheDTO并进行类型转换
+                            @SuppressWarnings("unchecked")
+                            Class<T> dataType = (Class<T>) cacheGroup.getDataType();
+
+                            List<SystemCacheDTO<T>> result =
+                                    userCaches.stream()
+                                            .map(cache -> convertToSystemCacheDTO(cache, dataType))
+                                            .toList();
+
+                            log.debug(
+                                    LOG_USER_CACHE_OPERATION,
+                                    cacheGroup.getName(),
+                                    userEmail,
+                                    "获取数据",
+                                    result.size());
+                            return result;
+                        })
+                .orElseGet(
+                        () -> {
+                            log.warn("无法获取当前用户信息，返回空列表");
+                            return Collections.emptyList();
+                        });
+    }
+
+    @Override
+    @Transactional
+    public int batchDeleteCache(CacheGroup cacheGroup, List<String> cacheKeys) {
+        validateBatchDeleteParams(cacheGroup, cacheKeys);
+
+        int deletedRows =
+                systemCacheConfigMapper.batchDeleteByGroupAndKeys(cacheGroup.name(), cacheKeys);
+
+        log.debug(
+                "批量删除缓存: group={}, keys={}, deleted={}",
+                cacheGroup.getName(),
+                cacheKeys.size(),
+                deletedRows);
+
+        return deletedRows;
     }
 
     // ==================== 私有辅助方法 ====================
@@ -194,10 +224,9 @@ public class SystemCacheServiceImpl implements SystemCacheService {
     }
 
     /** 验证获取缓存的参数 */
-    private <T> void validateGetParams(CacheGroup cacheGroup, String cacheKey, Class<T> clazz) {
+    private <T> void validateGetParams(CacheGroup cacheGroup, String cacheKey) {
         validateCacheGroup(cacheGroup);
         validateCacheKey(cacheKey);
-        validateNotNull(clazz, "目标类型不能为空");
     }
 
     /** 验证删除缓存的参数 */
@@ -236,6 +265,37 @@ public class SystemCacheServiceImpl implements SystemCacheService {
                     String.format(
                             "缓存数据类型不匹配，期望类型: %s，实际类型: %s",
                             expectedType.getSimpleName(), actualType.getSimpleName()));
+        }
+    }
+
+    /** 转换SystemCacheConfig为SystemCacheDTO */
+    private <T> SystemCacheDTO<T> convertToSystemCacheDTO(
+            SystemCacheConfig cache, Class<T> dataType) {
+        SystemCacheDTO<T> dto = new SystemCacheDTO<>();
+        dto.setId(cache.getId());
+        dto.setCacheGroup(cache.getCacheGroup());
+        dto.setCacheKey(cache.getCacheKey());
+        dto.setCreateTime(cache.getCreateTime());
+        dto.setCreateUser(cache.getCreateUser());
+
+        // 反序列化content字段为指定类型
+        if (StringUtils.hasText(cache.getContent())) {
+            T data = deserializeFromJson(cache.getContent(), dataType);
+            dto.setData(data);
+        }
+
+        return dto;
+    }
+
+    /** 验证批量删除缓存的参数 */
+    private void validateBatchDeleteParams(CacheGroup cacheGroup, List<String> cacheKeys) {
+        validateCacheGroup(cacheGroup);
+        validateNotNull(cacheKeys, "缓存键列表不能为空");
+        if (cacheKeys.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "缓存键列表不能为空");
+        }
+        if (cacheKeys.size() > 100) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "单次批量删除的缓存键数量不能超过100个");
         }
     }
 }

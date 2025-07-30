@@ -15,8 +15,11 @@ import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.common.util.CacheKeyUtils;
 import com.hinadt.miaocha.domain.dto.SchemaInfoDTO;
+import com.hinadt.miaocha.domain.dto.cache.BatchDeleteCacheDTO;
+import com.hinadt.miaocha.domain.dto.cache.SystemCacheDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogDetailResultDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogHistogramResultDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchCacheDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.entity.enums.CacheGroup;
@@ -157,7 +160,7 @@ public class LogSearchServiceImpl implements LogSearchService {
 
     /** 保存用户个性化的日志搜索条件 */
     @Override
-    public String saveSearchCondition(LogSearchDTO searchCondition) {
+    public String saveSearchCondition(LogSearchCacheDTO searchCondition) {
         // 生成缓存键
         String cacheKey = CacheKeyUtils.generateSearchConditionKey();
 
@@ -165,5 +168,19 @@ public class LogSearchServiceImpl implements LogSearchService {
         systemCacheService.saveCache(CacheGroup.LOG_SEARCH_CONDITION, cacheKey, searchCondition);
 
         return cacheKey;
+    }
+
+    /** 获取用户个性化的日志搜索条件数据 */
+    @Override
+    public List<SystemCacheDTO<LogSearchCacheDTO>> getUserSearchConditions() {
+        return systemCacheService.getUserCacheData(CacheGroup.LOG_SEARCH_CONDITION);
+    }
+
+    /** 批量删除用户个性化的日志搜索条件 */
+    @Override
+    @Transactional
+    public void batchDeleteSearchConditions(BatchDeleteCacheDTO deleteCacheDTO) {
+        systemCacheService.batchDeleteCache(
+                CacheGroup.LOG_SEARCH_CONDITION, deleteCacheDTO.getCacheKeys());
     }
 }

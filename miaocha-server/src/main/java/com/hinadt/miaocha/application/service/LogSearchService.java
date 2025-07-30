@@ -1,9 +1,12 @@
 package com.hinadt.miaocha.application.service;
 
 import com.hinadt.miaocha.domain.dto.SchemaInfoDTO;
+import com.hinadt.miaocha.domain.dto.cache.BatchDeleteCacheDTO;
+import com.hinadt.miaocha.domain.dto.cache.SystemCacheDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogDetailResultDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogFieldDistributionResultDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogHistogramResultDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchCacheDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import java.util.List;
 
@@ -45,8 +48,22 @@ public interface LogSearchService {
     /**
      * 保存用户个性化的日志搜索条件
      *
-     * @param searchCondition 日志搜索条件
+     * @param searchCondition 日志搜索条件缓存
      * @return 生成的缓存键
      */
-    String saveSearchCondition(LogSearchDTO searchCondition);
+    String saveSearchCondition(LogSearchCacheDTO searchCondition);
+
+    /**
+     * 获取用户个性化的日志搜索条件数据
+     *
+     * @return 用户的搜索条件缓存列表
+     */
+    List<SystemCacheDTO<LogSearchCacheDTO>> getUserSearchConditions();
+
+    /**
+     * 批量删除用户个性化的日志搜索条件
+     *
+     * @param deleteCacheDTO 批量删除请求
+     */
+    void batchDeleteSearchConditions(BatchDeleteCacheDTO deleteCacheDTO);
 }

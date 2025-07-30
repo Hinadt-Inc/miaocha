@@ -107,12 +107,10 @@
     <delete id="batchDeleteByGroupAndKeys">
         DELETE FROM system_cache_config
         WHERE cache_group = #{cacheGroup}
-        <if test="cacheKeys != null and cacheKeys.size() > 0">
-            AND cache_key IN
-            <foreach collection="cacheKeys" item="key" open="(" separator="," close=")">
-                #{key}
-            </foreach>
-        </if>
+        AND cache_key IN
+        <foreach collection="cacheKeys" item="key" open="(" separator="," close=")">
+            #{key}
+        </foreach>
     </delete>
 
     <!-- 统计指定缓存组的配置数量 -->

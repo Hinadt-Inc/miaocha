@@ -1,5 +1,6 @@
 package com.hinadt.miaocha.application.service;
 
+import com.hinadt.miaocha.domain.dto.cache.SystemCacheDTO;
 import com.hinadt.miaocha.domain.entity.SystemCacheConfig;
 import com.hinadt.miaocha.domain.entity.enums.CacheGroup;
 import java.util.List;
@@ -20,23 +21,14 @@ public interface SystemCacheService {
     <T> SystemCacheConfig saveCache(CacheGroup cacheGroup, String cacheKey, T data);
 
     /**
-     * 获取缓存内容并反序列化为指定类型
+     * 获取缓存内容并反序列化为指定类型, 注意获取的是缓存内容，不是缓存整行记录
      *
      * @param cacheGroup 缓存组
      * @param cacheKey 缓存键
-     * @param clazz 目标类型
      * @param <T> 数据类型
      * @return 反序列化后的对象，如果不存在则返回空
      */
-    <T> Optional<T> getCache(CacheGroup cacheGroup, String cacheKey, Class<T> clazz);
-
-    /**
-     * 获取当前用户在指定缓存组的所有缓存配置 用户信息通过 UserContextUtil 自动获取
-     *
-     * @param cacheGroup 缓存组
-     * @return 缓存配置列表
-     */
-    List<SystemCacheConfig> getUserCaches(CacheGroup cacheGroup);
+    <T> Optional<T> getCache(CacheGroup cacheGroup, String cacheKey);
 
     /**
      * 删除缓存配置
@@ -46,4 +38,22 @@ public interface SystemCacheService {
      * @return 是否删除成功
      */
     boolean deleteCache(CacheGroup cacheGroup, String cacheKey);
+
+    /**
+     * 获取当前用户在指定缓存组的所有缓存数据（带类型转换） 用户信息通过 UserContextUtil 自动获取
+     *
+     * @param cacheGroup 缓存组
+     * @param <T> 数据类型
+     * @return 缓存数据列表
+     */
+    <T> List<SystemCacheDTO<T>> getUserCacheData(CacheGroup cacheGroup);
+
+    /**
+     * 批量删除缓存配置
+     *
+     * @param cacheGroup 缓存组
+     * @param cacheKeys 缓存键列表
+     * @return 删除的数量
+     */
+    int batchDeleteCache(CacheGroup cacheGroup, List<String> cacheKeys);
 }
