@@ -155,10 +155,27 @@ const SavedSearchesModal: React.FC<SavedSearchesModalProps> = ({
   };
 
   // 时间格式转译
-  const formatCreateTime = (createTime: string | number) => {
+   const formatCreateTime = (createTime: string | number) => {
+    // 输入验证
+    if (!createTime) {
+      return '无效时间';
+    }
+    
     const time = dayjs(createTime);
+    
+    // 验证时间是否有效
+    if (!time.isValid()) {
+      return '无效时间';
+    }
+    
     const now = dayjs();
-    const diffDays = now.diff(time, 'day');
+    // 使用 startOf('day') 确保比较的是日期而不是具体时间点
+    const diffDays = now.startOf('day').diff(time.startOf('day'), 'day');
+    
+    // 处理未来时间
+    if (diffDays < 0) {
+      return time.format('YYYY-MM-DD HH:mm');
+    }
     
     if (diffDays === 0) {
       return `今天 ${time.format('HH:mm')}`;
@@ -166,8 +183,12 @@ const SavedSearchesModal: React.FC<SavedSearchesModalProps> = ({
       return `昨天 ${time.format('HH:mm')}`;
     } else if (diffDays < 7) {
       return `${diffDays}天前 ${time.format('HH:mm')}`;
-    } else {
+    } else if (time.year() === now.year()) {
+      // 同一年显示月日
       return time.format('MM-DD HH:mm');
+    } else {
+      // 不同年份显示完整日期
+      return time.format('YYYY-MM-DD HH:mm');
     }
   };
 
