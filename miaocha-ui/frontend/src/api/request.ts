@@ -202,3 +202,8 @@ export function get<T = unknown>(url: string, config?: AxiosRequestConfig): Prom
 export function post<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
   return request({ ...config, method: 'POST', url, data });
 }
+
+// 封装DELETE请求
+export function del<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+  return request({ ...config, method: 'DELETE', url, data });
+}

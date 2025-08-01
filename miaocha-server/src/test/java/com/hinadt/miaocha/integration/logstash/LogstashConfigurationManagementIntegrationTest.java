@@ -157,10 +157,10 @@ public class LogstashConfigurationManagementIntegrationTest {
 
     private static final String UPDATED_LOGSTASH_YML =
             """
-        http.host: 0.0.0.0
-        http.port: 9600
+        api.http.host: 0.0.0.0
+        api.http.port: 9600
         log.level: info
-        path.logs: /var/log/logstash
+        path.logs: /home/ubuntu/logstash-logs
         pipeline.workers: 4
         pipeline.batch.size: 250
         queue.type: memory

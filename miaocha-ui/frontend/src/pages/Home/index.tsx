@@ -72,10 +72,10 @@ const HomePage = () => {
               }),
             );
 
-            // 清理sessionStorage中的provider信息和ticket参数
+            // 清理sessionStorage中的provider信息
             sessionStorage.removeItem('oauthProvider');
             
-            // 移除URL中的ticket参数并保持其他参数
+            // 移除URL中的ticket参数，但保留分享参数
             const newUrl = new URL(window.location.href);
             newUrl.searchParams.delete('ticket');
             window.history.replaceState({}, '', newUrl.toString());
@@ -92,6 +92,183 @@ const HomePage = () => {
 
     handleCASCallback();
   }, [urlSearchParams, dispatch]);
+
+  // 分享参数状态
+  const [sharedParams, setSharedParams] = useState<any>(null);
+  const [hasAppliedSharedParams, setHasAppliedSharedParams] = useState(false);
+
+  // 页面初始化时检查是否有保存的分享参数
+  useEffect(() => {
+    const savedSharedParams = sessionStorage.getItem('miaocha_shared_params');
+    if (savedSharedParams && !sharedParams) {
+      try {
+        const parsedSavedParams = JSON.parse(savedSharedParams);
+        setSharedParams(parsedSavedParams);
+        
+        if (parsedSavedParams.module) {
+          setSelectedModule(parsedSavedParams.module);
+        }
+        
+        console.log('页面初始化时恢复分享参数:', parsedSavedParams);
+      } catch (e) {
+        console.error('解析保存的分享参数失败:', e);
+        sessionStorage.removeItem('miaocha_shared_params');
+      }
+    }
+  }, []); // 只在组件挂载时执行一次
+
+  // 处理分享的URL参数
+  useEffect(() => {
+    const handleSharedParams = () => {
+      try {
+        const keywords = urlSearchParams.get('keywords');
+        const whereSqls = urlSearchParams.get('whereSqls');
+        const timeRange = urlSearchParams.get('timeRange');
+        const startTime = urlSearchParams.get('startTime');
+        const endTime = urlSearchParams.get('endTime');
+        const module = urlSearchParams.get('module');
+        const timeGrouping = urlSearchParams.get('timeGrouping');
+
+        // 如果有分享参数，解析并保存
+        if (keywords || whereSqls || timeRange || module) {
+          const parsedParams: any = {};
+          
+          if (keywords) {
+            try {
+              parsedParams.keywords = JSON.parse(keywords);
+            } catch (e) {
+              console.error('解析keywords参数失败:', e);
+            }
+          }
+          
+          if (whereSqls) {
+            try {
+              parsedParams.whereSqls = JSON.parse(whereSqls);
+            } catch (e) {
+              console.error('解析whereSqls参数失败:', e);
+            }
+          }
+          
+          if (timeRange) parsedParams.timeRange = timeRange;
+          if (startTime) parsedParams.startTime = startTime;
+          if (endTime) parsedParams.endTime = endTime;
+          if (timeGrouping) parsedParams.timeGrouping = timeGrouping;
+          if (module) parsedParams.module = module;
+
+          // 保存分享参数到状态和sessionStorage，确保登录后不丢失
+          if (Object.keys(parsedParams).length > 0) {
+            setSharedParams(parsedParams);
+            
+            // 保存到sessionStorage，防止登录跳转后丢失
+            sessionStorage.setItem('miaocha_shared_params', JSON.stringify(parsedParams));
+            
+            if (parsedParams.module) {
+              setSelectedModule(parsedParams.module);
+            }
+            
+            // 先不清理URL参数，等到参数成功应用后再清理
+            console.log('检测到分享参数:', parsedParams);
+          }
+        } else {
+          // 如果URL中没有分享参数，检查sessionStorage中是否有保存的分享参数
+          const savedSharedParams = sessionStorage.getItem('miaocha_shared_params');
+          if (savedSharedParams && !sharedParams) {
+            try {
+              const parsedSavedParams = JSON.parse(savedSharedParams);
+              setSharedParams(parsedSavedParams);
+              
+              if (parsedSavedParams.module) {
+                setSelectedModule(parsedSavedParams.module);
+              }
+              
+              console.log('从sessionStorage恢复分享参数:', parsedSavedParams);
+            } catch (e) {
+              console.error('解析保存的分享参数失败:', e);
+              sessionStorage.removeItem('miaocha_shared_params');
+            }
+          }
+        }
+      } catch (error) {
+        console.error('处理分享参数失败:', error);
+      }
+    };
+
+    handleSharedParams();
+  }, [urlSearchParams, sharedParams]);
+
+  // 应用分享参数到搜索栏
+  useEffect(() => {
+    if (sharedParams && !hasAppliedSharedParams && searchBarRef.current && moduleOptions.length > 0) {
+      // 短暂延迟确保 SearchBar 组件完全初始化
+      const timer = setTimeout(() => {
+        try {
+          // 应用关键词
+          if (sharedParams.keywords && Array.isArray(sharedParams.keywords)) {
+            setKeywords(sharedParams.keywords);
+          }
+          
+          // 应用SQL条件
+          if (sharedParams.whereSqls && Array.isArray(sharedParams.whereSqls)) {
+            setSqls(sharedParams.whereSqls);
+          }
+          
+          // 应用时间分组
+          if (sharedParams.timeGrouping) {
+            searchBarRef.current?.setTimeGroup?.(sharedParams.timeGrouping);
+          }
+          
+          // 应用时间范围到SearchBar
+          if (sharedParams.timeRange || (sharedParams.startTime && sharedParams.endTime)) {
+            const timeOption = {
+              value: sharedParams.timeRange || `${sharedParams.startTime} ~ ${sharedParams.endTime}`,
+              range: [sharedParams.startTime, sharedParams.endTime],
+              label: sharedParams.timeRange ? (QUICK_RANGES[sharedParams.timeRange]?.label || sharedParams.timeRange) : `${sharedParams.startTime} ~ ${sharedParams.endTime}`,
+              type: sharedParams.timeRange && QUICK_RANGES[sharedParams.timeRange] ? 'quick' : 'absolute',
+            };
+            searchBarRef.current?.setTimeOption?.(timeOption);
+          }
+          
+          // 更新搜索参数
+          if (sharedParams.module) {
+            const moduleOption = moduleOptions.find(option => option.module === sharedParams.module);
+            if (moduleOption) {
+              setSearchParams(prev => ({
+                ...prev,
+                datasourceId: Number(moduleOption.datasourceId),
+                module: sharedParams.module,
+                startTime: sharedParams.startTime || prev.startTime,
+                endTime: sharedParams.endTime || prev.endTime,
+                timeRange: sharedParams.timeRange || prev.timeRange,
+                timeGrouping: sharedParams.timeGrouping || prev.timeGrouping,
+                keywords: sharedParams.keywords || [],
+                whereSqls: sharedParams.whereSqls || [],
+                offset: 0,
+              }));
+            }
+          }
+          
+          setHasAppliedSharedParams(true);
+          
+          // 参数应用成功后，清理URL和sessionStorage
+          const newUrl = new URL(window.location.href);
+          ['keywords', 'whereSqls', 'timeRange', 'startTime', 'endTime', 'module', 'timeGrouping'].forEach(param => {
+            newUrl.searchParams.delete(param);
+          });
+          window.history.replaceState({}, '', newUrl.toString());
+          
+          // 清理sessionStorage中的分享参数
+          sessionStorage.removeItem('miaocha_shared_params');
+          
+          console.log('分享参数应用成功并已清理:', sharedParams);
+        } catch (error) {
+          console.error('应用分享参数失败:', error);
+        }
+      }, 200);
+
+      return () => clearTimeout(timer);
+    }
+  }, [sharedParams, hasAppliedSharedParams, moduleOptions, searchBarRef]);
+  
   const [isInitialized, setIsInitialized] = useState(false); // 标记是否已经初始化
   const lastCallParamsRef = useRef<string>('');
   const requestTimerRef = useRef<NodeJS.Timeout | null>(null); // 新增：用于延迟请求的定时器
@@ -133,11 +310,23 @@ const HomePage = () => {
       const moduleOptions = generateModuleOptions(res);
       setModuleOptions(moduleOptions);
 
+      // 如果有分享参数，优先应用分享的模块
+      if (sharedParams && sharedParams.module && !hasAppliedSharedParams) {
+        const sharedModuleOption = moduleOptions.find(option => option.module === sharedParams.module);
+        if (sharedModuleOption) {
+          setSelectedModule(sharedParams.module);
+          setSearchParams((prev) => ({
+            ...prev,
+            datasourceId: Number(sharedModuleOption.datasourceId),
+            module: sharedParams.module,
+          }));
+          return; // 分享参数会在后续的 useEffect 中完整应用
+        }
+      }
+
       // 只在初始化时设置默认模块，避免重复设置
       if ((!searchParams.datasourceId || !searchParams.module) && moduleOptions[0]) {
-        const favoriteModule = localStorage.getItem('favoriteModule');
-        const defaultModule = favoriteModule || moduleOptions[0].module;
-        const defaultOption = moduleOptions.find((opt) => opt.module === defaultModule) || moduleOptions[0];
+        const defaultOption = moduleOptions[0];
 
         // 批量更新状态，避免多次渲染
         setSelectedModule(defaultOption.module);
