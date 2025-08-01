@@ -1,0 +1,58 @@
+.shareModal {
+  .linkContainer {
+    .linkDescription {
+      margin-bottom: 16px;
+      color: #666;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    
+    .linkInput {
+      margin-bottom: 16px;
+      
+      :global {
+        .ant-input {
+          font-size: 12px;
+          font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        }
+      }
+    }
+    
+    .copyButton {
+      width: 100%;
+    }
+  }
+  
+  .qrcodeContainer {
+    text-align: center;
+    
+    .qrcodeDescription {
+      margin-bottom: 20px;
+      color: #666;
+      font-size: 13px;
+    }
+    
+    .qrcodeWrapper {
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+      background-color: #fafafa;
+      border-radius: 8px;
+      
+      :global {
+        .ant-qrcode {
+          background-color: white;
+          padding: 16px;
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+      }
+    }
+  }
+  
+  :global {
+    .ant-tabs-content-holder {
+      padding-top: 16px;
+    }
+  }
+}

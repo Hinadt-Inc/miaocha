@@ -215,4 +215,128 @@ declare global {
     isFixed?: boolean;
     _createTime?: number;
   }
+
+  // 保存的搜索条件接口
+  interface ISavedSearchCondition {
+    /** ID */
+    id: string;
+    /** 用户ID */
+    userId: number;
+    /** 搜索条件名称 */
+    name: string;
+    /** 搜索条件描述 */
+    description?: string;
+    /** 搜索参数 */
+    searchParams: ILogSearchParams;
+    /** 创建时间 */
+    createTime: string;
+    /** 更新时间 */
+    updateTime: string;
+  }
+
+  // 保存搜索条件的参数
+  interface ISaveSearchConditionParams {
+    /** 搜索条件名称 */
+    name: string;
+    /** 搜索条件描述 */
+    description?: string;
+    /** 搜索参数 */
+    searchParams: ILogSearchParams;
+  }
+
+  // 保存搜索条件并返回缓存键的参数
+  interface ISaveSearchConditionWithCacheParams {
+    /** 模块名称 */
+    module: string;
+    /** 关键词列表 */
+    keywords?: string[];
+    /** SQL条件列表 */
+    whereSqls?: string[];
+    /** 开始时间（可选） */
+    startTime?: string;
+    /** 结束时间（可选） */
+    endTime?: string;
+    /** 时间范围（可选） */
+    timeRange?: string;
+    /** 时间分组（可选） */
+    timeGrouping?: string;
+    /** 目标桶数量 */
+    targetBuckets?: number;
+    /** 页面大小 */
+    pageSize?: number;
+    /** 偏移量 */
+    offset?: number;
+    /** 字段列表 */
+    fields?: string[];
+    /** 排序字段列表（可选） */
+    sortFields?: Array<{
+      fieldName: string;
+      direction: 'ASC' | 'DESC';
+    }>;
+    /** 搜索条件名称 */
+    name: string;
+    /** 搜索条件描述（可选） */
+    description?: string;
+  }
+
+  // 保存搜索条件并返回缓存键的响应
+  interface ISaveSearchConditionCacheResponse {
+    /** 生成的缓存键 */
+    cacheKey: string;
+    /** 搜索条件ID */
+    id?: string;
+    /** 消息 */
+    message?: string;
+  }
+
+  // 缓存条件数据结构
+  interface ICacheSearchConditionData {
+    /** 模块名称 */
+    module: string;
+    /** 关键词列表 */
+    keywords?: string[];
+    /** SQL条件列表 */
+    whereSqls?: string[];
+    /** 开始时间 */
+    startTime?: string;
+    /** 结束时间 */
+    endTime?: string;
+    /** 时间范围 */
+    timeRange?: string;
+    /** 时间分组 */
+    timeGrouping?: string;
+    /** 目标桶数量 */
+    targetBuckets?: number;
+    /** 页面大小 */
+    pageSize?: number;
+    /** 偏移量 */
+    offset?: number;
+    /** 字段列表 */
+    fields?: string[];
+    /** 排序字段列表 */
+    sortFields?: Array<{
+      fieldName: string;
+      direction: 'ASC' | 'DESC';
+    }>;
+    /** 搜索条件名称 */
+    name: string;
+    /** 搜索条件描述 */
+    description?: string;
+  }
+
+  // 缓存搜索条件完整结构
+  interface ICachedSearchCondition {
+    /** 缓存ID */
+    id: number;
+    /** 缓存分组 */
+    cacheGroup: string;
+    /** 缓存键 */
+    cacheKey: string;
+    /** 搜索条件数据 */
+    data: ICacheSearchConditionData;
+    /** 创建时间 */
+    createTime: string;
+    /** 创建用户 */
+    createUser: string;
+  }
 }
