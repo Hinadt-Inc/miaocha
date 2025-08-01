@@ -7,11 +7,10 @@ public class LogstashPathUtils {
      * 构建日志文件路径
      *
      * @param deployPath 部署路径
-     * @param logstashMachineId Logstash实例ID
      * @return 日志文件完整路径
      */
-    public static String buildLogFilePath(String deployPath, Long logstashMachineId) {
-        return deployPath + "/logs/logstash-" + logstashMachineId + ".log";
+    public static String buildLogFilePath(String deployPath) {
+        return deployPath + "/logs/logstash-plain.log";
     }
 
     /**

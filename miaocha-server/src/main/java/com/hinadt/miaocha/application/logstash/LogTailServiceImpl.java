@@ -107,7 +107,7 @@ public class LogTailServiceImpl implements LogTailService {
 
         // 构建日志文件路径
         String deployPath = deployPathManager.getInstanceDeployPath(logstashMachineId);
-        String logFilePath = LogstashPathUtils.buildLogFilePath(deployPath, logstashMachineId);
+        String logFilePath = LogstashPathUtils.buildLogFilePath(deployPath);
 
         // 简化命令，测试基本的tail功能
         String tailCommand = String.format("tail -n %d -f %s", tailLines, logFilePath);

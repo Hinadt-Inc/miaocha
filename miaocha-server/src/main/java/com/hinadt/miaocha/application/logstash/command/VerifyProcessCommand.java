@@ -33,9 +33,8 @@ public class VerifyProcessCommand extends AbstractLogstashCommand {
     protected boolean doExecute(MachineInfo machineInfo) {
         try {
             String processDir = getProcessDirectory();
-            String logDir = LogstashPathUtils.buildLogDirPath(processDir);
             String pidFile = LogstashPathUtils.buildPidFilePath(processDir, logstashMachineId);
-            String logFile = LogstashPathUtils.buildLogFilePath(processDir, logstashMachineId);
+            String logFile = LogstashPathUtils.buildLogFilePath(processDir);
 
             // 尝试多次验证，最多尝试5次，每次间隔3秒
             for (int attempt = 1; attempt <= 5; attempt++) {

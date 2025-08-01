@@ -61,12 +61,10 @@ public class StartProcessCommand extends AbstractLogstashCommand {
     protected boolean doExecute(MachineInfo machineInfo) {
         try {
             String processDir = getProcessDirectory();
-            String configDir = LogstashPathUtils.buildConfigDirPath(processDir);
-            String logDir = LogstashPathUtils.buildLogDirPath(processDir);
             String configPath =
                     LogstashPathUtils.buildConfigFilePath(processDir, logstashMachineId);
             String pidFile = LogstashPathUtils.buildPidFilePath(processDir, logstashMachineId);
-            String logFile = LogstashPathUtils.buildLogFilePath(processDir, logstashMachineId);
+            String logDir = LogstashPathUtils.buildLogDirPath(processDir);
 
             // 确保日志目录存在
             String createLogDirCommand = String.format("mkdir -p %s", logDir);
@@ -81,12 +79,12 @@ public class StartProcessCommand extends AbstractLogstashCommand {
             String scriptContent =
                     String.format(
                             "#!/bin/bash\n"
-                                + "cd %s\n"
-                                + "nohup ./bin/logstash -f %s --path.logs %s --path.data %s/data"
-                                + " --log.level info --config.reload.automatic > %s 2>&1 </dev/null"
-                                + " & \n"
-                                + "echo $! > %s\n",
-                            processDir, configPath, logDir, processDir, logFile, pidFile);
+                                    + "cd %s\n"
+                                    + "nohup ./bin/logstash -f %s "
+                                    + " --log.level info --config.reload.automatic > /dev/null 2>&1"
+                                    + " & \n"
+                                    + "echo $! > %s\n",
+                            processDir, configPath, pidFile);
 
             // 将脚本写入临时文件
             String tempScript =
