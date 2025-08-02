@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Splitter } from 'antd';
 import { useRequest } from 'ahooks';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { login } from '@/store/userSlice';
 import { oAuthCallback } from '@/api/auth';
@@ -15,7 +15,6 @@ import styles from './index.module.less';
 import dayjs from 'dayjs';
 
 const HomePage = () => {
-  const navigate = useNavigate();
   const dispatch = useDispatch();
   const [urlSearchParams] = useSearchParams();
   
@@ -73,10 +72,10 @@ const HomePage = () => {
               }),
             );
 
-            // 清理sessionStorage中的provider信息和ticket参数
+            // 清理sessionStorage中的provider信息
             sessionStorage.removeItem('oauthProvider');
             
-            // 移除URL中的ticket参数并保持其他参数
+            // 移除URL中的ticket参数，但保留分享参数
             const newUrl = new URL(window.location.href);
             newUrl.searchParams.delete('ticket');
             window.history.replaceState({}, '', newUrl.toString());
@@ -93,6 +92,183 @@ const HomePage = () => {
 
     handleCASCallback();
   }, [urlSearchParams, dispatch]);
+
+  // 分享参数状态
+  const [sharedParams, setSharedParams] = useState<any>(null);
+  const [hasAppliedSharedParams, setHasAppliedSharedParams] = useState(false);
+
+  // 页面初始化时检查是否有保存的分享参数
+  useEffect(() => {
+    const savedSharedParams = sessionStorage.getItem('miaocha_shared_params');
+    if (savedSharedParams && !sharedParams) {
+      try {
+        const parsedSavedParams = JSON.parse(savedSharedParams);
+        setSharedParams(parsedSavedParams);
+        
+        if (parsedSavedParams.module) {
+          setSelectedModule(parsedSavedParams.module);
+        }
+        
+        console.log('页面初始化时恢复分享参数:', parsedSavedParams);
+      } catch (e) {
+        console.error('解析保存的分享参数失败:', e);
+        sessionStorage.removeItem('miaocha_shared_params');
+      }
+    }
+  }, []); // 只在组件挂载时执行一次
+
+  // 处理分享的URL参数
+  useEffect(() => {
+    const handleSharedParams = () => {
+      try {
+        const keywords = urlSearchParams.get('keywords');
+        const whereSqls = urlSearchParams.get('whereSqls');
+        const timeRange = urlSearchParams.get('timeRange');
+        const startTime = urlSearchParams.get('startTime');
+        const endTime = urlSearchParams.get('endTime');
+        const module = urlSearchParams.get('module');
+        const timeGrouping = urlSearchParams.get('timeGrouping');
+
+        // 如果有分享参数，解析并保存
+        if (keywords || whereSqls || timeRange || module) {
+          const parsedParams: any = {};
+          
+          if (keywords) {
+            try {
+              parsedParams.keywords = JSON.parse(keywords);
+            } catch (e) {
+              console.error('解析keywords参数失败:', e);
+            }
+          }
+          
+          if (whereSqls) {
+            try {
+              parsedParams.whereSqls = JSON.parse(whereSqls);
+            } catch (e) {
+              console.error('解析whereSqls参数失败:', e);
+            }
+          }
+          
+          if (timeRange) parsedParams.timeRange = timeRange;
+          if (startTime) parsedParams.startTime = startTime;
+          if (endTime) parsedParams.endTime = endTime;
+          if (timeGrouping) parsedParams.timeGrouping = timeGrouping;
+          if (module) parsedParams.module = module;
+
+          // 保存分享参数到状态和sessionStorage，确保登录后不丢失
+          if (Object.keys(parsedParams).length > 0) {
+            setSharedParams(parsedParams);
+            
+            // 保存到sessionStorage，防止登录跳转后丢失
+            sessionStorage.setItem('miaocha_shared_params', JSON.stringify(parsedParams));
+            
+            if (parsedParams.module) {
+              setSelectedModule(parsedParams.module);
+            }
+            
+            // 先不清理URL参数，等到参数成功应用后再清理
+            console.log('检测到分享参数:', parsedParams);
+          }
+        } else {
+          // 如果URL中没有分享参数，检查sessionStorage中是否有保存的分享参数
+          const savedSharedParams = sessionStorage.getItem('miaocha_shared_params');
+          if (savedSharedParams && !sharedParams) {
+            try {
+              const parsedSavedParams = JSON.parse(savedSharedParams);
+              setSharedParams(parsedSavedParams);
+              
+              if (parsedSavedParams.module) {
+                setSelectedModule(parsedSavedParams.module);
+              }
+              
+              console.log('从sessionStorage恢复分享参数:', parsedSavedParams);
+            } catch (e) {
+              console.error('解析保存的分享参数失败:', e);
+              sessionStorage.removeItem('miaocha_shared_params');
+            }
+          }
+        }
+      } catch (error) {
+        console.error('处理分享参数失败:', error);
+      }
+    };
+
+    handleSharedParams();
+  }, [urlSearchParams, sharedParams]);
+
+  // 应用分享参数到搜索栏
+  useEffect(() => {
+    if (sharedParams && !hasAppliedSharedParams && searchBarRef.current && moduleOptions.length > 0) {
+      // 短暂延迟确保 SearchBar 组件完全初始化
+      const timer = setTimeout(() => {
+        try {
+          // 应用关键词
+          if (sharedParams.keywords && Array.isArray(sharedParams.keywords)) {
+            setKeywords(sharedParams.keywords);
+          }
+          
+          // 应用SQL条件
+          if (sharedParams.whereSqls && Array.isArray(sharedParams.whereSqls)) {
+            setSqls(sharedParams.whereSqls);
+          }
+          
+          // 应用时间分组
+          if (sharedParams.timeGrouping) {
+            searchBarRef.current?.setTimeGroup?.(sharedParams.timeGrouping);
+          }
+          
+          // 应用时间范围到SearchBar
+          if (sharedParams.timeRange || (sharedParams.startTime && sharedParams.endTime)) {
+            const timeOption = {
+              value: sharedParams.timeRange || `${sharedParams.startTime} ~ ${sharedParams.endTime}`,
+              range: [sharedParams.startTime, sharedParams.endTime],
+              label: sharedParams.timeRange ? (QUICK_RANGES[sharedParams.timeRange]?.label || sharedParams.timeRange) : `${sharedParams.startTime} ~ ${sharedParams.endTime}`,
+              type: sharedParams.timeRange && QUICK_RANGES[sharedParams.timeRange] ? 'quick' : 'absolute',
+            };
+            searchBarRef.current?.setTimeOption?.(timeOption);
+          }
+          
+          // 更新搜索参数
+          if (sharedParams.module) {
+            const moduleOption = moduleOptions.find(option => option.module === sharedParams.module);
+            if (moduleOption) {
+              setSearchParams(prev => ({
+                ...prev,
+                datasourceId: Number(moduleOption.datasourceId),
+                module: sharedParams.module,
+                startTime: sharedParams.startTime || prev.startTime,
+                endTime: sharedParams.endTime || prev.endTime,
+                timeRange: sharedParams.timeRange || prev.timeRange,
+                timeGrouping: sharedParams.timeGrouping || prev.timeGrouping,
+                keywords: sharedParams.keywords || [],
+                whereSqls: sharedParams.whereSqls || [],
+                offset: 0,
+              }));
+            }
+          }
+          
+          setHasAppliedSharedParams(true);
+          
+          // 参数应用成功后，清理URL和sessionStorage
+          const newUrl = new URL(window.location.href);
+          ['keywords', 'whereSqls', 'timeRange', 'startTime', 'endTime', 'module', 'timeGrouping'].forEach(param => {
+            newUrl.searchParams.delete(param);
+          });
+          window.history.replaceState({}, '', newUrl.toString());
+          
+          // 清理sessionStorage中的分享参数
+          sessionStorage.removeItem('miaocha_shared_params');
+          
+          console.log('分享参数应用成功并已清理:', sharedParams);
+        } catch (error) {
+          console.error('应用分享参数失败:', error);
+        }
+      }, 200);
+
+      return () => clearTimeout(timer);
+    }
+  }, [sharedParams, hasAppliedSharedParams, moduleOptions, searchBarRef]);
+  
   const [isInitialized, setIsInitialized] = useState(false); // 标记是否已经初始化
   const lastCallParamsRef = useRef<string>('');
   const requestTimerRef = useRef<NodeJS.Timeout | null>(null); // 新增：用于延迟请求的定时器
@@ -134,11 +310,23 @@ const HomePage = () => {
       const moduleOptions = generateModuleOptions(res);
       setModuleOptions(moduleOptions);
 
+      // 如果有分享参数，优先应用分享的模块
+      if (sharedParams && sharedParams.module && !hasAppliedSharedParams) {
+        const sharedModuleOption = moduleOptions.find(option => option.module === sharedParams.module);
+        if (sharedModuleOption) {
+          setSelectedModule(sharedParams.module);
+          setSearchParams((prev) => ({
+            ...prev,
+            datasourceId: Number(sharedModuleOption.datasourceId),
+            module: sharedParams.module,
+          }));
+          return; // 分享参数会在后续的 useEffect 中完整应用
+        }
+      }
+
       // 只在初始化时设置默认模块，避免重复设置
       if ((!searchParams.datasourceId || !searchParams.module) && moduleOptions[0]) {
-        const favoriteModule = localStorage.getItem('favoriteModule');
-        const defaultModule = favoriteModule || moduleOptions[0].module;
-        const defaultOption = moduleOptions.find((opt) => opt.module === defaultModule) || moduleOptions[0];
+        const defaultOption = moduleOptions[0];
 
         // 批量更新状态，避免多次渲染
         setSelectedModule(defaultOption.module);
@@ -297,9 +485,21 @@ const HomePage = () => {
   }, [searchParams, moduleQueryConfig, executeDataRequest, isInitialized]);
 
   // 处理列变化
-  const handleChangeColumns = (columns: ILogColumnsResponse[]) => {
+  const handleChangeColumns = useCallback((columns: ILogColumnsResponse[]) => {
     setLogTableColumns(columns);
-  };
+    
+    // 更新搜索参数中的fields字段，触发detail接口调用
+    const selectedColumns = columns
+      .filter((item) => item.selected && item.columnName)
+      .map((item) => item.columnName!)
+      .filter((name): name is string => Boolean(name));
+    
+    setSearchParams((prev) => ({
+      ...prev,
+      fields: selectedColumns.length > 0 ? selectedColumns : undefined,
+      offset: 0, // 重置分页
+    }));
+  }, []);
 
   const handleSetWhereSqlsFromSider = (flag: '=' | '!=', columnName: string, value: string) => {
     const sql = `${columnName} ${flag} '${value}'`;
@@ -403,13 +603,57 @@ const HomePage = () => {
   };
 
   // 处理列变化
-  const handleChangeColumnsByLog = (col: any) => {
+  const handleChangeColumnsByLog = useCallback((col: any) => {
+    
     const index = logTableColumns.findIndex((item) => item.columnName === col.title);
-    if (index === -1) return;
+    
+    if (index === -1) {
+      return;
+    }
+    
+    // 更新列状态
     logTableColumns[index].selected = false;
     delete logTableColumns[index]._createTime;
-    setLogTableColumns([...logTableColumns]);
-  };
+    
+    // 计算移除该列后的选中列列表
+    const selectedColumns = logTableColumns
+      .filter((item) => item.selected && item.columnName)
+      .map((item) => item.columnName!)
+      .filter((name): name is string => Boolean(name));
+    
+    // 更新本地搜索参数
+    const _savedSearchParams = localStorage.getItem('searchBarParams');
+    if (_savedSearchParams) {
+      const savedSearchParams = JSON.parse(_savedSearchParams);
+      localStorage.setItem(
+        'searchBarParams',
+        JSON.stringify({
+          ...savedSearchParams,
+          fields: selectedColumns,
+        }),
+      );
+    }
+    
+    // 通知父组件激活字段变化
+    setActiveColumns(selectedColumns);
+    
+    // 排序并更新列状态
+    const sortedColumns = logTableColumns.sort(
+      (a: ILogColumnsResponse, b: ILogColumnsResponse) => (a._createTime || 0) - (b._createTime || 0),
+    );
+    const updatedColumns = [...sortedColumns];
+    setLogTableColumns(updatedColumns);
+    
+    // 更新搜索参数中的fields字段，触发detail接口调用
+    setSearchParams((prev) => {
+      const newParams = {
+        ...prev,
+        fields: selectedColumns.length > 0 ? selectedColumns : undefined,
+        offset: 0, // 重置分页
+      };
+      return newParams;
+    });
+  }, [logTableColumns]);
 
   // 优化log组件的props
   const logProps: any = useMemo(
@@ -437,6 +681,7 @@ const HomePage = () => {
       sqls,
       moduleQueryConfig,
       handleSortChange,
+      handleChangeColumnsByLog, // 添加这个依赖
       sortConfig, // 添加sortConfig到依赖数组
     ],
   );

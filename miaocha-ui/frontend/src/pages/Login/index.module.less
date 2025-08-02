@@ -5,8 +5,9 @@
   justify-content: center;
   align-items: center;
   width: 100%;
-  height: 100%;
-  min-height: 450px;
+  height: 100vh;
+  min-height: 100vh;
+  overflow-y: auto;
 
   /* 视频背景 */
   .videoBackground {
@@ -31,7 +32,19 @@
     width: 380px;
     max-width: 95%;
     animation: fadeIn 0.8s ease-out;
-    top: -50px;
+    padding: 20px 0;
+    margin: auto;
+
+    /* 响应式设计 - 针对小屏幕设备 */
+    @media (max-height: 800px) {
+      top: 0;
+      padding: 10px 0;
+    }
+
+    @media (max-height: 700px) {
+      top: 0;
+      padding: 5px 0;
+    }
 
     @keyframes fadeIn {
       from {
@@ -47,20 +60,40 @@
     /* 品牌区域 */
     .brandSection {
       text-align: center;
-      margin-bottom: 48px;
+      margin-bottom: 32px;
+
+      /* 响应式设计 - 减少小屏幕上的间距 */
+      @media (max-height: 800px) {
+        margin-bottom: 24px;
+      }
+
+      @media (max-height: 700px) {
+        margin-bottom: 16px;
+      }
 
       /* Logo容器 */
       .logoContainer {
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-bottom: 20px;
+        margin-bottom: 16px;
+
+        /* 响应式设计 - 减少小屏幕上的间距 */
+        @media (max-height: 700px) {
+          margin-bottom: 12px;
+        }
 
         /* Logo图片 */
         .logo {
           height: 50px;
           margin-right: 12px;
           filter: brightness(0.95);
+
+          /* 响应式设计 - 在小屏幕上缩小logo */
+          @media (max-height: 700px) {
+            height: 40px;
+            margin-right: 8px;
+          }
         }
 
         /* 品牌名称 */
@@ -75,6 +108,11 @@
           background-clip: text;
           text-shadow: 0 2px 12px rgba(99, 102, 241, 0.12);
           display: inline-block;
+
+          /* 响应式设计 - 在小屏幕上缩小字体 */
+          @media (max-height: 700px) {
+            font-size: 28px;
+          }
         }
       }
 
@@ -88,6 +126,11 @@
         letter-spacing: 0.5px;
         text-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
         font-weight: 500;
+
+        /* 响应式设计 - 在小屏幕上缩小字体 */
+        @media (max-height: 700px) {
+          font-size: 14px;
+        }
       }
     }
 
@@ -98,7 +141,7 @@
       /* 卡片头部 */
       .cardHeader {
         text-align: center;
-        margin-bottom: 32px;
+        margin-bottom: 24px;
         font-size: 18px;
         font-weight: 600;
         background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
@@ -108,6 +151,12 @@
         letter-spacing: 1px;
         text-shadow: 0 2px 10px rgba(139, 92, 246, 0.2);
         position: relative;
+
+        /* 响应式设计 - 减少小屏幕上的间距 */
+        @media (max-height: 700px) {
+          margin-bottom: 16px;
+          font-size: 16px;
+        }
         
         &::after {
           content: '';
@@ -139,10 +188,24 @@
             -moz-text-fill-color: #333 !important;
           }
           .ant-form-item {
+            /* 响应式设计 - 在小屏幕上减少表单项间距 */
+            @media (max-height: 700px) {
+              margin-bottom: 16px;
+            }
+
+            @media (max-height: 600px) {
+              margin-bottom: 12px;
+            }
+
             .ant-input-affix-wrapper {
               border-radius: 28px;
               background-color: #ffffff40;
               height: 48px;
+
+              /* 响应式设计 - 在小屏幕上调整高度 */
+              @media (max-height: 700px) {
+                height: 42px;
+              }
             }
             .ant-input-prefix {
               color: #999;
@@ -160,6 +223,14 @@
               position: relative;
               overflow: hidden;
               box-shadow: 0 4px 15px rgba(139, 92, 246, 0.25);
+
+              /* 响应式设计 - 在小屏幕上调整高度和字体 */
+              @media (max-height: 700px) {
+                height: 42px;
+                font-size: 14px;
+                margin-top: 8px;
+              }
+
               &:hover {
                 box-shadow: 0 6px 20px rgba(139, 92, 246, 0.75);
                 background: linear-gradient(-135deg,  #3b82f6 0%, #8b5cf6 100%);
@@ -182,5 +253,63 @@
     font-size: 12px;
     z-index: 2;
     color: #00000066;
+
+    /* 响应式设计 - 在小屏幕上调整字体大小 */
+    @media (max-height: 700px) {
+      font-size: 10px;
+      bottom: 2px;
+    }
+  }
+
+  /* 针对更小的屏幕 - 添加整体媒体查询 */
+  @media (max-height: 600px) {
+    min-height: 600px;
+    align-items: flex-start;
+    padding-top: 20px;
+
+    .contentWrapper {
+      top: 0;
+      padding: 10px 0 60px 0;
+    }
+
+    .footer {
+      position: fixed;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 5px 0;
+    }
+  }
+
+  /* 针对极小屏幕的额外优化 */
+  @media (max-height: 500px) {
+    .contentWrapper {
+      .brandSection {
+        margin-bottom: 12px;
+
+        .logoContainer {
+          margin-bottom: 8px;
+
+          .logo {
+            height: 32px;
+            margin-right: 6px;
+          }
+
+          .brandName {
+            font-size: 24px;
+          }
+        }
+
+        .slogan {
+          font-size: 12px;
+        }
+      }
+
+      .loginCard {
+        .cardHeader {
+          margin-bottom: 12px;
+          font-size: 14px;
+        }
+      }
+    }
   }
 }

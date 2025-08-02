@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.hinadt.miaocha.application.service.ModuleInfoService;
+import com.hinadt.miaocha.application.service.SystemCacheService;
 import com.hinadt.miaocha.application.service.database.DatabaseMetadataService;
 import com.hinadt.miaocha.application.service.database.DatabaseMetadataServiceFactory;
 import com.hinadt.miaocha.application.service.impl.LogSearchServiceImpl;
@@ -53,6 +54,7 @@ class LogSearchServiceImplTest {
     @Mock private DatabaseMetadataServiceFactory metadataServiceFactory;
     @Mock private ModuleInfoService moduleInfoService;
     @Mock private JdbcQueryExecutor jdbcQueryExecutor;
+    @Mock private SystemCacheService systemCacheService;
     @Mock private DatabaseMetadataService metadataService;
     @Mock private Connection connection;
 
@@ -73,7 +75,8 @@ class LogSearchServiceImplTest {
                         fieldDistributionExecutor,
                         metadataServiceFactory,
                         moduleInfoService,
-                        jdbcQueryExecutor);
+                        jdbcQueryExecutor,
+                        systemCacheService);
 
         testDto = new LogSearchDTO();
         testDto.setModule("test-module");
