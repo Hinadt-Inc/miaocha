@@ -1,25 +1,30 @@
 package com.hinadt.miaocha.integration.service;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.hinadt.miaocha.TestContainersFactory;
-import com.hinadt.miaocha.application.service.DatasourceService;
-import com.hinadt.miaocha.application.service.ModuleInfoService;
-import com.hinadt.miaocha.application.service.ModulePermissionService;
-import com.hinadt.miaocha.application.service.SqlQueryService;
+import com.hinadt.miaocha.application.service.*;
 import com.hinadt.miaocha.application.service.database.DatabaseMetadataService;
 import com.hinadt.miaocha.application.service.database.DatabaseMetadataServiceFactory;
 import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.dto.*;
+import com.hinadt.miaocha.domain.dto.cache.SystemCacheDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchCacheDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import com.hinadt.miaocha.domain.dto.module.*;
-import com.hinadt.miaocha.domain.dto.permission.*;
-import com.hinadt.miaocha.domain.entity.*;
+import com.hinadt.miaocha.domain.dto.permission.ModuleUsersPermissionDTO;
+import com.hinadt.miaocha.domain.dto.permission.UserModulePermissionDTO;
+import com.hinadt.miaocha.domain.entity.DatasourceInfo;
+import com.hinadt.miaocha.domain.entity.ModuleInfo;
+import com.hinadt.miaocha.domain.entity.User;
+import com.hinadt.miaocha.domain.entity.UserModulePermission;
+import com.hinadt.miaocha.domain.entity.enums.CacheGroup;
 import com.hinadt.miaocha.domain.entity.enums.UserRole;
 import com.hinadt.miaocha.domain.mapper.*;
 import com.hinadt.miaocha.integration.data.IntegrationTestDataInitializer;
@@ -254,6 +259,7 @@ public class ServiceIntegrationTest {
     @Autowired private ModulePermissionService modulePermissionService;
     @Autowired private SqlQueryService sqlQueryService;
     @Autowired private DatabaseMetadataService databaseMetadataService;
+    @Autowired private SystemCacheService systemCacheService;
 
     // ==================== Mapper依赖注入 ====================
 
@@ -854,14 +860,14 @@ public class ServiceIntegrationTest {
 
             String createTableSql =
                     """
-                CREATE TABLE IF NOT EXISTS test_integration_table (
-                    id BIGINT,
-                    name VARCHAR(100),
-                    create_time DATETIME
-                ) UNIQUE KEY(id)
-                DISTRIBUTED BY HASH(id) BUCKETS 1
-                PROPERTIES("replication_num" = "1")
-                """;
+                    CREATE TABLE IF NOT EXISTS test_integration_table (
+                        id BIGINT,
+                        name VARCHAR(100),
+                        create_time DATETIME
+                    ) UNIQUE KEY(id)
+                    DISTRIBUTED BY HASH(id) BUCKETS 1
+                    PROPERTIES("replication_num" = "1")
+                    """;
 
             // 执行SQL（Mock会成功）
             ModuleInfoDTO result = moduleInfoService.executeDorisSql(testModuleId, createTableSql);
@@ -1924,16 +1930,16 @@ public class ServiceIntegrationTest {
 
             String complexSql =
                     """
-                SELECT
-                    t1.id,
-                    t1.name,
-                    COUNT(*) as record_count
-                FROM test_integration_table t1
-                WHERE t1.create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-                GROUP BY t1.id, t1.name
-                ORDER BY record_count DESC
-                LIMIT 100
-                """;
+                    SELECT
+                        t1.id,
+                        t1.name,
+                        COUNT(*) as record_count
+                    FROM test_integration_table t1
+                    WHERE t1.create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                    GROUP BY t1.id, t1.name
+                    ORDER BY record_count DESC
+                    LIMIT 100
+                    """;
 
             SqlQueryDTO queryDto =
                     SqlQueryDTO.builder()
@@ -2331,6 +2337,285 @@ public class ServiceIntegrationTest {
             }
 
             log.info("✅ 系统限制验证测试通过");
+        }
+    }
+
+    // ==================== 系统缓存测试组 ====================
+
+    @Nested
+    @DisplayName("系统缓存测试组")
+    @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+    class SystemCacheIntegrationTest {
+
+        private static final String testCacheKey = "test_log_search_condition_integration_test";
+        private final String testCreateUser = "test_cache_user";
+
+        @Test
+        @Order(1)
+        @DisplayName("CACHE-001: 保存缓存 - 正常流程")
+        void testSaveCacheNormalFlow() {
+            log.info("🔍 测试保存缓存正常流程");
+
+            // 创建测试用的 LogSearchDTO 数据
+            LogSearchDTO logSearchData = new LogSearchCacheDTO();
+            logSearchData.setModule("test-module");
+            logSearchData.setKeywords(List.of("error", "warning"));
+            logSearchData.setWhereSqls(List.of("level = 'ERROR'", "service_name = 'user-service'"));
+            logSearchData.setStartTime("2023-06-01 10:00:00.000");
+            logSearchData.setEndTime("2023-06-01 11:00:00.000");
+            logSearchData.setTimeRange("last_1h");
+            logSearchData.setPageSize(100);
+            logSearchData.setOffset(0);
+            logSearchData.setFields(List.of("log_time", "level", "message"));
+
+            // 保存缓存
+            assertDoesNotThrow(
+                    () -> {
+                        systemCacheService.saveCache(
+                                CacheGroup.LOG_SEARCH_CONDITION, testCacheKey, logSearchData);
+                    });
+
+            log.info("✅ 保存缓存正常流程测试通过");
+        }
+
+        @Test
+        @Order(2)
+        @DisplayName("CACHE-002: 获取缓存 - 正常流程")
+        void testGetCacheNormalFlow() {
+            log.info("🔍 测试获取缓存正常流程");
+
+            // 获取缓存
+            Optional<LogSearchCacheDTO> retrievedDataOpt =
+                    systemCacheService.getCache(CacheGroup.LOG_SEARCH_CONDITION, testCacheKey);
+
+            // 验证缓存存在
+            assertThat(retrievedDataOpt).isPresent();
+            LogSearchDTO retrievedData = retrievedDataOpt.get();
+
+            // 验证结果
+            assertThat(retrievedData).isNotNull();
+            assertThat(retrievedData.getModule()).isEqualTo("test-module");
+            assertThat(retrievedData.getKeywords()).containsExactly("error", "warning");
+            assertThat(retrievedData.getWhereSqls())
+                    .containsExactly("level = 'ERROR'", "service_name = 'user-service'");
+            assertThat(retrievedData.getStartTime()).isEqualTo("2023-06-01 10:00:00.000");
+            assertThat(retrievedData.getEndTime()).isEqualTo("2023-06-01 11:00:00.000");
+            assertThat(retrievedData.getTimeRange()).isEqualTo("last_1h");
+            assertThat(retrievedData.getPageSize()).isEqualTo(100);
+            assertThat(retrievedData.getOffset()).isEqualTo(0);
+            assertThat(retrievedData.getFields()).containsExactly("log_time", "level", "message");
+
+            log.info("✅ 获取缓存正常流程测试通过");
+        }
+
+        @Test
+        @Order(3)
+        @DisplayName("CACHE-003: 获取用户缓存数据")
+        void testGetUserCacheData() {
+            log.info("🔍 测试获取用户缓存数据");
+
+            // 获取用户缓存数据
+            List<SystemCacheDTO<LogSearchCacheDTO>> userCacheData =
+                    systemCacheService.getUserCacheData(CacheGroup.LOG_SEARCH_CONDITION);
+
+            // 验证结果
+            assertThat(userCacheData).isNotNull();
+            assertThat(userCacheData).isNotEmpty();
+
+            // 验证包含我们创建的缓存
+            boolean containsTestCache =
+                    userCacheData.stream()
+                            .anyMatch(cache -> cache.getCacheKey().equals(testCacheKey));
+            assertThat(containsTestCache).isTrue();
+
+            // 验证缓存内容
+            SystemCacheDTO<LogSearchCacheDTO> testCache =
+                    userCacheData.stream()
+                            .filter(cache -> cache.getCacheKey().equals(testCacheKey))
+                            .findFirst()
+                            .orElse(null);
+
+            assertThat(testCache).isNotNull();
+            assertThat(testCache.getCacheGroup()).isEqualTo(CacheGroup.LOG_SEARCH_CONDITION.name());
+            // 在集成测试环境中，由于没有认证上下文，UserContextUtil.getCurrentUserEmail() 返回 "anonymous"
+            // 这是正常的行为，因为测试环境中没有设置 SecurityContext
+            assertThat(testCache.getCreateUser()).isEqualTo("anonymous");
+            assertThat(testCache.getData()).isNotNull();
+            assertThat(testCache.getData().getModule()).isEqualTo("test-module");
+
+            log.info("✅ 获取用户缓存数据测试通过 - 共{}个缓存", userCacheData.size());
+        }
+
+        @Test
+        @Order(4)
+        @DisplayName("CACHE-004: 更新缓存 - 覆盖保存")
+        void testUpdateCacheOverwrite() {
+            log.info("🔍 测试更新缓存覆盖保存");
+
+            // 创建新的测试数据
+            LogSearchCacheDTO updatedLogSearchData = new LogSearchCacheDTO();
+            updatedLogSearchData.setModule("updated-module");
+            updatedLogSearchData.setKeywords(List.of("fatal", "critical"));
+            updatedLogSearchData.setWhereSqls(List.of("level = 'FATAL'"));
+            updatedLogSearchData.setStartTime("2023-06-02 10:00:00.000");
+            updatedLogSearchData.setEndTime("2023-06-02 11:00:00.000");
+            updatedLogSearchData.setTimeRange("last_2h");
+            updatedLogSearchData.setPageSize(200);
+            updatedLogSearchData.setOffset(10);
+            updatedLogSearchData.setFields(List.of("log_time", "level", "message", "host"));
+
+            // 更新缓存（覆盖保存）
+            assertDoesNotThrow(
+                    () -> {
+                        systemCacheService.saveCache(
+                                CacheGroup.LOG_SEARCH_CONDITION,
+                                testCacheKey,
+                                updatedLogSearchData);
+                    });
+
+            // 验证更新后的数据
+            Optional<LogSearchDTO> retrievedDataOpt =
+                    systemCacheService.getCache(CacheGroup.LOG_SEARCH_CONDITION, testCacheKey);
+
+            // 验证缓存存在
+            assertThat(retrievedDataOpt).isPresent();
+            LogSearchDTO retrievedData = retrievedDataOpt.get();
+
+            assertThat(retrievedData).isNotNull();
+            assertThat(retrievedData.getModule()).isEqualTo("updated-module");
+            assertThat(retrievedData.getKeywords()).containsExactly("fatal", "critical");
+            assertThat(retrievedData.getWhereSqls()).containsExactly("level = 'FATAL'");
+            assertThat(retrievedData.getTimeRange()).isEqualTo("last_2h");
+            assertThat(retrievedData.getPageSize()).isEqualTo(200);
+            assertThat(retrievedData.getOffset()).isEqualTo(10);
+            assertThat(retrievedData.getFields())
+                    .containsExactly("log_time", "level", "message", "host");
+
+            log.info("✅ 更新缓存覆盖保存测试通过");
+        }
+
+        @Test
+        @Order(5)
+        @DisplayName("CACHE-005: 获取不存在的缓存")
+        void testGetNonExistentCache() {
+            log.info("🔍 测试获取不存在的缓存");
+
+            String nonExistentKey = "non_existent_key_" + System.currentTimeMillis();
+
+            // 获取不存在的缓存
+            Optional<LogSearchDTO> result =
+                    systemCacheService.getCache(CacheGroup.LOG_SEARCH_CONDITION, nonExistentKey);
+
+            // 验证结果为空
+            assertThat(result).isEmpty();
+
+            log.info("✅ 获取不存在的缓存测试通过");
+        }
+
+        @Test
+        @Order(6)
+        @DisplayName("CACHE-006: 删除缓存")
+        void testDeleteCache() {
+            log.info("🔍 测试删除缓存");
+
+            // 删除缓存
+            assertDoesNotThrow(
+                    () -> {
+                        systemCacheService.deleteCache(
+                                CacheGroup.LOG_SEARCH_CONDITION, testCacheKey);
+                    });
+
+            // 验证缓存已被删除
+            Optional<LogSearchDTO> result =
+                    systemCacheService.getCache(CacheGroup.LOG_SEARCH_CONDITION, testCacheKey);
+            assertThat(result).isEmpty();
+
+            // 验证用户缓存数据中不再包含该缓存
+            List<SystemCacheDTO<LogSearchCacheDTO>> userCacheData =
+                    systemCacheService.getUserCacheData(CacheGroup.LOG_SEARCH_CONDITION);
+            boolean containsTestCache =
+                    userCacheData.stream()
+                            .anyMatch(cache -> cache.getCacheKey().equals(testCacheKey));
+            assertThat(containsTestCache).isFalse();
+
+            // 测试批量删除空缓存键列表 - 应该抛出异常
+            assertBusinessException(
+                    () ->
+                            systemCacheService.batchDeleteCache(
+                                    CacheGroup.LOG_SEARCH_CONDITION, Collections.emptyList()),
+                    ErrorCode.VALIDATION_ERROR);
+
+            log.info("✅ 删除缓存测试通过");
+        }
+
+        @Test
+        @Order(7)
+        @DisplayName("CACHE-007: 删除不存在的缓存")
+        void testDeleteNonExistentCache() {
+            log.info("🔍 测试删除不存在的缓存");
+
+            String nonExistentKey = "non_existent_key_" + System.currentTimeMillis();
+
+            // 删除不存在的缓存应该不抛出异常
+            assertDoesNotThrow(
+                    () -> {
+                        systemCacheService.deleteCache(
+                                CacheGroup.LOG_SEARCH_CONDITION, nonExistentKey);
+                    });
+
+            log.info("✅ 删除不存在的缓存测试通过");
+        }
+
+        @Test
+        @Order(8)
+        @DisplayName("CACHE-008: 数据类型验证 - 错误类型")
+        void testDataTypeValidation() {
+            log.info("🔍 测试数据类型验证");
+
+            // 尝试保存错误类型的数据（String 而不是 LogSearchDTO）
+            String wrongTypeData = "This is a string, not LogSearchDTO";
+
+            // 验证抛出业务异常
+            assertBusinessException(
+                    () ->
+                            systemCacheService.saveCache(
+                                    CacheGroup.LOG_SEARCH_CONDITION,
+                                    "wrong_type_key",
+                                    wrongTypeData),
+                    ErrorCode.VALIDATION_ERROR);
+
+            log.info("✅ 数据类型验证测试通过");
+        }
+
+        @Test
+        @Order(9)
+        @DisplayName("CACHE-009: 参数验证 - 空值检查")
+        void testParameterValidation() {
+            log.info("🔍 测试参数验证");
+
+            LogSearchDTO validData = new LogSearchDTO();
+            validData.setModule("test-module");
+
+            // 测试空的缓存组
+            assertBusinessException(
+                    () -> systemCacheService.saveCache(null, "test_key", validData),
+                    ErrorCode.VALIDATION_ERROR);
+
+            // 测试空的缓存键
+            assertBusinessException(
+                    () ->
+                            systemCacheService.saveCache(
+                                    CacheGroup.LOG_SEARCH_CONDITION, null, validData),
+                    ErrorCode.VALIDATION_ERROR);
+
+            // 测试空的数据
+            assertBusinessException(
+                    () ->
+                            systemCacheService.saveCache(
+                                    CacheGroup.LOG_SEARCH_CONDITION, "test_key", null),
+                    ErrorCode.VALIDATION_ERROR);
+
+            log.info("✅ 参数验证测试通过");
         }
     }
 }

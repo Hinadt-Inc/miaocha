@@ -2,6 +2,7 @@ package com.hinadt.miaocha.application.service.impl;
 
 import com.hinadt.miaocha.application.service.LogSearchService;
 import com.hinadt.miaocha.application.service.ModuleInfoService;
+import com.hinadt.miaocha.application.service.SystemCacheService;
 import com.hinadt.miaocha.application.service.database.DatabaseMetadataService;
 import com.hinadt.miaocha.application.service.database.DatabaseMetadataServiceFactory;
 import com.hinadt.miaocha.application.service.impl.logsearch.executor.DetailSearchExecutor;
@@ -12,11 +13,16 @@ import com.hinadt.miaocha.application.service.impl.logsearch.validator.LogSearch
 import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
+import com.hinadt.miaocha.common.util.CacheKeyUtils;
 import com.hinadt.miaocha.domain.dto.SchemaInfoDTO;
+import com.hinadt.miaocha.domain.dto.cache.BatchDeleteCacheDTO;
+import com.hinadt.miaocha.domain.dto.cache.SystemCacheDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogDetailResultDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogHistogramResultDTO;
+import com.hinadt.miaocha.domain.dto.logsearch.LogSearchCacheDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
+import com.hinadt.miaocha.domain.entity.enums.CacheGroup;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
@@ -39,6 +45,7 @@ public class LogSearchServiceImpl implements LogSearchService {
     private final DatabaseMetadataServiceFactory metadataServiceFactory;
     private final ModuleInfoService moduleInfoService;
     private final JdbcQueryExecutor jdbcQueryExecutor;
+    private final SystemCacheService systemCacheService;
 
     public LogSearchServiceImpl(
             LogSearchValidator validator,
@@ -48,7 +55,8 @@ public class LogSearchServiceImpl implements LogSearchService {
             FieldDistributionSearchExecutor fieldDistributionExecutor,
             DatabaseMetadataServiceFactory metadataServiceFactory,
             ModuleInfoService moduleInfoService,
-            JdbcQueryExecutor jdbcQueryExecutor) {
+            JdbcQueryExecutor jdbcQueryExecutor,
+            SystemCacheService systemCacheService) {
         this.validator = validator;
         this.searchTemplate = searchTemplate;
         this.detailExecutor = detailExecutor;
@@ -57,6 +65,7 @@ public class LogSearchServiceImpl implements LogSearchService {
         this.metadataServiceFactory = metadataServiceFactory;
         this.moduleInfoService = moduleInfoService;
         this.jdbcQueryExecutor = jdbcQueryExecutor;
+        this.systemCacheService = systemCacheService;
     }
 
     /** 执行日志明细查询 */
@@ -147,5 +156,31 @@ public class LogSearchServiceImpl implements LogSearchService {
 
         // 否则返回原始字段列表
         return columns;
+    }
+
+    /** 保存用户个性化的日志搜索条件 */
+    @Override
+    public String saveSearchCondition(LogSearchCacheDTO searchCondition) {
+        // 生成缓存键
+        String cacheKey = CacheKeyUtils.generateSearchConditionKey();
+
+        // 保存搜索条件到缓存
+        systemCacheService.saveCache(CacheGroup.LOG_SEARCH_CONDITION, cacheKey, searchCondition);
+
+        return cacheKey;
+    }
+
+    /** 获取用户个性化的日志搜索条件数据 */
+    @Override
+    public List<SystemCacheDTO<LogSearchCacheDTO>> getUserSearchConditions() {
+        return systemCacheService.getUserCacheData(CacheGroup.LOG_SEARCH_CONDITION);
+    }
+
+    /** 批量删除用户个性化的日志搜索条件 */
+    @Override
+    @Transactional
+    public void batchDeleteSearchConditions(BatchDeleteCacheDTO deleteCacheDTO) {
+        systemCacheService.batchDeleteCache(
+                CacheGroup.LOG_SEARCH_CONDITION, deleteCacheDTO.getCacheKeys());
     }
 }
