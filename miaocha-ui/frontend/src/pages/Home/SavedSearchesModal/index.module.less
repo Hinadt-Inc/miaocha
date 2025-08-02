@@ -1,0 +1,127 @@
+.savedSearchesModal {
+  .topBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    gap: 16px;
+  }
+
+  .leftActions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+  }
+
+  .rightActions {
+    display: flex;
+    align-items: center;
+  }
+
+  .searchInput {
+    width: 300px;
+  }
+
+  .batchActions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background-color: #fafafa;
+    border-radius: 4px;
+    border: 1px solid #f0f0f0;
+  }
+  
+  .searchList {
+    max-height: 500px;
+    overflow-y: auto;
+    
+    .searchItem {
+      padding: 12px 0;
+      border-bottom: 1px solid #f0f0f0;
+      
+      &:last-child {
+        border-bottom: none;
+      }
+      
+      &:hover {
+        background-color: #fafafa;
+      }
+    }
+    
+    .searchTitle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      
+      .searchName {
+        font-weight: 500;
+        font-size: 14px;
+        color: #333;
+      }
+      
+      .searchTime {
+        font-size: 12px;
+        color: #999;
+      }
+    }
+    
+    .searchDescription {
+      .description {
+        color: #666;
+        font-size: 12px;
+        margin-bottom: 6px;
+        line-height: 1.4;
+      }
+
+      .cacheInfo {
+        margin-bottom: 6px;
+        
+        :global {
+          .ant-tag {
+            font-size: 11px;
+            padding: 1px 4px;
+            line-height: 1.2;
+            margin-bottom: 2px;
+            margin-right: 4px;
+          }
+        }
+      }
+      
+      .searchPreview {
+        :global {
+          .ant-tag {
+            margin-bottom: 2px;
+            margin-right: 4px;
+            font-size: 11px;
+            padding: 1px 4px;
+            line-height: 1.2;
+          }
+        }
+      }
+    }
+  }
+  
+  :global {
+    .ant-list-item-action {
+      margin-left: 12px;
+      
+      li {
+        padding-left: 6px;
+        
+        &:first-child {
+          padding-left: 0;
+        }
+      }
+    }
+    
+    .ant-btn-sm {
+      height: 24px;
+      padding: 0 8px;
+      font-size: 12px;
+    }
+  }
+}

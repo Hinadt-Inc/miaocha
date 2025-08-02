@@ -1,4 +1,4 @@
-import { post, get } from './request';
+import {del, post, get } from './request';
 
 // 获取我的模块权限
 export function fetchMyModules(): Promise<IMyModulesResponse[]> {
@@ -31,4 +31,42 @@ export function fetchDistributions(
 // 获取日志表字段
 export function fetchColumns(params: ILogColumnsParams): Promise<ILogColumnsResponse[]> {
   return get('/api/logs/columns', { params });
+}
+
+// 获取用户保存的搜索条件
+export function fetchSavedSearchConditions(): Promise<ISavedSearchCondition[]> {
+  return get('/api/logs/search/conditions');
+}
+
+// 获取缓存的搜索条件列表
+export function fetchCachedSearchConditions(): Promise<ICachedSearchCondition[]> {
+  return get('/api/logs/search/conditions');
+}
+
+// 保存搜索条件
+export function saveSearchCondition(params: ISaveSearchConditionParams): Promise<ISavedSearchCondition> {
+  return post('/api/logs/search/conditions', params);
+}
+
+// 保存搜索条件并返回缓存键
+export function saveSearchConditionWithCache(params: ISaveSearchConditionWithCacheParams): Promise<ISaveSearchConditionCacheResponse> {
+  return post('/api/logs/search/save-condition', params);
+}
+
+// 通过缓存键加载搜索条件
+export function loadSearchConditionByCache(cacheKey: string): Promise<ISaveSearchConditionWithCacheParams> {
+  return get(`/api/logs/search/load-condition/${cacheKey}`);
+}
+
+// 删除搜索条件
+export function deleteSearchCondition(id: string): Promise<void> {
+  return post(`/api/logs/search/conditions/${id}/delete`);
+}
+
+// 删除缓存的搜索条件
+export function deleteCachedSearchConditions(params: {
+  cacheGroup: string;
+  cacheKeys: string[];
+}): Promise<void> {
+  return del('/api/logs/search/conditions', params);
 }
