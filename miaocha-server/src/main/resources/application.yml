@@ -70,23 +70,6 @@ miaocha:
       read-only: false
       isolate-internal-queries: false
 
-# LDAP配置
-ldap:
-  enabled: ${LDAP_ENABLED:true}
-  url: ldap://10.10.0.1:389
-  base: OU=People,OU=Users,DC=com
-  username: CN=ops,OU=Service accounts,OU=Users,DC=com
-  password: 5BbzxEnBbewqELXgocXieQ==
-  user-dn-pattern: cn={0},OU=People,OU=Users,DC=com
-  user-search-filter: (mail={0})
-  user-search-base: OU=People,OU=Users,DC=com
-  # 默认邮箱域名（可选，如果不设置则不会自动生成邮箱）
-  default-email-domain: xxxx.com
-  # 用户同步配置
-  sync:
-    enabled: true
-    cron: "0 0 2 * * ?" # 每天凌晨2点执行
-    default-role: USER
 # Logstash配置
 logstash:
   # Logstash压缩包路径

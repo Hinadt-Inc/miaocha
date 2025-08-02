@@ -60,20 +60,6 @@
             <artifactId>jjwt-jackson</artifactId>
         </dependency>
 
-        <!-- LDAP -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-ldap</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.ldap</groupId>
-            <artifactId>spring-ldap-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-ldap</artifactId>
-        </dependency>
-
         <!-- Logstash JSON日志编码器 -->
         <dependency>
             <groupId>net.logstash.logback</groupId>

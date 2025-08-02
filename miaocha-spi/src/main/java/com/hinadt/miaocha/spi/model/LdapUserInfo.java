@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class LdapUserDTO {
+public class LdapUserInfo {
 
     /** 用户唯一标识符 通常是LDAP中的用户DN或其他唯一标识 */
     private String uid;

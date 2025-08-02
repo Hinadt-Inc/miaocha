@@ -1,9 +1,9 @@
 package com.hinadt.miaocha.spi;
 
-import com.hinadt.miaocha.spi.model.LdapUserDTO;
+import com.hinadt.miaocha.spi.model.LdapUserInfo;
 
-/** LDAP认证服务SPI接口 用于加载外部LDAP认证插件，使用Java原生ServiceLoader机制 */
-public interface LdapAuthenticationService {
+/** LDAP认证提供者SPI接口 用于加载外部LDAP认证插件，使用Java原生ServiceLoader机制 */
+public interface LdapAuthProvider {
 
     /**
      * LDAP用户认证
@@ -12,7 +12,7 @@ public interface LdapAuthenticationService {
      * @param password 密码
      * @return LDAP用户信息，认证失败返回null
      */
-    LdapUserDTO authenticate(String loginIdentifier, String password);
+    LdapUserInfo authenticate(String loginIdentifier, String password);
 
     /**
      * 检查LDAP服务是否可用

@@ -1,8 +1,8 @@
 package com.hinadt.miaocha.ldap.service;
 
 import com.hinadt.miaocha.ldap.config.LdapProperties;
-import com.hinadt.miaocha.spi.LdapUserSyncService;
-import com.hinadt.miaocha.spi.model.LdapUserDTO;
+import com.hinadt.miaocha.spi.LdapUserSyncProvider;
+import com.hinadt.miaocha.spi.model.LdapUserInfo;
 import java.util.List;
 import javax.naming.directory.SearchControls;
 import lombok.extern.slf4j.Slf4j;
@@ -13,20 +13,24 @@ import org.springframework.ldap.core.support.LdapContextSource;
 import org.springframework.ldap.filter.AndFilter;
 import org.springframework.ldap.filter.EqualsFilter;
 
-/** LDAP用户同步服务实现 */
+/** LDAP用户同步提供者实现 */
 @Slf4j
-public class LdapUserSyncServiceImpl implements LdapUserSyncService {
+public class LdapUserSyncServiceImpl implements LdapUserSyncProvider {
 
     private final LdapProperties ldapProperties;
     private final LdapTemplate ldapTemplate;
 
     public LdapUserSyncServiceImpl() {
-        this.ldapProperties = loadLdapProperties();
+        this(new LdapProperties());
+    }
+
+    public LdapUserSyncServiceImpl(LdapProperties ldapProperties) {
+        this.ldapProperties = ldapProperties;
         this.ldapTemplate = createLdapTemplate();
     }
 
     @Override
-    public List<LdapUserDTO> syncAllUsers() {
+    public List<LdapUserInfo> syncAllUsers() {
         if (!isAvailable()) {
             log.warn("LDAP service is not available for user sync");
             return List.of();
@@ -38,7 +42,7 @@ public class LdapUserSyncServiceImpl implements LdapUserSyncService {
             String searchBase = ldapProperties.getUserDn() + "," + ldapProperties.getBaseDn();
             String filter = String.format("(objectClass=%s)", ldapProperties.getUserObjectClass());
 
-            List<LdapUserDTO> users =
+            List<LdapUserInfo> users =
                     ldapTemplate.search(
                             searchBase,
                             filter,
@@ -55,7 +59,7 @@ public class LdapUserSyncServiceImpl implements LdapUserSyncService {
     }
 
     @Override
-    public List<LdapUserDTO> syncUsersByFilter(String filter) {
+    public List<LdapUserInfo> syncUsersByFilter(String filter) {
         if (!isAvailable()) {
             log.warn("LDAP service is not available for filtered user sync");
             return List.of();
@@ -79,7 +83,7 @@ public class LdapUserSyncServiceImpl implements LdapUserSyncService {
                                 "(&(objectClass=%s)%s)",
                                 ldapProperties.getUserObjectClass(), filter);
 
-                List<LdapUserDTO> users =
+                List<LdapUserInfo> users =
                         ldapTemplate.search(
                                 searchBase,
                                 combinedFilterString,
@@ -101,7 +105,7 @@ public class LdapUserSyncServiceImpl implements LdapUserSyncService {
     }
 
     @Override
-    public LdapUserDTO getUserByIdentifier(String loginIdentifier) {
+    public LdapUserInfo getUserByIdentifier(String loginIdentifier) {
         if (!isAvailable()) {
             log.warn("LDAP service is not available for user lookup");
             return null;
@@ -127,7 +131,7 @@ public class LdapUserSyncServiceImpl implements LdapUserSyncService {
                 combinedFilter = searchFilter;
             }
 
-            List<LdapUserDTO> users =
+            List<LdapUserInfo> users =
                     ldapTemplate.search(
                             searchBase,
                             combinedFilter,
@@ -165,35 +169,6 @@ public class LdapUserSyncServiceImpl implements LdapUserSyncService {
         }
     }
 
-    /** 加载LDAP配置 */
-    private LdapProperties loadLdapProperties() {
-        // 这里应该从配置文件或环境变量中加载配置
-        // 为了简化，这里使用默认配置
-        LdapProperties properties = new LdapProperties();
-
-        // 从系统属性中读取配置
-        String enabled = System.getProperty("miaocha.ldap.enabled", "false");
-        properties.setEnabled(Boolean.parseBoolean(enabled));
-
-        String url = System.getProperty("miaocha.ldap.url", "ldap://localhost:389");
-        properties.setUrl(url);
-
-        String baseDn = System.getProperty("miaocha.ldap.base-dn", "dc=example,dc=com");
-        properties.setBaseDn(baseDn);
-
-        String userDn = System.getProperty("miaocha.ldap.user-dn", "ou=users");
-        properties.setUserDn(userDn);
-
-        String managerDn =
-                System.getProperty("miaocha.ldap.manager-dn", "cn=admin,dc=example,dc=com");
-        properties.setManagerDn(managerDn);
-
-        String managerPassword = System.getProperty("miaocha.ldap.manager-password", "admin");
-        properties.setManagerPassword(managerPassword);
-
-        return properties;
-    }
-
     /** 创建LDAP模板 */
     private LdapTemplate createLdapTemplate() {
         LdapContextSource contextSource = new LdapContextSource();
@@ -212,10 +187,10 @@ public class LdapUserSyncServiceImpl implements LdapUserSyncService {
     }
 
     /** LDAP用户上下文映射器 */
-    private class LdapUserContextMapper extends AbstractContextMapper<LdapUserDTO> {
+    private class LdapUserContextMapper extends AbstractContextMapper<LdapUserInfo> {
         @Override
-        protected LdapUserDTO doMapFromContext(DirContextOperations ctx) {
-            return LdapUserDTO.builder()
+        protected LdapUserInfo doMapFromContext(DirContextOperations ctx) {
+            return LdapUserInfo.builder()
                     .dn(ctx.getNameInNamespace())
                     .uid(getAttributeValue(ctx, "uid"))
                     .email(getAttributeValue(ctx, ldapProperties.getEmailAttribute()))
