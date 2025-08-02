@@ -1,9 +1,17 @@
 package com.hinadt.miaocha.spi;
 
+import com.hinadt.miaocha.spi.model.LdapProviderInfo;
 import com.hinadt.miaocha.spi.model.LdapUserInfo;
 
 /** LDAP认证提供者SPI接口 用于加载外部LDAP认证插件，使用Java原生ServiceLoader机制 */
 public interface LdapAuthProvider {
+
+    /**
+     * 获取提供者元信息
+     *
+     * @return 提供者元信息对象
+     */
+    LdapProviderInfo getProviderInfo();
 
     /**
      * LDAP用户认证

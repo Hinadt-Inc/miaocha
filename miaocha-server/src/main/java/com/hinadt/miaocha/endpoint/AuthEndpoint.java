@@ -5,8 +5,9 @@ import com.hinadt.miaocha.domain.dto.ApiResponse;
 import com.hinadt.miaocha.domain.dto.auth.LoginRequestDTO;
 import com.hinadt.miaocha.domain.dto.auth.LoginResponseDTO;
 import com.hinadt.miaocha.domain.dto.auth.RefreshTokenRequestDTO;
+import com.hinadt.miaocha.spi.LdapAuthProvider;
 import com.hinadt.miaocha.spi.OAuthProvider;
-import com.hinadt.miaocha.spi.model.OAuthProviderInfo;
+import com.hinadt.miaocha.spi.model.BaseProviderInfo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -58,23 +59,39 @@ public class AuthEndpoint {
     }
 
     /**
-     * 获取支持的 OAuth 提供者列表
+     * 获取支持的所有认证提供者列表
      *
      * @return 支持的提供者信息列表
      */
     @GetMapping("/providers")
-    @Operation(summary = "获取支持的 OAuth 提供者", description = "返回系统支持的第三方登录提供者详细信息列表")
-    public ApiResponse<List<OAuthProviderInfo>> getOAuthProviders() {
-        ServiceLoader<OAuthProvider> serviceLoader = ServiceLoader.load(OAuthProvider.class);
+    @Operation(summary = "获取支持的认证提供者", description = "返回系统支持的所有认证提供者详细信息列表，包括OAuth和LDAP")
+    public ApiResponse<List<BaseProviderInfo>> getAllProviders() {
+        List<BaseProviderInfo> allProviders = new ArrayList<>();
 
-        List<OAuthProviderInfo> providers =
-                StreamSupport.stream(serviceLoader.spliterator(), false)
+        // 加载 OAuth 提供者
+        ServiceLoader<OAuthProvider> oauthLoader = ServiceLoader.load(OAuthProvider.class);
+        List<BaseProviderInfo> oauthProviders =
+                StreamSupport.stream(oauthLoader.spliterator(), false)
                         .filter(OAuthProvider::isAvailable)
                         .map(OAuthProvider::getProviderInfo)
-                        .sorted(Comparator.comparingInt(OAuthProviderInfo::getSortOrder))
+                        .map(info -> (BaseProviderInfo) info)
                         .collect(Collectors.toList());
+        allProviders.addAll(oauthProviders);
 
-        return ApiResponse.success(providers);
+        // 加载 LDAP 提供者
+        ServiceLoader<LdapAuthProvider> ldapLoader = ServiceLoader.load(LdapAuthProvider.class);
+        List<BaseProviderInfo> ldapProviders =
+                StreamSupport.stream(ldapLoader.spliterator(), false)
+                        .filter(LdapAuthProvider::isAvailable)
+                        .map(LdapAuthProvider::getProviderInfo)
+                        .map(info -> (BaseProviderInfo) info)
+                        .collect(Collectors.toList());
+        allProviders.addAll(ldapProviders);
+
+        // 按排序顺序排列
+        allProviders.sort(Comparator.comparingInt(BaseProviderInfo::getSortOrder));
+
+        return ApiResponse.success(allProviders);
     }
 
     /**

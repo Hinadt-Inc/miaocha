@@ -2,6 +2,7 @@ package com.hinadt.miaocha.ldap.service;
 
 import com.hinadt.miaocha.ldap.config.LdapProperties;
 import com.hinadt.miaocha.spi.LdapAuthProvider;
+import com.hinadt.miaocha.spi.model.LdapProviderInfo;
 import com.hinadt.miaocha.spi.model.LdapUserInfo;
 import java.util.List;
 import javax.naming.directory.SearchControls;
@@ -27,6 +28,24 @@ public class LdapAuthenticationServiceImpl implements LdapAuthProvider {
     public LdapAuthenticationServiceImpl(LdapProperties ldapProperties) {
         this.ldapProperties = ldapProperties;
         this.ldapTemplate = createLdapTemplate();
+    }
+
+    @Override
+    public LdapProviderInfo getProviderInfo() {
+        return LdapProviderInfo.builder()
+                .providerId("ldap")
+                .displayName("LDAP认证")
+                .description("通过LDAP服务器进行用户身份认证")
+                .version("1.0.0")
+                .providerType("ldap")
+                .sortOrder(100)
+                .enabled(ldapProperties.isEnabled())
+                .serverUrl(ldapProperties.getUrl())
+                .baseDn(ldapProperties.getBaseDn())
+                .supportUserSync(true)
+                .connectionStatus(isAvailable() ? "connected" : "disconnected")
+                .lastConnectionTest(System.currentTimeMillis())
+                .build();
     }
 
     @Override

@@ -20,7 +20,9 @@ import com.hinadt.miaocha.domain.entity.User;
 import com.hinadt.miaocha.domain.entity.enums.UserRole;
 import com.hinadt.miaocha.domain.mapper.UserMapper;
 import com.hinadt.miaocha.domain.mapper.UserModulePermissionMapper;
+import com.hinadt.miaocha.spi.LdapAuthProvider;
 import com.hinadt.miaocha.spi.OAuthProvider;
+import com.hinadt.miaocha.spi.model.LdapUserInfo;
 import com.hinadt.miaocha.spi.model.OAuthUserInfo;
 import io.jsonwebtoken.ExpiredJwtException;
 import java.util.List;
@@ -65,7 +67,18 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public LoginResponseDTO login(LoginRequestDTO loginRequest) {
-        User user = userMapper.selectByEmail(loginRequest.getEmail());
+        // 如果指定了 providerId，使用对应的认证方式
+        if (loginRequest.getProviderId() != null && !loginRequest.getProviderId().isEmpty()) {
+            return loginWithProvider(loginRequest);
+        }
+
+        // 默认使用系统认证（保持向后兼容性）
+        String loginIdentifier =
+                loginRequest.getLoginIdentifier() != null
+                        ? loginRequest.getLoginIdentifier()
+                        : loginRequest.getEmail();
+
+        User user = userMapper.selectByEmail(loginIdentifier);
         if (user == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
@@ -79,6 +92,72 @@ public class UserServiceImpl implements UserService {
         }
 
         String loginType = SYSTEM_LOGIN_TYPE;
+        String token = jwtUtils.generateTokenWithUserInfo(user, loginType);
+        String refreshToken = jwtUtils.generateRefreshTokenWithUserInfo(user, loginType);
+
+        long expiresAt = jwtUtils.getExpirationFromToken(token);
+        long refreshExpiresAt = jwtUtils.getExpirationFromToken(refreshToken);
+
+        return LoginResponseDTO.builder()
+                .token(token)
+                .refreshToken(refreshToken)
+                .expiresAt(expiresAt)
+                .refreshExpiresAt(refreshExpiresAt)
+                .userId(user.getId())
+                .nickname(user.getNickname())
+                .role(user.getRole())
+                .loginType(loginType)
+                .build();
+    }
+
+    /** 使用指定提供者进行登录 */
+    private LoginResponseDTO loginWithProvider(LoginRequestDTO loginRequest) {
+        String providerId = loginRequest.getProviderId();
+
+        // 尝试 LDAP 认证
+        if ("ldap".equals(providerId)) {
+            return ldapLogin(loginRequest.getLoginIdentifier(), loginRequest.getPassword());
+        }
+
+        // 可以在这里添加其他提供者的认证逻辑
+        throw new BusinessException(ErrorCode.VALIDATION_ERROR, "不支持的提供者: " + providerId);
+    }
+
+    /** LDAP 登录 */
+    private LoginResponseDTO ldapLogin(String loginIdentifier, String password) {
+        ServiceLoader<LdapAuthProvider> loader = ServiceLoader.load(LdapAuthProvider.class);
+
+        Optional<LdapAuthProvider> providerOpt =
+                StreamSupport.stream(loader.spliterator(), false)
+                        .filter(LdapAuthProvider::isAvailable)
+                        .findFirst();
+
+        if (providerOpt.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "LDAP 服务不可用");
+        }
+
+        LdapAuthProvider provider = providerOpt.get();
+        LdapUserInfo ldapUser = provider.authenticate(loginIdentifier, password);
+
+        if (ldapUser == null || ldapUser.getEmail() == null || ldapUser.getEmail().isEmpty()) {
+            throw new BusinessException(ErrorCode.USER_PASSWORD_ERROR, "LDAP 认证失败");
+        }
+
+        // 查找或创建本地用户
+        User user = userMapper.selectByEmail(ldapUser.getEmail());
+        if (user == null) {
+            // 创建新用户
+            user = createUserFromLdap(ldapUser);
+        } else {
+            // 更新用户信息
+            updateUserFromLdap(user, ldapUser);
+        }
+
+        if (user.getStatus() == 0) {
+            throw new BusinessException(ErrorCode.USER_FORBIDDEN);
+        }
+
+        String loginType = "ldap";
         String token = jwtUtils.generateTokenWithUserInfo(user, loginType);
         String refreshToken = jwtUtils.generateRefreshTokenWithUserInfo(user, loginType);
 
@@ -478,5 +557,49 @@ public class UserServiceImpl implements UserService {
                 .role(user.getRole())
                 .loginType(providerId)
                 .build();
+    }
+
+    /** 从 LDAP 用户信息创建本地用户 */
+    private User createUserFromLdap(LdapUserInfo ldapUser) {
+        User user = new User();
+        user.setUid(generateUid());
+        user.setEmail(ldapUser.getEmail());
+        user.setNickname(
+                ldapUser.getNickname() != null
+                        ? ldapUser.getNickname()
+                        : extractNicknameFromEmail(ldapUser.getEmail()));
+        // User 实体类中暂不支持 realName、department、position 字段
+        // 可以在未来扩展时添加这些字段
+        user.setStatus(1); // 默认启用
+        user.setRole("user"); // 默认角色
+        user.setPassword(""); // LDAP 用户不需要本地密码
+
+        userMapper.insert(user);
+        log.info("从 LDAP 创建新用户: {} ({})", user.getNickname(), user.getEmail());
+        return user;
+    }
+
+    /** 使用 LDAP 用户信息更新本地用户 */
+    private void updateUserFromLdap(User user, LdapUserInfo ldapUser) {
+        boolean updated = false;
+
+        if (ldapUser.getNickname() != null && !ldapUser.getNickname().equals(user.getNickname())) {
+            user.setNickname(ldapUser.getNickname());
+            updated = true;
+        }
+
+        // 暂时只更新昵称，其他字段需要扩展 User 实体类
+        if (updated) {
+            userMapper.update(user);
+            log.info("更新 LDAP 用户信息: {} ({})", user.getNickname(), user.getEmail());
+        }
+    }
+
+    /** 从邮箱地址提取昵称 */
+    private String extractNicknameFromEmail(String email) {
+        if (email != null && email.contains("@")) {
+            return email.substring(0, email.indexOf("@"));
+        }
+        return email;
     }
 }
