@@ -70,7 +70,6 @@ miaocha:
       read-only: false
       isolate-internal-queries: false
 
-        
 # Logstash配置
 logstash:
   # Logstash压缩包路径

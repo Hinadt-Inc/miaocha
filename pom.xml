@@ -13,6 +13,7 @@
     <modules>
         <module>miaocha-spi</module>
         <module>miaocha-server</module>
+        <module>miaocha-spi-provider</module>
         <module>miaocha-ui</module>
         <module>miaocha-assembly</module>
     </modules>

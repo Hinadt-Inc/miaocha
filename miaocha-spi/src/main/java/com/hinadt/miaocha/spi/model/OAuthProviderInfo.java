@@ -1,9 +1,10 @@
 package com.hinadt.miaocha.spi.model;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 /**
  * OAuth提供者元信息
@@ -11,44 +12,11 @@ import lombok.NoArgsConstructor;
  * <p>定义OAuth提供者的完整信息，包含SPI标识信息和前端所需的URL配置。 既符合SPI设计原则，又满足前端展示和交互需求。
  */
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OAuthProviderInfo {
-
-    // ========== SPI核心元数据 ==========
-
-    /**
-     * 提供者唯一标识符
-     *
-     * <p>用于在系统中唯一标识该OAuth提供者，建议使用小写字母和连字符
-     *
-     * <p>例如："mandao", "github", "google"
-     */
-    private String providerId;
-
-    /**
-     * 提供者显示名称
-     *
-     * <p>用于在用户界面中显示的友好名称
-     *
-     * <p>例如："曼道SSO", "GitHub", "Google"
-     */
-    private String displayName;
-
-    /**
-     * 提供者描述信息
-     *
-     * <p>简要描述该OAuth提供者的用途或特点
-     */
-    private String description;
-
-    /**
-     * 提供者版本
-     *
-     * <p>标识该SPI实现的版本，用于兼容性管理
-     */
-    private String version;
+@EqualsAndHashCode(callSuper = true)
+public class OAuthProviderInfo extends BaseProviderInfo {
 
     // ========== OAuth2标准端点信息 ==========
 
@@ -88,20 +56,6 @@ public class OAuthProviderInfo {
      * <p>用于在前端显示的图标地址
      */
     private String iconUrl;
-
-    /**
-     * 是否启用
-     *
-     * <p>控制该提供者是否在前端显示和可用
-     */
-    private Boolean enabled;
-
-    /**
-     * 排序顺序
-     *
-     * <p>用于控制多个OAuth提供者在前端的显示顺序，数值越小越靠前
-     */
-    private Integer sortOrder;
 
     // ========== OAuth2功能支持信息 ==========
 
