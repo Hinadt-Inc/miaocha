@@ -22,7 +22,7 @@ public class LdapAuthenticationServiceImpl implements LdapAuthProvider {
     private final LdapTemplate ldapTemplate;
 
     public LdapAuthenticationServiceImpl() {
-        this(new LdapProperties());
+        this(LdapPropertiesLoader.loadFromClasspath());
     }
 
     public LdapAuthenticationServiceImpl(LdapProperties ldapProperties) {
@@ -42,7 +42,6 @@ public class LdapAuthenticationServiceImpl implements LdapAuthProvider {
                 .enabled(ldapProperties.isEnabled())
                 .serverUrl(ldapProperties.getUrl())
                 .baseDn(ldapProperties.getBaseDn())
-                .supportUserSync(true)
                 .connectionStatus(isAvailable() ? "connected" : "disconnected")
                 .lastConnectionTest(System.currentTimeMillis())
                 .build();

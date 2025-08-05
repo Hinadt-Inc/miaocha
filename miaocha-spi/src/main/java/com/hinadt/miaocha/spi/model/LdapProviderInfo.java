@@ -24,9 +24,6 @@ public class LdapProviderInfo extends BaseProviderInfo {
     /** 基础DN */
     private String baseDn;
 
-    /** 是否支持用户同步 */
-    private boolean supportUserSync;
-
     /** 连接状态 */
     private String connectionStatus;
 

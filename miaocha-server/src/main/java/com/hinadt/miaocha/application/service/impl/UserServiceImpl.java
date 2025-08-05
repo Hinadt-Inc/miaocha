@@ -72,7 +72,6 @@ public class UserServiceImpl implements UserService {
             return loginWithProvider(loginRequest);
         }
 
-        // 默认使用系统认证（保持向后兼容性）
         String loginIdentifier =
                 loginRequest.getLoginIdentifier() != null
                         ? loginRequest.getLoginIdentifier()
@@ -114,50 +113,51 @@ public class UserServiceImpl implements UserService {
     private LoginResponseDTO loginWithProvider(LoginRequestDTO loginRequest) {
         String providerId = loginRequest.getProviderId();
 
-        // 尝试 LDAP 认证
-        if ("ldap".equals(providerId)) {
-            return ldapLogin(loginRequest.getLoginIdentifier(), loginRequest.getPassword());
-        }
-
-        // 可以在这里添加其他提供者的认证逻辑
-        throw new BusinessException(ErrorCode.VALIDATION_ERROR, "不支持的提供者: " + providerId);
+        // 尝试 LDAP 认证提供者
+        return authenticateWithLdapProvider(
+                providerId, loginRequest.getLoginIdentifier(), loginRequest.getPassword());
     }
 
-    /** LDAP 登录 */
-    private LoginResponseDTO ldapLogin(String loginIdentifier, String password) {
+    /** 使用 LDAP 认证提供者进行登录 */
+    private LoginResponseDTO authenticateWithLdapProvider(
+            String requestedProviderId, String loginIdentifier, String password) {
         ServiceLoader<LdapAuthProvider> loader = ServiceLoader.load(LdapAuthProvider.class);
 
         Optional<LdapAuthProvider> providerOpt =
                 StreamSupport.stream(loader.spliterator(), false)
                         .filter(LdapAuthProvider::isAvailable)
+                        .filter(
+                                provider ->
+                                        requestedProviderId.equals(
+                                                provider.getProviderInfo().getProviderId()))
                         .findFirst();
 
         if (providerOpt.isEmpty()) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "LDAP 服务不可用");
+            throw new BusinessException(
+                    ErrorCode.VALIDATION_ERROR, "未找到可用的提供者: " + requestedProviderId);
         }
 
         LdapAuthProvider provider = providerOpt.get();
         LdapUserInfo ldapUser = provider.authenticate(loginIdentifier, password);
 
         if (ldapUser == null || ldapUser.getEmail() == null || ldapUser.getEmail().isEmpty()) {
-            throw new BusinessException(ErrorCode.USER_PASSWORD_ERROR, "LDAP 认证失败");
+            throw new BusinessException(
+                    ErrorCode.USER_PASSWORD_ERROR,
+                    provider.getProviderInfo().getDisplayName() + " LDAP 登录, 用户名或者密码错误");
         }
 
         // 查找或创建本地用户
         User user = userMapper.selectByEmail(ldapUser.getEmail());
         if (user == null) {
-            // 创建新用户
-            user = createUserFromLdap(ldapUser);
-        } else {
-            // 更新用户信息
-            updateUserFromLdap(user, ldapUser);
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND, "用户不存在，请联系管理员创建账户");
         }
 
         if (user.getStatus() == 0) {
             throw new BusinessException(ErrorCode.USER_FORBIDDEN);
         }
 
-        String loginType = "ldap";
+        // 使用实际的 providerId 作为 loginType
+        String loginType = provider.getProviderInfo().getProviderId();
         String token = jwtUtils.generateTokenWithUserInfo(user, loginType);
         String refreshToken = jwtUtils.generateRefreshTokenWithUserInfo(user, loginType);
 
@@ -557,49 +557,5 @@ public class UserServiceImpl implements UserService {
                 .role(user.getRole())
                 .loginType(providerId)
                 .build();
-    }
-
-    /** 从 LDAP 用户信息创建本地用户 */
-    private User createUserFromLdap(LdapUserInfo ldapUser) {
-        User user = new User();
-        user.setUid(generateUid());
-        user.setEmail(ldapUser.getEmail());
-        user.setNickname(
-                ldapUser.getNickname() != null
-                        ? ldapUser.getNickname()
-                        : extractNicknameFromEmail(ldapUser.getEmail()));
-        // User 实体类中暂不支持 realName、department、position 字段
-        // 可以在未来扩展时添加这些字段
-        user.setStatus(1); // 默认启用
-        user.setRole("user"); // 默认角色
-        user.setPassword(""); // LDAP 用户不需要本地密码
-
-        userMapper.insert(user);
-        log.info("从 LDAP 创建新用户: {} ({})", user.getNickname(), user.getEmail());
-        return user;
-    }
-
-    /** 使用 LDAP 用户信息更新本地用户 */
-    private void updateUserFromLdap(User user, LdapUserInfo ldapUser) {
-        boolean updated = false;
-
-        if (ldapUser.getNickname() != null && !ldapUser.getNickname().equals(user.getNickname())) {
-            user.setNickname(ldapUser.getNickname());
-            updated = true;
-        }
-
-        // 暂时只更新昵称，其他字段需要扩展 User 实体类
-        if (updated) {
-            userMapper.update(user);
-            log.info("更新 LDAP 用户信息: {} ({})", user.getNickname(), user.getEmail());
-        }
-    }
-
-    /** 从邮箱地址提取昵称 */
-    private String extractNicknameFromEmail(String email) {
-        if (email != null && email.contains("@")) {
-            return email.substring(0, email.indexOf("@"));
-        }
-        return email;
     }
 }

@@ -15,6 +15,11 @@
     <description>秒查 SPI 规范模块，定义了第三方扩展需要实现的接口和公共模型</description>
 
     <dependencies>
+        <!-- 日志依赖 -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
 
         <!-- 测试依赖 -->
         <dependency>

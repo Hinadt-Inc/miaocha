@@ -1,40 +1,52 @@
 # 秒查LDAP认证提供者
 
-这个模块实现了秒查系统的LDAP认证功能，通过SPI插件的方式提供LDAP用户认证和同步服务。
+这个模块实现了秒查系统的LDAP认证功能，通过SPI插件的方式提供LDAP用户认证服务。
 
 ## 功能特性
 
 - **LDAP用户认证**: 支持通过LDAP服务器验证用户身份
-- **LDAP用户同步**: 支持从LDAP服务器同步用户信息
 - **灵活配置**: 支持多种LDAP服务器（Active Directory, OpenLDAP等）
 - **SPI架构**: 通过SPI机制实现，易于扩展和替换
 
 ## 使用方法
 
-### 1. 启用LDAP功能
+### 1. 配置文件方式
 
-在系统配置中设置以下系统属性：
+在 `application.properties` 中添加 LDAP 配置：
 
-```bash
--Dmiaocha.ldap.enabled=true
--Dmiaocha.ldap.url=ldap://your-ldap-server:389
--Dmiaocha.ldap.base-dn=dc=example,dc=com
--Dmiaocha.ldap.user-dn=ou=users
--Dmiaocha.ldap.manager-dn=cn=admin,dc=example,dc=com
--Dmiaocha.ldap.manager-password=admin_password
+```properties
+miaocha.ldap.enabled=true
+miaocha.ldap.url=ldap://your-ldap-server:389
+miaocha.ldap.base-dn=dc=example,dc=com
+miaocha.ldap.user-dn=ou=users
+miaocha.ldap.manager-dn=cn=admin,dc=example,dc=com
+miaocha.ldap.manager-password=admin_password
+miaocha.ldap.user-search-filter=(uid={0})
+miaocha.ldap.user-object-class=inetOrgPerson
+miaocha.ldap.email-attribute=mail
+miaocha.ldap.nickname-attribute=cn
+miaocha.ldap.real-name-attribute=displayName
+miaocha.ldap.department-attribute=department
+miaocha.ldap.position-attribute=title
+miaocha.ldap.organizational-unit-attribute=ou
 ```
 
-### 2. 配置文件方式
+### 2. 登录方式
 
-将 `application-ldap-example.yml` 的内容添加到您的应用配置文件中，并根据您的LDAP环境进行调整。
+使用 LDAP 认证时，需要在登录请求中指定 `providerId`：
 
-### 3. 登录方式
+```json
+{
+  "loginIdentifier": "username",
+  "password": "password",
+  "providerId": "ldap"
+}
+```
 
-启用LDAP后，用户可以使用以下方式登录：
-- 使用LDAP用户名和密码
-- 使用邮箱地址和LDAP密码
-
-系统会首先尝试LDAP认证，如果LDAP认证失败或服务不可用，则回退到系统内置的用户认证。
+**重要说明**：
+- LDAP 认证仅用于身份验证，不会自动创建或同步用户信息
+- 用户必须先在系统中存在（由管理员创建）才能使用 LDAP 登录
+- 如果需要用户数据同步，请使用外部工具进行用户管理
 
 ## 配置参数说明
 
@@ -52,28 +64,24 @@
 ## 支持的LDAP服务器
 
 ### Active Directory
-```yaml
-miaocha:
-  ldap:
-    enabled: true
-    url: ldap://ad.example.com:389
-    base-dn: dc=example,dc=com
-    user-dn: cn=Users
-    user-search-filter: "(sAMAccountName={0})"
-    user-object-class: user
-    email-attribute: userPrincipalName
+```properties
+miaocha.ldap.enabled=true
+miaocha.ldap.url=ldap://ad.example.com:389
+miaocha.ldap.base-dn=dc=example,dc=com
+miaocha.ldap.user-dn=cn=Users
+miaocha.ldap.user-search-filter=(sAMAccountName={0})
+miaocha.ldap.user-object-class=user
+miaocha.ldap.email-attribute=userPrincipalName
 ```
 
 ### OpenLDAP
-```yaml
-miaocha:
-  ldap:
-    enabled: true
-    url: ldap://openldap.example.com:389
-    base-dn: dc=example,dc=com
-    user-dn: ou=people
-    user-search-filter: "(uid={0})"
-    user-object-class: inetOrgPerson
+```properties
+miaocha.ldap.enabled=true
+miaocha.ldap.url=ldap://openldap.example.com:389
+miaocha.ldap.base-dn=dc=example,dc=com
+miaocha.ldap.user-dn=ou=people
+miaocha.ldap.user-search-filter=(uid={0})
+miaocha.ldap.user-object-class=inetOrgPerson
 ```
 
 ## 开发说明
@@ -81,8 +89,7 @@ miaocha:
 ### SPI接口
 
 该模块实现了以下SPI接口：
-- `LdapAuthenticationService`: LDAP用户认证服务
-- `LdapUserSyncService`: LDAP用户同步服务
+- `LdapAuthProvider`: LDAP用户认证提供者
 
 ### 扩展开发
 
