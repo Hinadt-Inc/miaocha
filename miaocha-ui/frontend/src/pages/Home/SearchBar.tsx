@@ -3,6 +3,9 @@ import { useState, useMemo, useEffect, Suspense, lazy, forwardRef, useImperative
 import { AutoComplete, Button, Space, Tag, Popover, Statistic, Tooltip } from 'antd';
 import CountUp from 'react-countup';
 import SpinIndicator from '@/components/SpinIndicator';
+import SaveSearchButton from './SaveSearchButton';
+import SavedSearchesButton from './SavedSearchesButton';
+import ShareButton from './ShareButton';
 import styles from './SearchBar.module.less';
 import { QUICK_RANGES, TIME_GROUP, getLatestTime, DATE_FORMAT_THOUSOND } from './utils';
 import dayjs from 'dayjs';
@@ -46,61 +49,10 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
   const [timeGroup, setTimeGroup] = useState<string>('auto'); // 时间分组
   const [activeTab, setActiveTab] = useState('quick'); // 选项卡值
   const [keyword, setKeyword] = useState<string>(''); // 当前输入的关键词
-  const [keywordHistory, setKeywordHistory] = useState<string[]>(() => {
-    const saved = localStorage.getItem('keywordHistory');
-    return saved ? JSON.parse(saved) : [];
-  });
-
   const [sql, setSql] = useState<string>(''); // sql字符串
 
-  const [sqlHistory, setSqlHistory] = useState<string[]>(() => {
-    const saved = localStorage.getItem('sqlHistory');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // 添加查询条件恢复功能
-  const [initialized, setInitialized] = useState(false);
-
-  // 在组件初始化时恢复之前的查询条件
-  useEffect(() => {
-    if (!initialized) {
-      const savedSearchParams = localStorage.getItem('searchBarParams');
-      if (savedSearchParams) {
-        try {
-          const params = JSON.parse(savedSearchParams);
-
-          // 恢复关键词
-          if (params.keywords && Array.isArray(params.keywords)) {
-            setKeywords(params.keywords);
-          }
-
-          // 恢复SQL条件
-          if (params.whereSqls && Array.isArray(params.whereSqls)) {
-            setSqls(params.whereSqls);
-          }
-
-          // 恢复时间分组
-          if (params.timeGrouping) {
-            setTimeGroup(params.timeGrouping);
-          }
-
-          // 恢复时间范围
-          if (params.startTime && params.endTime && params.timeRange) {
-            const timeOption = {
-              value: params.timeRange,
-              range: [params.startTime, params.endTime],
-              label: QUICK_RANGES[params.timeRange]?.label || '自定义时间',
-              type: QUICK_RANGES[params.timeRange] ? ('quick' as const) : ('absolute' as const),
-            };
-            setTimeOption(timeOption);
-          }
-        } catch (error) {
-          console.error('恢复查询条件失败:', error);
-        }
-      }
-      setInitialized(true);
-    }
-  }, [initialized, setKeywords, setSqls]);
+  // 查询条件初始化标记
+  const [initialized] = useState(true); // 直接设置为true，不需要恢复逻辑
 
   // 获取默认时间选项配置
   const getDefaultTimeOption = () => {
@@ -139,7 +91,46 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
     },
     // 渲染时间
     setTimeOption,
+    // 设置时间分组
+    setTimeGroup,
   }), [sqls]);
+
+  // 加载已保存的搜索条件
+  const handleLoadSearch = (savedSearchParams: any) => {
+    try {
+      // 恢复关键词
+      if (savedSearchParams.keywords && Array.isArray(savedSearchParams.keywords)) {
+        setKeywords(savedSearchParams.keywords);
+      } else {
+        setKeywords([]);
+      }
+
+      // 恢复SQL条件
+      if (savedSearchParams.whereSqls && Array.isArray(savedSearchParams.whereSqls)) {
+        setSqls(savedSearchParams.whereSqls);
+      } else {
+        setSqls([]);
+      }
+
+      // 恢复时间分组
+      if (savedSearchParams.timeGrouping) {
+        setTimeGroup(savedSearchParams.timeGrouping);
+      }
+
+      // 恢复时间范围
+      if (savedSearchParams.startTime && savedSearchParams.endTime && savedSearchParams.timeRange) {
+        const timeOption = {
+          value: savedSearchParams.timeRange,
+          range: [savedSearchParams.startTime, savedSearchParams.endTime],
+          label: QUICK_RANGES[savedSearchParams.timeRange]?.label || '自定义时间',
+          type: QUICK_RANGES[savedSearchParams.timeRange] ? ('quick' as const) : ('absolute' as const),
+        };
+        setTimeOption(timeOption);
+      }
+    } catch (error) {
+      console.error('加载搜索条件失败:', error);
+    }
+  };
 
   // 处理关键词输入变化
   const changeKeyword = (value: string) => {
@@ -155,38 +146,9 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
     setOpenTimeRange(true);
   };
 
-  // 清除本地存储中的关键词
-  const clearKeywordFromLocalStorage = (item: string) => {
-    try {
-      const savedParams = localStorage.getItem('searchBarParams');
-      if (savedParams) {
-        const params = JSON.parse(savedParams);
-        params.keywords = params.keywords.filter((k: string) => k !== item);
-        localStorage.setItem('searchBarParams', JSON.stringify(params));
-      }
-    } catch (error) {
-      console.error('清除关键词本地存储失败:', error);
-    }
-  };
-
-  // 清除本地存储中的SQL
-  const clearSqlFromLocalStorage = (item: string) => {
-    try {
-      const savedParams = localStorage.getItem('searchBarParams');
-      if (savedParams) {
-        const params = JSON.parse(savedParams);
-        params.whereSqls = params.whereSqls.filter((s: string) => s !== item);
-        localStorage.setItem('searchBarParams', JSON.stringify(params));
-      }
-    } catch (error) {
-      console.error('清除SQL本地存储失败:', error);
-    }
-  };
-
   // 处理点击keyword逻辑
   const handleClickSearchBarKeyword = (item: string) => {
     setKeyword(item);
-    clearKeywordFromLocalStorage(item);
     // 从keywords数组中移除该项
     setKeywords(keywords.filter((keyword: string) => keyword !== item));
   };
@@ -194,7 +156,6 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
   // 处理点击sql逻辑
   const handleClickSearchBarSql = (item: string) => {
     setSql(item);
-    clearSqlFromLocalStorage(item);
     // 从sqls数组中移除该项
     setSqls(sqls.filter((sql: string) => sql !== item));
     // 从sider中移除该项
@@ -204,7 +165,6 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
   // 处理删除关键词
   const handleCloseKeyword = (item: string) => {
     setKeywords(keywords.filter((keyword: string) => keyword !== item));
-    clearKeywordFromLocalStorage(item);
     const latestTime = getLatestTime(timeOption);
     setTimeOption((prev: any) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
   };
@@ -212,7 +172,6 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
   // 处理删除SQL
   const handleCloseSql = (item: string) => {
     setSqls(sqls.filter((sub: string) => sub !== item));
-    clearSqlFromLocalStorage(item);
     setWhereSqlsFromSider(setWhereSqlsFromSiderArr.filter((sub: any) => sub.label !== item));
     const latestTime = getLatestTime(timeOption);
     setTimeOption((prev: any) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
@@ -261,7 +220,7 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
 
   // 当关键词、sqls或时间变化时触发搜索
   useEffect(() => {
-    // 只有在组件初始化完成后才执行搜索和保存逻辑
+    // 只有在组件初始化完成后才执行搜索逻辑
     if (!initialized) return;
     // 等待 commonColumns 准备好后再执行（页面初始化时需要等待，后端说模块下一定会有普通字段）
     if (commonColumns.length === 0) return;
@@ -286,21 +245,6 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
       delete params.whereSqls;
     }
 
-    // 保存查询条件到本地存储
-    try {
-      const searchParamsToSave = {
-        keywords: keywords || [],
-        whereSqls: params.whereSqls || [],
-        startTime: params.startTime,
-        endTime: params.endTime,
-        timeRange: params.timeRange,
-        timeGrouping: params.timeGrouping,
-        fields: params.fields,
-      };
-      localStorage.setItem('searchBarParams', JSON.stringify(searchParamsToSave));
-    } catch (error) {
-      console.error('保存查询条件失败:', error);
-    }
     onSearch(params as ILogSearchParams);
 
     // 通知父组件sqls数据变化
@@ -319,29 +263,14 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
     const keywordTrim = String(keyword || '')?.trim();
     const sqlTrim = String(sql || '')?.trim();
 
-    // 保存关键词搜索历史
-    if (keywordTrim) {
-      if (!keywordHistory.includes(keywordTrim)) {
-        const newHistory = [keywordTrim, ...keywordHistory].slice(0, 10);
-        setKeywordHistory(newHistory);
-        localStorage.setItem('keywordHistory', JSON.stringify(newHistory));
-      }
-      // 添加到关键词列表
-      if (!keywords.includes(keywordTrim)) {
-        setKeywords([...keywords, keywordTrim]);
-      }
+    // 添加到关键词列表
+    if (keywordTrim && !keywords.includes(keywordTrim)) {
+      setKeywords([...keywords, keywordTrim]);
     }
 
-    // 保存SQL历史
-    if (sqlTrim) {
-      if (!sqlHistory.includes(sqlTrim)) {
-        const newHistory = [sqlTrim, ...sqlHistory].slice(0, 10);
-        setSqlHistory(newHistory);
-        localStorage.setItem('sqlHistory', JSON.stringify(newHistory));
-      }
-      if (!sqls.includes(sqlTrim)) {
-        setSqls([...sqls, sqlTrim]);
-      }
+    // 添加到SQL列表
+    if (sqlTrim && !sqls.includes(sqlTrim)) {
+      setSqls([...sqls, sqlTrim]);
     }
 
     // 清空输入框
@@ -409,14 +338,11 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
           style={{ width: '100%' }}
           value={keyword}
           onChange={changeKeyword}
-          options={keywordHistory.map((item: string) => ({
-            value: item,
-            label: item,
-          }))}
+          options={[]}
         />
       </Space.Compact>
     );
-  }, [keywordHistory, keyword]);
+  }, [keyword]);
 
   // 渲染SQL查询输入框，包含历史SQL查询记录和常用字段模板
   const sqlRender = useMemo(() => {
@@ -484,7 +410,7 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
         />
       </Space.Compact>
     );
-  }, [sql, sqlHistory, columns]);
+  }, [sql, columns]);
 
   const changeTimeGroup = (text: string) => {
     const latestTime = getLatestTime(timeOption);
@@ -525,8 +451,40 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
       <div className={styles.top}>
         <div className={styles.left}>{leftRender}</div>
         <div className={styles.right}>
-          {timeGroupRender}
-          {timeRender}
+          <Space size={8}>
+            <SaveSearchButton
+              searchParams={{
+                keywords,
+                whereSqls: sqls,
+                timeRange: timeOption.value,
+                startTime: timeOption.range?.[0],
+                endTime: timeOption.range?.[1],
+                timeGrouping: timeGroup,
+                module: searchParams.module,
+                sortConfig,
+              }}
+              size="small"
+            />
+            <SavedSearchesButton
+              onLoadSearch={handleLoadSearch}
+              size="small"
+            />
+            <ShareButton
+              searchParams={{
+                keywords,
+                whereSqls: sqls,
+                timeRange: timeOption.value,
+                startTime: timeOption.range?.[0],
+                endTime: timeOption.range?.[1],
+                timeGrouping: timeGroup,
+                module: searchParams.module,
+                sortConfig,
+              }}
+              size="small"
+            />
+            {timeGroupRender}
+            {timeRender}
+          </Space>
         </div>
       </div>
       <div className={styles.form}>

@@ -13,7 +13,7 @@ interface IProps {
   whereSqlsFromSider: IStatus[]; // 侧边栏的where条件
   sqls?: string[]; // SQL语句列表
   onSearch: (params: ILogSearchParams) => void; // 搜索回调函数
-  onChangeColumns: (params: ILogColumnsResponse[]) => void; // 列变化回调函数
+  onChangeColumns: (col: any) => void; // 列变化回调函数 - 传递单个列对象
   onSearchFromTable?: (params: ILogSearchParams) => void; // 来自表格的搜索回调
   moduleQueryConfig?: any; // 模块查询配置
   onSortChange?: (sortConfig: any[]) => void; // 排序变化回调函数

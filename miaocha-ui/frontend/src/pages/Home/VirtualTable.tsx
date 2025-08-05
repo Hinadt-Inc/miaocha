@@ -42,7 +42,7 @@ interface IProps {
   hasMore?: boolean; // 是否还有更多数据
   dynamicColumns?: ILogColumnsResponse[]; // 动态列配置
   whereSqlsFromSider: IStatus[];
-  onChangeColumns: (params: ILogColumnsResponse[]) => void; // 列变化回调函数
+  onChangeColumns: (col: any) => void; // 列变化回调函数 - 传递单个列对象
   sqls?: string[]; // SQL语句列表
   onSearch?: (params: ILogSearchParams) => void; // 搜索回调函数
   moduleQueryConfig?: any; // 模块查询配置
@@ -180,6 +180,9 @@ const VirtualTable = (props: IProps) => {
   const [scrollX, setScrollX] = useState(1300);
   const [localSortConfig, setLocalSortConfig] = useState<any[]>([]);
   const [screenWidth, setScreenWidth] = useState(window.innerWidth); // 添加屏幕宽度状态
+  const [expandedRowKeys, setExpandedRowKeys] = useState<React.Key[]>([]); // 添加展开行状态
+  const expandedRecordsRef = useRef<Map<React.Key, any>>(new Map()); // 记录展开行的内容
+  const isUserExpandActionRef = useRef(false); // 标记是否是用户主动的展开操作
 
   // 监听窗口大小变化
   useEffect(() => {
@@ -190,6 +193,149 @@ const VirtualTable = (props: IProps) => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // 监听数据变化，保持展开行状态
+  useEffect(() => {
+    // 如果是用户主动操作，跳过这次检查
+    if (isUserExpandActionRef.current) {
+      isUserExpandActionRef.current = false;
+      return;
+    }
+
+    // 添加防抖，避免频繁触发
+    const timeoutId = setTimeout(() => {
+      if (expandedRowKeys.length > 0 && data && data.length > 0) {
+        console.log('开始检查展开状态保持逻辑...');
+        
+        // 生成一个记录内容的hash函数，用于匹配记录
+        const generateRecordHash = (record: any) => {
+          const timeField = moduleQueryConfig?.timeField || 'log_time';
+          // 使用时间字段和部分关键字段生成唯一标识，确保唯一性
+          const identifyingFields = [timeField, 'host', 'source', 'log_offset'];
+          const hashParts = identifyingFields
+            .filter(field => record[field] !== undefined && record[field] !== null)
+            .map(field => `${field}:${String(record[field])}`);
+          
+          // 如果基本字段不够唯一，添加更多字段
+          if (hashParts.length < 2) {
+            const additionalFields = Object.keys(record).slice(0, 5);
+            additionalFields.forEach(field => {
+              if (!identifyingFields.includes(field) && record[field] !== undefined) {
+                hashParts.push(`${field}:${String(record[field]).substring(0, 100)}`);
+              }
+            });
+          }
+          
+          return hashParts.join('|');
+        };
+
+        // 为当前数据中的每条记录生成hash映射
+        const dataHashToKey = new Map<string, React.Key>();
+        const keyToHash = new Map<React.Key, string>();
+        
+        data.forEach(record => {
+          const hash = generateRecordHash(record);
+          dataHashToKey.set(hash, record._key);
+          keyToHash.set(record._key, hash);
+        });
+
+        // 检查当前展开的keys是否还在新数据中存在
+        const stillValidKeys = expandedRowKeys.filter(key => {
+          const currentRecord = data.find(item => item._key === key);
+          return currentRecord !== undefined;
+        });
+
+        // 如果当前展开的keys在新数据中仍然存在，直接保持
+        if (stillValidKeys.length === expandedRowKeys.length) {
+          console.log('所有展开的keys仍然有效，无需更新');
+          return; // 不需要更新
+        }
+
+        console.log('需要通过内容匹配恢复展开状态');
+
+        // 否则，尝试通过内容匹配来恢复展开状态
+        const newExpandedKeys: React.Key[] = [];
+        const newExpandedRecords = new Map<React.Key, any>();
+
+        expandedRowKeys.forEach(oldKey => {
+          // 首先检查这个key是否还存在
+          if (stillValidKeys.includes(oldKey)) {
+            newExpandedKeys.push(oldKey);
+            const record = data.find(item => item._key === oldKey);
+            if (record) {
+              newExpandedRecords.set(oldKey, record);
+            }
+          } else {
+            // key不存在，尝试通过内容匹配
+            const expandedRecord = expandedRecordsRef.current.get(oldKey);
+            if (expandedRecord) {
+              const recordHash = generateRecordHash(expandedRecord);
+              const newKey = dataHashToKey.get(recordHash);
+              if (newKey && !newExpandedKeys.includes(newKey)) {
+                // 找到匹配的记录，使用新的key
+                newExpandedKeys.push(newKey);
+                const newRecord = data.find(item => item._key === newKey);
+                if (newRecord) {
+                  newExpandedRecords.set(newKey, newRecord);
+                }
+              }
+            }
+          }
+        });
+
+        // 更新展开状态，但只有在真正发生变化时才更新
+        if (newExpandedKeys.length !== expandedRowKeys.length || 
+            !newExpandedKeys.every(key => expandedRowKeys.includes(key))) {
+          
+          console.log('更新展开状态:', {
+            old: expandedRowKeys,
+            new: newExpandedKeys
+          });
+          
+          // 清理旧的引用
+          expandedRecordsRef.current.clear();
+          // 设置新的引用
+          newExpandedRecords.forEach((record, key) => {
+            expandedRecordsRef.current.set(key, record);
+          });
+          
+          setExpandedRowKeys(newExpandedKeys);
+        }
+      }
+    }, 100); // 100ms防抖
+
+    return () => clearTimeout(timeoutId);
+  }, [data]);
+
+  // 监听搜索参数变化，在特定情况下清空展开状态
+  const prevSearchParamsRef = useRef(searchParams);
+  useEffect(() => {
+    const prev = prevSearchParamsRef.current;
+    const current = searchParams;
+    
+    // 如果是重要的搜索条件发生了变化，则清空展开状态
+    // 但如果只是字段列表(fields)变化，则保持展开状态
+    const importantParamsChanged = 
+      prev.startTime !== current.startTime ||
+      prev.endTime !== current.endTime ||
+      prev.module !== current.module ||
+      prev.datasourceId !== current.datasourceId ||
+      JSON.stringify(prev.whereSqls) !== JSON.stringify(current.whereSqls) ||
+      JSON.stringify(prev.keywords) !== JSON.stringify(current.keywords) ||
+      prev.timeRange !== current.timeRange;
+    
+    // 检查是否是新的搜索请求（offset回到0）但不是因为字段变化导致的
+    const isNewSearchNotFieldChange = 
+      prev.offset !== 0 && current.offset === 0 && 
+      JSON.stringify(prev.fields) === JSON.stringify(current.fields);
+    
+    if (importantParamsChanged || isNewSearchNotFieldChange) {
+      setExpandedRowKeys([]);
+      expandedRecordsRef.current.clear(); // 清空展开记录的引用
+    }
+    
+    prevSearchParamsRef.current = current;
+  }, [searchParams]);
 
   // 不支持排序的字段类型
   const unsortableFieldTypes = [
@@ -685,9 +831,12 @@ const VirtualTable = (props: IProps) => {
 
   // 删除列
   const handleDeleteColumn = (colIndex: number) => {
+    console.log('🚀 handleDeleteColumn called with colIndex:', colIndex);
     const col = columns[colIndex];
+    console.log('🚀 Column to delete:', col);
     const newCols = columns.filter((_, idx) => idx !== colIndex);
     setColumns(newCols);
+    console.log('🚀 Calling onChangeColumns with:', col);
     onChangeColumns(col);
     // 当删除列后，计算剩余的选中字段
     const timeField = moduleQueryConfig?.timeField || 'log_time';
@@ -747,6 +896,13 @@ const VirtualTable = (props: IProps) => {
     }
   };
 
+  // 添加调试信息
+  useEffect(() => {
+    console.log('VirtualTable - expandedRowKeys changed:', expandedRowKeys);
+    console.log('VirtualTable - data length:', data?.length);
+    console.log('VirtualTable - current data keys:', data?.map(item => item._key));
+  }, [expandedRowKeys, data]);
+
   // 包装列头，添加删除、左移、右移按钮，并根据是否存在_source列来决定是否显示
   // 如果存在_source列，则不显示删除、左移、右移按钮
   const enhancedColumns = !hasSourceColumn
@@ -791,6 +947,29 @@ const VirtualTable = (props: IProps) => {
         }}
         expandable={{
           columnWidth: 26,
+          expandedRowKeys,
+          onExpand: (expanded, record) => {
+            const key = record._key;
+            
+            // 立即更新状态，避免延迟
+            if (expanded) {
+              // 展开行
+              const newExpandedKeys = [...expandedRowKeys, key];
+              setExpandedRowKeys(newExpandedKeys);
+              // 记录展开的记录内容
+              expandedRecordsRef.current.set(key, record);
+              
+              console.log('展开行:', key, '当前展开的行:', newExpandedKeys);
+            } else {
+              // 收起行
+              const newExpandedKeys = expandedRowKeys.filter(k => k !== key);
+              setExpandedRowKeys(newExpandedKeys);
+              // 从ref中移除记录
+              expandedRecordsRef.current.delete(key);
+              
+              console.log('收起行:', key, '当前展开的行:', newExpandedKeys);
+            }
+          },
           expandedRowRender: (record) => (
             <ExpandedRow data={record} keywords={keyWordsFormat || []} moduleQueryConfig={moduleQueryConfig} />
           ),

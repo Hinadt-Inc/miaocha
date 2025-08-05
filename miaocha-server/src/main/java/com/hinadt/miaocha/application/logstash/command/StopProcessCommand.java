@@ -11,9 +11,11 @@ import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
 public class StopProcessCommand extends AbstractLogstashCommand {
 
     /** 停止进程的重试超时时间（秒） */
-    private static final int STOP_TIMEOUT_SECONDS = 60;
+    private static final int GRACEFUL_STOP_TIMEOUT_SECONDS = 360; // 6分钟
 
-    /** 每次轮询的间隔时间（秒） */
+    private static final int FORCE_STOP_TIMEOUT_SECONDS = 180; // 3分钟
+
+    /** 轮询间隔时间（秒） */
     private static final int POLL_INTERVAL_SECONDS = 3;
 
     public StopProcessCommand(
@@ -111,12 +113,25 @@ public class StopProcessCommand extends AbstractLogstashCommand {
 
             logger.info("停止Logstash进程，实例ID: {}, PID: {}", logstashMachineId, pid);
 
-            // 直接使用 kill -9 强制停止进程
-            String forceStopCommand = String.format("kill -9 %s", pid);
-            sshClient.executeCommand(machineInfo, forceStopCommand);
+            // 首先尝试优雅停止进程
+            String gracefulStopCommand = String.format("kill %s", pid);
+            sshClient.executeCommand(machineInfo, gracefulStopCommand);
+            logger.info("已发送优雅停止信号，等待进程停止，实例ID: {}, PID: {}", logstashMachineId, pid);
 
-            // 重试等待进程停止，最多等待60秒，每3秒检查一次
-            boolean stopped = waitForProcessToStop(machineInfo, pid);
+            // 等待进程优雅停止，最多等待6分钟
+            boolean stopped = waitForProcessToStop(machineInfo, pid, GRACEFUL_STOP_TIMEOUT_SECONDS);
+
+            if (!stopped) {
+                // 优雅停止失败，打印警告日志并使用强制停止
+                logger.warn("优雅停止超时，将使用强制停止，实例ID: {}, PID: {}", logstashMachineId, pid);
+
+                String forceStopCommand = String.format("kill -9 %s", pid);
+                sshClient.executeCommand(machineInfo, forceStopCommand);
+                logger.info("已发送强制停止信号，等待进程停止，实例ID: {}, PID: {}", logstashMachineId, pid);
+
+                // 等待强制停止，最多等待3分钟
+                stopped = waitForProcessToStop(machineInfo, pid, FORCE_STOP_TIMEOUT_SECONDS);
+            }
 
             if (stopped) {
                 // 删除PID文件并清理数据库
@@ -140,9 +155,10 @@ public class StopProcessCommand extends AbstractLogstashCommand {
      *
      * @param machineInfo 机器信息
      * @param pid 进程ID
+     * @param timeoutSeconds 超时时间（秒）
      * @return true 如果进程已停止，false 如果超时仍未停止
      */
-    private boolean waitForProcessToStop(MachineInfo machineInfo, String pid) {
+    private boolean waitForProcessToStop(MachineInfo machineInfo, String pid, int timeoutSeconds) {
         String checkProcessCommand =
                 String.format(
                         "if ps -p %s > /dev/null 2>&1; then echo \"running\"; else echo"
@@ -150,7 +166,7 @@ public class StopProcessCommand extends AbstractLogstashCommand {
                         pid);
 
         long startTime = System.currentTimeMillis();
-        long timeoutMillis = STOP_TIMEOUT_SECONDS * 1000L;
+        long timeoutMillis = timeoutSeconds * 1000L;
         long pollIntervalMillis = POLL_INTERVAL_SECONDS * 1000L;
 
         while (System.currentTimeMillis() - startTime < timeoutMillis) {
@@ -191,10 +207,7 @@ public class StopProcessCommand extends AbstractLogstashCommand {
         }
 
         logger.warn(
-                "等待进程停止超时，实例ID: {}, PID: {}, 超时时间: {}秒",
-                logstashMachineId,
-                pid,
-                STOP_TIMEOUT_SECONDS);
+                "等待进程停止超时，实例ID: {}, PID: {}, 超时时间: {}秒", logstashMachineId, pid, timeoutSeconds);
         return false;
     }
 
