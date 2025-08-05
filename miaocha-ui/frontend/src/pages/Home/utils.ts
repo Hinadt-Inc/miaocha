@@ -14,6 +14,38 @@ dayjs.extend(isSameOrAfter);
 export const DATE_FORMAT = 'YYYY-MM-DD HH:mm:ss';
 export const DATE_FORMAT_THOUSOND = 'YYYY-MM-DD HH:mm:ss.SSS';
 
+/**
+ * 格式化时间字符串，处理毫秒部分不足三位的情况
+ * @param timeString 原始时间字符串
+ * @returns 格式化后的时间字符串
+ */
+export const formatTimeString = (timeString: string): string => {
+  try {
+    if (!timeString) {
+      return '';
+    }
+
+    let formattedTimeString = timeString;
+    
+    // 处理毫秒部分不足三位的情况
+    // 例如：2025-08-05T13:12:07.6 -> 2025-08-05T13:12:07.600
+    // 例如：2025-08-05T13:12:07.67 -> 2025-08-05T13:12:07.670
+    const millisecondsRegex = /\.(\d{1,2})$/;
+    const millisecondsMatch = millisecondsRegex.exec(formattedTimeString);
+    if (millisecondsMatch) {
+      const milliseconds = millisecondsMatch[1];
+      const paddedMs = milliseconds.padEnd(3, '0');
+      formattedTimeString = formattedTimeString.replace(millisecondsRegex, `.${paddedMs}`);
+    }
+    
+    const timeValue = dayjs(formattedTimeString);
+    return timeValue.isValid() ? timeValue.format(DATE_FORMAT_THOUSOND) : timeString;
+  } catch (error) {
+    console.warn('时间格式化失败:', error, timeString);
+    return timeString;
+  }
+};
+
 // 日志常用字段和值
 export const LOG_FIELDS: IStatus[] = [
   { label: 'service', value: 'service', example: 'hina-cloud-engine' },

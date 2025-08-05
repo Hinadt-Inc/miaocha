@@ -205,7 +205,6 @@ const VirtualTable = (props: IProps) => {
     // 添加防抖，避免频繁触发
     const timeoutId = setTimeout(() => {
       if (expandedRowKeys.length > 0 && data && data.length > 0) {
-        console.log('开始检查展开状态保持逻辑...');
         
         // 生成一个记录内容的hash函数，用于匹配记录
         const generateRecordHash = (record: any) => {
@@ -247,11 +246,9 @@ const VirtualTable = (props: IProps) => {
 
         // 如果当前展开的keys在新数据中仍然存在，直接保持
         if (stillValidKeys.length === expandedRowKeys.length) {
-          console.log('所有展开的keys仍然有效，无需更新');
           return; // 不需要更新
         }
 
-        console.log('需要通过内容匹配恢复展开状态');
 
         // 否则，尝试通过内容匹配来恢复展开状态
         const newExpandedKeys: React.Key[] = [];
@@ -286,12 +283,6 @@ const VirtualTable = (props: IProps) => {
         // 更新展开状态，但只有在真正发生变化时才更新
         if (newExpandedKeys.length !== expandedRowKeys.length || 
             !newExpandedKeys.every(key => expandedRowKeys.includes(key))) {
-          
-          console.log('更新展开状态:', {
-            old: expandedRowKeys,
-            new: newExpandedKeys
-          });
-          
           // 清理旧的引用
           expandedRecordsRef.current.clear();
           // 设置新的引用
@@ -639,7 +630,6 @@ const VirtualTable = (props: IProps) => {
             new Set([...(keyWordsFormat?.length ? allKeywords : sqlFilterValue)]),
           ).filter(Boolean);
 
-          // console.log('匹配高亮关键词', finalKeywords);
 
           // 预处理每个字段的优先级
           const entries = Object.entries(record).map(([key, value]) => {
@@ -704,7 +694,6 @@ const VirtualTable = (props: IProps) => {
     ];
   }, [dynamicColumns, keyWordsFormat, columnWidths, whereSqlsFromSider, sqls, screenWidth]);
 
-  // console.log('columnWidths', columnWidths);
 
   useEffect(() => {
     const resizableColumns = getBaseColumns.map((col, index) => {
@@ -831,12 +820,9 @@ const VirtualTable = (props: IProps) => {
 
   // 删除列
   const handleDeleteColumn = (colIndex: number) => {
-    console.log('🚀 handleDeleteColumn called with colIndex:', colIndex);
     const col = columns[colIndex];
-    console.log('🚀 Column to delete:', col);
     const newCols = columns.filter((_, idx) => idx !== colIndex);
     setColumns(newCols);
-    console.log('🚀 Calling onChangeColumns with:', col);
     onChangeColumns(col);
     // 当删除列后，计算剩余的选中字段
     const timeField = moduleQueryConfig?.timeField || 'log_time';
@@ -896,13 +882,6 @@ const VirtualTable = (props: IProps) => {
     }
   };
 
-  // 添加调试信息
-  useEffect(() => {
-    console.log('VirtualTable - expandedRowKeys changed:', expandedRowKeys);
-    console.log('VirtualTable - data length:', data?.length);
-    console.log('VirtualTable - current data keys:', data?.map(item => item._key));
-  }, [expandedRowKeys, data]);
-
   // 包装列头，添加删除、左移、右移按钮，并根据是否存在_source列来决定是否显示
   // 如果存在_source列，则不显示删除、左移、右移按钮
   const enhancedColumns = !hasSourceColumn
@@ -959,7 +938,6 @@ const VirtualTable = (props: IProps) => {
               // 记录展开的记录内容
               expandedRecordsRef.current.set(key, record);
               
-              console.log('展开行:', key, '当前展开的行:', newExpandedKeys);
             } else {
               // 收起行
               const newExpandedKeys = expandedRowKeys.filter(k => k !== key);
@@ -967,7 +945,6 @@ const VirtualTable = (props: IProps) => {
               // 从ref中移除记录
               expandedRecordsRef.current.delete(key);
               
-              console.log('收起行:', key, '当前展开的行:', newExpandedKeys);
             }
           },
           expandedRowRender: (record) => (
