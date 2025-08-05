@@ -107,7 +107,7 @@ export function updateLogstashConfig(
   },
 ): Promise<void> {
   return request({
-    url: `/api/logstash/processes/${id}/config`,
+    url: `/api/logstash/processes/${id}/metadata-and-config`,
     method: 'PUT',
     data,
   });

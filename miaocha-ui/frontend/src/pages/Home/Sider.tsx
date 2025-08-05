@@ -102,7 +102,7 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
     const abortRef = useRef<AbortController | null>(null);
     
     // 使用 ref 来追踪上一次的查询条件，避免循环请求
-    const lastQueryConditionsRef = useRef<string>('');
+    const lastQueryConditionsRef = useRef<string | Record<string, string>>('');
 
     // 当 searchParams 变化时，完全同步 _searchParams，确保删除的条件也能正确更新
     useEffect(() => {
@@ -182,10 +182,13 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
           });
           setDistributionLoading(prev => ({ ...prev, ...newLoadingState }));
         },
-        onError: () => {
-          setDistributions({});
-          // 清除所有loading状态
-          setDistributionLoading({});
+        onError: (error) => {
+          // 只有在不是主动取消的情况下才处理错误
+          if (error?.name !== 'AbortError') {
+            setDistributions({});
+            // 清除所有loading状态
+            setDistributionLoading({});
+          }
         },
       },
     );
@@ -458,6 +461,12 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
           ..._searchParams,
           fields: newActiveColumns,
         });
+        // 清除该字段的loading状态
+        setDistributionLoading(prev => {
+          const newState = { ...prev };
+          delete newState[columnName];
+          return newState;
+        });
         return;
       }
       
@@ -474,8 +483,9 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
       }
       _setSearchParams(params);
       
-      // 生成当前查询条件的标识符，与useEffect中的逻辑保持一致
+      // 为单个字段生成唯一的查询标识符，包含字段名以避免不同字段的请求被误认为重复
       const currentConditions = JSON.stringify({
+        columnName: columnName, // 添加字段名确保不同字段的请求不会被认为是重复的
         whereSqls: params.whereSqls || [],
         keywords: searchParams.keywords || [],
         startTime: searchParams.startTime,
@@ -483,20 +493,31 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
         fields: newActiveColumns || []
       });
       
-      // 如果查询条件与上次相同，则不发起重复请求
-      if (currentConditions === lastQueryConditionsRef.current) {
+      // 使用字段特定的查询条件引用
+      const fieldQueryKey = `${columnName}_query`;
+      const lastFieldQuery = (lastQueryConditionsRef.current as any)?.[fieldQueryKey];
+      
+      // 如果该字段的查询条件与上次相同，则不发起重复请求
+      if (lastFieldQuery === currentConditions) {
+        // 但仍需要清除loading状态，因为可能是重复点击
+        setDistributionLoading(prev => ({ ...prev, [columnName]: false }));
         return;
       }
       
-      lastQueryConditionsRef.current = currentConditions;
+      // 更新该字段的查询条件记录
+      if (typeof lastQueryConditionsRef.current !== 'object' || lastQueryConditionsRef.current === null) {
+        lastQueryConditionsRef.current = {};
+      }
+      (lastQueryConditionsRef.current as any)[fieldQueryKey] = currentConditions;
       
       if (abortRef.current) abortRef.current.abort(); // 取消上一次
       abortRef.current = new AbortController();
+      
       setTimeout(() => {
-        if (abortRef.current) {
+        if (abortRef.current && !abortRef.current.signal.aborted) {
           queryDistribution.run({ ...params, signal: abortRef.current.signal });
         }
-      }, 500);
+      }, 300); // 减少延迟时间，提升响应速度
     }, [searchParams, _searchParams, queryDistribution]);
 
     const fieldListProps = useMemo(() => {
