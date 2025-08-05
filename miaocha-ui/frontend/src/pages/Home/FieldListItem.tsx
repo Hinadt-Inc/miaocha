@@ -41,6 +41,15 @@ const FieldListItem: React.FC<IProps> = memo(
     const handleCollapseChange = useCallback(
       (key: string[]) => {
         const { columnName = '' } = column;
+        
+        // 防止重复触发相同操作
+        if (key.length > 0 && activeKey.includes(key[0])) {
+          return; // 如果已经展开，不重复处理
+        }
+        if (key.length === 0 && activeKey.length === 0) {
+          return; // 如果已经折叠，不重复处理
+        }
+        
         // 只有当折叠面板状态变化时才更新activeColumns
         if (key.length > 0) {
           // 展开时，无论字段是否已在activeColumns中，都要触发分布数据查询
@@ -66,7 +75,7 @@ const FieldListItem: React.FC<IProps> = memo(
 
         setActiveKey(key);
       },
-      [activeColumns, column.columnName, onActiveColumns, onDistribution],
+      [activeColumns, column.columnName, onActiveColumns, onDistribution, activeKey],
     );
 
     // 切换字段选中状态的回调

@@ -113,7 +113,7 @@ export default defineConfig({
     open: true,
     proxy: {
       '/api': {
-        target: 'http://10.0.21.34:31806/',
+        target: 'http://10.254.134.115',
         // target: 'https://miaocha.hinadt.com', // 生产环境
         changeOrigin: true,
       },
