@@ -10,9 +10,8 @@ import * as modulesApi from '@/api/modules';
 import SearchBar from './SearchBar';
 import Log from './Log';
 import Sider from './Sider';
-import { QUICK_RANGES, DATE_FORMAT_THOUSOND } from './utils';
+import { QUICK_RANGES, DATE_FORMAT_THOUSOND, formatTimeString } from './utils';
 import styles from './index.module.less';
-import dayjs from 'dayjs';
 
 const HomePage = () => {
   const dispatch = useDispatch();
@@ -356,23 +355,17 @@ const HomePage = () => {
       manual: true,
       onSuccess: (res) => {
         const { rows } = res;
-        // 为每条记录添加唯一ID
-        const timeField = moduleQueryConfig?.timeField || 'log_time'; // 如果没有配置则回退到log_time
-        (rows || []).map((item, index) => {
+        const timeField = moduleQueryConfig?.timeField || 'log_time';
+        
+        // 为每条记录添加唯一ID并格式化时间字段
+        (rows || []).forEach((item, index) => {
           item._key = `${Date.now()}_${index}`;
+          
           if (item[timeField]) {
-            try {
-              const timeValue = dayjs(item[timeField] as string);
-              if (timeValue.isValid()) {
-                item[timeField] = timeValue.format(DATE_FORMAT_THOUSOND);
-              } else {
-                item[timeField] = item[timeField] || '';
-              }
-            } catch (error) {
-              item[timeField] = item[timeField] || '';
-            }
+            item[timeField] = formatTimeString(item[timeField] as string);
           }
         });
+        
         setDetailData(res);
       },
       onError: () => {
