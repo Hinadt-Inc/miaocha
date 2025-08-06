@@ -283,7 +283,6 @@ const VirtualTable = (props: IProps) => {
         // 更新展开状态，但只有在真正发生变化时才更新
         if (newExpandedKeys.length !== expandedRowKeys.length || 
             !newExpandedKeys.every(key => expandedRowKeys.includes(key))) {
-          
           // 清理旧的引用
           expandedRecordsRef.current.clear();
           // 设置新的引用
@@ -630,7 +629,6 @@ const VirtualTable = (props: IProps) => {
           const finalKeywords = Array.from(
             new Set([...(keyWordsFormat?.length ? allKeywords : sqlFilterValue)]),
           ).filter(Boolean);
-
           // 预处理每个字段的优先级
           const entries = Object.entries(record).map(([key, value]) => {
             let priority = 2; // 默认最低
