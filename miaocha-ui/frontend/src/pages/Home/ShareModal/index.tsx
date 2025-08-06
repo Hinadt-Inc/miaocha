@@ -28,15 +28,17 @@ const ShareModal: React.FC<ShareModalProps> = ({
     if (searchParams.whereSqls?.length > 0) {
       params.set('whereSqls', JSON.stringify(searchParams.whereSqls));
     }
+    
+    // 时间范围处理：优先使用相对时间范围，避免绝对时间固化
     if (searchParams.timeRange) {
       params.set('timeRange', searchParams.timeRange);
-    }
-    if (searchParams.startTime) {
+      // 对于相对时间范围，不传递绝对时间，让接收方根据当前时间重新计算
+    } else if (searchParams.startTime && searchParams.endTime) {
+      // 只有在没有相对时间范围时，才使用绝对时间
       params.set('startTime', searchParams.startTime);
-    }
-    if (searchParams.endTime) {
       params.set('endTime', searchParams.endTime);
     }
+    
     if (searchParams.module) {
       params.set('module', searchParams.module);
     }

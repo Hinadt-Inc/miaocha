@@ -34,6 +34,8 @@ const HomePage = () => {
 
   // 查询配置相关状态
   const [moduleQueryConfig, setModuleQueryConfig] = useState<any>(null); // 存储完整的模块查询配置
+  const [loadingQueryConfig, setLoadingQueryConfig] = useState(false); // 防止重复请求查询配置
+  const loadedConfigModulesRef = useRef<Set<string>>(new Set()); // 跟踪已加载配置的模块
 
   // 处理CAS回调
   useEffect(() => {
@@ -80,7 +82,6 @@ const HomePage = () => {
             window.history.replaceState({}, '', newUrl.toString());
             
             // 可以显示成功提示
-            console.log('CAS登录成功');
           }
         } catch (error) {
           console.error('CAS回调处理失败:', error);
@@ -95,6 +96,7 @@ const HomePage = () => {
   // 分享参数状态
   const [sharedParams, setSharedParams] = useState<any>(null);
   const [hasAppliedSharedParams, setHasAppliedSharedParams] = useState(false);
+  const processedUrlRef = useRef<string>(''); // 用于跟踪已处理的URL参数，避免重复处理
 
   // 页面初始化时检查是否有保存的分享参数
   useEffect(() => {
@@ -102,13 +104,20 @@ const HomePage = () => {
     if (savedSharedParams && !sharedParams) {
       try {
         const parsedSavedParams = JSON.parse(savedSharedParams);
+        
+        // 对于保存的相对时间范围，重新计算时间
+        if (parsedSavedParams.timeRange && QUICK_RANGES[parsedSavedParams.timeRange]) {
+          const quickRange = QUICK_RANGES[parsedSavedParams.timeRange];
+          parsedSavedParams.startTime = quickRange.from().format(DATE_FORMAT_THOUSOND);
+          parsedSavedParams.endTime = quickRange.to().format(DATE_FORMAT_THOUSOND);
+        }
+        
         setSharedParams(parsedSavedParams);
         
         if (parsedSavedParams.module) {
           setSelectedModule(parsedSavedParams.module);
         }
         
-        console.log('页面初始化时恢复分享参数:', parsedSavedParams);
       } catch (e) {
         console.error('解析保存的分享参数失败:', e);
         sessionStorage.removeItem('miaocha_shared_params');
@@ -127,6 +136,14 @@ const HomePage = () => {
         const endTime = urlSearchParams.get('endTime');
         const module = urlSearchParams.get('module');
         const timeGrouping = urlSearchParams.get('timeGrouping');
+
+        // 生成当前URL参数的唯一标识
+        const currentUrlParams = `${keywords || ''}-${whereSqls || ''}-${timeRange || ''}-${startTime || ''}-${endTime || ''}-${module || ''}-${timeGrouping || ''}`;
+        
+        // 如果已经处理过相同的URL参数，则跳过
+        if (processedUrlRef.current === currentUrlParams) {
+          return;
+        }
 
         // 如果有分享参数，解析并保存
         if (keywords || whereSqls || timeRange || module) {
@@ -156,6 +173,16 @@ const HomePage = () => {
 
           // 保存分享参数到状态和sessionStorage，确保登录后不丢失
           if (Object.keys(parsedParams).length > 0) {
+            // 对于相对时间范围，重新计算当前时间
+            if (parsedParams.timeRange && QUICK_RANGES[parsedParams.timeRange]) {
+              const quickRange = QUICK_RANGES[parsedParams.timeRange];
+              parsedParams.startTime = quickRange.from().format(DATE_FORMAT_THOUSOND);
+              parsedParams.endTime = quickRange.to().format(DATE_FORMAT_THOUSOND);
+            }
+            
+            // 标记已处理这组URL参数
+            processedUrlRef.current = currentUrlParams;
+            
             setSharedParams(parsedParams);
             
             // 保存到sessionStorage，防止登录跳转后丢失
@@ -164,9 +191,6 @@ const HomePage = () => {
             if (parsedParams.module) {
               setSelectedModule(parsedParams.module);
             }
-            
-            // 先不清理URL参数，等到参数成功应用后再清理
-            console.log('检测到分享参数:', parsedParams);
           }
         } else {
           // 如果URL中没有分享参数，检查sessionStorage中是否有保存的分享参数
@@ -180,7 +204,6 @@ const HomePage = () => {
                 setSelectedModule(parsedSavedParams.module);
               }
               
-              console.log('从sessionStorage恢复分享参数:', parsedSavedParams);
             } catch (e) {
               console.error('解析保存的分享参数失败:', e);
               sessionStorage.removeItem('miaocha_shared_params');
@@ -193,11 +216,16 @@ const HomePage = () => {
     };
 
     handleSharedParams();
-  }, [urlSearchParams, sharedParams]);
+  }, [urlSearchParams]); // 移除sharedParams依赖，避免循环
 
   // 应用分享参数到搜索栏
   useEffect(() => {
     if (sharedParams && !hasAppliedSharedParams && searchBarRef.current && moduleOptions.length > 0) {
+      // 如果有分享的模块参数，需要等待该模块的配置加载完成
+      if (sharedParams.module && (!moduleQueryConfig || loadingQueryConfig)) {
+        return; // 等待模块配置加载完成
+      }
+      
       // 短暂延迟确保 SearchBar 组件完全初始化
       const timer = setTimeout(() => {
         try {
@@ -216,14 +244,37 @@ const HomePage = () => {
             searchBarRef.current?.setTimeGroup?.(sharedParams.timeGrouping);
           }
           
-          // 应用时间范围到SearchBar
-          if (sharedParams.timeRange || (sharedParams.startTime && sharedParams.endTime)) {
-            const timeOption = {
-              value: sharedParams.timeRange || `${sharedParams.startTime} ~ ${sharedParams.endTime}`,
-              range: [sharedParams.startTime, sharedParams.endTime],
-              label: sharedParams.timeRange ? (QUICK_RANGES[sharedParams.timeRange]?.label || sharedParams.timeRange) : `${sharedParams.startTime} ~ ${sharedParams.endTime}`,
-              type: sharedParams.timeRange && QUICK_RANGES[sharedParams.timeRange] ? 'quick' : 'absolute',
+          // 应用时间范围到SearchBar - 优先处理相对时间范围
+          let timeOption: any = null;
+          let calculatedStartTime: string | undefined;
+          let calculatedEndTime: string | undefined;
+          
+          if (sharedParams.timeRange && QUICK_RANGES[sharedParams.timeRange]) {
+            // 有相对时间范围，重新计算当前时间
+            const quickRange = QUICK_RANGES[sharedParams.timeRange];
+            calculatedStartTime = quickRange.from().format(DATE_FORMAT_THOUSOND);
+            calculatedEndTime = quickRange.to().format(DATE_FORMAT_THOUSOND);
+            
+            timeOption = {
+              value: sharedParams.timeRange,
+              range: [calculatedStartTime, calculatedEndTime],
+              label: quickRange.label,
+              type: 'quick',
             };
+          } else if (sharedParams.startTime && sharedParams.endTime) {
+            // 没有相对时间范围，使用绝对时间
+            calculatedStartTime = sharedParams.startTime;
+            calculatedEndTime = sharedParams.endTime;
+            
+            timeOption = {
+              value: `${sharedParams.startTime} ~ ${sharedParams.endTime}`,
+              range: [sharedParams.startTime, sharedParams.endTime],
+              label: `${sharedParams.startTime} ~ ${sharedParams.endTime}`,
+              type: 'absolute',
+            };
+          }
+          
+          if (timeOption) {
             searchBarRef.current?.setTimeOption?.(timeOption);
           }
           
@@ -235,14 +286,16 @@ const HomePage = () => {
                 ...prev,
                 datasourceId: Number(moduleOption.datasourceId),
                 module: sharedParams.module,
-                startTime: sharedParams.startTime || prev.startTime,
-                endTime: sharedParams.endTime || prev.endTime,
+                startTime: calculatedStartTime || prev.startTime,
+                endTime: calculatedEndTime || prev.endTime,
                 timeRange: sharedParams.timeRange || prev.timeRange,
                 timeGrouping: sharedParams.timeGrouping || prev.timeGrouping,
                 keywords: sharedParams.keywords || [],
                 whereSqls: sharedParams.whereSqls || [],
                 offset: 0,
               }));
+            } else {
+              console.warn('未找到对应的模块选项:', sharedParams.module, moduleOptions);
             }
           }
           
@@ -258,7 +311,6 @@ const HomePage = () => {
           // 清理sessionStorage中的分享参数
           sessionStorage.removeItem('miaocha_shared_params');
           
-          console.log('分享参数应用成功并已清理:', sharedParams);
         } catch (error) {
           console.error('应用分享参数失败:', error);
         }
@@ -266,7 +318,7 @@ const HomePage = () => {
 
       return () => clearTimeout(timer);
     }
-  }, [sharedParams, hasAppliedSharedParams, moduleOptions, searchBarRef]);
+  }, [sharedParams, hasAppliedSharedParams, moduleOptions, searchBarRef, moduleQueryConfig, loadingQueryConfig]);
   
   const [isInitialized, setIsInitialized] = useState(false); // 标记是否已经初始化
   const lastCallParamsRef = useRef<string>('');
@@ -300,8 +352,8 @@ const HomePage = () => {
     );
   };
 
-  // 获取模块列表
-  const fetchModulesRequest = useRequest(api.fetchMyModules, {
+    // 获取模块列表
+  useRequest(api.fetchMyModules, {
     onBefore: () => {
       isInitializingRef.current = true;
     },
@@ -336,7 +388,8 @@ const HomePage = () => {
         }));
       }
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('获取模块列表失败:', error);
       isInitializingRef.current = false;
     },
   });
@@ -417,7 +470,7 @@ const HomePage = () => {
       return;
     }
 
-    // 如果正在初始化中，跳过请求
+    // 如果正在初始化中（仅针对模块配置加载），跳过请求
     if (isInitializingRef.current) {
       return;
     }
@@ -451,11 +504,13 @@ const HomePage = () => {
     requestTimerRef.current = setTimeout(() => {
       // 再次检查条件，确保在延迟期间状态没有变化导致条件不满足
       if (!searchParams.datasourceId || !searchParams.module || !moduleQueryConfig) {
+        console.log('延迟执行时条件不满足，跳过请求');
         return;
       }
 
       // 再次检查是否正在初始化
       if (isInitializingRef.current) {
+        console.log('延迟执行时仍在初始化中，跳过请求');
         return;
       }
 
@@ -468,7 +523,7 @@ const HomePage = () => {
       if (!isInitialized) {
         setIsInitialized(true);
       }
-    }, 300); // 增加延迟时间到500ms，确保状态完全稳定
+    }, 300);
 
     return () => {
       if (requestTimerRef.current) {
@@ -532,6 +587,11 @@ const HomePage = () => {
   // 处理选中模块变化
   const handleSelectedModuleChange = useCallback(
     (selectedModule: string, datasourceId?: number) => {
+      // 如果模块发生了变化，清理已加载配置记录
+      if (selectedModule !== searchParams.module) {
+        loadedConfigModulesRef.current.clear();
+      }
+      
       setSelectedModule(selectedModule);
       setKeywords([]); // 新增：切换模块时重置
       setSqls([]); // 新增：切换模块时重置
@@ -568,6 +628,7 @@ const HomePage = () => {
     onSelectedModuleChange: handleSelectedModuleChange,
     moduleQueryConfig,
     onCommonColumnsChange: setCommonColumns,
+    selectedModule, // 传递当前选中的模块，确保Sider组件与Home组件状态同步
   };
 
   // 使用useCallback稳定getDistributionWithSearchBar函数引用
@@ -682,18 +743,26 @@ const HomePage = () => {
   // 获取模块查询配置
   const getModuleQueryConfig = useRequest((moduleName: string) => modulesApi.getModuleQueryConfig(moduleName), {
     manual: true,
+    onBefore: () => {
+      setLoadingQueryConfig(true);
+    },
     onSuccess: (res) => {
       setModuleQueryConfig(res);
+      setLoadingQueryConfig(false);
+      
+      // 记录已加载配置的模块
+      loadedConfigModulesRef.current.add(selectedModule);
+
 
       // 清除初始化标记，允许数据请求执行
-      // 移除手动触发请求的逻辑，避免重复请求
-      // 让主要的 useEffect 负责监听 searchParams 变化并触发请求
       setTimeout(() => {
         isInitializingRef.current = false;
-      }, 100); // 延迟100ms清除标记，确保状态更新完成
+      }, 100);
     },
     onError: () => {
       setModuleQueryConfig(null);
+      setLoadingQueryConfig(false);
+
 
       // 即使失败也要清除初始化标记
       isInitializingRef.current = false;
@@ -703,12 +772,16 @@ const HomePage = () => {
   // 当selectedModule变化时，获取模块查询配置
   useEffect(() => {
     if (selectedModule) {
-      // 只有当模块真正变化时才重置状态和获取配置
-      if (selectedModule !== moduleQueryConfig?.module) {
-        setIsInitialized(false);
-        lastCallParamsRef.current = '';
-        setModuleQueryConfig(null); // 先清空配置，避免使用旧配置
-
+      // 检查是否需要获取配置：
+      // 1. 没有模块配置
+      // 2. 没有正在加载
+      // 3. 没有已经为该模块加载过配置
+      const needsFetchConfig = !moduleQueryConfig && 
+                              !loadingQueryConfig && 
+                              !getModuleQueryConfig.loading &&
+                              !loadedConfigModulesRef.current.has(selectedModule);
+      
+      if (needsFetchConfig) {
         // 重新设置初始化标记
         isInitializingRef.current = true;
 
@@ -719,8 +792,10 @@ const HomePage = () => {
       setIsInitialized(false);
       lastCallParamsRef.current = '';
       isInitializingRef.current = false;
+      // 清空已加载模块的记录
+      loadedConfigModulesRef.current.clear();
     }
-  }, [selectedModule, moduleQueryConfig?.module]);
+  }, [selectedModule]); // 只依赖 selectedModule，避免循环触发
 
   // 组件卸载时清理定时器
   useEffect(() => {
@@ -733,6 +808,8 @@ const HomePage = () => {
       }
       // 清理初始化标记
       isInitializingRef.current = false;
+      // 清理已加载模块记录
+      loadedConfigModulesRef.current.clear();
     };
   }, []);
 
@@ -741,7 +818,9 @@ const HomePage = () => {
     () => ({
       searchParams,
       totalCount: detailData?.totalCount,
-      onSearch: setSearchParams,
+      onSearch: (newParams: ILogSearchParams) => {
+        setSearchParams(newParams);
+      },
       setWhereSqlsFromSider,
       columns: logTableColumns,
       onSqlsChange: setSqls,
@@ -759,7 +838,6 @@ const HomePage = () => {
     [
       searchParams,
       detailData?.totalCount,
-      setSearchParams,
       setWhereSqlsFromSider,
       logTableColumns,
       activeColumns,

@@ -629,8 +629,6 @@ const VirtualTable = (props: IProps) => {
           const finalKeywords = Array.from(
             new Set([...(keyWordsFormat?.length ? allKeywords : sqlFilterValue)]),
           ).filter(Boolean);
-
-
           // 预处理每个字段的优先级
           const entries = Object.entries(record).map(([key, value]) => {
             let priority = 2; // 默认最低

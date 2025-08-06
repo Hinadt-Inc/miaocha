@@ -17,6 +17,7 @@ interface IProps {
   onSelectedModuleChange?: (selectedModule: string, datasourceId?: number) => void; // 选中模块变化回调函数
   moduleQueryConfig?: any; // 模块查询配置
   onCommonColumnsChange?: (commonColumns: string[]) => void; // 普通字段变化回调函数
+  selectedModule?: string; // 外部传入的选中模块，用于同步状态
 }
 
 // 简化的虚拟滚动组件
@@ -90,6 +91,7 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
       onSelectedModuleChange,
       moduleQueryConfig,
       onCommonColumnsChange,
+      selectedModule: externalSelectedModule, // 外部传入的选中模块
     } = props;
     const [columns, setColumns] = useState<ILogColumnsResponse[]>([]); // 日志表字段
     const [selectedModule, setSelectedModule] = useState<string>(''); // 已选模块
@@ -100,6 +102,7 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
     const [_searchParams, _setSearchParams] = useState<ILogSearchParams>(searchParams); // 临时查询参数，供searchBar查询调用
     const [distributionLoading, setDistributionLoading] = useState<Record<string, boolean>>({}); // 字段分布加载状态
     const abortRef = useRef<AbortController | null>(null);
+    const lastModuleRef = useRef<string>(''); // 用于跟踪上一次的module值，避免循环
     
     // 使用 ref 来追踪上一次的查询条件，避免循环请求
     const lastQueryConditionsRef = useRef<string | Record<string, string>>('');
@@ -112,6 +115,16 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
         fields: prev.fields, // 保留 _searchParams 中的 fields，这是专门为字段分布查询准备的
       }));
     }, [searchParams]);
+
+    // 同步外部传入的selectedModule
+    useEffect(() => {
+      if (externalSelectedModule && externalSelectedModule !== selectedModule) {
+        setSelectedModule(externalSelectedModule);
+        lastModuleRef.current = externalSelectedModule; // 更新ref，避免触发其他useEffect
+        // 重置调用标识，允许新模块重新调用getColumns
+        setHasCalledGetColumns('');
+      }
+    }, [externalSelectedModule, selectedModule]);
 
     // 获取日志字段
     const getColumns = useRequest(api.fetchColumns, {
@@ -252,6 +265,7 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
       const datasourceId = modules.find((item: IStatus) => item.value === value)?.datasourceId;
       // 解析value：datasourceId-module
       setSelectedModule(value);
+      lastModuleRef.current = value; // 更新ref，避免触发useEffect
       // 重置调用标识，允许新模块重新调用getColumns
       setHasCalledGetColumns('');
       // 通知父组件模块变化，让父组件统一处理搜索参数更新
@@ -266,6 +280,24 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
       //   offset: 0,
       // });
     };
+
+    // 监听searchParams.module变化，同步到selectedModule状态
+    useEffect(() => {
+      // 使用ref避免循环，只有当module真正发生变化时才处理
+      if (searchParams.module && 
+          searchParams.module !== selectedModule && 
+          searchParams.module !== lastModuleRef.current) {
+        console.log('Sider检测到searchParams.module变化:', {
+          from: selectedModule,
+          to: searchParams.module,
+          lastRef: lastModuleRef.current
+        });
+        lastModuleRef.current = searchParams.module;
+        setSelectedModule(searchParams.module);
+        // 重置调用标识，允许新模块重新调用getColumns
+        setHasCalledGetColumns('');
+      }
+    }, [searchParams.module, selectedModule]);
 
     // 当 modules 加载完成后，自动选择第一个数据源和第一个模块
     useEffect(() => {
@@ -287,6 +319,7 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>(
           const datasourceId = String(targetModule.datasourceId);
           const module = String(targetModule.module);
           setSelectedModule(module);
+          lastModuleRef.current = module; // 更新ref，避免触发useEffect
           // 重置调用标识，允许初始化时调用getColumns
           setHasCalledGetColumns('');
           // 通知父组件模块变化
