@@ -743,12 +743,27 @@ const HomePage = () => {
     };
   }, []);
 
+  // 处理刷新操作
+  const handleRefresh = useCallback(() => {
+    // 通过SearchBar的ref调用autoRefresh方法
+    // 这样可以确保时间更新并只触发一次接口调用
+    if (searchBarRef.current?.autoRefresh) {
+      searchBarRef.current.autoRefresh();
+    } else {
+      // 备用方案：直接执行数据请求
+      if (searchParams.datasourceId && searchParams.module && moduleQueryConfig) {
+        executeDataRequest(searchParams);
+      }
+    }
+  }, [searchParams, moduleQueryConfig, executeDataRequest]);
+
   // 搜索栏组件props
   const searchBarProps = useMemo(
     () => ({
       searchParams,
       totalCount: detailData?.totalCount,
       onSearch: setSearchParams,
+      onRefresh: handleRefresh,
       setWhereSqlsFromSider,
       columns: logTableColumns,
       onSqlsChange: setSqls,
@@ -767,6 +782,7 @@ const HomePage = () => {
       searchParams,
       detailData?.totalCount,
       setSearchParams,
+      handleRefresh,
       setWhereSqlsFromSider,
       logTableColumns,
       activeColumns,

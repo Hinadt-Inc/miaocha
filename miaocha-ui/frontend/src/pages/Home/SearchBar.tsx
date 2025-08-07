@@ -6,6 +6,7 @@ import SpinIndicator from '@/components/SpinIndicator';
 import SaveSearchButton from './SaveSearchButton';
 import SavedSearchesButton from './SavedSearchesButton';
 import ShareButton from './ShareButton';
+import AutoRefresh from './AutoRefresh/index';
 import styles from './SearchBar.module.less';
 import { QUICK_RANGES, TIME_GROUP, getLatestTime, DATE_FORMAT_THOUSOND } from './utils';
 import dayjs from 'dayjs';
@@ -15,6 +16,7 @@ interface IProps {
   searchParams: ILogSearchParams; // 搜索参数
   totalCount?: number; // 记录总数
   onSearch: (params: ILogSearchParams) => void; // 搜索回调函数
+  onRefresh?: () => void; // 刷新回调函数
   setWhereSqlsFromSider: any; // 设置whereSqlsFromSider
   columns?: ILogColumnsResponse[]; // 字段列表数据
   onSqlsChange?: (sqls: string[]) => void; // SQL列表变化回调函数
@@ -31,7 +33,7 @@ interface IProps {
 }
 
 const SearchBar = forwardRef((props: IProps, ref: any) => {
-  const { loading = false, keywords, setKeywords, sqls, setSqls, setWhereSqlsFromSiderArr } = props;
+  const { loading = false, keywords, setKeywords, sqls, setSqls, setWhereSqlsFromSiderArr, onRefresh } = props;
   const searchBarRef = useRef<HTMLDivElement>(null);
   const {
     searchParams,
@@ -93,7 +95,14 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
     setTimeOption,
     // 设置时间分组
     setTimeGroup,
-  }), [sqls]);
+    // 自动刷新方法（供父组件调用）
+    autoRefresh: () => {
+      // 更新时间到最新
+      const latestTime = getLatestTime(timeOption);
+      setTimeOption((prev: any) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
+      // 这会触发useEffect，自动调用onSearch
+    },
+  }), [sqls, timeOption]);
 
   // 加载已保存的搜索条件
   const handleLoadSearch = (savedSearchParams: any) => {
@@ -295,6 +304,15 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
     );
   }, [totalCount]);
 
+  // 处理自动刷新
+  const handleAutoRefresh = () => {
+    if (onRefresh) {
+      // 自动刷新时，直接调用父组件的onRefresh方法
+      // 父组件会通过ref调用SearchBar的autoRefresh方法来更新时间
+      onRefresh();
+    }
+  };
+
   // 提交时间范围
   const submitTime = (params: ILogTimeSubmitParams) => {
     setTimeOption(params);
@@ -452,6 +470,11 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
         <div className={styles.left}>{leftRender}</div>
         <div className={styles.right}>
           <Space size={8}>
+            <AutoRefresh
+              onRefresh={handleAutoRefresh}
+              loading={loading}
+              disabled={false}
+            />
             <SaveSearchButton
               searchParams={{
                 keywords,
