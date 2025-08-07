@@ -81,7 +81,7 @@ const AutoRefresh: React.FC<AutoRefreshProps> = ({ onRefresh, loading = false, d
               disabled={disabled || refreshInterval === 0}
               className={`${styles.autoRefreshToggle} ${isAutoRefreshing ? styles.active : ''}`}
             >
-              {isAutoRefreshing ? '暂停' : '自动刷新'}
+              {isAutoRefreshing ? '停止' : '开始'}
             </Button>
           </Tooltip>
 
