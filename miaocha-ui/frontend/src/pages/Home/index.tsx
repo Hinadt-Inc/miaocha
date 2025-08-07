@@ -772,16 +772,10 @@ const HomePage = () => {
   // 当selectedModule变化时，获取模块查询配置
   useEffect(() => {
     if (selectedModule) {
-      // 检查是否需要获取配置：
-      // 1. 没有模块配置
-      // 2. 没有正在加载
-      // 3. 没有已经为该模块加载过配置
-      const needsFetchConfig = !moduleQueryConfig && 
-                              !loadingQueryConfig && 
-                              !getModuleQueryConfig.loading &&
-                              !loadedConfigModulesRef.current.has(selectedModule);
-      
-      if (needsFetchConfig) {
+      if (selectedModule !== moduleQueryConfig?.module) {
+        setIsInitialized(false);
+        lastCallParamsRef.current = '';
+        // setModuleQueryConfig(null); // 先清空配置，避免使用旧配置
         // 重新设置初始化标记
         isInitializingRef.current = true;
 
@@ -813,14 +807,27 @@ const HomePage = () => {
     };
   }, []);
 
+  // 处理刷新操作
+  const handleRefresh = useCallback(() => {
+    // 通过SearchBar的ref调用autoRefresh方法
+    // 这样可以确保时间更新并只触发一次接口调用
+    if (searchBarRef.current?.autoRefresh) {
+      searchBarRef.current.autoRefresh();
+    } else {
+      // 备用方案：直接执行数据请求
+      if (searchParams.datasourceId && searchParams.module && moduleQueryConfig) {
+        executeDataRequest(searchParams);
+      }
+    }
+  }, [searchParams, moduleQueryConfig, executeDataRequest]);
+
   // 搜索栏组件props
   const searchBarProps = useMemo(
     () => ({
       searchParams,
       totalCount: detailData?.totalCount,
-      onSearch: (newParams: ILogSearchParams) => {
-        setSearchParams(newParams);
-      },
+      onSearch: setSearchParams,
+      onRefresh: handleRefresh,
       setWhereSqlsFromSider,
       columns: logTableColumns,
       onSqlsChange: setSqls,
@@ -838,6 +845,8 @@ const HomePage = () => {
     [
       searchParams,
       detailData?.totalCount,
+      setSearchParams,
+      handleRefresh,
       setWhereSqlsFromSider,
       logTableColumns,
       activeColumns,
