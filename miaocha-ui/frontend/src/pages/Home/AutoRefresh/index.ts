@@ -4,7 +4,6 @@
 
 // 主组件
 export { default } from './AutoRefresh';
-export { default as AutoRefresh } from './AutoRefresh';
 
 // Hook
 export { useAutoRefresh } from './useAutoRefresh';

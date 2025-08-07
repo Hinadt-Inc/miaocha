@@ -775,7 +775,7 @@ const HomePage = () => {
       if (selectedModule !== moduleQueryConfig?.module) {
         setIsInitialized(false);
         lastCallParamsRef.current = '';
-        setModuleQueryConfig(null); // 先清空配置，避免使用旧配置
+        // setModuleQueryConfig(null); // 先清空配置，避免使用旧配置
         // 重新设置初始化标记
         isInitializingRef.current = true;
 

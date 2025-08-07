@@ -33,13 +33,25 @@ export const useAutoRefresh = (onRefresh: () => void, loading?: boolean) => {
   const startCountdown = useCallback(() => {
     if (state.refreshInterval <= 0 || loading || state.isPaused) return;
     
-    // 清除之前的定时器
-    clearTimers();
+    
     
     // 如果剩余时间为0，重置为完整间隔
     if (state.remainingTime <= 0) {
       setState(prev => ({ ...prev, remainingTime: prev.refreshInterval }));
     }
+    setState(prev => {
+      // 如果不满足条件，直接返回原状态，不启动倒计时
+      if (prev.refreshInterval <= 0 || loading || prev.isPaused) {
+        return prev;
+      }
+      // 如果剩余时间为0，重置为完整间隔
+      if (prev.remainingTime <= 0) {
+        return { ...prev, remainingTime: prev.refreshInterval };
+      }
+      return prev;
+    });
+    // 清除之前的定时器
+    clearTimers();
     
     countdownRef.current = setInterval(() => {
       setState(prev => {
