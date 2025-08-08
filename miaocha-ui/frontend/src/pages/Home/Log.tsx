@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Splitter } from 'antd';
 import HistogramChart from './HistogramChart';
 import styles from './Log.module.less';
-import VirtualTable from './VirtualTable';
+import VirtualTable from './VirtualTable/index';
 interface IProps {
   histogramData: ILogHistogramData[]; // 直方图数据
   histogramDataLoading: boolean; // 直方图数据是否正在加载
