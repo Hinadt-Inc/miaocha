@@ -52,7 +52,7 @@ class WhereConditionBuilderTest {
 
         String result = whereConditionBuilder.buildWhereConditions(dto);
 
-        assertEquals("level = 'ERROR'", result);
+        assertEquals("(level = 'ERROR')", result);
     }
 
     @Test
@@ -65,7 +65,8 @@ class WhereConditionBuilderTest {
 
         String result = whereConditionBuilder.buildWhereConditions(dto);
 
-        String expected = "(level = 'ERROR' AND service = 'user-service' AND host LIKE 'server-%')";
+        String expected =
+                "(level = 'ERROR') AND (service = 'user-service') AND (host LIKE 'server-%')";
         assertEquals(expected, result);
     }
 
@@ -78,7 +79,7 @@ class WhereConditionBuilderTest {
 
         String result = whereConditionBuilder.buildWhereConditions(dto);
 
-        String expected = "(level = 'ERROR' AND service = 'user-service')";
+        String expected = "(level = 'ERROR') AND (service = 'user-service')";
         assertEquals(expected, result);
     }
 
@@ -131,9 +132,9 @@ class WhereConditionBuilderTest {
         String result = whereConditionBuilder.buildWhereConditions(dto);
 
         String expected =
-                "(level = 'ERROR' AND service IN ('user', 'order') AND message LIKE '%timeout%' AND"
-                        + " log_time > DATE_SUB(NOW(), INTERVAL 1 HOUR) AND"
-                        + " variant_field['meta']['type'] = 'request')";
+                "(level = 'ERROR') AND (service IN ('user', 'order')) AND (message LIKE"
+                        + " '%timeout%') AND (log_time > DATE_SUB(NOW(), INTERVAL 1 HOUR)) AND"
+                        + " (variant_field['meta']['type'] = 'request')";
         assertEquals(expected, result);
     }
 }
