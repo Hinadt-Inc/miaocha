@@ -9,6 +9,14 @@ spring:
     username: ${DB_USER:root}
     password: ${DB_PASSWORD:root}
 
+  ai:
+    deepseek:
+      api-key: ${DEEPSEEK_API_KEY}
+    tools:
+      throw-exception-on-error: true
+
+
+
   # 开发环境显示SQL日志
   jpa:
     show-sql: true
@@ -35,3 +43,6 @@ logstash:
   package-path: ${LOGSTASH_PACKAGE_PATH:/opt/logstash/logstash-9.0.2-linux-x86_64.tar.gz}
   # 远程部署目录
   deploy-dir: ${LOGSTASH_DEPLOY_DIR:logstash}
+
+
+logging.level.org.springframework.ai.model.tool.autoconfigure.ToolCallingAutoConfiguration: WARN
