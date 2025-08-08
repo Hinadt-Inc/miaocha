@@ -171,6 +171,7 @@
         </root>
         <!-- 应用特定日志级别 -->
         <logger name="com.hinadt.miaocha" level="DEBUG"/>
+        <logger name="org.springframework.ai" level="DEBUG"/>
     </springProfile>
 
     <!-- 测试环境配置：控制台 + 普通格式文件 + JSON格式文件 -->
