@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, Fragment, useMemo } from 'react';
 import { Table, Button, Tooltip } from 'antd';
-import ExpandedRow from './ExpandedRow';
+import ExpandedRow from './ExpandedRow/index';
 import styles from './VirtualTable.module.less';
 import { highlightText } from '@/utils/highlightText';
 import { CloseOutlined, DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons';
