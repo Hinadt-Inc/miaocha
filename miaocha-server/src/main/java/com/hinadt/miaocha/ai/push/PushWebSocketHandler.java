@@ -9,6 +9,8 @@ import com.hinadt.miaocha.infrastructure.NodeIdProvider;
 import com.hinadt.miaocha.infrastructure.mapper.ActionOutboxMapper;
 import com.hinadt.miaocha.infrastructure.mapper.ChannelRegistryMapper;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
@@ -22,15 +24,16 @@ import org.springframework.web.socket.*;
  * WebSocket 推送处理器
  *
  * <p>支持消息类型： - REGISTER: 绑定通道（clientId + pageId [ + userId + conversationId]） { "type": "REGISTER",
- * "pageId": "xyz", "userId": "u1", "conversationId": "conv-123" }
+ * "pageId": "xyz", "userId": "u1", }
  *
  * <p>- PING: 心跳，刷新 lastSeenAt { "type": "PING" }
  *
  * <p>- ACK: 前端处理完一个 action 进行确认 { "type": "ACK", "actionId": "uuid", }
  *
- * <p>发送给前端的消息（由 DeliveryTask 调用 sendToChannelKey 发出）： { "type": "ACTION", "actionId": "...",
- * "sequence": 123, "toolName": "sendSearchLogDetailsAction", "conversationId": "...", "payload": {
- * ... 任意JSON ... } }
+ * <p>发送给前端的消息（由 DeliveryTask 调用 sendToChannelKey 发出）：
+ *
+ * <p>{ "type": "ACTION", "actionId": "...", "sequence": 123, "toolName":
+ * "sendSearchLogDetailsAction", "conversationId": "...", "payload": { ... 任意JSON } }
  */
 @Component
 @Slf4j
@@ -148,15 +151,16 @@ public class PushWebSocketHandler implements WebSocketHandler {
             userId = String.valueOf(user.getId());
         }
 
-        String conversationId = getText(root, "conversationId");
+        // conversationId 由服务端生成并返回给前端
+        String conversationId = generateConversationId();
 
         if (!StringUtils.hasText(clientId) || !StringUtils.hasText(pageId)) {
             sendError(session, MESSAGE_REGISTER, "clientId/pageId required");
             return;
         }
 
-        // channelKey = tenant:user:client:page (tenant/user 允许为空)
-        String channelKey = buildChannelKey(userId, clientId, pageId);
+        // channelKey 由 userId/clientId/pageId/conversationId 通过哈希计算得到，长度固定
+        String channelKey = buildChannelKey(userId, clientId, pageId, conversationId);
         String wsConnId = wsConnIdBySessionId.get(session.getId());
 
         // 绑定内存映射
@@ -191,10 +195,19 @@ public class PushWebSocketHandler implements WebSocketHandler {
                         .createObjectNode()
                         .put(MESSAGE_TYPE, "REGISTERED")
                         .put("channelKey", channelKey)
+                        .put("conversationId", conversationId)
                         .put("nodeId", nodeIdProvider.getNodeId())
                         .put("wsConnId", wsConnId));
 
-        log.info("[WS] REGISTER ok: channelKey={}", channelKey);
+        log.info(
+                "[WS] REGISTER ok: channelKey={}, wsConnId={}, userId={}, clientId={}, pageId={},"
+                        + " conversationId={}",
+                channelKey,
+                wsConnId,
+                userId,
+                clientId,
+                pageId,
+                conversationId);
     }
 
     private void handlePing(WebSocketSession session) {
@@ -262,9 +275,12 @@ public class PushWebSocketHandler implements WebSocketHandler {
 
     // ========== utils ==========
 
-    private static String buildChannelKey(String userId, String clientId, String pageId) {
+    private static String buildChannelKey(
+            String userId, String clientId, String pageId, String conversationId) {
         String u = StringUtils.hasText(userId) ? userId : "-";
-        return u + ":" + clientId + ":" + pageId;
+        String input = u + "|" + clientId + "|" + pageId + "|" + conversationId;
+        // 使用 SHA-256 计算哈希，并截取前32位十六进制，保持长度固定
+        return sha256Hex(input).substring(0, 32);
     }
 
     private void sendError(WebSocketSession session, String forType, String msg) {
@@ -294,5 +310,23 @@ public class PushWebSocketHandler implements WebSocketHandler {
 
     private static String shortId() {
         return UUID.randomUUID().toString().substring(0, 8);
+    }
+
+    private static String generateConversationId() {
+        return UUID.randomUUID().toString();
+    }
+
+    private static String sha256Hex(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder(digest.length * 2);
+            for (byte b : digest) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to compute SHA-256", e);
+        }
     }
 }
