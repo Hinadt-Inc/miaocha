@@ -199,7 +199,7 @@ public class LogSearchTool {
         dto.setTimeRange(timeRange);
 
         try {
-            actionSseService.sendAction(conversationId, "sendSearchLogHistogramAction", dto);
+            actionSseService.sendAction(conversationId, "sendSearchFieldDistributionsAction", dto);
             return "字段分布查询结果已经生成，结果已经呈现在前端日志查询主界面上";
         } catch (Exception e) {
             return "字段分布查询失败,请联系系统管理员, 异常信息: " + e.getMessage();
