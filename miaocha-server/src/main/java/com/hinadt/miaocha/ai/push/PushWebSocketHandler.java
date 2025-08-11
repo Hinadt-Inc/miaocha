@@ -160,7 +160,7 @@ public class PushWebSocketHandler implements WebSocketHandler {
         }
 
         // channelKey 由 userId/clientId/pageId/conversationId 通过哈希计算得到，长度固定
-        String channelKey = buildChannelKey(userId, clientId, pageId, conversationId);
+        String channelKey = buildChannelKey(userId, clientId, pageId);
         String wsConnId = wsConnIdBySessionId.get(session.getId());
 
         // 绑定内存映射
@@ -275,10 +275,9 @@ public class PushWebSocketHandler implements WebSocketHandler {
 
     // ========== utils ==========
 
-    private static String buildChannelKey(
-            String userId, String clientId, String pageId, String conversationId) {
+    private static String buildChannelKey(String userId, String clientId, String pageId) {
         String u = StringUtils.hasText(userId) ? userId : "-";
-        String input = u + "|" + clientId + "|" + pageId + "|" + conversationId;
+        String input = u + "|" + clientId + "|" + pageId;
         // 使用 SHA-256 计算哈希，并截取前32位十六进制，保持长度固定
         return sha256Hex(input).substring(0, 32);
     }
