@@ -1,4 +1,4 @@
-package com.hinadt.miaocha.domain.entity.enums;
+package com.hinadt.miaocha.domain.enums;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;

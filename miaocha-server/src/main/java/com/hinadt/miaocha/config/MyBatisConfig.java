@@ -1,6 +1,6 @@
 package com.hinadt.miaocha.config;
 
-import com.hinadt.miaocha.config.mybatis.UserAuditInterceptor;
+import com.hinadt.miaocha.infrastructure.mybatis.UserAuditInterceptor;
 import jakarta.annotation.PostConstruct;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,4 +1,4 @@
-package com.hinadt.miaocha.config.mybatis;
+package com.hinadt.miaocha.infrastructure.mybatis;
 
 import com.hinadt.miaocha.common.annotation.UserAuditable;
 import com.hinadt.miaocha.common.util.UserContextUtil;

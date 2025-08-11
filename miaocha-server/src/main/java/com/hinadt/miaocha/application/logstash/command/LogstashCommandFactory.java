@@ -4,7 +4,7 @@ import com.hinadt.miaocha.application.logstash.path.LogstashDeployPathManager;
 import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.config.LogstashProperties;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
-import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
+import com.hinadt.miaocha.infrastructure.mapper.LogstashMachineMapper;
 import org.springframework.stereotype.Component;
 
 /** Logstash命令工厂 - 重构支持多实例，基于logstashMachineId创建命令 */

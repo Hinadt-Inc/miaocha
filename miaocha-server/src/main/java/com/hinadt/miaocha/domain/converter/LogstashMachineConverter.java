@@ -7,9 +7,9 @@ import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.LogstashProcess;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import com.hinadt.miaocha.domain.entity.ModuleInfo;
-import com.hinadt.miaocha.domain.mapper.MachineMapper;
-import com.hinadt.miaocha.domain.mapper.ModuleInfoMapper;
-import com.hinadt.miaocha.domain.mapper.UserMapper;
+import com.hinadt.miaocha.infrastructure.mapper.MachineMapper;
+import com.hinadt.miaocha.infrastructure.mapper.ModuleInfoMapper;
+import com.hinadt.miaocha.infrastructure.mapper.UserMapper;
 import java.time.LocalDateTime;
 import org.springframework.stereotype.Component;
 
