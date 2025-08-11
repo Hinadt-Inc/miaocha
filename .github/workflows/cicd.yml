@@ -302,7 +302,7 @@ jobs:
             echo "❌ Node.js dependencies cache miss, will save after build"
             echo "NODEMODULES_CACHE_HIT=false" >> $GITHUB_ENV
           fi
-          
+
       - name: Verify Java and Maven
         run: |
           echo "🔍 Verify Java and Maven installation..."
@@ -420,6 +420,7 @@ jobs:
           # Set environment variables
           export PR_NUMBER=${{ github.event.pull_request.number }}
           export DOCKER_IMAGE="${{ steps.docker-tag.outputs.latest_image }}"
+          export DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}"
 
           # Execute deployment
           chmod +x scripts/github/k8s/deploy.sh

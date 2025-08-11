@@ -23,6 +23,13 @@ spring:
     locations: classpath:db/migration/v1,classpath:db/migration/v2
     table: flyway_schema_history
 
+
+  ai:
+    deepseek:
+      api-key: ${DEEPSEEK_API_KEY}
+    tools:
+      throw-exception-on-error: true
+
 # 环境配置
 environment: '@environment@'
 
@@ -70,7 +77,7 @@ miaocha:
       read-only: false
       isolate-internal-queries: false
 
-        
+
 # Logstash配置
 logstash:
   # Logstash压缩包路径
