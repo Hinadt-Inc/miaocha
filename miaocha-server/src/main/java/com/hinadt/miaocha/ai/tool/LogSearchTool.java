@@ -1,7 +1,6 @@
 package com.hinadt.miaocha.ai.tool;
 
-import com.hinadt.miaocha.ai.AISessionContext;
-import com.hinadt.miaocha.ai.push.ActionPushService;
+import com.hinadt.miaocha.ai.sse.ActionSseService;
 import com.hinadt.miaocha.application.service.LogSearchService;
 import com.hinadt.miaocha.domain.dto.SchemaInfoDTO;
 import com.hinadt.miaocha.domain.dto.cache.SystemCacheDTO;
@@ -23,11 +22,11 @@ import org.springframework.stereotype.Component;
 public class LogSearchTool {
 
     private final LogSearchService logSearchService;
-    private final ActionPushService actionPushService;
+    private final ActionSseService actionSseService;
 
-    public LogSearchTool(LogSearchService logSearchService, ActionPushService actionPushService) {
+    public LogSearchTool(LogSearchService logSearchService, ActionSseService actionSseService) {
         this.logSearchService = logSearchService;
-        this.actionPushService = actionPushService;
+        this.actionSseService = actionSseService;
     }
 
     /**
@@ -84,12 +83,8 @@ public class LogSearchTool {
         logSearchDTO.setOffset(offset);
         logSearchDTO.setFields(fields);
 
-        String channelKey = AISessionContext.getChannelKey();
-        String conversationId = AISessionContext.getConversationId();
-
         try {
-            actionPushService.publishToChannel(
-                    channelKey, conversationId, "sendSearchLogDetailsAction", logSearchDTO);
+            actionSseService.sendAction("sendSearchLogDetailsAction", logSearchDTO);
             return "日志明细查询查询结果已经生成，结果已经呈现在前端日志查询主界面上";
         } catch (Exception e) {
             return "日志明细查询查询失败,请联系系统管理员, 异常信息: " + e.getMessage();
@@ -147,11 +142,8 @@ public class LogSearchTool {
         dto.setTimeGrouping(timeGrouping);
         dto.setTargetBuckets(targetBuckets);
 
-        String channelKey = AISessionContext.getChannelKey();
-        String conversationId = AISessionContext.getConversationId();
         try {
-            actionPushService.publishToChannel(
-                    channelKey, conversationId, "sendSearchLogHistogramAction", dto);
+            actionSseService.sendAction("sendSearchLogHistogramAction", dto);
             return "日志时间分布查询结果已经生成，结果已经呈现在前端日志查询主界面上";
         } catch (Exception e) {
             return "日志时间分布查询失败,请联系系统管理员, 异常信息: " + e.getMessage();
@@ -203,12 +195,8 @@ public class LogSearchTool {
         dto.setEndTime(endTime);
         dto.setTimeRange(timeRange);
 
-        String channelKey = AISessionContext.getChannelKey();
-        String conversationId = AISessionContext.getConversationId();
-
         try {
-            actionPushService.publishToChannel(
-                    channelKey, conversationId, "sendSearchFieldDistributionsAction", dto);
+            actionSseService.sendAction("sendSearchFieldDistributionsAction", dto);
             return "字段分布查询结果已经生成，结果已经呈现在前端日志查询主界面上";
         } catch (Exception e) {
             return "字段分布查询失败,请联系系统管理员, 异常信息: " + e.getMessage();
