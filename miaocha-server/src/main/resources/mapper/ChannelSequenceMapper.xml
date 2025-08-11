@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hinadt.miaocha.infrastructure.mapper.ChannelSequenceMapper">
+
+    <resultMap id="ChannelSequenceMap" type="com.hinadt.miaocha.domain.entity.ChannelSequence">
+        <result property="channelKey" column="channel_key"/>
+        <result property="seq" column="seq"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- 获取并递增通道序号（原子操作） -->
+    <update id="getAndIncrementSequence">
+        INSERT INTO channel_sequence (channel_key, seq, updated_at)
+        VALUES (#{channelKey}, 1, NOW(3))
+        ON DUPLICATE KEY UPDATE 
+            seq = seq + 1,
+            updated_at = NOW(3)
+    </update>
+    
+    <!-- 获取递增后的序号 -->
+    <select id="getSequenceAfterIncrement" resultType="java.lang.Long">
+        SELECT seq FROM channel_sequence WHERE channel_key = #{channelKey}
+    </select>
+
+    <!-- 获取当前序号（不递增） -->
+    <select id="getCurrentSequence" resultType="java.lang.Long">
+        SELECT COALESCE(seq, 0) FROM channel_sequence WHERE channel_key = #{channelKey}
+    </select>
+
+    <!-- 重置通道序号 -->
+    <update id="resetSequence">
+        INSERT INTO channel_sequence (channel_key, seq, updated_at)
+        VALUES (#{channelKey}, 0, NOW(3))
+        ON DUPLICATE KEY UPDATE 
+            seq = 0,
+            updated_at = NOW(3)
+    </update>
+
+    <!-- 删除通道序号记录 -->
+    <delete id="deleteSequence">
+        DELETE FROM channel_sequence WHERE channel_key = #{channelKey}
+    </delete>
+
+    <!-- 根据通道键查询序号记录 -->
+    <select id="selectByChannelKey" resultMap="ChannelSequenceMap">
+        SELECT channel_key, seq, updated_at 
+        FROM channel_sequence 
+        WHERE channel_key = #{channelKey}
+    </select>
+
+</mapper>

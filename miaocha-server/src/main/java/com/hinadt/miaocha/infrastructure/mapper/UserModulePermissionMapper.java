@@ -1,4 +1,4 @@
-package com.hinadt.miaocha.domain.mapper;
+package com.hinadt.miaocha.infrastructure.mapper;
 
 import com.hinadt.miaocha.domain.entity.UserModulePermission;
 import java.util.List;

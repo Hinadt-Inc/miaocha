@@ -1,7 +1,7 @@
 package com.hinadt.miaocha.application.service.database;
 
 import com.hinadt.miaocha.domain.dto.SchemaInfoDTO;
-import com.hinadt.miaocha.domain.entity.enums.DatasourceType;
+import com.hinadt.miaocha.domain.enums.DatasourceType;
 import java.sql.*;
 import java.util.*;
 import org.springframework.stereotype.Component;
