@@ -20,6 +20,9 @@ import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -53,7 +56,7 @@ public class AISessionEndpoint {
             6. **触发前端执行日志查询**：
                - 在一次日志查询中使用相同的过滤条件依次或并行调用所需的前端动作工具（除非用户显式只需其中一项）
                - 这些工具不会返回日志结果；你只负责调用它们
-            7. **向用户说明**： 向用户说明已触发查询动作，结果将由前端界面展示，说明你的查询条件和查询意图，和预期将会显示的相关日志，并思考用户可能下一步的问题，给出一些合理建议
+            7. **向用户说明**： 向用户说明你已经查询了日志，结果将由前端界面展示，说明你的查询条件和查询意图，和预期将会显示的相关日志，并思考用户可能下一步的问题，给出一些合理建议
 
             ## 重要原则
             - 所有前端动作工具调用必须使用同一模块与同一套过滤条件
@@ -102,6 +105,7 @@ public class AISessionEndpoint {
         LogSearchTool scopedLogSearchTool =
                 new LogSearchTool(logSearchService, actionSseService, conversationId);
         ModuleTool moduleTool = new ModuleTool(moduleInfoService);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         chatClient
                 .prompt()
@@ -111,6 +115,7 @@ public class AISessionEndpoint {
                 .tools(new DateTimeTools(), scopedLogSearchTool, moduleTool)
                 .stream()
                 .content()
+                .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication))
                 .doOnNext(
                         chunk -> {
                             AISessionResponseDTO dto = new AISessionResponseDTO();
