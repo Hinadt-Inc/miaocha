@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { QUICK_RANGES, DATE_FORMAT_THOUSOND } from '../utils';
+import { QUICK_RANGES, DATE_FORMAT_THOUSOND, formatTimeString } from '../utils';
 import { STORAGE_KEYS, URL_PARAMS, URL_PARAMS_TO_CLEAN } from '../constants';
 import type { ISharedParams } from '../types';
 
@@ -11,7 +11,7 @@ export const useUrlParams = (
   sharedParams: ISharedParams | null,
   setSharedParams: (params: ISharedParams | null) => void,
   setSelectedModule: (module: string) => void,
-  processedUrlRef: React.MutableRefObject<string>
+  processedUrlRef: React.MutableRefObject<string>,
 ) => {
   const [urlSearchParams] = useSearchParams();
 
@@ -21,20 +21,29 @@ export const useUrlParams = (
     if (savedSharedParams && !sharedParams) {
       try {
         const parsedSavedParams = JSON.parse(savedSharedParams);
-        
-        // 对于保存的相对时间范围，重新计算时间
-        if (parsedSavedParams.timeRange && QUICK_RANGES[parsedSavedParams.timeRange]) {
-          const quickRange = QUICK_RANGES[parsedSavedParams.timeRange];
-          parsedSavedParams.startTime = quickRange.from().format(DATE_FORMAT_THOUSOND);
-          parsedSavedParams.endTime = quickRange.to().format(DATE_FORMAT_THOUSOND);
+
+        // 处理保存的时间范围参数
+        if (parsedSavedParams.timeRange) {
+          if (QUICK_RANGES[parsedSavedParams.timeRange]) {
+            // 对于保存的相对时间范围，重新计算时间
+            const quickRange = QUICK_RANGES[parsedSavedParams.timeRange];
+            parsedSavedParams.startTime = quickRange.from().format(DATE_FORMAT_THOUSOND);
+            parsedSavedParams.endTime = quickRange.to().format(DATE_FORMAT_THOUSOND);
+          } else if (parsedSavedParams.timeRange.includes(' ~ ')) {
+            // 绝对时间范围格式：startTime ~ endTime
+            const timeParts = parsedSavedParams.timeRange.split(' ~ ');
+            if (timeParts.length === 2) {
+              parsedSavedParams.startTime = formatTimeString(timeParts[0]);
+              parsedSavedParams.endTime = formatTimeString(timeParts[1]);
+            }
+          }
         }
-        
+
         setSharedParams(parsedSavedParams);
-        
+
         if (parsedSavedParams.module) {
           setSelectedModule(parsedSavedParams.module);
         }
-        
       } catch (e) {
         console.error('解析保存的分享参数失败:', e);
         sessionStorage.removeItem(STORAGE_KEYS.SHARED_PARAMS);
@@ -53,19 +62,30 @@ export const useUrlParams = (
         const endTime = urlSearchParams.get(URL_PARAMS.END_TIME);
         const module = urlSearchParams.get(URL_PARAMS.MODULE);
         const timeGrouping = urlSearchParams.get(URL_PARAMS.TIME_GROUPING);
+        const timeType = urlSearchParams.get('timeType');
+        const relativeStartOption = urlSearchParams.get('relativeStartOption');
+        const relativeEndOption = urlSearchParams.get('relativeEndOption');
 
         // 生成当前URL参数的唯一标识
-        const currentUrlParams = `${keywords || ''}-${whereSqls || ''}-${timeRange || ''}-${startTime || ''}-${endTime || ''}-${module || ''}-${timeGrouping || ''}`;
-        
+        const currentUrlParams = `${keywords || ''}-${whereSqls || ''}-${timeRange || ''}-${startTime || ''}-${endTime || ''}-${module || ''}-${timeGrouping || ''}-${timeType || ''}-${relativeStartOption || ''}-${relativeEndOption || ''}`;
+
         // 如果已经处理过相同的URL参数，则跳过
         if (processedUrlRef.current === currentUrlParams) {
           return;
         }
 
         // 如果有分享参数，解析并保存
-        if (keywords || whereSqls || timeRange || module) {
+        if (
+          keywords ||
+          whereSqls ||
+          timeRange ||
+          startTime ||
+          endTime ||
+          module ||
+          (timeType === 'relative' && relativeStartOption && relativeEndOption)
+        ) {
           const parsedParams: any = {};
-          
+
           if (keywords) {
             try {
               parsedParams.keywords = JSON.parse(keywords);
@@ -73,7 +93,7 @@ export const useUrlParams = (
               console.error('解析keywords参数失败:', e);
             }
           }
-          
+
           if (whereSqls) {
             try {
               parsedParams.whereSqls = JSON.parse(whereSqls);
@@ -81,30 +101,58 @@ export const useUrlParams = (
               console.error('解析whereSqls参数失败:', e);
             }
           }
-          
+
           if (timeRange) parsedParams.timeRange = timeRange;
-          if (startTime) parsedParams.startTime = startTime;
-          if (endTime) parsedParams.endTime = endTime;
+
+          // 处理自定义相对时间参数
+          if (timeType === 'relative' && relativeStartOption && relativeEndOption) {
+            try {
+              parsedParams.timeType = 'relative';
+              parsedParams.relativeStartOption = JSON.parse(relativeStartOption);
+              parsedParams.relativeEndOption = JSON.parse(relativeEndOption);
+            } catch (e) {
+              console.error('解析相对时间参数失败:', e);
+            }
+          }
+
+          if (startTime) {
+            const formattedStartTime = formatTimeString(startTime);
+            parsedParams.startTime = formattedStartTime;
+          }
+          if (endTime) {
+            const formattedEndTime = formatTimeString(endTime);
+            parsedParams.endTime = formattedEndTime;
+          }
           if (timeGrouping) parsedParams.timeGrouping = timeGrouping;
           if (module) parsedParams.module = module;
 
           // 保存分享参数到状态和sessionStorage，确保登录后不丢失
           if (Object.keys(parsedParams).length > 0) {
-            // 对于相对时间范围，重新计算当前时间
-            if (parsedParams.timeRange && QUICK_RANGES[parsedParams.timeRange]) {
-              const quickRange = QUICK_RANGES[parsedParams.timeRange];
-              parsedParams.startTime = quickRange.from().format(DATE_FORMAT_THOUSOND);
-              parsedParams.endTime = quickRange.to().format(DATE_FORMAT_THOUSOND);
+            // 处理时间范围参数
+            if (parsedParams.timeRange) {
+              if (QUICK_RANGES[parsedParams.timeRange]) {
+                // 相对时间范围，重新计算当前时间
+                const quickRange = QUICK_RANGES[parsedParams.timeRange];
+                parsedParams.startTime = quickRange.from().format(DATE_FORMAT_THOUSOND);
+                parsedParams.endTime = quickRange.to().format(DATE_FORMAT_THOUSOND);
+              } else if (parsedParams.timeRange.includes(' ~ ')) {
+                // 绝对时间范围格式：startTime ~ endTime
+                const timeParts = parsedParams.timeRange.split(' ~ ');
+                if (timeParts.length === 2) {
+                  parsedParams.startTime = formatTimeString(timeParts[0]);
+                  parsedParams.endTime = formatTimeString(timeParts[1]);
+                }
+              }
             }
-            
+
             // 标记已处理这组URL参数
             processedUrlRef.current = currentUrlParams;
-            
+
             setSharedParams(parsedParams);
-            
+
             // 保存到sessionStorage，防止登录跳转后丢失
             sessionStorage.setItem(STORAGE_KEYS.SHARED_PARAMS, JSON.stringify(parsedParams));
-            
+
             if (parsedParams.module) {
               setSelectedModule(parsedParams.module);
             }
@@ -116,11 +164,10 @@ export const useUrlParams = (
             try {
               const parsedSavedParams = JSON.parse(savedSharedParams);
               setSharedParams(parsedSavedParams);
-              
+
               if (parsedSavedParams.module) {
                 setSelectedModule(parsedSavedParams.module);
               }
-              
             } catch (e) {
               console.error('解析保存的分享参数失败:', e);
               sessionStorage.removeItem(STORAGE_KEYS.SHARED_PARAMS);
@@ -138,11 +185,11 @@ export const useUrlParams = (
   // 清理URL参数的工具函数
   const cleanupUrlParams = () => {
     const newUrl = new URL(window.location.href);
-    URL_PARAMS_TO_CLEAN.forEach(param => {
+    URL_PARAMS_TO_CLEAN.forEach((param) => {
       newUrl.searchParams.delete(param);
     });
     window.history.replaceState({}, '', newUrl.toString());
-    
+
     // 清理sessionStorage中的分享参数
     sessionStorage.removeItem(STORAGE_KEYS.SHARED_PARAMS);
   };

@@ -367,15 +367,30 @@ const Sider = forwardRef<{ getDistributionWithSearchBar: () => void }, IProps>((
         // 生成唯一标识，避免重复调用
         const callKey = `${selectedModule}_${datasourceId}_${moduleQueryConfig?.timeField || 'default'}`;
 
+        console.log('准备调用 getColumns:', {
+          selectedModule,
+          moduleQueryConfig,
+          hasCalledGetColumns,
+          callKey,
+          loading: getColumns.loading,
+        });
+
         // 只有当标识发生变化时才调用getColumns
         if (hasCalledGetColumns !== callKey && !getColumns.loading) {
           // 使用防抖机制，延迟200ms执行，避免快速连续调用
           getColumnsTimeoutRef.current = setTimeout(() => {
+            console.log('正在调用 getColumns:', selectedModule);
             setHasCalledGetColumns(callKey);
             getColumns.run({ module: selectedModule });
           }, 200);
         }
       }
+    } else {
+      console.log('getColumns 调用条件不满足:', {
+        selectedModule,
+        moduleQueryConfig,
+        modulesLength: modulesRef.current.length,
+      });
     }
 
     // 清理函数

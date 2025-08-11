@@ -1,4 +1,5 @@
 import { useCallback, useEffect } from 'react';
+import dayjs from 'dayjs';
 import { QUICK_RANGES, DATE_FORMAT_THOUSOND } from '../utils';
 import { SHARED_PARAMS_APPLY_DELAY, REQUEST_DEBOUNCE_DELAY, STORAGE_KEYS } from '../constants';
 import type { ILogSearchParams, IStatus, IMyModulesResponse, ILogColumnsResponse } from '../types';
@@ -52,7 +53,14 @@ export const useBusinessLogic = (
     if (sharedParams && !hasAppliedSharedParams && searchBarRef.current && moduleOptions.length > 0) {
       // 如果有分享的模块参数，需要等待该模块的配置加载完成
       if (sharedParams.module && (!moduleQueryConfig || loadingQueryConfig)) {
+        console.log('等待模块配置加载完成...', { moduleQueryConfig, loadingQueryConfig });
         return; // 等待模块配置加载完成
+      }
+
+      // 等待 columns 加载完成，确保 SearchBar 不会被阻塞
+      if (!columnsLoaded) {
+        console.log('等待 columns 加载完成...');
+        return;
       }
 
       // 短暂延迟确保 SearchBar 组件完全初始化
@@ -73,12 +81,38 @@ export const useBusinessLogic = (
             searchBarRef.current?.setTimeGroup?.(sharedParams.timeGrouping);
           }
 
-          // 应用时间范围到SearchBar - 优先处理相对时间范围
+          // 应用时间范围到SearchBar - 处理相对时间和绝对时间
           let timeOption: any = null;
           let calculatedStartTime: string | undefined;
           let calculatedEndTime: string | undefined;
 
-          if (sharedParams.timeRange && QUICK_RANGES[sharedParams.timeRange]) {
+          if (
+            sharedParams.timeType === 'relative' &&
+            sharedParams.relativeStartOption &&
+            sharedParams.relativeEndOption
+          ) {
+            // 根据相对时间选项重新计算当前时间
+            const startMoment = dayjs().subtract(
+              sharedParams.relativeStartOption.number || 0,
+              sharedParams.relativeStartOption.unitEN,
+            );
+            const endMoment = dayjs().subtract(
+              sharedParams.relativeEndOption.number || 0,
+              sharedParams.relativeEndOption.unitEN,
+            );
+
+            calculatedStartTime = startMoment.format(DATE_FORMAT_THOUSOND);
+            calculatedEndTime = endMoment.format(DATE_FORMAT_THOUSOND);
+
+            timeOption = {
+              value: `${sharedParams.relativeStartOption.number}${sharedParams.relativeStartOption.unitCN}前到${sharedParams.relativeEndOption.number}${sharedParams.relativeEndOption.unitCN}前`,
+              range: [calculatedStartTime, calculatedEndTime],
+              label: `${sharedParams.relativeStartOption.number}${sharedParams.relativeStartOption.unitCN}前到${sharedParams.relativeEndOption.number}${sharedParams.relativeEndOption.unitCN}前`,
+              type: 'relative',
+              startOption: sharedParams.relativeStartOption,
+              endOption: sharedParams.relativeEndOption,
+            };
+          } else if (sharedParams.timeRange && QUICK_RANGES[sharedParams.timeRange]) {
             // 有相对时间范围，重新计算当前时间
             const quickRange = QUICK_RANGES[sharedParams.timeRange];
             calculatedStartTime = quickRange.from().format(DATE_FORMAT_THOUSOND);
@@ -90,8 +124,22 @@ export const useBusinessLogic = (
               label: quickRange.label,
               type: 'quick',
             };
+          } else if (sharedParams.timeRange && sharedParams.timeRange.includes(' ~ ')) {
+            // 绝对时间范围格式：startTime ~ endTime
+            const timeParts = sharedParams.timeRange.split(' ~ ');
+            if (timeParts.length === 2) {
+              calculatedStartTime = timeParts[0];
+              calculatedEndTime = timeParts[1];
+
+              timeOption = {
+                value: sharedParams.timeRange,
+                range: [calculatedStartTime, calculatedEndTime],
+                label: sharedParams.timeRange,
+                type: 'absolute',
+              };
+            }
           } else if (sharedParams.startTime && sharedParams.endTime) {
-            // 没有相对时间范围，使用绝对时间
+            // 直接使用startTime和endTime
             calculatedStartTime = sharedParams.startTime;
             calculatedEndTime = sharedParams.endTime;
 
@@ -104,7 +152,11 @@ export const useBusinessLogic = (
           }
 
           if (timeOption) {
-            searchBarRef.current?.setTimeOption?.(timeOption);
+            if (searchBarRef.current?.setTimeOption) {
+              searchBarRef.current.setTimeOption(timeOption);
+            } else {
+              console.warn('SearchBar ref 不可用，将直接更新 searchParams');
+            }
           }
 
           // 更新搜索参数
@@ -117,7 +169,11 @@ export const useBusinessLogic = (
                 module: sharedParams.module,
                 startTime: calculatedStartTime || prev.startTime,
                 endTime: calculatedEndTime || prev.endTime,
-                timeRange: sharedParams.timeRange || prev.timeRange,
+                timeRange:
+                  sharedParams.timeRange ||
+                  (calculatedStartTime && calculatedEndTime
+                    ? `${calculatedStartTime} ~ ${calculatedEndTime}`
+                    : prev.timeRange),
                 timeGrouping: sharedParams.timeGrouping || prev.timeGrouping,
                 keywords: sharedParams.keywords || [],
                 whereSqls: sharedParams.whereSqls || [],
@@ -139,7 +195,15 @@ export const useBusinessLogic = (
 
       return () => clearTimeout(timer);
     }
-  }, [sharedParams, hasAppliedSharedParams, moduleOptions, searchBarRef, moduleQueryConfig, loadingQueryConfig]);
+  }, [
+    sharedParams,
+    hasAppliedSharedParams,
+    moduleOptions,
+    searchBarRef,
+    moduleQueryConfig,
+    loadingQueryConfig,
+    columnsLoaded,
+  ]);
 
   // 主要的数据请求逻辑
   useEffect(() => {
@@ -150,10 +214,6 @@ export const useBusinessLogic = (
 
     // 确保moduleQueryConfig与当前选中的模块匹配，避免使用错误的配置
     if (moduleQueryConfig.module !== searchParams.module) {
-      console.log('模块配置与当前模块不匹配，等待正确配置加载', {
-        configModule: moduleQueryConfig.module,
-        currentModule: searchParams.module,
-      });
       return;
     }
 

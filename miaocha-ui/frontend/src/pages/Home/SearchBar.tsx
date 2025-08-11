@@ -9,6 +9,7 @@ import ShareButton from './ShareButton';
 import AutoRefresh from './AutoRefresh/index';
 import styles from './SearchBar.module.less';
 import { QUICK_RANGES, TIME_GROUP, getLatestTime, DATE_FORMAT_THOUSOND } from './utils';
+import { ILogSearchParams, ILogColumnsResponse, ITimeOption } from './types';
 import dayjs from 'dayjs';
 const TimePicker = lazy(() => import('./TimePicker.tsx'));
 
@@ -30,10 +31,22 @@ interface IProps {
   sqls: string[]; // 新增
   setSqls: (s: string[]) => void; // 新增
   setWhereSqlsFromSiderArr: any[]; // 新增
+  sharedParams?: any; // 分享参数
+  hasAppliedSharedParams?: boolean; // 是否已应用分享参数
 }
 
 const SearchBar = forwardRef((props: IProps, ref: any) => {
-  const { loading = false, keywords, setKeywords, sqls, setSqls, setWhereSqlsFromSiderArr, onRefresh } = props;
+  const {
+    loading = false,
+    keywords,
+    setKeywords,
+    sqls,
+    setSqls,
+    setWhereSqlsFromSiderArr,
+    onRefresh,
+    sharedParams,
+    hasAppliedSharedParams,
+  } = props;
   const searchBarRef = useRef<HTMLDivElement>(null);
   const {
     searchParams,
@@ -56,12 +69,11 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
   // 查询条件初始化标记
   const [initialized] = useState(true); // 直接设置为true，不需要恢复逻辑
 
-  // 获取默认时间选项配置
-  const getDefaultTimeOption = () => {
+  // 初始化时使用默认值，避免依赖还未传递的 props
+  const [timeOption, setTimeOption] = useState<ITimeOption>(() => {
     const { timeRange } = searchParams as any;
     const isQuick = QUICK_RANGES[timeRange];
     if (!isQuick) {
-      // 如果没有有效的时间范围，默认使用最近15分钟
       const defaultRange = QUICK_RANGES['last_15m'];
       return {
         value: 'last_15m',
@@ -77,32 +89,66 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
       ...QUICK_RANGES[timeRange],
       type: 'quick',
     } as any;
-  };
-  const [timeOption, setTimeOption] = useState<ILogTimeSubmitParams>(getDefaultTimeOption); // 时间选项
+  }); // 时间选项
   const [openTimeRange, setOpenTimeRange] = useState<boolean>(false); // 显隐浮层
   const [openTimeGroup, setOpenTimeGroup] = useState<boolean>(false); // 显隐浮层-时间分组
 
+  // 监听 searchParams 中的时间变化，同步更新 timeOption
+  useEffect(() => {
+    if (searchParams.startTime && searchParams.endTime) {
+      const currentTimeString = `${timeOption?.range?.[0]} ~ ${timeOption?.range?.[1]}`;
+      const newTimeString = `${searchParams.startTime} ~ ${searchParams.endTime}`;
+
+      // 如果 searchParams 中的时间与当前 timeOption 不一致，更新 timeOption
+      if (currentTimeString !== newTimeString) {
+        const newTimeOption = {
+          value: searchParams.timeRange || newTimeString,
+          range: [searchParams.startTime, searchParams.endTime],
+          label:
+            searchParams.timeRange && QUICK_RANGES[searchParams.timeRange]
+              ? QUICK_RANGES[searchParams.timeRange].label
+              : searchParams.timeRange || newTimeString,
+          type:
+            searchParams.timeType ||
+            (searchParams.timeRange && QUICK_RANGES[searchParams.timeRange] ? 'quick' : 'absolute'),
+          ...(searchParams.timeType === 'relative' &&
+            searchParams.relativeStartOption &&
+            searchParams.relativeEndOption && {
+              startOption: searchParams.relativeStartOption,
+              endOption: searchParams.relativeEndOption,
+            }),
+        };
+
+        setTimeOption(newTimeOption as any);
+      }
+    }
+  }, [searchParams.startTime, searchParams.endTime, searchParams.timeRange]);
+
   // 暴露给父组件的方法
-  useImperativeHandle(ref, () => ({
-    // 渲染sql
-    addSql: (sql: string) => {
-      setSqls([...sqls, sql]);
-    },
-    removeSql: (sql: string) => {
-      setSqls(sqls.filter((item: string) => item !== sql));
-    },
-    // 渲染时间
-    setTimeOption,
-    // 设置时间分组
-    setTimeGroup,
-    // 自动刷新方法（供父组件调用）
-    autoRefresh: () => {
-      // 更新时间到最新
-      const latestTime = getLatestTime(timeOption);
-      setTimeOption((prev: any) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
-      // 这会触发useEffect，自动调用onSearch
-    },
-  }), [sqls, timeOption]);
+  useImperativeHandle(
+    ref,
+    () => ({
+      // 渲染sql
+      addSql: (sql: string) => {
+        setSqls([...sqls, sql]);
+      },
+      removeSql: (sql: string) => {
+        setSqls(sqls.filter((item: string) => item !== sql));
+      },
+      // 渲染时间
+      setTimeOption,
+      // 设置时间分组
+      setTimeGroup,
+      // 自动刷新方法（供父组件调用）
+      autoRefresh: () => {
+        // 更新时间到最新
+        const latestTime = getLatestTime(timeOption);
+        setTimeOption((prev: any) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
+        // 这会触发useEffect，自动调用onSearch
+      },
+    }),
+    [sqls, timeOption],
+  );
 
   // 加载已保存的搜索条件
   const handleLoadSearch = (savedSearchParams: any) => {
@@ -128,11 +174,11 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
 
       // 恢复时间范围
       if (savedSearchParams.startTime && savedSearchParams.endTime && savedSearchParams.timeRange) {
-        const timeOption = {
+        const timeOption: ITimeOption = {
           value: savedSearchParams.timeRange,
           range: [savedSearchParams.startTime, savedSearchParams.endTime],
           label: QUICK_RANGES[savedSearchParams.timeRange]?.label || '自定义时间',
-          type: QUICK_RANGES[savedSearchParams.timeRange] ? ('quick' as const) : ('absolute' as const),
+          type: QUICK_RANGES[savedSearchParams.timeRange] ? 'quick' : 'absolute',
         };
         setTimeOption(timeOption);
       }
@@ -242,6 +288,13 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
       startTime: dayjs(timeOption?.range?.[0]).format(DATE_FORMAT_THOUSOND),
       endTime: dayjs(timeOption?.range?.[1]).format(DATE_FORMAT_THOUSOND),
       timeRange: timeOption?.value,
+      timeType: timeOption?.type, // 添加时间类型信息
+      ...(timeOption?.type === 'relative' &&
+        timeOption?.startOption &&
+        timeOption?.endOption && {
+          relativeStartOption: timeOption.startOption,
+          relativeEndOption: timeOption.endOption,
+        }),
       timeGrouping: timeGroup,
       offset: 0,
       fields: fieldsHasDot ? [...commonColumns, ...(activeColumns || [])] : commonColumns,
@@ -315,7 +368,16 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
 
   // 提交时间范围
   const submitTime = (params: ILogTimeSubmitParams) => {
-    setTimeOption(params);
+    // 转换 ILogTimeSubmitParams 到 ITimeOption
+    const timeOption: ITimeOption = {
+      value: params.value || '',
+      range: [params.range?.[0] || '', params.range?.[1] || ''],
+      label: params.label || '',
+      type: params.type || 'absolute',
+      startOption: params.startOption,
+      endOption: params.endOption,
+    };
+    setTimeOption(timeOption);
     setOpenTimeRange(false);
   };
 
@@ -330,9 +392,9 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
         placement="bottomRight"
         content={
           <Suspense fallback={<SpinIndicator />}>
-            <TimePicker 
-              activeTab={activeTab} 
-              setActiveTab={setActiveTab} 
+            <TimePicker
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
               onSubmit={submitTime}
               currentTimeOption={timeOption}
             />
@@ -381,8 +443,8 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
     const currentWord = getCurrentInputWord(sql);
     const filteredColumns = currentWord
       ? (columns || []).filter(
-        (column) => column.columnName && column.columnName.toLowerCase().includes(currentWord.toLowerCase()),
-      )
+          (column) => column.columnName && column.columnName.toLowerCase().includes(currentWord.toLowerCase()),
+        )
       : columns || [];
 
     return (
@@ -470,11 +532,7 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
         <div className={styles.left}>{leftRender}</div>
         <div className={styles.right}>
           <Space size={8}>
-            <AutoRefresh
-              onRefresh={handleAutoRefresh}
-              loading={loading}
-              disabled={false}
-            />
+            <AutoRefresh onRefresh={handleAutoRefresh} loading={loading} disabled={false} />
             <SaveSearchButton
               searchParams={{
                 keywords,
@@ -485,13 +543,17 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
                 timeGrouping: timeGroup,
                 module: searchParams.module,
                 sortConfig,
+                timeType: timeOption?.type, // 添加时间类型信息
+                ...(timeOption?.type === 'relative' &&
+                  timeOption?.startOption &&
+                  timeOption?.endOption && {
+                    relativeStartOption: timeOption.startOption,
+                    relativeEndOption: timeOption.endOption,
+                  }),
               }}
               size="small"
             />
-            <SavedSearchesButton
-              onLoadSearch={handleLoadSearch}
-              size="small"
-            />
+            <SavedSearchesButton onLoadSearch={handleLoadSearch} size="small" />
             <ShareButton
               searchParams={{
                 keywords,
@@ -502,6 +564,13 @@ const SearchBar = forwardRef((props: IProps, ref: any) => {
                 timeGrouping: timeGroup,
                 module: searchParams.module,
                 sortConfig,
+                timeType: timeOption?.type, // 添加时间类型信息
+                ...(timeOption?.type === 'relative' &&
+                  timeOption?.startOption &&
+                  timeOption?.endOption && {
+                    relativeStartOption: timeOption.startOption,
+                    relativeEndOption: timeOption.endOption,
+                  }),
               }}
               size="small"
             />

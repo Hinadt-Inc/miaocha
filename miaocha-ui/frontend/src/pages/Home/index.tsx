@@ -326,6 +326,8 @@ const HomePage = () => {
       sqls: state.sqls,
       setSqls: state.setSqls,
       setWhereSqlsFromSiderArr: state.whereSqlsFromSider,
+      sharedParams: state.sharedParams,
+      hasAppliedSharedParams: state.hasAppliedSharedParams,
     }),
     [
       searchParams,
@@ -341,6 +343,8 @@ const HomePage = () => {
       state.keywords,
       state.sqls,
       state.whereSqlsFromSider,
+      state.sharedParams,
+      state.hasAppliedSharedParams,
     ],
   );
 

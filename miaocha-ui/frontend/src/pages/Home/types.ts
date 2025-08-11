@@ -16,6 +16,9 @@ export interface ILogSearchParams {
   keywords?: string[];
   fields?: string[];
   sortFields?: any[];
+  timeType?: 'relative' | 'absolute' | 'quick';
+  relativeStartOption?: IRelativeTime;
+  relativeEndOption?: IRelativeTime;
 }
 
 // 模块选项接口
@@ -68,6 +71,9 @@ export interface ISharedParams {
   endTime?: string;
   module?: string;
   timeGrouping?: string;
+  timeType?: 'relative' | 'absolute' | 'quick';
+  relativeStartOption?: IRelativeTime;
+  relativeEndOption?: IRelativeTime;
 }
 
 // 时间选项接口
@@ -75,7 +81,9 @@ export interface ITimeOption {
   value: string;
   range: [string, string];
   label: string;
-  type: 'quick' | 'absolute';
+  type: 'quick' | 'absolute' | 'relative';
+  startOption?: IRelativeTime;
+  endOption?: IRelativeTime;
 }
 
 // 搜索栏Ref接口
