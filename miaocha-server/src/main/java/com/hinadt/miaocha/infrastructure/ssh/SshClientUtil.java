@@ -1,4 +1,4 @@
-package com.hinadt.miaocha.common.ssh;
+package com.hinadt.miaocha.infrastructure.ssh;
 
 import com.hinadt.miaocha.common.exception.SshException;
 import java.io.IOException;

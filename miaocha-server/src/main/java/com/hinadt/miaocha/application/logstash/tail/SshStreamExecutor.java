@@ -1,7 +1,7 @@
 package com.hinadt.miaocha.application.logstash.tail;
 
-import com.hinadt.miaocha.common.ssh.SshClientUtil;
-import com.hinadt.miaocha.common.ssh.SshConfig;
+import com.hinadt.miaocha.infrastructure.ssh.SshClientUtil;
+import com.hinadt.miaocha.infrastructure.ssh.SshConfig;
 import jakarta.annotation.PreDestroy;
 import java.io.BufferedReader;
 import java.io.IOException;
