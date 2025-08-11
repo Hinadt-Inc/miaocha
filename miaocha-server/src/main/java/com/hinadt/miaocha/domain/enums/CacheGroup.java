@@ -1,4 +1,4 @@
-package com.hinadt.miaocha.domain.entity.enums;
+package com.hinadt.miaocha.domain.enums;
 
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchCacheDTO;
 import lombok.Getter;

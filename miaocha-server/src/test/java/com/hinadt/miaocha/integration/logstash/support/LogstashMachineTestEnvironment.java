@@ -2,7 +2,7 @@ package com.hinadt.miaocha.integration.logstash.support;
 
 import com.hinadt.miaocha.TestContainersFactory;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
-import com.hinadt.miaocha.domain.mapper.MachineMapper;
+import com.hinadt.miaocha.infrastructure.mapper.MachineMapper;
 import com.hinadt.miaocha.integration.TestMachineFactory;
 import java.util.ArrayList;
 import java.util.List;

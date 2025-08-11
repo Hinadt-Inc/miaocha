@@ -3,7 +3,7 @@ package com.hinadt.miaocha.application.logstash.command;
 import com.hinadt.miaocha.application.logstash.path.LogstashDeployPathManager;
 import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
-import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
+import com.hinadt.miaocha.infrastructure.mapper.LogstashMachineMapper;
 
 /**
  * 强制停止Logstash进程命令 - 重构支持多实例，基于logstashMachineId 应急停止功能：执行原有的停止逻辑，但无论命令成功与否，都强制返回成功

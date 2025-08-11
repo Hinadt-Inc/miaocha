@@ -1,7 +1,7 @@
 package com.hinadt.miaocha.application.service.datasource;
 
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
-import com.hinadt.miaocha.domain.entity.enums.DatasourceType;
+import com.hinadt.miaocha.domain.enums.DatasourceType;
 import com.zaxxer.hikari.HikariConfig;
 import lombok.Getter;
 import lombok.Setter;
