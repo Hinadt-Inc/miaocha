@@ -24,7 +24,6 @@ public class ActionSseService {
             return;
         }
         AISessionActionDTO dto = new AISessionActionDTO();
-        dto.setChannelKey(AISessionContext.getChannelKey());
         dto.setConversationId(AISessionContext.getConversationId());
         dto.setToolName(toolName);
         dto.setPayload(payload);
