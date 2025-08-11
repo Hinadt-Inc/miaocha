@@ -1,7 +1,8 @@
 package com.hinadt.miaocha.ai.sse;
 
-import com.hinadt.miaocha.ai.AISessionContext;
 import com.hinadt.miaocha.domain.dto.ai.AISessionActionDTO;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -11,20 +12,30 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Slf4j
 public class ActionSseService {
 
+    private final Map<String, SseEmitter> sessions = new ConcurrentHashMap<>();
+
+    /** Register an emitter for the given conversation. */
+    public void register(String conversationId, SseEmitter emitter) {
+        sessions.put(conversationId, emitter);
+        emitter.onCompletion(() -> sessions.remove(conversationId));
+        emitter.onTimeout(() -> sessions.remove(conversationId));
+    }
+
     /**
      * Push action information through SSE to the connected frontend.
      *
+     * @param conversationId id of the conversation associated with the action
      * @param toolName name of the invoked tool
      * @param payload tool parameters
      */
-    public void sendAction(String toolName, Object payload) {
-        SseEmitter emitter = AISessionContext.getEmitter();
+    public void sendAction(String conversationId, String toolName, Object payload) {
+        SseEmitter emitter = sessions.get(conversationId);
         if (emitter == null) {
             log.warn("No SSE emitter available for action: {}", toolName);
             return;
         }
         AISessionActionDTO dto = new AISessionActionDTO();
-        dto.setConversationId(AISessionContext.getConversationId());
+        dto.setConversationId(conversationId);
         dto.setToolName(toolName);
         dto.setPayload(payload);
         try {

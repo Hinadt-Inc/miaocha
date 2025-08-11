@@ -6,14 +6,12 @@ import com.hinadt.miaocha.domain.dto.module.QueryConfigDTO;
 import java.util.List;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
-import org.springframework.stereotype.Component;
 
 /**
  * 模块管理工具类
  *
  * <p>提供AI助手调用的模块管理相关功能，包括获取所有模块信息、获取模块查询配置等功能。
  */
-@Component
 public class ModuleTool {
 
     private final ModuleInfoService moduleInfoService;
