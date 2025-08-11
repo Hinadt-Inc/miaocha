@@ -28,6 +28,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilterAsyncDispatch() {
+        // Ensure JWT authentication runs for async dispatches (e.g. SSE),
+        // so SecurityContext is populated during subsequent filter chain
+        // invocations triggered after the response has started.
+        return false;
+    }
+
+    @Override
     protected void doFilterInternal(
             HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
