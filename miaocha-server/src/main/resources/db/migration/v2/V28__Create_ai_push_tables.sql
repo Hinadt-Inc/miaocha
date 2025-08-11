@@ -6,7 +6,6 @@ CREATE TABLE IF NOT EXISTS channel_registry (
     user_id         VARCHAR(64)  NULL COMMENT '用户ID',
     client_id       VARCHAR(64)  NULL COMMENT '前端 clientId',
     page_id         VARCHAR(64)  NULL COMMENT '前端 pageId',
-    conversation_id VARCHAR(128) NULL COMMENT '模型会话ID',
     node_id         VARCHAR(64)  NOT NULL COMMENT '承载该连接的应用节点ID',
     ws_conn_id      VARCHAR(128) NOT NULL COMMENT 'WebSocket 会话ID',
     status          VARCHAR(16)  NOT NULL DEFAULT 'OFFLINE' COMMENT 'ONLINE/OFFLINE',
