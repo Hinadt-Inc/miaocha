@@ -1,5 +1,7 @@
 package com.hinadt.miaocha.ai.tool;
 
+import com.hinadt.miaocha.ai.AISessionContext;
+import com.hinadt.miaocha.ai.push.ActionPushService;
 import com.hinadt.miaocha.application.service.LogSearchService;
 import com.hinadt.miaocha.domain.dto.SchemaInfoDTO;
 import com.hinadt.miaocha.domain.dto.cache.SystemCacheDTO;
@@ -21,9 +23,11 @@ import org.springframework.stereotype.Component;
 public class LogSearchTool {
 
     private final LogSearchService logSearchService;
+    private final ActionPushService actionPushService;
 
-    public LogSearchTool(LogSearchService logSearchService) {
+    public LogSearchTool(LogSearchService logSearchService, ActionPushService actionPushService) {
         this.logSearchService = logSearchService;
+        this.actionPushService = actionPushService;
     }
 
     /**
@@ -36,8 +40,7 @@ public class LogSearchTool {
             @ToolParam(
                             description =
                                     "查询日志的模块名称, 如 k8s-hina-cloud ... ,"
-                                            + " 等，不同业务线的应用通过模块名称来进行区分，一个模块对应实际Doris存储的一张日志表",
-                            required = true)
+                                            + " 等，不同业务线的应用通过模块名称来进行区分，一个模块对应实际Doris存储的一张日志表")
                     String module,
             @ToolParam(
                             description =
@@ -58,30 +61,39 @@ public class LogSearchTool {
                             description =
                                     "预定义时间范围：last_5m, last_15m, last_30m, last_1h, last_8h,"
                                             + " last_24h, today, yesterday,"
-                                            + " last_week。注意：建议优先使用startTime和endTime手动指定时间范围")
+                                            + " last_week。注意：建议优先使用startTime和endTime手动指定时间范围",
+                            required = false)
                     String timeRange,
-            @ToolParam(description = "分页大小，默认50，最大5000, 建议调用设为 20") Integer pageSize,
+            @ToolParam(description = "分页大小，默认50，最大5000, 建议调用设为 1000") Integer pageSize,
             @ToolParam(description = "分页偏移量，默认0") Integer offset,
             @ToolParam(
                             description =
                                     "查询字段列表，必须指定模块对应的Doris表中实际存在的字段名，不能为空。常用字段如：log_time,"
                                             + " message_text 等",
-                            required = true)
+                            required = false)
                     List<String> fields) {
 
-        LogSearchDTO dto = new LogSearchDTO();
-        dto.setModule(module);
-        dto.setKeywords(keywords);
-        dto.setWhereSqls(whereSqls);
-        dto.setStartTime(startTime);
-        dto.setEndTime(endTime);
-        dto.setTimeRange(timeRange);
-        dto.setPageSize(pageSize != null ? pageSize : 50);
-        dto.setOffset(offset != null ? offset : 0);
-        dto.setFields(fields);
+        LogSearchDTO logSearchDTO = new LogSearchDTO();
+        logSearchDTO.setModule(module);
+        logSearchDTO.setKeywords(keywords);
+        logSearchDTO.setWhereSqls(whereSqls);
+        logSearchDTO.setStartTime(startTime);
+        logSearchDTO.setEndTime(endTime);
+        logSearchDTO.setTimeRange(timeRange);
+        logSearchDTO.setPageSize(pageSize);
+        logSearchDTO.setOffset(offset);
+        logSearchDTO.setFields(fields);
 
-        log.info("日志明细前端工具触发");
-        return "日志明细已经查询，结果已经呈现在前端日志查询主界面上";
+        String channelKey = AISessionContext.getChannelKey();
+        String conversationId = AISessionContext.getConversationId();
+
+        try {
+            actionPushService.publishToChannel(
+                    channelKey, conversationId, "sendSearchLogDetailsAction", logSearchDTO);
+            return "日志明细查询查询结果已经生成，结果已经呈现在前端日志查询主界面上";
+        } catch (Exception e) {
+            return "日志明细查询查询失败,请联系系统管理员, 异常信息: " + e.getMessage();
+        }
     }
 
     /**
@@ -132,11 +144,18 @@ public class LogSearchTool {
         dto.setStartTime(startTime);
         dto.setEndTime(endTime);
         dto.setTimeRange(timeRange);
-        dto.setTimeGrouping(timeGrouping != null ? timeGrouping : "auto");
-        dto.setTargetBuckets(targetBuckets != null ? targetBuckets : 50);
+        dto.setTimeGrouping(timeGrouping);
+        dto.setTargetBuckets(targetBuckets);
 
-        log.info("日志时间分布直方图前端工具触发");
-        return "日志时间分布直方图已经查询，结果已经呈现在前端日志查询主界面上";
+        String channelKey = AISessionContext.getChannelKey();
+        String conversationId = AISessionContext.getConversationId();
+        try {
+            actionPushService.publishToChannel(
+                    channelKey, conversationId, "sendSearchLogHistogramAction", dto);
+            return "日志时间分布查询结果已经生成，结果已经呈现在前端日志查询主界面上";
+        } catch (Exception e) {
+            return "日志时间分布查询失败,请联系系统管理员, 异常信息: " + e.getMessage();
+        }
     }
 
     /**
@@ -184,8 +203,16 @@ public class LogSearchTool {
         dto.setEndTime(endTime);
         dto.setTimeRange(timeRange);
 
-        log.info("字段分布查询前端工具触发");
-        return "字段分布查询结果已经生成，结果已经呈现在前端日志查询主界面上";
+        String channelKey = AISessionContext.getChannelKey();
+        String conversationId = AISessionContext.getConversationId();
+
+        try {
+            actionPushService.publishToChannel(
+                    channelKey, conversationId, "sendSearchFieldDistributionsAction", dto);
+            return "字段分布查询结果已经生成，结果已经呈现在前端日志查询主界面上";
+        } catch (Exception e) {
+            return "字段分布查询失败,请联系系统管理员, 异常信息: " + e.getMessage();
+        }
     }
 
     /**

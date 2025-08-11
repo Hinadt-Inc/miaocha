@@ -5,7 +5,7 @@ import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessCreateDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessResponseDTO;
 import com.hinadt.miaocha.domain.entity.*;
-import com.hinadt.miaocha.domain.mapper.*;
+import com.hinadt.miaocha.infrastructure.mapper.*;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;

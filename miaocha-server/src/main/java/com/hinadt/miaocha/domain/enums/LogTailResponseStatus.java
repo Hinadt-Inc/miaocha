@@ -1,4 +1,4 @@
-package com.hinadt.miaocha.domain.entity.enums;
+package com.hinadt.miaocha.domain.enums;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

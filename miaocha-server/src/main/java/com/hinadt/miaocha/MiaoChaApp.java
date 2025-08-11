@@ -11,7 +11,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * @author hina
  */
 @SpringBootApplication(scanBasePackages = {"com.hinadt.miaocha"})
-@MapperScan("com.hinadt.miaocha.domain.mapper")
+@MapperScan("com.hinadt.miaocha.infrastructure.mapper")
 @EnableScheduling
 public class MiaoChaApp {
     public static void main(String[] args) {
