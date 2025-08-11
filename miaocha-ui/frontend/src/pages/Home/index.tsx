@@ -41,6 +41,8 @@ const HomePage = () => {
     moduleQueryConfig,
     setModuleQueryConfig,
     setLoadingQueryConfig,
+    columnsLoaded,
+    setColumnsLoaded,
     isInitializingRef,
     loadedConfigModulesRef,
     setIsInitialized,
@@ -59,7 +61,7 @@ const HomePage = () => {
     state.sharedParams,
     state.setSharedParams,
     setSelectedModule,
-    state.processedUrlRef
+    state.processedUrlRef,
   );
 
   // 4. 数据请求hooks
@@ -69,38 +71,39 @@ const HomePage = () => {
   const getModuleQueryConfig = useModuleQueryConfig();
 
   // 5. 执行数据请求的函数
-  const executeDataRequest = useCallback((params: ILogSearchParams) => {
-    // 取消之前的请求
-    if (abortRef.current) {
-      abortRef.current.abort();
-    }
+  const executeDataRequest = useCallback(
+    (params: ILogSearchParams) => {
+      // 取消之前的请求
+      if (abortRef.current) {
+        abortRef.current.abort();
+      }
 
-    abortRef.current = new AbortController();
-    const requestParams = { ...params, signal: abortRef.current.signal };
+      abortRef.current = new AbortController();
+      const requestParams = { ...params, signal: abortRef.current.signal };
 
-    getDetailData.run(requestParams);
-    getHistogramData.run(requestParams);
-  }, [getDetailData, getHistogramData]);
+      getDetailData.run(requestParams);
+      getHistogramData.run(requestParams);
+    },
+    [getDetailData, getHistogramData],
+  );
 
   // 6. 业务逻辑处理
-  const {
-    generateModuleOptions,
-    handleSelectedModuleChange,
-    handleChangeColumns,
-    handleChangeColumnsByLog,
-  } = useBusinessLogic(state, executeDataRequest, cleanupUrlParams);
+  const { generateModuleOptions, handleSelectedModuleChange, handleChangeColumns, handleChangeColumnsByLog } =
+    useBusinessLogic(state, executeDataRequest, cleanupUrlParams, columnsLoaded);
 
   // 7. 处理模块列表请求成功
   useEffect(() => {
     if (modulesList.data) {
       isInitializingRef.current = true;
-      
+
       const moduleOptions = generateModuleOptions(modulesList.data);
       setModuleOptions(moduleOptions);
 
       // 如果有分享参数，优先应用分享的模块
       if (state.sharedParams?.module && !state.hasAppliedSharedParams) {
-        const sharedModuleOption = moduleOptions.find((option: IStatus) => option.module === state.sharedParams?.module);
+        const sharedModuleOption = moduleOptions.find(
+          (option: IStatus) => option.module === state.sharedParams?.module,
+        );
         if (sharedModuleOption) {
           setSelectedModule(state.sharedParams.module);
           setSearchParams((prev: ILogSearchParams) => ({
@@ -147,6 +150,7 @@ const HomePage = () => {
         setIsInitialized(false);
         lastCallParamsRef.current = '';
         isInitializingRef.current = true;
+        setColumnsLoaded(false); // 重置columns加载状态
 
         getModuleQueryConfig.run(selectedModule);
       }
@@ -155,6 +159,7 @@ const HomePage = () => {
       setIsInitialized(false);
       lastCallParamsRef.current = '';
       isInitializingRef.current = false;
+      setColumnsLoaded(false); // 重置columns加载状态
       loadedConfigModulesRef.current.clear();
     }
   }, [selectedModule]);
@@ -185,7 +190,7 @@ const HomePage = () => {
       ...searchParams,
       offset: 0,
     };
-    
+
     if (flag === '=') {
       const oldSql = `${columnName} != '${value}'`;
       newSearchParams.whereSqls = [...(searchParams?.whereSqls || []), sql];
@@ -204,11 +209,11 @@ const HomePage = () => {
       searchBarRef?.current?.removeSql?.(oldSql);
       state.setWhereSqlsFromSider((prev: any) => prev.filter((item: any) => item.value !== value));
     }
-    
+
     if (newSearchParams?.whereSqls?.length === 0) {
       delete newSearchParams.whereSqls;
     }
-    
+
     searchBarRef?.current?.addSql?.(sql);
     setSearchParams(newSearchParams);
   };
@@ -255,86 +260,89 @@ const HomePage = () => {
   }, []);
 
   // 13. 组件props优化
-  const siderProps = useMemo(() => ({
-    searchParams,
-    modules: moduleOptions,
-    setWhereSqlsFromSider: handleSetWhereSqlsFromSider,
-    onSearch: setSearchParams,
-    onChangeColumns: handleChangeColumns,
-    onActiveColumnsChange: state.setActiveColumns,
-    onSelectedModuleChange: handleSelectedModuleChange,
-    moduleQueryConfig,
-    onCommonColumnsChange: state.setCommonColumns,
-    selectedModule,
-  }), [
-    searchParams,
-    moduleOptions,
-    moduleQueryConfig,
-    selectedModule,
-    handleSelectedModuleChange,
-    handleChangeColumns,
-  ]);
+  const siderProps = useMemo(
+    () => ({
+      searchParams,
+      modules: moduleOptions,
+      setWhereSqlsFromSider: handleSetWhereSqlsFromSider,
+      onSearch: setSearchParams,
+      onChangeColumns: handleChangeColumns,
+      onActiveColumnsChange: state.setActiveColumns,
+      onSelectedModuleChange: handleSelectedModuleChange,
+      moduleQueryConfig,
+      onCommonColumnsChange: state.setCommonColumns,
+      selectedModule,
+      onColumnsLoaded: setColumnsLoaded, // 传递columns加载完成回调
+    }),
+    [searchParams, moduleOptions, moduleQueryConfig, selectedModule, handleSelectedModuleChange, handleChangeColumns],
+  );
 
-  const logProps: any = useMemo(() => ({
-    histogramData,
-    detailData,
-    getDetailData,
-    searchParams,
-    dynamicColumns: state.logTableColumns,
-    whereSqlsFromSider: state.whereSqlsFromSider,
-    sqls: state.sqls,
-    onSearch: onSearchFromLog,
-    onChangeColumns: handleChangeColumnsByLog,
-    onSearchFromTable: setSearchParams,
-    moduleQueryConfig,
-    onSortChange: handleSortChange,
-  }), [
-    histogramData,
-    detailData,
-    getDetailData,
-    state.logTableColumns,
-    searchParams,
-    state.whereSqlsFromSider,
-    state.sqls,
-    moduleQueryConfig,
-    handleSortChange,
-    handleChangeColumnsByLog,
-    state.sortConfig,
-  ]);
+  const logProps: any = useMemo(
+    () => ({
+      histogramData,
+      detailData,
+      getDetailData,
+      searchParams,
+      dynamicColumns: state.logTableColumns,
+      whereSqlsFromSider: state.whereSqlsFromSider,
+      sqls: state.sqls,
+      onSearch: onSearchFromLog,
+      onChangeColumns: handleChangeColumnsByLog,
+      onSearchFromTable: setSearchParams,
+      moduleQueryConfig,
+      onSortChange: handleSortChange,
+    }),
+    [
+      histogramData,
+      detailData,
+      getDetailData,
+      state.logTableColumns,
+      searchParams,
+      state.whereSqlsFromSider,
+      state.sqls,
+      moduleQueryConfig,
+      handleSortChange,
+      handleChangeColumnsByLog,
+      state.sortConfig,
+    ],
+  );
 
-  const searchBarProps = useMemo(() => ({
-    searchParams,
-    totalCount: detailData?.totalCount,
-    onSearch: setSearchParams,
-    onRefresh: handleRefresh,
-    setWhereSqlsFromSider: handleSetWhereSqlsFromSider,
-    columns: state.logTableColumns,
-    onSqlsChange: state.setSqls,
-    activeColumns: state.activeColumns,
-    getDistributionWithSearchBar,
-    sortConfig: state.sortConfig,
-    commonColumns: state.commonColumns,
-    loading: getDetailData.loading,
-    keywords: state.keywords,
-    setKeywords: state.setKeywords,
-    sqls: state.sqls,
-    setSqls: state.setSqls,
-    setWhereSqlsFromSiderArr: state.whereSqlsFromSider,
-  }), [
-    searchParams,
-    detailData?.totalCount,
-    setSearchParams,
-    handleRefresh,
-    state.logTableColumns,
-    state.activeColumns,
-    getDistributionWithSearchBar,
-    state.sortConfig,
-    state.commonColumns,
-    getDetailData.loading,
-    state.keywords,
-    state.sqls,
-    state.whereSqlsFromSider,
-  ]);
+  const searchBarProps = useMemo(
+    () => ({
+      searchParams,
+      totalCount: detailData?.totalCount,
+      onSearch: setSearchParams,
+      onRefresh: handleRefresh,
+      setWhereSqlsFromSider: handleSetWhereSqlsFromSider,
+      columns: state.logTableColumns,
+      onSqlsChange: state.setSqls,
+      activeColumns: state.activeColumns,
+      getDistributionWithSearchBar,
+      sortConfig: state.sortConfig,
+      commonColumns: state.commonColumns,
+      loading: getDetailData.loading,
+      keywords: state.keywords,
+      setKeywords: state.setKeywords,
+      sqls: state.sqls,
+      setSqls: state.setSqls,
+      setWhereSqlsFromSiderArr: state.whereSqlsFromSider,
+    }),
+    [
+      searchParams,
+      detailData?.totalCount,
+      setSearchParams,
+      handleRefresh,
+      state.logTableColumns,
+      state.activeColumns,
+      getDistributionWithSearchBar,
+      state.sortConfig,
+      state.commonColumns,
+      getDetailData.loading,
+      state.keywords,
+      state.sqls,
+      state.whereSqlsFromSider,
+    ],
+  );
 
   return (
     <div className={styles.layout}>

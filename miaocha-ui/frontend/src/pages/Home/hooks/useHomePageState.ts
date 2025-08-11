@@ -1,13 +1,13 @@
 import { useState, useRef } from 'react';
-import type { 
-  IStatus, 
-  ILogDetailsResponse, 
-  ILogColumnsResponse, 
-  ILogHistogramData, 
+import type {
+  IStatus,
+  ILogDetailsResponse,
+  ILogColumnsResponse,
+  ILogHistogramData,
   ILogSearchParams,
   IModuleQueryConfig,
   ISharedParams,
-  SortConfig
+  SortConfig,
 } from '../types';
 import { DEFAULT_SEARCH_PARAMS } from '../constants';
 
@@ -31,6 +31,7 @@ export const useHomePageState = () => {
   // 查询配置相关状态
   const [moduleQueryConfig, setModuleQueryConfig] = useState<IModuleQueryConfig | null>(null);
   const [loadingQueryConfig, setLoadingQueryConfig] = useState(false);
+  const [columnsLoaded, setColumnsLoaded] = useState(false); // 追踪columns是否已加载
 
   // 分享参数状态
   const [sharedParams, setSharedParams] = useState<ISharedParams | null>(null);
@@ -80,6 +81,8 @@ export const useHomePageState = () => {
     setModuleQueryConfig,
     loadingQueryConfig,
     setLoadingQueryConfig,
+    columnsLoaded,
+    setColumnsLoaded,
     sharedParams,
     setSharedParams,
     hasAppliedSharedParams,
@@ -88,7 +91,7 @@ export const useHomePageState = () => {
     setIsInitialized,
     searchParams,
     setSearchParams,
-    
+
     // refs
     searchBarRef,
     siderRef,
