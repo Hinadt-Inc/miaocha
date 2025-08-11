@@ -118,6 +118,10 @@ public class SecurityConfig {
                                         .requestMatchers("/api/logstash/log-tail/**")
                                         .permitAll() // 临时设为permitAll避免异步线程认证问题
 
+                                        // AI会话接口 - 需要认证
+                                        .requestMatchers("/api/ai/**")
+                                        .authenticated()
+
                                         // 所有其他API接口需要认证
                                         .requestMatchers("/api/**")
                                         .authenticated()
