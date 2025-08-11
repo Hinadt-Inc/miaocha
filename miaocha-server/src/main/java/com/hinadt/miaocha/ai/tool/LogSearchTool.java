@@ -10,23 +10,26 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
-import org.springframework.stereotype.Component;
 
 /**
  * 日志搜索工具类
  *
  * <p>提供AI助手调用的日志搜索相关功能，包括日志明细查询、时间分布统计、字段分布分析、 表结构查询和搜索条件管理等功能。
  */
-@Component
 @Slf4j
 public class LogSearchTool {
 
     private final LogSearchService logSearchService;
     private final ActionSseService actionSseService;
+    private final String conversationId;
 
-    public LogSearchTool(LogSearchService logSearchService, ActionSseService actionSseService) {
+    public LogSearchTool(
+            LogSearchService logSearchService,
+            ActionSseService actionSseService,
+            String conversationId) {
         this.logSearchService = logSearchService;
         this.actionSseService = actionSseService;
+        this.conversationId = conversationId;
     }
 
     /**
@@ -63,7 +66,7 @@ public class LogSearchTool {
                                             + " last_week。注意：建议优先使用startTime和endTime手动指定时间范围",
                             required = false)
                     String timeRange,
-            @ToolParam(description = "分页大小，默认50，最大5000, 建议调用设为 1000") Integer pageSize,
+            @ToolParam(description = "分页大小，默认50，最大5000, 建议调用设为 100") Integer pageSize,
             @ToolParam(description = "分页偏移量，默认0") Integer offset,
             @ToolParam(
                             description =
@@ -84,7 +87,7 @@ public class LogSearchTool {
         logSearchDTO.setFields(fields);
 
         try {
-            actionSseService.sendAction("sendSearchLogDetailsAction", logSearchDTO);
+            actionSseService.sendAction(conversationId, "sendSearchLogDetailsAction", logSearchDTO);
             return "日志明细查询查询结果已经生成，结果已经呈现在前端日志查询主界面上";
         } catch (Exception e) {
             return "日志明细查询查询失败,请联系系统管理员, 异常信息: " + e.getMessage();
@@ -143,7 +146,7 @@ public class LogSearchTool {
         dto.setTargetBuckets(targetBuckets);
 
         try {
-            actionSseService.sendAction("sendSearchLogHistogramAction", dto);
+            actionSseService.sendAction(conversationId, "sendSearchLogHistogramAction", dto);
             return "日志时间分布查询结果已经生成，结果已经呈现在前端日志查询主界面上";
         } catch (Exception e) {
             return "日志时间分布查询失败,请联系系统管理员, 异常信息: " + e.getMessage();
@@ -196,7 +199,7 @@ public class LogSearchTool {
         dto.setTimeRange(timeRange);
 
         try {
-            actionSseService.sendAction("sendSearchFieldDistributionsAction", dto);
+            actionSseService.sendAction(conversationId, "sendSearchLogHistogramAction", dto);
             return "字段分布查询结果已经生成，结果已经呈现在前端日志查询主界面上";
         } catch (Exception e) {
             return "字段分布查询失败,请联系系统管理员, 异常信息: " + e.getMessage();

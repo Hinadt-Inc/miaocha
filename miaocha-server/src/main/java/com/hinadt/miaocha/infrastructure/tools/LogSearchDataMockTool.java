@@ -1,4 +1,4 @@
-package com.hinadt.miaocha.common.tools;
+package com.hinadt.miaocha.infrastructure.tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.*;
@@ -21,7 +21,7 @@ import java.util.concurrent.*;
  *
  * <p>独立的命令行工具，用于向指定的 Doris 实例生成测试日志数据
  *
- * <p>使用方法： java -cp ".:lib/*" com.hinadt.miaocha.common.tools.LogSearchDataMockTool \
+ * <p>使用方法： java -cp ".:lib/*" com.hinadt.miaocha.infrastructure.tools.LogSearchDataMockTool \
  * --host=127.0.0.1 --port=9030 --user=root --password= --count=10000
  *
  * <p>功能特性： - 自动创建数据库和表结构 - 多线程生成JSON数据文件 - 使用Stream Load高性能导入 - 支持自定义数据条数
@@ -830,8 +830,8 @@ public class LogSearchDataMockTool {
         System.out.println();
         System.out.println("用法:");
         System.out.println(
-                "  java -cp \".:lib/*\" com.hinadt.miaocha.common.tools.LogSearchDataMockTool"
-                        + " [选项]");
+                "  java -cp \".:lib/*\""
+                        + " com.hinadt.miaocha.infrastructure.tools.LogSearchDataMockTool [选项]");
         System.out.println();
         System.out.println("选项:");
         System.out.println("  --host=HOST       Doris服务器地址 (必需)");
@@ -844,7 +844,8 @@ public class LogSearchDataMockTool {
         System.out.println();
         System.out.println("示例:");
         System.out.println(
-                "  java -cp \".:lib/*\" com.hinadt.miaocha.common.tools.LogSearchDataMockTool \\");
+                "  java -cp \".:lib/*\""
+                        + " com.hinadt.miaocha.infrastructure.tools.LogSearchDataMockTool \\");
         System.out.println(
                 "    --host=127.0.0.1 --port=9030 --user=root --password= --count=10000"
                         + " --stream-load-port=8040");
