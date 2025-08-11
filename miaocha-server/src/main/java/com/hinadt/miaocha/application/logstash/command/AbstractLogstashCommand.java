@@ -1,10 +1,10 @@
 package com.hinadt.miaocha.application.logstash.command;
 
 import com.hinadt.miaocha.application.logstash.path.LogstashDeployPathManager;
-import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import com.hinadt.miaocha.infrastructure.mapper.LogstashMachineMapper;
+import com.hinadt.miaocha.infrastructure.ssh.SshClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

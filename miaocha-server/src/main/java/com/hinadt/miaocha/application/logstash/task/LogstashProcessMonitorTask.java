@@ -2,13 +2,13 @@ package com.hinadt.miaocha.application.logstash.task;
 
 import com.hinadt.miaocha.application.logstash.enums.LogstashMachineState;
 import com.hinadt.miaocha.common.exception.SshException;
-import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.LogstashProcess;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import com.hinadt.miaocha.infrastructure.mapper.LogstashMachineMapper;
 import com.hinadt.miaocha.infrastructure.mapper.LogstashProcessMapper;
 import com.hinadt.miaocha.infrastructure.mapper.MachineMapper;
+import com.hinadt.miaocha.infrastructure.ssh.SshClient;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
