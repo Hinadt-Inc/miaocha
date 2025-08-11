@@ -9,14 +9,14 @@ import lombok.Data;
 @Schema(description = "AI会话请求")
 public class AISessionRequestDTO {
 
-    @Schema(description = "通道键", required = true)
+    @Schema(description = "通道键", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "channelKey不能为空")
     private String channelKey;
 
     @Schema(description = "会话ID，不传则创建新会话")
     private String conversationId;
 
-    @Schema(description = "用户输入的消息", required = true)
+    @Schema(description = "用户输入的消息", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "message不能为空")
     private String message;
 }
