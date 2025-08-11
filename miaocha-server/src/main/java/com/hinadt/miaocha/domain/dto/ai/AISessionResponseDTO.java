@@ -8,9 +8,6 @@ import lombok.Data;
 @Schema(description = "AI会话响应")
 public class AISessionResponseDTO {
 
-    @Schema(description = "通道键")
-    private String channelKey;
-
     @Schema(description = "会话ID")
     private String conversationId;
 

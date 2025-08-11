@@ -9,19 +9,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
-import org.springframework.ai.chat.messages.AssistantMessage;
-import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.ai.chat.prompt.SystemPromptTemplate;
-import org.springframework.ai.deepseek.DeepSeekChatModel;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.memory.MessageWindowChatMemory;
+import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.http.MediaType;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -64,18 +58,21 @@ public class AISessionEndpoint {
             - 不跳过任何步骤，不改变执行顺序
             """;
 
-    private final DeepSeekChatModel deepSeekChatModel;
+    private final ChatClient chatClient;
     private final LogSearchTool logSearchTool;
     private final ModuleTool moduleTool;
-    private final Map<String, List<Message>> conversations = new ConcurrentHashMap<>();
 
     public AISessionEndpoint(
-            DeepSeekChatModel deepSeekChatModel,
-            LogSearchTool logSearchTool,
-            ModuleTool moduleTool) {
-        this.deepSeekChatModel = deepSeekChatModel;
+            ChatModel chatModel, LogSearchTool logSearchTool, ModuleTool moduleTool) {
         this.logSearchTool = logSearchTool;
         this.moduleTool = moduleTool;
+        ChatMemory chatMemory = MessageWindowChatMemory.builder().build();
+        this.chatClient =
+                ChatClient.builder(chatModel)
+                        .defaultAdvisors(
+                                MessageChatMemoryAdvisor.builder(chatMemory).build(),
+                                SimpleLoggerAdvisor.builder().build())
+                        .build();
     }
 
     /** 与AI助手对话（流式输出） */
@@ -85,44 +82,27 @@ public class AISessionEndpoint {
             @Parameter(description = "会话请求", required = true) @Valid @RequestBody
                     AISessionRequestDTO request) {
 
-        String channelKey = request.getChannelKey();
-        String conversationId = request.getConversationId();
-        if (!StringUtils.hasText(conversationId)) {
-            conversationId = UUID.randomUUID().toString();
-        }
+        String conversationId =
+                StringUtils.hasText(request.getConversationId())
+                        ? request.getConversationId()
+                        : UUID.randomUUID().toString();
 
-        AISessionContext.set(channelKey, conversationId);
-        List<Message> history =
-                conversations.computeIfAbsent(
-                        conversationId,
-                        id -> {
-                            List<Message> list = new ArrayList<>();
-                            list.add(new SystemPromptTemplate(SYSTEM_PROMPT).createMessage());
-                            return list;
-                        });
-
-        history.add(new UserMessage(request.getMessage()));
-
-        Prompt prompt = new Prompt(history);
-
-        ChatClient client =
-                ChatClient.builder(deepSeekChatModel)
-                        .defaultAdvisors(SimpleLoggerAdvisor.builder().build())
-                        .build();
-
+        AISessionContext.set(conversationId);
         SseEmitter emitter = new SseEmitter(0L);
         AISessionContext.setEmitter(emitter);
-        StringBuilder finalContent = new StringBuilder();
 
-        String finalConversationId = conversationId;
-        client.prompt(prompt).tools(new DateTimeTools(), logSearchTool, moduleTool).stream()
+        chatClient
+                .prompt()
+                .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, conversationId))
+                .system(SYSTEM_PROMPT)
+                .user(request.getMessage())
+                .tools(new DateTimeTools(), logSearchTool, moduleTool)
+                .stream()
                 .content()
                 .doOnNext(
                         chunk -> {
-                            finalContent.append(chunk);
                             AISessionResponseDTO dto = new AISessionResponseDTO();
-                            dto.setChannelKey(channelKey);
-                            dto.setConversationId(finalConversationId);
+                            dto.setConversationId(conversationId);
                             dto.setContent(chunk);
                             try {
                                 emitter.send(SseEmitter.event().name("message").data(dto));
@@ -131,11 +111,7 @@ public class AISessionEndpoint {
                             }
                         })
                 .doOnError(emitter::completeWithError)
-                .doOnComplete(
-                        () -> {
-                            history.add(new AssistantMessage(finalContent.toString()));
-                            emitter.complete();
-                        })
+                .doOnComplete(emitter::complete)
                 .subscribe();
 
         emitter.onCompletion(AISessionContext::clear);
