@@ -151,9 +151,6 @@ public class PushWebSocketHandler implements WebSocketHandler {
             userId = String.valueOf(user.getId());
         }
 
-        // conversationId 由服务端生成并返回给前端
-        String conversationId = generateConversationId();
-
         if (!StringUtils.hasText(clientId) || !StringUtils.hasText(pageId)) {
             sendError(session, MESSAGE_REGISTER, "clientId/pageId required");
             return;
@@ -173,7 +170,6 @@ public class PushWebSocketHandler implements WebSocketHandler {
         registry.setUserId(userId);
         registry.setClientId(clientId);
         registry.setPageId(pageId);
-        registry.setConversationId(conversationId);
         registry.setNodeId(nodeIdProvider.getNodeId());
         registry.setWsConnId(wsConnId);
         registry.setStatus(WebSocketChannelStatus.ONLINE.name());
@@ -195,19 +191,16 @@ public class PushWebSocketHandler implements WebSocketHandler {
                         .createObjectNode()
                         .put(MESSAGE_TYPE, "REGISTERED")
                         .put("channelKey", channelKey)
-                        .put("conversationId", conversationId)
                         .put("nodeId", nodeIdProvider.getNodeId())
                         .put("wsConnId", wsConnId));
 
         log.info(
-                "[WS] REGISTER ok: channelKey={}, wsConnId={}, userId={}, clientId={}, pageId={},"
-                        + " conversationId={}",
+                "[WS] REGISTER ok: channelKey={}, wsConnId={}, userId={}, clientId={}, pageId={}",
                 channelKey,
                 wsConnId,
                 userId,
                 clientId,
-                pageId,
-                conversationId);
+                pageId);
     }
 
     private void handlePing(WebSocketSession session) {
@@ -309,10 +302,6 @@ public class PushWebSocketHandler implements WebSocketHandler {
 
     private static String shortId() {
         return UUID.randomUUID().toString().substring(0, 8);
-    }
-
-    private static String generateConversationId() {
-        return UUID.randomUUID().toString();
     }
 
     private static String sha256Hex(String input) {
