@@ -302,7 +302,7 @@ jobs:
             echo "❌ Node.js依赖缓存未命中，将在构建后保存"
             echo "NODEMODULES_CACHE_HIT=false" >> $GITHUB_ENV
           fi
-          
+
       - name: Verify Java and Maven
         run: |
           echo "🔍 验证Java和Maven安装状态..."
@@ -420,6 +420,7 @@ jobs:
           # 设置环境变量
           export PR_NUMBER=${{ github.event.pull_request.number }}
           export DOCKER_IMAGE="${{ steps.docker-tag.outputs.latest_image }}"
+          export DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}"
 
           # 执行部署
           chmod +x scripts/github/k8s/deploy.sh
