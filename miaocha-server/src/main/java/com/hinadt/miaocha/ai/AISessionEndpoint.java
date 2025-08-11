@@ -3,14 +3,16 @@ package com.hinadt.miaocha.ai;
 import com.hinadt.miaocha.ai.tool.DateTimeTools;
 import com.hinadt.miaocha.ai.tool.LogSearchTool;
 import com.hinadt.miaocha.ai.tool.ModuleTool;
-import com.hinadt.miaocha.domain.dto.ApiResponse;
 import com.hinadt.miaocha.domain.dto.ai.AISessionRequestDTO;
 import com.hinadt.miaocha.domain.dto.ai.AISessionResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
@@ -20,11 +22,13 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.ai.deepseek.DeepSeekChatModel;
+import org.springframework.http.MediaType;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /** AI 会话接口 */
 @RestController
@@ -74,10 +78,10 @@ public class AISessionEndpoint {
         this.moduleTool = moduleTool;
     }
 
-    /** 与AI助手对话 */
-    @PostMapping("/session")
-    @Operation(summary = "AI 对话", description = "与AI助手进行对话，返回AI回复内容")
-    public ApiResponse<AISessionResponseDTO> session(
+    /** 与AI助手对话（流式输出） */
+    @PostMapping(value = "/session", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "AI 对话", description = "与AI助手进行对话，流式返回AI回复内容")
+    public SseEmitter session(
             @Parameter(description = "会话请求", required = true) @Valid @RequestBody
                     AISessionRequestDTO request) {
 
@@ -88,41 +92,54 @@ public class AISessionEndpoint {
         }
 
         AISessionContext.set(channelKey, conversationId);
-        try {
-            List<Message> history =
-                    conversations.computeIfAbsent(
-                            conversationId,
-                            id -> {
-                                List<Message> list = new ArrayList<>();
-                                list.add(new SystemPromptTemplate(SYSTEM_PROMPT).createMessage());
-                                return list;
-                            });
+        List<Message> history =
+                conversations.computeIfAbsent(
+                        conversationId,
+                        id -> {
+                            List<Message> list = new ArrayList<>();
+                            list.add(new SystemPromptTemplate(SYSTEM_PROMPT).createMessage());
+                            return list;
+                        });
 
-            history.add(new UserMessage(request.getMessage()));
+        history.add(new UserMessage(request.getMessage()));
 
-            Prompt prompt = new Prompt(history);
+        Prompt prompt = new Prompt(history);
 
-            ChatClient client =
-                    ChatClient.builder(deepSeekChatModel)
-                            .defaultAdvisors(SimpleLoggerAdvisor.builder().build())
-                            .build();
+        ChatClient client =
+                ChatClient.builder(deepSeekChatModel)
+                        .defaultAdvisors(SimpleLoggerAdvisor.builder().build())
+                        .build();
 
-            String content =
-                    client.prompt(prompt)
-                            .tools(new DateTimeTools(), logSearchTool, moduleTool)
-                            .call()
-                            .content();
+        SseEmitter emitter = new SseEmitter(0L);
+        AISessionContext.setEmitter(emitter);
+        StringBuilder finalContent = new StringBuilder();
 
-            history.add(new AssistantMessage(content));
+        String finalConversationId = conversationId;
+        client.prompt(prompt).tools(new DateTimeTools(), logSearchTool, moduleTool).stream()
+                .content()
+                .doOnNext(
+                        chunk -> {
+                            finalContent.append(chunk);
+                            AISessionResponseDTO dto = new AISessionResponseDTO();
+                            dto.setChannelKey(channelKey);
+                            dto.setConversationId(finalConversationId);
+                            dto.setContent(chunk);
+                            try {
+                                emitter.send(SseEmitter.event().name("message").data(dto));
+                            } catch (Exception e) {
+                                emitter.completeWithError(e);
+                            }
+                        })
+                .doOnError(emitter::completeWithError)
+                .doOnComplete(
+                        () -> {
+                            history.add(new AssistantMessage(finalContent.toString()));
+                            emitter.complete();
+                        })
+                .subscribe();
 
-            AISessionResponseDTO dto = new AISessionResponseDTO();
-            dto.setChannelKey(channelKey);
-            dto.setConversationId(conversationId);
-            dto.setContent(content);
-
-            return ApiResponse.success(dto);
-        } finally {
-            AISessionContext.clear();
-        }
+        emitter.onCompletion(AISessionContext::clear);
+        emitter.onTimeout(AISessionContext::clear);
+        return emitter;
     }
 }
