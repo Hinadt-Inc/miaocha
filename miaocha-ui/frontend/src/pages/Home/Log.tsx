@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Splitter } from 'antd';
-import HistogramChart from './HistogramChart';
+import HistogramChart from './HistogramChart/index';
 import styles from './Log.module.less';
 import VirtualTable from './VirtualTable/index';
 interface IProps {
