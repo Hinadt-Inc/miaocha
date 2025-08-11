@@ -2,6 +2,7 @@ package com.hinadt.miaocha.ai.push;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hinadt.miaocha.domain.dto.user.UserDTO;
 import com.hinadt.miaocha.domain.entity.ChannelRegistry;
 import com.hinadt.miaocha.domain.enums.WebSocketChannelStatus;
 import com.hinadt.miaocha.infrastructure.NodeIdProvider;
@@ -141,7 +142,11 @@ public class PushWebSocketHandler implements WebSocketHandler {
     private void handleRegister(WebSocketSession session, JsonNode root) {
         String clientId = getText(root, "clientId");
         String pageId = getText(root, "pageId");
-        String userId = getText(root, "userId");
+
+        String userId = null;
+        if (session.getPrincipal() instanceof UserDTO user) {
+            userId = String.valueOf(user.getId());
+        }
 
         String conversationId = getText(root, "conversationId");
 
