@@ -43,6 +43,9 @@ spec:
               value: "/opt/logstash/logstash-9.0.0-linux-x86_64.tar.gz"
             - name: LOGSTASH_DEPLOY_DIR
               value: "logstash"
+            - name: DEEPSEEK_API_KEY
+              value: "${DEEPSEEK_API_KEY}"
+
           ports:
             - containerPort: 8081
               name: http
