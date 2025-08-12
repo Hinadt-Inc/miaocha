@@ -27,3 +27,11 @@
 # Additional Rules
 1. In addition to the above rules, you must also follow the rules in the `.cursor/rules` folder that apply to Cursor.
 2. If the above rules conflict with other files’ rules, follow the rules in this document.
+
+# GitHub PR & ISSUE Rules
+
+1. Always use **English** for PR and ISSUE.
+2. Follow the templates:
+    - ISSUE → `.github/ISSUE_TEMPLATE`
+    - PR → `.github/PULL_REQUEST_TEMPLATE`
+3. Use **precise and concise** wording; avoid redundancy.
