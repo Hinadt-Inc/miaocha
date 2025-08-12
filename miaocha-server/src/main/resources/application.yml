@@ -31,10 +31,9 @@ spring:
     properties:
       mail:
         smtp:
+          ssl:
+            enable: ${SMTP_SSL:false}
           auth: ${SMTP_AUTH:false}
-          starttls:
-            enable: ${SMTP_STARTTLS:false}
-
 
   ai:
     deepseek:
