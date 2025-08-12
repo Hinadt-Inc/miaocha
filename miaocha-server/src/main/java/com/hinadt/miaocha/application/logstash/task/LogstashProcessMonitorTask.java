@@ -202,15 +202,15 @@ public class LogstashProcessMonitorTask {
                 return buildDeadInstance(logstashMachine, machineInfo, pid);
             } else {
                 log.debug(
-                        "Process [{}] on [{}] is running. PID={}",
-                        processId,
+                        "Process instance [{}] on [{}] is running. PID={}",
+                        logstashMachineId,
                         machineInfo.getIp(),
                         pid);
             }
         } catch (Exception e) {
             log.error(
-                    "Error checking process [{}] on [{}]: {}",
-                    processId,
+                    "Error checking Process instance [{}] on [{}]: {}",
+                    logstashMachineId,
                     machineInfo.getIp(),
                     e.getMessage(),
                     e);
