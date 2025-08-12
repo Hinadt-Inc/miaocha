@@ -23,6 +23,18 @@ spring:
     locations: classpath:db/migration/v1,classpath:db/migration/v2
     table: flyway_schema_history
 
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:25}
+    username: ${SMTP_USER:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:false}
+          starttls:
+            enable: ${SMTP_STARTTLS:false}
+
 
   ai:
     deepseek:
@@ -77,6 +89,11 @@ miaocha:
       read-only: false
       isolate-internal-queries: false
 
+  alerts:
+    mail:
+      enabled: ${ALERT_MAIL_ENABLED:false}
+      from: ${ALERT_MAIL_FROM:}
+
 
 # Logstash配置
 logstash:
@@ -86,6 +103,5 @@ logstash:
   deploy-dir: ${LOGSTASH_DEPLOY_DIR:/opt/logstash}
   # 进程监控配置
   monitor:
-    # 监控间隔时间（毫秒），默认10分钟
-    interval: 600000
-
+    # 监控间隔时间（毫秒），默认5分钟
+    interval: 300000
