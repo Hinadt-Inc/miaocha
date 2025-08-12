@@ -27,6 +27,7 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
   // 状态管理
   const [activeColumns, setActiveColumns] = useState<string[]>([]);
   const [searchText, setSearchText] = useState<string>('');
+  const [isFirstLoad, setIsFirstLoad] = useState<boolean>(true);
 
   // 自定义Hooks
   const { favoriteModule, toggleFavorite } = useFavoriteModule();
@@ -139,6 +140,12 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
 
   // 监听搜索条件变化，重新获取分布数据
   useEffect(() => {
+    // 页面第一次加载时不调用接口
+    if (isFirstLoad) {
+      setIsFirstLoad(false);
+      return;
+    }
+
     const savedSearchParams = localStorage.getItem('searchBarParams');
     if (savedSearchParams) {
       const parsedParams = JSON.parse(savedSearchParams);
@@ -164,6 +171,7 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
     searchParams.startTime,
     searchParams.endTime,
     getDistributionWithSearchBar,
+    isFirstLoad,
   ]);
 
   // 处理字段切换

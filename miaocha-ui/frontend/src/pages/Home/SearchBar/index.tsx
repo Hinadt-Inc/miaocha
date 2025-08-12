@@ -51,6 +51,7 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
   const searchBarRef = useRef<HTMLDivElement>(null);
   const [initialized] = useState(true);
   const timeUpdateFromParamsRef = useRef(false); // 标记时间更新是否来自外部params
+  const [isFirstLoad, setIsFirstLoad] = useState<boolean>(true); // 标记是否第一次加载
 
   // 使用自定义钩子
   const { searchState, changeKeyword, changeSql, clearInputs } = useSearchInput();
@@ -135,6 +136,12 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
     // 等待 commonColumns 准备好后再执行（页面初始化时需要等待，后端说模块下一定会有普通字段）
     if (commonColumns.length === 0) return;
 
+    // 页面第一次加载时不调用getDistributionWithSearchBar接口
+    const shouldCallDistribution = !isFirstLoad;
+    if (isFirstLoad) {
+      setIsFirstLoad(false);
+    }
+
     const fieldsHasDot = activeColumns?.some((item: any) => item.includes('.'));
     const resSortConfig = sortConfig?.filter((item) => !item.fieldName.includes('.'));
 
@@ -162,8 +169,8 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
       onSqlsChange(sqls);
     }
 
-    // 调用Sider组件的getDistributionWithSearchBar方法
-    if (getDistributionWithSearchBar) {
+    // 调用Sider组件的getDistributionWithSearchBar方法，但第一次加载时跳过
+    if (shouldCallDistribution && getDistributionWithSearchBar) {
       getDistributionWithSearchBar();
     }
   }, [
@@ -174,6 +181,7 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
     commonColumns,
     keywords,
     sqls,
+    isFirstLoad,
     // 移除了timeState.timeOption依赖，避免时间变化引起的循环
     // 移除了可能导致循环的依赖：onSearch, getDistributionWithSearchBar, searchParams, onSqlsChange
   ]);

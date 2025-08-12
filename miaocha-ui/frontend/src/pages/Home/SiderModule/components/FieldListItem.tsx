@@ -80,19 +80,12 @@ const FieldListItem: React.FC<IFieldListItemProps> = memo(
         const { columnName = '' } = column;
         const { value } = son;
 
-        // 首先更新主要的搜索条件，这会触发主要数据请求（日志列表、时间分布图等）
+        // 更新主要的搜索条件，这会触发主要数据请求（日志列表、时间分布图等）
         // 同时也会同步更新localStorage中的searchBarParams
+        // Sider组件会通过useEffect自动监听searchParams变化并重新获取分布数据，无需手动调用
         setWhereSqlsFromSider(flag, columnName, value);
-
-        // 延迟触发该字段的分布数据重新查询
-        // 现在localStorage已经同步更新，所以分布查询能获取到正确的whereSqls条件
-        setTimeout(() => {
-          // 重新查询该字段的分布数据，不传入额外的SQL条件
-          // 因为新的过滤条件已经通过setWhereSqlsFromSider同步到localStorage中
-          onDistribution(columnName, activeColumns, '');
-        }, 100); // 减少延迟时间，因为localStorage同步更新是立即的
       },
-      [setWhereSqlsFromSider, column, onDistribution, activeColumns],
+      [setWhereSqlsFromSider, column],
     );
 
     // 如果是固定字段，不显示
