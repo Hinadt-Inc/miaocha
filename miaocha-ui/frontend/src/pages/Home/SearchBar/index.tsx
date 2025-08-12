@@ -145,15 +145,31 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
     const fieldsHasDot = activeColumns?.some((item: any) => item.includes('.'));
     const resSortConfig = sortConfig?.filter((item) => !item.fieldName.includes('.'));
 
-    const params = {
-      ...searchParams,
-      ...(keywords.length > 0 && { keywords }),
-      ...(sqls.length > 0 && { whereSqls: sqls }),
+    // 如果activeColumns为空或未定义，使用commonColumns作为默认值
+    let effectiveFields = commonColumns;
+    if (activeColumns && activeColumns.length > 0) {
+      effectiveFields = fieldsHasDot ? [...commonColumns, ...activeColumns] : activeColumns;
+    }
+
+    // 先构建基础参数，避免searchParams中的空fields覆盖我们的effectiveFields
+    const baseParams = {
+      datasourceId: searchParams.datasourceId,
+      module: searchParams.module,
+      startTime: searchParams.startTime,
+      endTime: searchParams.endTime,
+      timeRange: searchParams.timeRange,
+      timeType: searchParams.timeType,
+      relativeStartOption: searchParams.relativeStartOption,
+      relativeEndOption: searchParams.relativeEndOption,
       timeGrouping: timeState.timeGroup,
       offset: 0,
-      fields: fieldsHasDot ? [...commonColumns, ...(activeColumns || [])] : commonColumns,
+      fields: effectiveFields, // 确保使用我们计算的effectiveFields
       sortFields: resSortConfig || [],
+      ...(keywords.length > 0 && { keywords }),
+      ...(sqls.length > 0 && { whereSqls: sqls }),
     };
+
+    const params = baseParams;
 
     if (keywords.length === 0) {
       delete params.keywords;
@@ -200,10 +216,16 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
     const fieldsHasDot = activeColumns?.some((item: any) => item.includes('.'));
     const resSortConfig = sortConfig?.filter((item) => !item.fieldName.includes('.'));
 
-    const params = {
-      ...searchParams,
-      ...(keywords.length > 0 && { keywords }),
-      ...(sqls.length > 0 && { whereSqls: sqls }),
+    // 如果activeColumns为空或未定义，使用commonColumns作为默认值
+    let effectiveFields = commonColumns;
+    if (activeColumns && activeColumns.length > 0) {
+      effectiveFields = fieldsHasDot ? [...commonColumns, ...activeColumns] : activeColumns;
+    }
+
+    // 先构建基础参数，避免searchParams中的空fields覆盖我们的effectiveFields
+    const baseParams = {
+      datasourceId: searchParams.datasourceId,
+      module: searchParams.module,
       startTime: dayjs(timeState.timeOption?.range?.[0]).format(DATE_FORMAT_THOUSOND),
       endTime: dayjs(timeState.timeOption?.range?.[1]).format(DATE_FORMAT_THOUSOND),
       timeRange: timeState.timeOption?.value,
@@ -216,9 +238,13 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
         }),
       timeGrouping: timeState.timeGroup,
       offset: 0,
-      fields: fieldsHasDot ? [...commonColumns, ...(activeColumns || [])] : commonColumns,
+      fields: effectiveFields, // 确保使用我们计算的effectiveFields
       sortFields: resSortConfig || [],
+      ...(keywords.length > 0 && { keywords }),
+      ...(sqls.length > 0 && { whereSqls: sqls }),
     };
+
+    const params = baseParams;
 
     if (keywords.length === 0) {
       delete params.keywords;
@@ -356,6 +382,7 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
                 endTime: timeState.timeOption.range?.[1],
                 timeGrouping: timeState.timeGroup,
                 module: searchParams.module,
+                fields: activeColumns, // 使用用户实际选择的字段列表
                 sortConfig,
                 timeType: timeState.timeOption?.type, // 添加时间类型信息
                 ...(timeState.timeOption?.type === 'relative' &&

@@ -21,6 +21,7 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
     moduleQueryConfig,
     onCommonColumnsChange,
     selectedModule: externalSelectedModule,
+    activeColumns: externalActiveColumns,
     onColumnsLoaded,
   } = props;
 
@@ -31,11 +32,13 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
 
   // 自定义Hooks
   const { favoriteModule, toggleFavorite } = useFavoriteModule();
+
   const { columns, getColumns, toggleColumn } = useColumns(
     moduleQueryConfig,
     onChangeColumns,
     onCommonColumnsChange,
     onColumnsLoaded,
+    externalActiveColumns, // 传递外部activeColumns
   );
   const { selectedModule, setSelectedModule, lastModuleRef, changeModules } = useModuleSelection(
     modules,
@@ -60,6 +63,14 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
       setHasCalledGetColumns('');
     }
   }, [externalSelectedModule, selectedModule, setSelectedModule]);
+
+  // 同步外部传入的activeColumns
+  useEffect(() => {
+    if (externalActiveColumns && JSON.stringify(externalActiveColumns) !== JSON.stringify(activeColumns)) {
+      console.log('Sider同步外部字段:', externalActiveColumns);
+      setActiveColumns(externalActiveColumns);
+    }
+  }, [externalActiveColumns, activeColumns]);
 
   // 监听searchParams.module变化
   useEffect(() => {
@@ -185,6 +196,24 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
     },
     [toggleColumn, onActiveColumnsChange],
   );
+
+  // 当外部activeColumns变化时，检查同步状态（暂时只记录，避免无限循环）
+  useEffect(() => {
+    if (externalActiveColumns && externalActiveColumns.length > 0 && columns.length > 0) {
+      const currentSelectedColumns = columns
+        .filter((col) => col.selected)
+        .map((col) => col.columnName)
+        .filter(Boolean) as string[];
+
+      const hasAllExpected = externalActiveColumns.every((field) => currentSelectedColumns.includes(field));
+      const hasOnlyExpected = currentSelectedColumns.every((field) => externalActiveColumns.includes(field));
+      const needSync = !hasAllExpected || !hasOnlyExpected;
+
+      if (needSync) {
+        console.log('Sider状态不同步 - 外部:', externalActiveColumns, '内部:', currentSelectedColumns);
+      }
+    }
+  }, [externalActiveColumns, columns]);
 
   // 处理收藏切换
   const handleToggleFavorite = useCallback(

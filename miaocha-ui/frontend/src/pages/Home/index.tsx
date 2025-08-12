@@ -325,6 +325,7 @@ const HomePage = () => {
       moduleQueryConfig,
       onCommonColumnsChange: state.setCommonColumns,
       selectedModule,
+      activeColumns: state.activeColumns, // 传递activeColumns用于同步左侧已选字段显示
       onColumnsLoaded: setColumnsLoaded, // 传递columns加载完成回调
     }),
     [
@@ -332,6 +333,7 @@ const HomePage = () => {
       moduleOptions,
       moduleQueryConfig,
       selectedModule,
+      state.activeColumns, // 添加activeColumns依赖
       // 移除了函数依赖，它们应该是稳定的
     ],
   );

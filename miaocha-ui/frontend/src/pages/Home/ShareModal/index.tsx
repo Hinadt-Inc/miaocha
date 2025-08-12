@@ -51,6 +51,11 @@ const ShareModal: React.FC<ShareModalProps> = ({ visible, onClose, searchParams 
       params.set('timeGrouping', searchParams.timeGrouping);
     }
 
+    // 添加字段信息到分享链接
+    if (searchParams.fields?.length > 0) {
+      params.set('fields', JSON.stringify(searchParams.fields));
+    }
+
     return `${baseUrl}?${params.toString()}`;
   };
 

@@ -71,6 +71,7 @@ export interface ISharedParams {
   endTime?: string;
   module?: string;
   timeGrouping?: string;
+  fields?: string[];
   timeType?: 'relative' | 'absolute' | 'quick';
   relativeStartOption?: IRelativeTime;
   relativeEndOption?: IRelativeTime;

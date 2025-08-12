@@ -62,12 +62,13 @@ export const useUrlParams = (
         const endTime = urlSearchParams.get(URL_PARAMS.END_TIME);
         const module = urlSearchParams.get(URL_PARAMS.MODULE);
         const timeGrouping = urlSearchParams.get(URL_PARAMS.TIME_GROUPING);
+        const fields = urlSearchParams.get('fields');
         const timeType = urlSearchParams.get('timeType');
         const relativeStartOption = urlSearchParams.get('relativeStartOption');
         const relativeEndOption = urlSearchParams.get('relativeEndOption');
 
         // 生成当前URL参数的唯一标识
-        const currentUrlParams = `${keywords || ''}-${whereSqls || ''}-${timeRange || ''}-${startTime || ''}-${endTime || ''}-${module || ''}-${timeGrouping || ''}-${timeType || ''}-${relativeStartOption || ''}-${relativeEndOption || ''}`;
+        const currentUrlParams = `${keywords || ''}-${whereSqls || ''}-${timeRange || ''}-${startTime || ''}-${endTime || ''}-${module || ''}-${timeGrouping || ''}-${fields || ''}-${timeType || ''}-${relativeStartOption || ''}-${relativeEndOption || ''}`;
 
         // 如果已经处理过相同的URL参数，则跳过
         if (processedUrlRef.current === currentUrlParams) {
@@ -82,6 +83,7 @@ export const useUrlParams = (
           startTime ||
           endTime ||
           module ||
+          fields ||
           (timeType === 'relative' && relativeStartOption && relativeEndOption)
         ) {
           const parsedParams: any = {};
@@ -99,6 +101,14 @@ export const useUrlParams = (
               parsedParams.whereSqls = JSON.parse(whereSqls);
             } catch (e) {
               console.error('解析whereSqls参数失败:', e);
+            }
+          }
+
+          if (fields) {
+            try {
+              parsedParams.fields = JSON.parse(fields);
+            } catch (e) {
+              console.error('解析fields参数失败:', e);
             }
           }
 
@@ -185,7 +195,8 @@ export const useUrlParams = (
   // 清理URL参数的工具函数
   const cleanupUrlParams = () => {
     const newUrl = new URL(window.location.href);
-    URL_PARAMS_TO_CLEAN.forEach((param) => {
+    const paramsToClean = [...URL_PARAMS_TO_CLEAN, 'fields'];
+    paramsToClean.forEach((param) => {
       newUrl.searchParams.delete(param);
     });
     window.history.replaceState({}, '', newUrl.toString());

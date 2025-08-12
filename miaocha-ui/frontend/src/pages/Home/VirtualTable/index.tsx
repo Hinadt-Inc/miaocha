@@ -195,7 +195,7 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
           return undefined;
         })(),
         ellipsis: false,
-        hidden: false, // 始终显示_source列
+        hidden: _columns.length > 0, // 当有其他字段时隐藏_source列
         render: (_: any, record: ILogColumnsResponse) => {
           const whereValues = whereSqlsFromSider.map((item) => String(item.value)).filter(Boolean);
           const allKeywords = Array.from(new Set([...keyWordsFormat, ...whereValues])).filter(Boolean);
@@ -429,26 +429,28 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
 
   // 包装列头，添加操作按钮
   const enhancedColumns = !hasSourceColumn
-    ? columns.map((col, idx) => {
-        if (col.dataIndex === timeField) {
-          return col;
-        }
-        return {
-          ...col,
-          title: (
-            <ColumnHeader
-              title={col.title}
-              colIndex={idx}
-              onDelete={handleDeleteColumn}
-              onMoveLeft={handleMoveLeft}
-              onMoveRight={handleMoveRight}
-              showActions={true}
-              columns={columns}
-            />
-          ),
-        };
-      })
-    : columns;
+    ? columns
+        .filter((col) => !col.hidden) // 过滤掉hidden的列
+        .map((col, idx) => {
+          if (col.dataIndex === timeField) {
+            return col;
+          }
+          return {
+            ...col,
+            title: (
+              <ColumnHeader
+                title={col.title}
+                colIndex={idx}
+                onDelete={handleDeleteColumn}
+                onMoveLeft={handleMoveLeft}
+                onMoveRight={handleMoveRight}
+                showActions={true}
+                columns={columns}
+              />
+            ),
+          };
+        })
+    : columns.filter((col) => !col.hidden); // 过滤掉hidden的列
 
   return (
     <div className={styles.virtualLayout} ref={containerRef}>

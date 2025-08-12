@@ -43,6 +43,7 @@ export const useColumns = (
   onChangeColumns?: (params: ILogColumnsResponse[]) => void,
   onCommonColumnsChange?: (commonColumns: string[]) => void,
   onColumnsLoaded?: (loaded: boolean) => void,
+  externalActiveColumns?: string[], // 新增：外部传入的活跃字段
 ) => {
   const [columns, setColumns] = useState<ILogColumnsResponse[]>([]);
 
@@ -103,7 +104,37 @@ export const useColumns = (
       console.log('✅ 最终确定的时间字段:', actualTimeField);
 
       const processedColumns = res?.map((column) => {
-        if (column.columnName === actualTimeField) {
+        // 确定时间字段应该始终被选中
+        const isTimeField = column.columnName === actualTimeField;
+
+        console.log('处理字段:', column.columnName, {
+          isTimeField,
+          actualTimeField,
+          externalActiveColumns,
+          isInActiveColumns: externalActiveColumns?.includes(column.columnName || ''),
+        });
+
+        // 如果有外部传入的activeColumns，优先使用它来决定字段的选中状态
+        if (externalActiveColumns && externalActiveColumns.length > 0) {
+          const isInActiveColumns = externalActiveColumns.includes(column.columnName || '');
+          // 时间字段或在activeColumns中的字段都应该被选中
+          const shouldBeSelected = isTimeField || isInActiveColumns;
+
+          console.log('字段选中判断:', column.columnName, {
+            isTimeField,
+            isInActiveColumns,
+            shouldBeSelected,
+          });
+
+          if (shouldBeSelected) {
+            console.log('✅ 设置字段为选中:', column.columnName, isTimeField ? '(时间字段)' : '(外部字段)');
+            return { ...column, selected: true, _createTime: new Date().getTime() };
+          }
+          return { ...column, selected: false };
+        }
+
+        // 如果没有外部activeColumns，则使用默认逻辑（只选中时间字段）
+        if (isTimeField) {
           console.log('设置时间字段为选中:', column.columnName);
           return { ...column, selected: true, _createTime: new Date().getTime() };
         }
@@ -127,6 +158,18 @@ export const useColumns = (
 
       // 初始加载时也通知父组件列变化
       if (onChangeColumns) {
+        const selectedColumns = processedColumns.filter((col) => col.selected);
+        console.log(
+          'useColumns onSuccess - 选中的字段:',
+          selectedColumns.map((col) => col.columnName),
+        );
+        console.log(
+          'useColumns onSuccess - 即将调用onChangeColumns，传递的processedColumns:',
+          processedColumns.map((col) => ({
+            name: col.columnName,
+            selected: col.selected,
+          })),
+        );
         onChangeColumns(processedColumns);
       }
 

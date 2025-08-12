@@ -14,6 +14,7 @@ export interface ISiderProps {
   moduleQueryConfig?: any; // 模块查询配置
   onCommonColumnsChange?: (commonColumns: string[]) => void; // 普通字段变化回调函数
   selectedModule?: string; // 外部传入的选中模块，用于同步状态
+  activeColumns?: string[]; // 外部传入的活跃字段，用于同步状态
   onColumnsLoaded?: (loaded: boolean) => void; // columns加载完成回调
 }
 

@@ -177,8 +177,16 @@ export const useBusinessLogic = (
                 timeGrouping: sharedParams.timeGrouping || prev.timeGrouping,
                 keywords: sharedParams.keywords || [],
                 whereSqls: sharedParams.whereSqls || [],
+                // 只有当分享参数中明确包含fields时才设置，否则保持undefined让SearchBar处理默认值
+                ...(sharedParams.fields && sharedParams.fields.length > 0 && { fields: sharedParams.fields }),
                 offset: 0,
               }));
+
+              // 如果有fields参数，需要立即更新activeColumns状态
+              if (sharedParams.fields && sharedParams.fields.length > 0) {
+                console.log('恢复分享字段:', sharedParams.fields);
+                setActiveColumns(sharedParams.fields);
+              }
             } else {
               console.warn('未找到对应的模块选项:', sharedParams.module, moduleOptions);
             }
@@ -204,6 +212,28 @@ export const useBusinessLogic = (
     loadingQueryConfig,
     columnsLoaded,
   ]);
+
+  // 专门处理字段恢复的useEffect - 在columns加载完成后恢复logTableColumns的selected状态
+  useEffect(() => {
+    // 只有在已应用分享参数、有sharedParams.fields并且columns已加载的情况下才进行字段恢复
+    if (hasAppliedSharedParams && sharedParams?.fields && sharedParams.fields.length > 0 && columnsLoaded) {
+      console.log('恢复表格字段状态:', sharedParams.fields);
+
+      // 更新logTableColumns的selected状态
+      setLogTableColumns((prevColumns: ILogColumnsResponse[]) => {
+        if (prevColumns.length === 0) {
+          return prevColumns;
+        }
+
+        const updatedColumns = prevColumns.map((column: ILogColumnsResponse) => ({
+          ...column,
+          selected: sharedParams.fields!.includes(column.columnName || ''),
+        }));
+
+        return updatedColumns;
+      });
+    }
+  }, [hasAppliedSharedParams, sharedParams?.fields, columnsLoaded]); // 监听分享参数应用状态、fields和columnsLoaded的变化
 
   // 主要的数据请求逻辑
   useEffect(() => {
@@ -317,6 +347,14 @@ export const useBusinessLogic = (
 
   // 处理列变化
   const handleChangeColumns = useCallback((columns: ILogColumnsResponse[]) => {
+    console.log(
+      'handleChangeColumns 接收到的columns:',
+      columns.map((col) => ({
+        name: col.columnName,
+        selected: col.selected,
+      })),
+    );
+
     setLogTableColumns(columns);
 
     // 更新搜索参数中的fields字段，触发detail接口调用
@@ -324,6 +362,8 @@ export const useBusinessLogic = (
       .filter((item) => item.selected && item.columnName)
       .map((item) => item.columnName!)
       .filter((name): name is string => Boolean(name));
+
+    console.log('handleChangeColumns 筛选出的selectedColumns:', selectedColumns);
 
     setSearchParams((prev: ILogSearchParams) => ({
       ...prev,
