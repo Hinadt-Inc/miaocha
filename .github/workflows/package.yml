@@ -12,8 +12,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 需要完整历史
-          submodules: true  # 自动签出所有子模块
+          fetch-depth: 0  # Need full history
+          submodules: true  # Auto checkout all submodules
 
       - name: Update submodules to latest
         run: |
@@ -30,15 +30,15 @@ jobs:
 
       - name: Configure system for Doris
         run: |
-          # 关闭swap分区
+          # Disable swap
           sudo swapoff -a
 
-          # 设置系统参数
+          # Tune kernel parameters
           sudo sysctl -w vm.max_map_count=2000000
           sudo sysctl -w vm.swappiness=0
           sudo sysctl -w fs.file-max=655360
 
-          # 验证设置
+          # Verify settings
           echo "=== System Configuration ==="
           echo "Swap status:"
           swapon --show
