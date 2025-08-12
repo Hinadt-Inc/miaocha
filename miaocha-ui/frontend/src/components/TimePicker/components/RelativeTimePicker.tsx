@@ -1,41 +1,36 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Checkbox, Button, InputNumber, Select, Typography, Tag } from 'antd';
+import { Checkbox, Button, InputNumber, Select, Typography } from 'antd';
 import dayjs from 'dayjs';
-import styles from './Relative.module.less';
-import { RELATIVE_TIME, DATE_FORMAT_THOUSOND } from './utils';
+
+import { IRelativeTimePickerProps, ILogTimeSubmitParams, IRelativeTimeState } from '../types';
+import { RELATIVE_TIME, DATE_FORMAT_THOUSOND } from '../utils';
+import styles from '../styles/Relative.module.less';
 
 const { Text } = Typography;
 
-interface IProps {
-  onSubmit: (params: ILogTimeSubmitParams) => void; // 提交时间
-}
-
-interface ITime extends IRelativeTime {
-  number: number; // 数字框的值
-  isExact: boolean; // 是否精确到秒
-}
-
-const TimePicker = (props: IProps) => {
+/**
+ * 相对时间选择组件
+ */
+const RelativeTimePicker: React.FC<IRelativeTimePickerProps> = ({ onSubmit }) => {
   const CURRENT = '现在';
-  const { onSubmit } = props;
   const defaultTime = RELATIVE_TIME[0];
 
   // 开始时间的配置项
-  const [startOption, setStartOption] = useState<ITime>({
+  const [startOption, setStartOption] = useState<IRelativeTimeState>({
     ...defaultTime,
     number: 0, // 数字框的值
     isExact: false, // 是否精确到秒
   });
 
   // 结束时间的配置项
-  const [endOption, setEndOption] = useState<ITime>({
+  const [endOption, setEndOption] = useState<IRelativeTimeState>({
     ...defaultTime,
     number: 0, // 数字框的值
     isExact: false, // 是否精确到秒
   });
 
   // 获取时间文本的公共函数
-  const getTimeText = useCallback((option: ITime) => {
+  const getTimeText = useCallback((option: IRelativeTimeState) => {
     const now = dayjs();
     const { number, unitEN, isExact, label, format } = option;
     // 时间的文本
@@ -69,10 +64,6 @@ const TimePicker = (props: IProps) => {
     return {
       value,
       options: RELATIVE_TIME,
-      optionRender: (option: any) => {
-        const { label } = option;
-        return <Tag color={String(label).endsWith('前') ? 'error' : 'processing'}>{label}</Tag>;
-      },
     };
   }, []);
 
@@ -81,6 +72,19 @@ const TimePicker = (props: IProps) => {
 
   // 下拉选择的配置项-结束时间
   const endSelectProps = useMemo(() => getSelectProps(endOption.value), [endOption.value, getSelectProps]);
+
+  // 设置为当前时间
+  const setToCurrentTime = useCallback(
+    (type: 'start' | 'end') => {
+      const resetOption = { ...defaultTime, number: 0, isExact: false };
+      if (type === 'start') {
+        setStartOption(resetOption);
+      } else {
+        setEndOption(resetOption);
+      }
+    },
+    [defaultTime],
+  );
 
   // 提交时间
   const handleSubmit = useCallback(() => {
@@ -91,9 +95,14 @@ const TimePicker = (props: IProps) => {
     ];
     const startLabel = startTimeText === CURRENT ? CURRENT : `${startOption.number}${startOption.label}`;
     const endLabel = endTimeText === CURRENT ? CURRENT : `${endOption.number}${endOption.label}`;
+
+    const startExactText = startOption.isExact ? `(精确到${startOption.unitCN})` : '';
+    const endExactText = endOption.isExact ? `(精确到${endOption.unitCN})` : '';
+    const labelText = `${startLabel}${startExactText} ~ ${endLabel}${endExactText}`;
+
     const params: ILogTimeSubmitParams = {
       range,
-      label: `${startLabel}${startOption.isExact ? `(精确到${startOption.unitCN})` : ''} ~ ${endLabel}${endOption.isExact ? `(精确到${endOption.unitCN})` : ''}`,
+      label: labelText,
       value: `${startLabel} ~ ${endLabel}`,
       type: 'relative',
       startOption,
@@ -108,12 +117,7 @@ const TimePicker = (props: IProps) => {
         <div className={styles.item}>
           <div className={styles.one}>
             <Text strong>开始时间</Text>
-            <Button
-              color="primary"
-              variant="link"
-              size="small"
-              onClick={() => setStartOption((prev: any) => ({ ...prev, ...defaultTime, number: 0 }))}
-            >
+            <Button color="primary" variant="link" size="small" onClick={() => setToCurrentTime('start')}>
               设置为当前时间
             </Button>
           </div>
@@ -123,17 +127,17 @@ const TimePicker = (props: IProps) => {
             max="999999999"
             changeOnWheel
             value={String(startOption.number || 0)}
-            onChange={(number) => setStartOption((prev: any) => ({ ...prev, number }))}
+            onChange={(number) => setStartOption((prev) => ({ ...prev, number: Number(number) || 0 }))}
             parser={(value) => (value ? parseInt(value) : 0) as any}
             formatter={(value) => (value ? parseInt(value).toString() : '0')}
             addonAfter={
-              <Select
-                {...startSelectProps}
-                onChange={(_, item) => setStartOption((prev: any) => ({ ...prev, ...item }))}
-              />
+              <Select {...startSelectProps} onChange={(_, item) => setStartOption((prev) => ({ ...prev, ...item }))} />
             }
           />
-          <Checkbox onChange={(e) => setStartOption((prev: any) => ({ ...prev, isExact: e.target.checked }))}>
+          <Checkbox
+            checked={startOption.isExact}
+            onChange={(e) => setStartOption((prev) => ({ ...prev, isExact: e.target.checked }))}
+          >
             精确到{startOption.unitCN}
           </Checkbox>
         </div>
@@ -141,12 +145,7 @@ const TimePicker = (props: IProps) => {
         <div className={styles.item}>
           <div className={styles.one}>
             <Text strong>结束时间</Text>
-            <Button
-              color="primary"
-              variant="link"
-              size="small"
-              onClick={() => setEndOption((prev: any) => ({ ...prev, ...defaultTime, number: 0 }))}
-            >
+            <Button color="primary" variant="link" size="small" onClick={() => setToCurrentTime('end')}>
               设置为当前时间
             </Button>
           </div>
@@ -156,14 +155,17 @@ const TimePicker = (props: IProps) => {
             max="999999999"
             changeOnWheel
             value={String(endOption.number || 0)}
-            onChange={(number) => setEndOption((prev: any) => ({ ...prev, number }))}
+            onChange={(number) => setEndOption((prev) => ({ ...prev, number: Number(number) || 0 }))}
             parser={(value) => (value ? parseInt(value) : 0) as any}
             formatter={(value) => (value ? parseInt(value).toString() : '0')}
             addonAfter={
-              <Select {...endSelectProps} onChange={(_, item) => setEndOption((prev: any) => ({ ...prev, ...item }))} />
+              <Select {...endSelectProps} onChange={(_, item) => setEndOption((prev) => ({ ...prev, ...item }))} />
             }
           />
-          <Checkbox onChange={(e) => setEndOption((prev: any) => ({ ...prev, isExact: e.target.checked }))}>
+          <Checkbox
+            checked={endOption.isExact}
+            onChange={(e) => setEndOption((prev) => ({ ...prev, isExact: e.target.checked }))}
+          >
             精确到{endOption.unitCN}
           </Checkbox>
         </div>
@@ -177,4 +179,5 @@ const TimePicker = (props: IProps) => {
     </div>
   );
 };
-export default TimePicker;
+
+export default RelativeTimePicker;

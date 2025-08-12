@@ -1,28 +1,15 @@
-import { useState, useCallback, memo } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import { Collapse, Tag, Button, Progress, Tooltip, Typography, Empty, Spin } from 'antd';
 import { getFieldTypeColor } from '@/utils/logDataHelpers';
-import styles from './Sider.module.less';
+import { IFieldListItemProps } from '../types';
+import { sumArrayCount, hasDistributionData } from '../utils';
+import styles from '../styles/FieldListItem.module.less';
 
-interface IFieldData {
-  activeColumns: string[]; // 选中的列
-  searchParams: ILogSearchParams; // 搜索参数
-  distributions: Record<string, IFieldDistributions>; // 字段分布
-  distributionLoading: Record<string, boolean>; // 字段分布加载状态
-  onToggle: (column: ILogColumnsResponse) => void; // 切换选中状态
-  onDistribution: (columnName: string, newActiveColumns: string[], sql: string) => void; // 分布
-  onActiveColumns: (params: string[]) => void; // 选中的列
-  setWhereSqlsFromSider: any; // 设置where条件
-}
-
-interface IProps {
-  isSelected: boolean; // 是否选中
-  columnIndex: number; // 字段索引
-  column: ILogColumnsResponse; // 字段数据
-  fieldData: IFieldData; // 合并后的字段数据
-  moduleQueryConfig?: any; // 模块查询配置
-}
-
-const FieldListItem: React.FC<IProps> = memo(
+/**
+ * 字段列表项组件
+ * 显示字段信息和分布数据
+ */
+const FieldListItem: React.FC<IFieldListItemProps> = memo(
   ({ isSelected, column, columnIndex, fieldData, moduleQueryConfig }) => {
     const {
       distributions = {},
@@ -41,15 +28,15 @@ const FieldListItem: React.FC<IProps> = memo(
     const handleCollapseChange = useCallback(
       (key: string[]) => {
         const { columnName = '' } = column;
-        
+
         // 防止重复触发相同操作
         if (key.length > 0 && activeKey.includes(key[0])) {
-          return; // 如果已经展开，不重复处理
+          return;
         }
         if (key.length === 0 && activeKey.length === 0) {
-          return; // 如果已经折叠，不重复处理
+          return;
         }
-        
+
         // 只有当折叠面板状态变化时才更新activeColumns
         if (key.length > 0) {
           // 展开时，无论字段是否已在activeColumns中，都要触发分布数据查询
@@ -92,45 +79,72 @@ const FieldListItem: React.FC<IProps> = memo(
       (flag: '=' | '!=', son: IValueDistributions) => {
         const { columnName = '' } = column;
         const { value } = son;
+
+        // 首先更新主要的搜索条件，这会触发主要数据请求（日志列表、时间分布图等）
+        // 同时也会同步更新localStorage中的searchBarParams
         setWhereSqlsFromSider(flag, columnName, value);
+
+        // 延迟触发该字段的分布数据重新查询
+        // 现在localStorage已经同步更新，所以分布查询能获取到正确的whereSqls条件
+        setTimeout(() => {
+          // 重新查询该字段的分布数据，不传入额外的SQL条件
+          // 因为新的过滤条件已经通过setWhereSqlsFromSider同步到localStorage中
+          onDistribution(columnName, activeColumns, '');
+        }, 100); // 减少延迟时间，因为localStorage同步更新是立即的
       },
-      [setWhereSqlsFromSider, column],
+      [setWhereSqlsFromSider, column, onDistribution, activeColumns],
     );
 
+    // 如果是固定字段，不显示
     if (column.isFixed) {
       return null;
     }
 
-    // 数组count求和
-    const sumArrayCount = (valueDistributions: IValueDistributions[]): number => {
-      const counts = valueDistributions.map((item) => item.count);
-      return counts.reduce((sum: number, item: string | number): number => {
-        const num = typeof item === 'string' ? parseFloat(item) : item;
-        return sum + (isNaN(num) ? 0 : num);
-      }, 0);
+    // 动态获取时间字段名
+    const determineTimeField = (): string => {
+      // 优先使用配置的时间字段
+      if (moduleQueryConfig?.timeField) {
+        return moduleQueryConfig.timeField;
+      }
+
+      // 如果没有配置，从字段数据中智能查找
+      const availableFields = fieldData.activeColumns || [];
+      const commonTimeFields = ['logs_timestamp', 'log_time', 'timestamp', 'time', '@timestamp'];
+
+      for (const timeField of commonTimeFields) {
+        if (availableFields.includes(timeField)) {
+          return timeField;
+        }
+      }
+
+      // 查找包含time关键字的字段
+      const timeRelatedField = availableFields.find(
+        (field) => field.toLowerCase().includes('time') || field.toLowerCase().includes('timestamp'),
+      );
+
+      return timeRelatedField || 'logs_timestamp'; // 兜底默认值
     };
 
-    // 获取时间字段名
-    const timeField = moduleQueryConfig?.timeField || 'log_time';
+    const timeField = determineTimeField();
     const isTimeField = isSelected && column.columnName === timeField;
 
     // 获取分布数据
     const dist = distributions[column.columnName as string];
     const isLoading = distributionLoading[column.columnName as string];
-    const hasData =
-      !!dist &&
-      ((dist.nonNullCount || 0) > 0 || (dist.totalCount || 0) > 0 || (dist.valueDistributions?.length || 0) > 0);
+    const hasData = hasDistributionData(dist);
 
     // 渲染内容
     const renderContent = () => {
       if (isLoading) {
         return (
           <div className={styles.loadingContainer}>
-            <Spin size="small" tip="加载中..." />
+            <Spin spinning={true}>
+              <div className={styles.spinPlaceholder} />
+            </Spin>
           </div>
         );
       }
-      
+
       if (hasData) {
         return (
           <>
@@ -148,7 +162,7 @@ const FieldListItem: React.FC<IProps> = memo(
                         ellipsis={{
                           rows: 1,
                           tooltip: true,
-                          onEllipsis: () => { },
+                          onEllipsis: () => {},
                         }}
                       >
                         {sub.value}
@@ -161,7 +175,7 @@ const FieldListItem: React.FC<IProps> = memo(
                         variant="link"
                         onClick={() => handleQuery('=', sub)}
                       >
-                        <i className="iconfont icon-fangda"></i>
+                        <i className="iconfont icon-fangda" />
                       </Button>
                       <Button
                         disabled={searchParams?.whereSqls?.includes(`${column.columnName} != '${sub.value}'`)}
@@ -169,7 +183,7 @@ const FieldListItem: React.FC<IProps> = memo(
                         variant="link"
                         onClick={() => handleQuery('!=', sub)}
                       >
-                        <i className="iconfont icon-suoxiao1"></i>
+                        <i className="iconfont icon-suoxiao1" />
                       </Button>
                     </div>
                   </div>
@@ -184,7 +198,7 @@ const FieldListItem: React.FC<IProps> = memo(
           </>
         );
       }
-      
+
       return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />;
     };
 
@@ -195,13 +209,16 @@ const FieldListItem: React.FC<IProps> = memo(
         activeKey={activeKey}
         className={styles.item}
         onChange={handleCollapseChange}
+        expandIcon={() => null}
         items={[
           {
             key: `${column.columnName}`,
             label: (
               <div className={styles.bar}>
                 <Tooltip placement="topLeft" title={column.dataType} arrow={false}>
-                  <Tag color={getFieldTypeColor(column.dataType)}>{column.dataType?.substring(0, 1)?.toUpperCase()}</Tag>
+                  <Tag color={getFieldTypeColor(column.dataType)}>
+                    {column.dataType?.substring(0, 1)?.toUpperCase()}
+                  </Tag>
                 </Tooltip>
                 <Tooltip placement="topLeft" title={column.columnName} arrow={false}>
                   <span className={styles.columnName}>{column.columnName}</span>
@@ -218,11 +235,7 @@ const FieldListItem: React.FC<IProps> = memo(
                 )}
               </div>
             ),
-            children: (
-              <div className={styles.record}>
-                {renderContent()}
-              </div>
-            ),
+            children: <div className={styles.record}>{renderContent()}</div>,
           },
         ]}
       />
@@ -235,9 +248,9 @@ const FieldListItem: React.FC<IProps> = memo(
       prevProps.column.columnName === nextProps.column.columnName &&
       prevProps.column.selected === nextProps.column.selected &&
       prevProps.fieldData.distributions[prevProps.column.columnName as string] ===
-      nextProps.fieldData.distributions[nextProps.column.columnName as string] &&
+        nextProps.fieldData.distributions[nextProps.column.columnName as string] &&
       prevProps.fieldData.distributionLoading[prevProps.column.columnName as string] ===
-      nextProps.fieldData.distributionLoading[nextProps.column.columnName as string] &&
+        nextProps.fieldData.distributionLoading[nextProps.column.columnName as string] &&
       prevProps.fieldData.searchParams === nextProps.fieldData.searchParams
     );
   },

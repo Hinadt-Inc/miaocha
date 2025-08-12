@@ -1,8 +1,8 @@
 import { useMemo, useCallback, useEffect } from 'react';
 import { Splitter } from 'antd';
-import SearchBar from './SearchBar';
-import Log from './Log';
-import Sider from './Sider';
+import SearchBar from './SearchBar/index';
+import Log from './LogModule/index';
+import Sider from './SiderModule/index';
 import styles from './index.module.less';
 
 // 导入模块化的hooks
@@ -146,7 +146,8 @@ const HomePage = () => {
   // 9. 当selectedModule变化时，获取模块查询配置
   useEffect(() => {
     if (selectedModule) {
-      if (selectedModule !== moduleQueryConfig?.module) {
+      // 检查当前选中模块是否已经加载了配置
+      if (!loadedConfigModulesRef.current.has(selectedModule)) {
         setIsInitialized(false);
         lastCallParamsRef.current = '';
         isInitializingRef.current = true;
@@ -162,7 +163,7 @@ const HomePage = () => {
       setColumnsLoaded(false); // 重置columns加载状态
       loadedConfigModulesRef.current.clear();
     }
-  }, [selectedModule]);
+  }, [selectedModule]); // 只依赖selectedModule，避免循环
 
   // 10. 处理模块查询配置请求结果
   useEffect(() => {
@@ -181,7 +182,7 @@ const HomePage = () => {
         isInitializingRef.current = false;
       }, 100);
     }
-  }, [getModuleQueryConfig.data, selectedModule]);
+  }, [getModuleQueryConfig.data]); // 移除selectedModule依赖，避免循环更新
 
   // 11. 其他业务处理函数
   const handleSetWhereSqlsFromSider = (flag: '=' | '!=', columnName: string, value: string) => {
@@ -214,9 +215,61 @@ const HomePage = () => {
       delete newSearchParams.whereSqls;
     }
 
+    // 同步更新localStorage中的searchBarParams，确保分布数据查询能获取到最新的whereSqls
+    const savedSearchParams = localStorage.getItem('searchBarParams');
+    if (savedSearchParams) {
+      try {
+        const params = JSON.parse(savedSearchParams);
+        const updatedParams = {
+          ...params,
+          whereSqls: newSearchParams.whereSqls || [],
+        };
+        localStorage.setItem('searchBarParams', JSON.stringify(updatedParams));
+      } catch (error) {
+        console.error('更新localStorage中的searchBarParams失败:', error);
+      }
+    }
+
     searchBarRef?.current?.addSql?.(sql);
     setSearchParams(newSearchParams);
   };
+
+  // 删除SQL条件的处理函数
+  const handleRemoveSql = useCallback(
+    (sql: string) => {
+      // 直接从searchParams中删除该SQL并重新搜索
+      const newSearchParams = {
+        ...searchParams,
+        offset: 0,
+        whereSqls: searchParams?.whereSqls?.filter((item: any) => item !== sql),
+      };
+
+      if (newSearchParams?.whereSqls?.length === 0) {
+        delete newSearchParams.whereSqls;
+      }
+
+      // 从whereSqlsFromSider中删除对应项
+      state.setWhereSqlsFromSider((prev: any) => prev.filter((item: any) => item.label !== sql));
+
+      // 更新localStorage中的searchBarParams
+      const savedSearchParams = localStorage.getItem('searchBarParams');
+      if (savedSearchParams) {
+        const params = JSON.parse(savedSearchParams);
+        const updatedParams = {
+          ...params,
+          whereSqls: params.whereSqls?.filter((item: string) => item !== sql) || [],
+        };
+        localStorage.setItem('searchBarParams', JSON.stringify(updatedParams));
+      }
+
+      // 重新搜索
+      setSearchParams(newSearchParams);
+
+      // 注意：删除SQL标签后的分布数据更新由Sider组件的useEffect自动处理
+      // 不需要手动调用getDistributionWithSearchBar，避免重复调用
+    },
+    [searchParams, state.setWhereSqlsFromSider],
+  );
 
   const handleSortChange = useCallback((newSortConfig: any[]) => {
     state.setSortConfig(newSortConfig);
@@ -274,7 +327,13 @@ const HomePage = () => {
       selectedModule,
       onColumnsLoaded: setColumnsLoaded, // 传递columns加载完成回调
     }),
-    [searchParams, moduleOptions, moduleQueryConfig, selectedModule, handleSelectedModuleChange, handleChangeColumns],
+    [
+      searchParams,
+      moduleOptions,
+      moduleQueryConfig,
+      selectedModule,
+      // 移除了函数依赖，它们应该是稳定的
+    ],
   );
 
   const logProps: any = useMemo(
@@ -301,9 +360,8 @@ const HomePage = () => {
       state.whereSqlsFromSider,
       state.sqls,
       moduleQueryConfig,
-      handleSortChange,
-      handleChangeColumnsByLog,
       state.sortConfig,
+      // 移除了函数依赖，它们应该是稳定的
     ],
   );
 
@@ -314,6 +372,7 @@ const HomePage = () => {
       onSearch: setSearchParams,
       onRefresh: handleRefresh,
       setWhereSqlsFromSider: handleSetWhereSqlsFromSider,
+      onRemoveSql: handleRemoveSql,
       columns: state.logTableColumns,
       onSqlsChange: state.setSqls,
       activeColumns: state.activeColumns,
@@ -325,18 +384,14 @@ const HomePage = () => {
       setKeywords: state.setKeywords,
       sqls: state.sqls,
       setSqls: state.setSqls,
-      setWhereSqlsFromSiderArr: state.whereSqlsFromSider,
       sharedParams: state.sharedParams,
       hasAppliedSharedParams: state.hasAppliedSharedParams,
     }),
     [
       searchParams,
       detailData?.totalCount,
-      setSearchParams,
-      handleRefresh,
       state.logTableColumns,
       state.activeColumns,
-      getDistributionWithSearchBar,
       state.sortConfig,
       state.commonColumns,
       getDetailData.loading,
@@ -345,6 +400,7 @@ const HomePage = () => {
       state.whereSqlsFromSider,
       state.sharedParams,
       state.hasAppliedSharedParams,
+      // 移除了setter函数和回调函数的依赖，它们应该是稳定的
     ],
   );
 

@@ -4,12 +4,12 @@ import ExpandedRow from '../ExpandedRow/index';
 import { VirtualTableProps } from './types';
 import { ResizableTitle, ColumnHeader } from './components';
 import { useScreenWidth, useExpandedRows } from './hooks';
-import { 
-  extractSqlKeywords, 
-  formatSearchKeywords, 
+import {
+  extractSqlKeywords,
+  formatSearchKeywords,
   processSorterChange,
   getAutoColumnWidth,
-  isFieldSortable
+  isFieldSortable,
 } from './utils';
 import { highlightText } from '@/utils/highlightText';
 import styles from './VirtualTable.module.less';
@@ -60,7 +60,7 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
 
     if (otherColumns && otherColumns.length > 0) {
       const isSmallScreen = screenWidth < 1200;
-      
+
       otherColumns.forEach((item: ILogColumnsResponse) => {
         const { columnName = '' } = item;
 
@@ -80,46 +80,57 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
           dataIndex: columnName,
           width: columnWidth,
           render: (text: string) => highlightText(text, keyWordsFormat || []),
-          ...(isFieldSortable(item.dataType) ? {
-            sorter: {
-              compare: (a: any, b: any) => {
-                const valueA = a[columnName];
-                const valueB = b[columnName];
-                
-                if (valueA === null || valueA === undefined) {
-                  if (valueB === null || valueB === undefined) return 0;
-                  return -1;
-                }
-                if (valueB === null || valueB === undefined) {
-                  return 1;
-                }
+          ...(isFieldSortable(item.dataType)
+            ? {
+                sorter: {
+                  compare: (a: any, b: any) => {
+                    const valueA = a[columnName];
+                    const valueB = b[columnName];
 
-                const dataType = item.dataType?.toUpperCase();
-                const isNumericType = ['INT', 'INTEGER', 'BIGINT', 'TINYINT', 'SMALLINT', 
-                                     'FLOAT', 'DOUBLE', 'DECIMAL', 'NUMERIC'].includes(dataType);
+                    if (valueA === null || valueA === undefined) {
+                      if (valueB === null || valueB === undefined) return 0;
+                      return -1;
+                    }
+                    if (valueB === null || valueB === undefined) {
+                      return 1;
+                    }
 
-                if (isNumericType) {
-                  const numA = parseFloat(valueA);
-                  const numB = parseFloat(valueB);
-                  
-                  if (!isNaN(numA) && !isNaN(numB)) {
-                    return numA - numB;
-                  }
-                  
-                  if (isNaN(numA) && !isNaN(numB)) return 1;
-                  if (!isNaN(numA) && isNaN(numB)) return -1;
-                  
-                  return String(valueA).localeCompare(String(valueB));
-                } else {
-                  if (typeof valueA === 'string' && typeof valueB === 'string') {
-                    return valueA.localeCompare(valueB);
-                  }
-                  return (valueA || '').toString().localeCompare((valueB || '').toString());
-                }
-              },
-              multiple: otherColumns.findIndex(col => col.columnName === columnName) + 2,
-            }
-          } : {}),
+                    const dataType = item.dataType?.toUpperCase();
+                    const isNumericType = [
+                      'INT',
+                      'INTEGER',
+                      'BIGINT',
+                      'TINYINT',
+                      'SMALLINT',
+                      'FLOAT',
+                      'DOUBLE',
+                      'DECIMAL',
+                      'NUMERIC',
+                    ].includes(dataType);
+
+                    if (isNumericType) {
+                      const numA = parseFloat(valueA);
+                      const numB = parseFloat(valueB);
+
+                      if (!isNaN(numA) && !isNaN(numB)) {
+                        return numA - numB;
+                      }
+
+                      if (isNaN(numA) && !isNaN(numB)) return 1;
+                      if (!isNaN(numA) && isNaN(numB)) return -1;
+
+                      return String(valueA).localeCompare(String(valueB));
+                    } else {
+                      if (typeof valueA === 'string' && typeof valueB === 'string') {
+                        return valueA.localeCompare(valueB);
+                      }
+                      return (valueA || '').toString().localeCompare((valueB || '').toString());
+                    }
+                  },
+                  multiple: otherColumns.findIndex((col) => col.columnName === columnName) + 2,
+                },
+              }
+            : {}),
         });
       });
     }
@@ -184,7 +195,7 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
           return undefined;
         })(),
         ellipsis: false,
-        hidden: _columns.length > 0,
+        hidden: false, // 始终显示_source列
         render: (_: any, record: ILogColumnsResponse) => {
           const whereValues = whereSqlsFromSider.map((item) => String(item.value)).filter(Boolean);
           const allKeywords = Array.from(new Set([...keyWordsFormat, ...whereValues])).filter(Boolean);
@@ -229,7 +240,7 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
         if (columnWidths[column.dataIndex]) {
           columnWidth = columnWidths[column.dataIndex];
         } else {
-          columnWidth = isLast ? undefined : (column.width || 150);
+          columnWidth = isLast ? undefined : column.width || 150;
         }
 
         return {
@@ -353,7 +364,7 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
     const sourceCol = columns.find((col: any) => col.dataIndex === '_source');
 
     let totalWidth = 190; // 时间字段固定宽度
-    
+
     dynamicCols.forEach((col: any) => {
       totalWidth += col.width || 150;
     });
@@ -382,7 +393,7 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
     const newCols = columns.filter((_, idx) => idx !== colIndex);
     setColumns(newCols);
     onChangeColumns(col);
-    
+
     const _fields = newCols?.filter((item) => ![timeField, '_source'].includes(item.title)) || [];
     if (_fields.length === 0 && onSearch) {
       const params = {
@@ -460,11 +471,7 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
           expandedRowKeys,
           onExpand: handleExpand,
           expandedRowRender: (record) => (
-            <ExpandedRow 
-              data={record} 
-              keywords={keyWordsFormat || []} 
-              moduleQueryConfig={moduleQueryConfig} 
-            />
+            <ExpandedRow data={record} keywords={keyWordsFormat || []} moduleQueryConfig={moduleQueryConfig} />
           ),
         }}
         components={{
