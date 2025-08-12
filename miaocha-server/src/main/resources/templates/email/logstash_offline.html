@@ -1,0 +1,56 @@
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;color:#1F2937;background:#F9FAFB;}
+    .container{max-width:920px;margin:24px auto;background:#ffffff;border:1px solid #E5E7EB;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
+    .header{padding:16px 20px;border-bottom:1px solid #E5E7EB;background:#111827;color:#F3F4F6;border-top-left-radius:8px;border-top-right-radius:8px;}
+    .title{font-size:18px;margin:0;}
+    .meta{padding:12px 20px;color:#4B5563;font-size:13px;}
+    table{width:100%;border-collapse:collapse;margin:0;padding:0;}
+    th,td{padding:10px 12px;border-bottom:1px solid #E5E7EB;text-align:left;font-size:13px;}
+    th{background:#F3F4F6;color:#374151;}
+    tr:hover{background:#F9FAFB;}
+    .section{padding:16px 20px;}
+    .card{border:1px solid #E5E7EB;border-radius:6px;margin:12px 0;background:#FAFAFA;}
+    .card-header{padding:10px 12px;background:#F3F4F6;border-bottom:1px solid #E5E7EB;color:#111827;font-weight:bold;}
+    .log{padding:12px;white-space:pre-wrap;background:#0B1021;color:#E5E7EB;font-family:ui-monospace,Consolas,Menlo,monospace;border-bottom-left-radius:6px;border-bottom-right-radius:6px;font-size:12px;}
+    .footer{padding:14px 20px;color:#6B7280;border-top:1px solid #E5E7EB;font-size:12px;}
+  </style>
+  <title>Logstash Offline Alert</title>
+  </head>
+<body>
+  <div class="container">
+    <div class="header"><h1 class="title">Logstash Offline Alert</h1></div>
+    <div class="meta">
+      Process: <b th:text="${processName}"></b> • Generated at: <span th:text="${generatedAt}"></span>
+    </div>
+    <div class="section">
+      <table>
+        <thead>
+          <tr><th>Instance ID</th><th>Machine IP</th><th>Deploy Path</th><th>PID</th><th>Detected At</th></tr>
+        </thead>
+        <tbody>
+          <tr th:each="ins : ${instances}">
+            <td th:text="${ins.instanceId}"></td>
+            <td th:text="${ins.machineIp}"></td>
+            <td th:text="${ins.deployPath}"></td>
+            <td th:text="${ins.pid}"></td>
+            <td th:text="${ins.detectedAt}"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3>Last 50 log lines</h3>
+      <div class="card" th:each="ins : ${instances}">
+        <div class="card-header">Instance <span th:text="${ins.instanceId}"></span> @ <span th:text="${ins.machineIp}"></span></div>
+        <div class="log" th:text="${ins.lastLogs}"></div>
+      </div>
+    </div>
+
+    <div class="footer">You are receiving this email because you are configured as an alert recipient for this process.</div>
+  </div>
+</body>
+</html>
