@@ -9,7 +9,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
 
-    # 声明必要的权限
+    # Declare required permissions
     permissions:
       contents: write
       packages: write
@@ -23,22 +23,22 @@ jobs:
       - name: Verify tag is from release branch
         run: |
           TAG_NAME=${GITHUB_REF#refs/tags/}
-          echo "检查 tag: $TAG_NAME"
+          echo "Checking tag: $TAG_NAME"
 
-          # 获取 tag 指向的 commit
+          # Get commit that the tag points to
           TAG_COMMIT=$(git rev-list -n 1 $TAG_NAME)
 
-          # 检查包含此 commit 的 release-* 分支
+          # Check release-* branches containing this commit
           RELEASE_BRANCHES=$(git branch -r --contains $TAG_COMMIT | grep -E "origin/release-" | head -1)
 
           if [ -z "$RELEASE_BRANCHES" ]; then
-            echo "❌ Error: Tag '$TAG_NAME' 不是从 release-* 分支推送的"
-            echo "包含此 commit 的分支:"
+            echo "❌ Error: Tag '$TAG_NAME' is not pushed from a release-* branch"
+            echo "Branches containing this commit:"
             git branch -r --contains $TAG_COMMIT
             exit 1
           fi
 
-          echo "✅ Tag '$TAG_NAME' 来自有效的 release 分支: $RELEASE_BRANCHES"
+          echo "✅ Tag '$TAG_NAME' is from a valid release branch: $RELEASE_BRANCHES"
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -54,15 +54,15 @@ jobs:
 
       - name: Configure system for Doris
         run: |
-          # 关闭swap分区
+          # Disable swap
           sudo swapoff -a
 
-          # 设置系统参数
+          # Tune kernel parameters
           sudo sysctl -w vm.max_map_count=2000000
           sudo sysctl -w vm.swappiness=0
           sudo sysctl -w fs.file-max=655360
 
-          # 验证设置
+          # Verify settings
           echo "=== System Configuration ==="
           echo "Swap status:"
           swapon --show
@@ -77,14 +77,14 @@ jobs:
       - name: Get Release Notes
         id: release_notes
         run: |
-          # 检查RELEASE_NOTES.md文件是否存在
+          # Check whether RELEASE_NOTES.md exists
           if [ ! -f "RELEASE_NOTES.md" ]; then
-            echo "❌ 错误: 未找到 RELEASE_NOTES.md 文件"
-            echo "请在发布前运行 release-version.sh 脚本生成 Release Notes"
+            echo "❌ Error: RELEASE_NOTES.md not found"
+            echo "Please run release-version.sh to generate Release Notes before releasing"
             exit 1
           fi
           
-          echo "## 📋 使用现成的 Release Notes 文件:"
+          echo "## 📋 Using existing Release Notes file:"
           echo "========================================"
           cat RELEASE_NOTES.md
           echo "========================================"
@@ -139,10 +139,10 @@ jobs:
 
       - name: Release Summary
         run: |
-          echo "## 🎉 发布成功!" >> $GITHUB_STEP_SUMMARY
+          echo "## 🎉 Release successful!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **版本**: v${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Docker镜像**: ghcr.io/${{ steps.repo.outputs.REPOSITORY }}:${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **分发包**: miaocha-${{ steps.version.outputs.VERSION }}-bin.zip/tar.gz" >> $GITHUB_STEP_SUMMARY
-          echo "- **源码包**: miaocha-${{ steps.version.outputs.VERSION }}-source.zip/tar.gz" >> $GITHUB_STEP_SUMMARY
-          echo "- **Release页面**: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: v${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Docker image**: ghcr.io/${{ steps.repo.outputs.REPOSITORY }}:${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Binary**: miaocha-${{ steps.version.outputs.VERSION }}-bin.zip/tar.gz" >> $GITHUB_STEP_SUMMARY
+          echo "- **Source**: miaocha-${{ steps.version.outputs.VERSION }}-source.zip/tar.gz" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release page**: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
