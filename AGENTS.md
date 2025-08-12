@@ -9,6 +9,7 @@
 1. Always ensure elegance and reusability in your code.
 2. Do not add redundant logs; logs should only be placed where necessary. Avoid adding meaningless logs as personal reminders.
 3. When handling exceptions, think about whether the exception can be perceived and handled by the user. Exceptions that can be perceived and handled by the user are meaningful and should have specific error codes defined.
+4. **Do not commit or push code without my explicit approval.**
 
 # Testing Rules
 ## Unit Testing Rules
