@@ -1,26 +1,26 @@
 ---
-name: 报告 Bug
-about: 报告 Miaocha 的相关BUG
+name: Bug Report
+about: Report a bug found in Miaocha
 title: ''
 labels: bug
 assignees: ''
 
 ---
 
-- [ ] 我已经在 [issues](https://github.com/Hinadt-Inc/miaocha/issues/issues) 搜索过相关问题了,并没有重复的。
+- [ ] I have searched existing [issues](https://github.com/Hinadt-Inc/miaocha/issues) and found no duplicates.
 
- 你是否希望来认领这个Bug。
+Would you like to take ownership of fixing this bug?
 
- 「   Y   /   N  」
+"   Y   /   N  "
 
 
-### 环境信息
+### Environment
 
-* Miaocha version :   <font size=4 color =red>   xxx </font>
-* Operating System version :  <font size=4 color =red> xxx </font>
-* Java version : <font size=4 color =red> xxx </font>
+* Miaocha version: <font size=4 color=red>xxx</font>
+* Operating System version: <font size=4 color=red>xxx</font>
+* Java version: <font size=4 color=red>xxx</font>
 
-### 重现该问题的步骤
+### Steps to reproduce
 
 1. xxx
 
@@ -30,18 +30,18 @@ assignees: ''
 
 3. xxx
 
-### 预期结果
+### Expected result
 
-<!-- 写下应该出现的预期结果？-->
+<!-- What should have happened? -->
 
-### 实际结果
+### Actual result
 
-<!-- 实际发生了什么? -->
+<!-- What actually happened? -->
 
 
 ---
 
-如果有异常，请附上异常Trace:
+If there is an exception, please attach the stack trace:
 
 ```
 Just put your stack trace here!
