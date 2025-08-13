@@ -157,6 +157,11 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
       return;
     }
 
+    // 确保模块已选择且模块配置已加载，避免报错"模块名称不能为空"
+    if (!selectedModule || !moduleQueryConfig) {
+      return;
+    }
+
     const savedSearchParams = localStorage.getItem('searchBarParams');
     if (savedSearchParams) {
       const parsedParams = JSON.parse(savedSearchParams);
@@ -183,6 +188,8 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
     searchParams.endTime,
     getDistributionWithSearchBar,
     isFirstLoad,
+    selectedModule, // 添加selectedModule依赖
+    moduleQueryConfig, // 添加moduleQueryConfig依赖
   ]);
 
   // 处理字段切换

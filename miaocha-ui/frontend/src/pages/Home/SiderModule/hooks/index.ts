@@ -406,6 +406,12 @@ export const useDistributions = (searchParams: ILogSearchParams, availableColumn
     const _searchParams = JSON.parse(localStorage.getItem('searchBarParams') || '{}');
     const fields = _searchParams?.fields;
 
+    // 确保模块已选择，避免报错"模块名称不能为空"
+    if (!searchParams.module) {
+      console.warn('模块未选择，跳过字段分布查询');
+      return;
+    }
+
     if (fields?.length) {
       // 验证字段有效性
       const validFields = validateFields(fields);
@@ -451,6 +457,13 @@ export const useDistributions = (searchParams: ILogSearchParams, availableColumn
           delete newState[columnName];
           return newState;
         });
+        return;
+      }
+
+      // 确保模块已选择，避免报错"模块名称不能为空"
+      if (!searchParams.module) {
+        console.warn('模块未选择，跳过字段分布查询');
+        setDistributionLoading((prev) => ({ ...prev, [columnName]: false }));
         return;
       }
 
