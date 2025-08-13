@@ -26,18 +26,23 @@ export const formatTimeString = (timeString: string): string => {
     }
 
     let formattedTimeString = timeString;
-    
-    // 处理毫秒部分不足三位的情况
-    // 例如：2025-08-05T13:12:07.6 -> 2025-08-05T13:12:07.600
-    // 例如：2025-08-05T13:12:07.67 -> 2025-08-05T13:12:07.670
-    const millisecondsRegex = /\.(\d{1,2})$/;
-    const millisecondsMatch = millisecondsRegex.exec(formattedTimeString);
-    if (millisecondsMatch) {
-      const milliseconds = millisecondsMatch[1];
-      const paddedMs = milliseconds.padEnd(3, '0');
-      formattedTimeString = formattedTimeString.replace(millisecondsRegex, `.${paddedMs}`);
+
+    // 如果时间字符串没有毫秒部分，添加 .000
+    if (!formattedTimeString.includes('.')) {
+      formattedTimeString += '.000';
+    } else {
+      // 处理毫秒部分不足三位的情况
+      // 例如：2025-08-05T13:12:07.6 -> 2025-08-05T13:12:07.600
+      // 例如：2025-08-05T13:12:07.67 -> 2025-08-05T13:12:07.670
+      const millisecondsRegex = /\.(\d{1,2})$/;
+      const millisecondsMatch = millisecondsRegex.exec(formattedTimeString);
+      if (millisecondsMatch) {
+        const milliseconds = millisecondsMatch[1];
+        const paddedMs = milliseconds.padEnd(3, '0');
+        formattedTimeString = formattedTimeString.replace(millisecondsRegex, `.${paddedMs}`);
+      }
     }
-    
+
     const timeValue = dayjs(formattedTimeString);
     return timeValue.isValid() ? timeValue.format(DATE_FORMAT_THOUSOND) : timeString;
   } catch (error) {
@@ -134,28 +139,28 @@ export const QUICK_RANGES: Record<string, IStatus> = {
   },
   today: {
     label: '今天',
-    from: () => dayjs().subtract(0, 'day'),
-    to: () => dayjs(),
-    format: ['YYYY-MM-DD 00:00:00.000', 'YYYY-MM-DD 23:59:59.999'],
+    from: () => dayjs().startOf('day'),
+    to: () => dayjs().endOf('day'),
+    format: [DATE_FORMAT_THOUSOND, DATE_FORMAT_THOUSOND],
   },
   yesterday: {
     label: '昨天',
     from: () => dayjs().subtract(1, 'day').startOf('day'),
     to: () => dayjs().subtract(1, 'day').endOf('day'),
-    format: ['YYYY-MM-DD 00:00:00.000', 'YYYY-MM-DD 23:59:59.999'],
+    format: [DATE_FORMAT_THOUSOND, DATE_FORMAT_THOUSOND],
   },
   this_week: {
     label: '本周',
     from: () => dayjs().startOf('week'),
     to: () => dayjs().endOf('week'),
-    format: ['YYYY-MM-DD 00:00:00.000', 'YYYY-MM-DD 23:59:59.999'],
+    format: [DATE_FORMAT_THOUSOND, DATE_FORMAT_THOUSOND],
   },
 
   last_week: {
     label: '上周',
     from: () => dayjs().subtract(1, 'week').startOf('week'),
     to: () => dayjs().subtract(1, 'week').endOf('week'),
-    format: ['YYYY-MM-DD 00:00:00.000', 'YYYY-MM-DD 23:59:59.999'],
+    format: [DATE_FORMAT_THOUSOND, DATE_FORMAT_THOUSOND],
   },
 };
 

@@ -1,0 +1,38 @@
+.moduleOption {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.moduleLabel {
+    display: inline-block;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.favoriteIcon {
+    cursor: pointer;
+    font-size: 12px;
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+
+    &.active {
+        color: #0038ff;
+    }
+
+    &.inactive {
+        color: #d9d9d9;
+    }
+
+    &:hover {
+        opacity: 0.8;
+    }
+}
+
+.moduleSelector {
+    width: 100%;
+}
