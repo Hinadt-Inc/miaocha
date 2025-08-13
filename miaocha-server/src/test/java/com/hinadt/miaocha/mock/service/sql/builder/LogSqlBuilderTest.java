@@ -371,7 +371,7 @@ class LogSqlBuilderTest {
             String expectedSql =
                     "SELECT TOPN(level, 5) AS 'level', count(*) AS 'total' FROM (SELECT * FROM"
                         + " test_logs WHERE log_time >= '2024-01-01 00:00:00.000' AND log_time <"
-                        + " '2024-01-01 01:00:00.000' AND (message['level'] = 'ERROR' AND host ="
+                        + " '2024-01-01 01:00:00.000' AND (message['level'] = 'ERROR') AND (host ="
                         + " 'server1') ORDER BY log_time DESC LIMIT 1000 OFFSET 0) AS sub_query";
 
             assertNotNull(result, "SQL不应为null");
@@ -407,8 +407,8 @@ class LogSqlBuilderTest {
                     "SELECT FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(log_time) / 7200) * 7200) AS"
                         + " log_time_, COUNT(*) AS count FROM test_logs WHERE log_time >="
                         + " '2024-01-01 00:00:00.000' AND log_time < '2024-01-01 01:00:00.000' AND"
-                        + " (request['headers']['authorization'] IS NOT NULL AND"
-                        + " response['data']['user']['id'] = '12345') GROUP BY"
+                        + " (request['headers']['authorization'] IS NOT NULL) AND"
+                        + " (response['data']['user']['id'] = '12345') GROUP BY"
                         + " FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(log_time) / 7200) * 7200) ORDER BY"
                         + " log_time_ ASC";
 

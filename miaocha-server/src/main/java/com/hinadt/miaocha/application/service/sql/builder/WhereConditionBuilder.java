@@ -5,7 +5,6 @@ import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import java.util.List;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
@@ -50,19 +49,13 @@ public class WhereConditionBuilder {
                         .filter(StringUtils::isNotBlank)
                         .map(String::trim)
                         .map(this::validateAndSanitizeCondition)
-                        .collect(Collectors.toList());
+                        .map(c -> "(" + c + ")") // 关键：每个条件都加括号
+                        .toList();
 
         if (validConditions.isEmpty()) {
             return "";
         }
-
-        // 单个条件：直接返回，不添加外层括号
-        if (validConditions.size() == 1) {
-            return validConditions.get(0);
-        }
-
-        // 多个条件：使用AND连接，并添加外层括号
-        return validConditions.stream().collect(Collectors.joining(" AND ", "(", ")"));
+        return String.join(" AND ", validConditions);
     }
 
     /**
