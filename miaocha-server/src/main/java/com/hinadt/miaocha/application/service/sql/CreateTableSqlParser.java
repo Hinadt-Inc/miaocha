@@ -14,10 +14,10 @@ public final class CreateTableSqlParser {
 
     public static boolean isCreateTable(String sql) {
         if (sql == null) return false;
-        String s = sql.trim().toUpperCase();
-        return s.startsWith("CREATE TABLE ")
-                || s.startsWith("CREATE\nTABLE ")
-                || s.startsWith("CREATE\r\nTABLE ");
+        // Normalize all whitespace to single spaces so variants like
+        // "CREATE\nTABLE\ntest (" or multiple spaces are handled.
+        String s = sql.trim().toUpperCase().replaceAll("\\s+", " ");
+        return s.startsWith("CREATE TABLE ");
     }
 
     public static String extractTableName(String sql) {
@@ -87,6 +87,12 @@ public final class CreateTableSqlParser {
     public static List<String> extractFieldNames(String sql) {
         List<String> fieldNames = new ArrayList<>();
         if (sql == null || sql.trim().isEmpty()) return fieldNames;
+
+        // Guard: only handle real CREATE TABLE statements.
+        // Avoid mis-parsing other DDL like CREATE INDEX ... (col) as field definitions.
+        if (!isCreateTable(sql)) {
+            return fieldNames;
+        }
         String section = extractFieldsSection(sql);
         if (section == null) return fieldNames;
         String noComments = removeSqlCommentsPreserveLines(section);
