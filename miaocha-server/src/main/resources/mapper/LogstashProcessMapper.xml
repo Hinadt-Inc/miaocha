@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.hinadt.miaocha.domain.mapper.LogstashProcessMapper">
+<mapper namespace="com.hinadt.miaocha.infrastructure.mapper.LogstashProcessMapper">
 
     <!-- Logstash进程表所有字段 -->
     <sql id="logstashProcessColumns">
         id
-        , name, module_id, config_content, jvm_options, logstash_yml, create_time, update_time, create_user, update_user
+        , name, module_id, config_content, jvm_options, logstash_yml, alert_recipients, create_time, update_time, create_user, update_user
     </sql>
 
     <!-- Logstash进程表所有字段（带lp别名） -->
     <sql id="logstashProcessColumnsWithAlias">
-        lp.id, lp.name, lp.module_id, lp.config_content, lp.jvm_options, lp.logstash_yml, lp.create_time, lp.update_time, lp.create_user, lp.update_user
+        lp.id, lp.name, lp.module_id, lp.config_content, lp.jvm_options, lp.logstash_yml, lp.alert_recipients, lp.create_time, lp.update_time, lp.create_user, lp.update_user
     </sql>
 
     <!-- 插入 Logstash 进程记录 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO logstash_process (name, module_id, config_content, jvm_options, logstash_yml, create_user,
+        INSERT INTO logstash_process (name, module_id, config_content, jvm_options, logstash_yml, alert_recipients, create_user,
                                       update_user)
-        VALUES (#{name}, #{moduleId}, #{configContent}, #{jvmOptions}, #{logstashYml}, #{createUser}, #{updateUser})
+        VALUES (#{name}, #{moduleId}, #{configContent}, #{jvmOptions}, #{logstashYml}, #{alertRecipients}, #{createUser}, #{updateUser})
     </insert>
 
     <!-- 更新进程记录 -->
@@ -28,6 +28,7 @@
             config_content=#{configContent},
             jvm_options=#{jvmOptions},
             logstash_yml=#{logstashYml},
+            alert_recipients=#{alertRecipients},
             update_user=#{updateUser}
         WHERE id = #{id}
     </update>

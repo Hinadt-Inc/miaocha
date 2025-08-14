@@ -4,7 +4,7 @@ import com.hinadt.miaocha.application.logstash.enums.LogstashMachineState;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
-import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
+import com.hinadt.miaocha.infrastructure.mapper.LogstashMachineMapper;
 import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;

@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import lombok.Data;
 
-/** Logstash进程任务实体类 */
+/** Logstash process task entity */
 @Data
 @Schema(description = "Logstash进程任务实体")
 public class LogstashProcess implements UserAuditable {
@@ -26,6 +26,9 @@ public class LogstashProcess implements UserAuditable {
 
     @Schema(description = "Logstash系统配置模板")
     private String logstashYml;
+
+    @Schema(description = "Alert recipients JSON (List<String>)")
+    private String alertRecipients;
 
     @Schema(description = "创建时间")
     private LocalDateTime createTime;

@@ -10,7 +10,7 @@ import com.hinadt.miaocha.domain.dto.module.QueryConfigDTO;
 import com.hinadt.miaocha.domain.dto.permission.ModuleUsersPermissionDTO.UserPermissionInfoDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
 import com.hinadt.miaocha.domain.entity.ModuleInfo;
-import com.hinadt.miaocha.domain.mapper.UserMapper;
+import com.hinadt.miaocha.infrastructure.mapper.UserMapper;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

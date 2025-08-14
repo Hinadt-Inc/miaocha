@@ -32,6 +32,7 @@ for file in namespace.yml mysql-deployment.yml doris-deployment.yml miaocha-depl
         sed -e "s/\${PR_NUMBER}/$PR_NUMBER/g" \
             -e "s|\${DOCKER_IMAGE}|$DOCKER_IMAGE|g" \
             -e "s/\${DEPLOYMENT_TIMESTAMP}/$DEPLOYMENT_TIMESTAMP/g" \
+            -e "s/\${DEEPSEEK_API_KEY}/$DEEPSEEK_API_KEY/g" \
             "scripts/github/k8s/$file" > "$TEMP_DIR/$file"
     else
         echo "❌ 文件 scripts/github/k8s/$file 不存在"
@@ -59,17 +60,17 @@ fi
 if [ "$FIRST_DEPLOYMENT" = true ]; then
     echo "🗄️  部署 MySQL..."
     kubectl apply -f "$TEMP_DIR/mysql-deployment.yml"
-    
+
     echo "📊 部署 Doris..."
     kubectl apply -f "$TEMP_DIR/doris-deployment.yml"
-    
+
     echo "🚀 部署 Miaocha 应用..."
     kubectl apply -f "$TEMP_DIR/miaocha-deployment.yml"
 else
     echo "🔄 更新 Miaocha 应用..."
     # 应用配置会自动触发滚动更新（由于时间戳变化）
     kubectl apply -f "$TEMP_DIR/miaocha-deployment.yml"
-    
+
     echo "✅ MySQL 和 Doris 保持不变，仅更新应用"
 fi
 
@@ -78,18 +79,18 @@ wait_for_deployment() {
     local app_name=$1
     local namespace=$2
     local timeout=${3:-300}
-    
+
     echo "⏳ 等待 $app_name 部署完成..."
-    
+
     # 检查 deployment 是否存在
     if ! kubectl get deployment $app_name -n $namespace >/dev/null 2>&1; then
         echo "❌ Deployment $app_name 不存在"
         return 1
     fi
-    
+
     # 等待 deployment 就绪
     kubectl wait --for=condition=available deployment/$app_name -n $namespace --timeout=${timeout}s
-    
+
     if [ $? -eq 0 ]; then
         echo "✅ $app_name 部署成功"
         return 0
@@ -104,15 +105,15 @@ if [ "$FIRST_DEPLOYMENT" = true ]; then
     echo "⏳ 等待基础服务部署完成..."
     wait_for_deployment "mysql" "$NAMESPACE" 300
     wait_for_deployment "doris" "$NAMESPACE" 300
-    
+
     # 首次部署时，启动数据同步任务
     echo "🔄 启动数据同步任务..."
     kubectl apply -f "$TEMP_DIR/mysql-sync-job.yml"
-    
+
     # 等待数据同步完成
     echo "⏳ 等待数据同步完成..."
     kubectl wait --for=condition=complete job/mysql-sync-job -n $NAMESPACE --timeout=600s
-    
+
     if [ $? -eq 0 ]; then
         echo "✅ 数据同步完成"
     else
@@ -120,7 +121,7 @@ if [ "$FIRST_DEPLOYMENT" = true ]; then
         # 显示 Job 日志
         kubectl logs -l app=mysql-sync -n $NAMESPACE --tail=20
     fi
-    
+
     # 继续等待应用部署
     echo "⏳ 等待应用部署完成..."
     wait_for_deployment "miaocha" "$NAMESPACE" 300
@@ -128,7 +129,7 @@ else
     echo "⏳ 等待应用更新完成..."
     # 只等待 Miaocha 应用更新
     wait_for_deployment "miaocha" "$NAMESPACE" 300
-    
+
     # 检查滚动更新状态
     echo "🔄 检查滚动更新状态..."
     kubectl rollout status deployment/miaocha -n $NAMESPACE --timeout=300s
@@ -163,4 +164,4 @@ echo "  Doris Query: $NODE_IP:$DORIS_QUERY_PORT"
 echo "  MySQL: $NODE_IP:$MYSQL_PORT"
 echo ""
 echo "🧹 清理命令:"
-echo "  kubectl delete namespace miaocha-pr-$PR_NUMBER" 
+echo "  kubectl delete namespace miaocha-pr-$PR_NUMBER"

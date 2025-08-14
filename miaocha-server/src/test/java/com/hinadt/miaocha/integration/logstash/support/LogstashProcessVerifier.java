@@ -1,9 +1,9 @@
 package com.hinadt.miaocha.integration.logstash.support;
 
 import com.hinadt.miaocha.application.logstash.path.LogstashPathUtils;
-import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
+import com.hinadt.miaocha.infrastructure.ssh.SshClient;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

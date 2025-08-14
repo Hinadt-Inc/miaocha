@@ -43,7 +43,7 @@ public class QueryConfigDTO {
 
     @Valid
     @Size(max = 20, message = "关键词检索字段配置不能超过20个")
-    @Schema(description = "关键词检索字段配置列表，定义哪些字段可以用于关键词搜索以及对应的搜索方法", nullable = true)
+    @Schema(description = "关键词检索字段配置列表，定义哪些字段被用于关键词搜索以及对应的搜索方法", nullable = true)
     private List<KeywordFieldConfigDTO> keywordFields;
 
     @Valid

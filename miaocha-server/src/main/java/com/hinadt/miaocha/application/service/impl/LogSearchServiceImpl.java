@@ -22,7 +22,7 @@ import com.hinadt.miaocha.domain.dto.logsearch.LogHistogramResultDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchCacheDTO;
 import com.hinadt.miaocha.domain.dto.logsearch.LogSearchDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
-import com.hinadt.miaocha.domain.entity.enums.CacheGroup;
+import com.hinadt.miaocha.domain.enums.CacheGroup;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;

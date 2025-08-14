@@ -1,56 +1,55 @@
-<!-- 
-🚨 重要：请确保PR标题格式正确！
-标题必须按照以下格式：[ISSUE #xx] 描述内容
-例如：[ISSUE #123] 修复登录页面验证问题
+<!--
+🚨 Important: Ensure the PR title format is correct!
+Title format must be: [ISSUE #xx] Short description
+Example: [ISSUE #123] Fix login page validation
 
-⚠️ 注意：请在提交PR前删除本模板中的所有说明文字（包括这个注释块和下面的"PR标题格式要求"章节），只保留实际的内容描述！
+⚠️ Note: Remove all instructional text in this template (including this comment block and the "PR Title Requirements" section) before submitting. Keep only the actual content.
 -->
 
-请不要在没有先创建Issue的情况下创建Pull Request。
+Please do not open a Pull Request without a corresponding Issue first.
 
-## PR标题格式要求
+## PR Title Requirements
 
-**必须**按照以下格式设置PR标题：
+The PR title MUST follow the format:
 
 ```
-[ISSUE #xx] 描述内容
+[ISSUE #xx] Short description
 ```
 
-其中：
+Where:
 
-- `#xx` 是对应的Issue编号
-- `描述内容` 是简洁的变更描述
+- `#xx` is the related Issue number
+- `Short description` is a concise summary of the change
 
-示例：
+Examples:
 
-- `[ISSUE #123] 修复用户登录验证问题`
-- `[ISSUE #456] 添加数据库连接池配置`
-
-**⚠️ 提交前请删除上述"PR标题格式要求"章节，只保留下面的实际内容！**
+- [ISSUE #123] Fix user login validation
+- [ISSUE #456] Add database connection pool configuration
 
 ---
 
-## 变更的目的是什么
+## Purpose of the change
 
-<!-- 请替换下面的XXXXX为实际内容，并删除这个注释 -->
+<!-- Replace XXXXX with the actual purpose, then remove this comment -->
 XXXXX
 
-## 简短的更新日志
+## Changelog (brief)
 
-<!-- 请替换下面的XX为实际内容，并删除这个注释 -->
+<!-- Replace XX with actual highlights, then remove this comment -->
 XX
 
-## 验证这一变化
+## How it was verified
 
-<!-- 请替换下面的XXXX为实际内容，并删除这个注释 -->
+<!-- Replace XXXX with the verification steps/results, then remove this comment -->
 XXXX
 
-<!-- 请在每个checkbox前打勾 [x] 来确认已完成，并删除这个注释 -->
-请遵循此清单，以帮助我们快速轻松地整合您的贡献：
+<!-- Check the boxes [x] to confirm, then remove this comment -->
+Please follow this checklist to help us review and merge your contribution efficiently:
 
-* [ ] 一个 PR（Pull Request的简写）只解决一个问题，禁止一个 PR 解决多个问题；
-* [ ] 确保 PR 有对应的 Issue（通常在您开始处理之前创建），除非是书写错误之类的琐碎更改不需要 Issue ；
-* [ ] 格式化 PR 及 Commit-Log 的标题及内容。PS：Commit-Log 需要在 Git Commit 代码时进行填写，在 GitHub 上修改不了；
-* [ ] 编写足够详细的 PR 描述，以了解 PR 的作用、方式和原因；
-* [ ] 编写必要的单元测试来验证您的逻辑更正。如果提交了新功能或重大更改，请记住在 test 模块中添加 integration-test；
-* [ ] 确保编译通过，集成测试通过；
+* [ ] One PR addresses one problem only — avoid bundling multiple issues in one PR
+* [ ] This PR links to a corresponding Issue (created before you started). Trivial edits like typo fixes may skip an Issue
+* [ ] PR and commit messages are well formatted and descriptive
+* [ ] The PR description is detailed enough to explain the What, How, and Why
+* [ ] Add necessary unit/integration tests to validate the change. For new features or major changes, include integration tests in the `test` module when applicable
+* [ ] Ensure the project builds successfully and tests pass
+
