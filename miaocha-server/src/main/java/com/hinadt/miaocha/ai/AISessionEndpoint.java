@@ -24,16 +24,16 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-/** AI 会话接口 */
+/** AI session REST endpoint */
 @RestController
 @RequestMapping("/api/ai")
-@Tag(name = "AI 会话", description = "提供与AI助手对话的接口")
+@Tag(name = "AI Session", description = "Conversational interface with the AI assistant")
 public class AISessionEndpoint {
 
     private static final String SYSTEM_PROMPT =
@@ -87,11 +87,15 @@ public class AISessionEndpoint {
                         .build();
     }
 
-    /** 与AI助手对话（流式输出） */
-    @GetMapping(value = "/session", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    @Operation(summary = "AI 对话", description = "与AI助手进行对话，流式返回AI回复内容")
+    /** Chat with AI assistant (server-sent events). */
+    @PostMapping(value = "/session", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(
+            summary = "AI Conversation",
+            description = "Stream AI responses using Server-Sent Events")
     public SseEmitter session(
-            @Parameter(description = "会话请求", required = true) @Valid @RequestBody
+            @Parameter(description = "Conversation request payload", required = true)
+                    @Valid
+                    @RequestBody
                     AISessionRequestDTO request) {
 
         String conversationId =
