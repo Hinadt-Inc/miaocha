@@ -10,13 +10,14 @@ import * as modulesApi from '@/api/modules';
 import SearchBar from './SearchBar';
 import Log from './Log';
 import Sider from './Sider';
+import AIAssistant from '@/components/AIAssistant';
 import { QUICK_RANGES, DATE_FORMAT_THOUSOND, formatTimeString } from './utils';
 import styles from './index.module.less';
 
 const HomePage = () => {
   const dispatch = useDispatch();
   const [urlSearchParams] = useSearchParams();
-  
+
   const [moduleOptions, setModuleOptions] = useState<IStatus[]>([]); // 模块名称列表，用于字段选择等组件
   const [detailData, setDetailData] = useState<ILogDetailsResponse | null>(null); // 日志数据
   const [logTableColumns, setLogTableColumns] = useState<ILogColumnsResponse[]>([]); // 日志字段列表
@@ -41,15 +42,15 @@ const HomePage = () => {
   useEffect(() => {
     const handleCASCallback = async () => {
       const ticket = urlSearchParams.get('ticket');
-      
+
       if (ticket) {
         try {
           // 构造回调URL
           const redirectUri = `${window.location.origin}`;
-          
+
           // 从sessionStorage获取provider信息
           const providerId = sessionStorage.getItem('oauthProvider') || 'mandao';
-          
+
           // 调用后端回调接口
           const response = await oAuthCallback({
             provider: providerId,
@@ -75,12 +76,12 @@ const HomePage = () => {
 
             // 清理sessionStorage中的provider信息
             sessionStorage.removeItem('oauthProvider');
-            
+
             // 移除URL中的ticket参数，但保留分享参数
             const newUrl = new URL(window.location.href);
             newUrl.searchParams.delete('ticket');
             window.history.replaceState({}, '', newUrl.toString());
-            
+
             // 可以显示成功提示
           }
         } catch (error) {
@@ -104,20 +105,19 @@ const HomePage = () => {
     if (savedSharedParams && !sharedParams) {
       try {
         const parsedSavedParams = JSON.parse(savedSharedParams);
-        
+
         // 对于保存的相对时间范围，重新计算时间
         if (parsedSavedParams.timeRange && QUICK_RANGES[parsedSavedParams.timeRange]) {
           const quickRange = QUICK_RANGES[parsedSavedParams.timeRange];
           parsedSavedParams.startTime = quickRange.from().format(DATE_FORMAT_THOUSOND);
           parsedSavedParams.endTime = quickRange.to().format(DATE_FORMAT_THOUSOND);
         }
-        
+
         setSharedParams(parsedSavedParams);
-        
+
         if (parsedSavedParams.module) {
           setSelectedModule(parsedSavedParams.module);
         }
-        
       } catch (e) {
         console.error('解析保存的分享参数失败:', e);
         sessionStorage.removeItem('miaocha_shared_params');
@@ -139,7 +139,7 @@ const HomePage = () => {
 
         // 生成当前URL参数的唯一标识
         const currentUrlParams = `${keywords || ''}-${whereSqls || ''}-${timeRange || ''}-${startTime || ''}-${endTime || ''}-${module || ''}-${timeGrouping || ''}`;
-        
+
         // 如果已经处理过相同的URL参数，则跳过
         if (processedUrlRef.current === currentUrlParams) {
           return;
@@ -148,7 +148,7 @@ const HomePage = () => {
         // 如果有分享参数，解析并保存
         if (keywords || whereSqls || timeRange || module) {
           const parsedParams: any = {};
-          
+
           if (keywords) {
             try {
               parsedParams.keywords = JSON.parse(keywords);
@@ -156,7 +156,7 @@ const HomePage = () => {
               console.error('解析keywords参数失败:', e);
             }
           }
-          
+
           if (whereSqls) {
             try {
               parsedParams.whereSqls = JSON.parse(whereSqls);
@@ -164,7 +164,7 @@ const HomePage = () => {
               console.error('解析whereSqls参数失败:', e);
             }
           }
-          
+
           if (timeRange) parsedParams.timeRange = timeRange;
           if (startTime) parsedParams.startTime = startTime;
           if (endTime) parsedParams.endTime = endTime;
@@ -179,15 +179,15 @@ const HomePage = () => {
               parsedParams.startTime = quickRange.from().format(DATE_FORMAT_THOUSOND);
               parsedParams.endTime = quickRange.to().format(DATE_FORMAT_THOUSOND);
             }
-            
+
             // 标记已处理这组URL参数
             processedUrlRef.current = currentUrlParams;
-            
+
             setSharedParams(parsedParams);
-            
+
             // 保存到sessionStorage，防止登录跳转后丢失
             sessionStorage.setItem('miaocha_shared_params', JSON.stringify(parsedParams));
-            
+
             if (parsedParams.module) {
               setSelectedModule(parsedParams.module);
             }
@@ -199,11 +199,10 @@ const HomePage = () => {
             try {
               const parsedSavedParams = JSON.parse(savedSharedParams);
               setSharedParams(parsedSavedParams);
-              
+
               if (parsedSavedParams.module) {
                 setSelectedModule(parsedSavedParams.module);
               }
-              
             } catch (e) {
               console.error('解析保存的分享参数失败:', e);
               sessionStorage.removeItem('miaocha_shared_params');
@@ -225,7 +224,7 @@ const HomePage = () => {
       if (sharedParams.module && (!moduleQueryConfig || loadingQueryConfig)) {
         return; // 等待模块配置加载完成
       }
-      
+
       // 短暂延迟确保 SearchBar 组件完全初始化
       const timer = setTimeout(() => {
         try {
@@ -233,28 +232,28 @@ const HomePage = () => {
           if (sharedParams.keywords && Array.isArray(sharedParams.keywords)) {
             setKeywords(sharedParams.keywords);
           }
-          
+
           // 应用SQL条件
           if (sharedParams.whereSqls && Array.isArray(sharedParams.whereSqls)) {
             setSqls(sharedParams.whereSqls);
           }
-          
+
           // 应用时间分组
           if (sharedParams.timeGrouping) {
             searchBarRef.current?.setTimeGroup?.(sharedParams.timeGrouping);
           }
-          
+
           // 应用时间范围到SearchBar - 优先处理相对时间范围
           let timeOption: any = null;
           let calculatedStartTime: string | undefined;
           let calculatedEndTime: string | undefined;
-          
+
           if (sharedParams.timeRange && QUICK_RANGES[sharedParams.timeRange]) {
             // 有相对时间范围，重新计算当前时间
             const quickRange = QUICK_RANGES[sharedParams.timeRange];
             calculatedStartTime = quickRange.from().format(DATE_FORMAT_THOUSOND);
             calculatedEndTime = quickRange.to().format(DATE_FORMAT_THOUSOND);
-            
+
             timeOption = {
               value: sharedParams.timeRange,
               range: [calculatedStartTime, calculatedEndTime],
@@ -265,7 +264,7 @@ const HomePage = () => {
             // 没有相对时间范围，使用绝对时间
             calculatedStartTime = sharedParams.startTime;
             calculatedEndTime = sharedParams.endTime;
-            
+
             timeOption = {
               value: `${sharedParams.startTime} ~ ${sharedParams.endTime}`,
               range: [sharedParams.startTime, sharedParams.endTime],
@@ -273,16 +272,16 @@ const HomePage = () => {
               type: 'absolute',
             };
           }
-          
+
           if (timeOption) {
             searchBarRef.current?.setTimeOption?.(timeOption);
           }
-          
+
           // 更新搜索参数
           if (sharedParams.module) {
-            const moduleOption = moduleOptions.find(option => option.module === sharedParams.module);
+            const moduleOption = moduleOptions.find((option) => option.module === sharedParams.module);
             if (moduleOption) {
-              setSearchParams(prev => ({
+              setSearchParams((prev) => ({
                 ...prev,
                 datasourceId: Number(moduleOption.datasourceId),
                 module: sharedParams.module,
@@ -298,19 +297,18 @@ const HomePage = () => {
               console.warn('未找到对应的模块选项:', sharedParams.module, moduleOptions);
             }
           }
-          
+
           setHasAppliedSharedParams(true);
-          
+
           // 参数应用成功后，清理URL和sessionStorage
           const newUrl = new URL(window.location.href);
-          ['keywords', 'whereSqls', 'timeRange', 'startTime', 'endTime', 'module', 'timeGrouping'].forEach(param => {
+          ['keywords', 'whereSqls', 'timeRange', 'startTime', 'endTime', 'module', 'timeGrouping'].forEach((param) => {
             newUrl.searchParams.delete(param);
           });
           window.history.replaceState({}, '', newUrl.toString());
-          
+
           // 清理sessionStorage中的分享参数
           sessionStorage.removeItem('miaocha_shared_params');
-          
         } catch (error) {
           console.error('应用分享参数失败:', error);
         }
@@ -319,7 +317,7 @@ const HomePage = () => {
       return () => clearTimeout(timer);
     }
   }, [sharedParams, hasAppliedSharedParams, moduleOptions, searchBarRef, moduleQueryConfig, loadingQueryConfig]);
-  
+
   const [isInitialized, setIsInitialized] = useState(false); // 标记是否已经初始化
   const lastCallParamsRef = useRef<string>('');
   const requestTimerRef = useRef<NodeJS.Timeout | null>(null); // 新增：用于延迟请求的定时器
@@ -352,7 +350,7 @@ const HomePage = () => {
     );
   };
 
-    // 获取模块列表
+  // 获取模块列表
   useRequest(api.fetchMyModules, {
     onBefore: () => {
       isInitializingRef.current = true;
@@ -363,7 +361,7 @@ const HomePage = () => {
 
       // 如果有分享参数，优先应用分享的模块
       if (sharedParams && sharedParams.module && !hasAppliedSharedParams) {
-        const sharedModuleOption = moduleOptions.find(option => option.module === sharedParams.module);
+        const sharedModuleOption = moduleOptions.find((option) => option.module === sharedParams.module);
         if (sharedModuleOption) {
           setSelectedModule(sharedParams.module);
           setSearchParams((prev) => ({
@@ -409,16 +407,16 @@ const HomePage = () => {
       onSuccess: (res) => {
         const { rows } = res;
         const timeField = moduleQueryConfig?.timeField || 'log_time';
-        
+
         // 为每条记录添加唯一ID并格式化时间字段
         (rows || []).forEach((item, index) => {
           item._key = `${Date.now()}_${index}`;
-          
+
           if (item[timeField]) {
             item[timeField] = formatTimeString(item[timeField] as string);
           }
         });
-        
+
         setDetailData(res);
       },
       onError: () => {
@@ -450,18 +448,21 @@ const HomePage = () => {
   );
 
   // 执行数据请求的函数
-  const executeDataRequest = useCallback((params: ILogSearchParams) => {
-    // 取消之前的请求
-    if (abortRef.current) {
-      abortRef.current.abort();
-    }
+  const executeDataRequest = useCallback(
+    (params: ILogSearchParams) => {
+      // 取消之前的请求
+      if (abortRef.current) {
+        abortRef.current.abort();
+      }
 
-    abortRef.current = new AbortController();
-    const requestParams = { ...params, signal: abortRef.current.signal };
+      abortRef.current = new AbortController();
+      const requestParams = { ...params, signal: abortRef.current.signal };
 
-    getDetailData.run(requestParams);
-    getHistogramData.run(requestParams);
-  }, [getDetailData, getHistogramData]);
+      getDetailData.run(requestParams);
+      getHistogramData.run(requestParams);
+    },
+    [getDetailData, getHistogramData],
+  );
 
   // 主要的数据请求逻辑
   useEffect(() => {
@@ -535,13 +536,13 @@ const HomePage = () => {
   // 处理列变化
   const handleChangeColumns = useCallback((columns: ILogColumnsResponse[]) => {
     setLogTableColumns(columns);
-    
+
     // 更新搜索参数中的fields字段，触发detail接口调用
     const selectedColumns = columns
       .filter((item) => item.selected && item.columnName)
       .map((item) => item.columnName!)
       .filter((name): name is string => Boolean(name));
-    
+
     setSearchParams((prev) => ({
       ...prev,
       fields: selectedColumns.length > 0 ? selectedColumns : undefined,
@@ -591,7 +592,7 @@ const HomePage = () => {
       if (selectedModule !== searchParams.module) {
         loadedConfigModulesRef.current.clear();
       }
-      
+
       setSelectedModule(selectedModule);
       setKeywords([]); // 新增：切换模块时重置
       setSqls([]); // 新增：切换模块时重置
@@ -657,57 +658,59 @@ const HomePage = () => {
   };
 
   // 处理列变化
-  const handleChangeColumnsByLog = useCallback((col: any) => {
-    
-    const index = logTableColumns.findIndex((item) => item.columnName === col.title);
-    
-    if (index === -1) {
-      return;
-    }
-    
-    // 更新列状态
-    logTableColumns[index].selected = false;
-    delete logTableColumns[index]._createTime;
-    
-    // 计算移除该列后的选中列列表
-    const selectedColumns = logTableColumns
-      .filter((item) => item.selected && item.columnName)
-      .map((item) => item.columnName!)
-      .filter((name): name is string => Boolean(name));
-    
-    // 更新本地搜索参数
-    const _savedSearchParams = localStorage.getItem('searchBarParams');
-    if (_savedSearchParams) {
-      const savedSearchParams = JSON.parse(_savedSearchParams);
-      localStorage.setItem(
-        'searchBarParams',
-        JSON.stringify({
-          ...savedSearchParams,
-          fields: selectedColumns,
-        }),
+  const handleChangeColumnsByLog = useCallback(
+    (col: any) => {
+      const index = logTableColumns.findIndex((item) => item.columnName === col.title);
+
+      if (index === -1) {
+        return;
+      }
+
+      // 更新列状态
+      logTableColumns[index].selected = false;
+      delete logTableColumns[index]._createTime;
+
+      // 计算移除该列后的选中列列表
+      const selectedColumns = logTableColumns
+        .filter((item) => item.selected && item.columnName)
+        .map((item) => item.columnName!)
+        .filter((name): name is string => Boolean(name));
+
+      // 更新本地搜索参数
+      const _savedSearchParams = localStorage.getItem('searchBarParams');
+      if (_savedSearchParams) {
+        const savedSearchParams = JSON.parse(_savedSearchParams);
+        localStorage.setItem(
+          'searchBarParams',
+          JSON.stringify({
+            ...savedSearchParams,
+            fields: selectedColumns,
+          }),
+        );
+      }
+
+      // 通知父组件激活字段变化
+      setActiveColumns(selectedColumns);
+
+      // 排序并更新列状态
+      const sortedColumns = logTableColumns.sort(
+        (a: ILogColumnsResponse, b: ILogColumnsResponse) => (a._createTime || 0) - (b._createTime || 0),
       );
-    }
-    
-    // 通知父组件激活字段变化
-    setActiveColumns(selectedColumns);
-    
-    // 排序并更新列状态
-    const sortedColumns = logTableColumns.sort(
-      (a: ILogColumnsResponse, b: ILogColumnsResponse) => (a._createTime || 0) - (b._createTime || 0),
-    );
-    const updatedColumns = [...sortedColumns];
-    setLogTableColumns(updatedColumns);
-    
-    // 更新搜索参数中的fields字段，触发detail接口调用
-    setSearchParams((prev) => {
-      const newParams = {
-        ...prev,
-        fields: selectedColumns.length > 0 ? selectedColumns : undefined,
-        offset: 0, // 重置分页
-      };
-      return newParams;
-    });
-  }, [logTableColumns]);
+      const updatedColumns = [...sortedColumns];
+      setLogTableColumns(updatedColumns);
+
+      // 更新搜索参数中的fields字段，触发detail接口调用
+      setSearchParams((prev) => {
+        const newParams = {
+          ...prev,
+          fields: selectedColumns.length > 0 ? selectedColumns : undefined,
+          offset: 0, // 重置分页
+        };
+        return newParams;
+      });
+    },
+    [logTableColumns],
+  );
 
   // 优化log组件的props
   const logProps: any = useMemo(
@@ -749,10 +752,9 @@ const HomePage = () => {
     onSuccess: (res) => {
       setModuleQueryConfig(res);
       setLoadingQueryConfig(false);
-      
+
       // 记录已加载配置的模块
       loadedConfigModulesRef.current.add(selectedModule);
-
 
       // 清除初始化标记，允许数据请求执行
       setTimeout(() => {
@@ -762,7 +764,6 @@ const HomePage = () => {
     onError: () => {
       setModuleQueryConfig(null);
       setLoadingQueryConfig(false);
-
 
       // 即使失败也要清除初始化标记
       isInitializingRef.current = false;
@@ -874,6 +875,32 @@ const HomePage = () => {
           </div>
         </Splitter.Panel>
       </Splitter>
+
+      {/* AI助手悬浮窗 */}
+      <AIAssistant
+        onLogSearch={(params) => {
+          // 更新搜索参数并触发搜索
+          searchBarRef.current?.updateSearchParams(params);
+        }}
+        onFieldSelect={(fields) => {
+          // 更新显示字段
+          setActiveColumns(fields);
+        }}
+        onTimeRangeChange={(timeRange) => {
+          // 更新时间范围
+          searchBarRef.current?.updateTimeRange(timeRange);
+        }}
+        currentSearchParams={{
+          module: selectedModule,
+          keywords,
+          sqls,
+          activeColumns,
+          sortConfig,
+          whereSqls: whereSqlsFromSider,
+        }}
+        logData={detailData}
+        moduleOptions={moduleOptions}
+      />
     </div>
   );
 };

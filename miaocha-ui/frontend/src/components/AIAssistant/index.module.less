@@ -1,0 +1,849 @@
+/* AI助手主容器样式 - Grok风格设计 */
+.floatButton {
+  bottom: 80px !important;
+  right: 24px !important;
+  z-index: 1000;
+  background: linear-gradient(135deg, #1890ff 0%, #722ed1 50%, #eb2f96 100%) !important;
+  border: 3px solid rgba(255, 255, 255, 0.8) !important;
+  box-shadow:
+    0 12px 40px rgba(24, 144, 255, 0.6),
+    0 4px 20px rgba(114, 46, 209, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+  animation: pulse 2s infinite;
+  width: 60px !important;
+  height: 60px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  &:hover {
+    transform: scale(1.15) translateY(-3px);
+    box-shadow:
+      0 16px 50px rgba(24, 144, 255, 0.7),
+      0 8px 30px rgba(114, 46, 209, 0.5),
+      0 0 30px rgba(235, 47, 150, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: none;
+  }
+
+  &:active {
+    transform: scale(1.05) translateY(-1px);
+  }
+
+  :global(.anticon) {
+    color: white !important;
+    font-size: 28px !important;
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4));
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(135deg, #1890ff, #722ed1, #eb2f96);
+    border-radius: 50%;
+    z-index: -1;
+    opacity: 0.8;
+    filter: blur(8px);
+    animation: rotate 3s linear infinite;
+  }
+}
+
+/* 脉冲动画效果 */
+@keyframes pulse {
+  0% {
+    box-shadow:
+      0 12px 40px rgba(24, 144, 255, 0.6),
+      0 4px 20px rgba(114, 46, 209, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      0 0 0 0 rgba(24, 144, 255, 0.5);
+  }
+
+  50% {
+    box-shadow:
+      0 12px 40px rgba(24, 144, 255, 0.6),
+      0 4px 20px rgba(114, 46, 209, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      0 0 0 8px rgba(24, 144, 255, 0.2);
+  }
+
+  100% {
+    box-shadow:
+      0 12px 40px rgba(24, 144, 255, 0.6),
+      0 4px 20px rgba(114, 46, 209, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      0 0 0 0 rgba(24, 144, 255, 0);
+  }
+}
+
+/* 旋转背景光晕效果 */
+@keyframes rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.assistantDrawer {
+  :global(.ant-drawer-content) {
+    background: #fafbfc;
+    border-left: 1px solid #e1e8ed;
+  }
+
+  :global(.ant-drawer-header) {
+    border-bottom: 1px solid #e1e8ed;
+    background: white;
+    padding: 16px 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  :global(.ant-drawer-body) {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
+/* 拖拽弹框样式 */
+.draggableModal {
+  :global(.ant-modal) {
+    top: 20vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  :global(.ant-modal-content) {
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e1e8ed;
+    overflow: hidden;
+    /* 性能优化：启用硬件加速 */
+    transform: translateZ(0);
+    will-change: transform;
+    /* 优化拖拽时的渲染性能 */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+
+  :global(.ant-modal-header) {
+    padding: 0 !important;
+    margin: 0 !important;
+    border-bottom: none !important;
+    background: transparent !important;
+    /* 拖拽优化 */
+    cursor: move;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+  }
+
+  :global(.ant-modal-body) {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    height: 60vh;
+    max-height: 600px;
+    overflow: hidden;
+    /* 重要：阻止Modal body本身产生滚动条 */
+  }
+
+  :global(.ant-modal-close) {
+    display: none !important;
+  }
+
+  /* 拖拽时的优化样式 */
+  :global(.react-draggable-dragging) {
+    /* 拖拽时禁用过渡动画以提升性能 */
+    transition: none !important;
+    /* 确保在拖拽时保持良好的视觉效果 */
+    z-index: 9999 !important;
+    opacity: 0.9;
+  }
+}
+
+.draggableTitle {
+  cursor: move;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background: #f0f0f0;
+    cursor: grab;
+  }
+
+  &:active {
+    cursor: grabbing;
+    background: #e6f7ff;
+  }
+}
+
+.draggableTitleLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.draggableTitleRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.draggableTitleText {
+  font-weight: 500;
+  color: #262626;
+}
+
+.modalContent {
+  height: 100%;
+  /* 使用100%填满Modal body */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* 确保外层不出现滚动条 */
+}
+
+.drawerHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.drawerTabs {
+  display: flex;
+  gap: 8px;
+}
+
+.tabButton {
+  border-radius: 20px !important;
+  font-weight: 500;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.closeButton {
+  border-radius: 50% !important;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: #f7f9fa !important;
+  }
+}
+
+.drawerContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* 容器本身不滚动 */
+  background: white;
+  margin: 0;
+  border-radius: 0;
+  min-height: 0;
+  /* 重要：允许flex子元素缩小 */
+}
+
+/* 聊天界面样式 - Grok风格 */
+.chatInterface {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: white;
+  min-height: 0;
+  /* 重要：允许flex子元素缩小 */
+  overflow-y: auto;
+  /* 聊天界面自己处理滚动 */
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #e1e8ed;
+    border-radius: 2px;
+
+    &:hover {
+      background: #d1d9e6;
+    }
+  }
+}
+
+.chatContainer {
+  flex: 1;
+  overflow: visible;
+  /* 不处理滚动 */
+  padding: 16px 0;
+  /* 给内容一些间距 */
+  min-height: 0;
+  /* 重要：允许flex子元素缩小 */
+}
+
+.messagesContainer {
+  padding: 16px 24px 24px 24px;
+  /* 减少顶部padding */
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  /* 移除这里的滚动，让父级容器处理 */
+}
+
+/* 消息样式 - 类似Grok */
+.messageWrapper {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+.messageContent {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 100%;
+}
+
+.userMessage {
+  .messageContent {
+    flex-direction: row-reverse;
+  }
+
+  .messageBubble {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    margin-left: 48px;
+
+    .messageText {
+      color: white;
+    }
+
+    .messageTime {
+      color: rgba(255, 255, 255, 0.8);
+    }
+  }
+}
+
+.assistantMessage {
+  .messageBubble {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    margin-right: 48px;
+  }
+}
+
+.messageAvatar {
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+.avatarBot {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  border: 2px solid white;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+.avatarUser {
+  background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%) !important;
+  color: #8b4513 !important;
+  border: 2px solid white;
+  box-shadow: 0 2px 8px rgba(252, 182, 159, 0.2);
+}
+
+.messageBubble {
+  border-radius: 18px;
+  padding: 16px 20px;
+  max-width: calc(100% - 60px);
+  word-wrap: break-word;
+  position: relative;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+}
+
+.messageText {
+  line-height: 1.6;
+  font-size: 14px;
+  margin: 0;
+}
+
+.messageTime {
+  font-size: 11px;
+  color: #657786;
+  margin-top: 8px;
+  text-align: right;
+  opacity: 0.7;
+}
+
+/* 欢迎界面 - Grok风格 */
+.welcomeContainer {
+  padding: 32px 24px 40px 24px;
+  /* 保持合适的padding */
+  text-align: center;
+  /* 移除这里的高度和滚动设置，让父级容器处理 */
+  background: linear-gradient(135deg, #fafbfc 0%, #f7f9fa 100%);
+}
+
+.welcomeHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 48px;
+}
+
+.welcomeAvatar {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+}
+
+.welcomeContent {
+  max-width: 400px;
+}
+
+.welcomeTitle {
+  font-size: 28px;
+  font-weight: 700;
+  color: #14171a;
+  margin: 0 0 12px 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.welcomeDescription {
+  font-size: 16px;
+  color: #657786;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.promptsSection {
+  margin-bottom: 32px;
+}
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #14171a;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.promptCards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  text-align: left;
+}
+
+.promptCard {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #e1e8ed;
+  transition: all 0.3s ease;
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    border-color: #667eea;
+  }
+}
+
+.promptCardHeader {
+  margin-bottom: 12px;
+}
+
+.promptCardTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: #14171a;
+}
+
+.promptCardContent {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.promptItem {
+  padding: 8px 12px;
+  background: #f7f9fa;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #657786;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #e1e8ed;
+    color: #14171a;
+    transform: translateX(2px);
+  }
+}
+
+.quickActionsSection {
+  text-align: left;
+}
+
+.quickActions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quickActionButton {
+  height: 44px;
+  border-radius: 22px;
+  font-weight: 500;
+  border: 1px solid #e1e8ed;
+  background: white;
+  color: #14171a;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: transparent;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  }
+}
+
+/* 自定义输入框 - Grok风格 */
+.inputContainer {
+  background: white;
+  border-top: 1px solid #e1e8ed;
+  padding: 16px 24px;
+  flex-shrink: 0;
+  /* 不允许收缩，保持固定高度 */
+  z-index: 10;
+}
+
+.customInputContainer {
+  width: 100%;
+}
+
+.inputWrapper {
+  display: flex;
+  align-items: center;
+  /* 改为center，让文字垂直居中 */
+  gap: 12px;
+  background: #f7f9fa;
+  border-radius: 24px;
+  padding: 12px 16px;
+  border: 1px solid #e1e8ed;
+  transition: all 0.2s ease;
+
+  &:focus-within {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+}
+
+.customTextArea {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  resize: none !important;
+  padding: 4px 0 !important;
+  font-size: 14px;
+  line-height: 1.5;
+
+  &:focus {
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  &::placeholder {
+    color: #8899a6;
+  }
+}
+
+.sendButton {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  border: none;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+
+  &:disabled {
+    background: #e1e8ed;
+    cursor: not-allowed;
+  }
+
+  :global(.anticon) {
+    color: white;
+    font-size: 16px;
+  }
+}
+
+.inputHint {
+  font-size: 12px;
+  color: #8899a6;
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* Action 消息样式优化 */
+.actionContent {
+  background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+  border: 1px solid #e1e8ff;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 4px 0;
+}
+
+.actionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e1e8ff;
+}
+
+.actionIcon {
+  font-size: 16px;
+}
+
+.actionTitle {
+  font-weight: 600;
+  color: #4c63d2;
+}
+
+.actionLoading {
+  font-size: 12px;
+  color: #8899a6;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.actionDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.actionParams,
+.actionResult {
+  background: white;
+  border: 1px solid #e1e8ed;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.actionParamsCode {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 12px;
+  overflow-x: auto;
+  margin: 8px 0 0 0;
+  white-space: pre-wrap;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.actionSuccess {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #00ba7c;
+}
+
+.actionError {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #e0245e;
+}
+
+.logSearchDetails,
+.histogramDetails,
+.fieldDistributionDetails {
+  margin-top: 8px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+
+  p {
+    margin: 0 0 8px 0;
+    font-weight: 500;
+    color: #14171a;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 20px;
+
+    li {
+      margin: 4px 0;
+      font-size: 14px;
+      color: #657786;
+    }
+  }
+}
+
+/* 建议和历史容器样式 */
+.suggestionsContainer,
+.historyContainer {
+  padding: 24px;
+  background: #fafbfc;
+  height: 100%;
+  /* 填满父容器 */
+  overflow-y: auto;
+  /* 自己处理滚动 */
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #e1e8ed;
+    border-radius: 2px;
+
+    &:hover {
+      background: #d1d9e6;
+    }
+  }
+}
+
+.suggestionsList,
+.historyList {
+  width: 100%;
+}
+
+.suggestionCard,
+.historyCard {
+  transition: all 0.3s ease;
+  border-radius: 12px;
+  border: 1px solid #e1e8ed;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    border-color: #667eea;
+  }
+
+  :global(.ant-card-actions) {
+    border-top: 1px solid #e1e8ed;
+    background: #f7f9fa;
+    border-radius: 0 0 12px 12px;
+  }
+}
+
+.suggestionCard {
+  border-left: 4px solid #667eea;
+}
+
+.historyCard {
+  border-left: 4px solid #00ba7c;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .assistantDrawer {
+    width: 100% !important;
+  }
+
+  .drawerContent {
+    margin: 0;
+  }
+
+  .chatContainer,
+  .suggestionsContainer,
+  .historyContainer {
+    padding: 16px;
+  }
+
+  .welcomeContainer {
+    padding: 24px 16px;
+  }
+
+  .promptCards {
+    gap: 12px;
+  }
+
+  .promptCard {
+    padding: 16px;
+  }
+
+  .messageBubble {
+    max-width: calc(100% - 50px);
+  }
+
+  .userMessage .messageBubble {
+    margin-left: 40px;
+  }
+
+  .assistantMessage .messageBubble {
+    margin-right: 40px;
+  }
+}
