@@ -21,7 +21,7 @@ const HomePage = () => {
   const [moduleOptions, setModuleOptions] = useState<IStatus[]>([]); // 模块名称列表，用于字段选择等组件
   const [detailData, setDetailData] = useState<ILogDetailsResponse | null>(null); // 日志数据
   const [logTableColumns, setLogTableColumns] = useState<ILogColumnsResponse[]>([]); // 日志字段列表
-  const [histogramData, setHistogramData] = useState<ILogHistogramData | null>(null); // 日志时间分布列表
+  const [histogramData, setHistogramData] = useState<ILogHistogramResponse | null>(null); // 日志时间分布列表
   const [whereSqlsFromSider, setWhereSqlsFromSider] = useState<IStatus[]>([]); // 侧边栏的where条件
   const [keywords, setKeywords] = useState<string[]>([]); // 新增
   const [sqls, setSqls] = useState<string[]>([]); // 新增
@@ -878,17 +878,72 @@ const HomePage = () => {
 
       {/* AI助手悬浮窗 */}
       <AIAssistant
-        onLogSearch={(params) => {
-          // 更新搜索参数并触发搜索
-          searchBarRef.current?.updateSearchParams(params);
+        onLogSearch={(data) => {
+          console.log('🏠 Home页面收到onLogSearch回调:', data);
+
+          // 处理AI助手的搜索请求
+          const searchParams = data.searchParams || data; // 向后兼容
+
+          // 如果有搜索结果，直接更新状态
+          if (data.searchResult) {
+            console.log('📊 直接更新detailData状态');
+            setDetailData(data.searchResult);
+          }
+
+          // 更新搜索参数
+          setSearchParams(searchParams);
+
+          // 只有在没有skipRequest标记时才触发新的搜索请求
+          if (!data.skipRequest) {
+            console.log('🔄 触发executeDataRequest');
+            executeDataRequest(searchParams);
+          } else {
+            console.log('⏭️ 跳过重复请求 (skipRequest=true)');
+          }
         }}
         onFieldSelect={(fields) => {
           // 更新显示字段
           setActiveColumns(fields);
         }}
-        onTimeRangeChange={(timeRange) => {
-          // 更新时间范围
-          searchBarRef.current?.updateTimeRange(timeRange);
+        onTimeRangeChange={(data) => {
+          console.log('🏠 Home页面收到onTimeRangeChange回调:', data);
+
+          // 处理时间范围变更
+          let timeRangeData = data;
+
+          // 向后兼容处理
+          if (typeof data === 'string') {
+            timeRangeData = { timeRange: data };
+          }
+
+          // 如果有直方图数据，直接更新状态
+          if (timeRangeData.histogramData) {
+            console.log('📊 直接更新histogramData状态:', timeRangeData.histogramData);
+            console.log('📊 检查distributionData:', {
+              hasDistributionData: !!timeRangeData.histogramData.distributionData,
+              length: timeRangeData.histogramData.distributionData?.length,
+              firstItem: timeRangeData.histogramData.distributionData?.[0],
+            });
+            // 修正：直接设置整个histogramData，而不是取第一个元素
+            setHistogramData(timeRangeData.histogramData);
+          }
+
+          // 更新搜索参数中的时间范围
+          const newSearchParams = {
+            ...searchParams,
+            timeRange: timeRangeData.timeRange as any, // 类型断言
+            startTime: timeRangeData.startTime,
+            endTime: timeRangeData.endTime,
+          };
+          setSearchParams(newSearchParams);
+
+          // 只有在没有skipRequest标记时才触发新的搜索请求
+          if (!timeRangeData.skipRequest) {
+            console.log('🔄 触发executeDataRequest');
+            executeDataRequest(newSearchParams);
+          } else {
+            console.log('⏭️ 跳过重复请求 (skipRequest=true)');
+          }
         }}
         currentSearchParams={{
           module: selectedModule,

@@ -4,7 +4,7 @@ import HistogramChart from './HistogramChart';
 import styles from './Log.module.less';
 import VirtualTable from './VirtualTable';
 interface IProps {
-  histogramData: ILogHistogramData[]; // 直方图数据
+  histogramData: ILogHistogramResponse | null; // 直方图数据
   histogramDataLoading: boolean; // 直方图数据是否正在加载
   getDetailData: any; // 加载日志数据的函数
   detailData: ILogDetailsResponse; // 日志数据;
@@ -99,11 +99,65 @@ const Log = (props: IProps) => {
     onSortChange,
   ]);
 
+  const histogramChartData: ILogHistogramData | null = (() => {
+    console.log('📊 开始处理histogramData:', histogramData);
+
+    if (!histogramData) {
+      console.log('📊 histogramData为空');
+      return null;
+    }
+
+    // 检查数据结构 - 如果是ILogHistogramResponse格式
+    if (histogramData.distributionData && Array.isArray(histogramData.distributionData)) {
+      console.log('📊 histogramData.distributionData是数组, 长度:', histogramData.distributionData.length);
+
+      if (histogramData.distributionData.length === 0) {
+        console.log('📊 distributionData是空数组');
+        return null;
+      }
+
+      const firstItem = histogramData.distributionData[0];
+      console.log('📊 第一个元素:', firstItem);
+
+      // 确保返回的是ILogHistogramData类型
+      if (firstItem?.distributionData && firstItem?.timeUnit && firstItem?.timeInterval) {
+        return firstItem;
+      }
+    }
+
+    // 检查是否histogramData本身就是ILogHistogramData格式
+    const directData = histogramData as unknown as ILogHistogramData;
+    if (
+      directData?.distributionData &&
+      Array.isArray(directData.distributionData) &&
+      directData?.timeUnit &&
+      directData?.timeInterval
+    ) {
+      console.log('📊 histogramData本身就是ILogHistogramData格式');
+      return directData;
+    }
+
+    console.log('📊 无法识别的数据格式或数据为空');
+    return null;
+  })();
+
+  // 调试日志
+  console.log('📊 Log组件接收到的histogramData:', histogramData);
+  console.log('📊 histogramData的结构检查:', {
+    hasHistogramData: !!histogramData,
+    hasDistributionData: !!histogramData?.distributionData,
+    distributionDataLength: histogramData?.distributionData?.length,
+    distributionDataType: typeof histogramData?.distributionData,
+    isDistributionDataArray: Array.isArray(histogramData?.distributionData),
+    firstDistributionItem: histogramData?.distributionData?.[0],
+  });
+  console.log('📊 传递给HistogramChart的data:', histogramChartData);
+
   return (
     <Splitter layout="vertical" className={styles.logContainer}>
       <Splitter.Panel collapsible defaultSize={170} min={170} max={170}>
         <div className={styles.chart}>
-          <HistogramChart data={histogramData as any} searchParams={searchParams} onSearch={onSearch} />
+          <HistogramChart data={histogramChartData} searchParams={searchParams} onSearch={onSearch} />
         </div>
       </Splitter.Panel>
       <Splitter.Panel>

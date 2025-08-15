@@ -16,6 +16,7 @@ import rehypeHighlight from 'rehype-highlight';
 import rehypeRaw from 'rehype-raw';
 import { AIAssistantProvider } from './context/AIAssistantContext';
 import { ThinkingIndicator } from './components/ThinkingIndicator';
+import { fetchLogDetails, fetchLogHistogram, fetchDistributions } from '../../api/logs';
 import styles from './index.module.less';
 import markdownStyles from './markdown.module.less';
 import './highlight.css';
@@ -23,9 +24,9 @@ import './highlight.css';
 const { Title } = Typography;
 
 interface IAIAssistantProps {
-  onLogSearch?: (params: any) => void;
+  onLogSearch?: (data: any) => void; // 支持传递搜索参数和结果
   onFieldSelect?: (fields: string[]) => void;
-  onTimeRangeChange?: (timeRange: any) => void;
+  onTimeRangeChange?: (data: any) => void; // 支持传递时间范围和直方图数据
   currentSearchParams?: any;
   logData?: any;
   moduleOptions?: any[];
@@ -62,6 +63,7 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
   const [inputValue, setInputValue] = useState('');
   const [disabled, setDisabled] = useState(true);
   const [bounds, setBounds] = useState({ left: 0, top: 0, bottom: 0, right: 0 });
+  const [executingActions] = useState(new Set<string>()); // 防止重复执行action
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<any>(null);
   const draggleRef = useRef<HTMLDivElement>(null);
@@ -108,6 +110,18 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
 
   // 处理action执行
   const handleActionExecution = async (messageId: string, toolName: string, payload: any) => {
+    // 生成唯一的action标识符，防止重复执行
+    const actionKey = `${toolName}_${JSON.stringify(payload)}_${messageId}`;
+
+    // 如果这个action正在执行，直接返回
+    if (executingActions.has(actionKey)) {
+      console.log('Action正在执行中，跳过重复调用:', actionKey);
+      return;
+    }
+
+    // 标记action开始执行
+    executingActions.add(actionKey);
+
     try {
       let result;
       switch (toolName) {
@@ -130,7 +144,7 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
           msg.id === messageId
             ? {
                 ...msg,
-                content: `${toolName} 执行完成`,
+                content: result.message || `${toolName} 执行完成`,
                 actionData: {
                   ...msg.actionData!,
                   result,
@@ -157,43 +171,136 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
             : msg,
         ),
       );
+    } finally {
+      // 执行完成后移除标记
+      executingActions.delete(actionKey);
     }
   };
 
   // 执行日志搜索action
-  const executeLogSearchAction = async (payload: any) => {
-    console.log('执行日志搜索:', payload);
-    if (onLogSearch) {
-      onLogSearch(payload);
+  const executeLogSearchAction = async (payload: ILogSearchParams) => {
+    console.log('🔍 执行日志搜索:', payload);
+    try {
+      const result = await fetchLogDetails(payload);
+      console.log('✅ 日志搜索完成:', result);
+
+      // 如果有回调函数，调用它来更新外部状态，只传递结果，不重复触发请求
+      if (onLogSearch) {
+        console.log('📤 调用onLogSearch回调');
+        onLogSearch({
+          searchParams: payload,
+          searchResult: result,
+          skipRequest: true, // 标记跳过重复请求
+        });
+      }
+
+      return {
+        type: 'logSearch',
+        params: payload,
+        data: result,
+        success: result.success,
+        totalCount: result.totalCount,
+        executionTimeMs: result.executionTimeMs,
+        message: `日志搜索完成，找到 ${result.totalCount} 条记录，耗时 ${result.executionTimeMs}ms`,
+      };
+    } catch (error) {
+      console.error('❌ 日志搜索失败:', error);
+      throw new Error(error instanceof Error ? error.message : '日志搜索失败');
     }
-    return {
-      type: 'logSearch',
-      params: payload,
-      message: '日志搜索已执行',
-    };
   };
 
   // 执行日志直方图action
-  const executeLogHistogramAction = async (payload: any) => {
-    console.log('执行日志直方图:', payload);
-    return {
-      type: 'logHistogram',
-      params: payload,
-      message: '日志直方图已生成',
-    };
+  const executeLogHistogramAction = async (payload: ILogSearchParams) => {
+    console.log('📊 执行日志直方图:', payload);
+    console.log('📊 详细参数检查:', {
+      datasourceId: payload.datasourceId,
+      module: payload.module,
+      startTime: payload.startTime,
+      endTime: payload.endTime,
+      timeRange: payload.timeRange,
+      timeGrouping: payload.timeGrouping,
+      offset: payload.offset,
+      keywords: payload.keywords,
+    });
+
+    try {
+      const result = await fetchLogHistogram(payload);
+      console.log('✅ 日志直方图完成:', result);
+      console.log('📊 完整的API响应:', JSON.stringify(result, null, 2));
+      console.log('📊 直方图数据结构检查:', {
+        hasDistributionData: !!result.distributionData,
+        distributionDataLength: result.distributionData?.length || 0,
+        firstDistribution: result.distributionData?.[0],
+      });
+
+      // 检查实际的直方图数据
+      if (result.distributionData?.[0]?.distributionData) {
+        const histogramPoints = result.distributionData[0].distributionData;
+        console.log('📊 直方图数据点总数:', histogramPoints.length);
+        console.log('📊 前5个数据点:', histogramPoints.slice(0, 5));
+
+        const nonZeroPoints = histogramPoints.filter((point: any) => point.count > 0);
+        console.log('📊 非零count的数据点数量:', nonZeroPoints.length);
+        if (nonZeroPoints.length > 0) {
+          console.log('📊 前5个非零数据点:', nonZeroPoints.slice(0, 5));
+        }
+
+        const totalCount = histogramPoints.reduce((sum: number, point: any) => sum + (point.count || 0), 0);
+        console.log('📊 所有数据点的count总和:', totalCount);
+      } else {
+        console.log('📊 ❌ 没有找到distributionData或distributionData为空');
+      }
+
+      // 如果有时间范围变更回调，触发它，但不重复请求
+      if (onTimeRangeChange && (payload.timeRange || (payload.startTime && payload.endTime))) {
+        console.log('📤 调用onTimeRangeChange回调');
+        onTimeRangeChange({
+          timeRange: payload.timeRange,
+          startTime: payload.startTime,
+          endTime: payload.endTime,
+          histogramData: result,
+          skipRequest: true, // 标记跳过重复请求
+        });
+      }
+
+      return {
+        type: 'logHistogram',
+        params: payload,
+        data: result,
+        distributionCount: result.distributionData?.length || 0,
+        message: `日志直方图生成完成，包含 ${result.distributionData?.length || 0} 个时间分布点`,
+      };
+    } catch (error) {
+      console.error('❌ 日志直方图生成失败:', error);
+      throw new Error(error instanceof Error ? error.message : '日志直方图生成失败');
+    }
   };
 
   // 执行字段分布action
-  const executeFieldDistributionAction = async (payload: any) => {
+  const executeFieldDistributionAction = async (payload: ILogSearchParams) => {
     console.log('执行字段分布:', payload);
-    if (onFieldSelect) {
-      onFieldSelect(payload.fields || []);
+    try {
+      const result = await fetchDistributions(payload);
+
+      // 如果有回调函数，调用它来更新外部状态
+      if (onFieldSelect && payload.fields) {
+        onFieldSelect(payload.fields);
+      }
+
+      return {
+        type: 'fieldDistribution',
+        params: payload,
+        data: result,
+        success: result.success,
+        fieldCount: result.fieldDistributions?.length || 0,
+        sampleSize: result.sampleSize,
+        executionTimeMs: result.executionTimeMs,
+        message: `字段分布分析完成，分析了 ${result.fieldDistributions?.length || 0} 个字段，样本大小 ${result.sampleSize}，耗时 ${result.executionTimeMs}ms`,
+      };
+    } catch (error) {
+      console.error('字段分布分析失败:', error);
+      throw new Error(error instanceof Error ? error.message : '字段分布分析失败');
     }
-    return {
-      type: 'fieldDistribution',
-      params: payload,
-      message: '字段分布已分析',
-    };
   };
 
   // 渲染action类型的消息
@@ -254,27 +361,55 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
       case 'sendSearchLogDetailsAction':
         return (
           <div className={styles.logSearchDetails}>
-            <p>📊 搜索条件已应用到日志查询</p>
+            <p>📊 日志搜索已完成</p>
             <ul>
-              <li>模块: {result.params?.module}</li>
+              <li>模块: {result.params?.module || '未指定'}</li>
+              <li>数据源ID: {result.params?.datasourceId || '未指定'}</li>
               <li>
-                时间范围: {result.params?.startTime} ~ {result.params?.endTime}
+                时间范围:{' '}
+                {result.params?.timeRange ||
+                  (result.params?.startTime && result.params?.endTime
+                    ? `${result.params.startTime} ~ ${result.params.endTime}`
+                    : '未指定')}
               </li>
-              <li>关键词: {result.params?.keywords?.join(', ')}</li>
-              <li>字段: {result.params?.fields?.join(', ')}</li>
+              <li>关键词: {result.params?.keywords?.join(', ') || '无'}</li>
+              <li>查询字段: {result.params?.fields?.join(', ') || '全部字段'}</li>
+              {result.totalCount !== undefined && <li>查询结果: {result.totalCount} 条记录</li>}
+              {result.executionTimeMs !== undefined && <li>执行耗时: {result.executionTimeMs}ms</li>}
             </ul>
           </div>
         );
       case 'sendSearchLogHistogramAction':
         return (
           <div className={styles.histogramDetails}>
-            <p>📈 日志直方图已生成</p>
+            <p>📈 日志直方图分析已完成</p>
+            <ul>
+              <li>模块: {result.params?.module || '未指定'}</li>
+              <li>数据源ID: {result.params?.datasourceId || '未指定'}</li>
+              <li>时间分组: {result.params?.timeGrouping || 'auto'}</li>
+              {result.distributionCount !== undefined && <li>时间分布点: {result.distributionCount} 个</li>}
+              <li>
+                时间范围:{' '}
+                {result.params?.timeRange ||
+                  (result.params?.startTime && result.params?.endTime
+                    ? `${result.params.startTime} ~ ${result.params.endTime}`
+                    : '未指定')}
+              </li>
+            </ul>
           </div>
         );
       case 'sendSearchFieldDistributionAction':
         return (
           <div className={styles.fieldDistributionDetails}>
             <p>📋 字段分布分析已完成</p>
+            <ul>
+              <li>模块: {result.params?.module || '未指定'}</li>
+              <li>数据源ID: {result.params?.datasourceId || '未指定'}</li>
+              <li>分析字段: {result.params?.fields?.join(', ') || '默认字段'}</li>
+              {result.fieldCount !== undefined && <li>字段数量: {result.fieldCount} 个</li>}
+              {result.sampleSize !== undefined && <li>样本大小: {result.sampleSize}</li>}
+              {result.executionTimeMs !== undefined && <li>执行耗时: {result.executionTimeMs}ms</li>}
+            </ul>
           </div>
         );
       default:
@@ -488,6 +623,7 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
                               ),
                             );
                           } else if (data.toolName && data.payload) {
+                            console.log('🎯 接收到action:', data.toolName, data.payload);
                             const actionMessageId = (Date.now() + Math.random()).toString();
                             const actionMessage: IMessage = {
                               id: actionMessageId,

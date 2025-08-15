@@ -7,7 +7,7 @@ import { colorPrimary, isOverOneDay } from '@/utils/utils';
 import { DATE_FORMAT_THOUSOND } from './utils';
 
 interface IProps {
-  data: ILogHistogramData; // 直方图数据
+  data: ILogHistogramData | null; // 直方图数据
   searchParams: ILogSearchParams; // 搜索参数
   onSearch: (params: ILogSearchParams) => void; // 搜索回调函数
 }
@@ -15,26 +15,63 @@ interface IProps {
 const HistogramChart = (props: IProps) => {
   const { data, searchParams, onSearch } = props;
   const { distributionData, timeUnit, timeInterval } = data || {};
-  // const [dataZoom, setDataZoom] = useState<number[]>([0, 100]);
   const { timeGrouping = 'auto', startTime = '', endTime = '' } = searchParams;
   const chartRef = useRef<any>(null);
 
+  // 添加调试日志
+  console.log('📊 HistogramChart接收到的props.data:', data);
+  console.log('📊 HistogramChart解构的distributionData:', distributionData);
+  console.log('📊 distributionData类型和长度:', {
+    type: typeof distributionData,
+    isArray: Array.isArray(distributionData),
+    length: distributionData?.length,
+    firstItem: distributionData?.[0],
+  });
+
   // 根据timeGrouping聚合数据
   const aggregatedData = useMemo(() => {
+    console.log('📊 aggregatedData计算开始, distributionData:', distributionData);
+
+    // 如果没有数据，返回空数组
+    if (!distributionData) {
+      console.log('📊 没有distributionData, 返回空数组');
+      return {
+        values: [],
+        labels: [],
+        originalData: null,
+      };
+    }
+
+    // 检查distributionData是否为数组
+    if (!Array.isArray(distributionData)) {
+      console.log('📊 distributionData不是数组:', typeof distributionData);
+      return {
+        values: [],
+        labels: [],
+        originalData: null,
+      };
+    }
+
+    console.log('📊 开始转换distributionData, 长度:', distributionData.length);
+
     // 转换为数组
     const labels: string[] = [];
     const values: number[] = [];
-    distributionData?.forEach((item: any) => {
+    distributionData.forEach((item: any, index: number) => {
+      console.log(`📊 处理第${index}个数据点:`, item);
       labels.push(item.timePoint?.replace('T', ' '));
       values.push(item.count);
     });
-    // setDataZoom([0, 100]);
+
+    console.log('📊 转换完成, labels:', labels);
+    console.log('📊 转换完成, values:', values);
+
     return {
       values,
       labels,
       originalData: data,
     };
-  }, [distributionData]);
+  }, [distributionData, data]);
 
   // 构建图表选项
   const option = useMemo<EChartsOption>(() => {
@@ -223,7 +260,7 @@ const HistogramChart = (props: IProps) => {
 
   // 处理图表点击事件
   const handleChartClick = (params: any) => {
-    if (params.componentType === 'series' && timeUnit) {
+    if (params.componentType === 'series' && timeUnit && timeInterval) {
       const { name } = params;
       const newParams = {
         ...searchParams,
@@ -237,6 +274,15 @@ const HistogramChart = (props: IProps) => {
       onSearch(newParams);
     }
   };
+
+  // 如果没有数据，显示空状态
+  if (!data || !distributionData || distributionData.length === 0) {
+    return (
+      <div style={{ height: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Empty description="暂无直方图数据" />
+      </div>
+    );
+  }
 
   return (
     <ReactECharts
