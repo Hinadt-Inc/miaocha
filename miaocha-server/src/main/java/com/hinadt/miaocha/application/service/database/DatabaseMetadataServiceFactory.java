@@ -2,7 +2,7 @@ package com.hinadt.miaocha.application.service.database;
 
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
-import com.hinadt.miaocha.domain.entity.enums.DatasourceType;
+import com.hinadt.miaocha.domain.enums.DatasourceType;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

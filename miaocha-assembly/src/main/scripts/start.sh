@@ -95,7 +95,7 @@ if [ "$MOCK_MODE" = "true" ]; then
     fi
 
     # 执行Mock工具
-    java -cp "$CLASSPATH" com.hinadt.miaocha.common.tools.LogSearchDataMockTool \
+    java -cp "$CLASSPATH" com.hinadt.miaocha.infrastructure.tools.LogSearchDataMockTool \
         --host="$MOCK_DORIS_HOST" \
         --port="$MOCK_DORIS_PORT" \
         --user="$MOCK_DORIS_USER" \

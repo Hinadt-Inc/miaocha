@@ -11,72 +11,72 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 获取完整的 Git 历史，确保能正确同步
-          submodules: true  # 包含子模块
+          fetch-depth: 0  # Fetch full Git history to ensure correct sync
+          submodules: true  # Include submodules
 
       - name: Configure Git
         run: |
-          echo "🔧 配置 Git 用户信息..."
+          echo "🔧 Configure Git user info..."
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
 
       - name: Add GitLab remote and sync
         run: |
-          echo "🔗 添加 GitLab 远程仓库..."
+          echo "🔗 Add GitLab remote..."
           
-          # 检查认证信息是否存在
+          # Validate credentials
           if [ -z "${{ secrets.GITLAB_USERNAME }}" ] || [ -z "${{ secrets.GITLAB_TOKEN }}" ]; then
-            echo "❌ GitLab 认证信息未配置，请检查 GitHub Secrets"
+            echo "❌ GitLab credentials not configured; check GitHub Secrets"
             exit 1
           fi
           
-          # URL 编码认证信息（处理特殊字符）
+          # URL-encode credentials (handle special characters)
           GITLAB_USERNAME=$(python3 -c "import urllib.parse; print(urllib.parse.quote('${{ secrets.GITLAB_USERNAME }}', safe=''))")
           GITLAB_TOKEN=$(python3 -c "import urllib.parse; print(urllib.parse.quote('${{ secrets.GITLAB_TOKEN }}', safe=''))")
           
-          # 构建包含认证信息的 GitLab URL
+          # Build GitLab URL with credentials
           GITLAB_URL="http://${GITLAB_USERNAME}:${GITLAB_TOKEN}@git.hinadt.com/middle-software/log-manage-system.git"
           
-          echo "🔍 GitLab URL 格式检查完成"
+          echo "🔍 GitLab URL format check completed"
           
-          # 添加 GitLab 远程仓库
+          # Add GitLab remote
           git remote add gitlab "$GITLAB_URL" || git remote set-url gitlab "$GITLAB_URL"
           git fetch gitlab
           
-          # 获取当前分支名
+          # Get current branch name
           CURRENT_BRANCH="${{ github.ref_name }}"
-          echo "📤 当前分支: $CURRENT_BRANCH"
+          echo "📤 Current branch: $CURRENT_BRANCH"
           
-          # 推送到 GitLab 对应分支
-          echo "🚀 开始同步到 GitLab..."
+          # Push to GitLab branch
+          echo "🚀 Start syncing to GitLab..."
           git push gitlab "$CURRENT_BRANCH:$CURRENT_BRANCH" --force-with-lease
           
-          echo "✅ 同步完成！分支 $CURRENT_BRANCH 已成功同步到内部 GitLab"
+          echo "✅ Sync completed! Branch $CURRENT_BRANCH has been synced to internal GitLab"
 
       - name: Notify sync result
         if: always()
         run: |
           if [ "${{ job.status }}" = "success" ]; then
-            echo "## ✅ GitLab 同步成功" >> $GITHUB_STEP_SUMMARY
+            echo "## ✅ GitLab Sync Successful" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 📋 同步信息" >> $GITHUB_STEP_SUMMARY
-            echo "- **源分支**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-            echo "- **目标仓库**: git.hinadt.com/middle-software/log-manage-system" >> $GITHUB_STEP_SUMMARY
-            echo "- **目标分支**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-            echo "- **提交 SHA**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-            echo "- **同步时间**: $(date -d '+8 hours' '+%Y-%m-%d %H:%M:%S CST')" >> $GITHUB_STEP_SUMMARY
+            echo "### 📋 Sync Info" >> $GITHUB_STEP_SUMMARY
+            echo "- **Source branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Target repo**: git.hinadt.com/middle-software/log-manage-system" >> $GITHUB_STEP_SUMMARY
+            echo "- **Target branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Commit SHA**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Sync time**: $(date -d '+8 hours' '+%Y-%m-%d %H:%M:%S CST')" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 🎯 后续流程" >> $GITHUB_STEP_SUMMARY
-            echo "代码已成功同步到内部 GitLab，GitLab CI/CD 将自动触发镜像构建和部署流程。" >> $GITHUB_STEP_SUMMARY
+            echo "### 🎯 Next Steps" >> $GITHUB_STEP_SUMMARY
+            echo "Code has been synced to internal GitLab. GitLab CI/CD will build and deploy images automatically." >> $GITHUB_STEP_SUMMARY
           else
-            echo "## ❌ GitLab 同步失败" >> $GITHUB_STEP_SUMMARY
+            echo "## ❌ GitLab Sync Failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 🔍 可能的原因" >> $GITHUB_STEP_SUMMARY
-            echo "1. GitLab 服务器连接问题" >> $GITHUB_STEP_SUMMARY
-            echo "2. 认证信息错误或过期" >> $GITHUB_STEP_SUMMARY
-            echo "3. 目标仓库权限不足" >> $GITHUB_STEP_SUMMARY
-            echo "4. 网络连接问题" >> $GITHUB_STEP_SUMMARY
+            echo "### 🔍 Possible causes" >> $GITHUB_STEP_SUMMARY
+            echo "1. Connectivity issue to GitLab server" >> $GITHUB_STEP_SUMMARY
+            echo "2. Invalid or expired credentials" >> $GITHUB_STEP_SUMMARY
+            echo "3. Insufficient permissions on target repo" >> $GITHUB_STEP_SUMMARY
+            echo "4. Network issues" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 📞 解决方案" >> $GITHUB_STEP_SUMMARY
-            echo "请检查 GitHub Secrets 中的认证信息，并联系运维团队确认内部 GitLab 服务状态。" >> $GITHUB_STEP_SUMMARY
+            echo "### 📞 How to fix" >> $GITHUB_STEP_SUMMARY
+            echo "Check credentials in GitHub Secrets and contact Ops to verify internal GitLab status." >> $GITHUB_STEP_SUMMARY
           fi 

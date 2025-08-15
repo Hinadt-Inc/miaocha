@@ -28,6 +28,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilterAsyncDispatch() {
+        // Ensure JWT authentication runs for async dispatches (e.g. SSE),
+        // so SecurityContext is populated during subsequent filter chain
+        // invocations triggered after the response has started.
+        return false;
+    }
+
+    @Override
     protected void doFilterInternal(
             HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
@@ -73,18 +81,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private String parseJwt(HttpServletRequest request) {
-        // 首先尝试从Authorization头获取token
+        // 1) Authorization: Bearer xxx
         String headerAuth = request.getHeader("Authorization");
         if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ")) {
             return headerAuth.substring(7);
         }
 
-        // 如果Authorization头中没有token，尝试从查询参数获取（支持EventSource API）
+        // 2) Query 参数 ?token=xxx （你已经支持，兼容 WS/SSE 场景）
         String tokenParam = request.getParameter("token");
         if (StringUtils.hasText(tokenParam)) {
             return tokenParam;
         }
 
+        // 3) Cookie（名固定，"ACCESS_TOKEN"）
+        if (request.getCookies() != null) {
+            for (var c : request.getCookies()) {
+                if ("ACCESS_TOKEN".equals(c.getName()) && StringUtils.hasText(c.getValue())) {
+                    return c.getValue();
+                }
+            }
+        }
         return null;
     }
 }

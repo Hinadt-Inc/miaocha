@@ -1,137 +1,172 @@
 package com.hinadt.miaocha.application.logstash.task;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hinadt.miaocha.application.logstash.enums.LogstashMachineState;
+import com.hinadt.miaocha.application.logstash.path.LogstashPathUtils;
 import com.hinadt.miaocha.common.exception.SshException;
-import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.LogstashProcess;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
-import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
-import com.hinadt.miaocha.domain.mapper.LogstashProcessMapper;
-import com.hinadt.miaocha.domain.mapper.MachineMapper;
+import com.hinadt.miaocha.infrastructure.email.EmailService;
+import com.hinadt.miaocha.infrastructure.email.EmailTemplateRenderer;
+import com.hinadt.miaocha.infrastructure.mapper.LogstashMachineMapper;
+import com.hinadt.miaocha.infrastructure.mapper.LogstashProcessMapper;
+import com.hinadt.miaocha.infrastructure.mapper.MachineMapper;
+import com.hinadt.miaocha.infrastructure.ssh.SshClient;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-/** Logstash进程监控任务 定期检查所有运行中的Logstash进程状态，发现异常停止的进程时更新状态 只检查已运行至少5分钟的进程，以避免刚启动的进程被误判为异常 */
+/**
+ * Logstash process monitor task. Periodically checks all running Logstash instances and updates
+ * status if a process is unexpectedly dead. For processes that have gone offline, after the scan
+ * completes, aggregates and sends alert emails to configured recipients.
+ */
+@Slf4j
 @Component
 public class LogstashProcessMonitorTask {
-    private static final Logger logger = LoggerFactory.getLogger(LogstashProcessMonitorTask.class);
 
-    // 进程需要运行的最小时间（分钟）才会被监控
-    private static final long MIN_PROCESS_RUNTIME_MINUTES = 5;
+    // Minimum running minutes before a process is considered for monitoring
+    private static final long MIN_PROCESS_RUNTIME_MINUTES = 2;
 
     private final LogstashMachineMapper logstashMachineMapper;
     private final LogstashProcessMapper logstashProcessMapper;
     private final MachineMapper machineMapper;
     private final SshClient sshClient;
+    private final EmailService emailService;
+    private final EmailTemplateRenderer templateRenderer;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Value("${miaocha.alerts.mail.enabled:false}")
+    private boolean mailEnabled;
 
     public LogstashProcessMonitorTask(
             LogstashMachineMapper logstashMachineMapper,
             LogstashProcessMapper logstashProcessMapper,
             MachineMapper machineMapper,
-            SshClient sshClient) {
+            SshClient sshClient,
+            EmailService emailService,
+            EmailTemplateRenderer templateRenderer) {
         this.logstashMachineMapper = logstashMachineMapper;
         this.logstashProcessMapper = logstashProcessMapper;
         this.machineMapper = machineMapper;
         this.sshClient = sshClient;
+        this.emailService = emailService;
+        this.templateRenderer = templateRenderer;
     }
 
-    /** 定时检查所有运行中的Logstash进程状态 每10分钟执行一次 */
-    @Scheduled(fixedRateString = "${logstash.monitor.interval:600000}")
+    /** Periodically check running Logstash instances every configured interval. */
+    @Scheduled(fixedRateString = "${logstash.monitor.interval:300000}")
     public void monitorLogstashProcesses() {
         try {
-            logger.info("开始定时检查Logstash进程状态...");
+            log.debug("Start scheduled Logstash process status check...");
 
-            // 获取所有有PID记录的Logstash进程关联
+            // Fetch all LogstashMachine entries that have a recorded PID
             List<LogstashMachine> processesWithPid =
                     logstashMachineMapper.selectAllWithProcessPid();
             if (processesWithPid.isEmpty()) {
-                logger.info("没有找到正在运行的Logstash进程，跳过检查");
+                log.debug("No running Logstash instances found. Skipping check.");
                 return;
             }
 
-            // 记录检查开始时间
+            // Start timing
             LocalDateTime checkStartTime = LocalDateTime.now();
-            logger.info("找到{}个有PID记录的Logstash进程，开始检查状态", processesWithPid.size());
+            log.debug("Found {} instances with PID. Checking status...", processesWithPid.size());
 
             int checkedCount = 0;
             int skippedCount = 0;
+            // Collect dead instances for later aggregation email
+            List<DeadInstance> deadInstances = new ArrayList<>();
 
-            // 遍历所有进程关联记录进行检查
+            // Iterate and check
             for (LogstashMachine logstashMachine : processesWithPid) {
                 if (shouldCheckProcess(logstashMachine)) {
-                    checkProcessStatus(logstashMachine);
+                    DeadInstance dead = checkProcessStatus(logstashMachine);
+                    if (dead != null) {
+                        deadInstances.add(dead);
+                    }
                     checkedCount++;
                 } else {
                     skippedCount++;
                 }
             }
 
-            // 记录检查完成时间
+            // After checks, aggregate and send alert emails if needed
+            if (!deadInstances.isEmpty()) {
+                dispatchOfflineAlerts(deadInstances);
+            }
+
+            // Finish timing
             long duration = Duration.between(checkStartTime, LocalDateTime.now()).toMillis();
-            logger.info(
-                    "Logstash进程状态检查完成，共检查{}个进程，跳过{}个新启动进程，耗时{}毫秒",
+            log.debug(
+                    "Logstash status check completed. Checked: {}, skipped (new): {}, duration: {}"
+                            + " ms",
                     checkedCount,
                     skippedCount,
                     duration);
         } catch (Exception e) {
-            // 捕获所有异常，确保定时任务不会因为异常而停止
-            logger.error("Logstash进程监控任务执行异常: {}", e.getMessage(), e);
+            // Catch-all to ensure the scheduler keeps running
+            log.error("Unexpected error during Logstash monitoring task: {}", e.getMessage(), e);
         }
     }
 
     /**
-     * 判断是否应该检查该进程 只检查状态为RUNNING且已运行至少5分钟的进程
-     *
-     * @param logstashMachine Logstash进程与机器的关联记录
-     * @return 是否应该检查
+     * Determine whether the instance should be checked. Only check instances in RUNNING or
+     * STOP_FAILED state and that have run for at least MIN_PROCESS_RUNTIME_MINUTES.
      */
     private boolean shouldCheckProcess(LogstashMachine logstashMachine) {
         Long processId = logstashMachine.getLogstashProcessId();
         String pid = logstashMachine.getProcessPid();
 
-        // 跳过没有PID的记录
+        // Skip if no PID
         if (!StringUtils.hasText(pid)) {
             return false;
         }
 
-        // 获取进程信息，只用于获取更新时间
+        // Fetch process for updateTime
         LogstashProcess process = logstashProcessMapper.selectById(processId);
         if (process == null) {
-            logger.warn("找不到ID为{}的Logstash进程记录，可能已被删除", processId);
+            log.warn("Logstash process record not found for id={}, maybe deleted.", processId);
             return false;
         }
 
-        // 只检查运行中的机器
+        // Only check when instance is running or stop failed
         if (!LogstashMachineState.RUNNING.name().equals(logstashMachine.getState())
                 && !LogstashMachineState.STOP_FAILED.name().equals(logstashMachine.getState())) {
-            logger.debug(
-                    "Logstash进程[{}]在机器[{}]上状态为{}，不处于运行状态，跳过检查",
+            log.debug(
+                    "Instance of process [{}] on machine [{}] is in state {}. Skipping.",
                     processId,
                     logstashMachine.getMachineId(),
                     logstashMachine.getState());
             return false;
         }
 
-        // 检查进程最后更新时间，确保至少运行了MIN_PROCESS_RUNTIME_MINUTES分钟
+        // Check updateTime to ensure minimum runtime
         LocalDateTime updateTime = process.getUpdateTime();
         if (updateTime == null) {
-            logger.warn("Logstash进程[{}]没有更新时间记录，无法判断运行时长，跳过检查", processId);
+            log.warn(
+                    "Logstash process [{}] has no updateTime; cannot determine runtime. Skipping.",
+                    processId);
             return false;
         }
 
         LocalDateTime minRunTime = LocalDateTime.now().minusMinutes(MIN_PROCESS_RUNTIME_MINUTES);
         if (updateTime.isAfter(minRunTime)) {
-            // 进程更新时间少于MIN_PROCESS_RUNTIME_MINUTES分钟，跳过检查
+            // Updated within the minimum window, skip
             long runningMinutes = Duration.between(updateTime, LocalDateTime.now()).toMinutes();
-            logger.debug(
-                    "Logstash进程[{}]运行时间不足{}分钟(当前{}分钟)，跳过检查",
+            log.debug(
+                    "Process [{}] runtime < {} minutes ({}m). Skipping.",
                     processId,
                     MIN_PROCESS_RUNTIME_MINUTES,
                     runningMinutes);
@@ -141,114 +176,240 @@ public class LogstashProcessMonitorTask {
         return true;
     }
 
-    /**
-     * 检查单个Logstash进程的状态
-     *
-     * @param logstashMachine Logstash进程与机器的关联记录
-     */
-    private void checkProcessStatus(LogstashMachine logstashMachine) {
+    /** Check a single Logstash instance. Return a DeadInstance if it is found dead. */
+    private DeadInstance checkProcessStatus(LogstashMachine logstashMachine) {
         Long processId = logstashMachine.getLogstashProcessId();
         Long machineId = logstashMachine.getMachineId();
         Long logstashMachineId = logstashMachine.getId();
         String pid = logstashMachine.getProcessPid();
 
-        // 获取机器信息
+        // Fetch machine info
         MachineInfo machineInfo = machineMapper.selectById(machineId);
         if (machineInfo == null) {
-            logger.warn("找不到ID为{}的机器记录，无法检查Logstash进程[{}]状态", machineId, processId);
-            return;
+            log.warn(
+                    "Machine not found for id={}, cannot check process [{}] status.",
+                    machineId,
+                    processId);
+            return null;
         }
 
         try {
-            // 通过SSH检查进程是否存在
+            // Check process existence via SSH
             boolean processExists = checkProcessExistsBySsh(machineInfo, pid);
             if (!processExists) {
                 handleDeadProcess(logstashMachineId, machineInfo, pid);
+                // Build a dead instance record for later email
+                return buildDeadInstance(logstashMachine, machineInfo, pid);
             } else {
-                logger.debug(
-                        "Logstash进程[{}]在机器[{}]上正常运行中，PID={}", processId, machineInfo.getIp(), pid);
+                log.debug(
+                        "Process instance [{}] on [{}] is running. PID={}",
+                        logstashMachineId,
+                        machineInfo.getIp(),
+                        pid);
             }
         } catch (Exception e) {
-            logger.error(
-                    "检查Logstash进程[{}]在机器[{}]上的状态时发生错误: {}",
-                    processId,
+            log.error(
+                    "Error checking Process instance [{}] on [{}]: {}",
+                    logstashMachineId,
                     machineInfo.getIp(),
                     e.getMessage(),
                     e);
         }
+        return null;
     }
 
-    /**
-     * 通过SSH检查进程是否存在
-     *
-     * @param machineInfo 目标机器
-     * @param pid 进程PID
-     * @return 进程是否存在
-     */
+    /** Check whether a PID exists via SSH. */
     private boolean checkProcessExistsBySsh(MachineInfo machineInfo, String pid) {
         try {
-            // 使用ps命令检查进程是否存在
+            // Use ps to check PID existence
             String command = String.format("ps -p %s -o pid= || echo \"Process not found\"", pid);
             String result = sshClient.executeCommand(machineInfo, command);
 
-            // 如果结果包含"Process not found"，则进程不存在
-            boolean exists =
-                    !result.contains("Process not found") && StringUtils.hasText(result.trim());
-            return exists;
+            // If contains marker, the process is not found
+            return !result.contains("Process not found") && StringUtils.hasText(result.trim());
         } catch (SshException e) {
-            logger.error("SSH执行检查进程命令失败: {}", e.getMessage());
-            // 如果SSH执行失败，为安全起见，假设进程仍在运行
+            log.error("SSH check for process failed: {}", e.getMessage());
+            // On SSH failure, assume still running to avoid false positives
             return true;
         }
     }
 
-    /**
-     * 处理已经死亡的进程
-     *
-     * @param logstashMachineId LogstashMachine实例ID
-     * @param machineInfo 目标机器
-     * @param pid 进程PID
-     */
+    /** Update state and clear PID for a dead instance. */
     private void handleDeadProcess(Long logstashMachineId, MachineInfo machineInfo, String pid) {
-        logger.warn(
-                "检测到LogstashMachine实例[{}]在机器[{}]上异常终止，PID={}",
+        log.warn(
+                "Detected dead Logstash instance [{}] on machine [{}], PID={}",
                 logstashMachineId,
                 machineInfo.getIp(),
                 pid);
 
         try {
-            // 更新实例状态为未启动
+            // Update state to NOT_STARTED
             int updateResult =
                     logstashMachineMapper.updateStateById(
                             logstashMachineId, LogstashMachineState.NOT_STARTED.name());
             if (updateResult > 0) {
-                logger.info(
-                        "已将LogstashMachine实例[{}]在机器[{}]上的状态更新为未启动",
+                log.debug(
+                        "Updated instance [{}] on machine [{}] state to NOT_STARTED",
                         logstashMachineId,
                         machineInfo.getId());
             } else {
-                logger.warn(
-                        "更新LogstashMachine实例[{}]在机器[{}]上的状态失败，可能已被删除",
+                log.warn(
+                        "Failed updating instance [{}] on machine [{}]; maybe deleted.",
                         logstashMachineId,
                         machineInfo.getId());
             }
 
-            // 清空PID记录
+            // Clear PID
             int pidUpdateResult =
                     logstashMachineMapper.updateProcessPidById(logstashMachineId, null);
             if (pidUpdateResult > 0) {
-                logger.info(
-                        "已清除LogstashMachine实例[{}]在机器[{}]上的PID记录",
+                log.debug(
+                        "Cleared PID for instance [{}] on machine [{}]",
                         logstashMachineId,
                         machineInfo.getIp());
             } else {
-                logger.warn(
-                        "清除LogstashMachine实例[{}]在机器[{}]上的PID记录失败，可能已被删除",
+                log.warn(
+                        "Failed clearing PID for instance [{}] on machine [{}]",
                         logstashMachineId,
                         machineInfo.getIp());
             }
         } catch (Exception e) {
-            logger.error("处理死亡进程[{}]时发生错误: {}", logstashMachineId, e.getMessage(), e);
+            log.error(
+                    "Error while handling dead instance [{}]: {}",
+                    logstashMachineId,
+                    e.getMessage(),
+                    e);
         }
+    }
+
+    /** Build dead instance record for alerting. */
+    private DeadInstance buildDeadInstance(
+            LogstashMachine logstashMachine, MachineInfo machineInfo, String pid) {
+        LogstashProcess process =
+                logstashProcessMapper.selectById(logstashMachine.getLogstashProcessId());
+        if (process == null) {
+            return null;
+        }
+        DeadInstance di = new DeadInstance();
+        di.processId = process.getId();
+        di.processName = process.getName();
+        di.instanceId = logstashMachine.getId();
+        di.machineIp = machineInfo.getIp();
+        di.deployPath = logstashMachine.getDeployPath();
+        di.pid = pid;
+        di.alertRecipientsJson = process.getAlertRecipients();
+        di.detectedAt = LocalDateTime.now();
+        return di;
+    }
+
+    /** Aggregate by process and send alert emails with last 50 log lines for each instance. */
+    private void dispatchOfflineAlerts(List<DeadInstance> deadInstances) {
+        if (!mailEnabled) {
+            log.debug(
+                    "Mail alerts disabled. Skip email dispatch for {} dead instances.",
+                    deadInstances.size());
+            return;
+        }
+
+        Map<Long, List<DeadInstance>> byProcess =
+                deadInstances.stream()
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.groupingBy(di -> di.processId));
+
+        for (Map.Entry<Long, List<DeadInstance>> entry : byProcess.entrySet()) {
+            List<DeadInstance> list = entry.getValue();
+            if (CollectionUtils.isEmpty(list)) continue;
+
+            DeadInstance first = list.get(0);
+            List<String> recipients = parseRecipients(first.alertRecipientsJson);
+            if (CollectionUtils.isEmpty(recipients)) {
+                log.warn(
+                        "No alert recipients configured for process [{}] ({}). Skipping email.",
+                        first.processId,
+                        first.processName);
+                continue;
+            }
+
+            // Build template model and render
+
+            String subject =
+                    String.format("[Alert] Logstash instances stopped - %s", first.processName);
+            Map<String, Object> model = new java.util.HashMap<>();
+            model.put("processName", nullToEmpty(first.processName));
+            model.put("generatedAt", LocalDateTime.now().toString());
+            model.put("instances", buildInstanceModels(list));
+            String html = templateRenderer.render("logstash_offline", model);
+            try {
+                emailService.sendHtml(recipients, subject, html);
+                log.info(
+                        "Sent offline alert email to {} recipients for process [{}] ({} instances)",
+                        recipients.size(),
+                        first.processId,
+                        list.size());
+            } catch (Exception ex) {
+                log.error("Failed to send alert email: {}", ex.getMessage(), ex);
+            }
+        }
+    }
+
+    private String fetchLastLogsSafely(DeadInstance di) {
+        try {
+            MachineInfo machine =
+                    machineMapper.selectById(
+                            logstashMachineMapper.selectById(di.instanceId).getMachineId());
+            if (machine == null) return "Machine not found.";
+            String logPath = LogstashPathUtils.buildLogFilePath(di.deployPath);
+            String cmd =
+                    String.format(
+                            "tail -n 50 \"%s\" 2>/dev/null || echo 'No logs found.'", logPath);
+            return sshClient.executeCommand(machine, cmd);
+        } catch (Exception e) {
+            return "Failed to fetch logs: " + e.getMessage();
+        }
+    }
+
+    private List<String> parseRecipients(String json) {
+        if (!StringUtils.hasText(json)) return List.of();
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+        } catch (Exception e) {
+            log.warn("Invalid alert recipients JSON: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    private List<Map<String, Object>> buildInstanceModels(List<DeadInstance> list) {
+        List<Map<String, Object>> models = new ArrayList<>();
+        for (DeadInstance di : list) {
+            Map<String, Object> m = new java.util.HashMap<>();
+            m.put("instanceId", di.instanceId);
+            m.put("machineIp", di.machineIp);
+            m.put("deployPath", nullToEmpty(di.deployPath));
+            m.put("pid", nullToDash(di.pid));
+            m.put("detectedAt", di.detectedAt.toString());
+            m.put("lastLogs", fetchLastLogsSafely(di));
+            models.add(m);
+        }
+        return models;
+    }
+
+    private String nullToDash(String s) {
+        return (s == null || s.isBlank()) ? "-" : s;
+    }
+
+    private String nullToEmpty(String s) {
+        return s == null ? "" : s;
+    }
+
+    /** Value holder for dead instance info used for alerting. */
+    private static class DeadInstance {
+        Long processId;
+        String processName;
+        Long instanceId;
+        String machineIp;
+        String deployPath;
+        String pid;
+        String alertRecipientsJson;
+        LocalDateTime detectedAt;
     }
 }

@@ -3,8 +3,8 @@ package com.hinadt.miaocha.domain.converter;
 import com.hinadt.miaocha.domain.dto.MachineCreateDTO;
 import com.hinadt.miaocha.domain.dto.MachineDTO;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
-import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
-import com.hinadt.miaocha.domain.mapper.UserMapper;
+import com.hinadt.miaocha.infrastructure.mapper.LogstashMachineMapper;
+import com.hinadt.miaocha.infrastructure.mapper.UserMapper;
 import org.springframework.stereotype.Component;
 
 /** 机器实体与DTO转换器 */

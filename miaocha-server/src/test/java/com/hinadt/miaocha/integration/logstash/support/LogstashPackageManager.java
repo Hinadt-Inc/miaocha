@@ -1,8 +1,8 @@
 package com.hinadt.miaocha.integration.logstash.support;
 
-import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.config.LogstashProperties;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
+import com.hinadt.miaocha.infrastructure.ssh.SshClient;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;

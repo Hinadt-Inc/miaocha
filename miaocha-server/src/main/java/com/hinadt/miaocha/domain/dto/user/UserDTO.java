@@ -2,6 +2,7 @@ package com.hinadt.miaocha.domain.dto.user;
 
 import com.hinadt.miaocha.domain.dto.permission.UserModulePermissionDTO;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.Data;
@@ -9,7 +10,7 @@ import lombok.Data;
 /** 用户信息DTO */
 @Data
 @Schema(description = "用户信息对象")
-public class UserDTO {
+public class UserDTO implements Principal {
     @Schema(description = "用户ID", example = "1")
     private Long id;
 
@@ -36,4 +37,9 @@ public class UserDTO {
 
     @Schema(description = "用户拥有的模块权限列表")
     private List<UserModulePermissionDTO> modulePermissions;
+
+    @Override
+    public String getName() {
+        return email;
+    }
 }

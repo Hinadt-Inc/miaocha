@@ -4,7 +4,7 @@ import com.hinadt.miaocha.domain.dto.DatasourceCreateDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceDTO;
 import com.hinadt.miaocha.domain.dto.DatasourceUpdateDTO;
 import com.hinadt.miaocha.domain.entity.DatasourceInfo;
-import com.hinadt.miaocha.domain.mapper.UserMapper;
+import com.hinadt.miaocha.infrastructure.mapper.UserMapper;
 import org.springframework.stereotype.Component;
 
 /** 数据源实体与DTO转换器 */

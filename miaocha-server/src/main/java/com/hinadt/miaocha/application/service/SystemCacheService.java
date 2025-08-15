@@ -2,7 +2,7 @@ package com.hinadt.miaocha.application.service;
 
 import com.hinadt.miaocha.domain.dto.cache.SystemCacheDTO;
 import com.hinadt.miaocha.domain.entity.SystemCacheConfig;
-import com.hinadt.miaocha.domain.entity.enums.CacheGroup;
+import com.hinadt.miaocha.domain.enums.CacheGroup;
 import java.util.List;
 import java.util.Optional;
 

@@ -6,7 +6,7 @@ import com.hinadt.miaocha.application.logstash.enums.StepStatus;
 import com.hinadt.miaocha.application.logstash.enums.TaskStatus;
 import com.hinadt.miaocha.application.logstash.task.TaskService;
 import com.hinadt.miaocha.domain.entity.LogstashMachine;
-import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
+import com.hinadt.miaocha.infrastructure.mapper.LogstashMachineMapper;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;

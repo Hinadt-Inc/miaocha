@@ -7,85 +7,88 @@ import java.util.List;
 import lombok.Data;
 
 @Data
-@Schema(description = "Logstash进程响应DTO")
+@Schema(description = "Logstash process response DTO")
 public class LogstashProcessResponseDTO {
 
-    @Schema(description = "Logstash进程ID")
+    @Schema(description = "Logstash process ID")
     private Long id;
 
-    @Schema(description = "Logstash进程名称")
+    @Schema(description = "Logstash process name")
     private String name;
 
-    @Schema(description = "关联的模块ID")
+    @Schema(description = "Associated module ID")
     private Long moduleId;
 
-    @Schema(description = "模块名称")
+    @Schema(description = "Module name")
     private String moduleName;
 
-    @Schema(description = "数据源名称")
+    @Schema(description = "Datasource name")
     private String datasourceName;
 
-    @Schema(description = "表名")
+    @Schema(description = "Table name")
     private String tableName;
 
-    @Schema(description = "Logstash配置文件内容")
+    @Schema(description = "Logstash config content")
     private String configContent;
 
-    @Schema(description = "JVM配置文件内容")
+    @Schema(description = "JVM options file content")
     private String jvmOptions;
 
-    @Schema(description = "Logstash YML配置文件内容")
+    @Schema(description = "Logstash YML file content")
     private String logstashYml;
 
-    @Schema(description = "创建时间")
+    @Schema(description = "Alert recipients list (emails)")
+    private List<String> alertRecipients;
+
+    @Schema(description = "Create time")
     private LocalDateTime createTime;
 
-    @Schema(description = "更新时间")
+    @Schema(description = "Update time")
     private LocalDateTime updateTime;
 
-    @Schema(description = "创建人邮箱")
+    @Schema(description = "Creator email")
     private String createUser;
 
-    @Schema(description = "创建人昵称")
+    @Schema(description = "Creator nickname")
     private String createUserName;
 
-    @Schema(description = "修改人邮箱")
+    @Schema(description = "Updater email")
     private String updateUser;
 
-    @Schema(description = "修改人昵称")
+    @Schema(description = "Updater nickname")
     private String updateUserName;
 
-    @Schema(description = "关联的LogstashMachine实例状态列表")
+    @Schema(description = "Related LogstashMachine instance status list")
     private List<LogstashMachineStatusInfoDTO> logstashMachineStatusInfo;
 
     @Data
-    @Schema(description = "Logstash机器状态信息DTO")
+    @Schema(description = "Logstash machine status info DTO")
     public static class LogstashMachineStatusInfoDTO {
-        @Schema(description = "LogstashMachine实例ID")
+        @Schema(description = "LogstashMachine instance ID")
         private Long logstashMachineId;
 
-        @Schema(description = "机器ID")
+        @Schema(description = "Machine ID")
         private Long machineId;
 
-        @Schema(description = "机器名称")
+        @Schema(description = "Machine name")
         private String machineName;
 
-        @Schema(description = "机器IP")
+        @Schema(description = "Machine IP")
         private String machineIp;
 
-        @Schema(description = "Logstash在该机器上的状态")
+        @Schema(description = "Logstash state on the machine")
         private LogstashMachineState state;
 
-        @Schema(description = "Logstash在该机器上的状态描述")
+        @Schema(description = "Logstash state description on the machine")
         private String stateDescription;
 
-        @Schema(description = "目标机器上的进程PID")
+        @Schema(description = "Process PID on target machine")
         private String processPid;
 
-        @Schema(description = "部署目录路径")
+        @Schema(description = "Deploy directory path")
         private String deployPath;
 
-        @Schema(description = "Logstash实例状态最后更新时间")
+        @Schema(description = "Last update time of the instance state")
         private LocalDateTime lastUpdateTime;
     }
 }

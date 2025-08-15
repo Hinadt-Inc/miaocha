@@ -111,3 +111,5 @@ k6/bin
 .history/
 
 miaocha-oauth2-mandao/
+
+miaocha-server/src/main/resources/application-dev.yml

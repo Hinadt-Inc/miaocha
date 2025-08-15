@@ -1,6 +1,6 @@
 package com.hinadt.miaocha.domain.dto.logstash;
 
-import com.hinadt.miaocha.domain.entity.enums.LogTailResponseStatus;
+import com.hinadt.miaocha.domain.enums.LogTailResponseStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
