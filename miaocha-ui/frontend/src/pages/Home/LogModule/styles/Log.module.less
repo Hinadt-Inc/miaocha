@@ -1,0 +1,23 @@
+/**
+ * Log 主容器样式
+ */
+
+.logContainer {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+
+    :global {
+        .ant-splitter-bar {
+            z-index: 2;
+
+            &:after {
+                display: none !important;
+            }
+        }
+
+        .ant-splitter-bar .ant-splitter-bar-dragger-disabled.ant-splitter-bar-dragger::before {
+            height: 4px;
+        }
+    }
+}
