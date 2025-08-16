@@ -18,4 +18,7 @@ public class LoginRequestDTO {
     @Schema(description = "用户密码", example = "password123", required = true)
     @NotBlank(message = "密码不能为空")
     private String password;
+
+    @Schema(description = "认证提供者ID，为空时使用系统默认认证", example = "ldap")
+    private String providerId;
 }

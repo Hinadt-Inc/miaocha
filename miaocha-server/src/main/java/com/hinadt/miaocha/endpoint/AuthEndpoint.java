@@ -5,6 +5,8 @@ import com.hinadt.miaocha.domain.dto.ApiResponse;
 import com.hinadt.miaocha.domain.dto.auth.LoginRequestDTO;
 import com.hinadt.miaocha.domain.dto.auth.LoginResponseDTO;
 import com.hinadt.miaocha.domain.dto.auth.RefreshTokenRequestDTO;
+import com.hinadt.miaocha.spi.AuthenticationProvider;
+import com.hinadt.miaocha.spi.LdapProvider;
 import com.hinadt.miaocha.spi.OAuthProvider;
 import com.hinadt.miaocha.spi.model.OAuthProviderInfo;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,18 +30,28 @@ public class AuthEndpoint {
     private final UserService userService;
 
     /**
-     * 用户登录
+     * 统一用户登录接口 支持系统默认登录和SPI提供者登录（如LDAP）
      *
      * @param loginRequest 登录请求
      * @return 登录响应
      */
     @PostMapping("/login")
-    @Operation(summary = "用户登录", description = "使用邮箱和密码进行登录认证，返回JWT令牌")
+    @Operation(summary = "用户登录", description = "使用邮箱和密码进行登录认证，支持系统认证和第三方认证提供者，返回JWT令牌")
     public ApiResponse<LoginResponseDTO> login(
             @Parameter(description = "登录请求信息", required = true) @Valid @RequestBody
                     LoginRequestDTO loginRequest) {
-        LoginResponseDTO response = userService.login(loginRequest);
-        return ApiResponse.success(response);
+
+        String providerId = loginRequest.getProviderId();
+
+        if (providerId == null || providerId.equals("system")) {
+            // 传统系统登录
+            LoginResponseDTO response = userService.login(loginRequest);
+            return ApiResponse.success(response);
+        } else {
+            // SPI提供者登录
+            LoginResponseDTO response = userService.loginWithProvider(loginRequest);
+            return ApiResponse.success(response);
+        }
     }
 
     /**
@@ -58,23 +70,33 @@ public class AuthEndpoint {
     }
 
     /**
-     * 获取支持的 OAuth 提供者列表
+     * 获取支持的认证提供者列表 包括OAuth和LDAP等所有认证方式
      *
      * @return 支持的提供者信息列表
      */
     @GetMapping("/providers")
-    @Operation(summary = "获取支持的 OAuth 提供者", description = "返回系统支持的第三方登录提供者详细信息列表")
-    public ApiResponse<List<OAuthProviderInfo>> getOAuthProviders() {
-        ServiceLoader<OAuthProvider> serviceLoader = ServiceLoader.load(OAuthProvider.class);
+    @Operation(summary = "获取支持的认证提供者", description = "返回系统支持的所有认证提供者详细信息列表，包括OAuth和LDAP等")
+    public ApiResponse<List<OAuthProviderInfo>> getAuthProviders() {
+        List<OAuthProviderInfo> providers = new ArrayList<>();
 
-        List<OAuthProviderInfo> providers =
-                StreamSupport.stream(serviceLoader.spliterator(), false)
-                        .filter(OAuthProvider::isAvailable)
-                        .map(OAuthProvider::getProviderInfo)
+        // 加载OAuth提供者
+        ServiceLoader<OAuthProvider> oauthLoader = ServiceLoader.load(OAuthProvider.class);
+        StreamSupport.stream(oauthLoader.spliterator(), false)
+                .filter(AuthenticationProvider::isAvailable)
+                .map(AuthenticationProvider::getProviderInfo)
+                .forEach(providers::add);
+
+        // 加载LDAP提供者
+        ServiceLoader<LdapProvider> ldapLoader = ServiceLoader.load(LdapProvider.class);
+        StreamSupport.stream(ldapLoader.spliterator(), false)
+                .filter(AuthenticationProvider::isAvailable)
+                .map(AuthenticationProvider::getProviderInfo)
+                .forEach(providers::add);
+
+        return ApiResponse.success(
+                providers.stream()
                         .sorted(Comparator.comparingInt(OAuthProviderInfo::getSortOrder))
-                        .collect(Collectors.toList());
-
-        return ApiResponse.success(providers);
+                        .collect(Collectors.toList()));
     }
 
     /**
