@@ -20,6 +20,8 @@ import com.hinadt.miaocha.domain.entity.User;
 import com.hinadt.miaocha.domain.entity.enums.UserRole;
 import com.hinadt.miaocha.domain.mapper.UserMapper;
 import com.hinadt.miaocha.domain.mapper.UserModulePermissionMapper;
+import com.hinadt.miaocha.spi.AuthenticationProvider;
+import com.hinadt.miaocha.spi.LdapProvider;
 import com.hinadt.miaocha.spi.OAuthProvider;
 import com.hinadt.miaocha.spi.model.OAuthUserInfo;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -414,6 +416,37 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    /**
+     * 通过SPI提供者进行登录认证 当前支持LDAP认证，未来可扩展支持其他认证方式
+     *
+     * @param loginRequest 登录请求，必须包含providerId
+     * @return 登录响应，包含JWT令牌
+     * @throws BusinessException 当提供者不存在或认证失败时抛出
+     */
+    @Override
+    public LoginResponseDTO loginWithProvider(LoginRequestDTO loginRequest) {
+        String providerId = loginRequest.getProviderId();
+        String username = loginRequest.getEmail();
+        String password = loginRequest.getPassword();
+
+        // 查找LDAP提供者
+        ServiceLoader<LdapProvider> ldapLoader = ServiceLoader.load(LdapProvider.class);
+        Optional<LdapProvider> ldapProvider =
+                StreamSupport.stream(ldapLoader.spliterator(), false)
+                        .filter(p -> p.getProviderInfo().getProviderId().equals(providerId))
+                        .filter(AuthenticationProvider::isAvailable)
+                        .findFirst();
+
+        if (ldapProvider.isPresent()) {
+            OAuthUserInfo userInfo =
+                    ldapProvider.get().authenticateWithCredentials(username, password);
+            return processUserLogin(userInfo, providerId);
+        }
+
+        throw new BusinessException(
+                ErrorCode.VALIDATION_ERROR, "Unsupported provider: " + providerId);
+    }
+
     @Override
     public LoginResponseDTO oauthLogin(String providerId, String code, String redirectUri) {
         ServiceLoader<OAuthProvider> loader = ServiceLoader.load(OAuthProvider.class);
@@ -436,6 +469,17 @@ public class UserServiceImpl implements UserService {
         OAuthProvider provider = providerOpt.get();
         OAuthUserInfo userInfo = provider.authenticate(code, redirectUri);
 
+        return processUserLogin(userInfo, providerId);
+    }
+
+    /**
+     * 处理SPI提供者用户登录的通用逻辑 包括用户创建/更新和令牌生成
+     *
+     * @param userInfo 用户信息
+     * @param providerId 提供者ID
+     * @return 登录响应
+     */
+    private LoginResponseDTO processUserLogin(OAuthUserInfo userInfo, String providerId) {
         if (userInfo == null || userInfo.getEmail() == null || userInfo.getEmail().isEmpty()) {
             throw new BusinessException(
                     ErrorCode.VALIDATION_ERROR, "Authentication failed or invalid user info");
@@ -443,7 +487,7 @@ public class UserServiceImpl implements UserService {
 
         User user = userMapper.selectByEmail(userInfo.getEmail());
         if (user == null) {
-            // Create new user
+            // 创建新用户
             user = new User();
             user.setUid(userInfo.getUid() != null ? userInfo.getUid() : generateUid());
             user.setEmail(userInfo.getEmail());
@@ -457,8 +501,7 @@ public class UserServiceImpl implements UserService {
 
             user.setRole(UserRole.USER.name());
             user.setStatus(1);
-            user.setPassword(
-                    passwordEncoder.encode(UUID.randomUUID().toString())); // Random password
+            user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString())); // 随机密码
             userMapper.insert(user);
         }
 

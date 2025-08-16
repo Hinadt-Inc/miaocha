@@ -119,6 +119,14 @@ public interface UserService {
     User getUserEntityByUid(String uid);
 
     /**
+     * 通过SPI提供者登录 支持LDAP等认证方式
+     *
+     * @param loginRequest 登录请求
+     * @return 登录响应
+     */
+    LoginResponseDTO loginWithProvider(LoginRequestDTO loginRequest);
+
+    /**
      * OAuth 登录
      *
      * @param providerId 提供者ID

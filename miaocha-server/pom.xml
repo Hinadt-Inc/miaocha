@@ -187,6 +187,16 @@
             <artifactId>mysql</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- LDAP Dependencies -->
+        <dependency>
+            <groupId>org.springframework.ldap</groupId>
+            <artifactId>spring-ldap-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-ldap</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
