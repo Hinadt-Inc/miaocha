@@ -893,6 +893,34 @@ const HomePage = () => {
           // 更新搜索参数
           setSearchParams(searchParams);
 
+          // 主动更新本地状态以同步到SearchBar
+          if (searchParams.keywords && searchParams.keywords.length > 0) {
+            setKeywords(searchParams.keywords);
+          }
+
+          // 主动更新SearchBar组件的显示状态
+          if (searchBarRef.current && searchParams) {
+            // 更新时间范围
+            if (
+              searchParams.startTime &&
+              searchParams.endTime &&
+              typeof searchBarRef.current.setTimeOption === 'function'
+            ) {
+              const timeOption = {
+                label: `${searchParams.startTime} ~ ${searchParams.endTime}`,
+                value: `${searchParams.startTime} ~ ${searchParams.endTime}`,
+                range: [searchParams.startTime, searchParams.endTime],
+                type: 'absolute',
+              };
+              searchBarRef.current.setTimeOption(timeOption);
+            }
+
+            // 更新字段选择
+            if (searchParams.fields && searchParams.fields.length > 0) {
+              setActiveColumns(searchParams.fields);
+            }
+          }
+
           // 只有在没有skipRequest标记时才触发新的搜索请求
           if (!data.skipRequest) {
             console.log('🔄 触发executeDataRequest');

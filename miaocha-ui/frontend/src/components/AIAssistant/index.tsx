@@ -303,124 +303,9 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
     }
   };
 
-  // 渲染action类型的消息
-  const renderActionMessage = (message: IMessage) => {
-    if (!message.actionData) return <div>无效的action数据</div>;
-
-    const { toolName, payload, result, loading } = message.actionData;
-
-    return (
-      <div className={styles.actionContent}>
-        <div className={styles.actionHeader}>
-          <span className={styles.actionIcon}>⚡</span>
-          <span className={styles.actionTitle}>{getActionDisplayName(toolName)}</span>
-          {loading && <span className={styles.actionLoading}>执行中...</span>}
-        </div>
-
-        <div className={styles.actionDetails}>
-          <div className={styles.actionParams}>
-            <strong>执行参数:</strong>
-            <pre className={styles.actionParamsCode}>{JSON.stringify(payload, null, 2)}</pre>
-          </div>
-
-          {result && (
-            <div className={styles.actionResult}>
-              <strong>执行结果:</strong>
-              {result.error ? (
-                <div className={styles.actionError}>
-                  <span className={styles.errorIcon}>❌</span>
-                  {result.error}
-                </div>
-              ) : (
-                <div className={styles.actionSuccess}>
-                  <span className={styles.successIcon}>✅</span>
-                  {result.message || '执行成功'}
-                  {renderActionResultDetails(toolName, result)}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  // 获取action的显示名称
-  const getActionDisplayName = (toolName: string) => {
-    const actionNames: Record<string, string> = {
-      sendSearchLogDetailsAction: '日志详情搜索',
-      sendSearchLogHistogramAction: '日志直方图分析',
-      sendSearchFieldDistributionAction: '字段分布分析',
-    };
-    return actionNames[toolName] || toolName;
-  };
-
-  // 渲染action结果的详细信息
-  const renderActionResultDetails = (toolName: string, result: any) => {
-    switch (toolName) {
-      case 'sendSearchLogDetailsAction':
-        return (
-          <div className={styles.logSearchDetails}>
-            <p>📊 日志搜索已完成</p>
-            <ul>
-              <li>模块: {result.params?.module || '未指定'}</li>
-              <li>数据源ID: {result.params?.datasourceId || '未指定'}</li>
-              <li>
-                时间范围:{' '}
-                {result.params?.timeRange ||
-                  (result.params?.startTime && result.params?.endTime
-                    ? `${result.params.startTime} ~ ${result.params.endTime}`
-                    : '未指定')}
-              </li>
-              <li>关键词: {result.params?.keywords?.join(', ') || '无'}</li>
-              <li>查询字段: {result.params?.fields?.join(', ') || '全部字段'}</li>
-              {result.totalCount !== undefined && <li>查询结果: {result.totalCount} 条记录</li>}
-              {result.executionTimeMs !== undefined && <li>执行耗时: {result.executionTimeMs}ms</li>}
-            </ul>
-          </div>
-        );
-      case 'sendSearchLogHistogramAction':
-        return (
-          <div className={styles.histogramDetails}>
-            <p>📈 日志直方图分析已完成</p>
-            <ul>
-              <li>模块: {result.params?.module || '未指定'}</li>
-              <li>数据源ID: {result.params?.datasourceId || '未指定'}</li>
-              <li>时间分组: {result.params?.timeGrouping || 'auto'}</li>
-              {result.distributionCount !== undefined && <li>时间分布点: {result.distributionCount} 个</li>}
-              <li>
-                时间范围:{' '}
-                {result.params?.timeRange ||
-                  (result.params?.startTime && result.params?.endTime
-                    ? `${result.params.startTime} ~ ${result.params.endTime}`
-                    : '未指定')}
-              </li>
-            </ul>
-          </div>
-        );
-      case 'sendSearchFieldDistributionAction':
-        return (
-          <div className={styles.fieldDistributionDetails}>
-            <p>📋 字段分布分析已完成</p>
-            <ul>
-              <li>模块: {result.params?.module || '未指定'}</li>
-              <li>数据源ID: {result.params?.datasourceId || '未指定'}</li>
-              <li>分析字段: {result.params?.fields?.join(', ') || '默认字段'}</li>
-              {result.fieldCount !== undefined && <li>字段数量: {result.fieldCount} 个</li>}
-              {result.sampleSize !== undefined && <li>样本大小: {result.sampleSize}</li>}
-              {result.executionTimeMs !== undefined && <li>执行耗时: {result.executionTimeMs}ms</li>}
-            </ul>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
-
   // 渲染单个消息 - Grok风格
   const renderMessage = (message: IMessage) => {
     const isUser = message.role === 'user';
-    const isAction = message.type === 'action';
 
     return (
       <div
@@ -435,21 +320,17 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
           )}
 
           <div className={styles.messageBubble}>
-            {isAction ? (
-              renderActionMessage(message)
-            ) : (
-              <div className={styles.messageText}>
-                {isUser ? (
-                  message.content
-                ) : (
-                  <div className={markdownStyles.markdownContent}>
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight, rehypeRaw]}>
-                      {message.content}
-                    </ReactMarkdown>
-                  </div>
-                )}
-              </div>
-            )}
+            <div className={styles.messageText}>
+              {isUser ? (
+                message.content
+              ) : (
+                <div className={markdownStyles.markdownContent}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight, rehypeRaw]}>
+                    {message.content}
+                  </ReactMarkdown>
+                </div>
+              )}
+            </div>
 
             <div className={styles.messageTime}>
               {new Date(message.timestamp).toLocaleTimeString('zh-CN', {
