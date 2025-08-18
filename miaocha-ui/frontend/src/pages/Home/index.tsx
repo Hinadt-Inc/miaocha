@@ -630,6 +630,7 @@ const HomePage = () => {
     moduleQueryConfig,
     onCommonColumnsChange: setCommonColumns,
     selectedModule, // 传递当前选中的模块，确保Sider组件与Home组件状态同步
+    activeColumns, // 传递当前激活的字段，确保Sider组件与Home组件状态同步
   };
 
   // 使用useCallback稳定getDistributionWithSearchBar函数引用
@@ -918,6 +919,15 @@ const HomePage = () => {
             // 更新字段选择
             if (searchParams.fields && searchParams.fields.length > 0) {
               setActiveColumns(searchParams.fields);
+
+              // 同步更新logTableColumns的selected状态
+              setLogTableColumns((prevColumns) => {
+                return prevColumns.map((column) => ({
+                  ...column,
+                  selected: searchParams.fields!.includes(column.columnName || ''),
+                  _createTime: searchParams.fields!.includes(column.columnName || '') ? Date.now() : undefined,
+                }));
+              });
             }
           }
 
