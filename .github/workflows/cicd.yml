@@ -5,7 +5,7 @@ on:
     types: [ opened, synchronize, reopened, labeled ]
     branches: [ dev ]
 
-# 添加权限配置，授予 issues 和 pull-requests 写权限
+# Permissions: allow writing to issues and pull-requests
 permissions:
   issues: write
   pull-requests: write
@@ -28,7 +28,7 @@ jobs:
             echo "✅ CI 将正常执行"
           fi
 
-  # 跳过 CI 的说明 job
+  # Job to summarize when CI is skipped
   skip-ci-info:
     runs-on: ubuntu-latest
     needs: check-skip-ci
@@ -36,14 +36,14 @@ jobs:
     steps:
       - name: CI Skipped
         run: |
-          echo "::notice title=CI跳过::此 PR 包含 'no ci' 标签，CI 检查已被跳过"
+          echo "::notice title=CI Skipped::This PR has 'no ci' label; CI checks were skipped"
 
-  # PR CI 主要测试任务
+  # PR CI main test job
   pr-ci:
     runs-on: ubuntu-latest
     needs: check-skip-ci
     if: ${{ needs.check-skip-ci.outputs.should_skip == 'false' }}
-    # Job级别的并发控制 - 新推送会取消正在运行的 CI/CD 作业
+    # Job-level concurrency — new pushes cancel in-progress CI/CD jobs
     concurrency:
       group: pr-ci-${{ github.event.pull_request.number }}
       cancel-in-progress: true
@@ -51,7 +51,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          submodules: true  # 自动签出所有子模块
+          submodules: true  # Auto checkout all submodules
 
       - name: Cache JDK
         uses: actions/cache@v4
@@ -67,7 +67,7 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          check-latest: false  # 不检查最新版本，加速setup
+          check-latest: false  # Do not check latest to speed up setup
 
       - name: Cache Maven dependencies
         uses: actions/cache@v4
@@ -78,15 +78,15 @@ jobs:
 
       - name: Configure system for Doris
         run: |
-          # 关闭swap分区
+          # Disable swap
           sudo swapoff -a
 
-          # 设置系统参数
+          # Tune kernel parameters
           sudo sysctl -w vm.max_map_count=2000000
           sudo sysctl -w vm.swappiness=0
           sudo sysctl -w fs.file-max=655360
 
-          # 验证设置
+          # Verify settings
           echo "=== System Configuration ==="
           echo "Swap status:"
           swapon --show
@@ -96,10 +96,10 @@ jobs:
 
       - name: Run tests and build
         run: |
-          echo "🚀 开始执行 Maven 完整测试和构建"
-          echo "包括单元测试和集成测试..."
+          echo "🚀 Running full Maven tests and build"
+          echo "Including unit tests and integration tests..."
           mvn clean verify
-          echo "✅ 所有测试通过，构建完成"
+          echo "✅ All tests passed, build completed"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -165,19 +165,19 @@ jobs:
       - name: Check CI status (for label trigger)
         if: ${{ github.event.action == 'labeled' }}
         run: |
-          echo "🔍 检查CI状态（标签触发）..."
+          echo "🔍 Checking CI status (label trigger)..."
 
-          # 使用GitHub API检查最新的工作流运行状态
+          # Use GitHub API to check latest workflow run status
           WORKFLOW_RUNS=$(curl -s -H "Authorization: token ${{ github.token }}" \
             "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=${{ github.event.pull_request.head.sha }}&event=pull_request")
 
-          # 检查CI是否成功
+          # Check if CI succeeded
           CI_SUCCESS=$(echo "$WORKFLOW_RUNS" | jq -r '.workflow_runs[] | select(.name == "PR CI/CD") | select(.conclusion == "success") | .id' | head -1)
 
           if [ -n "$CI_SUCCESS" ]; then
-            echo "✅ CI已通过，可以进行部署"
+            echo "✅ CI passed, proceed with deployment"
           else
-            echo "❌ CI未通过或仍在运行中，停止部署"
+            echo "❌ CI failed or still running, abort deployment"
             exit 1
           fi
 
@@ -188,14 +188,14 @@ jobs:
 
       - name: Setup local cache directories
         run: |
-          # 创建本地缓存目录
+          # Create local cache directories
           mkdir -p /opt/action-runner/cache/jdk /opt/action-runner/cache/maven /opt/action-runner/cache/nodemodules /opt/action-runner/cache/kubectl
-          echo "📁 本地缓存目录已创建"
+          echo "📁 Local cache directories created"
           ls -la /opt/action-runner/cache/
 
       - name: Restore JDK from local cache
         run: |
-          echo "🔍 检查JDK本地缓存..."
+          echo "🔍 Checking local JDK cache..."
           ARCH=$(uname -m)
           JDK_CACHE_KEY="jdk-17-temurin-${ARCH}"
           JDK_CACHE_PATH="/opt/action-runner/cache/jdk/${JDK_CACHE_KEY}"
@@ -204,13 +204,13 @@ jobs:
           echo "JDK_CACHE_PATH=$JDK_CACHE_PATH" >> $GITHUB_ENV
 
           if [ -d "$JDK_CACHE_PATH" ] && [ "$(ls -A $JDK_CACHE_PATH 2>/dev/null)" ]; then
-            echo "✅ 发现JDK缓存: $JDK_CACHE_KEY"
-            echo "🔧 设置JDK环境变量..."
+            echo "✅ Found JDK cache: $JDK_CACHE_KEY"
+            echo "🔧 Setting JDK environment variables..."
             echo "JAVA_HOME=$JDK_CACHE_PATH" >> $GITHUB_ENV
             echo "$JDK_CACHE_PATH/bin" >> $GITHUB_PATH
             echo "JDK_CACHE_HIT=true" >> $GITHUB_ENV
           else
-            echo "❌ JDK缓存未命中，需要安装"
+            echo "❌ JDK cache miss, need to install"
             echo "JDK_CACHE_HIT=false" >> $GITHUB_ENV
           fi
 
@@ -230,19 +230,19 @@ jobs:
       - name: Setup Maven from cache (if JDK cache hit)
         if: env.JDK_CACHE_HIT == 'true'
         run: |
-          echo "🔧 JDK从缓存恢复，检查Maven..."
+          echo "🔧 JDK restored from cache, checking Maven..."
           if command -v mvn >/dev/null 2>&1; then
-            echo "✅ Maven已可用"
+            echo "✅ Maven is available"
           else
-            echo "⚠️ Maven不在PATH中，尝试从缓存的Maven二进制查找..."
-            # 尝试从Maven二进制缓存查找
+            echo "⚠️ Maven not in PATH, trying cached Maven binary..."
+            # Try from cached Maven binary
             MAVEN_BINARY_CACHE_PATH="/opt/action-runner/cache/maven-binary"
             if [ -d "$MAVEN_BINARY_CACHE_PATH" ]; then
-              echo "✅ 发现Maven二进制缓存"
+              echo "✅ Found cached Maven binary"
               echo "M2_HOME=$MAVEN_BINARY_CACHE_PATH" >> $GITHUB_ENV
               echo "$MAVEN_BINARY_CACHE_PATH/bin" >> $GITHUB_PATH
             else
-              echo "❌ 没有缓存的Maven二进制，使用setup-maven action"
+              echo "❌ No cached Maven binary, using setup-maven action"
               echo "NEED_MAVEN_INSTALL=true" >> $GITHUB_ENV
             fi
           fi
@@ -256,60 +256,60 @@ jobs:
       - name: Save Maven binary to cache (if installed)
         if: env.NEED_MAVEN_INSTALL == 'true' && always()
         run: |
-          echo "💾 保存Maven二进制到本地缓存..."
+          echo "💾 Save Maven binary to local cache..."
           if [ -n "$M2_HOME" ] && [ -d "$M2_HOME" ]; then
             MAVEN_BINARY_CACHE_PATH="/opt/action-runner/cache/maven-binary"
             cp -r "$M2_HOME" "$MAVEN_BINARY_CACHE_PATH"
-            echo "✅ Maven二进制本地缓存已保存"
+            echo "✅ Maven binary saved to local cache"
           else
-            echo "⚠️ M2_HOME未设置，跳过Maven二进制缓存保存"
+            echo "⚠️ M2_HOME is not set, skip Maven binary caching"
           fi
 
       - name: Restore Maven dependencies from local cache
         run: |
-          echo "🔍 检查Maven依赖本地缓存..."
+          echo "🔍 Checking local cache for Maven dependencies..."
           MAVEN_DEPS_CACHE_KEY="maven-deps-$(find . -name 'pom.xml' -exec sha256sum {} \; | sha256sum | cut -d' ' -f1)"
           MAVEN_DEPS_CACHE_FILE="/opt/action-runner/cache/maven/${MAVEN_DEPS_CACHE_KEY}.tar.gz"
 
           echo "MAVEN_DEPS_CACHE_KEY=$MAVEN_DEPS_CACHE_KEY" >> $GITHUB_ENV
 
           if [ -f "$MAVEN_DEPS_CACHE_FILE" ]; then
-            echo "✅ 发现Maven依赖缓存: $MAVEN_DEPS_CACHE_KEY"
+            echo "✅ Found Maven dependencies cache: $MAVEN_DEPS_CACHE_KEY"
             cd ~
             tar -xzf "$MAVEN_DEPS_CACHE_FILE"
-            echo "📦 Maven依赖本地缓存已恢复"
+            echo "📦 Maven dependencies restored from local cache"
             echo "MAVEN_DEPS_CACHE_HIT=true" >> $GITHUB_ENV
           else
-            echo "❌ Maven依赖缓存未命中，将在构建后保存"
+            echo "❌ Maven dependencies cache miss, will save after build"
             echo "MAVEN_DEPS_CACHE_HIT=false" >> $GITHUB_ENV
           fi
 
       - name: Restore Node.js dependencies from local cache
         run: |
-          echo "🔍 检查Node.js依赖本地缓存..."
+          echo "🔍 Checking local cache for Node.js dependencies..."
           NODEMODULES_CACHE_KEY="nodemodules-$(find miaocha-ui/frontend -name 'package.json' -o -name 'yarn.lock' -o -name 'package-lock.json' | xargs sha256sum | sha256sum | cut -d' ' -f1)"
           NODEMODULES_CACHE_FILE="/opt/action-runner/cache/nodemodules/${NODEMODULES_CACHE_KEY}.tar.gz"
 
           echo "NODEMODULES_CACHE_KEY=$NODEMODULES_CACHE_KEY" >> $GITHUB_ENV
 
           if [ -f "$NODEMODULES_CACHE_FILE" ]; then
-            echo "✅ 发现Node.js依赖缓存: $NODEMODULES_CACHE_KEY"
+            echo "✅ Found Node.js dependencies cache: $NODEMODULES_CACHE_KEY"
             cd miaocha-ui/frontend
             tar -xzf "$NODEMODULES_CACHE_FILE"
-            echo "📦 Node.js依赖本地缓存已恢复"
+            echo "📦 Node.js dependencies restored from local cache"
             echo "NODEMODULES_CACHE_HIT=true" >> $GITHUB_ENV
           else
-            echo "❌ Node.js依赖缓存未命中，将在构建后保存"
+            echo "❌ Node.js dependencies cache miss, will save after build"
             echo "NODEMODULES_CACHE_HIT=false" >> $GITHUB_ENV
           fi
 
       - name: Verify Java and Maven
         run: |
-          echo "🔍 验证Java和Maven安装状态..."
-          echo "Java版本:"
+          echo "🔍 Verify Java and Maven installation..."
+          echo "Java version:"
           java -version
           echo
-          echo "Maven版本:"
+          echo "Maven version:"
           mvn -version
 
       - name: Extract Maven project version
@@ -319,12 +319,12 @@ jobs:
           VERSION=$(grep -m 1 '<version>' pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/' | tr -d ' \t\n')
 
           if [ -z "$VERSION" ]; then
-            echo "❌ 无法获取项目版本"
+            echo "❌ Failed to get project version"
             exit 1
           fi
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "📦 项目版本: $VERSION"
+          echo "📦 Project version: $VERSION"
 
       - name: Generate Docker tag
         id: docker-tag
@@ -334,7 +334,7 @@ jobs:
           echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "full_image=crpi-5x5i70hcgjeg1z8k.cn-shanghai.personal.cr.aliyuncs.com/miaocha-github-dev/miaocha-test-pr:${IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "latest_image=crpi-5x5i70hcgjeg1z8k.cn-shanghai.personal.cr.aliyuncs.com/miaocha-github-dev/miaocha-test-pr:latest-pr${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
-          echo "📦 镜像标签: ${IMAGE_TAG}"
+          echo "📦 Image tag: ${IMAGE_TAG}"
 
       - name: Login to private Docker registry
         run: |
@@ -342,9 +342,9 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          echo "🐳 开始构建 Docker 镜像"
-          echo "镜像名称: miaocha-test-pr"
-          echo "镜像标签: ${{ steps.docker-tag.outputs.image_tag }}"
+          echo "🐳 Building Docker image"
+          echo "Image name: miaocha-test-pr"
+          echo "Image tag: ${{ steps.docker-tag.outputs.image_tag }}"
 
           # 确保脚本可执行
           chmod +x scripts/build-start-docker.sh
@@ -356,18 +356,18 @@ jobs:
           docker tag miaocha-test-pr:${{ steps.docker-tag.outputs.image_tag }} ${{ steps.docker-tag.outputs.full_image }}
           docker tag miaocha-test-pr:${{ steps.docker-tag.outputs.image_tag }} ${{ steps.docker-tag.outputs.latest_image }}
 
-          # 推送镜像到仓库
-          echo "📤 推送镜像到私有仓库..."
-          # 配置 Docker 客户端不对目标仓库使用代理
+          # Push image to registry
+          echo "📤 Pushing image to private registry..."
+          # Ensure Docker client does not use proxy for target registry
           docker push ${{ steps.docker-tag.outputs.full_image }}
           docker push ${{ steps.docker-tag.outputs.latest_image }}
 
-          echo "✅ 镜像推送完成!"
+          echo "✅ Image push completed!"
 
       - name: Restore kubectl from local cache
         run: |
-          echo "🔍 检查kubectl本地缓存..."
-          KUBECTL_VERSION="v1.29.0"  # 使用固定版本以便缓存
+          echo "🔍 Checking local kubectl cache..."
+          KUBECTL_VERSION="v1.29.0"  # Use fixed version for caching
           KUBECTL_CACHE_KEY="kubectl-${KUBECTL_VERSION}-$(uname -m)"
           KUBECTL_CACHE_PATH="/opt/action-runner/cache/kubectl/${KUBECTL_CACHE_KEY}"
 
@@ -375,12 +375,12 @@ jobs:
           echo "KUBECTL_CACHE_PATH=$KUBECTL_CACHE_PATH" >> $GITHUB_ENV
 
           if [ -f "$KUBECTL_CACHE_PATH/kubectl" ]; then
-            echo "✅ 发现kubectl缓存: $KUBECTL_CACHE_KEY"
+            echo "✅ Found kubectl cache: $KUBECTL_CACHE_KEY"
             sudo cp "$KUBECTL_CACHE_PATH/kubectl" /usr/local/bin/kubectl
             sudo chmod +x /usr/local/bin/kubectl
             echo "KUBECTL_CACHE_HIT=true" >> $GITHUB_ENV
           else
-            echo "❌ kubectl缓存未命中，需要下载"
+            echo "❌ kubectl cache miss, will download"
             echo "KUBECTL_CACHE_HIT=false" >> $GITHUB_ENV
           fi
 
@@ -388,58 +388,58 @@ jobs:
         if: env.KUBECTL_CACHE_HIT == 'false'
         uses: azure/setup-kubectl@v4
         with:
-          version: 'v1.29.0'  # 使用固定版本
+          version: 'v1.29.0'  # Use fixed version
 
       - name: Save kubectl to local cache
         if: env.KUBECTL_CACHE_HIT == 'false' && always()
         run: |
-          echo "💾 保存kubectl到本地缓存..."
+          echo "💾 Save kubectl to local cache..."
           if command -v kubectl >/dev/null 2>&1; then
             mkdir -p "$KUBECTL_CACHE_PATH"
             cp "$(which kubectl)" "$KUBECTL_CACHE_PATH/kubectl"
-            echo "✅ kubectl本地缓存已保存: $KUBECTL_CACHE_KEY"
+            echo "✅ kubectl saved to local cache: $KUBECTL_CACHE_KEY"
           else
-            echo "⚠️ kubectl未找到，跳过缓存保存"
+            echo "⚠️ kubectl not found, skip cache save"
           fi
 
       - name: Setup kubectl
         run: |
-          echo "🔧 配置 kubectl..."
-          # 创建 kubeconfig 文件
+          echo "🔧 Configure kubectl..."
+          # Create kubeconfig file
           mkdir -p ~/.kube
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
 
-          # 验证连接
+          # Verify connectivity
           kubectl cluster-info
 
       - name: Deploy to Kubernetes
         id: k8s-deploy
         run: |
-          echo "🚀 开始部署到 Kubernetes..."
+          echo "🚀 Deploying to Kubernetes..."
 
-          # 设置环境变量
+          # Set environment variables
           export PR_NUMBER=${{ github.event.pull_request.number }}
           export DOCKER_IMAGE="${{ steps.docker-tag.outputs.latest_image }}"
           export DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}"
 
-          # 执行部署
+          # Execute deployment
           chmod +x scripts/github/k8s/deploy.sh
           ./scripts/github/k8s/deploy.sh
 
       - name: Get deployment status
         id: k8s-status
         run: |
-          echo "📊 获取部署状态..."
+          echo "📊 Getting deployment status..."
 
           NAMESPACE="miaocha-pr-${{ github.event.pull_request.number }}"
 
-          # 获取节点 IP
+          # Get node IP
           NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="ExternalIP")].address}')
           if [ -z "$NODE_IP" ]; then
             NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
           fi
 
-          # 获取服务端口
+          # Get service ports
           MIAOCHA_PORT=$(kubectl get svc miaocha -n $NAMESPACE -o jsonpath='{.spec.ports[0].nodePort}')
           MYSQL_PORT=$(kubectl get svc mysql -n $NAMESPACE -o jsonpath='{.spec.ports[0].nodePort}')
           DORIS_HTTP_PORT=$(kubectl get svc doris -n $NAMESPACE -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
@@ -453,7 +453,7 @@ jobs:
           echo "doris_stream_port=$DORIS_STREAM_PORT" >> $GITHUB_OUTPUT
           echo "doris_query_port=$DORIS_QUERY_PORT" >> $GITHUB_OUTPUT
 
-          echo "✅ 部署状态获取完成"
+          echo "✅ Deployment status captured"
 
       - name: Comment on PR with deployment failure
         if: failure() && steps.k8s-deploy.outcome == 'failure'
@@ -463,31 +463,31 @@ jobs:
             const pr_number = context.issue.number;
             const docker_image = '${{ steps.docker-tag.outputs.latest_image }}';
 
-            const comment = `## ❌ 内部测试环境部署失败
+            const comment = `## ❌ Deployment to internal test environment failed
 
-            **PR #${pr_number}** 部署到内部测试环境时发生错误
+            An error occurred when deploying **PR #${pr_number}** to the internal test environment.
 
-            ### 🚨 部署信息
+            ### 🚨 Deployment Info
 
-            - **Docker 镜像**: \`${docker_image}\`
-            - **失败时间**: ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}
-            - **命名空间**: \`miaocha-pr-${pr_number}\`
+            - **Docker image**: \`${docker_image}\`
+            - **Failure time**: ${new Date().toLocaleString('en-US', { timeZone: 'Asia/Shanghai' })}
+            - **Namespace**: \`miaocha-pr-${pr_number}\`
 
-            ### 🔍 排查步骤
+            ### 🔍 Troubleshooting
 
-            1. 检查 GitHub Actions 日志获取详细错误信息
-            2. 确认 Kubernetes 集群状态正常
-            3. 检查资源配额是否足够
-            4. 验证 Docker 镜像是否正确推送
+            1. Check GitHub Actions logs for details
+            2. Verify Kubernetes cluster health
+            3. Ensure resource quotas are sufficient
+            4. Verify the Docker image was pushed correctly
 
-            ### 🛠️ 重新部署
+            ### 🛠️ Redeploy
 
-            修复问题后，重新推送代码将自动触发重新部署。
+            After fixing the issue, push again to trigger redeployment.
 
             ---
-            *🤖 此评论由 CI/CD 自动生成*`;
+            *🤖 This comment was generated by CI/CD*`;
 
-            // 创建失败评论
+            // Create failure comment
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -495,7 +495,7 @@ jobs:
               body: comment
             });
 
-            console.log('✅ 创建了部署失败评论');
+            console.log('✅ Created deployment failure comment');
 
       - name: Comment on PR with deployment info
         if: success() && steps.k8s-status.outcome == 'success'
@@ -511,48 +511,48 @@ jobs:
             const doris_query_port = '${{ steps.k8s-status.outputs.doris_query_port }}';
             const docker_image = '${{ steps.docker-tag.outputs.latest_image }}';
 
-            const comment = `## 🚀 内部测试环境部署成功
+            const comment = `## 🚀 Internal test environment deployment succeeded
 
-            **PR #${pr_number}** 已成功部署到内部测试环境
+            **PR #${pr_number}** has been deployed to the internal test environment.
 
-            ### 🌐 访问地址
+            ### 🌐 Access URLs
 
-            | 服务 | 访问地址 | 说明 |
+            | Service | URL | Note |
             |------|----------|------|
-            | 🖥️ **Miaocha 应用** | http://${node_ip}:${miaocha_port} | 主应用入口 |
-            | 📊 **Doris HTTP** | http://${node_ip}:${doris_http_port} | 数据查询界面 |
-            | 🔄 **Doris Stream Load** | http://${node_ip}:${doris_stream_port} | 数据导入端口 |
-            | 🗄️ **Doris Query** | ${node_ip}:${doris_query_port} | 查询端口 |
-            | 🐬 **MySQL** | ${node_ip}:${mysql_port} | 数据库连接 |
+            | 🖥️ **Miaocha App** | http://${node_ip}:${miaocha_port} | Main entry |
+            | 📊 **Doris HTTP** | http://${node_ip}:${doris_http_port} | Query UI |
+            | 🔄 **Doris Stream Load** | http://${node_ip}:${doris_stream_port} | Data ingestion |
+            | 🗄️ **Doris Query** | ${node_ip}:${doris_query_port} | Query port |
+            | 🐬 **MySQL** | ${node_ip}:${mysql_port} | Database |
 
 
-            ### 📦 部署信息
+            ### 📦 Deployment Info
 
-            - **命名空间**: \`miaocha-pr-${pr_number}\`
-            - **Docker 镜像**: \`${docker_image}\`
-            - **环境**: 内部测试环境 (dev)
-            - **部署时间**: ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}
-            - **数据同步**: 已从测试环境同步最新数据
-
-
-            ### ⚠️ 注意事项
-
-            - 这是**内部测试环境**，仅用于开发和测试
-            - 首次部署时会自动从测试环境 (\`10.0.21.34\`) 同步数据
-            - 数据存储为临时存储，Pod重启后会丢失
-            - 当 PR 关闭时，所有资源会自动清理
-            - 请不要在测试环境中存储重要数据
+            - **Namespace**: \`miaocha-pr-${pr_number}\`
+            - **Docker image**: \`${docker_image}\`
+            - **Environment**: Internal test (dev)
+            - **Deployment time**: ${new Date().toLocaleString('en-US', { timeZone: 'Asia/Shanghai' })}
+            - **Data sync**: Synchronized latest test data
 
 
-            ### 🧹 清理
+            ### ⚠️ Notes
 
-            PR 关闭时会自动清理所有资源，也可以手动清理：
+            - This is an internal test environment for development and testing only
+            - On first deploy, it automatically syncs data from the test environment (\`10.0.21.34\`)
+            - Storage is ephemeral; data is lost after Pod restarts
+            - All resources are auto-cleaned when the PR is closed
+            - Do not store important data in this environment
+
+
+            ### 🧹 Cleanup
+
+            Resources are cleaned automatically when the PR is closed. You can also clean manually:
             \`\`\`bash
             kubectl delete namespace miaocha-pr-${pr_number}
             \`\`\`
 
             ---
-            *🤖 此评论由 CI/CD 自动生成*`;
+            *🤖 This comment was generated by CI/CD*`;
 
             // 查找是否已有部署评论
             const { data: comments } = await github.rest.issues.listComments({
@@ -562,7 +562,7 @@ jobs:
             });
 
             const existingComment = comments.find(comment =>
-              comment.body.includes('🚀 内部测试环境部署成功') &&
+              comment.body.includes('Internal test environment deployment succeeded') &&
               comment.user.type === 'Bot'
             );
 
@@ -574,7 +574,7 @@ jobs:
                 comment_id: existingComment.id,
                 body: comment
               });
-              console.log('✅ 更新了现有的部署评论');
+              console.log('✅ Updated existing deployment comment');
             } else {
               // 创建新评论
               await github.rest.issues.createComment({
@@ -583,74 +583,73 @@ jobs:
                 issue_number: pr_number,
                 body: comment
               });
-              console.log('✅ 创建了新的部署评论');
+              console.log('✅ Created a new deployment comment');
             }
 
       - name: Save Maven dependencies to local cache
         if: env.MAVEN_DEPS_CACHE_HIT == 'false' && always()
         run: |
-          echo "💾 保存Maven依赖到本地缓存..."
+          echo "💾 Save Maven dependencies to local cache..."
           if [ -d ~/.m2 ] && [ "$(ls -A ~/.m2 2>/dev/null)" ]; then
             cd ~
             tar -czf "/opt/action-runner/cache/maven/$MAVEN_DEPS_CACHE_KEY.tar.gz" .m2
-            echo "✅ Maven依赖本地缓存已保存: $MAVEN_DEPS_CACHE_KEY"
+            echo "✅ Maven dependencies cached locally: $MAVEN_DEPS_CACHE_KEY"
           else
-            echo "⚠️ ~/.m2目录为空，跳过缓存保存"
+            echo "⚠️ ~/.m2 is empty, skip caching"
           fi
 
       - name: Save JDK to local cache
         if: env.JDK_CACHE_HIT == 'false' && always()
         run: |
-          echo "💾 保存JDK到本地缓存..."
+          echo "💾 Save JDK to local cache..."
           if [ -n "$JAVA_HOME" ] && [ -d "$JAVA_HOME" ]; then
             mkdir -p "$(dirname $JDK_CACHE_PATH)"
             cp -r "$JAVA_HOME" "$JDK_CACHE_PATH"
-            echo "✅ JDK本地缓存已保存: $JDK_CACHE_KEY"
+            echo "✅ JDK cached locally: $JDK_CACHE_KEY"
           else
-            echo "⚠️ JAVA_HOME未设置或不存在，跳过JDK缓存保存"
+            echo "⚠️ JAVA_HOME not set or missing, skip JDK caching"
           fi
 
       - name: Save Node.js dependencies to local cache
         if: env.NODEMODULES_CACHE_HIT == 'false' && always()
         run: |
-          echo "💾 保存Node.js依赖到本地缓存..."
+          echo "💾 Save Node.js dependencies to local cache..."
           if [ -d "miaocha-ui/frontend/node_modules" ] && [ "$(ls -A miaocha-ui/frontend/node_modules 2>/dev/null)" ]; then
             cd miaocha-ui/frontend
             tar -czf "/opt/action-runner/cache/nodemodules/$NODEMODULES_CACHE_KEY.tar.gz" node_modules
-            echo "✅ Node.js依赖本地缓存已保存: $NODEMODULES_CACHE_KEY"
+            echo "✅ Node.js dependencies cached locally: $NODEMODULES_CACHE_KEY"
           else
-            echo "⚠️ node_modules目录为空或不存在，跳过缓存保存"
+            echo "⚠️ node_modules is empty or missing, skip caching"
           fi
 
       - name: Summary
         run: |
-          echo "## 🚀 PR CD 部署成功" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 PR CD Deployment Succeeded" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📦 镜像信息" >> $GITHUB_STEP_SUMMARY
-          echo "- **仓库**: crpi-5x5i70hcgjeg1z8k.cn-shanghai.personal.cr.aliyuncs.com/miaocha-github-dev/miaocha-test-pr" >> $GITHUB_STEP_SUMMARY
-          echo "- **标签**: " >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Image Info" >> $GITHUB_STEP_SUMMARY
+          echo "- **Registry**: crpi-5x5i70hcgjeg1z8k.cn-shanghai.personal.cr.aliyuncs.com/miaocha-github-dev/miaocha-test-pr" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tags**: " >> $GITHUB_STEP_SUMMARY
           echo "  - ${{ steps.docker-tag.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "  - latest-pr${{ github.event.pull_request.number }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🌐 K8s 部署信息" >> $GITHUB_STEP_SUMMARY
+          echo "### 🌐 K8s Deployment Info" >> $GITHUB_STEP_SUMMARY
           echo "- **Namespace**: miaocha-pr-${{ github.event.pull_request.number }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **节点 IP**: ${{ steps.k8s-status.outputs.node_ip }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Node IP**: ${{ steps.k8s-status.outputs.node_ip }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🔗 访问地址" >> $GITHUB_STEP_SUMMARY
-          echo "- **Miaocha 应用**: http://${{ steps.k8s-status.outputs.node_ip }}:${{ steps.k8s-status.outputs.miaocha_port }}" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Access URLs" >> $GITHUB_STEP_SUMMARY
+          echo "- **Miaocha app**: http://${{ steps.k8s-status.outputs.node_ip }}:${{ steps.k8s-status.outputs.miaocha_port }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Doris HTTP**: http://${{ steps.k8s-status.outputs.node_ip }}:${{ steps.k8s-status.outputs.doris_http_port }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Doris Stream Load**: http://${{ steps.k8s-status.outputs.node_ip }}:${{ steps.k8s-status.outputs.doris_stream_port }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Doris Query**: ${{ steps.k8s-status.outputs.node_ip }}:${{ steps.k8s-status.outputs.doris_query_port }}" >> $GITHUB_STEP_SUMMARY
           echo "- **MySQL**: ${{ steps.k8s-status.outputs.node_ip }}:${{ steps.k8s-status.outputs.mysql_port }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🎯 Docker 使用方法" >> $GITHUB_STEP_SUMMARY
+          echo "### 🎯 Docker Usage" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
           echo "docker pull ${{ steps.docker-tag.outputs.latest_image }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🧹 清理命令" >> $GITHUB_STEP_SUMMARY
-          echo "PR 关闭时会自动清理，也可以手动清理：" >> $GITHUB_STEP_SUMMARY
+          echo "### 🧹 Cleanup Command" >> $GITHUB_STEP_SUMMARY
+          echo "Resources will be cleaned automatically when PR closes; you can also clean manually:" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
           echo "kubectl delete namespace miaocha-pr-${{ github.event.pull_request.number }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-

@@ -1,0 +1,51 @@
+// 主要的 Sider 模块样式
+.layoutSider {
+    height: 100%;
+    overflow: auto;
+    padding: 0 10px;
+
+    .virtualListContainer {
+
+        // 确保虚拟滚动容器的样式
+        .scrollableWrapper {
+            border-radius: 4px;
+            border: 1px solid #f0f0f0;
+
+            // 优化滚动条样式
+            &::-webkit-scrollbar {
+                width: 6px;
+            }
+
+            &::-webkit-scrollbar-track {
+                background: #f1f1f1;
+                border-radius: 3px;
+            }
+
+            &::-webkit-scrollbar-thumb {
+                background: #c1c1c1;
+                border-radius: 3px;
+
+                &:hover {
+                    background: #a8a8a8;
+                }
+            }
+        }
+    }
+}
+
+.emptyState {
+    text-align: center;
+    color: #999;
+    padding: 20px;
+    border: 1px solid #f0f0f0;
+    border-radius: 4px;
+}
+
+.searchInput {
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.virtualListWrapper {
+    margin-top: 8px;
+}
