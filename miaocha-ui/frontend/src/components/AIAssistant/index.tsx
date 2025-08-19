@@ -7,6 +7,7 @@ import {
   UserOutlined,
   DragOutlined,
   CloseOutlined,
+  ClearOutlined,
 } from '@ant-design/icons';
 import { Welcome } from '@ant-design/x';
 import Draggable from 'react-draggable';
@@ -27,9 +28,6 @@ interface IAIAssistantProps {
   onLogSearch?: (data: any) => void; // 支持传递搜索参数和结果
   onFieldSelect?: (fields: string[]) => void;
   onTimeRangeChange?: (data: any) => void; // 支持传递时间范围和直方图数据
-  currentSearchParams?: any;
-  logData?: any;
-  moduleOptions?: any[];
 }
 
 interface IMessage {
@@ -46,14 +44,7 @@ interface IMessage {
   };
 }
 
-const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
-  onLogSearch,
-  onFieldSelect,
-  onTimeRangeChange,
-  currentSearchParams,
-  logData,
-  moduleOptions = [],
-}) => {
+const AIAssistantComponent: React.FC<IAIAssistantProps> = ({ onLogSearch, onFieldSelect, onTimeRangeChange }) => {
   const [open, setOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState<'chat' | 'suggestions' | 'history'>('chat');
   const [messages, setMessages] = useState<IMessage[]>([]);
@@ -64,6 +55,7 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
   const [disabled, setDisabled] = useState(true);
   const [bounds, setBounds] = useState({ left: 0, top: 0, bottom: 0, right: 0 });
   const [executingActions] = useState(new Set<string>()); // 防止重复执行action
+  const [conversationId, setConversationId] = useState<string | null>(null); // 会话ID，用于上下文对话
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<any>(null);
   const draggleRef = useRef<HTMLDivElement>(null);
@@ -448,6 +440,7 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
       try {
         const requestBody = {
           message: messageContent,
+          ...(conversationId && { conversationId }), // 如果有conversationId则传递，没有则不传
         };
 
         fetch('/api/ai/session', {
@@ -496,6 +489,11 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
                         const data = JSON.parse(jsonStr);
 
                         if (data.conversationId) {
+                          // 保存会话ID以用于后续对话
+                          if (!conversationId) {
+                            setConversationId(data.conversationId);
+                          }
+
                           if (data.content !== undefined) {
                             accumulatedContent += data.content;
                             setMessages((prev) =>
@@ -558,6 +556,14 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
     });
   };
 
+  // 清空对话，开始新会话
+  const handleClearChat = () => {
+    setMessages([]);
+    setConversationId(null);
+    setCurrentTab('chat');
+  };
+
+  // 发送消息处理函数
   const handleSendMessage = async (messageContent: string) => {
     if (!messageContent.trim()) return;
     setInputValue('');
@@ -597,21 +603,25 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
             className={styles.sendButton}
           />
         </div>
-        <div className={styles.inputHint}>按 Enter 发送，Shift + Enter 换行</div>
+        <div className={styles.inputHint}>
+          <span>按 Enter 发送，Shift + Enter 换行</span>
+          {conversationId && <span className={styles.sessionHint}>· 上下文对话中</span>}
+        </div>
       </div>
     );
   };
 
   const getPlaceholderText = () => {
+    const baseText = conversationId ? '继续对话...' : '开始新对话...';
     switch (currentTab) {
       case 'chat':
-        return '询问任何关于日志分析的问题...';
+        return conversationId ? '继续询问日志分析相关问题...' : '询问任何关于日志分析的问题...';
       case 'suggestions':
         return '选择上面的建议或输入自定义查询...';
       case 'history':
         return '重新执行历史查询或输入新的查询...';
       default:
-        return '请输入您的查询...';
+        return baseText;
     }
   };
 
@@ -625,6 +635,12 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
               <div className={styles.welcomeContent}>
                 <h2 className={styles.welcomeTitle}>AI 智能助手</h2>
                 <p className={styles.welcomeDescription}>我是您的日志分析专家，可以帮您快速查找和分析日志数据</p>
+                {conversationId && (
+                  <div className={styles.sessionStatus}>
+                    <span className={styles.sessionIndicator}>💬</span>
+                    <span className={styles.sessionText}>当前会话ID: {conversationId.slice(-8)}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -806,6 +822,17 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
             </Button>
           ))}
         </div>
+        {/* 清空对话按钮，只在有对话记录时显示 */}
+        {messages.length > 0 && (
+          <Button
+            type="text"
+            icon={<ClearOutlined />}
+            onClick={handleClearChat}
+            size="small"
+            className={styles.clearButton}
+            title="清空对话，开始新会话"
+          />
+        )}
         <Button
           type="text"
           icon={<CloseOutlined />}

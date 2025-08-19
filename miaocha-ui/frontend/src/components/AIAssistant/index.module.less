@@ -260,6 +260,21 @@
   }
 }
 
+.clearButton {
+  border-radius: 50% !important;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fa8c16 !important;
+
+  &:hover {
+    background: #fff7e6 !important;
+    color: #fa541c !important;
+  }
+}
+
 .drawerContent {
   flex: 1;
   display: flex;
@@ -456,6 +471,27 @@
   line-height: 1.5;
 }
 
+.sessionStatus {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 6px 12px;
+  background: #f0f8ff;
+  border: 1px solid #e6f3ff;
+  border-radius: 16px;
+  font-size: 14px;
+}
+
+.sessionIndicator {
+  font-size: 16px;
+}
+
+.sessionText {
+  color: #1890ff;
+  font-weight: 500;
+}
+
 .promptsSection {
   margin-bottom: 32px;
 }
@@ -633,6 +669,15 @@
   color: #8899a6;
   margin-top: 8px;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.sessionHint {
+  color: #1890ff;
+  font-weight: 500;
 }
 
 /* Action 消息样式优化 */
