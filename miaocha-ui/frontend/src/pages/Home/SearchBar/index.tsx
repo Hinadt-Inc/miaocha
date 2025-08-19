@@ -24,6 +24,7 @@ import { useSearchInput, useTimeState, useSearchActions } from './hooks';
 
 // 类型和常量导入
 import { ISearchBarProps, ISearchBarRef } from './types';
+import type { ITimeOption } from '../types';
 import { SEARCH_BUTTON, STYLES } from './constants';
 import { getLatestTime, DATE_FORMAT_THOUSOND, QUICK_RANGES } from '../utils';
 
@@ -198,28 +199,59 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
     keywords,
     sqls,
     isFirstLoad,
+    // 添加searchParams相关依赖，确保当外部searchParams变化时能够触发搜索
+    searchParams.startTime,
+    searchParams.endTime,
+    searchParams.datasourceId,
+    searchParams.module,
     // 移除了timeState.timeOption依赖，避免时间变化引起的循环
     // 移除了可能导致循环的依赖：onSearch, getDistributionWithSearchBar, searchParams, onSqlsChange
   ]);
 
   // 单独处理时间变化的搜索
   useEffect(() => {
-    if (!initialized || commonColumns.length === 0) return;
+    // 如果是来自搜索按钮的强制触发，跳过初始化和columns检查
+    const isFromSearchButton = timeState.timeOption?._fromSearch;
 
-    // 如果时间更新来自外部params，不要重复搜索
-    if (timeUpdateFromParamsRef.current) {
-      timeUpdateFromParamsRef.current = false;
-      return;
+    if (!isFromSearchButton) {
+      // 非搜索按钮触发的情况，需要检查初始化状态和columns
+      if (!initialized || commonColumns.length === 0) {
+        console.log('⏸️ 等待初始化完成或columns加载完成...', {
+          initialized,
+          commonColumnsLength: commonColumns.length,
+        });
+        return;
+      }
+
+      // 如果时间更新来自外部params，不要重复搜索
+      if (timeUpdateFromParamsRef.current) {
+        timeUpdateFromParamsRef.current = false;
+        return;
+      }
+    } else {
+      console.log('🔍 来自搜索按钮的强制触发，跳过初始化检查');
     }
 
     // 时间发生变化时，需要更新搜索参数并触发搜索
     const fieldsHasDot = activeColumns?.some((item: any) => item.includes('.'));
     const resSortConfig = sortConfig?.filter((item) => !item.fieldName.includes('.'));
 
-    // 如果activeColumns为空或未定义，使用commonColumns作为默认值
-    let effectiveFields = commonColumns;
-    if (activeColumns && activeColumns.length > 0) {
-      effectiveFields = fieldsHasDot ? [...commonColumns, ...activeColumns] : activeColumns;
+    // 处理字段逻辑
+    let effectiveFields;
+    if (isFromSearchButton) {
+      // 搜索按钮触发时，优先使用activeColumns，如果没有则使用commonColumns，都没有就用空数组
+      effectiveFields =
+        activeColumns && activeColumns.length > 0
+          ? fieldsHasDot
+            ? [...(commonColumns || []), ...activeColumns]
+            : activeColumns
+          : commonColumns || [];
+    } else {
+      // 非搜索按钮触发时，使用原来的逻辑
+      effectiveFields = commonColumns;
+      if (activeColumns && activeColumns.length > 0) {
+        effectiveFields = fieldsHasDot ? [...commonColumns, ...activeColumns] : activeColumns;
+      }
     }
 
     // 先构建基础参数，避免searchParams中的空fields覆盖我们的effectiveFields
@@ -254,6 +286,40 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
     }
 
     onSearch(params as any);
+
+    // 同时触发字段分布数据更新
+    if (getDistributionWithSearchBar) {
+      // 在调用字段分布查询之前，确保localStorage中有最新的参数
+      try {
+        const currentSearchParams = {
+          ...params,
+          // 确保包含模块信息
+          datasourceId: searchParams.datasourceId,
+          module: searchParams.module,
+        };
+        localStorage.setItem('searchBarParams', JSON.stringify(currentSearchParams));
+        console.log('🔄 SearchBar更新localStorage:', currentSearchParams);
+      } catch (error) {
+        console.error('SearchBar更新localStorage失败:', error);
+      }
+
+      getDistributionWithSearchBar();
+    }
+
+    console.log('🔍 SearchBar useEffect 已触发所有API请求', {
+      fromSearch: timeState.timeOption?._fromSearch,
+      forceUpdate: timeState.timeOption?._forceUpdate,
+      params: params,
+      searchParams: searchParams,
+    });
+
+    // 如果是来自搜索按钮的触发，执行完成后清除标识
+    if (isFromSearchButton) {
+      setTimeOption((prev: ITimeOption) => ({
+        ...prev,
+        _fromSearch: false,
+      }));
+    }
   }, [timeState.timeOption]); // 只依赖timeOption
 
   // 处理搜索提交

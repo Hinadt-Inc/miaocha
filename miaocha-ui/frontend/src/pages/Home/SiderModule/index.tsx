@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, forwardRef, useImperativeHandle, useRef, useCallback } from 'react';
 import { Collapse, Input } from 'antd';
 import { ISiderProps, ISiderRef, IFieldData } from './types';
-import { VirtualFieldList, ModuleSelector, FieldListItem } from './components';
+import { ModuleSelector, FieldListItem } from './components';
 import { useFavoriteModule, useColumns, useModuleSelection, useDistributions } from './hooks';
 import { getFavoriteModule, removeLocalActiveColumns, updateSearchParamsInStorage } from './utils';
 import styles from './styles/index.module.less';
@@ -265,30 +265,10 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
     );
   }, [columns, searchText]);
 
-  // 虚拟列表渲染函数
-  const renderVirtualItem = useCallback(
-    (item: ILogColumnsResponse, index: number) => {
-      return (
-        <FieldListItem
-          key={item.columnName}
-          isSelected={false}
-          column={item}
-          columnIndex={index}
-          fieldData={fieldListProps}
-          moduleQueryConfig={moduleQueryConfig}
-        />
-      );
-    },
-    [fieldListProps, moduleQueryConfig],
-  );
-
   // 暴露给父组件的方法
   useImperativeHandle(ref, () => ({
     getDistributionWithSearchBar,
   }));
-
-  // 虚拟容器高度
-  const virtualContainerHeight = useMemo(() => 700, []);
 
   // 清理工作
   useEffect(() => {
@@ -347,14 +327,20 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
               />,
-              <div key="virtual-list-container" className={styles.virtualListWrapper}>
+              <div key="field-list-container" className={styles.virtualListWrapper}>
                 {filteredAvailableColumns && filteredAvailableColumns.length > 0 ? (
-                  <VirtualFieldList
-                    data={filteredAvailableColumns}
-                    itemHeight={35}
-                    containerHeight={virtualContainerHeight}
-                    renderItem={renderVirtualItem}
-                  />
+                  <div className={styles.fieldListContainer}>
+                    {filteredAvailableColumns.map((item: ILogColumnsResponse, index: number) => (
+                      <FieldListItem
+                        key={item.columnName}
+                        isSelected={false}
+                        column={item}
+                        columnIndex={index}
+                        fieldData={fieldListProps}
+                        moduleQueryConfig={moduleQueryConfig}
+                      />
+                    ))}
+                  </div>
                 ) : (
                   <div className={styles.emptyState}>{searchText ? '未找到匹配的字段' : '暂无可用字段'}</div>
                 )}

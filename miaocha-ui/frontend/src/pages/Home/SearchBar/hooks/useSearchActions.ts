@@ -101,8 +101,20 @@ export const useSearchActions = ({
       // 清空输入框
       clearInputs();
 
+      // 更新时间到最新并强制触发搜索
       const latestTime = getLatestTime(timeOption);
-      setTimeOption((prev: ITimeOption) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
+      const forceUpdateTimestamp = Date.now();
+
+      setTimeOption((prev: ITimeOption) => ({
+        ...prev,
+        range: [latestTime.startTime, latestTime.endTime],
+        // 每次点击搜索都生成新的时间戳，确保强制触发重新请求
+        _forceUpdate: forceUpdateTimestamp,
+        // 添加搜索标识，确保这是来自搜索按钮的触发
+        _fromSearch: true,
+      }));
+
+      console.log('🔍 强制触发搜索，时间戳:', forceUpdateTimestamp);
     },
     [keywords, setKeywords, sqls, setSqls, timeOption, setTimeOption],
   );

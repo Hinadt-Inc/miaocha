@@ -29,10 +29,8 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 /**
- * Logstash process monitor task. Periodically checks all running Logstash
- * instances and updates
- * status if a process is unexpectedly dead. For processes that have gone
- * offline, after the scan
+ * Logstash process monitor task. Periodically checks all running Logstash instances and updates
+ * status if a process is unexpectedly dead. For processes that have gone offline, after the scan
  * completes, aggregates and sends alert emails to configured recipients.
  */
 @Slf4j
@@ -75,7 +73,8 @@ public class LogstashProcessMonitorTask {
             log.debug("Start scheduled Logstash process status check...");
 
             // Fetch all LogstashMachine entries that have a recorded PID
-            List<LogstashMachine> processesWithPid = logstashMachineMapper.selectAllWithProcessPid();
+            List<LogstashMachine> processesWithPid =
+                    logstashMachineMapper.selectAllWithProcessPid();
             if (processesWithPid.isEmpty()) {
                 log.debug("No running Logstash instances found. Skipping check.");
                 return;
@@ -123,8 +122,7 @@ public class LogstashProcessMonitorTask {
     }
 
     /**
-     * Determine whether the instance should be checked. Only check instances in
-     * RUNNING or
+     * Determine whether the instance should be checked. Only check instances in RUNNING or
      * STOP_FAILED state and that have run for at least MIN_PROCESS_RUNTIME_MINUTES.
      */
     private boolean shouldCheckProcess(LogstashMachine logstashMachine) {
@@ -178,9 +176,7 @@ public class LogstashProcessMonitorTask {
         return true;
     }
 
-    /**
-     * Check a single Logstash instance. Return a DeadInstance if it is found dead.
-     */
+    /** Check a single Logstash instance. Return a DeadInstance if it is found dead. */
     private DeadInstance checkProcessStatus(LogstashMachine logstashMachine) {
         Long processId = logstashMachine.getLogstashProcessId();
         Long machineId = logstashMachine.getMachineId();
@@ -248,8 +244,9 @@ public class LogstashProcessMonitorTask {
 
         try {
             // Update state to NOT_STARTED
-            int updateResult = logstashMachineMapper.updateStateById(
-                    logstashMachineId, LogstashMachineState.NOT_STARTED.name());
+            int updateResult =
+                    logstashMachineMapper.updateStateById(
+                            logstashMachineId, LogstashMachineState.NOT_STARTED.name());
             if (updateResult > 0) {
                 log.debug(
                         "Updated instance [{}] on machine [{}] state to NOT_STARTED",
@@ -263,7 +260,8 @@ public class LogstashProcessMonitorTask {
             }
 
             // Clear PID
-            int pidUpdateResult = logstashMachineMapper.updateProcessPidById(logstashMachineId, null);
+            int pidUpdateResult =
+                    logstashMachineMapper.updateProcessPidById(logstashMachineId, null);
             if (pidUpdateResult > 0) {
                 log.debug(
                         "Cleared PID for instance [{}] on machine [{}]",
@@ -287,7 +285,8 @@ public class LogstashProcessMonitorTask {
     /** Build dead instance record for alerting. */
     private DeadInstance buildDeadInstance(
             LogstashMachine logstashMachine, MachineInfo machineInfo, String pid) {
-        LogstashProcess process = logstashProcessMapper.selectById(logstashMachine.getLogstashProcessId());
+        LogstashProcess process =
+                logstashProcessMapper.selectById(logstashMachine.getLogstashProcessId());
         if (process == null) {
             return null;
         }
@@ -303,10 +302,7 @@ public class LogstashProcessMonitorTask {
         return di;
     }
 
-    /**
-     * Aggregate by process and send alert emails with last 50 log lines for each
-     * instance.
-     */
+    /** Aggregate by process and send alert emails with last 50 log lines for each instance. */
     private void dispatchOfflineAlerts(List<DeadInstance> deadInstances) {
         if (!mailEnabled) {
             log.debug(
@@ -315,14 +311,14 @@ public class LogstashProcessMonitorTask {
             return;
         }
 
-        Map<Long, List<DeadInstance>> byProcess = deadInstances.stream()
-                .filter(Objects::nonNull)
-                .collect(Collectors.groupingBy(di -> di.processId));
+        Map<Long, List<DeadInstance>> byProcess =
+                deadInstances.stream()
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.groupingBy(di -> di.processId));
 
         for (Map.Entry<Long, List<DeadInstance>> entry : byProcess.entrySet()) {
             List<DeadInstance> list = entry.getValue();
-            if (CollectionUtils.isEmpty(list))
-                continue;
+            if (CollectionUtils.isEmpty(list)) continue;
 
             DeadInstance first = list.get(0);
             List<String> recipients = parseRecipients(first.alertRecipientsJson);
@@ -336,7 +332,8 @@ public class LogstashProcessMonitorTask {
 
             // Build template model and render
 
-            String subject = String.format("[Alert] Logstash instances stopped - %s", first.processName);
+            String subject =
+                    String.format("[Alert] Logstash instances stopped - %s", first.processName);
             Map<String, Object> model = new java.util.HashMap<>();
             model.put("processName", nullToEmpty(first.processName));
             model.put("generatedAt", LocalDateTime.now().toString());
@@ -357,13 +354,14 @@ public class LogstashProcessMonitorTask {
 
     private String fetchLastLogsSafely(DeadInstance di) {
         try {
-            MachineInfo machine = machineMapper.selectById(
-                    logstashMachineMapper.selectById(di.instanceId).getMachineId());
-            if (machine == null)
-                return "Machine not found.";
+            MachineInfo machine =
+                    machineMapper.selectById(
+                            logstashMachineMapper.selectById(di.instanceId).getMachineId());
+            if (machine == null) return "Machine not found.";
             String logPath = LogstashPathUtils.buildLogFilePath(di.deployPath);
-            String cmd = String.format(
-                    "tail -n 50 \"%s\" 2>/dev/null || echo 'No logs found.'", logPath);
+            String cmd =
+                    String.format(
+                            "tail -n 50 \"%s\" 2>/dev/null || echo 'No logs found.'", logPath);
             return sshClient.executeCommand(machine, cmd);
         } catch (Exception e) {
             return "Failed to fetch logs: " + e.getMessage();
@@ -371,11 +369,9 @@ public class LogstashProcessMonitorTask {
     }
 
     private List<String> parseRecipients(String json) {
-        if (!StringUtils.hasText(json))
-            return List.of();
+        if (!StringUtils.hasText(json)) return List.of();
         try {
-            return objectMapper.readValue(json, new TypeReference<List<String>>() {
-            });
+            return objectMapper.readValue(json, new TypeReference<List<String>>() {});
         } catch (Exception e) {
             log.warn("Invalid alert recipients JSON: {}", e.getMessage());
             return List.of();
