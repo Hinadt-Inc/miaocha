@@ -3,13 +3,17 @@ import styles from './ThinkingIndicator.module.less';
 
 interface IThinkingIndicatorProps {
   message?: string;
+  size?: 'small' | 'medium' | 'large';
+  theme?: 'default' | 'welcome';
 }
 
-export const ThinkingIndicator: React.FC<IThinkingIndicatorProps> = ({ 
-  message = 'AI正在思考中...' 
+export const ThinkingIndicator: React.FC<IThinkingIndicatorProps> = ({
+  message = 'AI正在思考中...',
+  size = 'medium',
+  theme = 'default',
 }) => {
   return (
-    <div className={styles.thinkingContainer}>
+    <div className={`${styles.thinkingContainer} ${styles[size]} ${styles[theme]}`}>
       <div className={styles.thinkingContent}>
         <div className={styles.dotsContainer}>
           <div className={styles.dot}></div>

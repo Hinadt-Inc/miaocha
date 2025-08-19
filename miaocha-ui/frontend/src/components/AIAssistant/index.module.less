@@ -334,6 +334,24 @@
   flex-direction: column;
   gap: 24px;
   /* 移除这里的滚动，让父级容器处理 */
+
+  /* 为消息添加淡入动画 */
+  .messageWrapper {
+    animation: messageSlideIn 0.3s ease-out;
+  }
+}
+
+/* 消息淡入动画 */
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* 消息样式 - 类似Grok */
@@ -409,6 +427,11 @@
   &:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  /* 确保内容变化时有平滑过渡 */
+  .messageText {
+    transition: opacity 0.2s ease;
   }
 }
 
@@ -491,6 +514,95 @@
   color: #1890ff;
   font-weight: 500;
 }
+
+/* 思考状态样式 - 已简化，现在直接在消息气泡中处理 */
+
+.thinkingBubble {
+  background: linear-gradient(135deg, #f8fafe 0%, #f0f7ff 100%) !important;
+  border: 1px solid #e1f0ff !important;
+  box-shadow:
+    0 2px 8px rgba(24, 144, 255, 0.08),
+    0 1px 3px rgba(24, 144, 255, 0.06) !important;
+  position: relative;
+
+  /* 柔和的呼吸效果 */
+  animation: thinkingBreath 3s ease-in-out infinite;
+
+  /* 思考时的微妙光晕 */
+  &::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    right: -1px;
+    bottom: -1px;
+    background: linear-gradient(135deg, #1890ff 0%, #40a9ff 50%, #69c0ff 100%);
+    border-radius: 19px;
+    z-index: -1;
+    opacity: 0.03;
+    animation: thinkingGlow 4s ease-in-out infinite;
+  }
+
+  /* 内容样式优化 */
+  .messageText {
+    padding: 4px 0;
+  }
+
+  /* 添加进入动画 */
+  animation: thinkingSlideIn 0.4s ease-out,
+  thinkingBreath 3s ease-in-out infinite 0.4s;
+}
+
+/* 轻柔的呼吸动画 */
+@keyframes thinkingBreath {
+
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 2px 8px rgba(24, 144, 255, 0.08),
+      0 1px 3px rgba(24, 144, 255, 0.06);
+  }
+
+  50% {
+    transform: scale(1.01);
+    box-shadow:
+      0 3px 12px rgba(24, 144, 255, 0.12),
+      0 2px 4px rgba(24, 144, 255, 0.08);
+  }
+}
+
+/* 思考气泡进入动画 */
+@keyframes thinkingSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 微妙的光晕效果 */
+@keyframes thinkingGlow {
+
+  0%,
+  100% {
+    opacity: 0.03;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.06;
+    transform: scale(1.02);
+  }
+}
+
+/* 思考状态的脉冲动画 - 已移除，使用更柔和的呼吸效果 */
+
+/* 思考状态的光晕动画 - 已移除，使用更微妙的效果 */
 
 .promptsSection {
   margin-bottom: 32px;
@@ -598,6 +710,63 @@
 
 .customInputContainer {
   width: 100%;
+
+  /* 为 Sender 组件添加样式 */
+  :global(.ant-sender) {
+    background: #f7f9fa;
+    border-radius: 24px;
+    border: 1px solid #e1e8ed;
+    transition: all 0.2s ease;
+
+    &:focus-within {
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+  }
+
+  :global(.ant-sender-input) {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 12px 16px !important;
+    font-size: 14px;
+    line-height: 1.5;
+
+    &::placeholder {
+      color: #8899a6;
+    }
+
+    &:focus {
+      border: none !important;
+      box-shadow: none !important;
+    }
+  }
+
+  :global(.ant-sender-button) {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 18px !important;
+    border: none !important;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    margin: 8px !important;
+    min-width: 36px !important;
+
+    &:hover:not(:disabled) {
+      transform: scale(1.05) !important;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
+    }
+
+    &:disabled {
+      background: #e1e8ed !important;
+      cursor: not-allowed !important;
+      transform: none !important;
+    }
+
+    .anticon {
+      color: white !important;
+      font-size: 16px !important;
+    }
+  }
 }
 
 .inputWrapper {
@@ -673,11 +842,53 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
+  transition: all 0.3s ease;
 }
 
 .sessionHint {
   color: #1890ff;
   font-weight: 500;
+}
+
+.thinkingHint {
+  color: #667eea;
+  font-style: italic;
+  animation: thinkingPulse 2s ease-in-out infinite;
+}
+
+/* 输入框禁用状态 */
+.inputDisabled {
+  :global(.ant-sender-input) {
+    background-color: #f8f9fa !important;
+    cursor: not-allowed !important;
+  }
+
+  :global(.ant-sender) {
+    opacity: 0.7;
+  }
+
+  /* 保留原有样式作为备用 */
+  .customTextArea {
+    background-color: #f8f9fa !important;
+    cursor: not-allowed;
+  }
+
+  .inputWrapper {
+    opacity: 0.7;
+  }
+}
+
+/* 思考状态的呼吸动画 */
+@keyframes thinkingPulse {
+
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
 
 /* Action 消息样式优化 */

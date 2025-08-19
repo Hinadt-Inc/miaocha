@@ -1,15 +1,14 @@
-import { useState, useEffect, useRef, useCallback, memo } from 'react';
-import { FloatButton, Modal, Button, Space, Typography, Card, message, Input, Avatar } from 'antd';
+import { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
+import { FloatButton, Modal, Button, Space, Typography, Card, message, Avatar } from 'antd';
 import {
   SearchOutlined,
-  SendOutlined,
   RobotOutlined,
   UserOutlined,
   DragOutlined,
   CloseOutlined,
   ClearOutlined,
 } from '@ant-design/icons';
-import { Welcome } from '@ant-design/x';
+import { Welcome, Sender } from '@ant-design/x';
 import Draggable from 'react-draggable';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -57,7 +56,6 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({ onLogSearch, onFiel
   const [executingActions] = useState(new Set<string>()); // 防止重复执行action
   const [conversationId, setConversationId] = useState<string | null>(null); // 会话ID，用于上下文对话
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<any>(null);
   const draggleRef = useRef<HTMLDivElement>(null);
 
   // 自动滚动到底部
@@ -101,7 +99,7 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({ onLogSearch, onFiel
   }, []);
 
   // 处理action执行
-  const handleActionExecution = async (messageId: string, toolName: string, payload: any) => {
+  const handleActionExecution = useCallback(async (messageId: string, toolName: string, payload: any) => {
     // 生成唯一的action标识符，防止重复执行
     const actionKey = `${toolName}_${JSON.stringify(payload)}_${messageId}`;
 
@@ -130,44 +128,14 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({ onLogSearch, onFiel
           result = { error: `未知的工具类型: ${toolName}` };
       }
 
-      // 更新消息结果
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === messageId
-            ? {
-                ...msg,
-                content: result.message || `${toolName} 执行完成`,
-                actionData: {
-                  ...msg.actionData!,
-                  result,
-                  loading: false,
-                },
-              }
-            : msg,
-        ),
-      );
+      console.log(`✅ ${toolName} 执行完成:`, result);
     } catch (error) {
       console.error('执行action失败:', error);
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === messageId
-            ? {
-                ...msg,
-                content: `${toolName} 执行失败`,
-                actionData: {
-                  ...msg.actionData!,
-                  result: { error: error instanceof Error ? error.message : '执行失败' },
-                  loading: false,
-                },
-              }
-            : msg,
-        ),
-      );
     } finally {
       // 执行完成后移除标记
       executingActions.delete(actionKey);
     }
-  };
+  }, []);
 
   // 执行日志搜索action
   const executeLogSearchAction = async (payload: ILogSearchParams) => {
@@ -298,6 +266,7 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({ onLogSearch, onFiel
   // 渲染单个消息 - Grok风格
   const renderMessage = (message: IMessage) => {
     const isUser = message.role === 'user';
+    const isAssistantThinking = !isUser && !message.content && loading;
 
     return (
       <div
@@ -311,25 +280,32 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({ onLogSearch, onFiel
             </div>
           )}
 
-          <div className={styles.messageBubble}>
+          <div className={`${styles.messageBubble} ${isAssistantThinking ? styles.thinkingBubble : ''}`}>
             <div className={styles.messageText}>
               {isUser ? (
                 message.content
+              ) : isAssistantThinking ? (
+                // 显示思考状态
+                <ThinkingIndicator message="正在思考中..." size="medium" theme="default" />
               ) : (
+                // 显示实际内容
                 <div className={markdownStyles.markdownContent}>
                   <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight, rehypeRaw]}>
-                    {message.content}
+                    {message.content || ''}
                   </ReactMarkdown>
                 </div>
               )}
             </div>
 
-            <div className={styles.messageTime}>
-              {new Date(message.timestamp).toLocaleTimeString('zh-CN', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </div>
+            {/* 只有在非思考状态且有内容时显示时间 */}
+            {!isAssistantThinking && message.content && (
+              <div className={styles.messageTime}>
+                {new Date(message.timestamp).toLocaleTimeString('zh-CN', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </div>
+            )}
           </div>
 
           {isUser && (
@@ -413,148 +389,139 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({ onLogSearch, onFiel
   ];
 
   // SSE流式API调用函数
-  const callAIAPIStream = async (messageContent: string) => {
-    return new Promise<void>((resolve, reject) => {
-      const userMessage: IMessage = {
-        id: Date.now().toString(),
-        role: 'user',
-        content: messageContent,
-        timestamp: Date.now(),
-      };
-      setMessages((prev) => [...prev, userMessage]);
-      setLoading(true);
-
-      const aiMessageId = (Date.now() + 1).toString();
-      let accumulatedContent = '';
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: aiMessageId,
-          role: 'assistant',
-          content: '',
+  const callAIAPIStream = useCallback(
+    async (messageContent: string) => {
+      return new Promise<void>((resolve, reject) => {
+        const userMessage: IMessage = {
+          id: Date.now().toString(),
+          role: 'user',
+          content: messageContent,
           timestamp: Date.now(),
-        },
-      ]);
-
-      try {
-        const requestBody = {
-          message: messageContent,
-          ...(conversationId && { conversationId }), // 如果有conversationId则传递，没有则不传
         };
+        setMessages((prev) => [...prev, userMessage]);
+        setLoading(true);
 
-        fetch('/api/ai/session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'text/event-stream',
-            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+        const aiMessageId = (Date.now() + 1).toString();
+        let accumulatedContent = '';
+
+        // 立即创建一个带有思考状态的AI消息
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: aiMessageId,
+            role: 'assistant',
+            content: '', // 空内容，但会显示思考状态
+            timestamp: Date.now(),
           },
-          body: JSON.stringify(requestBody),
-        })
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
+        ]);
 
-            const reader = response.body?.getReader();
-            if (!reader) {
-              throw new Error('无法获取响应流');
-            }
+        try {
+          const requestBody = {
+            message: messageContent,
+            ...(conversationId && { conversationId }), // 如果有conversationId则传递，没有则不传
+          };
 
-            const decoder = new TextDecoder();
-            let messageBuffer = '';
+          fetch('/api/ai/session', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'text/event-stream',
+              Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify(requestBody),
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+              }
 
-            const processStream = (): Promise<void> => {
-              return reader.read().then(({ done, value }) => {
-                if (done) {
-                  setLoading(false);
-                  resolve();
-                  return;
-                }
+              const reader = response.body?.getReader();
+              if (!reader) {
+                throw new Error('无法获取响应流');
+              }
 
-                const chunk = decoder.decode(value, { stream: true });
-                messageBuffer += chunk;
+              const decoder = new TextDecoder();
+              let messageBuffer = '';
 
-                const lines = messageBuffer.split('\n');
-                messageBuffer = lines.pop() || '';
+              const processStream = (): Promise<void> => {
+                return reader.read().then(({ done, value }) => {
+                  if (done) {
+                    setLoading(false);
+                    resolve();
+                    return;
+                  }
 
-                for (const line of lines) {
-                  if (line.trim() === '') continue;
+                  const chunk = decoder.decode(value, { stream: true });
+                  messageBuffer += chunk;
 
-                  if (line.startsWith('data:')) {
-                    try {
-                      const jsonStr = line.substring(5).trim();
-                      if (jsonStr && jsonStr !== '[DONE]') {
-                        const data = JSON.parse(jsonStr);
+                  const lines = messageBuffer.split('\n');
+                  messageBuffer = lines.pop() || '';
 
-                        if (data.conversationId) {
-                          // 保存会话ID以用于后续对话
-                          if (!conversationId) {
-                            setConversationId(data.conversationId);
+                  for (const line of lines) {
+                    if (line.trim() === '') continue;
+
+                    if (line.startsWith('data:')) {
+                      try {
+                        const jsonStr = line.substring(5).trim();
+                        if (jsonStr && jsonStr !== '[DONE]') {
+                          const data = JSON.parse(jsonStr);
+
+                          if (data.conversationId) {
+                            // 保存会话ID以用于后续对话
+                            if (!conversationId) {
+                              setConversationId(data.conversationId);
+                            }
+
+                            if (data.content !== undefined) {
+                              accumulatedContent += data.content;
+                              setMessages((prev) =>
+                                prev.map((msg) =>
+                                  msg.id === aiMessageId ? { ...msg, content: accumulatedContent } : msg,
+                                ),
+                              );
+                            } else if (data.toolName && data.payload) {
+                              console.log('🎯 接收到action:', data.toolName, data.payload);
+                              const actionMessageId = (Date.now() + Math.random()).toString();
+                              // 直接执行action，不显示"正在执行"消息
+                              handleActionExecution(actionMessageId, data.toolName, data.payload);
+                            }
                           }
-
-                          if (data.content !== undefined) {
-                            accumulatedContent += data.content;
-                            setMessages((prev) =>
-                              prev.map((msg) =>
-                                msg.id === aiMessageId ? { ...msg, content: accumulatedContent } : msg,
-                              ),
-                            );
-                          } else if (data.toolName && data.payload) {
-                            console.log('🎯 接收到action:', data.toolName, data.payload);
-                            const actionMessageId = (Date.now() + Math.random()).toString();
-                            const actionMessage: IMessage = {
-                              id: actionMessageId,
-                              role: 'assistant',
-                              content: `正在执行 ${data.toolName}...`,
-                              timestamp: Date.now(),
-                              type: 'action',
-                              actionData: {
-                                toolName: data.toolName,
-                                payload: data.payload,
-                                loading: true,
-                              },
-                            };
-
-                            setMessages((prev) => [...prev, actionMessage]);
-                            handleActionExecution(actionMessageId, data.toolName, data.payload);
-                          }
+                        } else if (jsonStr === '[DONE]') {
+                          setLoading(false);
+                          resolve();
+                          return;
                         }
-                      } else if (jsonStr === '[DONE]') {
-                        setLoading(false);
-                        resolve();
-                        return;
+                      } catch (parseError) {
+                        console.warn('解析SSE数据失败:', parseError);
                       }
-                    } catch (parseError) {
-                      console.warn('解析SSE数据失败:', parseError);
                     }
                   }
-                }
 
-                return processStream();
-              });
-            };
+                  return processStream();
+                });
+              };
 
-            return processStream();
-          })
-          .catch((error) => {
-            console.error('SSE请求错误:', error);
-            setLoading(false);
-            setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === aiMessageId ? { ...msg, content: '抱歉，AI服务暂时不可用，请稍后重试。' } : msg,
-              ),
-            );
-            reject(error instanceof Error ? error : new Error(String(error)));
-          });
-      } catch (error) {
-        console.error('创建SSE请求失败:', error);
-        setLoading(false);
-        reject(error instanceof Error ? error : new Error(String(error)));
-      }
-    });
-  };
+              return processStream();
+            })
+            .catch((error) => {
+              console.error('SSE请求错误:', error);
+              setLoading(false);
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === aiMessageId ? { ...msg, content: '抱歉，AI服务暂时不可用，请稍后重试。' } : msg,
+                ),
+              );
+              reject(error instanceof Error ? error : new Error(String(error)));
+            });
+        } catch (error) {
+          console.error('创建SSE请求失败:', error);
+          setLoading(false);
+          reject(error instanceof Error ? error : new Error(String(error)));
+        }
+      });
+    },
+    [conversationId, handleActionExecution],
+  );
 
   // 清空对话，开始新会话
   const handleClearChat = () => {
@@ -564,55 +531,41 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({ onLogSearch, onFiel
   };
 
   // 发送消息处理函数
-  const handleSendMessage = async (messageContent: string) => {
-    if (!messageContent.trim()) return;
-    setInputValue('');
+  const handleSendMessage = useCallback(
+    async (messageContent: string) => {
+      if (!messageContent.trim()) return;
+      setInputValue('');
 
-    try {
-      await callAIAPIStream(messageContent);
-    } catch (error) {
-      console.error('发送消息失败:', error);
-      message.error('AI服务暂时不可用，请稍后重试');
+      try {
+        await callAIAPIStream(messageContent);
+      } catch (error) {
+        console.error('发送消息失败:', error);
+        message.error('AI服务暂时不可用，请稍后重试');
+      }
+    },
+    [callAIAPIStream],
+  );
+
+  // 稳定的事件处理函数 - 移到组件外部避免重新创建
+  const handleInputChange = useCallback((value: string) => {
+    setInputValue(value);
+  }, []);
+
+  const handleInputSubmit = useCallback(
+    (value: string) => {
+      if (value.trim() && !loading) {
+        handleSendMessage(value);
+      }
+    },
+    [loading, handleSendMessage],
+  );
+
+  // 缓存 placeholder 文本
+  const placeholderText = useMemo(() => {
+    if (loading) {
+      return 'AI 正在思考中，请稍候...';
     }
-  };
 
-  // 自定义输入框组件
-  const CustomInput = () => {
-    return (
-      <div className={styles.customInputContainer}>
-        <div className={styles.inputWrapper}>
-          <Input.TextArea
-            ref={inputRef}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder={getPlaceholderText()}
-            autoSize={{ minRows: 1, maxRows: 4 }}
-            className={styles.customTextArea}
-            onPressEnter={(e) => {
-              if (!e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage(inputValue);
-              }
-            }}
-          />
-          <Button
-            type="primary"
-            icon={<SendOutlined />}
-            onClick={() => handleSendMessage(inputValue)}
-            disabled={!inputValue.trim() || loading}
-            className={styles.sendButton}
-          />
-        </div>
-        <div className={styles.inputHint}>
-          <span>按 Enter 发送，Shift + Enter 换行</span>
-          {conversationId && <span className={styles.sessionHint}>· 上下文对话中</span>}
-        </div>
-      </div>
-    );
-  };
-
-  const getPlaceholderText = () => {
-    const baseText = conversationId ? '继续对话...' : '开始新对话...';
     switch (currentTab) {
       case 'chat':
         return conversationId ? '继续询问日志分析相关问题...' : '询问任何关于日志分析的问题...';
@@ -621,14 +574,50 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({ onLogSearch, onFiel
       case 'history':
         return '重新执行历史查询或输入新的查询...';
       default:
-        return baseText;
+        return conversationId ? '继续对话...' : '开始新对话...';
     }
-  };
+  }, [loading, conversationId, currentTab]);
+
+  // 稳定的样式对象
+  const senderStyle = useMemo(
+    () => ({
+      background: '#f7f9fa',
+      borderRadius: '24px',
+      border: '1px solid #e1e8ed',
+    }),
+    [],
+  );
+
+  // 直接渲染输入框，不使用memo包装
+  const renderInputArea = () => (
+    <div className={`${styles.customInputContainer} ${loading ? styles.inputDisabled : ''}`}>
+      <Sender
+        key="ai-assistant-sender" // 添加固定key防止重新挂载
+        value={inputValue}
+        onChange={handleInputChange}
+        placeholder={placeholderText}
+        disabled={loading}
+        loading={loading}
+        onSubmit={handleInputSubmit}
+        style={senderStyle}
+      />
+      <div className={styles.inputHint}>
+        {loading ? (
+          <span className={styles.thinkingHint}>🤔 AI 正在思考中...</span>
+        ) : (
+          <>
+            <span>按 Enter 发送，Shift + Enter 换行</span>
+            {conversationId && <span className={styles.sessionHint}>· 上下文对话中</span>}
+          </>
+        )}
+      </div>
+    </div>
+  );
 
   const renderChatInterface = () => (
     <div className={styles.chatInterface}>
       <div className={styles.chatContainer}>
-        {messages.length === 0 && !loading ? (
+        {messages.length === 0 ? (
           <div className={styles.welcomeContainer}>
             <div className={styles.welcomeHeader}>
               <Avatar size={64} icon={<RobotOutlined />} className={styles.welcomeAvatar} />
@@ -692,18 +681,6 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({ onLogSearch, onFiel
         ) : (
           <div className={styles.messagesContainer}>
             {messages.map((message) => renderMessage(message))}
-            {loading && (
-              <div className={styles.messageWrapper}>
-                <div className={styles.messageContent}>
-                  <div className={styles.messageAvatar}>
-                    <Avatar size={36} icon={<RobotOutlined />} className={styles.avatarBot} />
-                  </div>
-                  <div className={styles.messageBubble}>
-                    <ThinkingIndicator />
-                  </div>
-                </div>
-              </div>
-            )}
             <div ref={messagesEndRef} />
           </div>
         )}
@@ -887,9 +864,7 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({ onLogSearch, onFiel
           <div className={styles.drawerContent}>{tabs.find((tab) => tab.key === currentTab)?.content}</div>
 
           {/* 输入框 */}
-          <div className={styles.inputContainer}>
-            <CustomInput />
-          </div>
+          <div className={styles.inputContainer}>{renderInputArea()}</div>
         </div>
       </Modal>
     </>
