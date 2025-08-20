@@ -870,6 +870,7 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({ onLogSearch, onFiel
               onClick={() => setCurrentTab(tab.key as any)}
               size="small"
               className={styles.tabButton}
+              data-type={currentTab === tab.key ? 'primary' : 'text'}
             >
               {tab.label}
             </Button>
@@ -892,6 +893,7 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({ onLogSearch, onFiel
           onClick={() => setOpen(false)}
           size="small"
           className={styles.closeButton}
+          title="关闭AI助手"
         />
       </div>
     </div>
