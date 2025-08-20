@@ -354,45 +354,45 @@
   }
 }
 
-/* 消息样式 - 类似Grok */
+/* 消息样式 - 适配 Ant Design X Bubble 组件 */
 .messageWrapper {
   display: flex;
   flex-direction: column;
   margin-bottom: 0;
-}
 
-.messageContent {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  max-width: 100%;
+  /* 为了兼容 Bubble 组件，确保宽度充满容器 */
+  width: 100%;
 }
 
 .userMessage {
-  .messageContent {
-    flex-direction: row-reverse;
-  }
 
-  .messageBubble {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    margin-left: 48px;
+  /* 用户消息的自定义样式 */
+  :global(.ant-bubble-content) {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+    border: none !important;
 
-    .messageText {
-      color: white;
+    /* 确保内部文本颜色为白色 */
+    * {
+      color: white !important;
     }
 
-    .messageTime {
-      color: rgba(255, 255, 255, 0.8);
+    /* 处理代码块的颜色 */
+    pre,
+    code {
+      background: rgba(255, 255, 255, 0.1) !important;
+      color: white !important;
     }
   }
 }
 
 .assistantMessage {
-  .messageBubble {
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    margin-right: 48px;
+
+  /* 助手消息的自定义样式 */
+  :global(.ant-bubble-content) {
+    background: #f8f9fa !important;
+    border: 1px solid #e9ecef !important;
+    color: #14171a !important;
   }
 }
 
@@ -404,49 +404,28 @@
 .avatarBot {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
   color: white !important;
-  border: 2px solid white;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+  border: 2px solid white !important;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2) !important;
 }
 
 .avatarUser {
   background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%) !important;
   color: #8b4513 !important;
-  border: 2px solid white;
-  box-shadow: 0 2px 8px rgba(252, 182, 159, 0.2);
-}
-
-.messageBubble {
-  border-radius: 18px;
-  padding: 16px 20px;
-  max-width: calc(100% - 60px);
-  word-wrap: break-word;
-  position: relative;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
-
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  }
-
-  /* 确保内容变化时有平滑过渡 */
-  .messageText {
-    transition: opacity 0.2s ease;
-  }
-}
-
-.messageText {
-  line-height: 1.6;
-  font-size: 14px;
-  margin: 0;
+  border: 2px solid white !important;
+  box-shadow: 0 2px 8px rgba(252, 182, 159, 0.2) !important;
 }
 
 .messageTime {
   font-size: 11px;
   color: #657786;
-  margin-top: 8px;
+  margin-top: 4px;
   text-align: right;
   opacity: 0.7;
+}
+
+/* 为用户消息的时间设置不同颜色 */
+.userMessage .messageTime {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 /* 欢迎界面 - Grok风格 */
@@ -1102,4 +1081,129 @@
   .assistantMessage .messageBubble {
     margin-right: 40px;
   }
+}
+
+// 历史记录样式
+.historyContainer {
+  padding: 16px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.historyHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+
+  h4 {
+    margin: 0;
+    color: #262626;
+    font-weight: 600;
+  }
+}
+
+.clearHistoryButton {
+  color: #8c8c8c;
+  padding: 4px 8px;
+
+  &:hover {
+    color: #ff4d4f;
+    background-color: #fff2f0;
+  }
+}
+
+.historyItemTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.historyItemLeft {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0; // 确保可以收缩
+}
+
+.historyItemActions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  align-items: flex-start;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.historyCard:hover .historyItemActions {
+  opacity: 1;
+}
+
+.historyActionButton {
+  padding: 4px !important;
+  height: 24px !important;
+  width: 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 4px !important;
+
+  &:hover {
+    background-color: #f5f5f5 !important;
+  }
+
+  &.ant-btn-dangerous:hover {
+    background-color: #fff2f0 !important;
+    color: #ff4d4f !important;
+  }
+}
+
+.historyQuery {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  color: #262626;
+  margin-bottom: 2px;
+}
+
+.historyType {
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-weight: 500;
+  display: inline-block;
+
+  &.type-search {
+    background: #e6f7ff;
+    color: #1890ff;
+  }
+
+  &.type-analysis {
+    background: #f6ffed;
+    color: #52c41a;
+  }
+
+  &.type-query {
+    background: #fff2e8;
+    color: #fa8c16;
+  }
+}
+
+.historyItemDesc {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.successStatus {
+  color: #52c41a;
+}
+
+.errorStatus {
+  color: #ff4d4f;
 }

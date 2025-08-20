@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
 import { FloatButton, Modal, Button, Space, Typography, Card, message, Avatar } from 'antd';
 import {
-  SearchOutlined,
   RobotOutlined,
   UserOutlined,
   DragOutlined,
   CloseOutlined,
   ClearOutlined,
+  DeleteOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons';
-import { Welcome, Sender } from '@ant-design/x';
+import { Welcome, Sender, Bubble } from '@ant-design/x';
 import Draggable from 'react-draggable';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -43,13 +44,22 @@ interface IMessage {
   };
 }
 
+interface IHistoryItem {
+  id: string;
+  query: string;
+  timestamp: string;
+  date: number;
+  results?: number;
+  success?: boolean;
+  type?: 'search' | 'analysis' | 'query';
+}
+
 const AIAssistantComponent: React.FC<IAIAssistantProps> = ({ onLogSearch, onFieldSelect, onTimeRangeChange }) => {
   const [open, setOpen] = useState(false);
-  const [currentTab, setCurrentTab] = useState<'chat' | 'suggestions' | 'history'>('chat');
+  const [currentTab, setCurrentTab] = useState<'chat' | 'history'>('chat');
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [loading, setLoading] = useState(false);
-  const [suggestions] = useState([]);
-  const [searchHistory] = useState([]);
+  const [searchHistory, setSearchHistory] = useState<IHistoryItem[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [disabled, setDisabled] = useState(true);
   const [bounds, setBounds] = useState({ left: 0, top: 0, bottom: 0, right: 0 });
@@ -57,6 +67,62 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({ onLogSearch, onFiel
   const [conversationId, setConversationId] = useState<string | null>(null); // 会话ID，用于上下文对话
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const draggleRef = useRef<HTMLDivElement>(null);
+
+  // 从localStorage加载历史记录
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('ai-assistant-history');
+    if (savedHistory) {
+      try {
+        const parsed = JSON.parse(savedHistory);
+        setSearchHistory(parsed);
+      } catch (error) {
+        console.error('Failed to parse search history:', error);
+      }
+    }
+  }, []);
+
+  // 保存历史记录到localStorage
+  const saveHistoryToStorage = useCallback((history: IHistoryItem[]) => {
+    try {
+      localStorage.setItem('ai-assistant-history', JSON.stringify(history));
+    } catch (error) {
+      console.error('Failed to save search history:', error);
+    }
+  }, []);
+
+  // 添加历史记录
+  const addToHistory = useCallback(
+    (query: string, type: 'search' | 'analysis' | 'query' = 'query', results?: number) => {
+      const historyItem: IHistoryItem = {
+        id: Date.now().toString(),
+        query: query.trim(),
+        timestamp: new Date().toLocaleString('zh-CN'),
+        date: Date.now(),
+        results,
+        success: true,
+        type,
+      };
+
+      setSearchHistory((prev) => {
+        // 避免重复添加相同的查询
+        const exists = prev.some((item) => item.query === historyItem.query);
+        if (exists) return prev;
+
+        // 最多保留50条历史记录
+        const newHistory = [historyItem, ...prev].slice(0, 50);
+        saveHistoryToStorage(newHistory);
+        return newHistory;
+      });
+    },
+    [saveHistoryToStorage],
+  );
+
+  // 清空历史记录
+  const clearHistory = useCallback(() => {
+    setSearchHistory([]);
+    localStorage.removeItem('ai-assistant-history');
+    message.success('历史记录已清空');
+  }, []);
 
   // 自动滚动到底部
   const scrollToBottom = () => {
@@ -263,57 +329,59 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({ onLogSearch, onFiel
     }
   };
 
-  // 渲染单个消息 - Grok风格
+  // 渲染单个消息 - 使用 Ant Design X Bubble 组件
   const renderMessage = (message: IMessage) => {
     const isUser = message.role === 'user';
     const isAssistantThinking = !isUser && !message.content && loading;
 
-    return (
-      <div
-        key={message.id}
-        className={`${styles.messageWrapper} ${isUser ? styles.userMessage : styles.assistantMessage}`}
-      >
-        <div className={styles.messageContent}>
-          {!isUser && (
-            <div className={styles.messageAvatar}>
-              <Avatar size={36} icon={<RobotOutlined />} className={styles.avatarBot} />
-            </div>
-          )}
-
-          <div className={`${styles.messageBubble} ${isAssistantThinking ? styles.thinkingBubble : ''}`}>
-            <div className={styles.messageText}>
-              {isUser ? (
-                message.content
-              ) : isAssistantThinking ? (
-                // 显示思考状态
-                <ThinkingIndicator message="正在思考中..." size="medium" theme="default" />
-              ) : (
-                // 显示实际内容
-                <div className={markdownStyles.markdownContent}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight, rehypeRaw]}>
-                    {message.content || ''}
-                  </ReactMarkdown>
-                </div>
-              )}
-            </div>
-
-            {/* 只有在非思考状态且有内容时显示时间 */}
-            {!isAssistantThinking && message.content && (
-              <div className={styles.messageTime}>
-                {new Date(message.timestamp).toLocaleTimeString('zh-CN', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </div>
-            )}
+    // 准备渲染内容
+    const getContent = () => {
+      if (isUser) {
+        return message.content;
+      } else if (isAssistantThinking) {
+        return <ThinkingIndicator message="正在思考中..." size="medium" theme="default" />;
+      } else {
+        return (
+          <div className={markdownStyles.markdownContent}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight, rehypeRaw]}>
+              {message.content || ''}
+            </ReactMarkdown>
           </div>
+        );
+      }
+    };
 
-          {isUser && (
-            <div className={styles.messageAvatar}>
-              <Avatar size={36} icon={<UserOutlined />} className={styles.avatarUser} />
-            </div>
-          )}
+    // 准备时间信息
+    const getFooter = () => {
+      if (isAssistantThinking || !message.content) return undefined;
+
+      return (
+        <div className={styles.messageTime}>
+          {new Date(message.timestamp).toLocaleTimeString('zh-CN', {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
         </div>
+      );
+    };
+
+    return (
+      <div key={message.id} className={styles.messageWrapper}>
+        <Bubble
+          placement={isUser ? 'end' : 'start'}
+          avatar={
+            isUser ? (
+              <Avatar size={36} icon={<UserOutlined />} className={styles.avatarUser} />
+            ) : (
+              <Avatar size={36} icon={<RobotOutlined />} className={styles.avatarBot} />
+            )
+          }
+          content={getContent()}
+          footer={getFooter()}
+          variant="filled"
+          shape="round"
+          className={isUser ? styles.userMessage : styles.assistantMessage}
+        />
       </div>
     );
   };
@@ -536,6 +604,9 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({ onLogSearch, onFiel
       if (!messageContent.trim()) return;
       setInputValue('');
 
+      // 添加到历史记录
+      addToHistory(messageContent);
+
       try {
         await callAIAPIStream(messageContent);
       } catch (error) {
@@ -543,7 +614,7 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({ onLogSearch, onFiel
         message.error('AI服务暂时不可用，请稍后重试');
       }
     },
-    [callAIAPIStream],
+    [callAIAPIStream, addToHistory],
   );
 
   // 稳定的事件处理函数 - 移到组件外部避免重新创建
@@ -569,8 +640,6 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({ onLogSearch, onFiel
     switch (currentTab) {
       case 'chat':
         return conversationId ? '继续询问日志分析相关问题...' : '询问任何关于日志分析的问题...';
-      case 'suggestions':
-        return '选择上面的建议或输入自定义查询...';
       case 'history':
         return '重新执行历史查询或输入新的查询...';
       default:
@@ -688,52 +757,23 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({ onLogSearch, onFiel
     </div>
   );
 
-  const renderSuggestions = () => (
-    <div className={styles.suggestionsContainer}>
-      <Title level={4}>智能建议</Title>
-      {suggestions.length === 0 ? (
-        <Welcome
-          variant="filled"
-          icon="💡"
-          title="智能建议"
-          description="基于您的使用习惯，我会为您推荐常用的查询建议"
-          extra={
-            <Button type="primary" onClick={() => setCurrentTab('chat')}>
-              开始对话
-            </Button>
-          }
-        />
-      ) : (
-        <Space direction="vertical" size="middle" className={styles.suggestionsList}>
-          {suggestions.map((item: any) => (
-            <Card
-              key={item.id}
-              size="small"
-              hoverable
-              className={styles.suggestionCard}
-              actions={[
-                <Button
-                  key="execute"
-                  type="primary"
-                  size="small"
-                  icon={<SearchOutlined />}
-                  onClick={() => handleSendMessage(item.query)}
-                >
-                  执行查询
-                </Button>,
-              ]}
-            >
-              <Card.Meta title={item.title} description={item.description} />
-            </Card>
-          ))}
-        </Space>
-      )}
-    </div>
-  );
-
   const renderHistory = () => (
     <div className={styles.historyContainer}>
-      <Title level={4}>搜索历史</Title>
+      <div className={styles.historyHeader}>
+        <Title level={4}>搜索历史</Title>
+        {searchHistory.length > 0 && (
+          <Button
+            type="text"
+            size="small"
+            icon={<ClearOutlined />}
+            onClick={clearHistory}
+            className={styles.clearHistoryButton}
+          >
+            清空历史
+          </Button>
+        )}
+      </div>
+
       {searchHistory.length === 0 ? (
         <Welcome
           variant="filled"
@@ -748,19 +788,56 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({ onLogSearch, onFiel
         />
       ) : (
         <Space direction="vertical" size="middle" className={styles.historyList}>
-          {searchHistory.map((item: any) => (
-            <Card
-              key={item.id}
-              size="small"
-              hoverable
-              className={styles.historyCard}
-              actions={[
-                <Button key="rerun" type="default" size="small" onClick={() => handleSendMessage(item.query)}>
-                  重新执行
-                </Button>,
-              ]}
-            >
-              <Card.Meta title={item.query} description={`${item.timestamp} · ${item.results} 条结果`} />
+          {searchHistory.map((item: IHistoryItem) => (
+            <Card key={item.id} size="small" hoverable className={styles.historyCard}>
+              <Card.Meta
+                title={
+                  <div className={styles.historyItemTitle}>
+                    <div className={styles.historyItemLeft}>
+                      <span className={styles.historyQuery}>{item.query}</span>
+                    </div>
+                    <div className={styles.historyItemActions}>
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<ReloadOutlined />}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSendMessage(item.query);
+                          setCurrentTab('chat');
+                        }}
+                        title="重新执行"
+                        className={styles.historyActionButton}
+                      />
+                      <Button
+                        type="text"
+                        size="small"
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSearchHistory((prev) => {
+                            const newHistory = prev.filter((h) => h.id !== item.id);
+                            saveHistoryToStorage(newHistory);
+                            return newHistory;
+                          });
+                        }}
+                        title="删除此记录"
+                        className={styles.historyActionButton}
+                      />
+                    </div>
+                  </div>
+                }
+                description={
+                  <div className={styles.historyItemDesc}>
+                    <span>{item.timestamp}</span>
+                    {item.results && <span> · {item.results} 条结果</span>}
+                    <span className={item.success ? styles.successStatus : styles.errorStatus}>
+                      {item.success ? ' · 成功' : ' · 失败'}
+                    </span>
+                  </div>
+                }
+              />
             </Card>
           ))}
         </Space>
@@ -770,7 +847,6 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({ onLogSearch, onFiel
 
   const tabs = [
     { key: 'chat', label: '💬 对话', content: renderChatInterface() },
-    { key: 'suggestions', label: '💡 建议', content: renderSuggestions() },
     { key: 'history', label: '📚 历史', content: renderHistory() },
   ];
 
