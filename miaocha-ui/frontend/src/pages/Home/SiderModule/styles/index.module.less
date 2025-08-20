@@ -7,25 +7,31 @@
 
     // 优化滚动条样式 - 更细更美观
     &::-webkit-scrollbar {
-        width: 4px; /* 从6px改为4px，更细 */
+        width: 4px;
+        /* 从6px改为4px，更细 */
     }
 
     &::-webkit-scrollbar-track {
-        background: transparent; /* 轨道透明，更简洁 */
+        background: transparent;
+        /* 轨道透明，更简洁 */
         border-radius: 2px;
     }
 
     &::-webkit-scrollbar-thumb {
-        background: rgba(0, 0, 0, 0.15); /* 更淡的颜色，更优雅 */
+        background: rgba(0, 0, 0, 0.15);
+        /* 更淡的颜色，更优雅 */
         border-radius: 2px;
-        transition: background-color 0.2s ease; /* 添加过渡动画 */
+        transition: background-color 0.2s ease;
+        /* 添加过渡动画 */
 
         &:hover {
-            background: rgba(0, 0, 0, 0.25); /* hover时稍微深一点 */
+            background: rgba(0, 0, 0, 0.25);
+            /* hover时稍微深一点 */
         }
 
         &:active {
-            background: rgba(0, 0, 0, 0.35); /* 点击时更深 */
+            background: rgba(0, 0, 0, 0.35);
+            /* 点击时更深 */
         }
     }
 

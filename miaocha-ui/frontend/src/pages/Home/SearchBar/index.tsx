@@ -216,10 +216,6 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
     if (!isFromSearchButton) {
       // 非搜索按钮触发的情况，需要检查初始化状态和columns
       if (!initialized || commonColumns.length === 0) {
-        console.log('⏸️ 等待初始化完成或columns加载完成...', {
-          initialized,
-          commonColumnsLength: commonColumns.length,
-        });
         return;
       }
 
@@ -228,8 +224,6 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
         timeUpdateFromParamsRef.current = false;
         return;
       }
-    } else {
-      console.log('🔍 来自搜索按钮的强制触发，跳过初始化检查');
     }
 
     // 时间发生变化时，需要更新搜索参数并触发搜索
@@ -254,10 +248,27 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
       }
     }
 
-    // 先构建基础参数，避免searchParams中的空fields覆盖我们的effectiveFields
+    // 先构建基础参数，确保模块信息不丢失
+    // 如果searchParams中没有模块信息，尝试从localStorage获取
+    let effectiveDatasourceId = searchParams.datasourceId;
+    let effectiveModule = searchParams.module;
+
+    if (!effectiveDatasourceId || !effectiveModule) {
+      try {
+        const savedParams = localStorage.getItem('searchBarParams');
+        if (savedParams) {
+          const parsed = JSON.parse(savedParams);
+          effectiveDatasourceId = effectiveDatasourceId || parsed.datasourceId;
+          effectiveModule = effectiveModule || parsed.module;
+        }
+      } catch (error) {
+        console.error('从localStorage获取模块信息失败:', error);
+      }
+    }
+
     const baseParams = {
-      datasourceId: searchParams.datasourceId,
-      module: searchParams.module,
+      datasourceId: effectiveDatasourceId,
+      module: effectiveModule,
       startTime: dayjs(timeState.timeOption?.range?.[0]).format(DATE_FORMAT_THOUSOND),
       endTime: dayjs(timeState.timeOption?.range?.[1]).format(DATE_FORMAT_THOUSOND),
       timeRange: timeState.timeOption?.value,
@@ -293,25 +304,17 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
       try {
         const currentSearchParams = {
           ...params,
-          // 确保包含模块信息
-          datasourceId: searchParams.datasourceId,
-          module: searchParams.module,
+          // 确保包含有效的模块信息
+          datasourceId: effectiveDatasourceId,
+          module: effectiveModule,
         };
         localStorage.setItem('searchBarParams', JSON.stringify(currentSearchParams));
-        console.log('🔄 SearchBar更新localStorage:', currentSearchParams);
       } catch (error) {
         console.error('SearchBar更新localStorage失败:', error);
       }
 
       getDistributionWithSearchBar();
     }
-
-    console.log('🔍 SearchBar useEffect 已触发所有API请求', {
-      fromSearch: timeState.timeOption?._fromSearch,
-      forceUpdate: timeState.timeOption?._forceUpdate,
-      params: params,
-      searchParams: searchParams,
-    });
 
     // 如果是来自搜索按钮的触发，执行完成后清除标识
     if (isFromSearchButton) {

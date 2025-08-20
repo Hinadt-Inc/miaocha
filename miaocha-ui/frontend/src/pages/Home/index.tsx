@@ -429,26 +429,21 @@ const HomePage = () => {
       {/* AI助手悬浮窗 */}
       <AIAssistant
         onLogSearch={(data) => {
-          console.log('🏠 Home页面收到onLogSearch回调:', data);
-
           // 处理AI助手的搜索请求
           let searchParams = data.searchParams || data; // 向后兼容
 
           // 确保AI提供的searchParams包含必要的模块信息
           // 如果AI没有提供模块信息，使用当前的模块信息
           if (!searchParams.datasourceId || !searchParams.module) {
-            console.log('🔧 AI搜索参数缺少模块信息，使用当前模块信息补充');
             searchParams = {
               ...searchParams,
               datasourceId: searchParams.datasourceId || state.searchParams.datasourceId,
               module: searchParams.module || state.searchParams.module,
             };
-            console.log('🔧 补充后的searchParams:', searchParams);
           }
 
           // 如果有搜索结果，直接更新状态
           if (data.searchResult) {
-            console.log('📊 直接更新detailData状态');
             setDetailData(data.searchResult);
           }
 
@@ -503,7 +498,6 @@ const HomePage = () => {
 
           // 只有在没有skipRequest标记时才触发新的搜索请求
           if (!data.skipRequest) {
-            console.log('🔄 触发executeDataRequest');
             executeDataRequest(searchParams);
 
             // 同步更新localStorage中的searchBarParams，确保字段分布查询能获取到最新参数
@@ -518,19 +512,15 @@ const HomePage = () => {
                 module: searchParams.module,
               };
               localStorage.setItem('searchBarParams', JSON.stringify(updatedParams));
-              console.log('✅ 已更新localStorage中的searchBarParams:', updatedParams);
             } catch (error) {
               console.error('更新localStorage中的searchBarParams失败:', error);
             }
 
             // 同时触发字段分布数据更新
-            console.log('🔄 触发getDistributionWithSearchBar');
             // 需要延迟执行，确保localStorage和字段状态已经更新
             setTimeout(() => {
               getDistributionWithSearchBar();
             }, 100);
-          } else {
-            console.log('⏭️ 跳过重复请求 (skipRequest=true)');
           }
         }}
         onFieldSelect={(fields) => {
@@ -538,8 +528,6 @@ const HomePage = () => {
           setActiveColumns(fields);
         }}
         onTimeRangeChange={(data) => {
-          console.log('🏠 Home页面收到onTimeRangeChange回调:', data);
-
           // 处理时间范围变更
           let timeRangeData = data;
 
@@ -550,12 +538,6 @@ const HomePage = () => {
 
           // 如果有直方图数据，直接更新状态
           if (timeRangeData.histogramData) {
-            console.log('📊 直接更新histogramData状态:', timeRangeData.histogramData);
-            console.log('📊 检查distributionData:', {
-              hasDistributionData: !!timeRangeData.histogramData.distributionData,
-              length: timeRangeData.histogramData.distributionData?.length,
-              firstItem: timeRangeData.histogramData.distributionData?.[0],
-            });
             // 修正：直接设置整个histogramData，而不是取第一个元素
             setHistogramData(timeRangeData.histogramData);
           }
@@ -571,10 +553,7 @@ const HomePage = () => {
 
           // 只有在没有skipRequest标记时才触发新的搜索请求
           if (!timeRangeData.skipRequest) {
-            console.log('🔄 触发executeDataRequest');
             executeDataRequest(newSearchParams);
-          } else {
-            console.log('⏭️ 跳过重复请求 (skipRequest=true)');
           }
         }}
       />

@@ -488,8 +488,9 @@ export const useDistributions = (searchParams: ILogSearchParams, availableColumn
     const _searchParams = JSON.parse(localStorage.getItem('searchBarParams') || '{}');
     const fields = _searchParams?.fields;
 
-    // 确保模块已选择，避免报错"模块名称不能为空"
-    if (!searchParams.module) {
+    // 确保模块已选择，优先从localStorage获取，其次从searchParams获取
+    const currentModule = _searchParams?.module || searchParams.module;
+    if (!currentModule) {
       console.warn('模块未选择，跳过字段分布查询');
       return;
     }
@@ -526,8 +527,14 @@ export const useDistributions = (searchParams: ILogSearchParams, availableColumn
       if (abortRef.current) abortRef.current.abort();
       abortRef.current = new AbortController();
 
-      const params = { ...searchParams, fields: validFields };
-      queryDistribution.run({ ...params, signal: abortRef.current.signal });
+      // 使用localStorage中的参数或当前searchParams，确保模块信息正确
+      const effectiveParams = {
+        ...searchParams,
+        ..._searchParams, // localStorage的参数优先级更高
+        fields: validFields,
+        module: currentModule, // 确保模块信息正确
+      };
+      queryDistribution.run({ ...effectiveParams, signal: abortRef.current.signal });
     }
   }, [searchParams, queryDistribution, validateFields]);
 
@@ -542,8 +549,10 @@ export const useDistributions = (searchParams: ILogSearchParams, availableColumn
         return;
       }
 
-      // 确保模块已选择，避免报错"模块名称不能为空"
-      if (!searchParams.module) {
+      // 确保模块已选择，优先从localStorage获取，其次从searchParams获取
+      const _searchParams = JSON.parse(localStorage.getItem('searchBarParams') || '{}');
+      const currentModule = _searchParams?.module || searchParams.module;
+      if (!currentModule) {
         console.warn('模块未选择，跳过字段分布查询');
         setDistributionLoading((prev) => ({ ...prev, [columnName]: false }));
         return;
@@ -559,19 +568,22 @@ export const useDistributions = (searchParams: ILogSearchParams, availableColumn
 
       setDistributionLoading((prev) => ({ ...prev, [columnName]: true }));
 
-      const params: ILogSearchParams = {
+      // 使用localStorage中的参数或当前searchParams，确保模块信息正确
+      const effectiveParams: ILogSearchParams = {
         ...searchParams,
+        ..._searchParams, // localStorage的参数优先级更高
         fields: validFields,
+        module: currentModule, // 确保模块信息正确
         offset: 0,
       };
 
       if (sql) {
-        params.whereSqls = [...(searchParams?.whereSqls || []), sql];
+        effectiveParams.whereSqls = [...(searchParams?.whereSqls || []), sql];
       }
 
       const currentConditions = generateQueryConditionsKey({
         columnName: columnName,
-        whereSqls: params.whereSqls || [],
+        whereSqls: effectiveParams.whereSqls || [],
         keywords: searchParams.keywords || [],
         startTime: searchParams.startTime,
         endTime: searchParams.endTime,
@@ -597,7 +609,7 @@ export const useDistributions = (searchParams: ILogSearchParams, availableColumn
 
       setTimeout(() => {
         if (abortRef.current && !abortRef.current.signal.aborted) {
-          queryDistribution.run({ ...params, signal: abortRef.current.signal });
+          queryDistribution.run({ ...effectiveParams, signal: abortRef.current.signal });
         }
       }, 300);
     },
