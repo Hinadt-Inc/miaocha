@@ -2,7 +2,38 @@
 .layoutSider {
     height: 100%;
     overflow: auto;
+    /* 恢复外层滚动，让整个侧边栏可以滚动 */
     padding: 0 10px;
+
+    // 优化滚动条样式 - 更细更美观
+    &::-webkit-scrollbar {
+        width: 4px;
+        /* 从6px改为4px，更细 */
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+        /* 轨道透明，更简洁 */
+        border-radius: 2px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.15);
+        /* 更淡的颜色，更优雅 */
+        border-radius: 2px;
+        transition: background-color 0.2s ease;
+        /* 添加过渡动画 */
+
+        &:hover {
+            background: rgba(0, 0, 0, 0.25);
+            /* hover时稍微深一点 */
+        }
+
+        &:active {
+            background: rgba(0, 0, 0, 0.35);
+            /* 点击时更深 */
+        }
+    }
 
     .virtualListContainer {
 
@@ -10,25 +41,6 @@
         .scrollableWrapper {
             border-radius: 4px;
             border: 1px solid #f0f0f0;
-
-            // 优化滚动条样式
-            &::-webkit-scrollbar {
-                width: 6px;
-            }
-
-            &::-webkit-scrollbar-track {
-                background: #f1f1f1;
-                border-radius: 3px;
-            }
-
-            &::-webkit-scrollbar-thumb {
-                background: #c1c1c1;
-                border-radius: 3px;
-
-                &:hover {
-                    background: #a8a8a8;
-                }
-            }
         }
     }
 }
@@ -48,4 +60,9 @@
 
 .virtualListWrapper {
     margin-top: 8px;
+}
+
+.fieldListContainer {
+    /* 简单的字段列表容器，不使用虚拟滚动 */
+    border-radius: 4px;
 }

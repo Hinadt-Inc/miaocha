@@ -2,9 +2,9 @@ package com.hinadt.miaocha.application.logstash.command;
 
 import com.hinadt.miaocha.application.logstash.path.LogstashDeployPathManager;
 import com.hinadt.miaocha.common.exception.SshOperationException;
-import com.hinadt.miaocha.common.ssh.SshClient;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
-import com.hinadt.miaocha.domain.mapper.LogstashMachineMapper;
+import com.hinadt.miaocha.infrastructure.mapper.LogstashMachineMapper;
+import com.hinadt.miaocha.infrastructure.ssh.SshClient;
 import java.io.File;
 
 /** 解压Logstash安装包命令 - 重构支持多实例，基于logstashMachineId */

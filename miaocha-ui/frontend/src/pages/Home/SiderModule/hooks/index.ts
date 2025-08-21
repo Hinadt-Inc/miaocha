@@ -46,6 +46,8 @@ export const useColumns = (
   externalActiveColumns?: string[], // 新增：外部传入的活跃字段
 ) => {
   const [columns, setColumns] = useState<ILogColumnsResponse[]>([]);
+  // 添加一个ref来记录上一次处理的外部activeColumns
+  const lastExternalActiveColumnsRef = useRef<string>('');
 
   const getColumns = useRequest(api.fetchColumns, {
     manual: true,
@@ -268,6 +270,86 @@ export const useColumns = (
     [columns, moduleQueryConfig, onChangeColumns],
   );
 
+  // 监听外部activeColumns变化，同步更新columns的selected状态
+  useEffect(() => {
+    if (externalActiveColumns && columns.length > 0) {
+      // 使用字符串比较来检查是否发生变化，避免引用比较问题
+      const currentExternalColumnsStr = JSON.stringify(
+        externalActiveColumns.slice().sort((a, b) => a.localeCompare(b)),
+      );
+
+      if (lastExternalActiveColumnsRef.current !== currentExternalColumnsStr) {
+        console.log('useColumns: 监听到外部activeColumns变化:', externalActiveColumns);
+        lastExternalActiveColumnsRef.current = currentExternalColumnsStr;
+
+        // 动态确定时间字段
+        const determineTimeField = (): string => {
+          const availableFieldNames = columns.map((col) => col.columnName).filter(Boolean) as string[];
+
+          // 优先使用配置的时间字段
+          if (moduleQueryConfig?.timeField && availableFieldNames.includes(moduleQueryConfig.timeField)) {
+            return moduleQueryConfig.timeField;
+          }
+
+          // 查找常见时间字段
+          const commonTimeFields = ['logs_timestamp', 'log_time', 'timestamp', 'time', '@timestamp'];
+          for (const timeField of commonTimeFields) {
+            if (availableFieldNames.includes(timeField)) {
+              return timeField;
+            }
+          }
+
+          return '';
+        };
+
+        const timeField = determineTimeField();
+
+        // 检查是否需要更新
+        const currentActiveColumns = columns
+          .filter((col) => col.selected)
+          .map((col) => col.columnName)
+          .filter(Boolean) as string[];
+
+        // 比较当前选中字段和外部传入的字段，如果不同则需要更新
+        const needsUpdate =
+          currentActiveColumns.length !== externalActiveColumns.length ||
+          !currentActiveColumns.every((col) => externalActiveColumns.includes(col)) ||
+          !externalActiveColumns.every((col) => currentActiveColumns.includes(col));
+
+        if (needsUpdate) {
+          console.log('useColumns: 需要同步字段选中状态');
+          console.log('useColumns: 当前选中字段:', currentActiveColumns);
+          console.log('useColumns: 外部字段:', externalActiveColumns);
+
+          // 更新columns的selected状态
+          const updatedColumns = columns.map((col) => {
+            const shouldBeSelected =
+              col.columnName === timeField || // 时间字段应该始终选中
+              (col.columnName && externalActiveColumns.includes(col.columnName));
+
+            return {
+              ...col,
+              selected: !!shouldBeSelected, // 确保是boolean类型
+              _createTime: shouldBeSelected && !col._createTime ? new Date().getTime() : col._createTime,
+            } as ILogColumnsResponse;
+          });
+
+          console.log(
+            'useColumns: 更新后的字段选中状态:',
+            updatedColumns.filter((col) => col.selected).map((col) => col.columnName),
+          );
+
+          setColumns(updatedColumns);
+
+          // 通知父组件columns变化
+          if (onChangeColumns) {
+            onChangeColumns(updatedColumns);
+          }
+        }
+      }
+    }
+  }, [externalActiveColumns, columns.length]);
+
   return {
     columns,
     setColumns,
@@ -406,8 +488,9 @@ export const useDistributions = (searchParams: ILogSearchParams, availableColumn
     const _searchParams = JSON.parse(localStorage.getItem('searchBarParams') || '{}');
     const fields = _searchParams?.fields;
 
-    // 确保模块已选择，避免报错"模块名称不能为空"
-    if (!searchParams.module) {
+    // 确保模块已选择，优先从localStorage获取，其次从searchParams获取
+    const currentModule = _searchParams?.module || searchParams.module;
+    if (!currentModule) {
       console.warn('模块未选择，跳过字段分布查询');
       return;
     }
@@ -444,8 +527,14 @@ export const useDistributions = (searchParams: ILogSearchParams, availableColumn
       if (abortRef.current) abortRef.current.abort();
       abortRef.current = new AbortController();
 
-      const params = { ...searchParams, fields: validFields };
-      queryDistribution.run({ ...params, signal: abortRef.current.signal });
+      // 使用localStorage中的参数或当前searchParams，确保模块信息正确
+      const effectiveParams = {
+        ...searchParams,
+        ..._searchParams, // localStorage的参数优先级更高
+        fields: validFields,
+        module: currentModule, // 确保模块信息正确
+      };
+      queryDistribution.run({ ...effectiveParams, signal: abortRef.current.signal });
     }
   }, [searchParams, queryDistribution, validateFields]);
 
@@ -460,8 +549,10 @@ export const useDistributions = (searchParams: ILogSearchParams, availableColumn
         return;
       }
 
-      // 确保模块已选择，避免报错"模块名称不能为空"
-      if (!searchParams.module) {
+      // 确保模块已选择，优先从localStorage获取，其次从searchParams获取
+      const _searchParams = JSON.parse(localStorage.getItem('searchBarParams') || '{}');
+      const currentModule = _searchParams?.module || searchParams.module;
+      if (!currentModule) {
         console.warn('模块未选择，跳过字段分布查询');
         setDistributionLoading((prev) => ({ ...prev, [columnName]: false }));
         return;
@@ -477,19 +568,22 @@ export const useDistributions = (searchParams: ILogSearchParams, availableColumn
 
       setDistributionLoading((prev) => ({ ...prev, [columnName]: true }));
 
-      const params: ILogSearchParams = {
+      // 使用localStorage中的参数或当前searchParams，确保模块信息正确
+      const effectiveParams: ILogSearchParams = {
         ...searchParams,
+        ..._searchParams, // localStorage的参数优先级更高
         fields: validFields,
+        module: currentModule, // 确保模块信息正确
         offset: 0,
       };
 
       if (sql) {
-        params.whereSqls = [...(searchParams?.whereSqls || []), sql];
+        effectiveParams.whereSqls = [...(searchParams?.whereSqls || []), sql];
       }
 
       const currentConditions = generateQueryConditionsKey({
         columnName: columnName,
-        whereSqls: params.whereSqls || [],
+        whereSqls: effectiveParams.whereSqls || [],
         keywords: searchParams.keywords || [],
         startTime: searchParams.startTime,
         endTime: searchParams.endTime,
@@ -515,7 +609,7 @@ export const useDistributions = (searchParams: ILogSearchParams, availableColumn
 
       setTimeout(() => {
         if (abortRef.current && !abortRef.current.signal.aborted) {
-          queryDistribution.run({ ...params, signal: abortRef.current.signal });
+          queryDistribution.run({ ...effectiveParams, signal: abortRef.current.signal });
         }
       }, 300);
     },

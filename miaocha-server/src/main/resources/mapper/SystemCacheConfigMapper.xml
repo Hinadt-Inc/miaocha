@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.hinadt.miaocha.domain.mapper.SystemCacheConfigMapper">
+<mapper namespace="com.hinadt.miaocha.infrastructure.mapper.SystemCacheConfigMapper">
 
     <!-- 系统缓存配置表所有字段 -->
     <sql id="systemCacheConfigColumns">

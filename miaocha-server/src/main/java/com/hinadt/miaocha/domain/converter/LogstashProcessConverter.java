@@ -1,16 +1,19 @@
 package com.hinadt.miaocha.domain.converter;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hinadt.miaocha.application.logstash.enums.LogstashMachineState;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessCreateDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessResponseDTO;
 import com.hinadt.miaocha.domain.entity.*;
-import com.hinadt.miaocha.domain.mapper.*;
+import com.hinadt.miaocha.infrastructure.mapper.*;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
-/** Logstash进程实体与DTO转换器 */
+/** Converter between LogstashProcess entity and DTOs. */
 @Component
 public class LogstashProcessConverter implements Converter<LogstashProcess, LogstashProcessDTO> {
 
@@ -19,6 +22,7 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
     private final ModuleInfoMapper moduleInfoMapper;
     private final DatasourceMapper datasourceMapper;
     private final UserMapper userMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public LogstashProcessConverter(
             LogstashMachineMapper logstashMachineMapper,
@@ -34,10 +38,10 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
     }
 
     /**
-     * 将LogstashProcess实体转换为LogstashProcessResponseDTO 包括机器状态信息
+     * Convert LogstashProcess entity to LogstashProcessResponseDTO including machine statuses.
      *
-     * @param process Logstash进程实体
-     * @return 包含机器状态信息的响应DTO
+     * @param process Logstash process entity
+     * @return response DTO including machine status info
      */
     public LogstashProcessResponseDTO toResponseDTO(LogstashProcess process) {
         if (process == null) {
@@ -56,7 +60,21 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         responseDTO.setCreateUser(process.getCreateUser());
         responseDTO.setUpdateUser(process.getUpdateUser());
 
-        // 查询用户昵称
+        // Parse alert recipients JSON into list
+        if (StringUtils.hasText(process.getAlertRecipients())) {
+            try {
+                List<String> recipients =
+                        objectMapper.readValue(
+                                process.getAlertRecipients(), new TypeReference<List<String>>() {});
+                responseDTO.setAlertRecipients(recipients);
+            } catch (Exception ignored) {
+                responseDTO.setAlertRecipients(List.of());
+            }
+        } else {
+            responseDTO.setAlertRecipients(List.of());
+        }
+
+        // Query user nicknames
         if (process.getCreateUser() != null) {
             String createUserName = userMapper.selectNicknameByEmail(process.getCreateUser());
             responseDTO.setCreateUserName(createUserName);
@@ -67,14 +85,14 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
             responseDTO.setUpdateUserName(updateUserName);
         }
 
-        // 获取模块信息
+        // Fetch module info
         if (process.getModuleId() != null) {
             ModuleInfo moduleInfo = moduleInfoMapper.selectById(process.getModuleId());
             if (moduleInfo != null) {
                 responseDTO.setModuleName(moduleInfo.getName());
                 responseDTO.setTableName(moduleInfo.getTableName());
 
-                // 获取数据源信息
+                // Fetch datasource info
                 DatasourceInfo datasourceInfo =
                         datasourceMapper.selectById(moduleInfo.getDatasourceId());
                 if (datasourceInfo != null) {
@@ -83,7 +101,7 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
             }
         }
 
-        // 获取关联的机器状态
+        // Fetch related machine statuses
         List<LogstashMachine> machineRelations =
                 logstashMachineMapper.selectByLogstashProcessId(process.getId());
         List<LogstashProcessResponseDTO.LogstashMachineStatusInfoDTO> machineStatuses =
@@ -112,33 +130,33 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         return responseDTO;
     }
 
-    /** 获取状态描述信息 */
+    /** Get human-readable state description. */
     private String getStateDescription(LogstashMachine machine) {
         LogstashMachineState state = LogstashMachineState.valueOf(machine.getState());
 
         switch (state) {
             case INITIALIZING:
-                return "正在初始化";
+                return "Initializing";
             case INITIALIZE_FAILED:
-                return "初始化失败";
+                return "Initialize failed";
             case NOT_STARTED:
-                return "未启动";
+                return "Not started";
             case STARTING:
-                return "正在启动";
+                return "Starting";
             case START_FAILED:
-                return "启动失败";
+                return "Start failed";
             case RUNNING:
-                return "运行中";
+                return "Running";
             case STOPPING:
-                return "正在停止";
+                return "Stopping";
             case STOP_FAILED:
-                return "停止失败";
+                return "Stop failed";
             default:
                 return state.name();
         }
     }
 
-    /** 将DTO转换为实体 */
+    /** Convert DTO to entity. */
     @Override
     public LogstashProcess toEntity(LogstashProcessDTO dto) {
         if (dto == null) {
@@ -154,12 +172,12 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         entity.setLogstashYml(dto.getLogstashYml());
         entity.setCreateTime(dto.getCreateTime());
         entity.setUpdateTime(dto.getUpdateTime());
-        // 审计字段由MyBatis拦截器自动处理
+        // Audit fields are handled by MyBatis interceptor
 
         return entity;
     }
 
-    /** 将创建DTO转换为实体 */
+    /** Convert create DTO to entity. */
     public LogstashProcess toEntity(LogstashProcessCreateDTO dto) {
         if (dto == null) {
             return null;
@@ -171,12 +189,12 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         entity.setConfigContent(dto.getConfigContent());
         entity.setJvmOptions(dto.getJvmOptions());
         entity.setLogstashYml(dto.getLogstashYml());
-        // 审计字段由MyBatis拦截器自动处理
+        // Audit fields are handled by MyBatis interceptor
 
         return entity;
     }
 
-    /** 将实体转换为DTO */
+    /** Convert entity to DTO. */
     @Override
     public LogstashProcessDTO toDto(LogstashProcess entity) {
         if (entity == null) {
@@ -195,7 +213,7 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         dto.setCreateUser(entity.getCreateUser());
         dto.setUpdateUser(entity.getUpdateUser());
 
-        // 查询用户昵称
+        // Query user nicknames
         if (entity.getCreateUser() != null) {
             String createUserName = userMapper.selectNicknameByEmail(entity.getCreateUser());
             dto.setCreateUserName(createUserName);
@@ -209,7 +227,7 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         return dto;
     }
 
-    /** 使用DTO更新实体 */
+    /** Update entity with DTO. */
     @Override
     public LogstashProcess updateEntity(LogstashProcess entity, LogstashProcessDTO dto) {
         if (entity == null || dto == null) {
@@ -221,12 +239,12 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         entity.setConfigContent(dto.getConfigContent());
         entity.setJvmOptions(dto.getJvmOptions());
         entity.setLogstashYml(dto.getLogstashYml());
-        // 审计字段由MyBatis拦截器自动处理
+        // Audit fields are handled by MyBatis interceptor
 
         return entity;
     }
 
-    /** 使用创建DTO更新实体 */
+    /** Update entity with create DTO. */
     public LogstashProcess updateEntity(LogstashProcess entity, LogstashProcessCreateDTO dto) {
         if (entity == null || dto == null) {
             return entity;
@@ -237,7 +255,7 @@ public class LogstashProcessConverter implements Converter<LogstashProcess, Logs
         entity.setConfigContent(dto.getConfigContent());
         entity.setJvmOptions(dto.getJvmOptions());
         entity.setLogstashYml(dto.getLogstashYml());
-        // 审计字段由MyBatis拦截器自动处理
+        // Audit fields are handled by MyBatis interceptor
 
         return entity;
     }

@@ -195,7 +195,7 @@ export function request<T = unknown>(config: AxiosRequestConfig): Promise<T> {
 
 // 封装GET请求
 export function get<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
-  return request({ ...config, method: 'GET', url });
+  return request({ ...config, method: 'GET', url, data: config?.params });
 }
 
 // 封装POST请求
@@ -206,4 +206,17 @@ export function post<T = unknown>(url: string, data?: unknown, config?: AxiosReq
 // 封装DELETE请求
 export function del<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
   return request({ ...config, method: 'DELETE', url, data });
+}
+
+export function aiGet<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+  return request({
+    ...config,
+    method: 'POST', // 改为POST以确保请求体能正确发送
+    url,
+    data,
+    headers: {
+      'Content-Type': 'application/json',
+      ...config?.headers,
+    },
+  });
 }

@@ -21,21 +21,21 @@ jobs:
 
       - name: Restore kubectl from local cache
         run: |
-          echo "🔍 检查kubectl本地缓存..."
-          KUBECTL_VERSION="v1.29.0"  # 使用固定版本以便缓存
+          echo "🔍 Checking local kubectl cache..."
+          KUBECTL_VERSION="v1.29.0"  # Use fixed version for caching
           KUBECTL_CACHE_KEY="kubectl-${KUBECTL_VERSION}-$(uname -m)"
           KUBECTL_CACHE_PATH="/opt/action-runner/cache/kubectl/${KUBECTL_CACHE_KEY}"
           
-          # 创建缓存目录
+          # Create cache directory
           mkdir -p /opt/action-runner/cache/kubectl
           
           if [ -f "$KUBECTL_CACHE_PATH/kubectl" ]; then
-            echo "✅ 发现kubectl缓存: $KUBECTL_CACHE_KEY"
+            echo "✅ Found kubectl cache: $KUBECTL_CACHE_KEY"
             sudo cp "$KUBECTL_CACHE_PATH/kubectl" /usr/local/bin/kubectl
             sudo chmod +x /usr/local/bin/kubectl
             echo "KUBECTL_CACHE_HIT=true" >> $GITHUB_ENV
           else
-            echo "❌ kubectl缓存未命中，需要下载"
+            echo "❌ kubectl cache miss, will download"
             echo "KUBECTL_CACHE_HIT=false" >> $GITHUB_ENV
             echo "KUBECTL_CACHE_PATH=$KUBECTL_CACHE_PATH" >> $GITHUB_ENV
           fi
@@ -44,58 +44,58 @@ jobs:
         if: env.KUBECTL_CACHE_HIT == 'false'
         uses: azure/setup-kubectl@v4
         with:
-          version: 'v1.29.0'  # 使用固定版本
+          version: 'v1.29.0'  # Use fixed version
 
       - name: Save kubectl to local cache
         if: env.KUBECTL_CACHE_HIT == 'false' && always()
         run: |
-          echo "💾 保存kubectl到本地缓存..."
+          echo "💾 Save kubectl to local cache..."
           if command -v kubectl >/dev/null 2>&1; then
             mkdir -p "$KUBECTL_CACHE_PATH"
             cp "$(which kubectl)" "$KUBECTL_CACHE_PATH/kubectl"
-            echo "✅ kubectl本地缓存已保存: $KUBECTL_CACHE_KEY"
+            echo "✅ kubectl saved to local cache: $KUBECTL_CACHE_KEY"
           else
-            echo "⚠️ kubectl未找到，跳过缓存保存"
+            echo "⚠️ kubectl not found, skip cache save"
           fi
 
       - name: Setup kubectl
         run: |
-          echo "🔧 配置 kubectl..."
-          # 创建 kubeconfig 文件
+          echo "🔧 Configure kubectl..."
+          # Create kubeconfig file
           mkdir -p ~/.kube
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
 
-          # 验证连接
+          # Verify connectivity
           kubectl cluster-info
 
       - name: Cleanup Kubernetes resources
         run: |
-          echo "🧹 开始清理 PR-${{ github.event.pull_request.number }} 的 Kubernetes 资源..."
+          echo "🧹 Start cleaning Kubernetes resources for PR-${{ github.event.pull_request.number }}..."
 
-          # 设置环境变量
+          # Set environment variables
           export PR_NUMBER=${{ github.event.pull_request.number }}
 
-          # 执行清理
+          # Execute cleanup
           chmod +x scripts/github/k8s/cleanup.sh
           ./scripts/github/k8s/cleanup.sh
 
       - name: Cleanup Docker images (optional)
         continue-on-error: true
         run: |
-          echo "🐳 清理 Docker 镜像..."
+          echo "🐳 Cleaning Docker images..."
 
-          # 获取镜像列表
+          # Get image list
           IMAGES_TO_DELETE=$(docker images --format "table {{.Repository}}:{{.Tag}}" | grep "miaocha-test-pr" | grep "pr${{ github.event.pull_request.number }}" || true)
 
           if [ -n "$IMAGES_TO_DELETE" ]; then
-            echo "发现以下镜像需要删除:"
+            echo "Found images to delete:"
             echo "$IMAGES_TO_DELETE"
 
-            # 删除本地镜像
+            # Remove local images
             echo "$IMAGES_TO_DELETE" | xargs -r docker rmi -f
-            echo "✅ 本地镜像清理完成"
+            echo "✅ Local image cleanup completed"
           else
-            echo "未找到需要清理的镜像"
+            echo "No images found to clean"
           fi
 
       - name: Comment on PR with cleanup info
@@ -110,39 +110,39 @@ jobs:
             let status_icon = '';
 
             if (pr_merged) {
-              status_text = '已合并';
+              status_text = 'merged';
               status_icon = '✅';
             } else if (pr_state === 'closed') {
-              status_text = '已关闭';
+              status_text = 'closed';
               status_icon = '❌';
             } else {
-              status_text = '状态变更';
+              status_text = 'status changed';
               status_icon = '🔄';
             }
 
-            const comment = `## 🧹 内部测试环境已清理
+            const comment = `## 🧹 Internal test environment cleaned up
 
-            ${status_icon} **PR #${pr_number}** ${status_text}，内部测试环境已自动清理
+            ${status_icon} **PR #${pr_number}** ${status_text}. The internal test environment has been automatically cleaned up.
 
-            ### 📋 清理内容
+            ### 📋 Cleanup Scope
 
             - ✅ Kubernetes namespace: \`miaocha-pr-${pr_number}\`
-            - ✅ 所有 Pod, Service, Deployment
-            - ✅ 本地 Docker 镜像
-            - ✅ 相关网络资源
+            - ✅ All Pods, Services, Deployments
+            - ✅ Local Docker images
+            - ✅ Related network resources
 
-            ### 📊 清理详情
+            ### 📊 Details
 
-            - **清理时间**: ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}
-            - **清理原因**: PR ${status_text}
-            - **资源状态**: 已完全清理
+            - **Time**: ${new Date().toLocaleString('en-US', { timeZone: 'Asia/Shanghai' })}
+            - **Reason**: PR ${status_text}
+            - **Resource status**: fully cleaned
 
-            ### 🎉 清理完成
+            ### 🎉 Done
 
-            所有与此 PR 相关的内部测试环境资源已完全清理，不会产生额外费用。
+            All internal test environment resources related to this PR have been fully cleaned to avoid extra costs.
 
             ---
-            *🤖 此评论由 CI/CD 自动生成*`;
+            *🤖 This comment was generated by CI/CD*`;
 
             // 创建清理评论
             await github.rest.issues.createComment({
@@ -152,16 +152,16 @@ jobs:
               body: comment
             });
 
-            console.log('✅ 创建了清理完成评论');
+            console.log('✅ Created cleanup comment');
 
       - name: Summary
         run: |
-          echo "## 🧹 PR 清理完成" >> $GITHUB_STEP_SUMMARY
+          echo "## 🧹 PR cleanup completed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📋 清理内容" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Cleanup Scope" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Kubernetes namespace: miaocha-pr-${{ github.event.pull_request.number }}" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ 所有相关的 Pod, Service, Deployment" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ 本地 Docker 镜像" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ All related Pods, Services, Deployments" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Local Docker images" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🎉 资源已完全清理" >> $GITHUB_STEP_SUMMARY
-          echo "PR-${{ github.event.pull_request.number }} 的所有测试环境资源已清理完毕" >> $GITHUB_STEP_SUMMARY
+          echo "### 🎉 Resources fully cleaned" >> $GITHUB_STEP_SUMMARY
+          echo "All test environment resources for PR-${{ github.event.pull_request.number }} have been cleaned" >> $GITHUB_STEP_SUMMARY

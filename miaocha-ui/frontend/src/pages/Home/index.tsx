@@ -4,6 +4,7 @@ import SearchBar from './SearchBar/index';
 import Log from './LogModule/index';
 import Sider from './SiderModule/index';
 import styles from './index.module.less';
+import AIAssistant from '@/components/AIAssistant/index';
 
 // 导入模块化的hooks
 import {
@@ -51,6 +52,10 @@ const HomePage = () => {
     searchBarRef,
     siderRef,
     requestTimerRef,
+    // 添加必要的状态解构
+    setKeywords,
+    setActiveColumns,
+    setLogTableColumns,
   } = state;
 
   // 2. OAuth回调处理
@@ -420,6 +425,138 @@ const HomePage = () => {
           </div>
         </Splitter.Panel>
       </Splitter>
+
+      {/* AI助手悬浮窗 */}
+      <AIAssistant
+        onLogSearch={(data) => {
+          // 处理AI助手的搜索请求
+          let searchParams = data.searchParams || data; // 向后兼容
+
+          // 确保AI提供的searchParams包含必要的模块信息
+          // 如果AI没有提供模块信息，使用当前的模块信息
+          if (!searchParams.datasourceId || !searchParams.module) {
+            searchParams = {
+              ...searchParams,
+              datasourceId: searchParams.datasourceId || state.searchParams.datasourceId,
+              module: searchParams.module || state.searchParams.module,
+            };
+          }
+
+          // 如果有搜索结果，直接更新状态
+          if (data.searchResult) {
+            setDetailData(data.searchResult);
+          }
+
+          // 更新搜索参数
+          setSearchParams(searchParams);
+
+          // 主动更新本地状态以同步到SearchBar
+          if (searchParams.keywords && searchParams.keywords.length > 0) {
+            setKeywords(searchParams.keywords);
+          }
+
+          // 同步更新SQL条件到SearchBar
+          if (searchParams.whereSqls && searchParams.whereSqls.length > 0) {
+            // 更新sqls状态，这会触发SearchBar的useEffect重新搜索
+            state.setSqls(searchParams.whereSqls);
+          } else {
+            // 如果没有SQL条件，清空现有的SQL条件
+            state.setSqls([]);
+          }
+
+          // 主动更新SearchBar组件的显示状态
+          if (searchBarRef.current && searchParams) {
+            // 更新时间范围
+            if (
+              searchParams.startTime &&
+              searchParams.endTime &&
+              typeof searchBarRef.current.setTimeOption === 'function'
+            ) {
+              const timeOption = {
+                label: `${searchParams.startTime} ~ ${searchParams.endTime}`,
+                value: `${searchParams.startTime} ~ ${searchParams.endTime}`,
+                range: [searchParams.startTime, searchParams.endTime],
+                type: 'absolute',
+              };
+              searchBarRef.current.setTimeOption(timeOption);
+            }
+
+            // 更新字段选择
+            if (searchParams.fields && searchParams.fields.length > 0) {
+              setActiveColumns(searchParams.fields);
+
+              // 同步更新logTableColumns的selected状态
+              setLogTableColumns((prevColumns: any) => {
+                return prevColumns.map((column: any) => ({
+                  ...column,
+                  selected: searchParams.fields!.includes(column.columnName || ''),
+                  _createTime: searchParams.fields!.includes(column.columnName || '') ? Date.now() : undefined,
+                }));
+              });
+            }
+          }
+
+          // 只有在没有skipRequest标记时才触发新的搜索请求
+          if (!data.skipRequest) {
+            executeDataRequest(searchParams);
+
+            // 同步更新localStorage中的searchBarParams，确保字段分布查询能获取到最新参数
+            try {
+              const savedSearchParams = localStorage.getItem('searchBarParams');
+              const currentParams = savedSearchParams ? JSON.parse(savedSearchParams) : {};
+              const updatedParams = {
+                ...currentParams,
+                ...searchParams,
+                // 确保关键信息不丢失
+                datasourceId: searchParams.datasourceId,
+                module: searchParams.module,
+              };
+              localStorage.setItem('searchBarParams', JSON.stringify(updatedParams));
+            } catch (error) {
+              console.error('更新localStorage中的searchBarParams失败:', error);
+            }
+
+            // 同时触发字段分布数据更新
+            // 需要延迟执行，确保localStorage和字段状态已经更新
+            setTimeout(() => {
+              getDistributionWithSearchBar();
+            }, 100);
+          }
+        }}
+        onFieldSelect={(fields) => {
+          // 更新显示字段
+          setActiveColumns(fields);
+        }}
+        onTimeRangeChange={(data) => {
+          // 处理时间范围变更
+          let timeRangeData = data;
+
+          // 向后兼容处理
+          if (typeof data === 'string') {
+            timeRangeData = { timeRange: data };
+          }
+
+          // 如果有直方图数据，直接更新状态
+          if (timeRangeData.histogramData) {
+            // 修正：直接设置整个histogramData，而不是取第一个元素
+            setHistogramData(timeRangeData.histogramData);
+          }
+
+          // 更新搜索参数中的时间范围
+          const newSearchParams = {
+            ...searchParams,
+            timeRange: timeRangeData.timeRange,
+            startTime: timeRangeData.startTime,
+            endTime: timeRangeData.endTime,
+          };
+          setSearchParams(newSearchParams);
+
+          // 只有在没有skipRequest标记时才触发新的搜索请求
+          if (!timeRangeData.skipRequest) {
+            executeDataRequest(newSearchParams);
+          }
+        }}
+      />
     </div>
   );
 };

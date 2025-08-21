@@ -6,9 +6,9 @@ server:
 spring:
   application:
     name: miaocha
-    version: '@project.version@'
+    version: "@project.version@"
   profiles:
-    active: '@spring.profiles.active@'
+    active: "@spring.profiles.active@"
   output:
     ansi:
       enabled: always
@@ -23,8 +23,26 @@ spring:
     locations: classpath:db/migration/v1,classpath:db/migration/v2
     table: flyway_schema_history
 
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:25}
+    username: ${SMTP_USER:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          ssl:
+            enable: ${SMTP_SSL:false}
+          auth: ${SMTP_AUTH:false}
+
+  ai:
+    deepseek:
+      api-key: ${DEEPSEEK_API_KEY}
+    tools:
+      throw-exception-on-error: true
+
 # 环境配置
-environment: '@environment@'
+environment: "@environment@"
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml
@@ -43,8 +61,8 @@ springdoc:
 # JWT配置
 jwt:
   secret: 8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92
-  expiration: 3600000  # 1小时
-  refresh-expiration: 86400000  # 24小时
+  expiration: 3600000 # 1小时
+  refresh-expiration: 86400000 # 24小时
 
 # 自定义配置
 sql:
@@ -61,8 +79,8 @@ miaocha:
       maximum-pool-size: 100
       minimum-idle: 10
       connection-timeout: 30000
-      idle-timeout: 300000          # 5分钟（从10分钟调整为5分钟）
-      max-lifetime: 600000          # 10分钟（从30分钟调整为10分钟）
+      idle-timeout: 300000 # 5分钟（从10分钟调整为5分钟）
+      max-lifetime: 600000 # 10分钟（从30分钟调整为10分钟）
       connection-test-query: SELECT 1
       validation-timeout: 5000
       leak-detection-threshold: 60000
@@ -70,7 +88,11 @@ miaocha:
       read-only: false
       isolate-internal-queries: false
 
-        
+  alerts:
+    mail:
+      enabled: ${ALERT_MAIL_ENABLED:false}
+      from: ${ALERT_MAIL_FROM:}
+
 # Logstash配置
 logstash:
   # Logstash压缩包路径
@@ -79,6 +101,5 @@ logstash:
   deploy-dir: ${LOGSTASH_DEPLOY_DIR:/opt/logstash}
   # 进程监控配置
   monitor:
-    # 监控间隔时间（毫秒），默认10分钟
-    interval: 600000
-
+    # 监控间隔时间（毫秒），默认5分钟
+    interval: 300000

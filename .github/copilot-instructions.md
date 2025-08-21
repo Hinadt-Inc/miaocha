@@ -1,19 +1,19 @@
-# Copilot 代码审查指令
+# Copilot Code Review Instructions
 
-## 语言要求
-1. **必须使用中文**：无论是代码审查的 overview 概述还是具体的评论内容，都必须使用中文进行回复和解释
-2. 所有的代码注释建议和说明都要用中文书写
+## Language Requirements
+1. Use English for the overview and all review comments.
+2. Any suggested code comments or annotations must be in English.
 
-## 代码审查重点
-1. **代码质量**：关注代码的优雅性、可读性和可维护性
-2. **可复用性**：评估代码的可复用性和模块化程度
-3. **性能优化**：识别潜在的性能问题和优化建议
-4. **安全性**：检查潜在的安全漏洞和风险点
-5. **最佳实践**：确保代码遵循项目和语言的最佳实践
-6. **测试覆盖**：关注测试的完整性和有效性
+## Review Focus
+1. Code Quality: readability, maintainability, and elegance.
+2. Reusability: modularity and reuse of components/utilities.
+3. Performance: identify potential bottlenecks and optimizations.
+4. Security: highlight vulnerabilities and risky patterns.
+5. Best Practices: adherence to project and language conventions.
+6. Test Coverage: completeness and effectiveness of tests.
 
-## 审查格式要求
-- Overview 概述必须用中文总结主要变更和建议
-- 每个具体评论都要用中文清晰表达问题和建议
-- 提供具体的改进建议和代码示例（如果需要）
-- 使用礼貌和建设性的语言进行反馈
+## Review Format
+- Provide an English overview summarizing key changes and suggestions.
+- Use clear English for each specific comment and recommendation.
+- Offer concrete improvement suggestions and code examples when helpful.
+- Keep feedback polite, constructive, and actionable.

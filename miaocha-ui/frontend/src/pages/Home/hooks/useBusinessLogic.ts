@@ -250,7 +250,7 @@ export const useBusinessLogic = (
     // 确保columns已经加载完成，避免使用错误的fields
     if (!columnsLoaded) {
       console.log('等待columns加载完成...');
-      return;
+      // return;
     }
 
     // 如果正在初始化中（仅针对模块配置加载），跳过请求
