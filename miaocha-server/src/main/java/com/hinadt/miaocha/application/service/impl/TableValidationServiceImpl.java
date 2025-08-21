@@ -3,7 +3,9 @@ package com.hinadt.miaocha.application.service.impl;
 import com.hinadt.miaocha.application.service.TableValidationService;
 import com.hinadt.miaocha.application.service.database.DatabaseMetadataService;
 import com.hinadt.miaocha.application.service.database.DatabaseMetadataServiceFactory;
+import com.hinadt.miaocha.application.service.sql.CreateTableSqlParser;
 import com.hinadt.miaocha.application.service.sql.JdbcQueryExecutor;
+import com.hinadt.miaocha.application.service.sql.SqlQueryUtils;
 import com.hinadt.miaocha.common.exception.BusinessException;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.common.exception.QueryFieldNotExistsException;
@@ -15,8 +17,6 @@ import com.hinadt.miaocha.infrastructure.mapper.ModuleInfoMapper;
 import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,37 +28,6 @@ import org.springframework.util.StringUtils;
 @Service
 public class TableValidationServiceImpl implements TableValidationService {
     private static final Logger logger = LoggerFactory.getLogger(TableValidationServiceImpl.class);
-
-    // ==================== CREATE TABLE 相关常量 ====================
-
-    /** CREATE TABLE 语句的正则表达式 */
-    private static final Pattern CREATE_TABLE_PATTERN =
-            Pattern.compile(
-                    "^\\s*CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?(?:`?([\\w\\u4e00-\\u9fff\\-\\.@#$\\s]+)`?\\.)?`?([\\w\\u4e00-\\u9fff\\-\\.@#$\\s]+)`?\\s*\\(",
-                    Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-
-    /** CREATE TABLE 语句匹配的正则表达式（用于验证是否为CREATE TABLE语句） */
-    private static final Pattern CREATE_TABLE_CHECK_PATTERN =
-            Pattern.compile(
-                    "^\\s*CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?",
-                    Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-
-    // ==================== SQL 语句处理相关常量 ====================
-
-    /** LIMIT 子句检测正则 */
-    private static final Pattern LIMIT_PATTERN =
-            Pattern.compile(
-                    "\\blimit\\s+\\d+(?:\\s*,\\s*\\d+)?\\s*;?\\s*$", Pattern.CASE_INSENSITIVE);
-
-    /** 默认查询限制条数 */
-    private static final int DEFAULT_QUERY_LIMIT = 1000;
-
-    /** 最大查询限制条数 */
-    private static final int MAX_QUERY_LIMIT = 10000;
-
-    /** 表名提取正则 - FROM 子句 */
-    private static final Pattern FROM_PATTERN =
-            Pattern.compile("\\bFROM\\s+[\"'`]?([\\w\\d_\\.]+)[\"'`]?", Pattern.CASE_INSENSITIVE);
 
     @Autowired private ModuleInfoMapper moduleInfoMapper;
 
@@ -84,14 +53,14 @@ public class TableValidationServiceImpl implements TableValidationService {
         }
 
         // 1. 检查是否为CREATE TABLE语句
-        if (!CREATE_TABLE_CHECK_PATTERN.matcher(sql).find()) {
+        if (!CreateTableSqlParser.isCreateTable(sql)) {
             logger.warn("SQL不是CREATE TABLE语句: {}", sql);
             throw new BusinessException(
                     ErrorCode.SQL_NOT_CREATE_TABLE, "只允许执行CREATE TABLE语句，当前SQL类型不符合要求");
         }
 
         // 2. 提取SQL中的表名并验证是否与模块配置一致
-        String extractedTableName = extractTableNameFromCreateSql(sql);
+        String extractedTableName = CreateTableSqlParser.extractTableName(sql);
         if (!configuredTableName.equals(extractedTableName)) {
             logger.warn("SQL中的表名[{}]与模块配置的表名[{}]不一致", extractedTableName, configuredTableName);
             throw new BusinessException(
@@ -103,115 +72,7 @@ public class TableValidationServiceImpl implements TableValidationService {
         logger.info("Doris SQL校验通过: 模块名={}, 表名={}", moduleInfo.getName(), configuredTableName);
     }
 
-    /**
-     * 从CREATE TABLE语句中提取表名
-     *
-     * @param sql CREATE TABLE SQL语句
-     * @return 表名
-     * @throws BusinessException 如果无法解析表名
-     */
-    private String extractTableNameFromCreateSql(String sql) {
-        // 标准化SQL语句，将多个空白字符替换为单个空格
-        String normalizedSql = sql.replaceAll("\\s+", " ").trim();
-
-        // 使用正则表达式匹配CREATE TABLE语句
-        Pattern pattern =
-                Pattern.compile(
-                        "CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?(.+?)\\s*\\(",
-                        Pattern.CASE_INSENSITIVE);
-
-        Matcher matcher = pattern.matcher(normalizedSql);
-        if (!matcher.find()) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "无法从SQL语句中解析出表名");
-        }
-
-        String tableNamePart = matcher.group(1).trim();
-        if (tableNamePart.isEmpty()) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "表名不能为空");
-        }
-
-        // 检查提取的表名部分是否包含SQL关键字，这可能表示语法错误
-        if (tableNamePart.toUpperCase().matches(".*\\b(IF|NOT|EXISTS|EXIST)\\b.*")) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "表名格式错误或SQL语法错误");
-        }
-
-        return parseTableName(tableNamePart);
-    }
-
-    /**
-     * 解析表名部分，提取实际的表名
-     *
-     * @param tableNamePart 表名部分字符串
-     * @return 实际的表名
-     */
-    private String parseTableName(String tableNamePart) {
-        // 情况1: 包含点号的格式，可能是数据库.表名 (优先处理这种情况)
-        if (tableNamePart.contains(".")) {
-            return parseTableNameWithDatabase(tableNamePart);
-        }
-
-        // 情况2: 被反引号完全包围的表名，如 `table_name`
-        // 这种情况下，反引号内的所有内容都是表名，包括特殊字符
-        if (tableNamePart.startsWith("`")
-                && tableNamePart.endsWith("`")
-                && tableNamePart.length() > 2) {
-            return tableNamePart.substring(1, tableNamePart.length() - 1);
-        }
-
-        // 情况3: 普通表名
-        return tableNamePart;
-    }
-
-    /**
-     * 解析包含数据库前缀的表名格式 支持以下格式： - database.table - `database`.table - database.`table` -
-     * `database`.`table`
-     */
-    private String parseTableNameWithDatabase(String tableNamePart) {
-        // 处理各种可能的格式：
-        // 1. database.table
-        // 2. `database`.table
-        // 3. database.`table`
-        // 4. `database`.`table`
-
-        String input = tableNamePart.trim();
-
-        // 找到最后一个不在反引号内的点号
-        int lastDotIndex = -1;
-        boolean inBackticks = false;
-
-        for (int i = input.length() - 1; i >= 0; i--) {
-            char c = input.charAt(i);
-            if (c == '`') {
-                inBackticks = !inBackticks;
-            } else if (c == '.' && !inBackticks) {
-                lastDotIndex = i;
-                break;
-            }
-        }
-
-        if (lastDotIndex == -1) {
-            // 没有找到点号，说明没有数据库前缀，直接返回去掉反引号的表名
-            return input.replaceAll("`", "").trim();
-        }
-
-        if (lastDotIndex == input.length() - 1) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "表名格式错误：表名不能为空");
-        }
-
-        if (lastDotIndex == 0) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "表名格式错误：数据库名不能为空");
-        }
-
-        // 取点号后面的部分作为表名
-        String tablePart = input.substring(lastDotIndex + 1).trim();
-
-        if (tablePart.isEmpty()) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "表名不能为空");
-        }
-
-        // 去掉反引号
-        return tablePart.replaceAll("`", "").trim();
-    }
+    // 表名解析逻辑已迁移至 CreateTableSqlParser
 
     @Override
     public boolean isTableExists(ModuleInfo moduleInfo) {
@@ -262,15 +123,12 @@ public class TableValidationServiceImpl implements TableValidationService {
         }
 
         try {
-            // 提取字段定义部分
-            String fieldsSection = extractFieldsSection(sql);
-            if (fieldsSection == null) {
+            List<String> parsed = CreateTableSqlParser.extractFieldNames(sql);
+            if (parsed.isEmpty()) {
                 logger.warn("无法从SQL中提取字段定义部分: {}", sql);
                 return fieldNames;
             }
-
-            // 解析字段名
-            fieldNames = parseFieldNames(fieldsSection);
+            fieldNames = parsed;
 
             logger.debug("从建表SQL中解析出 {} 个字段: {}", fieldNames.size(), fieldNames);
             return fieldNames;
@@ -361,406 +219,20 @@ public class TableValidationServiceImpl implements TableValidationService {
         logger.debug("模块 {} 的查询配置字段验证通过", moduleInfo.getName());
     }
 
-    /** 提取CREATE TABLE语句中的字段定义部分 */
-    private String extractFieldsSection(String sql) {
-        // 标准化SQL
-        String normalizedSql = sql.replaceAll("\\s+", " ").trim();
-
-        // 查找第一个左括号
-        int startIndex = normalizedSql.indexOf('(');
-        if (startIndex == -1) {
-            return null;
-        }
-
-        // 查找匹配的右括号
-        int bracketCount = 0;
-        int endIndex = -1;
-
-        for (int i = startIndex; i < normalizedSql.length(); i++) {
-            char c = normalizedSql.charAt(i);
-            if (c == '(') {
-                bracketCount++;
-            } else if (c == ')') {
-                bracketCount--;
-                if (bracketCount == 0) {
-                    endIndex = i;
-                    break;
-                }
-            }
-        }
-
-        if (endIndex == -1) {
-            return null;
-        }
-
-        return normalizedSql.substring(startIndex + 1, endIndex);
-    }
-
-    /** 从字段定义部分解析字段名 */
-    private List<String> parseFieldNames(String fieldsSection) {
-        List<String> fieldNames = new ArrayList<>();
-
-        // 移除所有索引、约束、外键定义等非字段定义的行
-        String cleanedFieldsSection = removeNonFieldDefinitions(fieldsSection);
-
-        // 智能分割字段定义（考虑括号内的逗号）
-        List<String> fieldDefinitions = smartSplitFieldDefinitions(cleanedFieldsSection);
-
-        for (String fieldDef : fieldDefinitions) {
-            String fieldName = extractFieldName(fieldDef.trim());
-            if (fieldName != null && !fieldName.isEmpty()) {
-                fieldNames.add(fieldName);
-            }
-        }
-
-        return fieldNames;
-    }
-
-    /** 移除非字段定义（INDEX、PRIMARY KEY、FOREIGN KEY等） */
-    private String removeNonFieldDefinitions(String fieldsSection) {
-        String[] lines = fieldsSection.split("\\n");
-        StringBuilder cleaned = new StringBuilder();
-
-        for (String line : lines) {
-            String trimmedLine = line.trim();
-
-            // 跳过各种非字段定义
-            if (trimmedLine.isEmpty()
-                    || trimmedLine.matches(
-                            "(?i)^(PRIMARY\\s+KEY|UNIQUE\\s+KEY|KEY|INDEX|FOREIGN\\s+KEY|CONSTRAINT)\\b.*")
-                    || trimmedLine.matches(
-                            "(?i)^\\)\\s*(ENGINE|DUPLICATE|AUTO|DISTRIBUTED|PROPERTIES)\\b.*")) {
-                continue;
-            }
-
-            cleaned.append(line).append("\\n");
-        }
-
-        return cleaned.toString();
-    }
-
-    /** 智能分割字段定义，考虑括号内的逗号 */
-    private List<String> smartSplitFieldDefinitions(String fieldsSection) {
-        List<String> definitions = new ArrayList<>();
-        StringBuilder current = new StringBuilder();
-        int parenthesisDepth = 0;
-        boolean inQuotes = false;
-        char lastChar = ' ';
-
-        for (char c : fieldsSection.toCharArray()) {
-            if (c == '\'' || c == '"') {
-                if (lastChar != '\\') {
-                    inQuotes = !inQuotes;
-                }
-            } else if (!inQuotes) {
-                if (c == '(') {
-                    parenthesisDepth++;
-                } else if (c == ')') {
-                    parenthesisDepth--;
-                } else if (c == ',' && parenthesisDepth == 0) {
-                    // 只有在括号外且不在引号内的逗号才是字段分隔符
-                    String def = current.toString().trim();
-                    if (!def.isEmpty()) {
-                        definitions.add(def);
-                    }
-                    current = new StringBuilder();
-                    lastChar = c;
-                    continue;
-                }
-            }
-            current.append(c);
-            lastChar = c;
-        }
-
-        // 添加最后一个字段定义
-        String def = current.toString().trim();
-        if (!def.isEmpty()) {
-            definitions.add(def);
-        }
-
-        return definitions;
-    }
-
-    /** 从单个字段定义中提取字段名 */
-    private String extractFieldName(String fieldDefinition) {
-        if (fieldDefinition == null || fieldDefinition.trim().isEmpty()) {
-            return null;
-        }
-
-        String trimmed = fieldDefinition.trim();
-
-        // 跳过非字段定义
-        if (trimmed.matches(
-                "(?i)^(PRIMARY\\s+KEY|UNIQUE\\s+KEY|KEY|INDEX|FOREIGN\\s+KEY|CONSTRAINT)\\b.*")) {
-            return null;
-        }
-
-        // 提取字段名（第一个单词，可能被反引号包围）
-        String[] parts = trimmed.split("\\s+", 2);
-        if (parts.length == 0) {
-            return null;
-        }
-
-        String fieldName = parts[0];
-
-        // 移除反引号
-        if (fieldName.startsWith("`") && fieldName.endsWith("`") && fieldName.length() > 2) {
-            fieldName = fieldName.substring(1, fieldName.length() - 1);
-        }
-
-        // 验证字段名是否有效（包含字母、数字、下划线，支持数字开头的字段名）
-        if (fieldName.matches("^[a-zA-Z0-9_]+$")) {
-            return fieldName;
-        }
-
-        return null;
-    }
-
     // ==================== 新增的 SQL 处理方法 ====================
 
     @Override
     public boolean isSelectStatement(String sql) {
-        if (sql == null || sql.trim().isEmpty()) {
-            return false;
-        }
-
-        // 使用更完善的注释清理逻辑
-        String cleaned = removeCommentsAndWhitespace(sql);
-
-        // 使用更宽松的 SELECT 语句检测
-        return isSelectStatementInternal(cleaned);
-    }
-
-    /** 完善的 SQL 注释和空白字符清理逻辑 正确处理： 1. 单行注释 (--) 2. 块注释 (斜杠星号 星号斜杠) 3. 字符串字面量中的注释符号 4. 转义字符 5. 嵌套注释 */
-    private String removeCommentsAndWhitespace(String sql) {
-        if (sql == null || sql.isEmpty()) {
-            return "";
-        }
-
-        StringBuilder result = new StringBuilder();
-        char[] chars = sql.toCharArray();
-        int length = chars.length;
-
-        boolean inSingleQuotes = false; // 单引号字符串
-        boolean inDoubleQuotes = false; // 双引号字符串
-        boolean inBackticks = false; // 反引号标识符
-        boolean inLineComment = false; // 单行注释
-        boolean inBlockComment = false; // 块注释
-        int blockCommentDepth = 0; // 嵌套块注释深度
-
-        for (int i = 0; i < length; i++) {
-            char current = chars[i];
-            char next = (i + 1 < length) ? chars[i + 1] : '\0';
-            char prev = (i > 0) ? chars[i - 1] : '\0';
-
-            // 处理转义字符
-            if (prev == '\\' && (inSingleQuotes || inDoubleQuotes)) {
-                if (!inLineComment && !inBlockComment) {
-                    result.append(current);
-                }
-                continue;
-            }
-
-            // 处理字符串和标识符边界
-            if (!inLineComment && !inBlockComment) {
-                if (current == '\'' && !inDoubleQuotes && !inBackticks) {
-                    inSingleQuotes = !inSingleQuotes;
-                    result.append(current);
-                    continue;
-                } else if (current == '"' && !inSingleQuotes && !inBackticks) {
-                    inDoubleQuotes = !inDoubleQuotes;
-                    result.append(current);
-                    continue;
-                } else if (current == '`' && !inSingleQuotes && !inDoubleQuotes) {
-                    inBackticks = !inBackticks;
-                    result.append(current);
-                    continue;
-                }
-            }
-
-            // 如果在字符串或标识符内，直接添加字符
-            if (inSingleQuotes || inDoubleQuotes || inBackticks) {
-                if (!inLineComment && !inBlockComment) {
-                    result.append(current);
-                }
-                continue;
-            }
-
-            // 处理注释开始
-            if (!inLineComment && !inBlockComment) {
-                // 检测单行注释
-                if (current == '-' && next == '-') {
-                    inLineComment = true;
-                    i++; // 跳过下一个 '-'
-                    continue;
-                }
-
-                // 检测块注释开始
-                if (current == '/' && next == '*') {
-                    inBlockComment = true;
-                    blockCommentDepth = 1;
-                    i++; // 跳过下一个 '*'
-                    continue;
-                }
-            }
-
-            // 处理块注释中的嵌套
-            if (inBlockComment) {
-                if (current == '/' && next == '*') {
-                    blockCommentDepth++;
-                    i++; // 跳过下一个 '*'
-                    continue;
-                } else if (current == '*' && next == '/') {
-                    blockCommentDepth--;
-                    if (blockCommentDepth == 0) {
-                        inBlockComment = false;
-                    }
-                    i++; // 跳过下一个 '/'
-                    continue;
-                }
-                // 在块注释中，跳过所有字符
-                continue;
-            }
-
-            // 处理单行注释结束
-            if (inLineComment) {
-                if (current == '\n' || current == '\r') {
-                    inLineComment = false;
-                    // 保留换行符用于后续处理
-                    result.append(' ');
-                }
-                continue;
-            }
-
-            // 正常字符处理：标准化空白字符
-            if (Character.isWhitespace(current)) {
-                // 将连续的空白字符压缩为单个空格
-                if (result.length() > 0 && result.charAt(result.length() - 1) != ' ') {
-                    result.append(' ');
-                }
-            } else {
-                result.append(current);
-            }
-        }
-
-        return result.toString().trim();
-    }
-
-    /**
-     * 更宽松的 SELECT 语句检测逻辑 支持检测： 1. 标准 SELECT 语句 2. WITH 子句开头的 CTE 查询 3. 括号包围的 SELECT 语句 4. 复杂的嵌套查询结构
-     */
-    private boolean isSelectStatementInternal(String cleanedSql) {
-        if (cleanedSql == null || cleanedSql.isEmpty()) {
-            return false;
-        }
-
-        String upperSql = cleanedSql.toUpperCase().trim();
-
-        // 移除开头的括号
-        while (upperSql.startsWith("(")) {
-            upperSql = upperSql.substring(1).trim();
-        }
-
-        // 检测各种 SELECT 语句模式
-        return upperSql.startsWith("SELECT ")
-                || upperSql.startsWith("WITH ")
-                || // CTE 查询
-                upperSql.startsWith("(SELECT ")
-                || // 括号包围的查询
-                upperSql.matches("^\\s*\\(\\s*WITH\\s+.*"); // 括号包围的 CTE
+        return SqlQueryUtils.isSelectStatement(sql);
     }
 
     @Override
     public String processSqlWithLimit(String sql) {
-        if (sql == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "SQL语句不能为空");
-        }
-
-        // 只对SELECT语句进行LIMIT处理
-        if (!isSelectStatement(sql)) {
-            // 非SELECT语句直接返回，不做任何修改
-            return sql;
-        }
-
-        // 将SQL转为小写，用于检查LIMIT子句
-        String sqlLower = sql.trim().toLowerCase();
-
-        // 检查是否已经包含LIMIT子句
-        java.util.regex.Matcher limitMatcher = LIMIT_PATTERN.matcher(sqlLower);
-        if (limitMatcher.find()) {
-            // 提取LIMIT值
-            String limitClause = limitMatcher.group(0);
-            // 解析LIMIT子句中的数字
-            int limitValue = extractLimitValue(limitClause);
-
-            // 检查LIMIT是否超过最大允许值
-            if (limitValue > MAX_QUERY_LIMIT) {
-                throw new BusinessException(
-                        ErrorCode.VALIDATION_ERROR,
-                        "查询结果数量限制不能超过" + MAX_QUERY_LIMIT + "条，请调整您的LIMIT语句");
-            }
-
-            // LIMIT在合法范围内，直接返回原SQL
-            return sql;
-        } else {
-            // SELECT语句没有LIMIT子句，添加默认LIMIT
-            // 检查SQL是否以分号结束，如果是，在分号前添加LIMIT
-            if (sqlLower.endsWith(";")) {
-                return sql.substring(0, sql.length() - 1) + " LIMIT " + DEFAULT_QUERY_LIMIT + ";";
-            } else {
-                return sql + " LIMIT " + DEFAULT_QUERY_LIMIT;
-            }
-        }
+        return SqlQueryUtils.processSqlWithLimit(sql);
     }
 
     @Override
     public java.util.Set<String> extractTableNames(String sql) {
-        java.util.Set<String> tableNames = new java.util.HashSet<>();
-
-        if (sql == null || sql.trim().isEmpty()) {
-            return tableNames;
-        }
-
-        // 使用简单的FROM子句提取（目前先实现基本功能）
-        java.util.regex.Matcher fromMatcher = FROM_PATTERN.matcher(sql);
-        while (fromMatcher.find()) {
-            String tableName = fromMatcher.group(1);
-            if (tableName != null && !tableName.trim().isEmpty()) {
-                // 处理 schema.table 格式，只取表名部分
-                if (tableName.contains(".")) {
-                    String[] parts = tableName.split("\\.");
-                    tableName = parts[parts.length - 1]; // 取最后一部分作为表名
-                }
-                tableNames.add(tableName.trim());
-            }
-        }
-
-        return tableNames;
-    }
-
-    /**
-     * 从LIMIT子句中提取限制值 处理如下几种情况: - LIMIT X - LIMIT X, Y (MySQL语法，返回偏移X后的Y条记录)
-     *
-     * @param limitClause LIMIT子句
-     * @return 提取的限制值
-     */
-    private int extractLimitValue(String limitClause) {
-        // 移除LIMIT关键字，只保留数字部分
-        String numbers = limitClause.replaceAll("\\blimit\\s+", "").trim();
-
-        // 移除末尾的分号（如果有）
-        if (numbers.endsWith(";")) {
-            numbers = numbers.substring(0, numbers.length() - 1).trim();
-        }
-
-        // 处理LIMIT X, Y格式
-        if (numbers.contains(",")) {
-            String[] parts = numbers.split(",");
-            // 返回第二个数字，即实际的限制条数
-            return Integer.parseInt(parts[1].trim());
-        } else {
-            // 处理LIMIT X格式
-            return Integer.parseInt(numbers.trim());
-        }
+        return SqlQueryUtils.extractTableNames(sql);
     }
 }

@@ -28,7 +28,7 @@
     <property name="CONSOLE_LOG_PATTERN_COLOR"
               value="%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr([%thread]){magenta} %clr(%-5level){green} %clr(%logger{36}){cyan}%clr(%replace(%mdc{logId}){'^.+$', ' [$0] '}){yellow}- %msg%n"/>
 
-    <!-- 控制台输出 -->
+    <!-- 控制台输出（人类可读的普通格式） -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>${CONSOLE_LOG_PATTERN_COLOR}</pattern>
@@ -36,25 +36,43 @@
         </encoder>
     </appender>
 
-    <!-- 普通格式文件输出 -->
-    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_HOME}/${FILE_NAME}.log</file>
-        <encoder>
-            <pattern>${FILE_LOG_PATTERN}</pattern>
-            <charset>UTF-8</charset>
-        </encoder>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <!-- 日志文件名格式 -->
-            <fileNamePattern>${LOG_HOME}/archive/${FILE_NAME}.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
-            <!-- 日志文件保留天数 -->
-            <maxHistory>${MAX-HISTORY}</maxHistory>
-            <!-- 日志文件最大大小 -->
-            <maxFileSize>${MAX-FILE-SIZE}</maxFileSize>
-            <!-- 日志文件总大小限制 -->
-            <totalSizeCap>${TOTAL-SIZE-CAP}</totalSizeCap>
-            <cleanHistoryOnStart>${CLEAN-HISTORY-ON-START}</cleanHistoryOnStart>
-        </rollingPolicy>
+    <!-- 异步输出 - 控制台 -->
+    <appender name="ASYNC_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>${QUEUE-SIZE}</queueSize>
+        <discardingThreshold>${DISCARDING-THRESHOLD}</discardingThreshold>
+        <appender-ref ref="CONSOLE"/>
     </appender>
+
+    <!-- 将“普通格式文件输出”与其异步包装限定在非生产环境下定义，
+         避免在 prod 下产生空的普通日志文件 -->
+    <springProfile name="dev,test,integration-test">
+        <!-- 普通格式文件输出（仅非生产环境） -->
+        <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>${LOG_HOME}/${FILE_NAME}.log</file>
+            <encoder>
+                <pattern>${FILE_LOG_PATTERN}</pattern>
+                <charset>UTF-8</charset>
+            </encoder>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <!-- 日志文件名格式 -->
+                <fileNamePattern>${LOG_HOME}/archive/${FILE_NAME}.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+                <!-- 日志文件保留天数 -->
+                <maxHistory>${MAX-HISTORY}</maxHistory>
+                <!-- 日志文件最大大小 -->
+                <maxFileSize>${MAX-FILE-SIZE}</maxFileSize>
+                <!-- 日志文件总大小限制 -->
+                <totalSizeCap>${TOTAL-SIZE-CAP}</totalSizeCap>
+                <cleanHistoryOnStart>${CLEAN-HISTORY-ON-START}</cleanHistoryOnStart>
+            </rollingPolicy>
+        </appender>
+
+        <!-- 异步输出 - 普通格式（仅非生产环境） -->
+        <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+            <queueSize>${QUEUE-SIZE}</queueSize>
+            <discardingThreshold>${DISCARDING-THRESHOLD}</discardingThreshold>
+            <appender-ref ref="FILE"/>
+        </appender>
+    </springProfile>
 
     <!-- JSON格式INFO日志文件输出 -->
     <appender name="JSON_INFO_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
@@ -140,13 +158,6 @@
         </rollingPolicy>
     </appender>
 
-    <!-- 异步输出 - 普通格式 -->
-    <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
-        <queueSize>${QUEUE-SIZE}</queueSize>
-        <discardingThreshold>${DISCARDING-THRESHOLD}</discardingThreshold>
-        <appender-ref ref="FILE"/>
-    </appender>
-
     <!-- 异步输出 - JSON格式INFO -->
     <appender name="ASYNC_JSON_INFO" class="ch.qos.logback.classic.AsyncAppender">
         <queueSize>${QUEUE-SIZE}</queueSize>
@@ -161,10 +172,10 @@
         <appender-ref ref="JSON_ERROR_FILE"/>
     </appender>
 
-    <!-- 开发环境配置：控制台 + 普通格式文件 + JSON格式文件 -->
+    <!-- 开发环境配置：控制台(异步) + 普通格式文件(异步) + JSON文件(异步) -->
     <springProfile name="dev">
         <root level="INFO">
-            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="ASYNC_CONSOLE"/>
             <appender-ref ref="ASYNC_FILE"/>
             <appender-ref ref="ASYNC_JSON_INFO"/>
             <appender-ref ref="ASYNC_JSON_ERROR"/>
@@ -174,20 +185,20 @@
         <logger name="org.springframework.ai" level="DEBUG"/>
     </springProfile>
 
-    <!-- 测试环境配置：控制台 + 普通格式文件 + JSON格式文件 -->
+    <!-- 测试环境配置：控制台(异步) + 普通格式文件(异步) + JSON文件(异步) -->
     <springProfile name="test">
         <root level="INFO">
-            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="ASYNC_CONSOLE"/>
             <appender-ref ref="ASYNC_FILE"/>
             <appender-ref ref="ASYNC_JSON_INFO"/>
             <appender-ref ref="ASYNC_JSON_ERROR"/>
         </root>
     </springProfile>
 
-    <!-- 集成测试环境配置：只有控制台输出 -->
+    <!-- 集成测试环境配置：只有控制台输出(异步) -->
     <springProfile name="integration-test">
         <root level="INFO">
-            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="ASYNC_CONSOLE"/>
         </root>
         <!-- 应用特定日志级别 -->
         <logger name="com.hinadt.miaocha" level="DEBUG"/>
@@ -196,9 +207,11 @@
         <logger name="org.springframework.test" level="INFO"/>
     </springProfile>
 
-    <!-- 生产环境配置：只有JSON格式文件 -->
+    <!-- 生产环境配置：控制台(异步) + JSON文件(异步)
+         注意：不定义普通格式文件相关的 appender，避免产生空文件 -->
     <springProfile name="prod">
         <root level="INFO">
+            <appender-ref ref="ASYNC_CONSOLE"/>
             <appender-ref ref="ASYNC_JSON_INFO"/>
             <appender-ref ref="ASYNC_JSON_ERROR"/>
         </root>
@@ -209,5 +222,7 @@
         <logger name="org.hibernate" level="WARN"/>
         <logger name="org.apache" level="WARN"/>
     </springProfile>
+
+
 
 </configuration>

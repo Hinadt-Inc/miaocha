@@ -27,6 +27,7 @@
     "@ant-design/icons": "^6.0.0",
     "@ant-design/pro-components": "^2.8.7",
     "@ant-design/pro-layout": "^7.22.4",
+    "@ant-design/x": "1.6.0",
     "@react-spring/web": "^9.7.5",
     "@reduxjs/toolkit": "^2.7.0",
     "@tanstack/react-query": "^5.74.4",
@@ -36,6 +37,7 @@
     "@types/react-virtualized": "^9.22.2",
     "ahooks": "^3.8.4",
     "antd": "^5.25.1",
+    "antd-style": "^3.7.1",
     "axios": "^1.8.4",
     "classnames": "^2.5.1",
     "copy-to-clipboard": "^3.3.3",
@@ -54,7 +56,9 @@
     "react-activation": "^0.13.0",
     "react-countup": "^6.5.3",
     "react-dom": "^19.1.0",
+    "react-draggable": "^4.5.0",
     "react-json-view": "^1.21.3",
+    "react-markdown": "^10.1.0",
     "react-redux": "^9.2.0",
     "react-resizable": "^3.0.5",
     "react-router-dom": "^7.5.1",
@@ -62,7 +66,10 @@
     "react-split-pane": "^0.1.92",
     "react-transition-group": "^4.4.5",
     "react-virtualized": "^9.22.6",
-    "react-window": "^1.8.11"
+    "react-window": "^1.8.11",
+    "rehype-highlight": "^7.0.2",
+    "rehype-raw": "^7.0.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@babel/plugin-syntax-dynamic-import": "^7.8.3",

@@ -85,6 +85,10 @@ export interface ITimeOption {
   type: 'quick' | 'absolute' | 'relative';
   startOption?: IRelativeTime;
   endOption?: IRelativeTime;
+  // 强制更新标识，用于触发重新搜索
+  _forceUpdate?: number;
+  // 搜索来源标识，用于区分是否来自搜索按钮
+  _fromSearch?: boolean;
 }
 
 // 搜索栏Ref接口
