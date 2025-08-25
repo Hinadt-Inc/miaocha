@@ -11,6 +11,7 @@ interface UseTableConfigProps {
   onStop: (id: number) => void;
   onShowHistory: (id: number) => void;
   onScale: (record: LogstashProcess) => void;
+  onShowAlert: (record: LogstashProcess) => void;
   onRefreshAllConfig: (record: LogstashProcess) => void;
   onReinitializeFailedMachines: (processId: number) => void;
   onForceStopProcess: (id: number) => void;
@@ -167,6 +168,9 @@ export const useTableConfig = (props: UseTableConfigProps) => {
           </Button>
           <Button type="link" onClick={() => props.onScale(record)} style={{ padding: '0 4px' }}>
             扩容
+          </Button>
+          <Button type="link" onClick={() => props.onShowAlert(record)} style={{ padding: '0 4px' }}>
+            告警
           </Button>
           {!record.logstashMachineStatusInfo.every((el) => el.state === 'RUNNING') && (
             <Popconfirm

@@ -174,6 +174,7 @@ export interface LogstashProcess {
   processCreateTime: string;
   processUpdateTime: string;
   dorisSql: string;
+  alertRecipients?: string[];
 }
 
 export interface LogstashTaskStatusV2 {
