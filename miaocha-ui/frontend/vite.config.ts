@@ -115,7 +115,8 @@ export default defineConfig({
       '/api': {
         // target: 'http://10.254.134.115',
         // target: 'https://miaocha.hinadt.com', // 生产环境
-        target: 'http://10.0.21.34:31244', // 本地开发环境
+        // target: 'http://10.0.21.34:31244', // 本地开发环境
+        target: 'http://10.0.21.34:30635', // 本地开发环境
         changeOrigin: true,
       },
     },

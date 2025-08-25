@@ -220,6 +220,14 @@ export async function scaleProcess(
   });
 }
 
+export function updateLogstashAlertRecipients(processId: number, data: { alertRecipients: string[] }): Promise<void> {
+  return request({
+    url: `/api/logstash/processes/${processId}/alert-recipients`,
+    method: 'PUT',
+    data,
+  });
+}
+
 export async function startLogTail(logstashMachineId: number) {
   const accessToken = localStorage.getItem('accessToken') || '';
   const eventSource = new EventSource(
