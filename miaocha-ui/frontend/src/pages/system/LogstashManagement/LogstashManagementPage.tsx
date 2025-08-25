@@ -9,6 +9,7 @@ import {
   MachineTasksModal,
   ExpandedRowRenderer,
   LogstashEditModal,
+  LogstashAlertModal,
   LogstashMachineConfigModal,
   LogstashMachineDetailModal,
   LogstashScaleModal,
@@ -16,7 +17,7 @@ import {
 } from './components';
 import { useLogstashData, useTableConfig, useLogstashActions, useMachineActions } from './hooks';
 import { scaleProcess } from '@/api/logstash';
-import type { LogstashTaskSummary } from '@/types/logstashTypes';
+import type { LogstashTaskSummary, LogstashProcess } from '@/types/logstashTypes';
 import styles from './LogstashManagement.module.less';
 import Loading from '@/components/Loading';
 
@@ -64,6 +65,9 @@ const LogstashManagementPage = () => {
       actions.handleForceStopProcess(id);
     },
     onShowDetail: actions.handleShowDetail,
+    onShowAlert: (record: LogstashProcess) => {
+      actions.handleShowAlert(record);
+    },
   });
 
   const showTaskSteps = (task: LogstashTaskSummary) => {
@@ -94,7 +98,6 @@ const LogstashManagementPage = () => {
       // API 错误已由全局错误处理器处理
     }
   };
-
   return (
     <div className={styles.container}>
       {contextHolder}
@@ -144,6 +147,14 @@ const LogstashManagementPage = () => {
           )}
         </div>
       </div>
+
+      {/* 告警模态框 */}
+      <LogstashAlertModal
+        visible={actions.alertModalVisible}
+        onCancel={() => actions.setAlertModalVisible(false)}
+        onOk={actions.handleSubmitAlert}
+        initialValues={actions.currentProcess}
+      />
 
       {/* 编辑模态框 */}
       <LogstashEditModal

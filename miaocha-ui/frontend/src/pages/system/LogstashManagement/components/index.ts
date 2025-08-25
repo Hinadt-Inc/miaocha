@@ -6,6 +6,7 @@ export { default as MachineTasksModal } from './MachineTasksModal';
 export { default as MachineTable } from './MachineTable';
 export { default as ExpandedRowRenderer } from './ExpandedRowRenderer';
 export { default as LogstashEditModal } from './LogstashEditModal';
+export { default as LogstashAlertModal } from './LogstashAlertModal';
 export { default as LogstashMachineConfigModal } from './LogstashMachineConfigModal';
 export { default as LogstashMachineDetailModal } from './LogstashMachineDetailModal';
 export { default as LogstashScaleModal } from './LogstashScaleModal';

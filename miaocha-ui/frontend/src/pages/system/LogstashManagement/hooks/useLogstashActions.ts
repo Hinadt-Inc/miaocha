@@ -11,6 +11,7 @@ import {
   reinitializeFailedMachines,
   forceStopLogstashProcess,
   refreshLogstashConfig,
+  updateLogstashAlertRecipients,
 } from '@/api/logstash';
 import type { LogstashProcess, LogstashTaskSummary } from '@/types/logstashTypes';
 
@@ -27,6 +28,7 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
   const [scaleModalVisible, setScaleModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState<Record<string, boolean>>({});
   const [currentDetail, setCurrentDetail] = useState<LogstashProcess>();
+  const [alertModalVisible, setAlertModalVisible] = useState(false);
 
   const handleAdd = () => {
     setCurrentProcess(null);
@@ -41,6 +43,27 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
     };
     setCurrentProcess(editValues);
     setEditModalVisible(true);
+  };
+
+  const handleShowAlert = (record: LogstashProcess) => {
+    setCurrentProcess(record);
+    setAlertModalVisible(true);
+  };
+
+  const handleSubmitAlert = async (values: Partial<LogstashProcess>) => {
+    try {
+      if (values.id && values.alertRecipients) {
+        // 调用告警邮箱更新 API
+        await updateLogstashAlertRecipients(values.id, {
+          alertRecipients: values.alertRecipients,
+        });
+        showSuccess('告警邮箱设置成功');
+        await fetchData(); // 刷新数据
+      }
+    } catch (error) {
+      console.error('设置告警邮箱失败:', error);
+      // 错误已由全局错误处理器处理
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -143,7 +166,7 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
           jvmOptions?: string;
           logstashYml?: string;
         } = {};
-        
+
         // 注意：编辑模式下不更新 machineIds，因为部署机器不可编辑
         if (values.configContent) configData.configContent = values.configContent;
         if (values.jvmOptions) configData.jvmOptions = values.jvmOptions;
@@ -181,6 +204,8 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
     setDetailModalVisible,
     currentDetail,
     setCurrentDetail,
+    alertModalVisible,
+    setAlertModalVisible,
 
     // 动作
     handleAdd,
@@ -195,5 +220,7 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
     handleForceStopProcess,
     handleShowDetail,
     handleSubmit,
+    handleShowAlert,
+    handleSubmitAlert,
   };
 };
