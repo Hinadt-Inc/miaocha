@@ -17,6 +17,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.memory.ChatMemoryRepository;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.http.MediaType;
@@ -74,11 +75,15 @@ public class AISessionEndpoint {
             ChatModel chatModel,
             ActionSseService actionSseService,
             LogSearchService logSearchService,
-            ModuleInfoService moduleInfoService) {
+            ModuleInfoService moduleInfoService,
+            ChatMemoryRepository chatMemoryRepository) {
         this.actionSseService = actionSseService;
         this.logSearchService = logSearchService;
         this.moduleInfoService = moduleInfoService;
-        ChatMemory chatMemory = MessageWindowChatMemory.builder().build();
+        ChatMemory chatMemory =
+                MessageWindowChatMemory.builder()
+                        .chatMemoryRepository(chatMemoryRepository)
+                        .build();
         this.chatClient =
                 ChatClient.builder(chatModel)
                         .defaultAdvisors(
