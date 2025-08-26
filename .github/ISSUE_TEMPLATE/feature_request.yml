@@ -1,0 +1,52 @@
+---
+name: ✨ Feature Request
+description: Propose a new feature for Miaocha
+title: "[Feature] "
+labels: ["feature"]
+assignees: []
+
+body:
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Fill in this table with exact versions
+      value: |
+        | Info | Details |
+        |------|---------|
+        | Miaocha Version | 1.2.3 |
+        | Operating System | Ubuntu 22.04 / macOS 14 / Windows 11 |
+        | Java | 17.0.x |
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: need
+    attributes:
+      label: What problem does this solve?
+      description: Describe the need or use case
+      placeholder: I need to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution
+      description: Describe the feature and how it should work
+      placeholder: The system should...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative approaches you considered
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Screenshots, sketches, related links

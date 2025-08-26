@@ -1,0 +1,28 @@
+---
+name: 🤖 AI-Driven Issue
+description: Describe your problem/idea in plain words — AI will classify and standardize it
+title: "[AI] "
+labels: ["ai:triage"]
+assignees: []
+
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe in your own words
+      description: Write naturally — the AI will organize it to the correct template
+      placeholder: |
+        Examples:
+        - "Service crashes when connecting to Doris, only after upgrade..."
+        - "Please add an export-to-CSV capability for result sets..."
+        - "Docs unclear on how to configure Flyway v2 migrations..."
+
+        Tip: Include your environment details (Miaocha/OS/Java) using the table below.
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        Note: This template sends your text to an AI provider configured by repo maintainers to classify and rewrite your issue into the proper form. Do not include secrets.
+

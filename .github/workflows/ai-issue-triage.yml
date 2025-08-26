@@ -1,0 +1,58 @@
+name: AI Issue
+
+on:
+  issues:
+    types: [opened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ai-triage-${{ github.event.issue.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  analyze-and-apply:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issues' &&
+       contains(github.event.issue.labels.*.name, 'ai:triage'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Step A · Analyze with LLM
+        id: analyze
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # LLM provider (DeepSeek recommended).
+          # Only DEEPSEEK_API_KEY is required; the others have defaults:
+          # - DEEPSEEK_BASE_URL defaults to https://api.deepseek.com/v1
+          # - DEEPSEEK_MODEL    defaults to deepseek-chat
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          DEEPSEEK_MODEL: ${{ secrets.DEEPSEEK_MODEL }}
+          DEEPSEEK_BASE_URL: ${{ secrets.DEEPSEEK_BASE_URL }}
+        run: |
+          echo "::group::Analyze"
+          python .github/scripts/ai_issue_analyze.py
+          echo "::endgroup::"
+
+      - name: Step B · Apply updates to Issue
+        if: steps.analyze.outputs.json_path != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JSON_PATH: ${{ steps.analyze.outputs.json_path }}
+        run: |
+          echo "::group::Apply"
+          python .github/scripts/issue_apply_update.py
+          echo "::endgroup::"

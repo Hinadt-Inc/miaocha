@@ -1,0 +1,61 @@
+---
+name: 🐛 Bug Report
+description: Report a bug found in Miaocha
+title: "[Bug] "
+labels: ["bug"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug! Please provide clear, actionable details so we can reproduce and fix it efficiently.
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Fill in this table with exact versions
+      value: |
+        | Info | Details |
+        |------|---------|
+        | Miaocha Version | 1.2.3 |
+        | Operating System | Ubuntu 22.04 / macOS 14 / Windows 11 |
+        | Java | 17.0.x |
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A concise description of the problem
+      placeholder: Describe what happened and what you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Precise steps to reproduce the bug
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs / Stacktrace
+      description: Paste only the relevant excerpt (no secrets)
+      render: text
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional Context
+      description: Any other context or screenshots

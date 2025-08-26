@@ -1,0 +1,44 @@
+---
+name: 🔧 Enhancement
+description: Suggest an improvement to existing functionality
+title: "[Enhancement] "
+labels: ["enhancement"]
+assignees: []
+
+body:
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Fill in this table with exact versions
+      value: |
+        | Info | Details |
+        |------|---------|
+        | Miaocha Version | 1.2.3 |
+        | Operating System | Ubuntu 22.04 / macOS 14 / Windows 11 |
+        | Java | 17.0.x |
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Current Behavior
+      description: What happens now that should be improved?
+    validations:
+      required: true
+
+  - type: textarea
+    id: improved
+    attributes:
+      label: What should be better?
+      description: Describe your suggestion clearly
+    validations:
+      required: true
+
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Why is this better?
+      description: Benefits, impact, performance, UX, etc.
