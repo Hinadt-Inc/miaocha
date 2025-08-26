@@ -113,3 +113,16 @@ k6/bin
 miaocha-oauth2-mandao/
 
 miaocha-server/src/main/resources/application-dev.yml
+
+# GitHub AI artifacts
+.github/.ai
+
+# Secrets and credentials (prevent accidental commits)
+**/auth.json
+**/*.pem
+**/*.key
+**/*.p12
+**/*.keystore
+
+# Also ignore legacy AI dir
+.github/ai

@@ -1,0 +1,10 @@
+---
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://github.com/Hinadt-Inc/miaocha#readme
+    about: Read the docs before filing an issue
+  - name: 💬 Discussions
+    url: https://github.com/Hinadt-Inc/miaocha/discussions
+    about: Ask general questions or share ideas here
+
