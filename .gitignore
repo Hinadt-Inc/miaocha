@@ -123,3 +123,6 @@ miaocha-server/src/main/resources/application-dev.yml
 **/*.key
 **/*.p12
 **/*.keystore
+
+# Also ignore legacy AI dir
+.github/ai
