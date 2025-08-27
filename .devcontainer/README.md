@@ -41,6 +41,9 @@ node -v
 yarn -v
 pnpm -v
 docker version
+echo $JAVA_HOME
+echo $MAVEN_HOME
+echo $PATH | tr ':' '\n' | sed -n '1,10p'
 ```
 
 VS Code IntelliSense

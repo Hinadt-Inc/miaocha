@@ -9,7 +9,7 @@ if ! command -v sudo >/dev/null 2>&1; then
 fi
 
 sudo apt-get update -y
-sudo apt-get install -y wget curl gnupg ca-certificates apt-transport-https tar
+sudo apt-get install -y wget curl gnupg ca-certificates apt-transport-https tar coreutils
 
 sudo mkdir -p /etc/apt/keyrings
 if [ ! -f /etc/apt/keyrings/adoptium.gpg ]; then
@@ -38,19 +38,35 @@ fi
 
 echo "[postCreate] Temurin JDK 17 setup complete."
 
-# Install Maven (Apache binary, pinned version)
+# Install Maven (Apache binary, pinned version) with fallback mirrors
 MAVEN_VERSION="3.9.9"
-MAVEN_BASE_URL="https://downloads.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries"
 MAVEN_TGZ="apache-maven-${MAVEN_VERSION}-bin.tar.gz"
+PRIMARY="https://dlcdn.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries"
+MIRROR1="https://downloads.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries"
+ARCHIVE="https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries"
+
+download_with_fallback() {
+  local file="$1"
+  local url=""
+  for base in "$PRIMARY" "$MIRROR1" "$ARCHIVE"; do
+    url="${base}/${file}"
+    echo "[postCreate] Trying ${url} ..."
+    if curl -fL "${url}" -o "/tmp/${file}"; then
+      return 0
+    fi
+  done
+  return 1
+}
 
 echo "[postCreate] Installing Maven ${MAVEN_VERSION} from Apache..."
-curl -fsSL "${MAVEN_BASE_URL}/${MAVEN_TGZ}" -o "/tmp/${MAVEN_TGZ}"
-curl -fsSL "${MAVEN_BASE_URL}/${MAVEN_TGZ}.sha512" -o "/tmp/${MAVEN_TGZ}.sha512"
+download_with_fallback "${MAVEN_TGZ}.sha512"
+download_with_fallback "${MAVEN_TGZ}"
 cd /tmp && sha512sum -c "/tmp/${MAVEN_TGZ}.sha512"
 
 sudo mkdir -p /opt
 sudo tar -xzf "/tmp/${MAVEN_TGZ}" -C /opt
 sudo ln -sfn "/opt/apache-maven-${MAVEN_VERSION}" /opt/maven
+sudo mkdir -p /usr/local/bin
 sudo ln -sfn /opt/maven/bin/mvn /usr/local/bin/mvn
 
 # Persist MAVEN_HOME
@@ -62,3 +78,9 @@ fi
 
 echo "[postCreate] Maven installed. Version info:"
 mvn -v || true
+
+# Final sanity: ensure mvn is resolvable
+if ! command -v mvn >/dev/null 2>&1; then
+  echo "[postCreate][WARN] mvn not found on PATH; adding /opt/maven/bin to PATH via profile.d"
+  echo 'export PATH="/opt/maven/bin:${PATH}"' | sudo tee -a /etc/profile.d/maven_home.sh >/dev/null
+fi
