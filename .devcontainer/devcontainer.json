@@ -13,7 +13,6 @@
     }
   },
   "postCreateCommand": "bash .devcontainer/scripts/setup-maven.sh && bash .devcontainer/scripts/setup-pm.sh && bash .devcontainer/scripts/pull-images.sh",
-  "postAttachCommand": "bash -lc 'mkdir -p /workspaces/.codespaces/shared && if [ ! -f /workspaces/.codespaces/shared/codespaceStatusTool.js ]; then printf \"console.log(\\\"[codespaceStatusTool] noop\\\"); process.exit(0);\\n\" > /workspaces/.codespaces/shared/codespaceStatusTool.js; fi'",
   "customizations": {
     "vscode": {
       "settings": {
