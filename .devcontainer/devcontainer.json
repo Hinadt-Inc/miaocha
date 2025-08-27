@@ -35,8 +35,7 @@
   },
   "containerEnv": {
     "JAVA_HOME": "/usr/lib/jvm/temurin-17-jdk-amd64",
-    "MAVEN_HOME": "/opt/maven",
-    "PATH": "/opt/maven/bin:${containerEnv:PATH}"
+    "MAVEN_HOME": "/opt/maven"
   },
   "remoteUser": "vscode"
 }
