@@ -1,0 +1,43 @@
+{
+  "name": "miaocha - Dev",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "17",
+      "jdkDistro": "temurin"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "23.9.0",
+      "installYarn": "false",
+      "installPnpm": "false"
+    },
+    "ghcr.io/devcontainers/features/yarn:1": {
+      "version": "1.22.22"
+    },
+    "ghcr.io/devcontainers/features/pnpm:1": {
+      "version": "latest"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/scripts/pull-images.sh",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "java.configuration.runtimes": [
+          { "name": "JavaSE-17", "path": "/usr/local/sdkman/candidates/java/current" }
+        ],
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "redhat.java",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "eamodio.gitlens",
+        "github.vscode-github-actions"
+      ]
+    }
+  },
+  "remoteUser": "vscode"
+}
+
