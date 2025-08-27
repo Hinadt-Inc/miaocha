@@ -1,7 +1,8 @@
 {
   "name": "miaocha - Dev",
   "build": {
-    "dockerfile": ".devcontainer/Dockerfile"
+    "dockerfile": "Dockerfile",
+    "context": "."
   },
   "features": {
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
@@ -16,11 +17,11 @@
     "vscode": {
       "settings": {
         "terminal.integrated.defaultProfile.linux": "bash",
-        "java.jdt.ls.java.home": "/usr/lib/jvm/temurin-17-jdk-amd64",
+        "java.jdt.ls.java.home": "${containerEnv:JAVA_HOME}",
         "java.configuration.runtimes": [
-          { "name": "JavaSE-17", "path": "/usr/lib/jvm/temurin-17-jdk-amd64" }
+          { "name": "JavaSE-17", "path": "${containerEnv:JAVA_HOME}" }
         ],
-        "java.import.gradle.java.home": "/usr/lib/jvm/temurin-17-jdk-amd64",
+        "java.import.gradle.java.home": "${containerEnv:JAVA_HOME}",
         "maven.executable.path": "/usr/local/bin/mvn"
       },
       "extensions": [
