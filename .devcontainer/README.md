@@ -5,8 +5,8 @@ This repository ships a Codespaces-ready dev container that targets:
 
 - OS: Ubuntu 22.04
 - Docker: Enabled via docker-outside-of-docker feature
-- Java: JDK 17 (Temurin via Adoptium APT, baked into image)
-- Maven: 3.9.9 (Apache binary, baked into image)
+- Java: JDK 17 (OpenJDK from Ubuntu, baked into image)
+- Maven: 3.9.9 (Apache binary, installed post-create)
 - Node.js: v23.9.0
 - Yarn: v1.22.22 (Classic, provisioned via Corepack)
 - pnpm: latest (provisioned via Corepack)
@@ -14,7 +14,7 @@ This repository ships a Codespaces-ready dev container that targets:
 What it does
 ------------
 
-- Installs Java 17 (Temurin via Adoptium APT) and Maven 3.9.9 during image build, plus Node 23.9.0, Yarn 1.22.22 (via Corepack), and pnpm (via Corepack) after create.
+- Installs Java 17 (OpenJDK) during image build. Installs Maven 3.9.9, Node 23.9.0, Yarn 1.22.22 (via Corepack), and pnpm (via Corepack) after create.
 - Enables Docker CLI inside the container and connects to the host Docker daemon.
 - Post-create step pre-pulls required images:
   - `mysql:8.0`
@@ -49,7 +49,7 @@ echo $PATH | tr ':' '\n' | sed -n '1,10p'
 VS Code IntelliSense
 --------------------
 
-- Java: The container sets up Temurin 17 and includes Java-related extensions (Java Pack, Red Hat Java, Maven). The setting `java.jdt.ls.java.home` points to `/usr/lib/jvm/temurin-17-jdk-amd64`.
+- Java: The container sets up OpenJDK 17 and includes Java-related extensions (Java Pack, Red Hat Java, Maven). The setting `java.jdt.ls.java.home` points to `${containerEnv:JAVA_HOME}`.
 - JS/TS: Built-in TypeScript/JavaScript Language Features are available. ESLint and Prettier are pre-installed as extensions.
 
 Quick-run the images (examples)
