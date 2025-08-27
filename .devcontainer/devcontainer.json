@@ -13,14 +13,14 @@
   "customizations": {
     "vscode": {
       "settings": {
-        "java.configuration.runtimes": [
-          { "name": "JavaSE-17", "path": "/usr/local/sdkman/candidates/java/current" }
-        ],
-        "terminal.integrated.defaultProfile.linux": "bash"
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "java.jdt.ls.java.home": "/usr/lib/jvm/temurin-17-jdk-amd64",
+        "maven.executable.path": "/usr/bin/mvn"
       },
       "extensions": [
         "vscjava.vscode-java-pack",
         "redhat.java",
+        "vscjava.vscode-maven",
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
         "eamodio.gitlens",
