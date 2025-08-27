@@ -29,10 +29,27 @@ download_with_fallback() {
   return 1
 }
 
-download_with_fallback "${MAVEN_TGZ}.sha512"
-download_with_fallback "${MAVEN_TGZ}"
+verified=false
+for base in "$PRIMARY" "$MIRROR1" "$ARCHIVE"; do
+  echo "[postCreate] Trying base ${base} ..."
+  if curl -fL "${base}/${MAVEN_TGZ}.sha512" -o "/tmp/${MAVEN_TGZ}.sha512" \
+     && curl -fL "${base}/${MAVEN_TGZ}" -o "/tmp/${MAVEN_TGZ}"; then
+    echo "[postCreate] Downloaded Maven and checksum from ${base}. Verifying..."
+    expected=$(awk '{print $1}' "/tmp/${MAVEN_TGZ}.sha512" | tr -d '\r\n')
+    actual=$(sha512sum "/tmp/${MAVEN_TGZ}" | awk '{print $1}')
+    if [ -n "$expected" ] && [ "$expected" = "$actual" ]; then
+      verified=true
+      break
+    else
+      echo "[postCreate][WARN] Checksum mismatch from ${base}. Expected=$expected Actual=$actual"
+    fi
+  fi
+done
 
-cd /tmp && sha512sum -c "/tmp/${MAVEN_TGZ}.sha512"
+if [ "$verified" != true ]; then
+  echo "[postCreate][ERROR] Failed to download/verify Maven ${MAVEN_VERSION}. Aborting."
+  exit 1
+fi
 
 sudo mkdir -p /opt
 sudo tar -xzf "/tmp/${MAVEN_TGZ}" -C /opt
@@ -49,4 +66,3 @@ echo "[postCreate] Maven installed. Version info:"
 mvn -v || true
 
 echo "[postCreate] Maven 3.9.9 setup complete."
-
