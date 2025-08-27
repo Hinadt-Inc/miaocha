@@ -12,7 +12,7 @@
       "installPnpm": "false"
     }
   },
-  "postCreateCommand": "bash .devcontainer/scripts/setup-maven.sh && bash .devcontainer/scripts/setup-pm.sh && bash .devcontainer/scripts/pull-images.sh",
+  "postCreateCommand": "bash .devcontainer/scripts/fix-codespace-status.sh && bash .devcontainer/scripts/setup-maven.sh && bash .devcontainer/scripts/setup-pm.sh && bash .devcontainer/scripts/pull-images.sh",
   "customizations": {
     "vscode": {
       "settings": {

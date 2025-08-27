@@ -18,7 +18,6 @@ What it does
 - Enables Docker CLI inside the container and connects to the host Docker daemon.
 - Post-create step pre-pulls required images:
   - `mysql:8.0`
-  - `apache/doris:2.1.9-all`
   - `wataken44/ubuntu-latest-sshd:latest`
 
 How to use (Codespaces)

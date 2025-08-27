@@ -6,7 +6,6 @@ docker version > /dev/null
 
 images=(
   "mysql:8.0"
-  "apache/doris:2.1.9-all"
   "wataken44/ubuntu-latest-sshd:latest"
 )
 
@@ -24,4 +23,3 @@ echo "java:"
 java -version || true
 
 echo "[postCreate] Done."
-
