@@ -3,17 +3,13 @@
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
   "features": {
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
-    "ghcr.io/devcontainers/features/java:1": {
-      "version": "17",
-      "jdkDistro": "temurin"
-    },
     "ghcr.io/devcontainers/features/node:1": {
       "version": "23.9.0",
       "installYarn": "false",
       "installPnpm": "false"
     }
   },
-  "postCreateCommand": "bash .devcontainer/scripts/setup-pm.sh && bash .devcontainer/scripts/pull-images.sh",
+  "postCreateCommand": "bash .devcontainer/scripts/setup-java.sh && bash .devcontainer/scripts/setup-pm.sh && bash .devcontainer/scripts/pull-images.sh",
   "customizations": {
     "vscode": {
       "settings": {

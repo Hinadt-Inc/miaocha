@@ -5,7 +5,7 @@ This repository ships a Codespaces-ready dev container that targets:
 
 - OS: Ubuntu 22.04
 - Docker: Enabled via docker-outside-of-docker feature
-- Java: JDK 17 (Temurin)
+- Java: JDK 17 (Temurin via Adoptium APT)
 - Node.js: v23.9.0
 - Yarn: v1.22.22 (Classic, provisioned via Corepack)
 - pnpm: latest (provisioned via Corepack)
@@ -13,7 +13,7 @@ This repository ships a Codespaces-ready dev container that targets:
 What it does
 ------------
 
-- Installs Java 17, Node 23.9.0, Yarn 1.22.22 (via Corepack), and pnpm (via Corepack).
+- Installs Java 17 (Temurin via Adoptium APT), Node 23.9.0, Yarn 1.22.22 (via Corepack), and pnpm (via Corepack).
 - Enables Docker CLI inside the container and connects to the host Docker daemon.
 - Post-create step pre-pulls required images:
   - `mysql:8.0`
