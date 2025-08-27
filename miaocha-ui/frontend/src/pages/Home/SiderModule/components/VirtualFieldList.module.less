@@ -1,7 +1,9 @@
 .virtualContainer {
-    /* 移除固定高度和滚动，让内容自然展开，使用外层滚动 */
-    overflow: visible;
-    border-radius: 4px;
+	height: 100%;
+	overflow: auto;
+	&::-webkit-scrollbar {
+		width: 4px;
+	}
 }
 
 .placeholder {
