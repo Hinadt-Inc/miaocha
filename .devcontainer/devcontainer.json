@@ -1,6 +1,8 @@
 {
   "name": "miaocha - Dev",
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+  "build": {
+    "dockerfile": ".devcontainer/Dockerfile"
+  },
   "features": {
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
     "ghcr.io/devcontainers/features/node:1": {
@@ -9,7 +11,7 @@
       "installPnpm": "false"
     }
   },
-  "postCreateCommand": "bash .devcontainer/scripts/setup-java.sh && bash .devcontainer/scripts/setup-pm.sh && bash .devcontainer/scripts/pull-images.sh",
+  "postCreateCommand": "bash .devcontainer/scripts/setup-pm.sh && bash .devcontainer/scripts/pull-images.sh",
   "customizations": {
     "vscode": {
       "settings": {
