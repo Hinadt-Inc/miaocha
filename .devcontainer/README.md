@@ -8,12 +8,12 @@ This repository ships a Codespaces-ready dev container that targets:
 - Java: JDK 17 (Temurin)
 - Node.js: v23.9.0
 - Yarn: v1.22.22 (Classic, provisioned via Corepack)
-- pnpm: latest
+- pnpm: latest (provisioned via Corepack)
 
 What it does
 ------------
 
-- Installs Java 17, Node 23.9.0, Yarn 1.22.22 (via Corepack), and pnpm.
+- Installs Java 17, Node 23.9.0, Yarn 1.22.22 (via Corepack), and pnpm (via Corepack).
 - Enables Docker CLI inside the container and connects to the host Docker daemon.
 - Post-create step pre-pulls required images:
   - `mysql:8.0`
