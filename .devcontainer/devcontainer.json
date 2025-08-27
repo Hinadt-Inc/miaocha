@@ -1,0 +1,43 @@
+{
+  "name": "miaocha - Dev",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "23.9.0",
+      "installYarn": "false",
+      "installPnpm": "false"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/scripts/setup-maven.sh && bash .devcontainer/scripts/setup-pm.sh && bash .devcontainer/scripts/pull-images.sh",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "java.jdt.ls.java.home": "${containerEnv:JAVA_HOME}",
+        "java.configuration.runtimes": [
+          { "name": "JavaSE-17", "path": "${containerEnv:JAVA_HOME}" }
+        ],
+        "java.import.gradle.java.home": "${containerEnv:JAVA_HOME}",
+        "maven.executable.path": "/usr/local/bin/mvn"
+      },
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "redhat.java",
+        "visualstudioexptteam.vscodeintellicode",
+        "vscjava.vscode-maven",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "eamodio.gitlens",
+        "github.vscode-github-actions"
+      ]
+    }
+  },
+  "containerEnv": {
+    "JAVA_HOME": "/usr/lib/jvm/java-17-openjdk-amd64"
+  },
+  "remoteUser": "vscode"
+}
