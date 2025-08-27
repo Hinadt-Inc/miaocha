@@ -12,14 +12,11 @@
       "installYarn": "false",
       "installPnpm": "false"
     },
-    "ghcr.io/devcontainers/features/yarn:1": {
-      "version": "1.22.22"
-    },
     "ghcr.io/devcontainers/features/pnpm:1": {
       "version": "latest"
     }
   },
-  "postCreateCommand": "bash .devcontainer/scripts/pull-images.sh",
+  "postCreateCommand": "bash .devcontainer/scripts/setup-pm.sh && bash .devcontainer/scripts/pull-images.sh",
   "customizations": {
     "vscode": {
       "settings": {
@@ -40,4 +37,3 @@
   },
   "remoteUser": "vscode"
 }
-

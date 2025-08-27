@@ -7,13 +7,13 @@ This repository ships a Codespaces-ready dev container that targets:
 - Docker: Enabled via docker-outside-of-docker feature
 - Java: JDK 17 (Temurin)
 - Node.js: v23.9.0
-- Yarn: v1.22.22 (Classic)
+- Yarn: v1.22.22 (Classic, provisioned via Corepack)
 - pnpm: latest
 
 What it does
 ------------
 
-- Installs Java 17, Node 23.9.0, Yarn 1.22.22, and pnpm.
+- Installs Java 17, Node 23.9.0, Yarn 1.22.22 (via Corepack), and pnpm.
 - Enables Docker CLI inside the container and connects to the host Docker daemon.
 - Post-create step pre-pulls required images:
   - `mysql:8.0`
@@ -68,4 +68,3 @@ Local VS Code (optional)
 ------------------------
 
 If you prefer local containers instead of Codespaces, use the VS Code Dev Containers extension and open the repository in a container. The same configuration applies.
-
