@@ -15,11 +15,16 @@
       "settings": {
         "terminal.integrated.defaultProfile.linux": "bash",
         "java.jdt.ls.java.home": "/usr/lib/jvm/temurin-17-jdk-amd64",
-        "maven.executable.path": "/usr/bin/mvn"
+        "java.configuration.runtimes": [
+          { "name": "JavaSE-17", "path": "/usr/lib/jvm/temurin-17-jdk-amd64" }
+        ],
+        "java.import.gradle.java.home": "/usr/lib/jvm/temurin-17-jdk-amd64",
+        "maven.executable.path": "/usr/local/bin/mvn"
       },
       "extensions": [
         "vscjava.vscode-java-pack",
         "redhat.java",
+        "visualstudioexptteam.vscodeintellicode",
         "vscjava.vscode-maven",
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
