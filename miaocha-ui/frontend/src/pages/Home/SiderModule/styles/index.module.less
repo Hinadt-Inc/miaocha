@@ -4,6 +4,46 @@
     overflow: auto;
     /* 恢复外层滚动，让整个侧边栏可以滚动 */
     padding: 0 10px;
+	  display: flex;
+	  flex-direction: column;
+	:global{
+		.ant-collapse{
+			flex: 1 0 0;
+			display: flex;
+			flex-direction: column;
+			.ant-collapse-item:first-child{
+				flex-shrink: 0;
+			}
+			.ant-collapse-item:last-child{
+				flex: 1 0 0;
+				display: flex;
+				flex-direction: column;
+				.ant-collapse-content{
+					flex: 1 0 0;
+					display: flex;
+					flex-direction: column;
+					.ant-collapse-content-box{
+						display: flex;
+						flex-direction: column;
+						height: 100%;
+					}
+				}
+			}
+		}
+        .ant-collapse-item {
+            padding: 0;
+            .ant-collapse-header {
+                padding-left: 0;
+                padding-right: 0;
+            }
+            .ant-collapse-content {
+                .ant-collapse-content-box {
+                    padding: 0;
+                }
+            }
+
+        }
+	}
 
     // 优化滚动条样式 - 更细更美观
     &::-webkit-scrollbar {
@@ -55,11 +95,12 @@
 
 .searchInput {
     width: 100%;
-    margin-bottom: 8px;
 }
 
 .virtualListWrapper {
     margin-top: 8px;
+	flex:1 0 0;
+	height: 10px;
 }
 
 .fieldListContainer {

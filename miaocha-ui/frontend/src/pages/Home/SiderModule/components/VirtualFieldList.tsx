@@ -36,7 +36,7 @@ const VirtualFieldList: React.FC<IVirtualFieldListProps> = ({ data, itemHeight, 
       {/* 总高度占位符 */}
       <div className={styles.placeholder} style={{ height: `${data.length * itemHeight}px` }}>
         {/* 可视区域内容 */}
-        <div className={styles.visibleContent} style={{ top: `${visibleRange.start * itemHeight}px` }}>
+        <div className={styles.visibleContent} style={{transform: `translateY(${visibleRange.start * itemHeight}px)`}}>
           {visibleData.map((item, index) => renderItem(item, visibleRange.start + index))}
         </div>
       </div>
