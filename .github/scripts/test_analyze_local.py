@@ -56,18 +56,51 @@ def main():
             name = ensure_env("TEST_REPO")
 
     samples = [
-        # CN · bug
-        (8001, "Doris 连接后崩溃", "升级后连接 Doris 时服务崩溃，疑似内存溢出，请检查重连逻辑与池化配置。"),
-        # CN · feature
-        (8002, "需要导出 CSV", "希望查询结果支持一键导出 CSV，支持分隔符与编码选择。"),
-        # CN · enhancement
-        (8003, "慢查询日志优化", "慢查询统计过于粗糙，建议支持分桶统计与阈值告警。"),
-        # CN · question
-        (8004, "如何配置 Flyway v2?", "不知道 v2 版本迁移脚本应该放哪里，回滚脚本怎么命名？"),
-        # EN · bug
-        (8005, "NullPointerException during startup", "Service throws NPE during startup after bumping to Java 17.0.10. Please advise."),
-        # EN · feature
-        (8006, "Add metrics export", "Please add Prometheus metrics for query latency and error counts."),
+        # CN · bug (with code fence + Markdown image)
+        (8001, "Doris 连接后崩溃",
+         "应用在升级后连接 Doris 时发生随机崩溃，疑似与连接池配置相关。\n\n"
+         "## 复现步骤\n"
+         "1. 启动服务\n"
+         "2. 执行批量查询\n"
+         "3. 观察日志\n\n"
+         "## 日志片段\n"
+         "```java\n"
+         "java.lang.NullPointerException\n"
+         "\tat com.example.doris.Client.connect(Client.java:123)\n"
+         "```\n\n"
+         "## 截图\n"
+         "![Crash Screenshot](https://example.com/assets/crash.png)\n"),
+        # CN · feature (with HTML <img> and table)
+        (8002, "需要导出 CSV",
+         "希望查询结果页面支持一键导出 CSV，并可选择分隔符与编码。\n\n"
+         "<img width=\"800\" alt=\"UI\" src=\"https://example.com/assets/ui.png\" />\n\n"
+         "| 选项 | 说明 |\n|-----|-----|\n| 分隔符 | 逗号/制表符 |\n| 编码 | UTF-8/GBK |\n"),
+        # CN · enhancement (longer text + list)
+        (8003, "慢查询日志优化",
+         "当前慢查询统计过于粗糙：\n\n"
+         "- 缺乏分桶统计\n- 无法设置阈值\n- 缺乏维度筛选\n\n"
+         "期望：支持多维度分桶、阈值告警，以及近实时刷新。\n"),
+        # CN · question (code + links)
+        (8004, "如何配置 Flyway v2?",
+         "请问 v2 版本迁移脚本应该放在哪里？如何命名回滚脚本？\n\n"
+         "参考文档：https://docs.example.com/flyway\n\n"
+         "```sql\n-- V2 migration example\nCREATE TABLE demo(id INT);\n```\n"),
+        # EN · bug (image + code)
+        (8005, "NullPointerException during startup",
+         "Service throws NPE during startup after upgrading to Java 17.0.10.\n\n"
+         "Steps:\n1. Start service\n2. Load configuration\n3. Observe crash\n\n"
+         "```text\nException in thread \"main\" java.lang.NullPointerException\n```\n\n"
+         "![Boot Log](https://example.com/boot.png)\n"),
+        # EN · feature (longer spec)
+        (8006, "Add metrics export",
+         "Please add Prometheus metrics for query latency and error counts.\n\n"
+         "Metrics to include:\n- query_latency_ms (histogram)\n- error_total (counter)\n- active_requests (gauge)\n\n"
+         "Scrape endpoint suggestion: /actuator/prometheus\n"),
+        # EN · enhancement (HTML image + details)
+        (8007, "Improve search UX",
+         "Search results pagination and filters need refinement for large datasets.\n\n"
+         "<img alt=\"Search\" src=\"https://example.com/search.png\" width=\"600\" />\n\n"
+         "<details>\n<summary>Current behavior</summary>\nToo many clicks to refine filters.\n</details>\n"),
     ]
 
     AI_DIR.mkdir(parents=True, exist_ok=True)
@@ -114,4 +147,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
