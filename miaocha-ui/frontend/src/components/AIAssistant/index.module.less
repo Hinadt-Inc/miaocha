@@ -1,10 +1,9 @@
 /* AI助手主容器样式 - Grok风格设计 */
 .floatButton {
-  bottom: 80px !important;
-  right: 24px !important;
-  z-index: 1000 !important;
+	pointer-events: all;
   background: linear-gradient(135deg, #1890ff 0%, #722ed1 50%, #eb2f96 100%) !important;
   border: 3px solid rgba(255, 255, 255, 0.8) !important;
+	border-radius: 50%;
   box-shadow:
     0 12px 40px rgba(24, 144, 255, 0.6),
     0 4px 20px rgba(114, 46, 209, 0.4),
@@ -12,6 +11,7 @@
   animation: pulse 2s infinite;
   width: 60px !important;
   height: 60px !important;
+  box-sizing: border-box;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -167,8 +167,8 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    height: 60vh;
-    max-height: 600px;
+    // height: 60vh;
+    // max-height: 600px;
     overflow: hidden;
     /* 重要：阻止Modal body本身产生滚动条 */
   }
@@ -202,30 +202,6 @@
   position: relative;
   overflow: hidden;
 
-  /* 添加微妙的渐变边框效果 */
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, #1890ff 0%, #722ed1 50%, #eb2f96 100%);
-    opacity: 0.6;
-  }
-
-  &:hover {
-    background: linear-gradient(135deg, #f0f2ff 0%, #e6f0ff 100%);
-    cursor: grab;
-    transform: translateY(-1px);
-    box-shadow:
-      0 4px 12px rgba(24, 144, 255, 0.08),
-      0 2px 6px rgba(0, 0, 0, 0.04);
-
-    &::before {
-      opacity: 0.8;
-    }
-  }
 
   &:active {
     cursor: grabbing;
@@ -268,9 +244,7 @@
 }
 
 .draggableTitleText {
-  font-weight: 600;
   color: #262626;
-  font-size: 14px;
   letter-spacing: 0.02em;
   background: linear-gradient(135deg, #1890ff 0%, #722ed1 70%, #eb2f96 100%);
   -webkit-background-clip: text;
@@ -286,12 +260,59 @@
 }
 
 .modalContent {
-  height: 100%;
-  /* 使用100%填满Modal body */
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  /* 确保外层不出现滚动条 */
+  position: relative;
+  cursor: default;
+  .directionL,
+  .directionLD,
+  .directionD,
+  .directionRD,
+  .directionR{
+    position: absolute;
+    user-select: none;
+    z-index: 100;
+    --direction-w:10px;
+    --direction-h:10px;
+  }
+  .directionL {
+    width: var(--direction-w);
+    height: 100%;
+    left:0;
+    top:0;
+    cursor: col-resize;
+  }
+  .directionLD {
+    width: var(--direction-w);
+    height: var(--direction-h);
+    left: 0;
+    bottom: 0;
+    cursor: sw-resize;
+    z-index: 101;
+  }
+  .directionD{
+    width: 100%;
+    height: var(--direction-h);
+    left:0;
+    bottom:0;
+    cursor: row-resize;
+  }
+  .directionRD{
+    width: var(--direction-w);
+    height: var(--direction-h);
+    right: 0;
+    bottom: 0;
+    cursor: se-resize;
+    z-index: 101;
+  }
+  .directionR{
+    width: var(--direction-w);
+    height: 100%;
+    right:0;
+    top:0;
+    cursor: col-resize;
+  }
 }
 
 .drawerHeader {
@@ -372,71 +393,11 @@
 .closeButton {
   width: 28px;
   height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  background: rgba(255, 255, 255, 0.9) !important;
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-  :global(.anticon) {
-    color: #8c8c8c;
-    font-size: 12px;
-    transition: all 0.3s ease;
-  }
-
-  &:hover {
-    background: rgba(255, 77, 79, 0.1) !important;
-    border-color: rgba(255, 77, 79, 0.2) !important;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(255, 77, 79, 0.15);
-
-    :global(.anticon) {
-      color: #ff4d4f;
-      transform: scale(1.1);
-    }
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
 }
 
 .clearButton {
   width: 28px;
   height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(250, 140, 22, 0.2) !important;
-  background: rgba(255, 247, 230, 0.8) !important;
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-  :global(.anticon) {
-    color: #fa8c16;
-    font-size: 12px;
-    transition: all 0.3s ease;
-  }
-
-  &:hover {
-    background: rgba(250, 140, 22, 0.1) !important;
-    border-color: rgba(250, 140, 22, 0.3) !important;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(250, 140, 22, 0.2);
-
-    :global(.anticon) {
-      color: #fa541c;
-      transform: scale(1.1) rotate(90deg);
-    }
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
 }
 
 .drawerContent {
@@ -444,24 +405,13 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  /* 容器本身不滚动 */
-  background: white;
-  margin: 0;
-  border-radius: 0;
-  min-height: 0;
-  /* 重要：允许flex子元素缩小 */
 }
 
-/* 聊天界面样式 - Grok风格 */
+/* 聊天界面样式 */
 .chatInterface {
-  display: flex;
-  flex-direction: column;
   height: 100%;
   background: white;
-  min-height: 0;
-  /* 重要：允许flex子元素缩小 */
   overflow-y: auto;
-  /* 聊天界面自己处理滚动 */
 
   &::-webkit-scrollbar {
     width: 4px;
@@ -481,25 +431,11 @@
   }
 }
 
-.chatContainer {
-  flex: 1;
-  overflow: visible;
-  /* 不处理滚动 */
-  padding: 16px 0;
-  /* 给内容一些间距 */
-  min-height: 0;
-  /* 重要：允许flex子元素缩小 */
-}
-
 .messagesContainer {
-  padding: 16px 24px 24px 24px;
-  /* 减少顶部padding */
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  /* 移除这里的滚动，让父级容器处理 */
-
-  /* 为消息添加淡入动画 */
+  gap: 12px;
   .messageWrapper {
     animation: messageSlideIn 0.3s ease-out;
   }
@@ -522,19 +458,18 @@
 .messageWrapper {
   display: flex;
   flex-direction: column;
-  margin-bottom: 0;
-
-  /* 为了兼容 Bubble 组件，确保宽度充满容器 */
   width: 100%;
 }
 
 .userMessage {
-
   /* 用户消息的自定义样式 */
   :global(.ant-bubble-content) {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
     color: white !important;
     border: none !important;
+    border-radius: 8px;
+    padding: 8px;
+    min-height: inherit;
 
     /* 确保内部文本颜色为白色 */
     * {
@@ -548,15 +483,23 @@
       color: white !important;
     }
   }
+  :global(.ant-bubble-footer){
+     margin-top: 0;
+  }
 }
 
 .assistantMessage {
-
   /* 助手消息的自定义样式 */
   :global(.ant-bubble-content) {
     background: #f8f9fa !important;
     border: 1px solid #e9ecef !important;
     color: #14171a !important;
+    border-radius: 8px;
+    padding: 8px;
+    min-height: inherit;
+  }
+  :global(.ant-bubble-footer){
+     margin-top: 0;
   }
 }
 
@@ -587,43 +530,38 @@
   opacity: 0.7;
 }
 
-/* 为用户消息的时间设置不同颜色 */
-.userMessage .messageTime {
-  color: rgba(255, 255, 255, 0.8);
-}
-
 /* 欢迎界面 - Grok风格 */
 .welcomeContainer {
-  padding: 32px 24px 40px 24px;
-  /* 保持合适的padding */
+  padding: 10px 20px;
   text-align: center;
-  /* 移除这里的高度和滚动设置，让父级容器处理 */
   background: linear-gradient(135deg, #fafbfc 0%, #f7f9fa 100%);
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .welcomeHeader {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 48px;
+  margin-bottom: 16px;
 }
 
 .welcomeAvatar {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
   color: white !important;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
 }
 
 .welcomeContent {
-  max-width: 400px;
+  width: 90%;
 }
 
 .welcomeTitle {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
   color: #14171a;
-  margin: 0 0 12px 0;
+  margin: 0;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -631,7 +569,7 @@
 }
 
 .welcomeDescription {
-  font-size: 16px;
+  font-size: 14px;
   color: #657786;
   margin: 0;
   line-height: 1.5;
@@ -748,60 +686,48 @@
 /* 思考状态的光晕动画 - 已移除，使用更微妙的效果 */
 
 .promptsSection {
-  margin-bottom: 32px;
+  margin-bottom: 16px;
 }
 
 .sectionTitle {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: #14171a;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   text-align: left;
 }
 
 .promptCards {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 16px;
-  text-align: left;
-}
-
-.promptCard {
-  background: white;
-  border-radius: 16px;
-  padding: 20px;
+  gap: 12px;
   border: 1px solid #e1e8ed;
-  transition: all 0.3s ease;
-  cursor: pointer;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-    border-color: #667eea;
-  }
+  border-radius: 8px;
+  background: white;
+  padding:12px;
 }
 
 .promptCardHeader {
-  margin-bottom: 12px;
+  margin-bottom: 4px;
+  text-align: left;
 }
 
 .promptCardTitle {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: #14171a;
 }
 
 .promptCardContent {
   display: flex;
-  flex-direction: column;
   gap: 8px;
 }
 
 .promptItem {
-  padding: 8px 12px;
+  padding: 6px 8px;
   background: #f7f9fa;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 12px;
   color: #657786;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -809,35 +735,6 @@
   &:hover {
     background: #e1e8ed;
     color: #14171a;
-    transform: translateX(2px);
-  }
-}
-
-.quickActionsSection {
-  text-align: left;
-}
-
-.quickActions {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.quickActionButton {
-  height: 44px;
-  border-radius: 22px;
-  font-weight: 500;
-  border: 1px solid #e1e8ed;
-  background: white;
-  color: #14171a;
-  transition: all 0.3s ease;
-
-  &:hover {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-color: transparent;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
   }
 }
 
@@ -845,7 +742,7 @@
 .inputContainer {
   background: white;
   border-top: 1px solid #e1e8ed;
-  padding: 16px 24px;
+  padding: 10px 20px;
   flex-shrink: 0;
   /* 不允许收缩，保持固定高度 */
   z-index: 10;
@@ -865,13 +762,16 @@
       border-color: #667eea;
       box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
     }
-  }
 
+  }
+  :global(.ant-sender-content){
+     padding:8px;
+  }
   :global(.ant-sender-input) {
     border: none !important;
     background: transparent !important;
     box-shadow: none !important;
-    padding: 12px 16px !important;
+    padding: 4px 12px !important;
     font-size: 14px;
     line-height: 1.5;
 
@@ -1220,10 +1120,6 @@
   .suggestionsContainer,
   .historyContainer {
     padding: 16px;
-  }
-
-  .welcomeContainer {
-    padding: 24px 16px;
   }
 
   .promptCards {
