@@ -428,6 +428,7 @@ const HomePage = () => {
 
       {/* AI助手悬浮窗 */}
       <AIAssistant
+        searchParams={searchParams as any}
         onLogSearch={(data) => {
           // 处理AI助手的搜索请求
           let searchParams = data.searchParams || data; // 向后兼容

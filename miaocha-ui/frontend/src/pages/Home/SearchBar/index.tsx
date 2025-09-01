@@ -1,9 +1,4 @@
-/**
- * SearchBar 主组件 - 重构后的模块化版本
- */
-
-// @ts-ignore
-import React, { useState, useMemo, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
+import { useState, useMemo, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
 import { Button, Space } from 'antd';
 import dayjs from 'dayjs';
 
