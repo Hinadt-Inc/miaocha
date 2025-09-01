@@ -202,30 +202,6 @@
   position: relative;
   overflow: hidden;
 
-  /* 添加微妙的渐变边框效果 */
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, #1890ff 0%, #722ed1 50%, #eb2f96 100%);
-    opacity: 0.6;
-  }
-
-  &:hover {
-    background: linear-gradient(135deg, #f0f2ff 0%, #e6f0ff 100%);
-    cursor: grab;
-    transform: translateY(-1px);
-    box-shadow:
-      0 4px 12px rgba(24, 144, 255, 0.08),
-      0 2px 6px rgba(0, 0, 0, 0.04);
-
-    &::before {
-      opacity: 0.8;
-    }
-  }
 
   &:active {
     cursor: grabbing;
@@ -268,9 +244,7 @@
 }
 
 .draggableTitleText {
-  font-weight: 600;
   color: #262626;
-  font-size: 14px;
   letter-spacing: 0.02em;
   background: linear-gradient(135deg, #1890ff 0%, #722ed1 70%, #eb2f96 100%);
   -webkit-background-clip: text;
@@ -291,7 +265,6 @@
   overflow: hidden;
   position: relative;
   cursor: default;
-  height: 60vh;
   .directionL,
   .directionLD,
   .directionD,
@@ -420,71 +393,11 @@
 .closeButton {
   width: 28px;
   height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  background: rgba(255, 255, 255, 0.9) !important;
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-  :global(.anticon) {
-    color: #8c8c8c;
-    font-size: 12px;
-    transition: all 0.3s ease;
-  }
-
-  &:hover {
-    background: rgba(255, 77, 79, 0.1) !important;
-    border-color: rgba(255, 77, 79, 0.2) !important;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(255, 77, 79, 0.15);
-
-    :global(.anticon) {
-      color: #ff4d4f;
-      transform: scale(1.1);
-    }
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
 }
 
 .clearButton {
   width: 28px;
   height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(250, 140, 22, 0.2) !important;
-  background: rgba(255, 247, 230, 0.8) !important;
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-  :global(.anticon) {
-    color: #fa8c16;
-    font-size: 12px;
-    transition: all 0.3s ease;
-  }
-
-  &:hover {
-    background: rgba(250, 140, 22, 0.1) !important;
-    border-color: rgba(250, 140, 22, 0.3) !important;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(250, 140, 22, 0.2);
-
-    :global(.anticon) {
-      color: #fa541c;
-      transform: scale(1.1) rotate(90deg);
-    }
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
 }
 
 .drawerContent {
@@ -795,7 +708,7 @@
 }
 
 .promptCardHeader {
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   text-align: left;
 }
 

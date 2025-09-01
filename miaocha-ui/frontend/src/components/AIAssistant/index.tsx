@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Modal, Button, message, Avatar, Tooltip } from 'antd';
-import { RobotOutlined, UserOutlined, DragOutlined, CloseOutlined, ClearOutlined } from '@ant-design/icons';
+import { RobotOutlined, UserOutlined, CloseOutlined, ClearOutlined } from '@ant-design/icons';
 import { Sender, Bubble } from '@ant-design/x';
 import Draggable from 'react-draggable';
 import ReactMarkdown from 'react-markdown';
@@ -67,8 +67,8 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
     direction: 'l',
     minWidth: 700,
     minHeight: window.innerHeight * 0.6,
-    maxWidth: window.innerWidth * 0.9,
-    maxHeight: window.innerHeight - 180,
+    maxWidth: window.innerWidth * 1,
+    maxHeight: window.innerHeight - 0,
   });
   const animationFrameRef = useRef<number | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -519,11 +519,11 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
             })
             .catch((error) => {
               console.error('SSE请求错误:', error);
+              const isAbort = error.message.includes('aborted');
+              const msgContent = isAbort ? '已暂停生成' : '抱歉，AI服务暂时不可用，请稍后重试。';
               setLoading(false);
               setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === aiMessageId ? { ...msg, content: '抱歉，AI服务暂时不可用，请稍后重试。' } : msg,
-                ),
+                prev.map((msg) => (msg.id === aiMessageId ? { ...msg, content: msgContent } : msg)),
               );
               reject(error instanceof Error ? error : new Error(String(error)));
             })
@@ -571,6 +571,16 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
   const handleInputChange = useCallback((value: string) => {
     setInputValue(value);
   }, []);
+
+  const handleInputCancel = () => {
+    if (loading) {
+      if (abortControllerRef.current) {
+        setLoading(false);
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    }
+  };
 
   const handleInputSubmit = useCallback(
     (value: string) => {
@@ -670,7 +680,6 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
         onMouseLeave={() => setDisabled(true)}
       >
         <div className={styles.draggableTitleLeft}>
-          <DragOutlined style={{ color: '#666' }} />
           <span className={styles.draggableTitleText}>AI 智能助手</span>
         </div>
         <div className={styles.draggableTitleRight}>
@@ -847,9 +856,9 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
                 value={inputValue}
                 onChange={handleInputChange}
                 placeholder={placeholderText}
-                disabled={loading}
                 loading={loading}
                 onSubmit={handleInputSubmit}
+                onCancel={handleInputCancel}
                 style={{
                   background: '#f7f9fa',
                   borderRadius: '24px',
@@ -858,7 +867,7 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
               />
               <div className={styles.inputHint}>
                 {loading ? (
-                  <span className={styles.thinkingHint}>🤔 AI 正在思考中...</span>
+                  <span className={styles.thinkingHint}>AI 正在思考中...</span>
                 ) : (
                   <>
                     <span>按 Enter 发送，Shift + Enter 换行</span>
