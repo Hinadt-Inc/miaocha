@@ -397,6 +397,19 @@ export const useModuleSelection = (
       if (onSelectedModuleChange) {
         onSelectedModuleChange(value, Number(datasourceId));
       }
+      const savedSearchParams = localStorage.getItem('searchBarParams');
+      if (savedSearchParams) {
+        try {
+          const params = JSON.parse(savedSearchParams);
+          const updatedParams = {
+            ...params,
+            module: value,
+          };
+          localStorage.setItem('searchBarParams', JSON.stringify(updatedParams));
+        } catch (error) {
+          console.error('更新localStorage中的searchBarParams失败:', error);
+        }
+      }
     },
     [modules, onSelectedModuleChange],
   );
