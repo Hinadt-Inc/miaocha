@@ -69,8 +69,8 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
   // 监听 searchParams 中的时间变化，同步更新 timeOption
   useEffect(() => {
     if (searchParams.startTime && searchParams.endTime) {
-      const newTimeString = `${searchParams.startTime} ~ ${searchParams.endTime}`;
-      const currentTimeString = `${timeState.timeOption?.range?.[0]} ~ ${timeState.timeOption?.range?.[1]}`;
+      const newTimeString = `${dayjs(searchParams.startTime).format('YYYY-MM-DD HH:mm:ss')} ~ ${dayjs(searchParams.endTime).format('YYYY-MM-DD HH:mm:ss')}`;
+      const currentTimeString = `${dayjs(timeState.timeOption?.range?.[0]).format('YYYY-MM-DD HH:mm:ss')} ~ ${dayjs(timeState.timeOption?.range?.[1]).format('YYYY-MM-DD HH:mm:ss')}`;
 
       // 如果 searchParams 中的时间与当前 timeOption 不一致，更新 timeOption
       if (currentTimeString !== newTimeString) {
