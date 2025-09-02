@@ -126,11 +126,28 @@ const HomePage = () => {
 
         // 批量更新状态，避免多次渲染
         setSelectedModule(defaultOption.module);
-        setSearchParams((prev: ILogSearchParams) => ({
-          ...prev,
-          datasourceId: Number(defaultOption.datasourceId),
-          module: defaultOption.module,
-        }));
+
+        setSearchParams((prev: ILogSearchParams) => {
+          const payload = {
+            ...prev,
+            datasourceId: Number(defaultOption.datasourceId),
+            module: defaultOption.module,
+          };
+          const savedSearchParams = localStorage.getItem('searchBarParams');
+          if (savedSearchParams) {
+            try {
+              const params = JSON.parse(savedSearchParams);
+              const updatedParams = {
+                ...params,
+                ...payload,
+              };
+              localStorage.setItem('searchBarParams', JSON.stringify(updatedParams));
+            } catch (error) {
+              console.error('更新localStorage中的searchBarParams失败:', error);
+            }
+          }
+          return payload;
+        });
       }
     }
   }, [modulesList.data]);
