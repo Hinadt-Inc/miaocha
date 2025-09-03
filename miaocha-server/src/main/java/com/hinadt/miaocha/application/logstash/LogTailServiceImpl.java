@@ -84,7 +84,7 @@ public class LogTailServiceImpl implements LogTailService {
     }
 
     @Override
-    public SseEmitter getLogStream(Long logstashMachineId, Integer tailLines) {
+    public SseEmitter getAndCreateLogStream(Long logstashMachineId, Integer tailLines) {
         log.info(
                 "Creating log stream: logstashMachineId={}, tailLines={}",
                 logstashMachineId,
@@ -363,6 +363,24 @@ public class LogTailServiceImpl implements LogTailService {
 
             try {
                 emitter.send(SseEmitter.event().name(eventName).data(data));
+            } catch (IOException e) {
+                // Client disconnected - trigger cleanup immediately
+                log.debug(
+                        "Client disconnected for instance {} (IOException): {}",
+                        logstashMachineId,
+                        e.getMessage());
+                markCompleted();
+                // Trigger cleanup in background to avoid blocking
+                java.util.concurrent.CompletableFuture.runAsync(this::cleanup);
+            } catch (IllegalStateException e) {
+                // SSE connection is no longer valid
+                log.debug(
+                        "SSE connection invalid for instance {} (IllegalStateException): {}",
+                        logstashMachineId,
+                        e.getMessage());
+                markCompleted();
+                // Trigger cleanup in background to avoid blocking
+                java.util.concurrent.CompletableFuture.runAsync(this::cleanup);
             } catch (Exception e) {
                 log.warn(
                         "Failed to send {} event for instance {}: {}",
@@ -370,6 +388,8 @@ public class LogTailServiceImpl implements LogTailService {
                         logstashMachineId,
                         e.getMessage());
                 markCompleted();
+                // Trigger cleanup in background to avoid blocking
+                java.util.concurrent.CompletableFuture.runAsync(this::cleanup);
             }
         }
 

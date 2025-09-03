@@ -66,6 +66,6 @@ public class LogTailEndpoint {
 
         log.info(
                 "Get log stream: logstashMachineId={}, tailLines={}", logstashMachineId, tailLines);
-        return logTailService.getLogStream(logstashMachineId, tailLines);
+        return logTailService.getAndCreateLogStream(logstashMachineId, tailLines);
     }
 }
