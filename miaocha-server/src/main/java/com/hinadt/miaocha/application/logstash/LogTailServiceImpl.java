@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -158,22 +159,41 @@ public class LogTailServiceImpl implements LogTailService {
         emitter.onCompletion(
                 () -> {
                     log.debug("SSE stream completed for instance {}", logstashMachineId);
-                    context.cleanup();
+                    if (context.markCompleted()) {
+                        context.triggerAsyncCleanup();
+                    }
                 });
 
         emitter.onTimeout(
                 () -> {
                     log.debug("SSE stream timeout for instance {}", logstashMachineId);
-                    context.cleanup();
+                    if (context.markCompleted()) {
+                        context.triggerAsyncCleanup();
+                    }
                 });
 
         emitter.onError(
                 throwable -> {
-                    log.warn(
-                            "SSE stream error for instance {}: {}",
-                            logstashMachineId,
-                            throwable.getMessage());
-                    context.cleanup();
+                    // Check if this is a client disconnection error
+                    String errorMessage = throwable.getMessage();
+                    if (errorMessage != null
+                            && (errorMessage.contains("disconnected client")
+                                    || errorMessage.contains("Broken pipe"))) {
+                        log.debug(
+                                "SSE client disconnected for instance {}: {}",
+                                logstashMachineId,
+                                errorMessage);
+                    } else {
+                        log.warn(
+                                "SSE stream error for instance {}: {}",
+                                logstashMachineId,
+                                errorMessage);
+                    }
+
+                    // Mark as completed and trigger cleanup only if not already in progress
+                    if (context.markCompleted()) {
+                        context.triggerAsyncCleanup();
+                    }
                 });
 
         // Start SSH stream asynchronously
@@ -302,6 +322,7 @@ public class LogTailServiceImpl implements LogTailService {
         private final AtomicInteger globalConnectionCounter;
         private final List<String> logBuffer = new ArrayList<>();
         private final AtomicInteger completed = new AtomicInteger(0);
+        private final AtomicBoolean cleanupInProgress = new AtomicBoolean(false);
 
         private volatile StreamCommandTask streamTask;
         private volatile java.util.concurrent.ScheduledFuture<?> batchSendFuture;
@@ -357,7 +378,8 @@ public class LogTailServiceImpl implements LogTailService {
         }
 
         public void sendSafely(LogTailResponseDTO data, String eventName) {
-            if (isCompleted()) {
+            // Quick check - don't even try to send if completed or cleanup in progress
+            if (isCompleted() || cleanupInProgress.get()) {
                 return;
             }
 
@@ -370,8 +392,7 @@ public class LogTailServiceImpl implements LogTailService {
                         logstashMachineId,
                         e.getMessage());
                 markCompleted();
-                // Trigger cleanup in background to avoid blocking
-                java.util.concurrent.CompletableFuture.runAsync(this::cleanup);
+                triggerAsyncCleanup();
             } catch (IllegalStateException e) {
                 // SSE connection is no longer valid
                 log.debug(
@@ -379,8 +400,7 @@ public class LogTailServiceImpl implements LogTailService {
                         logstashMachineId,
                         e.getMessage());
                 markCompleted();
-                // Trigger cleanup in background to avoid blocking
-                java.util.concurrent.CompletableFuture.runAsync(this::cleanup);
+                triggerAsyncCleanup();
             } catch (Exception e) {
                 log.warn(
                         "Failed to send {} event for instance {}: {}",
@@ -388,52 +408,66 @@ public class LogTailServiceImpl implements LogTailService {
                         logstashMachineId,
                         e.getMessage());
                 markCompleted();
-                // Trigger cleanup in background to avoid blocking
+                triggerAsyncCleanup();
+            }
+        }
+
+        public void triggerAsyncCleanup() {
+            // Only trigger cleanup if not already in progress
+            if (cleanupInProgress.compareAndSet(false, true)) {
                 java.util.concurrent.CompletableFuture.runAsync(this::cleanup);
             }
         }
 
         public void cleanup() {
+            // Only proceed if we can mark as completed
             if (!markCompleted()) {
+                // Reset cleanup flag since cleanup was already done
+                cleanupInProgress.set(false);
                 return; // Already cleaned up
             }
 
-            log.debug("Cleaning up stream context for instance {}", logstashMachineId);
+            try {
+                log.debug("Cleaning up stream context for instance {}", logstashMachineId);
 
-            // Cancel scheduled tasks
-            if (batchSendFuture != null) {
-                batchSendFuture.cancel(true);
-            }
-            if (heartbeatFuture != null) {
-                heartbeatFuture.cancel(true);
-            }
-
-            // Stop SSH stream
-            if (streamTask != null) {
-                try {
-                    streamTask.stop();
-                } catch (Exception e) {
-                    log.warn(
-                            "Error stopping SSH stream for instance {}: {}",
-                            logstashMachineId,
-                            e.getMessage());
+                // Cancel scheduled tasks
+                if (batchSendFuture != null) {
+                    batchSendFuture.cancel(true);
                 }
-            }
+                if (heartbeatFuture != null) {
+                    heartbeatFuture.cancel(true);
+                }
 
-            // Clear log buffer
-            synchronized (this) {
-                logBuffer.clear();
-            }
+                // Stop SSH stream
+                if (streamTask != null) {
+                    try {
+                        streamTask.stop();
+                    } catch (Exception e) {
+                        log.warn(
+                                "Error stopping SSH stream for instance {}: {}",
+                                logstashMachineId,
+                                e.getMessage());
+                    }
+                }
 
-            // Decrement global counter
-            int remainingConnections = globalConnectionCounter.decrementAndGet();
-            log.debug(
-                    "Stream cleaned up for instance {}, remaining connections: {}",
-                    logstashMachineId,
-                    remainingConnections);
+                // Clear log buffer
+                synchronized (this) {
+                    logBuffer.clear();
+                }
+
+                // Decrement global counter
+                int remainingConnections = globalConnectionCounter.decrementAndGet();
+                log.debug(
+                        "Stream cleaned up for instance {}, remaining connections: {}",
+                        logstashMachineId,
+                        remainingConnections);
+            } finally {
+                // Always reset cleanup flag when done
+                cleanupInProgress.set(false);
+            }
         }
 
-        private boolean markCompleted() {
+        public boolean markCompleted() {
             return completed.compareAndSet(0, 1);
         }
 
