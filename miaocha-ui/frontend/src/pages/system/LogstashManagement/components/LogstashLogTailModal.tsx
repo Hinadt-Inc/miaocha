@@ -1,6 +1,6 @@
 import { Modal, Button, message } from 'antd';
 import { useEffect, useState, useRef } from 'react';
-import { startLogTail, stopLogTail, createLogTailTask } from '@/api/logstash';
+import { startLogTail } from '@/api/logstash';
 import styles from './LogstashLogTailModal.module.less';
 
 interface LogTailModalProps {
@@ -35,34 +35,34 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel }: L
     setShouldAutoScroll(true);
   };
 
-  // 自定义弹窗关闭处理函数，会自动停止日志跟踪
+  // Custom modal close handler with automatic cleanup
   const handleModalCancel = async () => {
-    // 如果正在跟踪日志，自动停止
-    if (isTailing) {
-      await stopTail();
+    // Stop tailing by closing the connection (automatic cleanup)
+    if (isTailing && eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+      setIsTailing(false);
     }
-    // 调用父组件传入的onCancel
+    // Call parent component's onCancel
     onCancel();
   };
 
   const startTail = async () => {
     try {
-      // 首先创建日志跟踪任务
-      await createLogTailTask(logstashMachineId);
-      // 调用异步startLogTail函数并等待返回EventSource对象
-      const eventSource = startLogTail(logstashMachineId);
+      // Create EventSource connection with automatic task creation
+      const eventSource = startLogTail(logstashMachineId, 500); // Default 500 lines
       if (!eventSource) {
-        throw new Error('无法创建EventSource连接');
+        throw new Error('Failed to create EventSource connection');
       }
-      // 监听EventSource的消息事件
-      (
-        await // 监听EventSource的消息事件
-        eventSource
-      ).onopen = () => {
-        console.log('日志跟踪连接已打开');
+      
+      const resolvedEventSource = await eventSource;
+      
+      // Setup connection handlers
+      resolvedEventSource.onopen = () => {
+        console.log('Log tail connection opened');
       };
 
-      eventSourceRef.current = await eventSource;
+      eventSourceRef.current = resolvedEventSource;
       eventSourceRef.current.addEventListener('log-data', (event) => {
         try {
           const data = JSON.parse(event.data);
@@ -70,36 +70,36 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel }: L
             setLogs((prev) => {
               const newEntries = (data.logLines || [data]).map((log: string, i: number) => ({
                 id: `${Date.now()}-${i}`,
-                key: `${Date.now()}-${i}`, // 添加key属性供VirtualList使用
+                key: `${Date.now()}-${i}`,
                 timestamp: Date.now(),
                 content: typeof log === 'string' ? log : JSON.stringify(log),
               }));
               const newLogs = [...prev, ...newEntries];
 
-              // 限制日志数量，避免内存溢出和性能问题
+              // Limit log count to prevent memory issues
               if (newLogs.length > maxLogs) {
-                return newLogs.slice(-maxLogs); // 保留最新的maxLogs条记录
+                return newLogs.slice(-maxLogs);
               }
 
               return newLogs;
             });
           }
         } catch (error) {
-          console.error('日志解析错误:', error);
+          console.error('Log parsing error:', error);
         }
       });
 
-      (await eventSource).addEventListener('heartbeat', (event) => {
+      resolvedEventSource.addEventListener('heartbeat', (event) => {
         try {
           const data = JSON.parse(event.data);
           setStatus(data.status);
         } catch (error) {
-          console.error('心跳数据解析错误:', error);
+          console.error('Heartbeat data parsing error:', error);
         }
       });
 
       eventSourceRef.current.onerror = (err) => {
-        console.error('EventSource错误:', err);
+        console.error('EventSource error:', err);
         setIsTailing(false);
         eventSourceRef.current?.close();
         eventSourceRef.current = null;
@@ -107,27 +107,31 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel }: L
 
       setIsTailing(true);
       setLogs([]);
-      messageApi.success('日志跟踪已启动');
+      messageApi.success('Log tail started');
     } catch (error: unknown) {
-      console.error('启动日志跟踪失败:', error);
+      console.error('Failed to start log tail:', error);
       setIsTailing(false);
     }
   };
 
   const stopTail = async () => {
     try {
-      await stopLogTail(logstashMachineId);
+      // Stop by closing the EventSource connection - automatic cleanup
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
       setIsTailing(false);
-      messageApi.success('日志跟踪已停止');
+      messageApi.success('Log tail stopped');
     } catch (error) {
-      console.error('停止日志跟踪失败:', error);
+      console.error('Failed to stop log tail:', error);
     }
   };
 
-  // 组件卸载时确保关闭连接
+  // Component cleanup - ensure connection is closed
   useEffect(() => {
     return () => {
-      // 组件卸载时确保关闭连接
+      // Close connection on component unmount
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
         eventSourceRef.current = null;
@@ -137,11 +141,11 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel }: L
 
   useEffect(() => {
     if (!visible) {
-      // 如果弹窗不可见且正在跟踪，自动停止跟踪
-      if (isTailing) {
-        stopTail().catch((error) => {
-          console.error('组件卸载时自动停止跟踪失败:', error);
-        });
+      // Auto-stop tailing when modal is hidden
+      if (isTailing && eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+        setIsTailing(false);
       }
     }
   }, [visible]);

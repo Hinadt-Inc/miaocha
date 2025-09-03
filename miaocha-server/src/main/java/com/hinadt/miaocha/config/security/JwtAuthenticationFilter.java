@@ -29,10 +29,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilterAsyncDispatch() {
-        // Ensure JWT authentication runs for async dispatches (e.g. SSE),
-        // so SecurityContext is populated during subsequent filter chain
-        // invocations triggered after the response has started.
+        // Keep authentication for ASYNC dispatch to ensure SecurityContext
+        // is available during SSE lifecycle.
         return false;
+    }
+
+    @Override
+    protected boolean shouldNotFilterErrorDispatch() {
+        // Do not run on ERROR dispatch to avoid duplicate logs during
+        // container error notifications (e.g., client disconnect for SSE).
+        return true;
     }
 
     @Override
