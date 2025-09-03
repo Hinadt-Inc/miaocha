@@ -44,16 +44,11 @@ public class LogTailEndpoint {
     /**
      * 创建日志跟踪任务
      *
-     * @deprecated 此接口已废弃。直接使用 /stream/{logstashMachineId} 接口即可，该接口会自动创建任务
      * @param request 跟踪请求参数
      * @return 创建结果
      */
     @PostMapping("/create")
-    @Operation(
-            summary = "创建日志跟踪任务（已废弃）",
-            description =
-                    "为指定Logstash实例创建日志跟踪任务。已废弃：直接使用 /stream/{logstashMachineId} 接口即可，该接口会自动创建任务")
-    @Deprecated
+    @Operation(summary = "创建日志跟踪任务", description = "为指定Logstash实例创建日志跟踪任务")
     public ApiResponse<Void> createTailing(@Valid @RequestBody LogTailRequestDTO request) {
         checkAuthentication();
 
@@ -76,8 +71,7 @@ public class LogTailEndpoint {
     @GetMapping(value = "/stream/{logstashMachineId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(
             summary = "获取日志流",
-            description =
-                    "获取指定Logstash实例的实时日志SSE流。如果日志跟踪任务不存在，会自动创建任务（默认读取最后500行）。支持通过Authorization头或token查询参数传递JWT令牌")
+            description = "获取指定Logstash实例的实时日志SSE流。支持通过Authorization头或token查询参数传递JWT令牌")
     public SseEmitter getLogStream(
             @Parameter(description = "Logstash实例ID", required = true) @PathVariable
                     Long logstashMachineId,

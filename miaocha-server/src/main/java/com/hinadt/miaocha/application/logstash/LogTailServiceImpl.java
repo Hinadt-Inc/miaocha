@@ -138,18 +138,12 @@ public class LogTailServiceImpl implements LogTailService {
     public SseEmitter getLogStream(Long logstashMachineId) {
         log.info("获取日志流: logstashMachineId={}", logstashMachineId);
 
-        // 检查是否存在跟踪任务，如果不存在则自动创建
+        // 检查是否存在跟踪任务
         LogTailTask task = activeTasks.get(logstashMachineId);
         if (task == null) {
-            log.info("Logstash实例[{}]的日志跟踪任务不存在，自动创建任务", logstashMachineId);
-            // 使用默认参数自动创建任务
-            createTailing(logstashMachineId, 500); // 默认读取最后500行
-            task = activeTasks.get(logstashMachineId);
-            if (task == null) {
-                throw new BusinessException(
-                        ErrorCode.INTERNAL_ERROR,
-                        "自动创建Logstash实例[" + logstashMachineId + "]的日志跟踪任务失败");
-            }
+            throw new BusinessException(
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "Logstash实例[" + logstashMachineId + "]的日志跟踪任务不存在，请先创建任务");
         }
 
         // 创建新的SSE发射器
@@ -176,27 +170,17 @@ public class LogTailServiceImpl implements LogTailService {
                         task.getSshConfig().getPort(),
                         task.getSshConfig().getHost());
 
-                // Create final references for lambda expressions
-                final Long finalLogstashMachineId = logstashMachineId;
-                final LogTailTask finalTask = task;
-
                 StreamCommandTask streamTask =
                         sshStreamExecutor.executeStreamCommand(
                                 task.getSshConfig(),
                                 task.getTailCommand(),
                                 line -> {
-                                    log.trace(
-                                            "接收到日志行，实例ID: {}, 内容: {}",
-                                            finalLogstashMachineId,
-                                            line);
-                                    finalTask.addLogLine(line);
+                                    log.trace("接收到日志行，实例ID: {}, 内容: {}", logstashMachineId, line);
+                                    task.addLogLine(line);
                                 },
                                 error -> {
-                                    log.warn(
-                                            "SSH流错误，实例ID: {}, 错误: {}",
-                                            finalLogstashMachineId,
-                                            error);
-                                    finalTask.addLogLine("[ERROR] " + error);
+                                    log.warn("SSH流错误，实例ID: {}, 错误: {}", logstashMachineId, error);
+                                    task.addLogLine("[ERROR] " + error);
                                 });
 
                 task.setStreamTask(streamTask);
@@ -205,7 +189,7 @@ public class LogTailServiceImpl implements LogTailService {
                 // 启动批量发送任务
                 task.setBatchSendFuture(
                         scheduler.scheduleAtFixedRate(
-                                () -> sendBatchData(finalTask),
+                                () -> sendBatchData(task),
                                 BATCH_SEND_INTERVAL,
                                 BATCH_SEND_INTERVAL,
                                 TimeUnit.SECONDS));
@@ -213,7 +197,7 @@ public class LogTailServiceImpl implements LogTailService {
                 // 启动心跳任务
                 task.setHeartbeatFuture(
                         scheduler.scheduleAtFixedRate(
-                                () -> sendHeartbeat(finalTask), 30, 10, TimeUnit.SECONDS));
+                                () -> sendHeartbeat(task), 30, 10, TimeUnit.SECONDS));
 
             } catch (Exception e) {
                 log.error("启动SSH流式命令失败，实例ID: {}, 错误: {}", logstashMachineId, e.getMessage(), e);
