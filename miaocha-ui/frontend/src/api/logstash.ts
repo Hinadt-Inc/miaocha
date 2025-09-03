@@ -254,6 +254,10 @@ export function getLogTailContent(lastLogId?: string): Promise<{ logs: string[];
   });
 }
 
+/**
+ * @deprecated Use startLogTail directly instead. This endpoint is no longer needed
+ * as the stream endpoint now auto-creates tasks when needed.
+ */
 export function createLogTailTask(logstashMachineId: number, tailLines: number = 500): Promise<{ taskId: string }> {
   return request({
     url: '/api/logstash/log-tail/create',

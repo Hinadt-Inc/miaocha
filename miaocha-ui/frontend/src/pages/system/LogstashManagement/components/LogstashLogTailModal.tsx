@@ -1,6 +1,6 @@
 import { Modal, Button, message } from 'antd';
 import { useEffect, useState, useRef } from 'react';
-import { startLogTail, stopLogTail, createLogTailTask } from '@/api/logstash';
+import { startLogTail, stopLogTail } from '@/api/logstash';
 import styles from './LogstashLogTailModal.module.less';
 
 interface LogTailModalProps {
@@ -47,9 +47,7 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel }: L
 
   const startTail = async () => {
     try {
-      // 首先创建日志跟踪任务
-      await createLogTailTask(logstashMachineId);
-      // 调用异步startLogTail函数并等待返回EventSource对象
+      // 直接创建EventSource连接，服务端会自动创建任务
       const eventSource = startLogTail(logstashMachineId);
       if (!eventSource) {
         throw new Error('无法创建EventSource连接');
