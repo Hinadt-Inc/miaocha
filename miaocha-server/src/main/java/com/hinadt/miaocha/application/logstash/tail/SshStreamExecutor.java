@@ -19,31 +19,27 @@ import org.apache.sshd.common.channel.Channel;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-/** SSH流式命令执行器（现代化版本） 使用线程池和现代化的资源管理，支持流式命令的安全执行 */
+/** SSH stream command executor - optimized for self-contained SSE streams */
 @Slf4j
 @Component
 public class SshStreamExecutor {
 
-    /** 用于处理SSH流式输出的线程池 */
+    /** Thread pool for SSH stream processing - optimized for concurrent streams */
     private final ExecutorService streamProcessorPool;
 
-    /** 用于管理SSH连接的线程池 */
+    /** Connection manager for SSH sessions */
     private final ScheduledExecutorService connectionManagerPool;
 
-    /** SSH客户端实例（Apache MINA SSHD） */
+    /** SSH client instance (Apache MINA SSHD) */
     private final SshClient sshClient;
 
     public SshStreamExecutor() {
-        // 创建专用的线程池，使用清晰的命名规则
+        // Create optimized thread pool for concurrent streams
         this.streamProcessorPool =
                 Executors.newCachedThreadPool(
                         r -> {
                             Thread thread = new Thread(r);
-                            thread.setName(
-                                    "ssh-stream-processor-"
-                                            + System.currentTimeMillis()
-                                            + "-"
-                                            + thread.getId());
+                            thread.setName("ssh-stream-processor-" + thread.getId());
                             thread.setDaemon(true);
                             return thread;
                         });
@@ -53,48 +49,43 @@ public class SshStreamExecutor {
                         2,
                         r -> {
                             Thread thread = new Thread(r);
-                            thread.setName(
-                                    "ssh-connection-manager-"
-                                            + System.currentTimeMillis()
-                                            + "-"
-                                            + thread.getId());
+                            thread.setName("ssh-connection-manager-" + thread.getId());
                             thread.setDaemon(true);
                             return thread;
                         });
 
-        // 初始化SSH客户端
+        // Initialize SSH client with optimized settings
         this.sshClient = SshClient.setUpDefaultClient();
 
-        // 配置服务器密钥验证器，忽略未知主机密钥的警告
+        // Accept all server keys for internal infrastructure
         this.sshClient.setServerKeyVerifier(
                 (clientSession, remoteAddress, serverKey) -> {
-                    log.debug("接受服务器密钥: {}@{}", serverKey.getAlgorithm(), remoteAddress);
-                    return true; // 总是接受服务器密钥
+                    log.debug(
+                            "Accepting server key: {}@{}", serverKey.getAlgorithm(), remoteAddress);
+                    return true;
                 });
 
         this.sshClient.start();
 
-        log.info(
-                "SSH流式命令执行器已初始化 | 线程池: ssh-stream-processor-*, ssh-connection-manager-* | 处理器={},"
-                        + " 连接管理=2",
-                Runtime.getRuntime().availableProcessors());
+        log.info("SSH stream executor initialized - optimized for self-contained streams");
     }
 
     /**
-     * 执行流式命令（如tail -f） 使用现代化的线程池和资源管理
+     * Execute streaming command (e.g., tail -f) - optimized for self-contained streams Creates
+     * independent SSH connection for each stream
      *
-     * @param sshConfig SSH连接配置
-     * @param command 要执行的命令
-     * @param outputConsumer 输出行处理器
-     * @param errorConsumer 错误行处理器
-     * @return 命令执行任务，可用于停止命令
+     * @param sshConfig SSH connection configuration
+     * @param command Command to execute
+     * @param outputConsumer Output line handler
+     * @param errorConsumer Error line handler
+     * @return Command execution task for lifecycle management
      */
     public StreamCommandTask executeStreamCommand(
             SshConfig sshConfig,
             String command,
             Consumer<String> outputConsumer,
             Consumer<String> errorConsumer) {
-        log.debug("开始执行流式命令: {}", command);
+        log.debug("Executing stream command: {}", command);
 
         CompletableFuture<StreamCommandTask> taskFuture =
                 CompletableFuture.supplyAsync(
@@ -103,79 +94,76 @@ public class SshStreamExecutor {
                                 return createStreamTask(
                                         sshConfig, command, outputConsumer, errorConsumer);
                             } catch (Exception e) {
-                                log.error("创建流式命令任务失败: {}", command, e);
-                                errorConsumer.accept("创建任务失败: " + e.getMessage());
-                                throw new RuntimeException("创建流式命令任务失败", e);
+                                log.error(
+                                        "Failed to create stream task for command: {}", command, e);
+                                errorConsumer.accept("Task creation failed: " + e.getMessage());
+                                throw new RuntimeException(
+                                        "Stream command task creation failed", e);
                             }
                         },
                         connectionManagerPool);
 
         try {
-            // 等待任务创建完成，最多等待30秒
+            // Wait for task creation with reasonable timeout
             return taskFuture.get(30, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
-            log.error("创建流式命令任务超时: {}", command);
-            errorConsumer.accept("创建任务超时");
-            throw new RuntimeException("创建流式命令任务超时", e);
+            log.error("Stream command task creation timeout: {}", command);
+            errorConsumer.accept("Task creation timeout");
+            throw new RuntimeException("Stream command task creation timeout", e);
         } catch (Exception e) {
-            log.error("执行流式命令失败: {}", command, e);
-            errorConsumer.accept("执行命令失败: " + e.getMessage());
-            throw new RuntimeException("执行流式命令失败", e);
+            log.error("Failed to execute stream command: {}", command, e);
+            errorConsumer.accept("Command execution failed: " + e.getMessage());
+            throw new RuntimeException("Stream command execution failed", e);
         }
     }
 
-    /** 创建流式命令任务 */
+    /** Create optimized stream task for independent SSH connection */
     private StreamCommandTask createStreamTask(
             SshConfig sshConfig,
             String command,
             Consumer<String> outputConsumer,
             Consumer<String> errorConsumer)
             throws Exception {
-        // 创建SSH会话
+        // Create dedicated SSH session for this stream
         ClientSession session = createSession(sshConfig);
 
-        // 创建命令通道
+        // Create command channel
         ClientChannel channel = session.createChannel(Channel.CHANNEL_EXEC, command);
 
-        // 打开通道
+        // Open channel with timeout
         channel.open().verify(sshConfig.getConnectTimeout(), TimeUnit.SECONDS);
 
-        // 获取输入输出流（必须在通道打开后获取）
+        // Get streams after channel is opened
         InputStream outputStream = channel.getInvertedOut();
         InputStream errorStream = channel.getInvertedErr();
 
-        // 创建任务对象
+        // Create task object for lifecycle management
         StreamCommandTask task = new StreamCommandTask(session, channel);
 
-        // 启动输出读取任务
+        // Start stream processing asynchronously
         Future<?> outputFuture =
                 streamProcessorPool.submit(
-                        () -> {
-                            processOutputStream(outputStream, outputConsumer, task, "OUTPUT");
-                        });
+                        () -> processOutputStream(outputStream, outputConsumer, task, "OUTPUT"));
 
-        // 启动错误读取任务
         Future<?> errorFuture =
                 streamProcessorPool.submit(
-                        () -> {
-                            processOutputStream(errorStream, errorConsumer, task, "ERROR");
-                        });
+                        () -> processOutputStream(errorStream, errorConsumer, task, "ERROR"));
 
-        // 设置Future到任务中，用于停止时取消
+        // Set futures for cleanup
         task.setOutputFuture(outputFuture);
         task.setErrorFuture(errorFuture);
 
-        log.debug("流式命令任务已创建: {}", command);
+        log.debug("Stream command task created: {}", command);
         return task;
     }
 
-    /** 处理输出流 */
+    /** Process output stream with optimized buffering */
     private void processOutputStream(
             InputStream inputStream,
             Consumer<String> consumer,
             StreamCommandTask task,
             String streamType) {
-        log.debug("开始处理{}流", streamType);
+        log.debug("Starting {} stream processing", streamType);
         try (BufferedReader reader =
                 new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
 
@@ -185,90 +173,93 @@ public class SshStreamExecutor {
                     && !Thread.currentThread().isInterrupted()
                     && (line = reader.readLine()) != null) {
                 lineCount++;
-                log.trace("{}流读取到第{}行: {}", streamType, lineCount, line);
                 consumer.accept(line);
             }
 
-            log.debug("{}流处理完成，共读取{}行", streamType, lineCount);
+            log.debug("{} stream processing completed, {} lines processed", streamType, lineCount);
 
         } catch (IOException e) {
             if (!task.isStopped() && !Thread.currentThread().isInterrupted()) {
-                log.error("读取{}流时发生错误", streamType, e);
-                consumer.accept(String.format("[%s] 读取流时发生错误: %s", streamType, e.getMessage()));
+                log.error("Error reading {} stream", streamType, e);
+                consumer.accept(
+                        String.format("[%s] Stream read error: %s", streamType, e.getMessage()));
             } else {
-                log.debug("{}流处理被停止或中断", streamType);
+                log.debug("{} stream processing stopped or interrupted", streamType);
             }
         }
     }
 
-    /** 创建SSH会话 */
+    /** Create optimized SSH session */
     private ClientSession createSession(SshConfig config) throws Exception {
         try {
-            // 连接到服务器
+            // Connect to server with timeout
             ClientSession session =
                     sshClient
                             .connect(config.getUsername(), config.getHost(), config.getPort())
                             .verify(config.getConnectTimeout(), TimeUnit.SECONDS)
                             .getSession();
 
-            // 设置认证方式
+            // Configure authentication
             if (StringUtils.hasText(config.getPrivateKey())) {
-                // 私钥认证
+                // Private key authentication
                 KeyPair keyPair = SshClientUtil.loadPrivateKey(config.getPrivateKey());
                 session.addPublicKeyIdentity(keyPair);
             } else if (StringUtils.hasText(config.getPassword())) {
-                // 密码认证
+                // Password authentication
                 session.addPasswordIdentity(config.getPassword());
             } else {
-                throw new RuntimeException("未提供认证信息，无法连接SSH服务器");
+                throw new RuntimeException("No authentication provided for SSH connection");
             }
 
-            // 尝试认证
+            // Authenticate with timeout
             session.auth().verify(config.getConnectTimeout(), TimeUnit.SECONDS);
 
             return session;
         } catch (Exception e) {
-            throw new RuntimeException("SSH连接或认证失败: " + e.getMessage(), e);
+            throw new RuntimeException(
+                    "SSH connection or authentication failed: " + e.getMessage(), e);
         }
     }
 
-    /** 应用关闭时清理资源 */
+    /** Application shutdown cleanup */
     @PreDestroy
     public void destroy() {
-        log.info("正在关闭SSH流式命令执行器...");
+        log.info("Shutting down SSH stream executor...");
 
-        // 关闭线程池
+        // Graceful shutdown of thread pools
         shutdownExecutor(streamProcessorPool, "StreamProcessor");
         shutdownExecutor(connectionManagerPool, "ConnectionManager");
 
-        // 关闭SSH客户端
+        // Close SSH client
         if (sshClient != null) {
             try {
                 sshClient.stop();
-                log.info("SSH客户端已关闭");
+                log.info("SSH client closed");
             } catch (Exception e) {
-                log.warn("关闭SSH客户端时发生错误", e);
+                log.warn("Error closing SSH client", e);
             }
         }
 
-        log.info("SSH流式命令执行器已关闭");
+        log.info("SSH stream executor shutdown complete");
     }
 
-    /** 优雅关闭线程池 */
+    /** Graceful thread pool shutdown */
     private void shutdownExecutor(ExecutorService executor, String name) {
         try {
             executor.shutdown();
             if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
-                log.warn("{}线程池未能在5秒内优雅关闭，强制关闭", name);
+                log.warn(
+                        "{} thread pool did not shutdown gracefully in 5 seconds, forcing shutdown",
+                        name);
                 executor.shutdownNow();
                 if (!executor.awaitTermination(2, TimeUnit.SECONDS)) {
-                    log.error("{}线程池强制关闭失败", name);
+                    log.error("{} thread pool forced shutdown failed", name);
                 }
             } else {
-                log.info("{}线程池已优雅关闭", name);
+                log.info("{} thread pool shutdown gracefully", name);
             }
         } catch (InterruptedException e) {
-            log.warn("关闭{}线程池时被中断", name);
+            log.warn("{} thread pool shutdown interrupted", name);
             executor.shutdownNow();
             Thread.currentThread().interrupt();
         }

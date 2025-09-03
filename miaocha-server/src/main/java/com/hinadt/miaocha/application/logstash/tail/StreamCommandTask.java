@@ -6,7 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.sshd.client.channel.ClientChannel;
 import org.apache.sshd.client.session.ClientSession;
 
-/** 流式命令任务（现代化版本） 用于管理SSH流式命令的生命周期和资源清理，支持现代化的线程池管理 */
+/** Stream command task - optimized for self-contained SSH stream lifecycle management */
 @Slf4j
 public class StreamCommandTask {
 
@@ -22,13 +22,13 @@ public class StreamCommandTask {
         this.channel = channel;
     }
 
-    /** 停止命令执行并清理资源 */
+    /** Stop command execution and cleanup all resources */
     public void stop() {
         if (stopped.compareAndSet(false, true)) {
-            log.debug("正在停止流式命令任务...");
+            log.debug("Stopping stream command task...");
 
             try {
-                // 取消Future任务
+                // Cancel processing futures
                 if (outputFuture != null && !outputFuture.isDone()) {
                     outputFuture.cancel(true);
                 }
@@ -36,48 +36,48 @@ public class StreamCommandTask {
                     errorFuture.cancel(true);
                 }
 
-                // 关闭通道
+                // Close channel
                 if (channel != null && channel.isOpen()) {
                     try {
                         channel.close();
                     } catch (Exception e) {
-                        log.warn("关闭通道时发生错误", e);
+                        log.warn("Error closing channel", e);
                     }
                 }
 
-                // 关闭SSH会话
+                // Close SSH session
                 if (session != null && !session.isClosed()) {
                     try {
                         session.close();
                     } catch (Exception e) {
-                        log.warn("关闭SSH会话时发生错误", e);
+                        log.warn("Error closing SSH session", e);
                     }
                 }
 
-                log.debug("流式命令任务已停止");
+                log.debug("Stream command task stopped successfully");
 
             } catch (Exception e) {
-                log.error("停止流式命令任务时发生错误", e);
+                log.error("Error stopping stream command task", e);
             }
         }
     }
 
-    /** 检查任务是否已停止 */
+    /** Check if task is stopped */
     public boolean isStopped() {
         return stopped.get();
     }
 
-    /** 设置输出处理Future */
+    /** Set output processing future for lifecycle management */
     public void setOutputFuture(Future<?> outputFuture) {
         this.outputFuture = outputFuture;
     }
 
-    /** 设置错误处理Future */
+    /** Set error processing future for lifecycle management */
     public void setErrorFuture(Future<?> errorFuture) {
         this.errorFuture = errorFuture;
     }
 
-    /** 检查命令是否仍在运行 */
+    /** Check if command is still running */
     public boolean isRunning() {
         return !stopped.get() && channel != null && channel.isOpen();
     }

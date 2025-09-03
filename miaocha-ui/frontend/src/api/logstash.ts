@@ -228,10 +228,10 @@ export function updateLogstashAlertRecipients(processId: number, data: { alertRe
   });
 }
 
-export async function startLogTail(logstashMachineId: number) {
+export async function startLogTail(logstashMachineId: number, tailLines: number = 500) {
   const accessToken = localStorage.getItem('accessToken') || '';
   const eventSource = new EventSource(
-    `/api/logstash/log-tail/stream/${logstashMachineId}?token=${encodeURIComponent(accessToken)}`,
+    `/api/logstash/log-tail/stream/${logstashMachineId}?tailLines=${tailLines}&token=${encodeURIComponent(accessToken)}`,
     {
       withCredentials: true,
     },
@@ -239,12 +239,7 @@ export async function startLogTail(logstashMachineId: number) {
   return eventSource;
 }
 
-export function stopLogTail(logstashMachineId: number): Promise<void> {
-  return request({
-    url: `/api/logstash/log-tail/stop/${logstashMachineId}`,
-    method: 'DELETE',
-  });
-}
+
 
 export function getLogTailContent(lastLogId?: string): Promise<{ logs: string[]; lastLogId: string }> {
   return request({
@@ -254,14 +249,4 @@ export function getLogTailContent(lastLogId?: string): Promise<{ logs: string[];
   });
 }
 
-/**
- * @deprecated Use startLogTail directly instead. This endpoint is no longer needed
- * as the stream endpoint now auto-creates tasks when needed.
- */
-export function createLogTailTask(logstashMachineId: number, tailLines: number = 500): Promise<{ taskId: string }> {
-  return request({
-    url: '/api/logstash/log-tail/create',
-    method: 'POST',
-    data: { logstashMachineId, tailLines },
-  });
-}
+
