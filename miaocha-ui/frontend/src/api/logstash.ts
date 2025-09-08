@@ -100,10 +100,13 @@ export function stopLogstashProcess(id: number): Promise<void> {
 export function updateLogstashConfig(
   id: number,
   data: {
+    name: string;
+    moduleId: number;
     machineIds?: number[];
     configContent?: string;
     jvmOptions?: string;
     logstashYml?: string;
+    updateUser?: string;
   },
 ): Promise<void> {
   return request({
@@ -189,20 +192,20 @@ export function getLogstashInstanceTasks(instanceId: string): Promise<LogstashTa
   });
 }
 
-export function updateLogstashProcessMetadata(
-  id: number,
-  data: {
-    name: string;
-    moduleId: number;
-    updateUser?: string;
-  },
-): Promise<void> {
-  return request({
-    url: `/api/logstash/processes/${id}/metadata-and-config`,
-    method: 'PUT',
-    data,
-  });
-}
+// export function updateLogstashProcessMetadata(
+//   id: number,
+//   data: {
+//     name: string;
+//     moduleId: number;
+//     updateUser?: string;
+//   },
+// ): Promise<void> {
+//   return request({
+//     url: `/api/logstash/processes/${id}/metadata-and-config`,
+//     method: 'PUT',
+//     data,
+//   });
+// }
 
 export async function scaleProcess(
   id: number,
@@ -239,8 +242,6 @@ export async function startLogTail(logstashMachineId: number, tailLines: number 
   return eventSource;
 }
 
-
-
 export function getLogTailContent(lastLogId?: string): Promise<{ logs: string[]; lastLogId: string }> {
   return request({
     url: '/api/logstash/log-tail/content',
@@ -248,5 +249,3 @@ export function getLogTailContent(lastLogId?: string): Promise<{ logs: string[];
     params: { lastLogId },
   });
 }
-
-
