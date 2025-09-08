@@ -5,7 +5,6 @@ import {
   startLogstashProcess,
   stopLogstashProcess,
   createLogstashProcess,
-  updateLogstashProcessMetadata,
   updateLogstashConfig,
   getLogstashTaskSummaries,
   reinitializeFailedMachines,
@@ -154,28 +153,22 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
   const handleSubmit = async (values: Partial<LogstashProcess>) => {
     try {
       if (currentProcess) {
-        // 编辑模式：更新元数据和配置信息
-        await updateLogstashProcessMetadata(currentProcess.id, {
-          name: values.name || currentProcess.name,
-          moduleId: values.moduleId || currentProcess.moduleId,
-        });
-
-        // 如果有配置相关的更新，也调用配置更新API
         const configData: {
+          name: string;
+          moduleId: number;
           configContent?: string;
           jvmOptions?: string;
           logstashYml?: string;
-        } = {};
+        } = {
+          name: values.name || currentProcess.name,
+          moduleId: values.moduleId || currentProcess.moduleId,
+        };
 
         // 注意：编辑模式下不更新 machineIds，因为部署机器不可编辑
         if (values.configContent) configData.configContent = values.configContent;
         if (values.jvmOptions) configData.jvmOptions = values.jvmOptions;
         if (values.logstashYml) configData.logstashYml = values.logstashYml;
-
-        // 只有当有配置更新时才调用配置API
-        if (Object.keys(configData).length > 0) {
-          await updateLogstashConfig(currentProcess.id, configData);
-        }
+        await updateLogstashConfig(currentProcess.id, configData);
 
         showSuccess('更新成功');
       } else {
