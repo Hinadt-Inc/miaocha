@@ -11,6 +11,8 @@ import {
   forceStopLogstashProcess,
   refreshLogstashConfig,
   updateLogstashAlertRecipients,
+  startLogstashInstances,
+  stopLogstashInstances,
 } from '@/api/logstash';
 import type { LogstashProcess, LogstashTaskSummary } from '@/types/logstashTypes';
 
@@ -28,6 +30,10 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
   const [detailModalVisible, setDetailModalVisible] = useState<Record<string, boolean>>({});
   const [currentDetail, setCurrentDetail] = useState<LogstashProcess>();
   const [alertModalVisible, setAlertModalVisible] = useState(false);
+  
+  // Batch operation states
+  const [selectedInstanceIds, setSelectedInstanceIds] = useState<number[]>([]);
+  const [batchLoading, setBatchLoading] = useState(false);
 
   const handleAdd = () => {
     setCurrentProcess(null);
@@ -182,6 +188,48 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
     }
   };
 
+  // ==================== Batch operations ====================
+
+  const handleInstanceSelectionChange = (selectedIds: number[]) => {
+    setSelectedInstanceIds(selectedIds);
+  };
+
+  const handleBatchStart = async () => {
+    if (selectedInstanceIds.length === 0) {
+      return;
+    }
+
+    try {
+      setBatchLoading(true);
+      await startLogstashInstances(selectedInstanceIds);
+      showSuccess(`批量启动命令已发送，共${selectedInstanceIds.length}个实例`);
+      setSelectedInstanceIds([]); // Clear selection after operation
+      await fetchData();
+    } catch {
+      // API 错误已由全局错误处理器处理
+    } finally {
+      setBatchLoading(false);
+    }
+  };
+
+  const handleBatchStop = async () => {
+    if (selectedInstanceIds.length === 0) {
+      return;
+    }
+
+    try {
+      setBatchLoading(true);
+      await stopLogstashInstances(selectedInstanceIds);
+      showSuccess(`批量停止命令已发送，共${selectedInstanceIds.length}个实例`);
+      setSelectedInstanceIds([]); // Clear selection after operation
+      await fetchData();
+    } catch {
+      // API 错误已由全局错误处理器处理
+    } finally {
+      setBatchLoading(false);
+    }
+  };
+
   return {
     // 状态
     editModalVisible,
@@ -200,6 +248,10 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
     alertModalVisible,
     setAlertModalVisible,
 
+    // Batch operation states
+    selectedInstanceIds,
+    batchLoading,
+
     // 动作
     handleAdd,
     handleEdit,
@@ -215,5 +267,10 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
     handleSubmit,
     handleShowAlert,
     handleSubmitAlert,
+
+    // Batch operations
+    handleInstanceSelectionChange,
+    handleBatchStart,
+    handleBatchStop,
   };
 };

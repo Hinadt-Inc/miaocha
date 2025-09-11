@@ -897,6 +897,138 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         return logstashMachineConverter.toDetailDTO(logstashMachine, process, machineInfo);
     }
 
+    // ==================== 批量实例操作方法 ====================
+
+    @Override
+    @Transactional
+    public void startLogstashInstances(List<Long> instanceIds) {
+        if (instanceIds == null || instanceIds.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "实例ID列表不能为空");
+        }
+
+        log.info("开始批量启动LogstashMachine实例: {}", instanceIds);
+
+        // 验证所有实例存在并获取实例信息
+        List<LogstashMachine> instances =
+                instanceIds.stream().map(this::validateInstanceExists).collect(Collectors.toList());
+
+        // 按进程分组，因为不同进程的实例需要分别处理
+        var instancesByProcess =
+                instances.stream()
+                        .collect(Collectors.groupingBy(LogstashMachine::getLogstashProcessId));
+
+        for (var entry : instancesByProcess.entrySet()) {
+            Long processId = entry.getKey();
+            List<LogstashMachine> processInstances = entry.getValue();
+
+            // 验证进程存在和配置
+            LogstashProcess process = validateProcessExists(processId);
+            validateProcessConfig(process);
+
+            // 过滤可启动的实例（状态检查）
+            List<LogstashMachine> startableInstances =
+                    processInstances.stream()
+                            .filter(
+                                    instance -> {
+                                        LogstashMachineState currentState =
+                                                LogstashMachineState.valueOf(instance.getState());
+                                        return currentState == LogstashMachineState.NOT_STARTED
+                                                || currentState
+                                                        == LogstashMachineState.START_FAILED;
+                                    })
+                            .collect(Collectors.toList());
+
+            if (startableInstances.isEmpty()) {
+                log.warn("进程[{}]没有可启动的实例", processId);
+                continue;
+            }
+
+            // 记录跳过的实例
+            List<LogstashMachine> skippedInstances =
+                    processInstances.stream()
+                            .filter(instance -> !startableInstances.contains(instance))
+                            .collect(Collectors.toList());
+
+            if (!skippedInstances.isEmpty()) {
+                String skippedInfo =
+                        skippedInstances.stream()
+                                .map(
+                                        instance ->
+                                                String.format(
+                                                        "[ID:%d,状态:%s]",
+                                                        instance.getId(),
+                                                        LogstashMachineState.valueOf(
+                                                                        instance.getState())
+                                                                .getDescription()))
+                                .collect(Collectors.joining(", "));
+                log.warn("以下实例状态不允许启动，已跳过: {}", skippedInfo);
+            }
+
+            // 启动可启动的实例
+            logstashDeployService.startInstances(startableInstances, process);
+            log.info("成功启动进程[{}]下的{}个实例", processId, startableInstances.size());
+        }
+
+        log.info("批量启动操作完成，处理了{}个实例", instanceIds.size());
+    }
+
+    @Override
+    @Transactional
+    public void stopLogstashInstances(List<Long> instanceIds) {
+        if (instanceIds == null || instanceIds.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "实例ID列表不能为空");
+        }
+
+        log.info("开始批量停止LogstashMachine实例: {}", instanceIds);
+
+        // 验证所有实例存在并获取实例信息
+        List<LogstashMachine> instances =
+                instanceIds.stream().map(this::validateInstanceExists).collect(Collectors.toList());
+
+        // 过滤可停止的实例（状态检查）
+        List<LogstashMachine> stoppableInstances =
+                instances.stream()
+                        .filter(
+                                instance -> {
+                                    LogstashMachineState currentState =
+                                            LogstashMachineState.valueOf(instance.getState());
+                                    return currentState == LogstashMachineState.RUNNING
+                                            || currentState == LogstashMachineState.STOP_FAILED;
+                                })
+                        .collect(Collectors.toList());
+
+        if (stoppableInstances.isEmpty()) {
+            log.warn("没有可停止的实例");
+            return;
+        }
+
+        // 记录跳过的实例
+        List<LogstashMachine> skippedInstances =
+                instances.stream()
+                        .filter(instance -> !stoppableInstances.contains(instance))
+                        .collect(Collectors.toList());
+
+        if (!skippedInstances.isEmpty()) {
+            String skippedInfo =
+                    skippedInstances.stream()
+                            .map(
+                                    instance ->
+                                            String.format(
+                                                    "[ID:%d,状态:%s]",
+                                                    instance.getId(),
+                                                    LogstashMachineState.valueOf(
+                                                                    instance.getState())
+                                                            .getDescription()))
+                            .collect(Collectors.joining(", "));
+            log.warn("以下实例状态不允许停止，已跳过: {}", skippedInfo);
+        }
+
+        // 停止可停止的实例
+        logstashDeployService.stopInstances(stoppableInstances);
+        log.info("成功停止{}个实例", stoppableInstances.size());
+        log.info("批量停止操作完成，处理了{}个实例", instanceIds.size());
+    }
+
     /**
      * 验证LogstashMachine实例是否存在
      *

@@ -76,7 +76,13 @@ const LogstashManagementPage = () => {
   };
 
   const renderExpandedRow = (record: any) => (
-    <ExpandedRowRenderer record={record} data={data} machineActions={machineActions} />
+    <ExpandedRowRenderer 
+      record={record} 
+      data={data} 
+      machineActions={machineActions}
+      selectedInstanceIds={actions.selectedInstanceIds}
+      onInstanceSelectionChange={actions.handleInstanceSelectionChange}
+    />
   );
 
   const handleScale = async (
@@ -107,6 +113,10 @@ const LogstashManagementPage = () => {
           onAdd={actions.handleAdd}
           onReload={handleReload}
           className={styles.tableToolbar}
+          selectedInstanceIds={actions.selectedInstanceIds}
+          onBatchStart={actions.handleBatchStart}
+          onBatchStop={actions.handleBatchStop}
+          batchLoading={actions.batchLoading}
         />
       </div>
 
