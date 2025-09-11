@@ -87,7 +87,7 @@ const MachineTable = ({
       ),
     }] : []),
     {
-      title: '实例ID',
+      title: 'Instance ID',
       dataIndex: 'logstashMachineId',
       key: 'logstashMachineId',
       render: (logstashMachineId: number) => (

@@ -58,15 +58,15 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
   const handleSubmitAlert = async (values: Partial<LogstashProcess>) => {
     try {
       if (values.id && values.alertRecipients) {
-        // 调用告警邮箱更新 API
+        // Call alert recipients update API
         await updateLogstashAlertRecipients(values.id, {
           alertRecipients: values.alertRecipients,
         });
-        showSuccess('告警邮箱设置成功');
-        await fetchData(); // 刷新数据
+        showSuccess('Alert recipients configured successfully');
+        await fetchData(); // Refresh data
       }
     } catch (error) {
-      console.error('设置告警邮箱失败:', error);
+      console.error('Failed to configure alert recipients:', error);
       // 错误已由全局错误处理器处理
     }
   };
@@ -74,30 +74,30 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
   const handleDelete = async (id: number) => {
     try {
       await deleteLogstashProcess(id);
-      showSuccess('删除成功');
+      showSuccess('Deleted successfully');
       await fetchData();
     } catch {
-      // API 错误已由全局错误处理器处理
+      // API errors handled by global error handler
     }
   };
 
   const handleStart = async (id: number) => {
     try {
       await startLogstashProcess(id);
-      showSuccess('启动命令已发送');
+      showSuccess('Start command sent');
       await fetchData();
     } catch {
-      // API 错误已由全局错误处理器处理
+      // API errors handled by global error handler
     }
   };
 
   const handleStop = async (id: number) => {
     try {
       await stopLogstashProcess(id);
-      showSuccess('停止命令已发送');
+      showSuccess('Stop command sent');
       await fetchData();
     } catch {
-      // API 错误已由全局错误处理器处理
+      // API errors handled by global error handler
     }
   };
 
@@ -107,7 +107,7 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
       setTaskSummaries(summaries);
       setSummaryModalVisible(true);
     } catch (err) {
-      console.error('获取任务历史失败:', err);
+      console.error('Failed to fetch task history:', err);
     }
   };
 
@@ -124,30 +124,30 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
       await refreshLogstashConfig(record.id, {
         logstashMachineIds,
       });
-      showSuccess('配置刷新命令已发送');
+      showSuccess('Config refresh command sent');
       await fetchData();
     } catch {
-      // API 错误已由全局错误处理器处理
+      // API errors handled by global error handler
     }
   };
 
   const handleReinitializeFailedMachines = async (processId: number) => {
     try {
       await reinitializeFailedMachines(processId);
-      showSuccess('重新初始化命令已发送');
+      showSuccess('Reinitialize command sent');
       await fetchData();
     } catch {
-      // API 错误已由全局错误处理器处理
+      // API errors handled by global error handler
     }
   };
 
   const handleForceStopProcess = async (id: number) => {
     try {
       await forceStopLogstashProcess(id);
-      showSuccess('全局强制停止命令已发送');
+      showSuccess('Global force stop command sent');
       await fetchData();
     } catch {
-      // API 错误已由全局错误处理器处理
+      // API errors handled by global error handler
     }
   };
 
@@ -170,21 +170,21 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
           moduleId: values.moduleId || currentProcess.moduleId,
         };
 
-        // 注意：编辑模式下不更新 machineIds，因为部署机器不可编辑
+        // Note: Do not update machineIds in edit mode, since deployment machines are not editable
         if (values.configContent) configData.configContent = values.configContent;
         if (values.jvmOptions) configData.jvmOptions = values.jvmOptions;
         if (values.logstashYml) configData.logstashYml = values.logstashYml;
         await updateLogstashConfig(currentProcess.id, configData);
 
-        showSuccess('更新成功');
+        showSuccess('Updated successfully');
       } else {
         await createLogstashProcess(values);
-        showSuccess('创建成功');
+        showSuccess('Created successfully');
       }
       setEditModalVisible(false);
       await fetchData();
     } catch {
-      // API 错误已由全局错误处理器处理
+      // API errors handled by global error handler
     }
   };
 
@@ -202,11 +202,11 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
     try {
       setBatchLoading(true);
       await startLogstashInstances(selectedInstanceIds);
-      showSuccess(`批量启动命令已发送，共${selectedInstanceIds.length}个实例`);
+      showSuccess(`Batch start command sent for ${selectedInstanceIds.length} instances`);
       setSelectedInstanceIds([]); // Clear selection after operation
       await fetchData();
     } catch {
-      // API 错误已由全局错误处理器处理
+      // API errors handled by global error handler
     } finally {
       setBatchLoading(false);
     }
@@ -220,11 +220,11 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
     try {
       setBatchLoading(true);
       await stopLogstashInstances(selectedInstanceIds);
-      showSuccess(`批量停止命令已发送，共${selectedInstanceIds.length}个实例`);
+      showSuccess(`Batch stop command sent for ${selectedInstanceIds.length} instances`);
       setSelectedInstanceIds([]); // Clear selection after operation
       await fetchData();
     } catch {
-      // API 错误已由全局错误处理器处理
+      // API errors handled by global error handler
     } finally {
       setBatchLoading(false);
     }

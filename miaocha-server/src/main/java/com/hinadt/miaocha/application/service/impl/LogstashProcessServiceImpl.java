@@ -29,7 +29,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-/** Logstash进程管理服务实现类 支持多实例部署，基于LogstashMachine架构 */
+/**
+ * Logstash process management service implementation. Supports multi-instance deployment based on
+ * LogstashMachine architecture
+ */
 @Slf4j
 @Service
 public class LogstashProcessServiceImpl implements LogstashProcessService {
@@ -897,22 +900,23 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         return logstashMachineConverter.toDetailDTO(logstashMachine, process, machineInfo);
     }
 
-    // ==================== 批量实例操作方法 ====================
+    // ==================== Batch Instance Operations ====================
 
     @Override
     @Transactional
     public void startLogstashInstances(List<Long> instanceIds) {
         if (instanceIds == null || instanceIds.isEmpty()) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "实例ID列表不能为空");
+            throw new BusinessException(
+                    ErrorCode.VALIDATION_ERROR, "Instance ID list cannot be empty");
         }
 
-        log.info("开始批量启动LogstashMachine实例: {}", instanceIds);
+        log.debug("Starting batch start operation for LogstashMachine instances: {}", instanceIds);
 
-        // 验证所有实例存在并获取实例信息
+        // Validate all instances exist and get instance information
         List<LogstashMachine> instances =
                 instanceIds.stream().map(this::validateInstanceExists).collect(Collectors.toList());
 
-        // 按进程分组，因为不同进程的实例需要分别处理
+        // Group by process, since instances from different processes need to be handled separately
         var instancesByProcess =
                 instances.stream()
                         .collect(Collectors.groupingBy(LogstashMachine::getLogstashProcessId));
@@ -921,11 +925,11 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             Long processId = entry.getKey();
             List<LogstashMachine> processInstances = entry.getValue();
 
-            // 验证进程存在和配置
+            // Validate process exists and configuration
             LogstashProcess process = validateProcessExists(processId);
             validateProcessConfig(process);
 
-            // 过滤可启动的实例（状态检查）
+            // Filter startable instances (state check)
             List<LogstashMachine> startableInstances =
                     processInstances.stream()
                             .filter(
@@ -939,11 +943,11 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                             .collect(Collectors.toList());
 
             if (startableInstances.isEmpty()) {
-                log.warn("进程[{}]没有可启动的实例", processId);
+                log.debug("No startable instances found for process [{}]", processId);
                 continue;
             }
 
-            // 记录跳过的实例
+            // Record skipped instances
             List<LogstashMachine> skippedInstances =
                     processInstances.stream()
                             .filter(instance -> !startableInstances.contains(instance))
@@ -955,37 +959,41 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                                 .map(
                                         instance ->
                                                 String.format(
-                                                        "[ID:%d,状态:%s]",
+                                                        "[ID:%d,State:%s]",
                                                         instance.getId(),
                                                         LogstashMachineState.valueOf(
                                                                         instance.getState())
                                                                 .getDescription()))
                                 .collect(Collectors.joining(", "));
-                log.warn("以下实例状态不允许启动，已跳过: {}", skippedInfo);
+                log.debug("Skipping instances with invalid state for starting: {}", skippedInfo);
             }
 
-            // 启动可启动的实例
+            // Start the startable instances
             logstashDeployService.startInstances(startableInstances, process);
-            log.info("成功启动进程[{}]下的{}个实例", processId, startableInstances.size());
+            log.info(
+                    "Successfully started {} instances for process [{}]",
+                    startableInstances.size(),
+                    processId);
         }
 
-        log.info("批量启动操作完成，处理了{}个实例", instanceIds.size());
+        log.info("Batch start operation completed, processed {} instances", instanceIds.size());
     }
 
     @Override
     @Transactional
     public void stopLogstashInstances(List<Long> instanceIds) {
         if (instanceIds == null || instanceIds.isEmpty()) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "实例ID列表不能为空");
+            throw new BusinessException(
+                    ErrorCode.VALIDATION_ERROR, "Instance ID list cannot be empty");
         }
 
-        log.info("开始批量停止LogstashMachine实例: {}", instanceIds);
+        log.debug("Starting batch stop operation for LogstashMachine instances: {}", instanceIds);
 
-        // 验证所有实例存在并获取实例信息
+        // Validate all instances exist and get instance information
         List<LogstashMachine> instances =
                 instanceIds.stream().map(this::validateInstanceExists).collect(Collectors.toList());
 
-        // 过滤可停止的实例（状态检查）
+        // Filter stoppable instances (state check)
         List<LogstashMachine> stoppableInstances =
                 instances.stream()
                         .filter(
@@ -998,11 +1006,11 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                         .collect(Collectors.toList());
 
         if (stoppableInstances.isEmpty()) {
-            log.warn("没有可停止的实例");
+            log.debug("No stoppable instances found");
             return;
         }
 
-        // 记录跳过的实例
+        // Record skipped instances
         List<LogstashMachine> skippedInstances =
                 instances.stream()
                         .filter(instance -> !stoppableInstances.contains(instance))
@@ -1014,36 +1022,38 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                             .map(
                                     instance ->
                                             String.format(
-                                                    "[ID:%d,状态:%s]",
+                                                    "[ID:%d,State:%s]",
                                                     instance.getId(),
                                                     LogstashMachineState.valueOf(
                                                                     instance.getState())
                                                             .getDescription()))
                             .collect(Collectors.joining(", "));
-            log.warn("以下实例状态不允许停止，已跳过: {}", skippedInfo);
+            log.debug("Skipping instances with invalid state for stopping: {}", skippedInfo);
         }
 
-        // 停止可停止的实例
+        // Stop the stoppable instances
         logstashDeployService.stopInstances(stoppableInstances);
-        log.info("成功停止{}个实例", stoppableInstances.size());
-        log.info("批量停止操作完成，处理了{}个实例", instanceIds.size());
+        log.info("Successfully stopped {} instances", stoppableInstances.size());
+        log.info("Batch stop operation completed, processed {} instances", instanceIds.size());
     }
 
     /**
-     * 验证LogstashMachine实例是否存在
+     * Validate LogstashMachine instance exists
      *
-     * @param instanceId LogstashMachine实例ID
-     * @return LogstashMachine实例
+     * @param instanceId LogstashMachine instance ID
+     * @return LogstashMachine instance
      */
     private LogstashMachine validateInstanceExists(Long instanceId) {
         if (instanceId == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "LogstashMachine实例ID不能为空");
+            throw new BusinessException(
+                    ErrorCode.VALIDATION_ERROR, "LogstashMachine instance ID cannot be null");
         }
 
         LogstashMachine instance = logstashMachineMapper.selectById(instanceId);
         if (instance == null) {
             throw new BusinessException(
-                    ErrorCode.LOGSTASH_MACHINE_NOT_FOUND, "LogstashMachine实例不存在: ID=" + instanceId);
+                    ErrorCode.LOGSTASH_MACHINE_NOT_FOUND,
+                    "LogstashMachine instance not found: ID=" + instanceId);
         }
 
         return instance;

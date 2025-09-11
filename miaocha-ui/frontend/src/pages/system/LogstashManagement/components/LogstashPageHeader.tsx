@@ -53,7 +53,7 @@ const LogstashPageHeader = ({
         {hasSelection && (
           <Space style={{ marginLeft: 16 }}>
             <span style={{ color: '#666', fontSize: '14px' }}>
-              已选择 {selectedInstanceIds.length} 个实例
+              Selected {selectedInstanceIds.length} instances
             </span>
             <Button
               type="primary"
@@ -62,7 +62,7 @@ const LogstashPageHeader = ({
               loading={batchLoading}
               disabled={!hasSelection}
             >
-              批量启动
+              Batch Start
             </Button>
             <Button
               danger
@@ -71,7 +71,7 @@ const LogstashPageHeader = ({
               loading={batchLoading}
               disabled={!hasSelection}
             >
-              批量停止
+              Batch Stop
             </Button>
           </Space>
         )}
