@@ -67,7 +67,7 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
   // 同步外部传入的activeColumns
   useEffect(() => {
     if (externalActiveColumns && JSON.stringify(externalActiveColumns) !== JSON.stringify(activeColumns)) {
-      console.log('Sider同步外部字段:', externalActiveColumns);
+      // console.log('Sider同步外部字段:', externalActiveColumns);
       setActiveColumns(externalActiveColumns);
     }
   }, [externalActiveColumns, activeColumns]);
@@ -196,9 +196,11 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
   const handleToggleColumn = useCallback(
     (data: ILogColumnsResponse) => {
       const newActiveColumns = toggleColumn(data);
+
       if (newActiveColumns && onActiveColumnsChange) {
         onActiveColumnsChange(newActiveColumns);
       }
+
       updateSearchParamsInStorage(newActiveColumns || []);
     },
     [toggleColumn, onActiveColumnsChange],
@@ -257,13 +259,22 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
   // 过滤可用字段
   const filteredAvailableColumns = useMemo(() => {
     const availableColumns = columns?.filter((item: ILogColumnsResponse) => !item.selected);
-    if (!searchText.trim()) {
-      return availableColumns;
+    let filteredColumns = availableColumns;
+
+    if (searchText.trim()) {
+      filteredColumns = availableColumns?.filter((item: ILogColumnsResponse) =>
+        item.columnName?.toLowerCase().includes(searchText.toLowerCase()),
+      );
     }
-    return availableColumns?.filter((item: ILogColumnsResponse) =>
-      item.columnName?.toLowerCase().includes(searchText.toLowerCase()),
-    );
+
+    // 按字段名排序，保持与已选字段一致的排序逻辑
+    return filteredColumns?.sort((a: ILogColumnsResponse, b: ILogColumnsResponse) => {
+      const nameA = a.columnName || '';
+      const nameB = b.columnName || '';
+      return nameA.localeCompare(nameB);
+    });
   }, [columns, searchText]);
+
   const renderVirtualItem = useCallback(
     (item: ILogColumnsResponse, index: number) => {
       return (
@@ -317,7 +328,17 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
             label: '已选字段',
             children: columns
               ?.filter((item: ILogColumnsResponse) => item.selected)
-              ?.sort((a: ILogColumnsResponse, b: ILogColumnsResponse) => (a._createTime || 0) - (b._createTime || 0))
+              ?.sort((a: ILogColumnsResponse, b: ILogColumnsResponse) => {
+                const nameA = a.columnName || '';
+                const nameB = b.columnName || '';
+
+                // log_time 始终排在第一位
+                if (nameA === 'log_time') return -1;
+                if (nameB === 'log_time') return 1;
+
+                // 其他字段按照 _createTime 排序（添加顺序）
+                return (a._createTime || 0) - (b._createTime || 0);
+              })
               ?.map((item: ILogColumnsResponse, index: number) => (
                 <FieldListItem
                   key={item.columnName}

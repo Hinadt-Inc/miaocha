@@ -26,13 +26,15 @@ import type { ILogSearchParams, IStatus } from './types';
  * 使用模块化的hooks来组织代码，提供日志查询和分析功能
  */
 const HomePage = () => {
-  // 1. 获取所有状态和refs
+  // 1. 获取所有状态和refs（状态集合器）
   const state = useHomePageState();
   const {
     moduleOptions,
     setModuleOptions,
     detailData,
     setDetailData,
+    originalDetailData,
+    setOriginalDetailData,
     histogramData,
     setHistogramData,
     searchParams,
@@ -61,7 +63,7 @@ const HomePage = () => {
   // 2. OAuth回调处理
   useOAuthCallback();
 
-  // 3. URL参数处理
+  // 3. URL参数处理（指分享）
   const { cleanupUrlParams } = useUrlParams(
     state.sharedParams,
     state.setSharedParams,
@@ -144,6 +146,8 @@ const HomePage = () => {
               localStorage.setItem('searchBarParams', JSON.stringify(updatedParams));
             } catch (error) {
               console.error('更新localStorage中的searchBarParams失败:', error);
+              // 清理损坏的数据
+              localStorage.removeItem('searchBarParams');
             }
           }
           return payload;
@@ -155,9 +159,37 @@ const HomePage = () => {
   // 8. 处理数据请求结果
   useEffect(() => {
     if (getDetailData.data) {
+      // 检查当前是否有选择的字段
+      const hasSelectedFields = state.activeColumns && state.activeColumns.length > 0;
+
+      if (!hasSelectedFields) {
+        // 没有选择字段时，保存原始完整数据
+        setOriginalDetailData(getDetailData.data);
+      } else {
+        // 有选择字段时，为每条记录添加原始数据引用
+        if (originalDetailData && getDetailData.data.rows) {
+          const enhancedRows = getDetailData.data.rows.map((row: any, index: number) => {
+            const originalRow = originalDetailData.rows?.[index];
+            if (originalRow) {
+              return {
+                ...row,
+                _originalSource: originalRow,
+              };
+            }
+            return row;
+          });
+
+          setDetailData({
+            ...getDetailData.data,
+            rows: enhancedRows,
+          });
+          return;
+        }
+      }
+
       setDetailData(getDetailData.data);
     }
-  }, [getDetailData.data]);
+  }, [getDetailData.data, state.activeColumns, originalDetailData]);
 
   useEffect(() => {
     if (getHistogramData.data) {

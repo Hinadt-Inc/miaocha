@@ -8,13 +8,6 @@ export const PLACEHOLDERS = {
   SQL: "WHERE子句，例如: level = 'ERROR' AND marker.reqType = 'EXECUTE'",
 } as const;
 
-// 搜索按钮配置
-export const SEARCH_BUTTON = {
-  TEXT: '搜索',
-  SIZE: 'small' as const,
-  TYPE: 'primary' as const,
-} as const;
-
 // 标签颜色配置
 export const TAG_COLORS = {
   KEYWORD: 'orange',

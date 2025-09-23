@@ -1,4 +1,4 @@
-import {del, post, get } from './request';
+import { del, post, get } from './request';
 
 // 获取我的模块权限
 export function fetchMyModules(): Promise<IMyModulesResponse[]> {
@@ -49,7 +49,9 @@ export function saveSearchCondition(params: ISaveSearchConditionParams): Promise
 }
 
 // 保存搜索条件并返回缓存键
-export function saveSearchConditionWithCache(params: ISaveSearchConditionWithCacheParams): Promise<ISaveSearchConditionCacheResponse> {
+export function saveSearchConditionWithCache(
+  params: ISaveSearchConditionWithCacheParams,
+): Promise<ISaveSearchConditionCacheResponse> {
   return post('/api/logs/search/save-condition', params);
 }
 
@@ -64,9 +66,6 @@ export function deleteSearchCondition(id: string): Promise<void> {
 }
 
 // 删除缓存的搜索条件
-export function deleteCachedSearchConditions(params: {
-  cacheGroup: string;
-  cacheKeys: string[];
-}): Promise<void> {
+export function deleteCachedSearchConditions(params: { cacheGroup: string; cacheKeys: string[] }): Promise<void> {
   return del('/api/logs/search/conditions', params);
 }

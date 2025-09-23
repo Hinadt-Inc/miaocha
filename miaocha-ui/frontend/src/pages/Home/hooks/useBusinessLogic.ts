@@ -36,7 +36,7 @@ export const useBusinessLogic = (
   } = state;
 
   // 生成模块选项
-  const generateModuleOptions = useCallback((modulesData: IMyModulesResponse[]): IStatus[] => {
+  const generateModuleOptions = (modulesData: IMyModulesResponse[]): IStatus[] => {
     return (
       modulesData?.map(({ datasourceId, datasourceName, module }) => ({
         label: module,
@@ -46,7 +46,7 @@ export const useBusinessLogic = (
         module,
       })) || []
     );
-  }, []);
+  };
 
   // 应用分享参数到搜索栏
   useEffect(() => {
@@ -248,10 +248,10 @@ export const useBusinessLogic = (
     }
 
     // 确保columns已经加载完成，避免使用错误的fields
-    if (!columnsLoaded) {
-      console.log('等待columns加载完成...');
-      // return;
-    }
+    // if (!columnsLoaded) {
+    //   console.log('等待columns加载完成...');
+    //   // return;
+    // }
 
     // 如果正在初始化中（仅针对模块配置加载），跳过请求
     if (isInitializingRef.current) {
@@ -347,13 +347,13 @@ export const useBusinessLogic = (
 
   // 处理列变化
   const handleChangeColumns = useCallback((columns: ILogColumnsResponse[]) => {
-    console.log(
-      'handleChangeColumns 接收到的columns:',
-      columns.map((col) => ({
-        name: col.columnName,
-        selected: col.selected,
-      })),
-    );
+    // console.log(
+    //   'handleChangeColumns 接收到的columns:',
+    //   columns.map((col) => ({
+    //     name: col.columnName,
+    //     selected: col.selected,
+    //   })),
+    // );
 
     setLogTableColumns(columns);
 
@@ -363,7 +363,7 @@ export const useBusinessLogic = (
       .map((item) => item.columnName!)
       .filter((name): name is string => Boolean(name));
 
-    console.log('handleChangeColumns 筛选出的selectedColumns:', selectedColumns);
+    // console.log('handleChangeColumns 筛选出的selectedColumns:', selectedColumns);
 
     setSearchParams((prev: ILogSearchParams) => ({
       ...prev,
