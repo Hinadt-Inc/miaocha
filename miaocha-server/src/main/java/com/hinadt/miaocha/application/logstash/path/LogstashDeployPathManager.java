@@ -5,6 +5,7 @@ import com.hinadt.miaocha.domain.entity.LogstashMachine;
 import com.hinadt.miaocha.domain.entity.MachineInfo;
 import com.hinadt.miaocha.infrastructure.mapper.LogstashMachineMapper;
 import com.hinadt.miaocha.infrastructure.mapper.MachineMapper;
+import java.nio.file.Path;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,6 +99,52 @@ public class LogstashDeployPathManager {
         // 使用UUID确保绝对唯一性
         String uuid = java.util.UUID.randomUUID().toString().replace("-", "");
         return String.format("%s/logstash-%s", actualDeployDir, uuid);
+    }
+
+    /**
+     * 规范化实例部署路径 如果传入的是相对路径（不以/开头且不包含绝对前缀），则将其视为相对于目标用户 home 目录。
+     *
+     * @param rawDeployPath 用户自定义部署路径
+     * @param machineInfo 目标机器信息
+     * @return 规范化后的绝对路径
+     */
+    public String normalizeInstanceDeployPath(String rawDeployPath, MachineInfo machineInfo) {
+        if (!StringUtils.hasText(rawDeployPath)) {
+            throw new IllegalArgumentException("自定义部署路径不能为空");
+        }
+        if (machineInfo == null) {
+            throw new IllegalArgumentException("MachineInfo不能为null");
+        }
+
+        String trimmedPath = rawDeployPath.trim();
+
+        // 处理以 ~ 开头的路径，视为用户家目录
+        if (trimmedPath.startsWith("~")) {
+            String subPath = trimmedPath.substring(1);
+            if (subPath.startsWith("/")) {
+                subPath = subPath.substring(1);
+            }
+            Path homeDir = Path.of(resolveHomeDirectory(machineInfo));
+            Path normalized = subPath.isEmpty() ? homeDir : homeDir.resolve(subPath).normalize();
+            return normalized.toString();
+        }
+
+        // 已经是绝对路径
+        if (trimmedPath.startsWith("/")) {
+            return Path.of(trimmedPath).normalize().toString();
+        }
+
+        // 相对路径，拼接到用户家目录下
+        Path homeDir = Path.of(resolveHomeDirectory(machineInfo));
+        return homeDir.resolve(trimmedPath).normalize().toString();
+    }
+
+    private String resolveHomeDirectory(MachineInfo machineInfo) {
+        String username = machineInfo.getUsername();
+        if (!StringUtils.hasText(username)) {
+            username = "root";
+        }
+        return "root".equals(username) ? "/root" : String.format("/home/%s", username);
     }
 
     /**

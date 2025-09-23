@@ -5,6 +5,7 @@ import com.hinadt.miaocha.application.logstash.LogstashMachineConnectionValidato
 import com.hinadt.miaocha.application.logstash.LogstashProcessDeployService;
 import com.hinadt.miaocha.application.logstash.enums.LogstashMachineState;
 import com.hinadt.miaocha.application.logstash.parser.LogstashConfigParser;
+import com.hinadt.miaocha.application.logstash.path.LogstashDeployPathManager;
 import com.hinadt.miaocha.application.logstash.task.TaskService;
 import com.hinadt.miaocha.application.service.LogstashProcessService;
 import com.hinadt.miaocha.common.exception.BusinessException;
@@ -45,6 +46,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
     private final TaskService taskService;
     private final LogstashConfigSyncService configSyncService;
     private final LogstashMachineConnectionValidator connectionValidator;
+    private final LogstashDeployPathManager deployPathManager;
 
     public LogstashProcessServiceImpl(
             LogstashProcessMapper logstashProcessMapper,
@@ -57,7 +59,8 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
             LogstashConfigParser logstashConfigParser,
             TaskService taskService,
             LogstashConfigSyncService configSyncService,
-            LogstashMachineConnectionValidator connectionValidator) {
+            LogstashMachineConnectionValidator connectionValidator,
+            LogstashDeployPathManager deployPathManager) {
         this.logstashProcessMapper = logstashProcessMapper;
         this.logstashMachineMapper = logstashMachineMapper;
         this.machineMapper = machineMapper;
@@ -69,6 +72,7 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         this.taskService = taskService;
         this.configSyncService = configSyncService;
         this.connectionValidator = connectionValidator;
+        this.deployPathManager = deployPathManager;
     }
 
     @Override
@@ -339,7 +343,11 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                         machine -> {
                             // 生成部署路径
                             String deployPath = dto.getCustomDeployPath();
-                            if (!StringUtils.hasText(deployPath)) {
+                            if (StringUtils.hasText(deployPath)) {
+                                deployPath =
+                                        deployPathManager.normalizeInstanceDeployPath(
+                                                deployPath, machine);
+                            } else {
                                 // 如果没有自定义路径，生成默认路径
                                 deployPath =
                                         logstashDeployService.generateDefaultInstancePath(machine);
@@ -636,7 +644,11 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
                         machine -> {
                             // 生成部署路径
                             String deployPath = customDeployPath;
-                            if (!StringUtils.hasText(deployPath)) {
+                            if (StringUtils.hasText(deployPath)) {
+                                deployPath =
+                                        deployPathManager.normalizeInstanceDeployPath(
+                                                deployPath, machine);
+                            } else {
                                 // 如果没有自定义路径，生成默认路径
                                 deployPath =
                                         logstashDeployService.generateDefaultInstancePath(machine);
