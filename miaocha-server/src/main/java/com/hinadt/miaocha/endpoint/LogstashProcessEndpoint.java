@@ -306,4 +306,30 @@ public class LogstashProcessEndpoint {
                     Long instanceId) {
         return ApiResponse.success(logstashProcessService.getLogstashMachineDetail(instanceId));
     }
+
+    // ==================== Batch instance operations ====================
+
+    /** Start multiple instances in batch. */
+    @PostMapping("/instances/batch/start")
+    @Operation(
+            summary = "Batch start instances",
+            description = "Start multiple LogstashMachine instances in batch")
+    public ApiResponse<Void> startLogstashInstances(
+            @Parameter(description = "Instance IDs", required = true) @RequestBody
+                    List<Long> instanceIds) {
+        logstashProcessService.startLogstashInstances(instanceIds);
+        return ApiResponse.success();
+    }
+
+    /** Stop multiple instances in batch. */
+    @PostMapping("/instances/batch/stop")
+    @Operation(
+            summary = "Batch stop instances",
+            description = "Stop multiple LogstashMachine instances in batch")
+    public ApiResponse<Void> stopLogstashInstances(
+            @Parameter(description = "Instance IDs", required = true) @RequestBody
+                    List<Long> instanceIds) {
+        logstashProcessService.stopLogstashInstances(instanceIds);
+        return ApiResponse.success();
+    }
 }

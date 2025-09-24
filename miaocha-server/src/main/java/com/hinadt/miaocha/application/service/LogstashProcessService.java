@@ -141,4 +141,20 @@ public interface LogstashProcessService {
      * @return LogstashMachine实例详细信息
      */
     LogstashMachineDetailDTO getLogstashMachineDetail(Long logstashMachineId);
+
+    // ==================== Batch Instance Operations ====================
+
+    /**
+     * Start multiple LogstashMachine instances in batch
+     *
+     * @param instanceIds List of LogstashMachine instance IDs
+     */
+    void startLogstashInstances(List<Long> instanceIds);
+
+    /**
+     * Stop multiple LogstashMachine instances in batch
+     *
+     * @param instanceIds List of LogstashMachine instance IDs
+     */
+    void stopLogstashInstances(List<Long> instanceIds);
 }

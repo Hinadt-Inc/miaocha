@@ -1,5 +1,5 @@
-import { Button, Breadcrumb } from 'antd';
-import { PlusOutlined, SyncOutlined, HomeOutlined } from '@ant-design/icons';
+import { Button, Breadcrumb, Space } from 'antd';
+import { PlusOutlined, SyncOutlined, HomeOutlined, PlayCircleOutlined, StopOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 
 interface LogstashPageHeaderProps {
@@ -7,9 +7,25 @@ interface LogstashPageHeaderProps {
   onAdd: () => void;
   onReload: () => void;
   className?: string;
+  // Batch operation props
+  selectedInstanceIds?: number[];
+  onBatchStart?: () => void;
+  onBatchStop?: () => void;
+  batchLoading?: boolean;
 }
 
-const LogstashPageHeader = ({ loading, onAdd, onReload, className }: LogstashPageHeaderProps) => {
+const LogstashPageHeader = ({ 
+  loading, 
+  onAdd, 
+  onReload, 
+  className,
+  selectedInstanceIds = [],
+  onBatchStart,
+  onBatchStop,
+  batchLoading = false
+}: LogstashPageHeaderProps) => {
+  const hasSelection = selectedInstanceIds.length > 0;
+
   return (
     <>
       <Breadcrumb
@@ -25,12 +41,40 @@ const LogstashPageHeader = ({ loading, onAdd, onReload, className }: LogstashPag
         ]}
       />
       <div className={className || 'table-toolbar'}>
-        <Button type="default" icon={<SyncOutlined />} onClick={onReload} loading={loading}>
-          刷新
-        </Button>
-        <Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>
-          新增Logstash进程
-        </Button>
+        <Space>
+          <Button type="default" icon={<SyncOutlined />} onClick={onReload} loading={loading}>
+            刷新
+          </Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>
+            新增Logstash进程
+          </Button>
+        </Space>
+        
+        {hasSelection && (
+          <Space style={{ marginLeft: 16 }}>
+            <span style={{ color: '#666', fontSize: '14px' }}>
+              Selected {selectedInstanceIds.length} instances
+            </span>
+            <Button
+              type="primary"
+              icon={<PlayCircleOutlined />}
+              onClick={onBatchStart}
+              loading={batchLoading}
+              disabled={!hasSelection}
+            >
+              Batch Start
+            </Button>
+            <Button
+              danger
+              icon={<StopOutlined />}
+              onClick={onBatchStop}
+              loading={batchLoading}
+              disabled={!hasSelection}
+            >
+              Batch Stop
+            </Button>
+          </Space>
+        )}
       </div>
     </>
   );

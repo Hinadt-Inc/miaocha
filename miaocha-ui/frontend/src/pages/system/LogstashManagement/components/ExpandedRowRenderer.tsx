@@ -16,9 +16,18 @@ interface ExpandedRowRendererProps {
     handleShowLog: (machineId: number, isBottom?: boolean) => void;
     handleDeleteMachine: (processId: number, machineId: number) => void;
   };
+  // Batch selection props
+  selectedInstanceIds?: number[];
+  onInstanceSelectionChange?: (selectedIds: number[]) => void;
 }
 
-const ExpandedRowRenderer = ({ record, data, machineActions }: ExpandedRowRendererProps) => {
+const ExpandedRowRenderer = ({ 
+  record, 
+  data, 
+  machineActions, 
+  selectedInstanceIds,
+  onInstanceSelectionChange 
+}: ExpandedRowRendererProps) => {
   return (
     <MachineTable
       record={record}
@@ -33,6 +42,8 @@ const ExpandedRowRenderer = ({ record, data, machineActions }: ExpandedRowRender
       onShowMachineTasks={machineActions.showMachineTasks}
       onShowLog={machineActions.handleShowLog}
       onDeleteMachine={machineActions.handleDeleteMachine}
+      selectedInstanceIds={selectedInstanceIds}
+      onInstanceSelectionChange={onInstanceSelectionChange}
     />
   );
 };
