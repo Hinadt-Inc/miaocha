@@ -20,7 +20,7 @@ import { useSearchInput, useTimeState, useSearchActions } from './hooks';
 // 类型和常量导入
 import { ISearchBarProps, ISearchBarRef } from './types';
 import type { ITimeOption } from '../types';
-import { SEARCH_BUTTON, STYLES } from './constants';
+import { STYLES } from './constants';
 import { getLatestTime, DATE_FORMAT_THOUSOND, QUICK_RANGES } from '../utils';
 
 const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
@@ -467,8 +467,8 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
         <div className={styles.item}>{keywordRender}</div>
         <div className={styles.item}>{sqlRender}</div>
         <div className={styles.item}>
-          <Button size={SEARCH_BUTTON.SIZE} type={SEARCH_BUTTON.TYPE} onClick={handleSubmit} loading={loading}>
-            {SEARCH_BUTTON.TEXT}
+          <Button size="small" type="primary" onClick={handleSubmit} loading={loading}>
+            搜索
           </Button>
         </div>
       </div>

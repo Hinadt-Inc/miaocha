@@ -18,6 +18,7 @@ export const useHomePageState = () => {
   // 基础数据状态
   const [moduleOptions, setModuleOptions] = useState<IStatus[]>([]);
   const [detailData, setDetailData] = useState<ILogDetailsResponse | null>(null);
+  const [originalDetailData, setOriginalDetailData] = useState<ILogDetailsResponse | null>(null); // 缓存原始完整数据
   const [logTableColumns, setLogTableColumns] = useState<ILogColumnsResponse[]>([]);
   const [histogramData, setHistogramData] = useState<ILogHistogramData | null>(null);
   const [whereSqlsFromSider, setWhereSqlsFromSider] = useState<IStatus[]>([]);
@@ -59,6 +60,8 @@ export const useHomePageState = () => {
     setModuleOptions,
     detailData,
     setDetailData,
+    originalDetailData,
+    setOriginalDetailData,
     logTableColumns,
     setLogTableColumns,
     histogramData,

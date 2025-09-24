@@ -197,28 +197,37 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
         ellipsis: false,
         hidden: _columns.length > 0, // 当有其他字段时隐藏_source列
         render: (_: any, record: ILogColumnsResponse) => {
+          // console.log('🔍 [_source 列渲染] record:', record);
+          // console.log('🔍 [_source 列渲染] _originalSource:', (record as any)._originalSource);
+
           const whereValues = whereSqlsFromSider.map((item) => String(item.value)).filter(Boolean);
           const allKeywords = Array.from(new Set([...keyWordsFormat, ...whereValues])).filter(Boolean);
           const finalKeywords = Array.from(
             new Set([...(keyWordsFormat?.length ? allKeywords : sqlFilterValue)]),
           ).filter(Boolean);
 
-          const entries = Object.entries(record).map(([key, value]) => {
-            let priority = 2;
-            let highlightArr: string[] = finalKeywords;
+          // 使用原始完整数据来渲染 _source 列，如果没有则使用当前记录
+          const sourceData = (record as any)._originalSource || record;
+          // console.log('🔍 [_source 列渲染] sourceData:', sourceData);
 
-            const whereMatch = whereSqlsFromSider.find((item) => item.field === key);
-            if (whereMatch) {
-              priority = 0;
-              highlightArr = [String(whereMatch.value)];
-            } else {
-              const valueStr = String(value);
-              if (finalKeywords.some((kw) => valueStr.includes(kw))) {
-                priority = 1;
+          const entries = Object.entries(sourceData)
+            .filter(([key]) => !key.startsWith('_')) // 过滤掉内部字段如 _key, _originalSource
+            .map(([key, value]) => {
+              let priority = 2;
+              let highlightArr: string[] = finalKeywords;
+
+              const whereMatch = whereSqlsFromSider.find((item) => item.field === key);
+              if (whereMatch) {
+                priority = 0;
+                highlightArr = [String(whereMatch.value)];
+              } else {
+                const valueStr = String(value);
+                if (finalKeywords.some((kw) => valueStr.includes(kw))) {
+                  priority = 1;
+                }
               }
-            }
-            return { key, value, priority, highlightArr };
-          });
+              return { key, value, priority, highlightArr };
+            });
 
           const sortedEntries = entries.sort((a, b) => a.priority - b.priority);
 
@@ -227,7 +236,7 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
               {sortedEntries.map(({ key, value, highlightArr }) => (
                 <Fragment key={key}>
                   <dt>{key}</dt>
-                  <dd>{highlightText(value, highlightArr)}</dd>
+                  <dd>{highlightText(String(value), highlightArr)}</dd>
                 </Fragment>
               ))}
             </dl>

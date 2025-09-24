@@ -16,15 +16,15 @@ export const useOAuthCallback = () => {
   useEffect(() => {
     const handleCASCallback = async () => {
       const ticket = urlSearchParams.get(URL_PARAMS.TICKET);
-      
+
       if (ticket) {
         try {
           // 构造回调URL
           const redirectUri = `${window.location.origin}`;
-          
+
           // 从sessionStorage获取provider信息
           const providerId = sessionStorage.getItem(STORAGE_KEYS.OAUTH_PROVIDER) || 'mandao';
-          
+
           // 调用后端回调接口
           const response = await oAuthCallback({
             provider: providerId,
@@ -50,7 +50,7 @@ export const useOAuthCallback = () => {
 
             // 清理sessionStorage中的provider信息
             sessionStorage.removeItem(STORAGE_KEYS.OAUTH_PROVIDER);
-            
+
             // 移除URL中的ticket参数，但保留分享参数
             const newUrl = new URL(window.location.href);
             newUrl.searchParams.delete(URL_PARAMS.TICKET);

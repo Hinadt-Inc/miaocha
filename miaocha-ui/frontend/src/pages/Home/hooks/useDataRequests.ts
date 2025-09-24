@@ -10,11 +10,7 @@ import type { ILogSearchParams, IModuleQueryConfig } from '../types';
 
 // 获取模块列表的hook
 export const useModulesList = () => {
-  return useRequest(api.fetchMyModules, {
-    onError: (error) => {
-      console.error('获取模块列表失败:', error);
-    },
-  });
+  return useRequest(api.fetchMyModules);
 };
 
 // 获取日志详情的hook
@@ -30,11 +26,11 @@ export const useLogDetails = (moduleQueryConfig: IModuleQueryConfig | null) => {
       onSuccess: (res) => {
         const { rows } = res;
         const timeField = moduleQueryConfig?.timeField || 'log_time';
-        
+
         // 为每条记录添加唯一ID并格式化时间字段
         (rows || []).forEach((item, index) => {
           item._key = `${Date.now()}_${index}`;
-          
+
           if (item[timeField]) {
             item[timeField] = formatTimeString(item[timeField] as string);
           }
@@ -66,13 +62,10 @@ export const useLogHistogram = () => {
 
 // 获取模块查询配置的hook
 export const useModuleQueryConfig = () => {
-  return useRequest(
-    (moduleName: string) => modulesApi.getModuleQueryConfig(moduleName),
-    {
-      manual: true,
-      onError: (error) => {
-        console.error('获取模块查询配置失败:', error);
-      },
+  return useRequest((moduleName: string) => modulesApi.getModuleQueryConfig(moduleName), {
+    manual: true,
+    onError: (error) => {
+      console.error('获取模块查询配置失败:', error);
     },
-  );
+  });
 };

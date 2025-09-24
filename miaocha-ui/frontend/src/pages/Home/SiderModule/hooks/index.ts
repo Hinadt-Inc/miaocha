@@ -61,16 +61,16 @@ export const useColumns = (
       // 动态确定时间字段的逻辑
       const determineTimeField = (availableColumns: ILogColumnsResponse[]): string => {
         const availableFieldNames = availableColumns.map((col) => col.columnName).filter(Boolean) as string[];
-        console.log('可用字段列表:', availableFieldNames);
+        // console.log('可用字段列表:', availableFieldNames);
 
         // 优先使用配置的时间字段
         if (moduleQueryConfig?.timeField) {
-          console.log('检查配置的时间字段:', moduleQueryConfig.timeField);
+          // console.log('检查配置的时间字段:', moduleQueryConfig.timeField);
           if (availableFieldNames.includes(moduleQueryConfig.timeField)) {
-            console.log('✅ 使用配置的时间字段:', moduleQueryConfig.timeField);
+            // console.log('✅ 使用配置的时间字段:', moduleQueryConfig.timeField);
             return moduleQueryConfig.timeField;
           } else {
-            console.warn(`❌ 配置的时间字段 "${moduleQueryConfig.timeField}" 在可用字段中不存在`);
+            // console.warn(`❌ 配置的时间字段 "${moduleQueryConfig.timeField}" 在可用字段中不存在`);
           }
         }
 
@@ -94,7 +94,6 @@ export const useColumns = (
 
         // 最后兜底：返回第一个字段
         if (availableFieldNames.length > 0 && availableFieldNames[0]) {
-          console.log('⚠️ 未找到时间字段，使用第一个字段作为默认:', availableFieldNames[0]);
           return availableFieldNames[0];
         }
 
@@ -103,18 +102,10 @@ export const useColumns = (
 
       // 确定实际使用的时间字段
       const actualTimeField = determineTimeField(res);
-      console.log('✅ 最终确定的时间字段:', actualTimeField);
 
       const processedColumns = res?.map((column) => {
         // 确定时间字段应该始终被选中
         const isTimeField = column.columnName === actualTimeField;
-
-        console.log('处理字段:', column.columnName, {
-          isTimeField,
-          actualTimeField,
-          externalActiveColumns,
-          isInActiveColumns: externalActiveColumns?.includes(column.columnName || ''),
-        });
 
         // 如果有外部传入的activeColumns，优先使用它来决定字段的选中状态
         if (externalActiveColumns && externalActiveColumns.length > 0) {
@@ -129,7 +120,7 @@ export const useColumns = (
           });
 
           if (shouldBeSelected) {
-            console.log('✅ 设置字段为选中:', column.columnName, isTimeField ? '(时间字段)' : '(外部字段)');
+            // console.log('✅ 设置字段为选中:', column.columnName, isTimeField ? '(时间字段)' : '(外部字段)');
             return { ...column, selected: true, _createTime: new Date().getTime() };
           }
           return { ...column, selected: false };
@@ -137,7 +128,7 @@ export const useColumns = (
 
         // 如果没有外部activeColumns，则使用默认逻辑（只选中时间字段）
         if (isTimeField) {
-          console.log('设置时间字段为选中:', column.columnName);
+          // console.log('设置时间字段为选中:', column.columnName);
           return { ...column, selected: true, _createTime: new Date().getTime() };
         }
         return column;
@@ -160,18 +151,18 @@ export const useColumns = (
 
       // 初始加载时也通知父组件列变化
       if (onChangeColumns) {
-        const selectedColumns = processedColumns.filter((col) => col.selected);
-        console.log(
-          'useColumns onSuccess - 选中的字段:',
-          selectedColumns.map((col) => col.columnName),
-        );
-        console.log(
-          'useColumns onSuccess - 即将调用onChangeColumns，传递的processedColumns:',
-          processedColumns.map((col) => ({
-            name: col.columnName,
-            selected: col.selected,
-          })),
-        );
+        // const selectedColumns = processedColumns.filter((col) => col.selected);
+        // console.log(
+        //   'useColumns onSuccess - 选中的字段:',
+        //   selectedColumns.map((col) => col.columnName),
+        // );
+        // console.log(
+        //   'useColumns onSuccess - 即将调用onChangeColumns，传递的processedColumns:',
+        //   processedColumns.map((col) => ({
+        //     name: col.columnName,
+        //     selected: col.selected,
+        //   })),
+        // );
         onChangeColumns(processedColumns);
       }
 
@@ -238,10 +229,11 @@ export const useColumns = (
       // 切换选中状态
       if (!columns[index].selected) {
         columns[index].selected = true;
+        // 为新添加的字段设置 _createTime，确保按添加顺序排列
         columns[index]._createTime = new Date().getTime();
       } else {
         columns[index].selected = false;
-        delete columns[index]._createTime;
+        // 保持 _createTime，以便字段重新添加时能回到正确位置
       }
 
       // 计算新的激活字段列表
@@ -253,10 +245,18 @@ export const useColumns = (
       // 更新本地搜索参数
       clearSearchConditionsKeepFields(newActiveColumns);
 
-      // 排序
-      const sortedColumns = [...columns].sort(
-        (a: ILogColumnsResponse, b: ILogColumnsResponse) => (a._createTime || 0) - (b._createTime || 0),
-      );
+      // 排序：log_time 始终第一位，其他字段按添加顺序
+      const sortedColumns = [...columns].sort((a: ILogColumnsResponse, b: ILogColumnsResponse) => {
+        const nameA = a.columnName || '';
+        const nameB = b.columnName || '';
+
+        // log_time 始终排在第一位
+        if (nameA === 'log_time') return -1;
+        if (nameB === 'log_time') return 1;
+
+        // 其他字段按照 _createTime 排序（添加顺序）
+        return (a._createTime || 0) - (b._createTime || 0);
+      });
       const updatedColumns = sortedColumns;
       setColumns(updatedColumns);
 
@@ -279,7 +279,7 @@ export const useColumns = (
       );
 
       if (lastExternalActiveColumnsRef.current !== currentExternalColumnsStr) {
-        console.log('useColumns: 监听到外部activeColumns变化:', externalActiveColumns);
+        // console.log('useColumns: 监听到外部activeColumns变化:', externalActiveColumns);
         lastExternalActiveColumnsRef.current = currentExternalColumnsStr;
 
         // 动态确定时间字段
@@ -317,9 +317,9 @@ export const useColumns = (
           !externalActiveColumns.every((col) => currentActiveColumns.includes(col));
 
         if (needsUpdate) {
-          console.log('useColumns: 需要同步字段选中状态');
-          console.log('useColumns: 当前选中字段:', currentActiveColumns);
-          console.log('useColumns: 外部字段:', externalActiveColumns);
+          // console.log('useColumns: 需要同步字段选中状态');
+          // console.log('useColumns: 当前选中字段:', currentActiveColumns);
+          // console.log('useColumns: 外部字段:', externalActiveColumns);
 
           // 更新columns的selected状态
           const updatedColumns = columns.map((col) => {
@@ -334,10 +334,10 @@ export const useColumns = (
             } as ILogColumnsResponse;
           });
 
-          console.log(
-            'useColumns: 更新后的字段选中状态:',
-            updatedColumns.filter((col) => col.selected).map((col) => col.columnName),
-          );
+          // console.log(
+          //   'useColumns: 更新后的字段选中状态:',
+          //   updatedColumns.filter((col) => col.selected).map((col) => col.columnName),
+          // );
 
           setColumns(updatedColumns);
 
