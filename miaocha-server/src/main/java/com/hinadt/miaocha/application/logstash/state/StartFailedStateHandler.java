@@ -151,6 +151,42 @@ public class StartFailedStateHandler extends AbstractLogstashMachineStateHandler
     }
 
     @Override
+    public boolean handleDelete(LogstashMachine logstashMachine, MachineInfo machineInfo) {
+        Long logstashMachineId = logstashMachine.getId();
+        Long machineId = machineInfo.getId();
+
+        logger.info("删除机器 [{}] 上的LogstashMachine实例 [{}] 目录 (启动失败状态)", machineId, logstashMachineId);
+
+        LogstashCommand deleteCommand =
+                commandFactory.deleteProcessDirectoryCommand(logstashMachineId);
+
+        try {
+            boolean success = deleteCommand.execute(machineInfo);
+            if (success) {
+                logger.info(
+                        "成功删除机器 [{}] 上的LogstashMachine实例 [{}] 目录", machineId, logstashMachineId);
+            } else {
+                logger.error(
+                        "删除机器 [{}] 上的LogstashMachine实例 [{}] 目录失败", machineId, logstashMachineId);
+            }
+            return success;
+        } catch (Exception ex) {
+            logger.error(
+                    "删除机器 [{}] 上的LogstashMachine实例 [{}] 目录时发生异常: {}",
+                    machineId,
+                    logstashMachineId,
+                    ex.getMessage(),
+                    ex);
+            throw new RuntimeException(ex.getMessage(), ex);
+        }
+    }
+
+    @Override
+    public boolean canDelete() {
+        return true;
+    }
+
+    @Override
     public LogstashMachineState getNextState(OperationType operationType, boolean success) {
         if (operationType == OperationType.START) {
             return success ? LogstashMachineState.RUNNING : LogstashMachineState.START_FAILED;

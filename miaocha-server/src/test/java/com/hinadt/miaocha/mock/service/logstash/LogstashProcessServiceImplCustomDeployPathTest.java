@@ -8,6 +8,7 @@ import com.hinadt.miaocha.application.logstash.LogstashConfigSyncService;
 import com.hinadt.miaocha.application.logstash.LogstashMachineConnectionValidator;
 import com.hinadt.miaocha.application.logstash.LogstashProcessDeployService;
 import com.hinadt.miaocha.application.logstash.parser.LogstashConfigParser;
+import com.hinadt.miaocha.application.logstash.path.LogstashDeployPathManager;
 import com.hinadt.miaocha.application.logstash.task.TaskService;
 import com.hinadt.miaocha.application.service.impl.LogstashProcessServiceImpl;
 import com.hinadt.miaocha.domain.converter.LogstashMachineConverter;
@@ -52,6 +53,7 @@ class LogstashProcessServiceImplCustomDeployPathTest {
     @Mock private TaskService taskService;
     @Mock private LogstashConfigSyncService configSyncService;
     @Mock private LogstashMachineConnectionValidator connectionValidator;
+    @Mock private LogstashDeployPathManager deployPathManager;
 
     private LogstashProcessServiceImpl logstashProcessService;
 
@@ -69,7 +71,12 @@ class LogstashProcessServiceImplCustomDeployPathTest {
                         logstashConfigParser,
                         taskService,
                         configSyncService,
-                        connectionValidator);
+                        connectionValidator,
+                        deployPathManager);
+
+        lenient()
+                .when(deployPathManager.normalizeInstanceDeployPath(anyString(), any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
@@ -90,10 +97,12 @@ class LogstashProcessServiceImplCustomDeployPathTest {
         MachineInfo mockMachine1 = new MachineInfo();
         mockMachine1.setId(1L);
         mockMachine1.setName("Machine1");
+        mockMachine1.setUsername("user1");
 
         MachineInfo mockMachine2 = new MachineInfo();
         mockMachine2.setId(2L);
         mockMachine2.setName("Machine2");
+        mockMachine2.setUsername("user2");
 
         LogstashMachine mockLogstashMachine1 = new LogstashMachine();
         mockLogstashMachine1.setId(1L);
@@ -115,6 +124,11 @@ class LogstashProcessServiceImplCustomDeployPathTest {
         when(machineMapper.selectById(2L)).thenReturn(mockMachine2);
 
         // Mock LogstashMachine创建
+        when(deployPathManager.normalizeInstanceDeployPath("/custom/deploy/path", mockMachine1))
+                .thenReturn("/custom/deploy/path");
+        when(deployPathManager.normalizeInstanceDeployPath("/custom/deploy/path", mockMachine2))
+                .thenReturn("/custom/deploy/path");
+
         when(logstashMachineConverter.createFromProcess(mockProcess, 1L, "/custom/deploy/path"))
                 .thenReturn(mockLogstashMachine1);
         when(logstashMachineConverter.createFromProcess(mockProcess, 2L, "/custom/deploy/path"))
@@ -171,6 +185,70 @@ class LogstashProcessServiceImplCustomDeployPathTest {
 
         // 验证调用了初始化
         verify(logstashDeployService).initializeInstances(anyList(), eq(mockProcess));
+    }
+
+    @Test
+    @DisplayName("创建进程 - 使用相对部署路径自动归一化")
+    void testCreateLogstashProcessWithRelativeDeployPath() {
+        LogstashProcessCreateDTO createDTO = new LogstashProcessCreateDTO();
+        createDTO.setName("Relative Path Process");
+        createDTO.setModuleId(1L);
+        createDTO.setCustomDeployPath("logs/app");
+        createDTO.setMachineIds(List.of(1L));
+
+        LogstashProcess mockProcess = new LogstashProcess();
+        mockProcess.setId(300L);
+        mockProcess.setName("Relative Path Process");
+        mockProcess.setModuleId(1L);
+
+        MachineInfo mockMachine = new MachineInfo();
+        mockMachine.setId(1L);
+        mockMachine.setName("Machine1");
+        mockMachine.setUsername("appuser");
+
+        String normalizedPath = "/home/appuser/logs/app";
+
+        LogstashMachine mockLogstashMachine = new LogstashMachine();
+        mockLogstashMachine.setId(10L);
+        mockLogstashMachine.setLogstashProcessId(300L);
+        mockLogstashMachine.setMachineId(1L);
+        mockLogstashMachine.setDeployPath(normalizedPath);
+
+        when(logstashProcessMapper.selectByName(anyString())).thenReturn(null);
+        when(moduleInfoMapper.selectById(1L))
+                .thenReturn(new com.hinadt.miaocha.domain.entity.ModuleInfo());
+        when(machineMapper.selectById(1L)).thenReturn(mockMachine);
+        when(logstashProcessConverter.toEntity(createDTO)).thenReturn(mockProcess);
+        when(logstashProcessMapper.insert(mockProcess))
+                .thenAnswer(
+                        invocation -> {
+                            mockProcess.setId(300L);
+                            return 1;
+                        });
+
+        when(deployPathManager.normalizeInstanceDeployPath("logs/app", mockMachine))
+                .thenReturn(normalizedPath);
+        when(logstashMachineMapper.selectByMachineAndPath(1L, normalizedPath)).thenReturn(null);
+        when(logstashMachineConverter.createFromProcess(mockProcess, 1L, normalizedPath))
+                .thenReturn(mockLogstashMachine);
+        when(logstashMachineMapper.insert(any(LogstashMachine.class))).thenReturn(1);
+        when(logstashMachineMapper.selectByLogstashProcessId(300L))
+                .thenReturn(List.of(mockLogstashMachine));
+        when(machineMapper.selectByIds(List.of(1L))).thenReturn(List.of(mockMachine));
+
+        doNothing().when(connectionValidator).validateSingleMachineConnection(mockMachine);
+        doNothing().when(logstashDeployService).initializeInstances(anyList(), eq(mockProcess));
+
+        LogstashProcessResponseDTO mockResponse = new LogstashProcessResponseDTO();
+        when(logstashProcessConverter.toResponseDTO(mockProcess)).thenReturn(mockResponse);
+        when(logstashProcessMapper.selectById(300L)).thenReturn(mockProcess);
+
+        LogstashProcessResponseDTO result = logstashProcessService.createLogstashProcess(createDTO);
+
+        assertNotNull(result);
+        verify(deployPathManager).normalizeInstanceDeployPath("logs/app", mockMachine);
+        verify(logstashMachineMapper).selectByMachineAndPath(1L, normalizedPath);
+        verify(logstashMachineConverter).createFromProcess(mockProcess, 1L, normalizedPath);
     }
 
     @Test

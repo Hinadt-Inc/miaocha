@@ -9,6 +9,7 @@ import com.hinadt.miaocha.application.logstash.LogstashMachineConnectionValidato
 import com.hinadt.miaocha.application.logstash.LogstashProcessDeployService;
 import com.hinadt.miaocha.application.logstash.enums.LogstashMachineState;
 import com.hinadt.miaocha.application.logstash.parser.LogstashConfigParser;
+import com.hinadt.miaocha.application.logstash.path.LogstashDeployPathManager;
 import com.hinadt.miaocha.application.logstash.task.TaskService;
 import com.hinadt.miaocha.application.service.impl.LogstashProcessServiceImpl;
 import com.hinadt.miaocha.common.exception.BusinessException;
@@ -56,6 +57,7 @@ class LogstashProcessServiceImplScaleTest {
     @Mock private TaskService taskService;
     @Mock private LogstashConfigSyncService configSyncService;
     @Mock private LogstashMachineConnectionValidator connectionValidator;
+    @Mock private LogstashDeployPathManager deployPathManager;
 
     private LogstashProcessServiceImpl logstashProcessService;
 
@@ -73,7 +75,12 @@ class LogstashProcessServiceImplScaleTest {
                         logstashConfigParser,
                         taskService,
                         configSyncService,
-                        connectionValidator);
+                        connectionValidator,
+                        deployPathManager);
+
+        lenient()
+                .when(deployPathManager.normalizeInstanceDeployPath(anyString(), any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
@@ -104,6 +111,11 @@ class LogstashProcessServiceImplScaleTest {
         when(machineMapper.selectById(4L)).thenReturn(machine4);
 
         // 检查是否存在冲突的LogstashMachine实例（相同machine+path）
+        when(deployPathManager.normalizeInstanceDeployPath("/custom/deploy/path", machine3))
+                .thenReturn("/custom/deploy/path");
+        when(deployPathManager.normalizeInstanceDeployPath("/custom/deploy/path", machine4))
+                .thenReturn("/custom/deploy/path");
+
         when(logstashMachineMapper.selectByMachineAndPath(3L, "/custom/deploy/path"))
                 .thenReturn(null);
         when(logstashMachineMapper.selectByMachineAndPath(4L, "/custom/deploy/path"))
@@ -142,6 +154,48 @@ class LogstashProcessServiceImplScaleTest {
     }
 
     @Test
+    @DisplayName("扩容操作 - 相对路径自动归一化")
+    void testScaleOut_RelativePathNormalization() {
+        Long processId = 2L;
+        LogstashProcess process = createTestProcess(processId);
+
+        LogstashProcessScaleRequestDTO dto = new LogstashProcessScaleRequestDTO();
+        dto.setAddMachineIds(Arrays.asList(5L));
+        dto.setCustomDeployPath("logs/app");
+
+        MachineInfo machine5 = createTestMachine(5L, "machine5", "192.168.1.5");
+        String normalizedPath = "/home/test/logs/app";
+
+        LogstashMachine newInstance = createTestLogstashMachine(50L, processId, 5L);
+        newInstance.setDeployPath(normalizedPath);
+
+        LogstashProcessResponseDTO responseDTO = new LogstashProcessResponseDTO();
+        responseDTO.setId(processId);
+
+        when(logstashProcessMapper.selectById(processId)).thenReturn(process);
+        when(machineMapper.selectById(5L)).thenReturn(machine5);
+        when(deployPathManager.normalizeInstanceDeployPath("logs/app", machine5))
+                .thenReturn(normalizedPath);
+        when(logstashMachineMapper.selectByMachineAndPath(5L, normalizedPath)).thenReturn(null);
+        when(logstashMachineConverter.createFromProcess(process, 5L, normalizedPath))
+                .thenReturn(newInstance);
+        when(logstashMachineMapper.insert(newInstance)).thenReturn(1);
+
+        doNothing().when(connectionValidator).validateSingleMachineConnection(machine5);
+        doNothing().when(logstashDeployService).initializeInstances(anyList(), eq(process));
+
+        when(logstashProcessConverter.toResponseDTO(process)).thenReturn(responseDTO);
+
+        LogstashProcessResponseDTO result =
+                logstashProcessService.scaleLogstashProcess(processId, dto);
+
+        assertNotNull(result);
+        verify(deployPathManager).normalizeInstanceDeployPath("logs/app", machine5);
+        verify(logstashMachineMapper).selectByMachineAndPath(5L, normalizedPath);
+        verify(logstashMachineConverter).createFromProcess(process, 5L, normalizedPath);
+    }
+
+    @Test
     @DisplayName("扩容操作 - 检测路径冲突")
     void testScaleOut_PathConflict() {
         // 准备测试数据
@@ -155,6 +209,9 @@ class LogstashProcessServiceImplScaleTest {
         MachineInfo machine2 = createTestMachine(2L, "machine2", "192.168.1.2");
         LogstashMachine existingConflictingInstance = createTestLogstashMachine(99L, processId, 2L);
         existingConflictingInstance.setDeployPath("/conflicting/path");
+
+        when(deployPathManager.normalizeInstanceDeployPath("/conflicting/path", machine2))
+                .thenReturn("/conflicting/path");
 
         when(logstashProcessMapper.selectById(processId)).thenReturn(process);
         when(machineMapper.selectById(2L))

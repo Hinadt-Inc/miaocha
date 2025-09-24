@@ -70,5 +70,6 @@
 - Ensure Issue exists first: Before opening a PR, verify there is an existing Issue describing the change. If none exists, create a new Issue using the appropriate template from `.github/ISSUE_TEMPLATE` (bug/feature/enhancement/question). Fill it thoroughly, including the Environment table where applicable.
 - Title format: PR title MUST follow the repository template format `[ISSUE #xx] Short description`, where `#xx` is the real Issue number.
 - PR description: Use the PR template strictly. Do not modify the structure or omit required sections. Explain What, How, and Why. Link the Issue explicitly (e.g., `Closes #xx`).
+- Target branch: Always open PRs against the `dev` branch; do not target `main`.
 - No fabricated references: Do not invent or reuse incorrect Issue numbers. If new scope emerges, open a separate Issue and submit a separate PR.
 - Scope discipline: Keep changes in a PR limited to the Issue’s scope. If the work spans multiple concerns, split into multiple Issues and PRs.
