@@ -1,4 +1,4 @@
-import { Table, Space, Button, Popconfirm, Tag } from 'antd';
+import { Table, Space, Button, Popconfirm, Tag, Checkbox } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import type { LogstashProcess } from '@/types/logstashTypes';
@@ -16,6 +16,9 @@ interface MachineTableProps {
   onShowMachineTasks: (processId: number, machineId: number) => void;
   onShowLog: (machineId: number, isBottom?: boolean) => void;
   onDeleteMachine: (processId: number, machineId: number) => void;
+  // Batch selection props
+  selectedInstanceIds?: number[];
+  onInstanceSelectionChange?: (selectedIds: number[]) => void;
 }
 
 const MachineTable = ({
@@ -31,10 +34,60 @@ const MachineTable = ({
   onShowMachineTasks,
   onShowLog,
   onDeleteMachine,
+  selectedInstanceIds = [],
+  onInstanceSelectionChange,
 }: MachineTableProps) => {
+  const handleSelectionChange = (machineId: number, checked: boolean) => {
+    if (!onInstanceSelectionChange) return;
+    
+    const newSelectedIds = checked
+      ? [...selectedInstanceIds, machineId]
+      : selectedInstanceIds.filter(id => id !== machineId);
+    
+    onInstanceSelectionChange(newSelectedIds);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (!onInstanceSelectionChange || !record.logstashMachineStatusInfo) return;
+    
+    const allMachineIds = record.logstashMachineStatusInfo.map(machine => machine.logstashMachineId);
+    const newSelectedIds = checked
+      ? [...new Set([...selectedInstanceIds, ...allMachineIds])]
+      : selectedInstanceIds.filter(id => !allMachineIds.includes(id));
+    
+    onInstanceSelectionChange(newSelectedIds);
+  };
+
+  const allMachinesSelected = record.logstashMachineStatusInfo?.every(machine => 
+    selectedInstanceIds.includes(machine.logstashMachineId)
+  ) || false;
+
+  const someMachinesSelected = record.logstashMachineStatusInfo?.some(machine => 
+    selectedInstanceIds.includes(machine.logstashMachineId)
+  ) || false;
+
   const columns: ColumnsType<any> = [
+    // Add checkbox column only if selection is enabled
+    ...(onInstanceSelectionChange ? [{
+      title: (
+        <Checkbox 
+          checked={allMachinesSelected}
+          indeterminate={!allMachinesSelected && someMachinesSelected}
+          onChange={(e) => handleSelectAll(e.target.checked)}
+        />
+      ),
+      dataIndex: 'selection',
+      key: 'selection',
+      width: 50,
+      render: (_: any, machine: any) => (
+        <Checkbox
+          checked={selectedInstanceIds.includes(machine.logstashMachineId)}
+          onChange={(e) => handleSelectionChange(machine.logstashMachineId, e.target.checked)}
+        />
+      ),
+    }] : []),
     {
-      title: '实例ID',
+      title: 'Instance ID',
       dataIndex: 'logstashMachineId',
       key: 'logstashMachineId',
       render: (logstashMachineId: number) => (
