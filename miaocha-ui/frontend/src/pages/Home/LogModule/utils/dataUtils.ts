@@ -57,7 +57,16 @@ export const mergeDataArrays = (prevRows: any[], newRows: any[], offset: number)
       // 已经拼接过，不再拼接
       return prevRows;
     }
-    return [...prevRows, ...newRows];
+
+    // 确保数据按正确顺序合并，保留第一页数据以支持浏览器搜索
+    const mergedRows = [...prevRows, ...newRows];
+
+    // 去重处理，基于_key字段
+    const uniqueRows = mergedRows.filter((row, index, arr) => {
+      return arr.findIndex((r) => r._key === row._key) === index;
+    });
+
+    return uniqueRows;
   } else {
     return prevRows;
   }

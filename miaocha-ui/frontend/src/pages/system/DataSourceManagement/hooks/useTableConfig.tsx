@@ -19,13 +19,13 @@ export const useTableConfig = ({ testExistingLoading, onEdit, onDelete, onTestCo
       title: '数据源名称',
       dataIndex: 'name',
       ellipsis: true,
-      width: '10%',
+      // width: '10%',
       hideInSearch: true,
     },
     {
       title: '类型',
       dataIndex: 'type',
-      width: '8%',
+      // width: 80,
       valueEnum: Object.fromEntries(dataSourceTypeOptions.map((option) => [option.value, option.label])),
       render: (_, record) => {
         const typeOption = dataSourceTypeOptions.find((option) => option.value === record.type);
@@ -36,14 +36,14 @@ export const useTableConfig = ({ testExistingLoading, onEdit, onDelete, onTestCo
     {
       title: 'JDBC URL',
       dataIndex: 'jdbcUrl',
-      width: '12%',
+      // width: '12%',
       ellipsis: true,
       hideInSearch: true,
     },
     {
       title: '创建时间',
       dataIndex: 'createTime',
-      width: '12%',
+      width: 160,
       hideInSearch: true,
       render: (text, record) => {
         const time = text || (record as any).createdAt;
@@ -54,7 +54,7 @@ export const useTableConfig = ({ testExistingLoading, onEdit, onDelete, onTestCo
     {
       title: '创建人',
       dataIndex: 'creator',
-      width: '10%',
+      // width: '10%',
       hideInSearch: true,
       render: (_, record) => record.createUser || '-',
       responsive: ['lg'],
@@ -62,7 +62,7 @@ export const useTableConfig = ({ testExistingLoading, onEdit, onDelete, onTestCo
     {
       title: '更新时间',
       dataIndex: 'updateTime',
-      width: '12%',
+      width: 160,
       hideInSearch: true,
       render: (text, record) => {
         const time = text || (record as any).updatedAt;
@@ -73,38 +73,33 @@ export const useTableConfig = ({ testExistingLoading, onEdit, onDelete, onTestCo
     {
       title: '更新人',
       dataIndex: 'updater',
-      width: '10%',
+      // width: '10%',
       hideInSearch: true,
       render: (_, record) => record.updateUser || '-',
       responsive: ['lg'],
     },
     {
       title: '操作',
-      width: '12%',
+      width: '100px',
       align: 'center',
-      valueType: 'option',
       fixed: 'right',
       render: (_, record) => (
-        <Space size={4} wrap>
+        <Space size="small">
           <Button
-            key="testConnection"
             type="link"
             size="small"
-            icon={<LinkOutlined />}
             loading={testExistingLoading[record.id] || false}
             onClick={() => {
               void onTestConnection(record.id, record.name);
             }}
-            style={{ padding: '0 4px' }}
             title={`测试 ${record.name} 的数据库连接是否正常`}
           >
             测试连接
           </Button>
-          <Button key="edit" type="link" size="small" onClick={() => onEdit(record)} style={{ padding: '0 4px' }}>
+          <Button type="link" size="small" onClick={() => onEdit(record)}>
             编辑
           </Button>
           <Popconfirm
-            key="delete"
             title={`确定要删除数据源 "${record.name}" 吗？`}
             description="删除后将无法恢复，请谨慎操作"
             placement="topRight"
@@ -115,7 +110,7 @@ export const useTableConfig = ({ testExistingLoading, onEdit, onDelete, onTestCo
               void onDelete(record.id, record.name);
             }}
           >
-            <Button type="link" size="small" danger style={{ padding: '0 4px' }}>
+            <Button type="link" size="small" danger>
               删除
             </Button>
           </Popconfirm>

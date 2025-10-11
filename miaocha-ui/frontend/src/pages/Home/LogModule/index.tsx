@@ -5,7 +5,8 @@
 
 import React from 'react';
 import { Splitter } from 'antd';
-import { LogChart, LogTable } from './components';
+import { LogChart } from './components';
+import VirtualTable from '../VirtualTable';
 import { useLogData, useTableProps } from './hooks';
 import { ILogProps } from './types';
 import styles from './styles/Log.module.less';
@@ -47,7 +48,7 @@ const Log: React.FC<ILogProps> = (props) => {
         <LogChart data={histogramData} searchParams={searchParams} onSearch={onSearch} />
       </Splitter.Panel>
       <Splitter.Panel>
-        <LogTable {...tableProps} />
+        <VirtualTable {...tableProps} />
       </Splitter.Panel>
     </Splitter>
   );

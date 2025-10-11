@@ -63,10 +63,12 @@ const ExecuteConfirmationModal: React.FC<ExecuteConfirmationModalProps> = ({
         }
       };
 
+      // todo 待确认
       window.addEventListener('unhandledrejection', handleRejection);
 
       // 组件卸载时清理
       return () => {
+        // todo 待确认
         window.removeEventListener('unhandledrejection', handleRejection);
       };
     }

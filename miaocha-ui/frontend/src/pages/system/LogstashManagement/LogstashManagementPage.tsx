@@ -273,5 +273,5 @@ const LogstashManagementPage = () => {
   );
 };
 
-import withSystemAccess from '@/utils/withSystemAccess';
-export default withSystemAccess(LogstashManagementPage);
+import withAdminAuth from '@/utils/withAdminAuth';
+export default withAdminAuth(LogstashManagementPage);

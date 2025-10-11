@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { message } from 'antd';
 import {
   createDataSource,
   updateDataSource,
@@ -9,7 +10,7 @@ import {
 import type { CreateDataSourceParams, TestConnectionParams } from '@/types/datasourceTypes';
 import type { DataSourceItem } from './useDataSourceData';
 import type { DataSourceFormData } from '../components';
-import { useErrorContext, ErrorType } from '@/providers/ErrorProvider';
+// import { useErrorContext, ErrorType } from '@/providers/ErrorProvider';
 import type { ActionType } from '@ant-design/pro-components';
 
 interface UseDataSourceActionsProps {
@@ -25,7 +26,8 @@ export const useDataSourceActions = ({
 }: UseDataSourceActionsProps) => {
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [currentDataSource, setCurrentDataSource] = useState<DataSourceFormData | undefined>(undefined);
-  const { handleError, showSuccess } = useErrorContext();
+  const showSuccess = () => {};
+  // const { handleError, showSuccess } = useErrorContext();
   const actionRef = useRef<ActionType>(null);
 
   // 打开新增模态框
@@ -67,11 +69,11 @@ export const useDataSourceActions = ({
           ...values,
           id: currentDataSource.id!,
         };
-        
+
         if (!values.password || values.password.trim() === '') {
           delete updateParams.password;
         }
-        
+
         const updated = await updateDataSource(currentDataSource.id!, updateParams);
         if (updated) {
           showSuccess(`数据源 "${values.name}" 更新成功`);
@@ -112,17 +114,17 @@ export const useDataSourceActions = ({
   const handleTestConnection = async (values: TestConnectionParams) => {
     // 在编辑模式下，如果密码为空，验证是否有原有密码可用
     const passwordToUse = values.password || (currentDataSource?.password ?? '');
-    
+
     if (!values.jdbcUrl || !values.username || !passwordToUse) {
       const missingFields = [];
       if (!values.jdbcUrl) missingFields.push('JDBC URL');
       if (!values.username) missingFields.push('用户名');
       if (!passwordToUse) missingFields.push('密码');
-      
-      handleError(`请完善连接信息：${missingFields.join('、')}不能为空`, {
-        type: ErrorType.VALIDATION,
-        showType: 'message',
-      });
+      message.error(`请完善连接信息：${missingFields.join('、')}不能为空`);
+      // handleError(`请完善连接信息：${missingFields.join('、')}不能为空`, {
+      //   type: ErrorType.VALIDATION,
+      //   showType: 'message',
+      // });
       return;
     }
 
