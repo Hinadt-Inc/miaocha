@@ -5,7 +5,7 @@ import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { login } from '@/store/userSlice';
 import { login as apiLogin, oAuthCallback } from '@/api/auth';
-import { getOAuthRedirectUri } from '@/config/env';
+import { getOAuthRedirectUri } from '@/constants/env';
 import { OAuthStorageHelper } from '@/utils/secureStorage';
 import OAuthButtons from '@/components/OAuthButtons/index';
 import login_bg_poster from '@/assets/login/banner-bg.png';
@@ -21,6 +21,7 @@ const LoginPage = () => {
   const [casLoading, setCasLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [form] = Form.useForm();
+  // console.log(222, ab);
 
   // 检查是否有来自OAuth回调的错误信息
   useEffect(() => {
@@ -39,31 +40,31 @@ const LoginPage = () => {
       const code = searchParams.get('code'); // OAuth2协议
       const state = searchParams.get('state'); // OAuth2 state参数
       const error = searchParams.get('error'); // 错误信息
-      
+
       // 如果有错误参数，直接显示错误
       if (error) {
         setError(`第三方登录失败: ${searchParams.get('error_description') || error}`);
         return;
       }
-      
+
       // 获取授权码（CAS使用ticket，OAuth2使用code）
       const authCode = ticket || code;
-      
+
       if (authCode) {
         setCasLoading(true);
         try {
           // 构造回调URL
           const redirectUri = getOAuthRedirectUri();
-          
+
           // 从安全存储或state参数获取provider信息
           let providerId = OAuthStorageHelper.getProvider();
           if (!providerId && state) {
             providerId = state; // OAuth2可能通过state参数传递providerId
           }
           providerId = providerId || 'mandao'; // 默认provider
-          
+
           console.log('处理OAuth回调:', { providerId, authCode: authCode.substring(0, 10) + '...' });
-          
+
           // 调用后端回调接口
           const response = await oAuthCallback({
             provider: providerId,
@@ -73,7 +74,7 @@ const LoginPage = () => {
 
           if (response) {
             console.log('OAuth登录成功:', { userId: response.userId, nickname: response.nickname });
-            
+
             // 登录成功，更新用户状态
             dispatch(
               login({
@@ -92,18 +93,18 @@ const LoginPage = () => {
 
             // 清理安全存储中的provider信息
             OAuthStorageHelper.removeProvider();
-            
+
             // 跳转到首页或用户原本要访问的页面
             let returnUrl = OAuthStorageHelper.getReturnUrl() || '/';
             OAuthStorageHelper.removeReturnUrl();
-            
+
             // 确保不会跳转回登录页面
             if (returnUrl === '/login') {
               returnUrl = '/';
             }
-            
+
             console.log('OAuth登录完成，即将跳转到:', returnUrl);
-            
+
             // 使用setTimeout确保Redux状态更新完成后再跳转
             setTimeout(() => {
               navigate(returnUrl, { replace: true });
@@ -156,7 +157,7 @@ const LoginPage = () => {
           },
         }),
       );
-      
+
       // 跳转到首页
       console.log('普通登录成功，跳转到首页');
       navigate('/', { replace: true });
@@ -189,29 +190,24 @@ const LoginPage = () => {
 
         <div className={styles.loginCard}>
           <div className={styles.cardHeader}>欢迎登录</div>
-          
+
           {/* 错误信息显示 */}
           {error && (
-            <Alert 
-              message={error} 
-              type="error" 
-              showIcon 
-              closable 
+            <Alert
+              message={error}
+              type="error"
+              showIcon
+              closable
               onClose={() => setError('')}
               style={{ marginBottom: 16 }}
             />
           )}
-          
+
           {/* OAuth回调处理中的提示 */}
           {casLoading && (
-            <Alert 
-              message="正在处理第三方登录，请稍候..." 
-              type="info" 
-              showIcon 
-              style={{ marginBottom: 16 }}
-            />
+            <Alert message="正在处理第三方登录，请稍候..." type="info" showIcon style={{ marginBottom: 16 }} />
           )}
-          
+
           <Form form={form} onFinish={onFinish} size="large" layout="vertical" className={styles.loginForm}>
             <Form.Item
               name="username"
@@ -230,11 +226,11 @@ const LoginPage = () => {
             </Form.Item>
 
             <Form.Item>
-              <Button 
-                type="primary" 
-                htmlType="submit" 
-                block 
-                size="large" 
+              <Button
+                type="primary"
+                htmlType="submit"
+                block
+                size="large"
                 loading={loading || casLoading}
                 disabled={loading || casLoading}
               >
@@ -246,7 +242,7 @@ const LoginPage = () => {
               </Button>
             </Form.Item>
           </Form>
-          
+
           {/* 第三方登录按钮 */}
           <OAuthButtons onError={handleOAuthError} />
         </div>

@@ -1,7 +1,7 @@
 import { Table } from 'antd';
 import { MachinePageHeader, MachineFormModal } from './components';
 import { useMachineData, useMachineActions, useTableConfig } from './hooks';
-import withSystemAccess from '@/utils/withSystemAccess';
+import withAdminAuth from '@/utils/withAdminAuth';
 import Loading from '@/components/Loading';
 import styles from './MachineManagement.module.less';
 
@@ -84,4 +84,4 @@ const MachineManagementPage = () => {
   );
 };
 
-export default withSystemAccess(MachineManagementPage);
+export default withAdminAuth(MachineManagementPage);

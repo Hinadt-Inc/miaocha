@@ -60,6 +60,8 @@ export interface ILogTableProps {
   onLoadMore: () => void;
   /** 是否还有更多数据 */
   hasMore: boolean;
+  /** 总数据条数 */
+  totalCount?: number;
   /** 动态列配置 */
   dynamicColumns?: ILogColumnsResponse[];
   /** SQL语句列表 */

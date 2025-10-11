@@ -3,7 +3,7 @@ import { DataSourcePageHeader, DataSourceFormModal, DataSourceToolBar } from './
 import { useDataSourceData, useTableConfig, useDataSourceActions } from './hooks';
 import Loading from '@/components/Loading';
 import styles from './DataSourceManagement.module.less';
-import withSystemAccess from '@/utils/withSystemAccess';
+import withAdminAuth from '@/utils/withAdminAuth';
 
 const DataSourceManagementPage = () => {
   const {
@@ -106,4 +106,4 @@ const DataSourceManagementPage = () => {
   );
 };
 
-export default withSystemAccess(DataSourceManagementPage);
+export default withAdminAuth(DataSourceManagementPage);

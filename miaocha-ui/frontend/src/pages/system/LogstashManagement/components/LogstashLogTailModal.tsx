@@ -49,14 +49,13 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel }: L
 
   const startTail = async () => {
     try {
-      // Create EventSource connection with automatic task creation
       const eventSource = startLogTail(logstashMachineId, 500); // Default 500 lines
       if (!eventSource) {
-        throw new Error('Failed to create EventSource connection');
+        // throw new Error('Failed to create EventSource connection');
       }
-      
+
       const resolvedEventSource = await eventSource;
-      
+
       // Setup connection handlers
       resolvedEventSource.onopen = () => {
         console.log('Log tail connection opened');
@@ -99,7 +98,6 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel }: L
       });
 
       eventSourceRef.current.onerror = (err) => {
-        console.error('EventSource error:', err);
         setIsTailing(false);
         eventSourceRef.current?.close();
         eventSourceRef.current = null;
@@ -116,7 +114,6 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel }: L
 
   const stopTail = async () => {
     try {
-      // Stop by closing the EventSource connection - automatic cleanup
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
         eventSourceRef.current = null;

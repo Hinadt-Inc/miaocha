@@ -8,7 +8,7 @@ import type { ILogSearchParams } from './types';
 // 默认的搜索参数
 export const DEFAULT_SEARCH_PARAMS: ILogSearchParams = {
   offset: 0,
-  pageSize: 1000,
+  pageSize: 50, // 改为每页50条数据
   datasourceId: null,
   module: null,
   startTime: QUICK_RANGES.last_15m.from().format(DATE_FORMAT_THOUSOND),
@@ -19,6 +19,10 @@ export const DEFAULT_SEARCH_PARAMS: ILogSearchParams = {
 
 // 请求防抖延迟时间（毫秒）
 export const REQUEST_DEBOUNCE_DELAY = 300;
+
+// 滚动加载相关常量
+export const SCROLL_LOAD_THRESHOLD = 200; // 距离底部200px时触发加载
+export const PAGE_SIZE = 50; // 每页数据条数
 
 // 分享参数应用延迟时间（毫秒）
 export const SHARED_PARAMS_APPLY_DELAY = 200;
