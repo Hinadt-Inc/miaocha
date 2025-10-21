@@ -38,12 +38,12 @@ const SavedSearchesButton: React.FC<SavedSearchesButtonProps> = ({
     <>
       <Tooltip title="查看已保存的搜索">
         <Button
+          className={`${styles.savedSearchesButton} ${className || ''}`}
           icon={<HistoryOutlined />}
-          onClick={handleOpen}
           size={size}
           type={type}
           variant={variant}
-          className={`${styles.savedSearchesButton} ${className || ''}`}
+          onClick={handleOpen}
         >
           检索书签
         </Button>

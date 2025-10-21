@@ -1,41 +1,27 @@
-import { Modal, Form, Input, Select, Row, Col } from 'antd';
-import { useEffect } from 'react';
+import { Modal, Form, Input, Select, Switch } from 'antd';
+import { useEffect, memo } from 'react';
 import { useSelector } from 'react-redux';
+import type { FormInstance } from 'antd/es/form';
+import * as v from '@/utils/validate';
+import type { UserListItem } from '../types';
 
-export interface UserData {
-  id: string;
-  nickname: string;
-  email: string;
-  role: string;
-  status: number;
-  username?: string;
-  createTime?: string;
-  updateTime?: string;
-  modulePermissions?: any[];
-}
-
-interface UserFormModalProps {
+interface Props {
   visible: boolean;
-  selectedRecord: UserData | null;
+  selectedRecord: UserListItem | null;
   onSubmit: () => Promise<void>;
   onCancel: () => void;
-  form: any;
+  form: FormInstance;
+  confirmLoading?: boolean;
 }
 
-const UserFormModal: React.FC<UserFormModalProps> = ({ visible, selectedRecord, onSubmit, onCancel, form }) => {
+const UserFormModal: React.FC<Props> = ({ visible, selectedRecord, onSubmit, onCancel, form, confirmLoading }) => {
+  console.log('渲染：监听UserFormModal组件');
   // 获取当前用户信息
   const currentUser = useSelector((state: { user: { role: string; userId: number } }) => state.user);
-
-  const isSuperAdmin = selectedRecord?.role === 'SUPER_ADMIN';
   const isCurrentUserAdmin = currentUser.role === 'ADMIN';
   const isCurrentUserSuperAdmin = currentUser.role === 'SUPER_ADMIN';
-  const isTargetUserAdmin = selectedRecord?.role === 'ADMIN';
   const isEditingSelf = currentUser.userId && selectedRecord?.id?.toString() === currentUser.userId.toString();
   const isAddingNewUser = !selectedRecord;
-
-  // 权限检查：如果当前用户是管理员，且目标用户也是管理员，则不可编辑
-  // 但是可以编辑自己的信息
-  const isReadOnly = isSuperAdmin || (isCurrentUserAdmin && isTargetUserAdmin && !isEditingSelf);
 
   // 根据当前用户角色动态生成角色选项
   const getRoleOptions = () => {
@@ -54,131 +40,88 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ visible, selectedRecord, 
     if (isCurrentUserAdmin) {
       if (isAddingNewUser) {
         // 新增用户时，管理员只能创建普通用户
-        return [{ value: 'USER', label: '普通用户' }];
+        return [allRoles[1]];
       } else if (isEditingSelf) {
         // 管理员编辑自己时，可以保持管理员角色
         return allRoles;
       } else {
         // 管理员编辑其他用户时，只能设置为普通用户
-        return [{ value: 'USER', label: '普通用户' }];
+        return [allRoles[1]];
       }
     }
-
-    // 普通用户不应该有权限到达这里，但为了安全起见
-    return [{ value: 'USER', label: '普通用户' }];
+    return [allRoles[1]];
   };
 
   useEffect(() => {
-    if (visible) {
-      form.resetFields();
-      if (selectedRecord) {
-        form.setFieldsValue({
-          ...selectedRecord,
-        });
-      } else if (isCurrentUserAdmin && !isCurrentUserSuperAdmin) {
-        // 管理员新增用户时，默认设置为普通用户角色
-        form.setFieldsValue({
-          role: 'USER',
-          status: 1,
-        });
-      }
+    if (!visible) return;
+    form.resetFields();
+
+    if (selectedRecord) {
+      // 编辑场景：回显已有数据
+      form.setFieldsValue({ ...selectedRecord });
+    } else {
+      // 新增场景
+      form.setFieldsValue({
+        status: 1, // 默认启用
+        ...(isCurrentUserAdmin ? { role: 'USER' } : {}),
+      });
     }
   }, [visible, selectedRecord, form, isCurrentUserAdmin, isCurrentUserSuperAdmin]);
 
-  // 生成模态框标题
-  const getModalTitle = () => {
-    if (!selectedRecord) {
-      if (isCurrentUserAdmin && !isCurrentUserSuperAdmin) {
-        return '添加用户 (仅可创建普通用户)';
-      }
-      return '添加用户';
-    }
-    if (isSuperAdmin) return '查看用户信息 (超级管理员不可编辑)';
-    if (isEditingSelf) return '编辑我的信息';
-    if (isCurrentUserAdmin && isTargetUserAdmin) return '查看用户信息 (管理员不能编辑其他管理员)';
-    return '编辑用户';
-  };
-
   return (
     <Modal
-      title={getModalTitle()}
-      open={visible}
-      onOk={onSubmit}
-      onCancel={onCancel}
-      width={600}
+      confirmLoading={confirmLoading}
       maskClosable={false}
-      okButtonProps={{ disabled: isReadOnly }}
-      okText={isReadOnly ? '确定' : undefined}
+      open={visible}
+      title={isAddingNewUser ? '新增' : '编辑'}
+      onCancel={onCancel}
+      onOk={() => form.submit()}
     >
-      <Form form={form} layout="vertical">
-        <Row gutter={8}>
-          <Col span={12}>
-            <Form.Item
-              name="nickname"
-              label="昵称"
-              rules={[
-                { required: true, message: '请输入昵称' },
-                { max: 128, message: '昵称长度不能超过128个字符' },
-              ]}
-            >
-              <Input showCount placeholder="请输入昵称" maxLength={128} disabled={isReadOnly} />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item
-              name="email"
-              label="邮箱"
-              rules={[
-                { required: true, message: '请输入邮箱' },
-                { type: 'email', message: '请输入有效的邮箱地址' },
-                { max: 128, message: '邮箱长度不能超过128个字符' },
-              ]}
-            >
-              <Input showCount placeholder="请输入邮箱" maxLength={128} disabled={isReadOnly} />
-            </Form.Item>
-          </Col>
-        </Row>
+      <Form
+        autoComplete="off"
+        form={form}
+        onFinish={() => {
+          void onSubmit();
+        }}
+      >
+        <Form.Item label="昵称" name="nickname" rules={[v.required('昵称'), v.max(128), v.noWhitespace()]}>
+          <Input allowClear maxLength={128} placeholder="请输入昵称" showCount />
+        </Form.Item>
+        <Form.Item
+          label="邮箱"
+          name="email"
+          rules={[v.required('邮箱'), v.max(128), { type: 'email', message: '请输入有效的邮箱地址' }]}
+        >
+          <Input allowClear autoComplete="off" maxLength={128} placeholder="请输入邮箱" showCount />
+        </Form.Item>
 
-        <Row gutter={8}>
-          <Col span={12}>
-            <Form.Item name="role" label="角色" rules={[{ required: true, message: '请选择角色' }]}>
-              <Select options={getRoleOptions()} placeholder="请选择角色" disabled={isReadOnly} />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="status" label="状态" initialValue={1} rules={[{ required: true, message: '请选择状态' }]}>
-              <Select
-                options={[
-                  { value: 1, label: '启用' },
-                  { value: 0, label: '禁用' },
-                ]}
-                placeholder="请选择状态"
-                disabled={isReadOnly}
-              />
-            </Form.Item>
-          </Col>
-        </Row>
+        <Form.Item label="角色" name="role" rules={[v.required('角色')]}>
+          <Select allowClear options={getRoleOptions()} placeholder="请选择角色" />
+        </Form.Item>
 
-        {!selectedRecord && (
-          <Row gutter={8}>
-            <Col span={24}>
-              <Form.Item
-                name="password"
-                label="密码"
-                rules={[
-                  { required: true, message: '请输入密码' },
-                  { min: 6, message: '密码长度不能少于6个字符' },
-                  { max: 128, message: '密码长度不能超过128个字符' },
-                ]}
-              >
-                <Input.Password placeholder="请输入密码" maxLength={128} />
-              </Form.Item>
-            </Col>
-          </Row>
+        {isAddingNewUser && (
+          <Form.Item
+            label="密码"
+            name="password"
+            preserve={false}
+            rules={[v.required('密码'), v.passwordPolicy(6, 20)]}
+          >
+            <Input.Password allowClear autoComplete="new-password" maxLength={128} placeholder="请输入密码" />
+          </Form.Item>
         )}
+        <Form.Item
+          getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)}
+          getValueProps={(value) => ({ checked: value === 1 || value === true })}
+          label="状态"
+          name="status"
+          rules={[v.required('状态')]}
+          valuePropName="checked"
+        >
+          <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+        </Form.Item>
       </Form>
     </Modal>
   );
 };
 
-export default UserFormModal;
+export default memo(UserFormModal);

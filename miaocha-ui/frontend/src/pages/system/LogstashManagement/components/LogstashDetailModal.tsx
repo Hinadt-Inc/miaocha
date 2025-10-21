@@ -64,11 +64,11 @@ const LogstashDetailModal = ({ visible, onClose, detail, styles: customStyles }:
 
   return (
     <Modal
-      title={`Logstash进程详情 - ${detail.name || ''}`}
-      open={visible}
-      onCancel={onClose}
       footer={null}
+      open={visible}
+      title={`Logstash进程详情 - ${detail.name || ''}`}
       width={1000}
+      onCancel={onClose}
     >
       <div>
         <Descriptions bordered column={2} size="small">
@@ -102,8 +102,8 @@ const LogstashDetailModal = ({ visible, onClose, detail, styles: customStyles }:
             <h4>配置内容</h4>
             <Tooltip title="复制">
               <Button
-                type="text"
                 icon={<CopyOutlined />}
+                type="text"
                 onClick={() => handleCopy(detail.configContent || '', '配置内容')}
               />
             </Tooltip>
@@ -116,8 +116,8 @@ const LogstashDetailModal = ({ visible, onClose, detail, styles: customStyles }:
             <h4>Logstash配置</h4>
             <Tooltip title="复制">
               <Button
-                type="text"
                 icon={<CopyOutlined />}
+                type="text"
                 onClick={() => handleCopy(detail.logstashYml || '', 'Logstash配置')}
               />
             </Tooltip>
@@ -130,8 +130,8 @@ const LogstashDetailModal = ({ visible, onClose, detail, styles: customStyles }:
             <h4>JVM参数</h4>
             <Tooltip title="复制">
               <Button
-                type="text"
                 icon={<CopyOutlined />}
+                type="text"
                 onClick={() => handleCopy(detail.jvmOptions || '', 'JVM参数')}
               />
             </Tooltip>
@@ -142,13 +142,13 @@ const LogstashDetailModal = ({ visible, onClose, detail, styles: customStyles }:
         <div className={customStyles?.machineStatusSection || 'machine-status-section'}>
           <h4>机器状态</h4>
           <Table
-            size="small"
             bordered
-            dataSource={detail.logstashMachineStatusInfo}
-            rowKey="machineId"
-            pagination={false}
-            scroll={{ x: true }}
             columns={machineColumns}
+            dataSource={detail.logstashMachineStatusInfo}
+            pagination={false}
+            rowKey="machineId"
+            scroll={{ x: true }}
+            size="small"
           />
         </div>
       </div>

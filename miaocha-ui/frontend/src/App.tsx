@@ -7,18 +7,20 @@ import ErrorBoundary from '@/components/Error/ErrorBoundary';
 import { colorPrimary } from '@/utils/utils';
 import { getAuthorizedRoutes } from './routes';
 import { useSelector } from 'react-redux';
+import { ConfigProvider } from 'antd';
 
 NProgress.configure({
   showSpinner: false, // 是否显示右上角的转圈加载图标
 });
 
 // 获取本地存储的collapsed状态
-const getStoredCollapsed = () => {
+const getStoredCollapsed = (): boolean => {
   try {
     const stored = localStorage.getItem('siderCollapsed');
-    return stored ? JSON.parse(stored) : true;
-  } catch (error) {
-    console.error('读取collapsed状态失败:', error);
+    if (stored === 'true') return true;
+    if (stored === 'false') return false;
+    return true; // 未设置或值异常时的默认值
+  } catch {
     return true;
   }
 };
@@ -78,36 +80,45 @@ const App = () => {
 
   return (
     <div className="app-container">
-      <ProLayout
-        title="秒查"
-        logo="/logo.png"
-        collapsed={collapsed}
-        onCollapse={handleCollapse}
-        breakpoint={false}
-        siderWidth={200}
-        location={{ pathname: location.pathname }}
-        openKeys={openKeys}
-        onOpenChange={handleOpenChange}
-        fixSiderbar={true}
-        menuProps={{
-          theme: 'light',
-          mode: 'inline',
-        }}
-        route={{
-          path: '/',
-          routes: getAuthorizedRoutes(userRole),
-        }}
-        menuItemRender={(item, dom) => <Link to={item.path ?? '/'}>{dom}</Link>}
-        avatarProps={{
-          render: () => <Profile collapsed={collapsed} />,
+      <ConfigProvider
+        theme={{
+          // algorithm: antdTheme.darkAlgorithm, // 暗色算法
+          token: {
+            colorPrimary, // 影响主按钮、确定按钮等
+            colorLink: colorPrimary, // 影响 Button type="link" 的文字颜色
+            colorInfo: colorPrimary, // 影响 Info 提示框的背景色
+          },
         }}
       >
-        <ErrorBoundary
-          key={location.pathname} // 路由切换自动复位
+        <ProLayout
+          avatarProps={{
+            render: () => <Profile collapsed={collapsed} />,
+          }}
+          breakpoint={false}
+          collapsed={collapsed}
+          fixSiderbar={true}
+          location={{ pathname: location.pathname }}
+          logo="/logo.png"
+          menuItemRender={(item, dom) => <Link to={item.path ?? '/'}>{dom}</Link>}
+          menuProps={{
+            theme: 'light',
+            mode: 'inline',
+          }}
+          openKeys={openKeys}
+          route={{
+            path: '/',
+            routes: getAuthorizedRoutes(userRole),
+          }}
+          siderWidth={200}
+          title="秒查"
+          onCollapse={handleCollapse}
+          onOpenChange={handleOpenChange}
         >
-          <Outlet />
-        </ErrorBoundary>
-      </ProLayout>
+          <ErrorBoundary key={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
+        </ProLayout>
+      </ConfigProvider>
     </div>
   );
 };

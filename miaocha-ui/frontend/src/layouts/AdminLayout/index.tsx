@@ -26,7 +26,7 @@ const AdminLayout: React.FC = () => {
 
   // 角色就绪后再判断权限
   if (!isAdmin(role || '')) {
-    return <Navigate to="/403" replace />;
+    return <Navigate replace to="/403" />;
   }
 
   return <Outlet />;

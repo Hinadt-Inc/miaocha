@@ -231,7 +231,7 @@ export function updateLogstashAlertRecipients(processId: number, data: { alertRe
   });
 }
 
-export async function startLogTail(logstashMachineId: number, tailLines: number = 500) {
+export async function startLogTail(logstashMachineId: number, tailLines = 500) {
   const accessToken = localStorage.getItem('accessToken') || '';
   const eventSource = new EventSource(
     `/api/logstash/log-tail/stream/${logstashMachineId}?tailLines=${tailLines}&token=${encodeURIComponent(accessToken)}`,

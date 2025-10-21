@@ -36,8 +36,8 @@ const FilterTags: React.FC<IFilterTagsProps> = ({
       {keywords.map((item: string) => (
         <Tooltip key={item} placement="topLeft" title={item}>
           <Tag
-            color={TAG_COLORS.KEYWORD}
             closable
+            color={TAG_COLORS.KEYWORD}
             onClick={() => onClickKeyword(item)}
             onClose={() => onCloseKeyword(item)}
           >
@@ -49,7 +49,7 @@ const FilterTags: React.FC<IFilterTagsProps> = ({
       {/* SQL条件标签 */}
       {[...new Set(sqls)].map((item: string) => (
         <Tooltip key={item} placement="topLeft" title={item}>
-          <Tag color={TAG_COLORS.SQL} closable onClick={() => onClickSql(item)} onClose={() => onCloseSql(item)}>
+          <Tag closable color={TAG_COLORS.SQL} onClick={() => onClickSql(item)} onClose={() => onCloseSql(item)}>
             <span className="tagContent">{item}</span>
           </Tag>
         </Tooltip>

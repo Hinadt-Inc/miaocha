@@ -4,13 +4,6 @@ import NProgress from 'nprogress';
 import { setTokens } from '../store/userSlice';
 import { store } from '../store/store';
 
-// // 定义全局错误处理器
-// let globalErrorHandler: ((error: Error) => void) | null = null;
-
-// export function setGlobalErrorHandler(handler: (error: Error) => void) {
-//   globalErrorHandler = handler;
-// }
-
 // 创建axios实例
 const service: AxiosInstance = axios.create({
   headers: {
@@ -23,7 +16,7 @@ service.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   NProgress.start(); // 开始进度条
   const token = localStorage.getItem('accessToken');
   if (token) {
-    config.headers['Authorization'] = `Bearer ${token}`;
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
@@ -31,7 +24,7 @@ service.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 // 是否正在刷新token
 let isRefreshing = false;
 // 重试队列
-let retryQueue: Array<() => void> = [];
+let retryQueue: (() => void)[] = [];
 
 // 响应拦截器
 service.interceptors.response.use(
@@ -43,7 +36,6 @@ service.interceptors.response.use(
     }
     // 处理EventSource响应
     if (response.config.responseType === 'text' && response.headers['content-type']?.includes('text/event-stream')) {
-      console.log('EventSource response received:', response);
       // 创建新的EventSource对象
       const eventSource = new EventSource(response.request.responseURL, {
         withCredentials: true,
@@ -65,7 +57,6 @@ service.interceptors.response.use(
     const message = errorMessage || res.message || '操作失败';
     // 根据后端接口返回结构调整
     if (isBizError || isCodeError) {
-      console.log('isError', response);
       window.dispatchEvent(
         new CustomEvent('unhandledrejection', {
           detail: {
@@ -82,7 +73,7 @@ service.interceptors.response.use(
     const originalRequest = requestError.config;
     const res = requestError.response?.data || {};
     const status = requestError.response?.status;
-    let errorMessage = requestError.response?.data?.message || requestError.message || '请求失败';
+    let errorMessage = requestError.response?.data?.message || requestError.message;
 
     // 常见HTTP状态码友好提示
     const statusMessageMap: Record<number, string> = {
@@ -99,7 +90,7 @@ service.interceptors.response.use(
       503: '服务不可用',
       504: '网关超时',
     };
-    if (status && statusMessageMap[status]) {
+    if (!errorMessage && status && statusMessageMap[status]) {
       errorMessage = statusMessageMap[status];
     }
 
@@ -163,7 +154,6 @@ service.interceptors.response.use(
       }
     }
 
-    console.log('isError3', errorMessage);
     window.dispatchEvent(
       new CustomEvent('unhandledrejection', {
         detail: {

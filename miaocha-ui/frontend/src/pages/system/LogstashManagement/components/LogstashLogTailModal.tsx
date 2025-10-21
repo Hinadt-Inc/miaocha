@@ -157,17 +157,6 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel }: L
     <>
       {contextHolder}
       <Modal
-        title={`日志跟踪 (实例ID: ${logstashMachineId})`}
-        open={visible}
-        width="100%"
-        style={{
-          top: 0,
-          maxWidth: '100vw',
-          margin: 0,
-        }}
-        onCancel={handleModalCancel}
-        // 点击遮罩层不会关闭弹窗
-        maskClosable={false}
         bodyStyle={{
           height: 'calc(100vh - 140px)',
           padding: 0,
@@ -182,6 +171,17 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel }: L
             开始跟踪
           </Button>,
         ]}
+        open={visible}
+        style={{
+          top: 0,
+          maxWidth: '100vw',
+          margin: 0,
+        }}
+        title={`日志跟踪 (实例ID: ${logstashMachineId})`}
+        width="100%"
+        onCancel={handleModalCancel}
+        // 点击遮罩层不会关闭弹窗
+        maskClosable={false}
       >
         <div className={styles.statusContainer}>
           <h4>跟踪状态: {isTailing ? '运行中' : '已停止'}</h4>

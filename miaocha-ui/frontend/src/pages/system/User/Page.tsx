@@ -1,16 +1,14 @@
+import { useCallback, useMemo } from 'react';
 import { Table } from 'antd';
 import { UserPageHeader, UserFormModal, PasswordModal, ModulePermissionModal } from './components';
 import { useUserData, useTableConfig, useUserActions } from './hooks';
 import styles from './Page.module.less';
 
 const UserManagementPage = () => {
-  const { data, setData, loading, searchText, moduleList, originalDataRef, handleSearch, handleReload, fetchUsers } =
+  const { data, loading, searchText, moduleList, originalDataRef, handleSearch, handleReload, fetchUsers } =
     useUserData();
 
   const actions = useUserActions({
-    setData,
-    data,
-    originalDataRef,
     moduleList,
     fetchUsers,
   });
@@ -22,73 +20,84 @@ const UserManagementPage = () => {
     onOpenModuleDrawer: actions.handleOpenModuleDrawer,
   });
 
+  // 固化与模态框相关的回调与派生数据，避免无关渲染时引用变化
+  const { setIsModalVisible, setModuleDrawerVisible } = actions;
+  const onCloseModuleDrawer = useCallback(() => setModuleDrawerVisible(false), [setModuleDrawerVisible]);
+  const handleModuleRefresh = useCallback(async () => {
+    await fetchUsers();
+    if (actions.selectedUserForDrawer) {
+      const latest = originalDataRef.current.find((u) => u.id === actions.selectedUserForDrawer?.id);
+      if (latest) actions.setSelectedUserForDrawer(latest);
+    }
+  }, [fetchUsers, actions, originalDataRef]);
+  const userModulePermissions = useMemo(
+    () => actions.selectedUserForDrawer?.modulePermissions?.map((m) => ({ moduleName: m.module })) || [],
+    [actions.selectedUserForDrawer],
+  );
+
+  const total = data.length;
+
   return (
     <div className={styles.container}>
       {actions.messageContextHolder}
       <div className={styles.header}>
         <UserPageHeader
-          searchText={searchText}
           loading={loading}
-          onSearch={handleSearch}
-          onAdd={() => actions.handleAddEdit()}
+          searchText={searchText}
+          onAdd={actions.handleAddEdit}
           onReload={handleReload}
+          onSearch={handleSearch}
         />
       </div>
 
       <Table
+        bordered
         columns={columns}
         dataSource={data}
+        pagination={{ ...pagination, total }}
         rowKey="id"
-        pagination={{
-          ...pagination,
-          total: data.length,
-        }}
-        scroll={{ x: 1300 }}
-        onChange={handleTableChange}
         size="small"
-        bordered
+        onChange={handleTableChange}
       />
 
-      {/* 用户表单模态框 */}
-      <UserFormModal
-        visible={actions.isModalVisible}
-        selectedRecord={actions.selectedRecord}
-        onSubmit={actions.handleSubmit}
-        onCancel={() => actions.setIsModalVisible(false)}
-        form={actions.form}
-      />
+      {actions.isModalVisible && (
+        <UserFormModal
+          confirmLoading={actions.submitLoading}
+          form={actions.form}
+          selectedRecord={actions.selectedRecord}
+          visible={actions.isModalVisible}
+          onCancel={() => setIsModalVisible(false)}
+          onSubmit={actions.handleSubmit}
+        />
+      )}
 
-      {/* 密码修改模态框 */}
-      <PasswordModal
-        visible={actions.isPasswordModalVisible}
-        selectedRecord={actions.selectedRecord}
-        onSubmit={actions.handlePasswordSubmit}
-        onCancel={() => actions.setIsPasswordModalVisible(false)}
-        form={actions.passwordForm}
-      />
+      {/* 密码修改模态框：仅在可见时挂载，且使用 memo 包装与稳定回调 */}
+      {actions.isPasswordModalVisible && (
+        <PasswordModal
+          confirmLoading={actions.passwordSubmitting}
+          form={actions.passwordForm}
+          selectedRecord={actions.selectedRecord}
+          visible={actions.isPasswordModalVisible}
+          onCancel={() => actions.setIsPasswordModalVisible(false)}
+          onSubmit={actions.handlePasswordSubmit}
+        />
+      )}
 
-      {/* 模块权限模态框 */}
-      <ModulePermissionModal
-        open={actions.moduleDrawerVisible}
-        onClose={() => actions.setModuleDrawerVisible(false)}
-        userId={actions.selectedUserForDrawer?.key || ''}
-        modules={actions.selectedUserForDrawer?.modulePermissions || []}
-        userModulePermissions={
-          actions.selectedUserForDrawer?.modulePermissions?.map((m) => ({ moduleName: m.module })) || []
-        }
-        allModules={moduleList}
-        onSave={actions.handleSaveModules}
-        onRefresh={async () => {
-          await fetchUsers();
-          // 刷新抽屉用户数据，保证弹窗内容同步
-          if (actions.selectedUserForDrawer) {
-            const latest = originalDataRef.current.find((u) => u.key === actions.selectedUserForDrawer?.key);
-            if (latest) actions.setSelectedUserForDrawer(latest);
-          }
-        }}
-        nickname={actions.selectedUserForDrawer?.nickname || ''}
-        email={actions.selectedUserForDrawer?.email || ''}
-      />
+      {/* 模块权限模态框：仅在可见时挂载，memo 包装与稳定 props */}
+      {actions.moduleDrawerVisible && (
+        <ModulePermissionModal
+          allModules={moduleList}
+          email={actions.selectedUserForDrawer?.email || ''}
+          modules={actions.selectedUserForDrawer?.modulePermissions || []}
+          nickname={actions.selectedUserForDrawer?.nickname || ''}
+          open={actions.moduleDrawerVisible}
+          userId={actions.selectedUserForDrawer?.id || 0}
+          userModulePermissions={userModulePermissions}
+          onClose={onCloseModuleDrawer}
+          onRefresh={handleModuleRefresh}
+          onSave={actions.handleSaveModules}
+        />
+      )}
     </div>
   );
 };

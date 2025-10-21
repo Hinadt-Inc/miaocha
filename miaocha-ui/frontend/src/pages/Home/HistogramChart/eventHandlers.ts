@@ -37,7 +37,7 @@ export const createBrushEndHandler = (
   aggregatedData: IAggregatedData,
   onSearch: (params: ILogSearchParams) => void,
 ) => {
-  return (params: { areas: Array<{ coordRange: [number, number] }> }) => {
+  return (params: { areas: { coordRange: [number, number] }[] }) => {
     if (params.areas && params.areas.length > 0 && timeUnit) {
       const [start, end] = params.areas[0].coordRange;
       const startTime = aggregatedData.labels[start];

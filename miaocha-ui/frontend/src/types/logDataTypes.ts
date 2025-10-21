@@ -29,10 +29,10 @@ export interface LogData {
   host: string;
   source: string;
   level: string;
-  distributionData?: Array<{
+  distributionData?: {
     timePoint: string;
     count: number;
-  }>;
+  }[];
   [key: string]: any;
 }
 
@@ -66,9 +66,7 @@ export interface UseFiltersReturn {
 }
 
 // API返回的日志数据类型
-export interface APILogData {
-  [key: string]: unknown;
-}
+export type APILogData = Record<string, unknown>;
 
 // 日志分布点类型
 export interface SearchLogsParams {

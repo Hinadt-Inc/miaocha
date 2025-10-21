@@ -156,7 +156,7 @@ export class SystemIntegration {
    * 转换时间范围
    */
   private convertTimeRange(range: string): any {
-    const timeRangeMap: { [key: string]: any } = {
+    const timeRangeMap: Record<string, any> = {
       last_1_hour: {
         type: 'relative',
         value: 1,

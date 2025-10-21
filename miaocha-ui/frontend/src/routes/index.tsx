@@ -5,16 +5,20 @@ import AdminLayout from '@/layouts/AdminLayout';
 import { CompassOutlined, ConsoleSqlOutlined, SettingOutlined } from '@ant-design/icons';
 import { ADMIN_ROLES } from '@/constants/roles';
 import ErrorBoundary from '@/components/Error/ErrorBoundary';
+import Forbidden from '@/pages/Error/Forbidden';
+import NotFound from '@/pages/Error/NotFound';
 
 // 懒加载组件
 const LoginPage = lazy(() => import('@/pages/Login'));
 const HomePage = lazy(() => import('@/pages/Home'));
 const SQLEditorPage = lazy(() => import('@/pages/SQLEditor'));
-const User = lazy(() => import('@/pages/system/User'));
-const DataSourceManagementPage = lazy(() => import('@/pages/system/DataSourceManagement'));
-const MachineManagementPage = lazy(() => import('@/pages/system/MachineManagement'));
-const LogstashManagementPage = lazy(() => import('@/pages/system/LogstashManagement'));
-const ModuleManagementPage = lazy(() => import('@/pages/system/ModuleManagement'));
+const User = lazy(() => import('@/pages/System/User'));
+const DataSourceManagementPage = lazy(() => import('@/pages/System/DataSourceManagement'));
+const MachineManagementPage = lazy(() => import('@/pages/System/MachineManagement'));
+const LogstashManagementPage = lazy(() => import('@/pages/System/LogstashManagement'));
+const ModuleManagementPage = lazy(() => import('@/pages/System/ModuleManagement'));
+
+type AccessRole = (typeof ADMIN_ROLES)[number];
 
 // 路由配置接口
 interface RouteConfig {
@@ -23,8 +27,15 @@ interface RouteConfig {
   icon?: React.ReactNode;
   element?: React.ReactNode;
   children?: RouteConfig[];
-  access?: any;
+  access?: readonly AccessRole[];
   key?: string;
+}
+
+// 路由器配置类型
+interface RouterConfig {
+  path: string;
+  element?: React.ReactNode;
+  children?: RouterConfig[];
 }
 
 // 路由配置，路由配置数据表
@@ -47,11 +58,11 @@ const routes: RouteConfig[] = [
     icon: <SettingOutlined />,
     access: ADMIN_ROLES,
     children: [
-      { path: '/system/user', name: '用户管理', element: <User /> },
-      { path: '/system/datasource', name: '数据源管理', element: <DataSourceManagementPage /> },
-      { path: '/system/machine', name: '服务器管理', element: <MachineManagementPage /> },
-      { path: '/system/module', name: '模块管理', element: <ModuleManagementPage /> },
-      { path: '/system/logstash', name: 'Logstash管理', element: <LogstashManagementPage /> },
+      { path: 'user', name: '用户管理', element: <User /> },
+      { path: 'datasource', name: '数据源管理', element: <DataSourceManagementPage /> },
+      { path: 'machine', name: '服务器管理', element: <MachineManagementPage /> },
+      { path: 'module', name: '模块管理', element: <ModuleManagementPage /> },
+      { path: 'logstash', name: 'Logstash管理', element: <LogstashManagementPage /> },
     ],
   },
 ];
@@ -61,7 +72,10 @@ const routes: RouteConfig[] = [
 export const getAuthorizedRoutes = (userRole: string | null): RouteConfig[] => {
   const filterRoutes = (routes: RouteConfig[]): RouteConfig[] => {
     return routes
-      .filter((route) => !route.access || (userRole && route.access.includes(userRole)))
+      .filter((route) => {
+        if (!route.access) return true;
+        return !!userRole && (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN');
+      })
       .map((route) => ({
         ...route,
         key: route.path, // 为 ProLayout 添加 key 字段
@@ -73,31 +87,6 @@ export const getAuthorizedRoutes = (userRole: string | null): RouteConfig[] => {
   return filterRoutes(routes);
 };
 
-// 菜单项类型
-interface MenuItem {
-  key: string;
-  label: string;
-  icon?: React.ReactNode;
-  children?: MenuItem[];
-}
-
-// 路由器配置类型
-interface RouterConfig {
-  path: string;
-  element?: React.ReactNode;
-  children?: RouterConfig[];
-}
-
-// 转换为菜单项
-const convertToMenuItems = (routes: RouteConfig[]): MenuItem[] => {
-  return routes.map((route) => ({
-    key: route.path,
-    label: route.name,
-    icon: route.icon,
-    children: route.children ? convertToMenuItems(route.children) : undefined,
-  }));
-};
-
 // 转换为 React Router 配置
 const convertToRouterConfig = (routes: RouteConfig[]): RouterConfig[] => {
   return routes.map((route) => {
@@ -106,7 +95,7 @@ const convertToRouterConfig = (routes: RouteConfig[]): RouterConfig[] => {
         path: route.path,
         element: <AdminLayout />,
         children: route.children.map((child) => ({
-          path: child.path.replace('/system/', ''),
+          path: child.path,
           element: child.element,
         })),
       };
@@ -124,7 +113,7 @@ const convertToRouterConfig = (routes: RouteConfig[]): RouterConfig[] => {
 const authLoader = () => {
   const token = localStorage.getItem('accessToken');
   if (!token) {
-    throw redirect('/login');
+    return redirect('/login');
   }
   return null;
 };
@@ -147,5 +136,13 @@ export const router = createBrowserRouter([
       </Suspense>
     ),
     children: convertToRouterConfig(routes),
+  },
+  {
+    path: '/403',
+    element: <Forbidden />,
+  },
+  {
+    path: '*',
+    element: <NotFound />,
   },
 ]);

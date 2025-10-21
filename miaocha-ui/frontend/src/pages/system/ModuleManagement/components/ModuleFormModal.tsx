@@ -48,28 +48,28 @@ const ModuleFormModal: React.FC<ModuleFormModalProps> = ({
 
   return (
     <Modal
-      title={selectedRecord ? '编辑模块' : '添加模块'}
-      open={visible}
-      onOk={handleSubmit}
-      onCancel={onCancel}
-      width={600}
       maskClosable={false}
+      open={visible}
+      title={selectedRecord ? '编辑模块' : '添加模块'}
+      width={600}
+      onCancel={onCancel}
+      onOk={handleSubmit}
     >
       <Form form={form} layout="vertical">
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item name="name" label="模块名称" rules={[{ required: true, message: '请输入模块名称' }]}>
-              <Input placeholder="请输入模块名称" maxLength={128} />
+            <Form.Item label="模块名称" name="name" rules={[{ required: true, message: '请输入模块名称' }]}>
+              <Input maxLength={128} placeholder="请输入模块名称" />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="datasourceId" label="数据源" rules={[{ required: true, message: '请选择数据源' }]}>
+            <Form.Item label="数据源" name="datasourceId" rules={[{ required: true, message: '请选择数据源' }]}>
               <Select
-                placeholder="请选择数据源"
                 options={dataSources.map((ds) => ({
                   value: ds.id,
                   label: ds.name,
                 }))}
+                placeholder="请选择数据源"
               />
             </Form.Item>
           </Col>
@@ -77,8 +77,8 @@ const ModuleFormModal: React.FC<ModuleFormModalProps> = ({
 
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item name="tableName" label="表名" rules={[{ required: true, message: '请输入表名' }]}>
-              <Input placeholder="请输入表名" maxLength={128} />
+            <Form.Item label="表名" name="tableName" rules={[{ required: true, message: '请输入表名' }]}>
+              <Input maxLength={128} placeholder="请输入表名" />
             </Form.Item>
           </Col>
         </Row>

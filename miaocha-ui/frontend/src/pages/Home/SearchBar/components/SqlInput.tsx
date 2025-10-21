@@ -23,7 +23,7 @@ const SqlInput: React.FC<ISqlInputProps> = ({ value, onChange, columns = [] }) =
     const lastWord = words[words.length - 1] || '';
 
     // 如果最后一个词汇包含操作符，提取字段名部分
-    const operatorMatch = lastWord.match(/^([a-zA-Z_][a-zA-Z0-9_.]*)/);
+    const operatorMatch = /^([a-zA-Z_][a-zA-Z0-9_.]*)/.exec(lastWord);
     return operatorMatch ? operatorMatch[1] : lastWord;
   };
 
@@ -31,7 +31,7 @@ const SqlInput: React.FC<ISqlInputProps> = ({ value, onChange, columns = [] }) =
   const currentWord = getCurrentInputWord(value);
   const filteredColumns = currentWord
     ? columns.filter(
-        (column) => column.columnName && column.columnName.toLowerCase().includes(currentWord.toLowerCase()),
+        (column) => column.columnName?.toLowerCase().includes(currentWord.toLowerCase()),
       )
     : columns;
 
@@ -65,11 +65,11 @@ const SqlInput: React.FC<ISqlInputProps> = ({ value, onChange, columns = [] }) =
     <Space.Compact style={{ width: '100%' }}>
       <AutoComplete
         allowClear
+        options={options}
         placeholder={PLACEHOLDERS.SQL}
         style={{ width: '100%' }}
         value={value}
         onChange={onChange}
-        options={options}
       />
     </Space.Compact>
   );

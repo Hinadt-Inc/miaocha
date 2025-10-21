@@ -245,7 +245,7 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
       } else {
         return (
           <div className={markdownStyles.markdownContent}>
-            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight, rehypeRaw]}>
+            <ReactMarkdown rehypePlugins={[rehypeHighlight, rehypeRaw]} remarkPlugins={[remarkGfm]}>
               {message.content || ''}
             </ReactMarkdown>
           </div>
@@ -270,19 +270,19 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
     return (
       <div key={message.id} className={styles.messageWrapper}>
         <Bubble
-          placement={isUser ? 'end' : 'start'}
           avatar={
             isUser ? (
-              <Avatar size={36} icon={<UserOutlined />} className={styles.avatarUser} />
+              <Avatar className={styles.avatarUser} icon={<UserOutlined />} size={36} />
             ) : (
-              <Avatar size={36} icon={<RobotOutlined />} className={styles.avatarBot} />
+              <Avatar className={styles.avatarBot} icon={<RobotOutlined />} size={36} />
             )
           }
+          className={isUser ? styles.userMessage : styles.assistantMessage}
           content={getContent()}
           footer={getFooter()}
-          variant="filled"
+          placement={isUser ? 'end' : 'start'}
           shape="round"
-          className={isUser ? styles.userMessage : styles.assistantMessage}
+          variant="filled"
         />
       </div>
     );
@@ -640,7 +640,7 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
     }
     // x轴方向向量
     const xVector = modalContentElementRect.current.direction.includes('l') ? -1 : 1;
-    let x = Math.min(
+    const x = Math.min(
       modalContentElementRect.current.maxWidth,
       Math.max(modalContentElementRect.current.width + deltaX * xVector * 2, modalContentElementRect.current.minWidth),
     );
@@ -686,21 +686,21 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
           {/* 清空对话按钮，只在有对话记录时显示 */}
           {messages.length > 0 && (
             <Button
-              type="text"
-              icon={<ClearOutlined />}
-              onClick={handleClearChat}
-              size="small"
               className={styles.clearButton}
+              icon={<ClearOutlined />}
+              size="small"
               title="清空对话，开始新会话"
+              type="text"
+              onClick={handleClearChat}
             />
           )}
           <Button
-            type="text"
-            icon={<CloseOutlined />}
-            onClick={() => setOpen(false)}
-            size="small"
             className={styles.closeButton}
+            icon={<CloseOutlined />}
+            size="small"
             title="关闭AI助手"
+            type="text"
+            onClick={() => setOpen(false)}
           />
         </div>
       </div>
@@ -719,12 +719,15 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
         }}
       >
         <Draggable
-          nodeRef={aiDraggleRef}
           bounds={{
             left: -70,
             bottom: 80,
             top: -window.innerHeight + 80 + 60,
             right: window.innerWidth - 60 - 70,
+          }}
+          nodeRef={aiDraggleRef}
+          onDrag={() => {
+            aiTrueDragging.current = true;
           }}
           onStart={() => setAiDragging(true)}
           onStop={() => {
@@ -733,19 +736,16 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
               setAiDragging(false);
             }, 10);
           }}
-          onDrag={() => {
-            aiTrueDragging.current = true;
-          }}
         >
           <div ref={aiDraggleRef}>
-            <Tooltip title={aiDragging ? '' : 'AI 智能助手'} placement="top">
+            <Tooltip placement="top" title={aiDragging ? '' : 'AI 智能助手'}>
               <Button
+                className={styles.floatButton}
+                icon={<RobotOutlined />}
                 onClick={() => {
                   if (aiTrueDragging.current) return;
                   setOpen(true);
                 }}
-                icon={<RobotOutlined />}
-                className={styles.floatButton}
               />
             </Tooltip>
           </div>
@@ -753,38 +753,38 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
       </div>
       {/* 可拖拽的弹框 */}
       <Modal
-        title={<DraggableTitle />}
-        open={open}
-        onCancel={() => setOpen(false)}
-        footer={null}
-        width={modalRect.width}
         className={styles.draggableModal}
+        destroyOnHidden={false}
+        footer={null}
         mask={false}
+        maskClosable={false}
         modalRender={(modal) => (
           <Draggable
-            disabled={disabled}
             bounds={bounds}
-            onStart={(event, uiData) => onStart(event, uiData)}
-            onDrag={handleDragStart}
-            onStop={handleDragStop}
+            cancel=".ant-btn, .ant-input, button"
+            defaultPosition={{ x: 0, y: 0 }}
+            disabled={disabled}
+            enableUserSelectHack={false}
             handle=".ant-modal-header"
             nodeRef={draggleRef}
-            enableUserSelectHack={false}
             scale={1}
-            defaultPosition={{ x: 0, y: 0 }}
-            cancel=".ant-btn, .ant-input, button"
+            onDrag={handleDragStart}
+            onStart={(event, uiData) => onStart(event, uiData)}
+            onStop={handleDragStop}
           >
             <div ref={draggleRef}>{modal}</div>
           </Draggable>
         )}
-        destroyOnHidden={false}
-        maskClosable={false}
+        open={open}
+        title={<DraggableTitle />}
+        width={modalRect.width}
+        onCancel={() => setOpen(false)}
       >
         <div
-          style={{ height: `${modalRect.height}px` }}
-          onMouseDown={handleMouseDown}
           ref={modalContentRef}
           className={styles.modalContent}
+          style={{ height: `${modalRect.height}px` }}
+          onMouseDown={handleMouseDown}
         >
           {/* 鼠标放缩类型 */}
           <div>
@@ -853,17 +853,17 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
             <div className={`${styles.customInputContainer} ${loading ? styles.inputDisabled : ''}`}>
               <Sender
                 key="ai-assistant-sender" // 添加固定key防止重新挂载
-                value={inputValue}
-                onChange={handleInputChange}
-                placeholder={placeholderText}
                 loading={loading}
-                onSubmit={handleInputSubmit}
-                onCancel={handleInputCancel}
+                placeholder={placeholderText}
                 style={{
                   background: '#f7f9fa',
                   borderRadius: '24px',
                   border: '1px solid #e1e8ed',
                 }}
+                value={inputValue}
+                onCancel={handleInputCancel}
+                onChange={handleInputChange}
+                onSubmit={handleInputSubmit}
               />
               <div className={styles.inputHint}>
                 {loading ? (

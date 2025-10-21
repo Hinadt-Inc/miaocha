@@ -22,10 +22,10 @@ export interface ILogColumnsResponse {
 }
 
 export interface ILogHistogramData {
-  buckets: Array<{
+  buckets: {
     timestamp: number;
     count: number;
-  }>;
+  }[];
   total: number;
 }
 

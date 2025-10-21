@@ -119,14 +119,14 @@ const SaveSearchModal: React.FC<SaveSearchModalProps> = ({
     <>
     {contextHolder}
     <Modal
-      title="保存搜索条件"
-      open={visible}
-      onOk={handleSave}
-      onCancel={handleCancel}
+      cancelText="取消"
       confirmLoading={loading}
       okText="保存"
-      cancelText="取消"
+      open={visible}
+      title="保存搜索条件"
       width={500}
+      onCancel={handleCancel}
+      onOk={handleSave}
     >
       <Form
         form={form}
@@ -135,8 +135,8 @@ const SaveSearchModal: React.FC<SaveSearchModalProps> = ({
       >
 
         <Form.Item
-          name="name"
           label="搜索名称"
+          name="name"
           rules={[
             { required: true, message: '请输入搜索名称' },
             { max: 50, message: '搜索名称不能超过50个字符' },
@@ -146,17 +146,17 @@ const SaveSearchModal: React.FC<SaveSearchModalProps> = ({
         </Form.Item>
         
         <Form.Item
-          name="description"
           label="描述"
+          name="description"
           rules={[
             { max: 200, message: '描述不能超过200个字符' },
           ]}
         >
           <Input.TextArea
+            maxLength={200}
             placeholder="请输入搜索描述（可选）"
             rows={3}
             showCount
-            maxLength={200}
           />
         </Form.Item>
       </Form>

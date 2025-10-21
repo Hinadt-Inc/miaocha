@@ -1,6 +1,12 @@
 import React, { useMemo } from 'react';
 import { Button, Dropdown, Space, Progress, Tooltip } from 'antd';
-import { PlayCircleOutlined, PauseCircleOutlined, ReloadOutlined, ClockCircleOutlined, CaretDownOutlined } from '@ant-design/icons';
+import {
+  PlayCircleOutlined,
+  PauseCircleOutlined,
+  ReloadOutlined,
+  ClockCircleOutlined,
+  CaretDownOutlined,
+} from '@ant-design/icons';
 import { AutoRefreshProps } from './types';
 import { REFRESH_INTERVALS } from './constants';
 import { useAutoRefresh } from './useAutoRefresh';
@@ -39,7 +45,7 @@ const AutoRefresh: React.FC<AutoRefreshProps> = ({ onRefresh, loading = false, d
 
   // 当前选中的间隔标签
   const currentIntervalLabel = useMemo(() => {
-    return REFRESH_INTERVALS.find(item => item.value === refreshInterval)?.label || '关闭';
+    return REFRESH_INTERVALS.find((item) => item.value === refreshInterval)?.label || '关闭';
   }, [refreshInterval]);
 
   // 构建tooltip内容
@@ -50,7 +56,7 @@ const AutoRefresh: React.FC<AutoRefreshProps> = ({ onRefresh, loading = false, d
       currentIntervalLabel,
       loading,
       remainingTime,
-      lastRefreshTime
+      lastRefreshTime,
     );
   }, [isAutoRefreshing, refreshInterval, currentIntervalLabel, loading, remainingTime, lastRefreshTime]);
 
@@ -60,13 +66,13 @@ const AutoRefresh: React.FC<AutoRefreshProps> = ({ onRefresh, loading = false, d
         {/* 手动刷新按钮 */}
         <Tooltip title="手动刷新">
           <Button
-            size="small"
-            type="text"
-            icon={<ReloadOutlined />}
-            onClick={handleManualRefresh}
-            loading={loading}
-            disabled={disabled}
             className={styles.refreshButton}
+            disabled={disabled}
+            icon={<ReloadOutlined />}
+            loading={loading}
+            size="small"
+            type="link"
+            onClick={handleManualRefresh}
           />
         </Tooltip>
 
@@ -74,12 +80,12 @@ const AutoRefresh: React.FC<AutoRefreshProps> = ({ onRefresh, loading = false, d
         <div className={styles.autoRefreshControl}>
           <Tooltip title={tooltipContent}>
             <Button
-              size="small"
-              type="text"
-              icon={isAutoRefreshing ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
-              onClick={toggleAutoRefresh}
-              disabled={disabled || refreshInterval === 0}
               className={`${styles.autoRefreshToggle} ${isAutoRefreshing ? styles.active : ''}`}
+              disabled={disabled || refreshInterval === 0}
+              icon={isAutoRefreshing ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
+              size="small"
+              type="link"
+              onClick={toggleAutoRefresh}
             >
               {isAutoRefreshing ? '停止' : '开始'}
             </Button>
@@ -87,12 +93,12 @@ const AutoRefresh: React.FC<AutoRefreshProps> = ({ onRefresh, loading = false, d
 
           {/* 刷新间隔选择 */}
           <Dropdown
-            menu={{ items: menuItems, selectedKeys: [refreshInterval.toString()] }}
-            trigger={['click']}
             disabled={disabled}
+            menu={{ items: menuItems, selectedKeys: [refreshInterval.toString()] }}
             placement="bottomRight"
+            trigger={['click']}
           >
-            <Button size="small" type="text" className={styles.intervalButton}>
+            <Button className={styles.intervalButton} size="small" type="text">
               <Space size={2}>
                 <ClockCircleOutlined />
                 <span>{currentIntervalLabel}</span>
@@ -107,15 +113,13 @@ const AutoRefresh: React.FC<AutoRefreshProps> = ({ onRefresh, loading = false, d
           <div className={styles.refreshStatus}>
             <div className={styles.progressContainer}>
               <Progress
-                percent={progressPercent}
-                size="small"
-                showInfo={false}
-                strokeColor={loading ? "#d9d9d9" : "#1890ff"}
                 className={styles.progress}
+                percent={progressPercent}
+                showInfo={false}
+                size="small"
+                strokeColor={loading ? '#d9d9d9' : '#1890ff'}
               />
-              <span className={styles.timeText}>
-                {formatRemainingTime(remainingTime, loading)}
-              </span>
+              <span className={styles.timeText}>{formatRemainingTime(remainingTime, loading)}</span>
             </div>
           </div>
         )}

@@ -4,7 +4,7 @@ import { PlayCircleOutlined, HistoryOutlined, SettingOutlined, ReloadOutlined } 
 import styles from '../SQLEditorPage.module.less';
 
 export interface SQLEditorHeaderProps {
-  dataSources: Array<{ id: string; name: string; type: string }>;
+  dataSources: { id: string; name: string; type: string }[];
   selectedSource: string | null;
   onSourceChange: (sourceId: string) => void;
   loadingSchema: boolean;
@@ -35,24 +35,24 @@ export const SQLEditorHeader: React.FC<SQLEditorHeaderProps> = ({
   return (
     <Space className={styles.editorHeaderActions}>
       <Select
-        placeholder="选择数据源"
-        value={selectedSource}
-        onChange={onSourceChange}
         loading={loadingDataSources}
-        style={{ minWidth: 180 }}
         options={dataSources.map((ds) => ({
           value: ds.id,
           label: `${ds.name} (${ds.type})`,
         }))}
+        placeholder="选择数据源"
+        style={{ minWidth: 180 }}
+        value={selectedSource}
+        onChange={onSourceChange}
       />
 
       <Tooltip title="执行查询 (Ctrl+Enter)">
         <Button
-          type="primary"
-          icon={<PlayCircleOutlined />}
-          onClick={onExecuteQuery}
-          loading={loadingResults}
           disabled={!selectedSource || !sqlQuery.trim()}
+          icon={<PlayCircleOutlined />}
+          loading={loadingResults}
+          type="primary"
+          onClick={onExecuteQuery}
         >
           执行
         </Button>

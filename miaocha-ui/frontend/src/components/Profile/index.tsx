@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { Form, Input, Modal } from 'antd';
-import { changeMyPassword, ChangePasswordParams } from '@/api/user';
+import { changePasswordBySuperAdmin } from '@/api/user';
+import type { ChangePasswordPayloadBySuperAdmin } from '@/pages/System/User/types';
 import { getOAuthProviders, logoutToOAuthProvider } from '@/api/auth';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -37,14 +38,14 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
         try {
           // 执行本地退出登录（不再调用后端接口）
           await dispatch(logoutUser());
-          
+
           // 判断登录类型，决定退出方式
           if (user.loginType === 'mandao') {
             console.log('mandao用户退出，跳转到第三方退出页面');
             // mandao用户需要跳转到第三方退出
             try {
               const providers = await getOAuthProviders();
-              const mandaoProvider = providers?.find(p => p.providerId === 'mandao');
+              const mandaoProvider = providers?.find((p) => p.providerId === 'mandao');
               if (mandaoProvider?.revocationEndpoint) {
                 logoutToOAuthProvider(mandaoProvider.revocationEndpoint);
                 return; // 不执行navigate('/login')，因为会跳转到第三方
@@ -53,7 +54,7 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
               console.error('获取OAuth提供者信息失败:', error);
             }
           }
-          
+
           // system用户或mandao用户获取provider失败时的处理
           navigate('/login');
         } catch (error) {
@@ -124,7 +125,7 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
   const renderUserInfo = useMemo(() => {
     if (!user.sessionChecked) {
       return (
-        <Button type="text" className={styles.profileButton}>
+        <Button className={styles.profileButton} type="text">
           <Space align="center">
             <Avatar icon={<UserOutlined />} size="small" />
             <Spin size="small" />
@@ -138,12 +139,12 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
     }
 
     if (collapsed) {
-      return <Avatar src={user.avatar} icon={!user.avatar ? <UserOutlined /> : undefined} size="small" />;
+      return <Avatar icon={!user.avatar ? <UserOutlined /> : undefined} size="small" src={user.avatar} />;
     }
 
     return (
       <Space>
-        <Avatar src={user.avatar} icon={!user.avatar ? <UserOutlined /> : undefined} size="small" />
+        <Avatar icon={!user.avatar ? <UserOutlined /> : undefined} size="small" src={user.avatar} />
         {user.loading ? (
           <Spin size="small" />
         ) : (
@@ -153,7 +154,7 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
             </Text>
             {user.error && (
               <Tooltip placement="left" title="重新获取用户信息">
-                <ReloadOutlined onClick={handleRetryFetchUserInfo} style={{ cursor: 'pointer' }} />
+                <ReloadOutlined style={{ cursor: 'pointer' }} onClick={handleRetryFetchUserInfo} />
               </Tooltip>
             )}
           </Space>
@@ -163,10 +164,10 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
   }, [user, collapsed, handleRetryFetchUserInfo]);
 
   const handleChangePassword = useCallback(
-    async (values: ChangePasswordParams) => {
+    async (values: ChangePasswordPayloadBySuperAdmin) => {
       try {
         setChangingPassword(true);
-        await changeMyPassword({
+        await changePasswordBySuperAdmin({
           oldPassword: values.oldPassword,
           newPassword: values.newPassword,
         });
@@ -197,12 +198,12 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
         <div className={styles.error}>
           <p className={styles.errorText}>获取用户信息失败: {user.error}</p>
           <Button
-            type="primary"
-            icon={<ReloadOutlined />}
-            onClick={handleRetryFetchUserInfo}
-            size="large"
-            shape="round"
             className={styles.retryButton}
+            icon={<ReloadOutlined />}
+            shape="round"
+            size="large"
+            type="primary"
+            onClick={handleRetryFetchUserInfo}
           >
             重新获取
           </Button>
@@ -215,13 +216,13 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
         <div className={styles.header}>
           <div className={styles.avatarWrapper}>
             <Avatar
-              src={user.avatar}
+              className={styles.avatar}
               icon={!user.avatar ? <UserOutlined /> : undefined}
               size={100}
-              className={styles.avatar}
+              src={user.avatar}
             />
           </div>
-          <Button type="text" onClick={handleCancel} className={styles.closeButton}>
+          <Button className={styles.closeButton} type="text" onClick={handleCancel}>
             ×
           </Button>
         </div>
@@ -229,7 +230,7 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
         <div className={styles.content}>
           <div className={styles.title}>
             <Typography.Title level={3}>{user.name || '未知用户'}</Typography.Title>
-            <Tag color="blue" className={styles.tag}>
+            <Tag className={styles.tag} color="blue">
               {user.role || '未知角色'}
             </Tag>
           </div>
@@ -249,7 +250,7 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
             </Col>
 
             <Col span={8}>
-              <Card variant="borderless" className={styles.card}>
+              <Card className={styles.card} variant="borderless">
                 <Space direction="vertical" size={4} style={{ width: '100%' }}>
                   <div className={styles.cardTitle}>邮箱</div>
                   <Space>
@@ -260,7 +261,7 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
             </Col>
 
             <Col span={8}>
-              <Card variant="borderless" className={styles.card}>
+              <Card className={styles.card} variant="borderless">
                 <Space direction="vertical" size={4} style={{ width: '100%' }}>
                   <div className={styles.cardTitle}>创建时间</div>
                   <Space>
@@ -277,38 +278,38 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
 
   return (
     <>
-      <Dropdown menu={{ items }} arrow>
+      <Dropdown arrow menu={{ items }}>
         {renderUserInfo}
       </Dropdown>
 
       <Modal
-        title={null}
-        open={isModalVisible}
-        onCancel={handleCancel}
-        footer={null}
-        width={700}
         centered
-        closable={false}
         className="user-profile-modal"
+        closable={false}
+        footer={null}
+        open={isModalVisible}
+        title={null}
+        width={700}
+        onCancel={handleCancel}
       >
         {modalContent}
       </Modal>
 
       <Modal
-        title="修改密码"
-        open={passwordModalVisible}
-        onCancel={() => setPasswordModalVisible(false)}
-        footer={null}
-        width={500}
         centered
+        footer={null}
+        open={passwordModalVisible}
+        title="修改密码"
+        width={500}
+        onCancel={() => setPasswordModalVisible(false)}
       >
-        <Form form={form} onFinish={handleChangePassword} layout="vertical">
-          <Form.Item name="oldPassword" label="旧密码" rules={[{ required: true, message: '请输入旧密码' }]}>
+        <Form form={form} layout="vertical" onFinish={handleChangePassword}>
+          <Form.Item label="旧密码" name="oldPassword" rules={[{ required: true, message: '请输入旧密码' }]}>
             <Input.Password />
           </Form.Item>
           <Form.Item
-            name="newPassword"
             label="新密码"
+            name="newPassword"
             rules={[
               { required: true, message: '请输入新密码' },
               { min: 8, message: '密码长度至少8位' },
@@ -317,9 +318,9 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
             <Input.Password />
           </Form.Item>
           <Form.Item
-            name="confirmPassword"
-            label="确认新密码"
             dependencies={['newPassword']}
+            label="确认新密码"
+            name="confirmPassword"
             rules={[
               { required: true, message: '请确认新密码' },
               ({ getFieldValue }) => ({
@@ -335,7 +336,7 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
             <Input.Password />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" htmlType="submit" loading={changingPassword}>
+            <Button htmlType="submit" loading={changingPassword} type="primary">
               修改密码
             </Button>
           </Form.Item>

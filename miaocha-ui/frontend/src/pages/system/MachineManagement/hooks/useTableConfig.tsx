@@ -48,19 +48,19 @@ export const useTableConfig = ({ onEdit, onDelete }: UseTableConfigProps) => {
       key: 'action',
       render: (_, record) => (
         <div className={styles.actions}>
-          <Button type="link" size="small" onClick={() => onEdit(record)} style={{ padding: '0 8px' }}>
+          <Button size="small" style={{ padding: '0 8px' }} type="link" onClick={() => onEdit(record)}>
             编辑
           </Button>
           <Popconfirm
-            title="确定要删除这台机器吗？"
+            cancelText="取消"
             description="此操作不可撤销"
+            okText="确定"
+            title="确定要删除这台机器吗？"
             onConfirm={() => {
               return void onDelete(record);
             }}
-            okText="确定"
-            cancelText="取消"
           >
-            <Button type="link" size="small" danger style={{ padding: '0 8px' }}>
+            <Button danger size="small" style={{ padding: '0 8px' }} type="link">
               删除
             </Button>
           </Popconfirm>

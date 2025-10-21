@@ -92,16 +92,16 @@ const MachineTable = ({
             <>
               {!['RUNNING', 'STARTING', 'STOPPING', 'INITIALIZING'].includes(machine.state) && (
                 <Popconfirm
-                  title="确认启动"
-                  description="确定要启动这台机器吗？"
-                  onConfirm={() => onStartMachine(machine.logstashMachineId)}
-                  okText="确认"
                   cancelText="取消"
+                  description="确定要启动这台机器吗？"
+                  okText="确认"
+                  title="确认启动"
+                  onConfirm={() => onStartMachine(machine.logstashMachineId)}
                 >
                   <Button
-                    type="link"
                     disabled={['RUNNING', 'STARTING', 'STOPPING'].includes(machine.state)}
                     style={{ padding: '0 4px' }}
+                    type="link"
                   >
                     启动
                   </Button>
@@ -109,16 +109,16 @@ const MachineTable = ({
               )}
               {!['STOPPED', 'STOPPING', 'NOT_STARTED', 'INITIALIZING'].includes(machine.state) && (
                 <Popconfirm
-                  title="确认停止"
-                  description="确定要停止这台机器吗？"
-                  onConfirm={() => onStopMachine(machine.logstashMachineId)}
-                  okText="确认"
                   cancelText="取消"
+                  description="确定要停止这台机器吗？"
+                  okText="确认"
+                  title="确认停止"
+                  onConfirm={() => onStopMachine(machine.logstashMachineId)}
                 >
                   <Button
-                    type="link"
                     disabled={['STOPPED', 'STOPPING', 'NOT_STARTED'].includes(machine.state)}
                     style={{ padding: '0 4px' }}
+                    type="link"
                   >
                     停止
                   </Button>
@@ -126,23 +126,23 @@ const MachineTable = ({
               )}
               {machine.state !== 'RUNNING' && (
                 <Popconfirm
-                  title="确认刷新配置"
-                  description="确定要刷新这台机器的配置吗？"
-                  onConfirm={() => onRefreshConfig(record.id, machine.logstashMachineId)}
-                  okText="确认"
                   cancelText="取消"
+                  description="确定要刷新这台机器的配置吗？"
+                  okText="确认"
+                  title="确认刷新配置"
+                  onConfirm={() => onRefreshConfig(record.id, machine.logstashMachineId)}
                 >
-                  <Button type="link" disabled={machine.state === 'RUNNING'} style={{ padding: '0 4px' }}>
+                  <Button disabled={machine.state === 'RUNNING'} style={{ padding: '0 4px' }} type="link">
                     刷新配置
                   </Button>
                 </Popconfirm>
               )}
               {machine.state !== 'RUNNING' && (
                 <Button
-                  type="link"
-                  onClick={() => onEditMachineConfig(machine.logstashMachineId, record.id, data)}
                   disabled={machine.state === 'RUNNING'}
                   style={{ padding: '0 4px' }}
+                  type="link"
+                  onClick={() => onEditMachineConfig(machine.logstashMachineId, record.id, data)}
                 >
                   编辑配置
                 </Button>
@@ -151,51 +151,51 @@ const MachineTable = ({
           )}
           {machine.state === 'INITIALIZE_FAILED' && (
             <Popconfirm
-              title="确认重新初始化"
-              description="确定要重新初始化这台机器吗？"
-              onConfirm={() => onReinitializeMachine(machine.logstashMachineId)}
-              okText="确认"
               cancelText="取消"
+              description="确定要重新初始化这台机器吗？"
+              okText="确认"
+              title="确认重新初始化"
+              onConfirm={() => onReinitializeMachine(machine.logstashMachineId)}
             >
-              <Button type="link" style={{ padding: '0 4px' }}>
+              <Button style={{ padding: '0 4px' }} type="link">
                 重新初始化
               </Button>
             </Popconfirm>
           )}
           {machine.state === 'STOP_FAILED' && (
             <Popconfirm
-              title="确认强制停止"
-              description="确定要强制停止这台机器吗？这可能会导致数据丢失"
-              onConfirm={() => onForceStopMachine(record.id, machine.machineId)}
-              okText="确认"
               cancelText="取消"
+              description="确定要强制停止这台机器吗？这可能会导致数据丢失"
+              okText="确认"
               okType="danger"
+              title="确认强制停止"
+              onConfirm={() => onForceStopMachine(record.id, machine.machineId)}
             >
-              <Button type="link" danger style={{ padding: '0 4px' }}>
+              <Button danger style={{ padding: '0 4px' }} type="link">
                 强制停止
               </Button>
             </Popconfirm>
           )}
           <Button
-            type="link"
             style={{ padding: '0 4px' }}
+            type="link"
             onClick={() => onShowMachineTasks(record.id, machine.logstashMachineId)}
           >
             任务
           </Button>
-          <Button type="link" style={{ padding: '0 4px' }} onClick={() => onShowLog(machine.logstashMachineId, true)}>
+          <Button style={{ padding: '0 4px' }} type="link" onClick={() => onShowLog(machine.logstashMachineId, true)}>
             日志
           </Button>
           {!['RUNNING', 'STOPPING', 'STARTING', 'STOPPING_FAILED'].includes(machine.state) && (
             <Popconfirm
-              title="确认删除"
-              description="确定要删除这台机器吗？此操作将执行缩容操作。"
-              onConfirm={() => onDeleteMachine(record.id, machine.logstashMachineId)}
-              okText="确认"
               cancelText="取消"
+              description="确定要删除这台机器吗？此操作将执行缩容操作。"
+              okText="确认"
               okType="danger"
+              title="确认删除"
+              onConfirm={() => onDeleteMachine(record.id, machine.logstashMachineId)}
             >
-              <Button type="link" danger style={{ padding: '0 4px' }} disabled={machine.state === 'RUNNING'}>
+              <Button danger disabled={machine.state === 'RUNNING'} style={{ padding: '0 4px' }} type="link">
                 删除
               </Button>
             </Popconfirm>
@@ -207,12 +207,12 @@ const MachineTable = ({
 
   return (
     <Table
-      size="small"
       bordered
-      dataSource={record.logstashMachineStatusInfo}
-      rowKey="machineId"
       columns={columns}
+      dataSource={record.logstashMachineStatusInfo}
       pagination={false}
+      rowKey="machineId"
+      size="small"
     />
   );
 };

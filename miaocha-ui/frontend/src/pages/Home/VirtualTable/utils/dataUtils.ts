@@ -8,7 +8,7 @@
  * @returns 提取的关键词数组
  */
 export const extractSqlKeywords = (sqls: string[]): string[] => {
-  if (!sqls || sqls.length === 0) return [];
+  if (sqls?.length === 0) return [];
 
   const extractKeywords = (sql: string): string[] => {
     const keywords: string[] = [];
@@ -53,7 +53,7 @@ export const extractSqlKeywords = (sqls: string[]): string[] => {
  * @returns 格式化后的关键词数组
  */
 export const formatSearchKeywords = (keywords: string[]): string[] => {
-  if (!keywords || keywords.length === 0) return [];
+  if (keywords?.length === 0) return [];
 
   /**
    * 关键词转换规则函数

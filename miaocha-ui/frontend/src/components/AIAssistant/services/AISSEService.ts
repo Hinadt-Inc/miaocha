@@ -56,7 +56,7 @@ type SSEEventListener = (data: ISSEData) => void;
 export class AISSEService {
   private apiEndpoint = '/api/ai/session';
   private eventSource: EventSource | null = null;
-  private listeners: Map<string, SSEEventListener[]> = new Map();
+  private listeners = new Map<string, SSEEventListener[]>();
 
   /**
    * 开始 AI 会话流

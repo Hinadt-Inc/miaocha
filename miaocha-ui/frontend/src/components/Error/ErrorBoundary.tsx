@@ -44,21 +44,21 @@ class ErrorBoundary extends Component<Props, State> {
     if (hasError) {
       return (
         <Result
-          status="error"
-          title="页面出现了错误"
-          subTitle={
-            process.env.NODE_ENV === 'development' && this.state.error
-              ? this.state.error.message
-              : '抱歉，发生了未预期的错误'
-          }
           extra={[
-            <Button key="reload" type="primary" icon={<ReloadOutlined />} onClick={this.handleReload}>
+            <Button key="reload" icon={<ReloadOutlined />} type="primary" onClick={this.handleReload}>
               刷新页面
             </Button>,
             <Button key="home" icon={<HomeOutlined />} onClick={this.handleGoHome}>
               返回首页
             </Button>,
           ]}
+          status="error"
+          subTitle={
+            process.env.NODE_ENV === 'development' && this.state.error
+              ? this.state.error.message
+              : '抱歉，发生了未预期的错误'
+          }
+          title="页面出现了错误"
         >
           {process.env.NODE_ENV === 'development' && this.state.errorInfo && (
             <details open>

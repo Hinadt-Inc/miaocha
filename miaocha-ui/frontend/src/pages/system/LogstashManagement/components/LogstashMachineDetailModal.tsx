@@ -30,10 +30,10 @@ export default function LogstashMachineDetailModal({ visible, onCancel, detail }
     <>
       {contextHolder}
       <Modal
-        title={`机器详情 - ${detail.machineName || detail.machineId}`}
         open={visible}
-        onCancel={onCancel}
+        title={`机器详情 - ${detail.machineName || detail.machineId}`}
         width={1000}
+        onCancel={onCancel}
       >
         <Descriptions bordered column={2}>
           <Descriptions.Item label="实例ID">{detail.id}</Descriptions.Item>
@@ -64,7 +64,7 @@ export default function LogstashMachineDetailModal({ visible, onCancel, detail }
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <h4>配置内容</h4>
             <Tooltip title="复制">
-              <Button icon={<CopyOutlined />} onClick={() => handleCopy(detail.configContent)} size="small" />
+              <Button icon={<CopyOutlined />} size="small" onClick={() => handleCopy(detail.configContent)} />
             </Tooltip>
           </div>
           <pre style={{ background: '#f5f5f5', padding: 12, borderRadius: 4, overflow: 'auto', height: 200 }}>
@@ -76,7 +76,7 @@ export default function LogstashMachineDetailModal({ visible, onCancel, detail }
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <h4>JVM参数</h4>
             <Tooltip title="复制">
-              <Button icon={<CopyOutlined />} onClick={() => handleCopy(detail.jvmOptions || '')} size="small" />
+              <Button icon={<CopyOutlined />} size="small" onClick={() => handleCopy(detail.jvmOptions || '')} />
             </Tooltip>
           </div>
           <pre style={{ background: '#f5f5f5', padding: 12, borderRadius: 4, overflow: 'auto', height: 200 }}>
@@ -88,7 +88,7 @@ export default function LogstashMachineDetailModal({ visible, onCancel, detail }
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <h4>Logstash配置</h4>
             <Tooltip title="复制">
-              <Button icon={<CopyOutlined />} onClick={() => handleCopy(detail.logstashYml)} size="small" />
+              <Button icon={<CopyOutlined />} size="small" onClick={() => handleCopy(detail.logstashYml)} />
             </Tooltip>
           </div>
           <pre style={{ background: '#f5f5f5', padding: 12, borderRadius: 4, overflow: 'auto', height: 200 }}>

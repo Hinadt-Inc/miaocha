@@ -14,6 +14,7 @@ interface SettingsDrawerProps {
 const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ visible, onClose, editorSettings, updateEditorSettings }) => {
   return (
     <Drawer
+      open={visible}
       title={
         <Space>
           <SettingOutlined />
@@ -21,7 +22,6 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ visible, onClose, edito
         </Space>
       }
       width={400}
-      open={visible}
       onClose={onClose}
     >
       <Form layout="vertical">

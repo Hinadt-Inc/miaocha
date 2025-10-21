@@ -52,7 +52,7 @@ export const useTableConfig = (props: UseTableConfigProps) => {
       dataIndex: 'name',
       key: 'name',
       render: (name: string, record: LogstashProcess) => (
-        <Button type="link" style={{ color: '#1890ff', padding: 0 }} onClick={() => props.onShowDetail(record)}>
+        <Button style={{ color: '#1890ff', padding: 0 }} type="link" onClick={() => props.onShowDetail(record)}>
           {name}
         </Button>
       ),
@@ -120,72 +120,72 @@ export const useTableConfig = (props: UseTableConfigProps) => {
       render: (_: unknown, record: LogstashProcess) => (
         <Space size="small">
           <Button
-            type="link"
-            onClick={() => props.onEdit(record)}
             disabled={['RUNNING', 'STARTING', 'STOPPING'].includes(record.state)}
             style={{ padding: '0 4px' }}
+            type="link"
+            onClick={() => props.onEdit(record)}
           >
             编辑
           </Button>
           {!checkSubTableStatus(record, 'start') && (
             <Popconfirm
-              title="确认启动"
+              cancelText="取消"
               description="确定要启动这个Logstash进程吗？"
+              okText="确认"
+              title="确认启动"
               onConfirm={() => {
                 props.onStart(record.id);
               }}
-              okText="确认"
-              cancelText="取消"
             >
-              <Button type="link" disabled={checkSubTableStatus(record, 'start')} style={{ padding: '0 4px' }}>
+              <Button disabled={checkSubTableStatus(record, 'start')} style={{ padding: '0 4px' }} type="link">
                 启动
               </Button>
             </Popconfirm>
           )}
           {!checkSubTableStatus(record, 'stop') && (
             <Popconfirm
-              title="确认停止"
+              cancelText="取消"
               description="确定要停止这个Logstash进程吗？"
+              okText="确认"
+              title="确认停止"
               onConfirm={() => {
                 props.onStop(record.id);
               }}
-              okText="确认"
-              cancelText="取消"
             >
-              <Button type="link" disabled={checkSubTableStatus(record, 'stop')} style={{ padding: '0 4px' }}>
+              <Button disabled={checkSubTableStatus(record, 'stop')} style={{ padding: '0 4px' }} type="link">
                 停止
               </Button>
             </Popconfirm>
           )}
           <Button
+            style={{ padding: '0 4px' }}
             type="link"
             onClick={() => {
               props.onShowHistory(record.id);
             }}
-            style={{ padding: '0 4px' }}
           >
             历史
           </Button>
-          <Button type="link" onClick={() => props.onScale(record)} style={{ padding: '0 4px' }}>
+          <Button style={{ padding: '0 4px' }} type="link" onClick={() => props.onScale(record)}>
             扩容
           </Button>
-          <Button type="link" onClick={() => props.onShowAlert(record)} style={{ padding: '0 4px' }}>
+          <Button style={{ padding: '0 4px' }} type="link" onClick={() => props.onShowAlert(record)}>
             告警
           </Button>
           {!record.logstashMachineStatusInfo.every((el) => el.state === 'RUNNING') && (
             <Popconfirm
-              title="确认刷新配置"
+              cancelText="取消"
               description="确定要刷新非运行状态下所有机器的配置吗？"
+              okText="确认"
+              title="确认刷新配置"
               onConfirm={() => {
                 props.onRefreshAllConfig(record);
               }}
-              okText="确认"
-              cancelText="取消"
             >
               <Button
-                type="link"
                 disabled={record.logstashMachineStatusInfo.every((el) => el.state === 'RUNNING')}
                 style={{ padding: '0 4px' }}
+                type="link"
               >
                 刷新配置
               </Button>
@@ -193,46 +193,46 @@ export const useTableConfig = (props: UseTableConfigProps) => {
           )}
           {hasInitializeFailedMachines(record) && (
             <Popconfirm
-              title="确认重新初始化"
+              cancelText="取消"
               description="确定要重新初始化所有初始化失败的机器吗？"
+              okText="确认"
+              title="确认重新初始化"
               onConfirm={() => {
                 props.onReinitializeFailedMachines(record.id);
               }}
-              okText="确认"
-              cancelText="取消"
             >
-              <Button type="link" style={{ padding: '0 4px' }}>
+              <Button style={{ padding: '0 4px' }} type="link">
                 重新初始化失败机器
               </Button>
             </Popconfirm>
           )}
           {allMachinesStopFailed(record) && (
             <Popconfirm
-              title="确认强制停止"
+              cancelText="取消"
               description="确定要强制停止所有机器吗？这可能会导致数据丢失"
+              okText="确认"
+              okType="danger"
+              title="确认强制停止"
               onConfirm={() => {
                 props.onForceStopProcess(record.id);
               }}
-              okText="确认"
-              cancelText="取消"
-              okType="danger"
             >
-              <Button type="link" danger style={{ padding: '0 4px' }}>
+              <Button danger style={{ padding: '0 4px' }} type="link">
                 强制停止
               </Button>
             </Popconfirm>
           )}
           <Popconfirm
-            title="确认删除"
+            cancelText="取消"
             description="确定要删除这个Logstash进程吗？"
+            okText="确认"
+            okType="danger"
+            title="确认删除"
             onConfirm={() => {
               props.onDelete(record.id);
             }}
-            okText="确认"
-            cancelText="取消"
-            okType="danger"
           >
-            <Button type="link" danger style={{ padding: '0 4px' }}>
+            <Button danger style={{ padding: '0 4px' }} type="link">
               删除
             </Button>
           </Popconfirm>

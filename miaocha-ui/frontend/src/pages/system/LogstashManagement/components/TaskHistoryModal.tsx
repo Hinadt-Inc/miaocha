@@ -62,7 +62,7 @@ const TaskHistoryModal = ({ visible, onClose, taskSummaries, onShowSteps }: Task
       title: '操作',
       key: 'action',
       render: (_: unknown, record: LogstashTaskSummary) => (
-        <Button type="link" icon={<InfoCircleOutlined />} onClick={() => onShowSteps(record)}>
+        <Button icon={<InfoCircleOutlined />} type="link" onClick={() => onShowSteps(record)}>
           详情
         </Button>
       ),
@@ -70,16 +70,16 @@ const TaskHistoryModal = ({ visible, onClose, taskSummaries, onShowSteps }: Task
   ];
 
   return (
-    <Modal title="任务历史" open={visible} onCancel={onClose} footer={null} width={1000}>
+    <Modal footer={null} open={visible} title="任务历史" width={1000} onCancel={onClose}>
       <Table
-        dataSource={taskSummaries}
-        rowKey="taskId"
         columns={columns}
+        dataSource={taskSummaries}
         pagination={{
           pageSize: 10,
           showSizeChanger: true,
           showTotal: (total) => `共 ${total} 条`,
         }}
+        rowKey="taskId"
       />
     </Modal>
   );

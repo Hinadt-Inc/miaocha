@@ -356,10 +356,10 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
           sqls={sqls}
           timeOption={timeState.timeOption}
           onClickKeyword={searchActions.handleClickKeyword}
-          onCloseKeyword={searchActions.handleCloseKeyword}
           onClickSql={searchActions.handleClickSql}
-          onCloseSql={searchActions.handleCloseSql}
           onClickTime={handleTimeFromTag}
+          onCloseKeyword={searchActions.handleCloseKeyword}
+          onCloseSql={searchActions.handleCloseSql}
         />
       </div>
     ),
@@ -373,12 +373,12 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
   const timeRender = useMemo(
     () => (
       <TimePickerWrapper
-        timeOption={timeState.timeOption}
+        activeTab={timeState.activeTab}
         open={timeState.openTimeRange}
+        setActiveTab={setActiveTab}
+        timeOption={timeState.timeOption}
         onOpenChange={setOpenTimeRange}
         onSubmit={submitTime}
-        activeTab={timeState.activeTab}
-        setActiveTab={setActiveTab}
       />
     ),
     [timeState.openTimeRange, timeState.timeOption, timeState.activeTab, setOpenTimeRange, submitTime, setActiveTab],
@@ -392,7 +392,7 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
 
   // 渲染SQL输入框
   const sqlRender = useMemo(
-    () => <SqlInput value={searchState.sql} onChange={changeSql} columns={columns} />,
+    () => <SqlInput columns={columns} value={searchState.sql} onChange={changeSql} />,
     [searchState.sql, changeSql, columns],
   );
 
@@ -400,22 +400,22 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
   const timeGroupRender = useMemo(
     () => (
       <TimeGroupSelector
-        timeGrouping={searchParams.timeGrouping}
         open={timeState.openTimeGroup}
-        onOpenChange={setOpenTimeGroup}
+        timeGrouping={searchParams.timeGrouping}
         onChange={handleTimeGroupChange}
+        onOpenChange={setOpenTimeGroup}
       />
     ),
     [searchParams.timeGrouping, timeState.openTimeGroup, setOpenTimeGroup, handleTimeGroupChange],
   );
 
   return (
-    <div className={styles.searchBar} ref={searchBarRef}>
+    <div ref={searchBarRef} className={styles.searchBar}>
       <div className={styles.top}>
         <div className={styles.left}>{leftRender}</div>
         <div className={styles.right}>
           <Space size={STYLES.SPACE_SIZE}>
-            <AutoRefresh onRefresh={handleAutoRefresh} loading={loading} disabled={false} />
+            <AutoRefresh disabled={false} loading={loading} onRefresh={handleAutoRefresh} />
             <SaveSearchButton
               searchParams={{
                 keywords,
@@ -436,7 +436,7 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
               }}
               size="small"
             />
-            <SavedSearchesButton onLoadSearch={searchActions.handleLoadSearch} size="small" />
+            <SavedSearchesButton size="small" onLoadSearch={searchActions.handleLoadSearch} />
             <ShareButton
               searchParams={{
                 keywords,
@@ -467,7 +467,7 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
         <div className={styles.item}>{keywordRender}</div>
         <div className={styles.item}>{sqlRender}</div>
         <div className={styles.item}>
-          <Button size="small" type="primary" onClick={handleSubmit} loading={loading}>
+          <Button loading={loading} size="small" type="primary" onClick={handleSubmit}>
             搜索
           </Button>
         </div>

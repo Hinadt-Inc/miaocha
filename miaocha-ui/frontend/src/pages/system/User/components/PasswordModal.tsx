@@ -1,16 +1,27 @@
 import { Modal, Form, Input } from 'antd';
-import { useEffect } from 'react';
-import type { UserData } from './UserFormModal';
+import { useEffect, memo } from 'react';
+import type { FormInstance } from 'antd/es/form';
+import type { UserListItem } from '../types';
+import * as v from '@/utils/validate';
 
 interface PasswordModalProps {
   visible: boolean;
-  selectedRecord: UserData | null;
+  selectedRecord: UserListItem | null;
   onSubmit: () => Promise<void>;
   onCancel: () => void;
-  form: any;
+  form: FormInstance;
+  confirmLoading?: boolean;
 }
 
-const PasswordModal: React.FC<PasswordModalProps> = ({ visible, selectedRecord, onSubmit, onCancel, form }) => {
+const PasswordModal: React.FC<PasswordModalProps> = ({
+  visible,
+  selectedRecord,
+  onSubmit,
+  onCancel,
+  form,
+  confirmLoading,
+}) => {
+  console.log('渲染：监听PasswordModal组件');
   useEffect(() => {
     if (visible) {
       form.resetFields();
@@ -18,38 +29,47 @@ const PasswordModal: React.FC<PasswordModalProps> = ({ visible, selectedRecord, 
   }, [visible, form]);
 
   return (
-    <Modal title="修改密码" open={visible} onOk={onSubmit} onCancel={onCancel} width={400} maskClosable={false}>
-      <Form form={form} layout="vertical">
-        <Form.Item label="用户名">
-          <Input value={selectedRecord?.nickname || selectedRecord?.username} readOnly disabled />
+    <Modal
+      confirmLoading={confirmLoading}
+      maskClosable={false}
+      open={visible}
+      title="修改密码"
+      onCancel={onCancel}
+      onOk={() => form.submit()}
+    >
+      <Form
+        autoComplete="off"
+        form={form}
+        labelCol={{ span: 4 }}
+        wrapperCol={{ span: 20 }}
+        onFinish={() => void onSubmit()}
+      >
+        <Form.Item label="昵称">
+          <Input disabled value={selectedRecord?.nickname ?? selectedRecord?.username} variant="borderless" />
         </Form.Item>
         {selectedRecord?.role === 'SUPER_ADMIN' && (
-          <Form.Item label="旧密码" name="oldPassword" rules={[{ required: true, message: '请输入旧密码' }]}>
-            <Input.Password />
+          <Form.Item
+            label="旧密码"
+            name="oldPassword"
+            preserve={false}
+            rules={[v.required('旧密码'), v.passwordPolicy()]}
+          >
+            <Input.Password allowClear autoComplete="new-password" placeholder="请输入旧密码" />
           </Form.Item>
         )}
         <Form.Item
-          name="newPassword"
           label="新密码"
-          rules={[
-            { required: true, message: '请输入新密码' },
-            {
-              min: 6,
-              max: 20,
-              message: '密码长度需在6~20个字符之间',
-            },
-            {
-              pattern: /^(?=.*[a-zA-Z])(?=.*\d).+$/,
-              message: '密码必须包含字母和数字',
-            },
-          ]}
+          name="newPassword"
+          preserve={false}
+          rules={[v.required('新密码'), v.passwordPolicy()]}
         >
-          <Input.Password placeholder="请输入新密码" />
+          <Input.Password allowClear autoComplete="new-password" placeholder="请输入新密码" />
         </Form.Item>
         <Form.Item
-          name="confirmPassword"
-          label="确认新密码"
           dependencies={['newPassword']}
+          label="确认密码"
+          name="confirmPassword"
+          preserve={false}
           rules={[
             { required: true, message: '请再次输入新密码' },
             ({ getFieldValue }) => ({
@@ -62,11 +82,11 @@ const PasswordModal: React.FC<PasswordModalProps> = ({ visible, selectedRecord, 
             }),
           ]}
         >
-          <Input.Password placeholder="请再次输入新密码" />
+          <Input.Password allowClear autoComplete="new-password" placeholder="请再次输入新密码" />
         </Form.Item>
       </Form>
     </Modal>
   );
 };
 
-export default PasswordModal;
+export default memo(PasswordModal);

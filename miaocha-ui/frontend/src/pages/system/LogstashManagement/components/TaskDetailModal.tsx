@@ -53,9 +53,9 @@ const TaskDetailModal = ({ visible, onClose, selectedTask }: TaskDetailModalProp
   ];
 
   return (
-    <Modal title="任务步骤详情" open={visible} onCancel={onClose} footer={null} width={1200}>
+    <Modal footer={null} open={visible} title="任务步骤详情" width={1200} onCancel={onClose}>
       <div>
-        <Descriptions bordered size="small" column={2} style={{ marginBottom: 16 }}>
+        <Descriptions bordered column={2} size="small" style={{ marginBottom: 16 }}>
           <Descriptions.Item label="任务ID">{selectedTask.taskId}</Descriptions.Item>
           <Descriptions.Item label="任务名称">{selectedTask.name}</Descriptions.Item>
           <Descriptions.Item label="任务状态">
@@ -85,12 +85,12 @@ const TaskDetailModal = ({ visible, onClose, selectedTask }: TaskDetailModalProp
                   {machineName} (进度: {selectedTask.instanceProgressPercentages[machineName]}%)
                 </h5>
                 <Table
-                  size="small"
                   bordered
-                  dataSource={steps}
-                  rowKey="stepId"
                   columns={stepColumns}
+                  dataSource={steps}
                   pagination={false}
+                  rowKey="stepId"
+                  size="small"
                 />
               </div>
             </div>

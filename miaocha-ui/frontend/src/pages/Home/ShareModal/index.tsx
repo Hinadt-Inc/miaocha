@@ -77,24 +77,24 @@ const ShareModal: React.FC<ShareModalProps> = ({ visible, onClose, searchParams 
 
   return (
     <Modal
-      title="分享当前查询"
-      open={visible}
-      onCancel={onClose}
-      footer={null}
-      width={500}
       className={styles.shareModal}
+      footer={null}
+      open={visible}
+      title="分享当前查询"
+      width={500}
+      onCancel={onClose}
     >
       <div className={styles.linkContainer}>
         <div className={styles.linkDescription}>
           复制下面的链接分享给其他人，他们打开链接后将自动应用当前的搜索条件：
         </div>
-        <Input.TextArea value={shareUrl} readOnly rows={3} className={styles.linkInput} />
+        <Input.TextArea className={styles.linkInput} readOnly rows={3} value={shareUrl} />
         <Button
-          type="primary"
+          className={styles.copyButton}
           icon={<CopyOutlined />}
           loading={copying}
+          type="primary"
           onClick={handleCopyLink}
-          className={styles.copyButton}
         >
           复制链接
         </Button>

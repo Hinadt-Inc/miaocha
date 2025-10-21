@@ -16,10 +16,10 @@ const StatisticsInfo: React.FC<IStatisticsInfoProps> = ({ totalCount }) => {
     <Space>
       找到
       <Statistic
-        value={totalCount}
         formatter={(value: any) => (
-          <CountUp end={Number(value)} duration={STATISTICS.COUNT_UP_DURATION} separator={STATISTICS.SEPARATOR} />
+          <CountUp duration={STATISTICS.COUNT_UP_DURATION} end={Number(value)} separator={STATISTICS.SEPARATOR} />
         )}
+        value={totalCount}
       />
       条记录
     </Space>

@@ -1,4 +1,4 @@
-// 全局错误提示监听（兼容原生和自定义的 unhandledrejection）
+// 全局错误提示监听
 import { useEffect } from 'react';
 import { App } from 'antd';
 
@@ -7,7 +7,11 @@ export default function GlobalErrorListener() {
 
   useEffect(() => {
     const handleRejection = (evt: any) => {
-      const content = evt?.detail?.reason?.message || '发生未知错误';
+      // console.log('======:', evt?.detail?.reason);
+      // console.log('======333:', evt?.detail?.reason?.message);
+      // evt?.detail?.reason?.message; // 自定义的错误，例如：@/src/api/request.ts 的错误
+      // evt?.reason?.message; // js的错误、throw的错误
+      const content = evt?.detail?.reason?.message || evt?.reason?.message || '发生未知错误';
       message.error({ content, key: 'global-unhandled-rejection' });
     };
 

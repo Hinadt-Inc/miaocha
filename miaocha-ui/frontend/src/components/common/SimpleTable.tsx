@@ -9,12 +9,11 @@ interface SimpleTableProps<T> extends TableProps<T> {
 export const SimpleTable = <T extends object>({ loading, ...props }: SimpleTableProps<T>) => {
   return (
     <div style={{ position: 'relative' }}>
-      <Table size="middle" pagination={false} {...props} />
+      <Table pagination={false} size="middle" {...props} />
       {loading && (
         <Loading
           fullScreen={false}
           size="large"
-          tip="加载中..."
           style={{
             position: 'absolute',
             top: 0,
@@ -25,6 +24,7 @@ export const SimpleTable = <T extends object>({ loading, ...props }: SimpleTable
             backgroundColor: 'rgba(255, 255, 255, 0.8)',
             backdropFilter: 'blur(2px)',
           }}
+          tip="加载中..."
         />
       )}
     </div>

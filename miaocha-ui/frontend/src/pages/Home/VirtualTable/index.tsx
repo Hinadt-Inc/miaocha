@@ -154,7 +154,7 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
             const parseTime = (timeStr: any) => {
               if (!timeStr) return 0;
               const str = String(timeStr);
-              if (str.match(/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}/)) {
+              if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}/.exec(str)) {
                 return str;
               }
               const date = new Date(str);
@@ -409,7 +409,7 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
     });
 
     const hasOtherColumns = dynamicCols.length > 0;
-    if (!hasOtherColumns && sourceCol && sourceCol.width) {
+    if (!hasOtherColumns && sourceCol?.width) {
       totalWidth += sourceCol.width;
     } else if (!hasOtherColumns) {
       totalWidth += isSmallScreen ? Math.min(600, screenWidth - 300) : 400;
@@ -478,13 +478,13 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
             ...col,
             title: (
               <ColumnHeader
-                title={col.title}
                 colIndex={idx}
+                columns={columns}
+                showActions={true}
+                title={col.title}
                 onDelete={handleDeleteColumn}
                 onMoveLeft={handleMoveLeft}
                 onMoveRight={handleMoveRight}
-                showActions={true}
-                columns={columns}
               />
             ),
           };
@@ -492,20 +492,16 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
     : columns.filter((col) => !col.hidden); // 过滤掉hidden的列
 
   return (
-    <div className={styles.virtualLayout} ref={containerRef}>
+    <div ref={containerRef} className={styles.virtualLayout}>
       <Table
-        size="small"
         ref={tblRef}
-        rowKey="_key"
-        dataSource={data}
-        pagination={false}
         columns={enhancedColumns}
-        onChange={handleTableChange}
-        // scroll={{ x: data.length > 0 ? scrollX : 0, y: containerHeight - headerHeight - 1 }}
-        sortDirections={['ascend', 'descend']}
-        showSorterTooltip={{
-          title: '点击排序，按住Ctrl+点击可多列排序',
+        components={{
+          header: {
+            cell: ResizableTitle,
+          },
         }}
+        dataSource={data}
         expandable={{
           columnWidth: 26,
           expandedRowKeys,
@@ -514,11 +510,15 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
             <ExpandedRow data={record} keywords={keyWordsFormat || []} moduleQueryConfig={moduleQueryConfig} />
           ),
         }}
-        components={{
-          header: {
-            cell: ResizableTitle,
-          },
+        pagination={false}
+        rowKey="_key"
+        showSorterTooltip={{
+          title: '点击排序，按住Ctrl+点击可多列排序',
         }}
+        size="small"
+        onChange={handleTableChange}
+        // scroll={{ x: data.length > 0 ? scrollX : 0, y: containerHeight - headerHeight - 1 }}
+        sortDirections={['ascend', 'descend']}
       />
     </div>
   );

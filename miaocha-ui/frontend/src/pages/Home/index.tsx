@@ -465,7 +465,7 @@ const HomePage = () => {
       <SearchBar ref={searchBarRef} {...(searchBarProps as any)} />
 
       <Splitter className={styles.container}>
-        <Splitter.Panel collapsible defaultSize={200} min={0} max="40%">
+        <Splitter.Panel collapsible defaultSize={200} max="40%" min={0}>
           <Sider ref={siderRef} {...(siderProps as any)} />
         </Splitter.Panel>
         <Splitter.Panel collapsible>
@@ -478,6 +478,10 @@ const HomePage = () => {
       {/* AI助手悬浮窗 */}
       <AIAssistant
         searchParams={searchParams as any}
+        onFieldSelect={(fields) => {
+          // 更新显示字段
+          setActiveColumns(fields);
+        }}
         onLogSearch={(data) => {
           // 处理AI助手的搜索请求
           let searchParams = data.searchParams || data; // 向后兼容
@@ -572,10 +576,6 @@ const HomePage = () => {
               getDistributionWithSearchBar();
             }, 100);
           }
-        }}
-        onFieldSelect={(fields) => {
-          // 更新显示字段
-          setActiveColumns(fields);
         }}
         onTimeRangeChange={(data) => {
           // 处理时间范围变更

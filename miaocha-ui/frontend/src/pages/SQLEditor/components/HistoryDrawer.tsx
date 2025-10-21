@@ -31,6 +31,7 @@ const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
 }) => {
   return (
     <Drawer
+      open={visible}
       title={
         <Space>
           <HistoryOutlined />
@@ -39,7 +40,6 @@ const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
         </Space>
       }
       width={800}
-      open={visible}
       onClose={onClose}
     >
       <div className={styles.historyList}>
@@ -56,9 +56,9 @@ const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                     <Space>
                       <Badge status="success" text={<Text className={styles.historySuccess}>成功</Text>} />
                       <Button
-                        type="text"
-                        size="small"
                         icon={<CopyOutlined />}
+                        size="small"
+                        type="text"
                         onClick={(e) => {
                           e.stopPropagation();
                           copyToClipboard(history.sqlQuery);
@@ -72,18 +72,18 @@ const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
             </VirtualList>
             <div style={{ marginTop: 16, textAlign: 'right' }}>
               <Pagination
-                size="small"
                 current={pagination?.pageNum || 1}
                 pageSize={pagination?.pageSize || 10}
+                showQuickJumper
+                showSizeChanger
+                showTotal={(total) => `共 ${total} 条记录`}
+                size="small"
                 total={pagination?.total || 0}
                 onChange={(page, pageSize) => {
                   if (onPaginationChange) {
                     onPaginationChange(page, pageSize);
                   }
                 }}
-                showSizeChanger
-                showQuickJumper
-                showTotal={(total) => `共 ${total} 条记录`}
               />
             </div>
           </>

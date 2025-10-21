@@ -26,12 +26,12 @@ export const SQLHistoryDrawer: React.FC<SQLHistoryDrawerProps> = ({
 }) => {
   return (
     <HistoryDrawer
+      copyToClipboard={onCopyToClipboard}
+      loadFromHistory={onLoadFromHistory}
+      pagination={pagination}
+      queryHistory={queryHistory}
       visible={visible}
       onClose={onClose}
-      queryHistory={queryHistory}
-      loadFromHistory={onLoadFromHistory}
-      copyToClipboard={onCopyToClipboard}
-      pagination={pagination}
       onPaginationChange={onPaginationChange}
     />
   );

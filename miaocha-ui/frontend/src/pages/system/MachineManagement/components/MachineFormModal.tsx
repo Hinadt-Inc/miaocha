@@ -25,73 +25,73 @@ const MachineFormModal: React.FC<MachineFormModalProps> = ({
 }) => {
   return (
     <Modal
-      title={title}
-      open={open}
-      onCancel={onCancel}
       footer={[
         <Button key="test" loading={testingConnection} onClick={onTestConnection}>
           测试连接
         </Button>,
-        <Button key="submit" type="primary" loading={loading} onClick={() => form.submit()}>
+        <Button key="submit" loading={loading} type="primary" onClick={() => form.submit()}>
           确定
         </Button>,
       ]}
       maskClosable={false}
+      open={open}
+      title={title}
+      onCancel={onCancel}
     >
       <Form form={form} layout="vertical" onFinish={onFinish}>
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
-              name="name"
               label="名称"
+              name="name"
               rules={[
                 { required: true, message: '请输入机器名称' },
                 { max: 128, message: '机器名称不能超过128个字符' },
               ]}
             >
-              <Input placeholder="测试服务器" maxLength={128} />
+              <Input maxLength={128} placeholder="测试服务器" />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item
-              name="ip"
               label="IP地址"
+              name="ip"
               rules={[
                 { required: true, message: '请输入IP地址' },
                 { max: 128, message: 'IP地址不能超过128个字符' },
               ]}
             >
-              <Input placeholder="IP地址" maxLength={128} />
+              <Input maxLength={128} placeholder="IP地址" />
             </Form.Item>
           </Col>
         </Row>
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item name="port" label="端口" rules={[{ required: true, message: '请输入端口号' }]}>
-              <InputNumber min={1} max={65535} className={styles.fullWidth} />
+            <Form.Item label="端口" name="port" rules={[{ required: true, message: '请输入端口号' }]}>
+              <InputNumber className={styles.fullWidth} max={65535} min={1} />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item
-              name="username"
               label="用户名"
+              name="username"
               rules={[
                 { required: true, message: '请输入用户名' },
                 { max: 128, message: '用户名不能超过128个字符' },
               ]}
             >
-              <Input placeholder="root" maxLength={128} />
+              <Input maxLength={128} placeholder="root" />
             </Form.Item>
           </Col>
         </Row>
         <Row gutter={16}>
           <Col span={24}>
-            <Form.Item name="password" label="密码" rules={[{ max: 128, message: '密码不能超过128个字符' }]}>
-              <Input.Password placeholder="可选" maxLength={128} />
+            <Form.Item label="密码" name="password" rules={[{ max: 128, message: '密码不能超过128个字符' }]}>
+              <Input.Password maxLength={128} placeholder="可选" />
             </Form.Item>
           </Col>
           <Col span={24}>
-            <Form.Item name="sshKey" label="SSH密钥">
+            <Form.Item label="SSH密钥" name="sshKey">
               <Input.TextArea placeholder="可选" rows={4} showCount />
             </Form.Item>
           </Col>

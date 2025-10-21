@@ -19,12 +19,12 @@ export interface TablePermission {
   permissions: string[];
   id: string;
   permissionId?: string;
-  users?: Array<{
+  users?: {
     userId: number;
     nickname: string;
     email: string;
     role: string;
-  }>;
+  }[];
 }
 
 /**
@@ -75,24 +75,24 @@ export type IModulesResponse = string;
 /**
  * 模块权限类型
  */
-export interface ModulePermission {
-  id: string;
-  userId: number;
-  datasourceId: number;
-  datasourceName: string;
-  databaseName: string;
-  module: string;
-  createTime: string;
-  createUser: string;
-  createUserName: string;
-  updateTime: string;
-  updateUser: string;
-  updateUserName: string;
-  users?: Array<{
-    userId: number;
-    userName: string;
-  }>;
-}
+// export interface ModulePermission {
+//   id: string;
+//   userId: number;
+//   datasourceId: number;
+//   datasourceName: string;
+//   databaseName: string;
+//   module: string;
+//   createTime: string;
+//   createUser: string;
+//   createUserName: string;
+//   updateTime: string;
+//   updateUser: string;
+//   updateUserName: string;
+//   users?: {
+//     userId: number;
+//     userName: string;
+//   }[];
+// }
 
 export interface UserModulePermission {
   moduleId: string;

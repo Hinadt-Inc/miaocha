@@ -9,7 +9,7 @@ const withAdminAuth = <P extends object>(WrappedComponent: React.ComponentType<P
   const AdminProtectedComponent: React.FC<P> = (props) => <WrappedComponent {...props} />;
 
   // 设置组件显示名称，便于调试
-  AdminProtectedComponent.displayName = `withAdminAuth(${WrappedComponent.displayName || WrappedComponent.name})`;
+  AdminProtectedComponent.displayName = `withAdminAuth(${WrappedComponent.displayName ?? WrappedComponent.name})`;
 
   return AdminProtectedComponent;
 };
