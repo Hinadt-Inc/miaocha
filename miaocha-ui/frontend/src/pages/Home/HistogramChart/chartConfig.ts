@@ -9,9 +9,9 @@ import { IAggregatedData } from './types';
 export const createChartOption = (
   aggregatedData: IAggregatedData,
   distributionData: any[] | undefined,
-  timeGrouping = 'auto',
-  startTime = '',
-  endTime = '',
+  timeGrouping: string = 'auto',
+  startTime: string = '',
+  endTime: string = '',
 ): EChartsOption => {
   const dataCount = distributionData?.length || 0;
   const barWidth = calculateBarWidth(dataCount);

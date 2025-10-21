@@ -124,7 +124,7 @@ export const useBusinessLogic = (
               label: quickRange.label,
               type: 'quick',
             };
-          } else if (sharedParams.timeRange?.includes(' ~ ')) {
+          } else if (sharedParams.timeRange && sharedParams.timeRange.includes(' ~ ')) {
             // 绝对时间范围格式：startTime ~ endTime
             const timeParts = sharedParams.timeRange.split(' ~ ');
             if (timeParts.length === 2) {

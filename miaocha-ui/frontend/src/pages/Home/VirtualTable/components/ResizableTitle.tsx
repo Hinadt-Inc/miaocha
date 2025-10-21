@@ -7,7 +7,7 @@ import styles from '../VirtualTable.module.less';
  */
 const ResizableTitle: React.FC<ResizableTitleProps> = (props) => {
   const { onResize, width, ...restProps } = props;
-  
+
   if (!width) {
     return <th {...restProps} />;
   }

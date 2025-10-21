@@ -36,13 +36,13 @@ export const useOptimizedSQLEditorActions = (editorState: OptimizedSQLEditorStat
   const compatibleSchema = useMemo(() => {
     if (!databaseSchema) return null;
     if ('error' in databaseSchema) return null;
-    
+
     // 转换为兼容的格式
     return {
       databaseName: databaseSchema.databaseName,
       tables: databaseSchema.tables
-        .filter(table => table.columns && table.columns.length > 0)
-        .map(table => ({
+        .filter((table) => table.columns && table.columns.length > 0)
+        .map((table) => ({
           tableName: table.tableName,
           tableComment: table.tableComment,
           columns: table.columns || [],
@@ -262,7 +262,7 @@ export const useOptimizedSQLEditorActions = (editorState: OptimizedSQLEditorStat
         completionProviderRef.current.dispose();
       }
       completionProviderRef.current = registerCompletionProvider();
-      console.log('🔄 SQL补全提供器已更新（数据库结构变化）');
+      // console.log('🔄 SQL补全提供器已更新（数据库结构变化）');
     }
   }, [compatibleSchema, registerCompletionProvider]);
 
@@ -309,37 +309,37 @@ export const useOptimizedSQLEditorActions = (editorState: OptimizedSQLEditorStat
   }, []);
 
   // 插入字段名
-  const handleInsertField = useCallback(
-    (fieldName: string) => {
-      if (editorRef.current) {
-        const position = editorRef.current.getPosition();
-        const model = editorRef.current.getModel();
-        if (position && model) {
-          const context = getSQLContext(editorRef.current);
-          let textToInsert = fieldName;
+  const handleInsertField = useCallback((fieldName: string) => {
+    if (editorRef.current) {
+      const position = editorRef.current.getPosition();
+      const model = editorRef.current.getModel();
+      if (position && model) {
+        const context = getSQLContext(editorRef.current);
+        let textToInsert = fieldName;
 
-          // 简化的插入逻辑
-          if (context.isInSelectClause) {
-            textToInsert = fieldName;
-          }
-
-          insertTextToEditor(editorRef.current, textToInsert);
-          message.success(`已插入字段: ${textToInsert}`);
+        // 简化的插入逻辑
+        if (context.isInSelectClause) {
+          textToInsert = fieldName;
         }
+
+        insertTextToEditor(editorRef.current, textToInsert);
+        message.success(`已插入字段: ${textToInsert}`);
       }
-    },
-    [],
-  );
+    }
+  }, []);
 
   // 兼容的插入表操作 - 支持随时插入表名，无需预先加载列信息
   const handleInsertTable = useCallback(
-    (tableName: string, _columns?: {
+    (
+      tableName: string,
+      _columns?: {
         columnName: string;
         dataType: string;
         columnComment: string;
         isPrimaryKey: boolean;
         isNullable: boolean;
-      }[]) => {
+      }[],
+    ) => {
       if (editorRef.current) {
         const context = getSQLContext(editorRef.current);
         let textToInsert = tableName;

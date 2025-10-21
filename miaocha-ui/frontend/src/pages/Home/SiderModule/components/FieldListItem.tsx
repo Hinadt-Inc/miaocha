@@ -122,8 +122,8 @@ const FieldListItem: React.FC<IFieldListItemProps> = memo(
     const isTimeField = isSelected && column.columnName === timeField;
 
     // 获取分布数据
-    const dist = distributions[column.columnName!];
-    const isLoading = distributionLoading[column.columnName!];
+    const dist = distributions[column.columnName as string];
+    const isLoading = distributionLoading[column.columnName as string];
     const hasData = hasDistributionData(dist);
 
     // 渲染内容
@@ -154,7 +154,6 @@ const FieldListItem: React.FC<IFieldListItemProps> = memo(
                         ellipsis={{
                           rows: 1,
                           tooltip: true,
-                          onEllipsis: () => {},
                         }}
                         type="secondary"
                       >
@@ -240,10 +239,10 @@ const FieldListItem: React.FC<IFieldListItemProps> = memo(
       prevProps.isSelected === nextProps.isSelected &&
       prevProps.column.columnName === nextProps.column.columnName &&
       prevProps.column.selected === nextProps.column.selected &&
-      prevProps.fieldData.distributions[prevProps.column.columnName!] ===
-        nextProps.fieldData.distributions[nextProps.column.columnName!] &&
-      prevProps.fieldData.distributionLoading[prevProps.column.columnName!] ===
-        nextProps.fieldData.distributionLoading[nextProps.column.columnName!] &&
+      prevProps.fieldData.distributions[prevProps.column.columnName as string] ===
+        nextProps.fieldData.distributions[nextProps.column.columnName as string] &&
+      prevProps.fieldData.distributionLoading[prevProps.column.columnName as string] ===
+        nextProps.fieldData.distributionLoading[nextProps.column.columnName as string] &&
       prevProps.fieldData.searchParams === nextProps.fieldData.searchParams
     );
   },

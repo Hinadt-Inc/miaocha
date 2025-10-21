@@ -1,6 +1,5 @@
 // eslint.config.js
 // 说明：这是项目的 ESLint 主配置文件，采用新版 "flat config" 形式（typescript-eslint 提供的组合器）。
-// 目标：在保证代码质量的同时，尽量降低“无效噪音”与“过度严格”的规则，聚焦 src 目录的真实业务代码。
 
 import js from '@eslint/js'; // 官方 JS 推荐规则集合
 import globals from 'globals'; // 常用运行时全局变量（browser、node 等）
@@ -10,7 +9,6 @@ import tseslint from 'typescript-eslint'; // TypeScript 与 ESLint 的集成（�
 import reactPlugin from 'eslint-plugin-react'; // React 组件与 JSX 相关规则
 
 export default tseslint.config(
-  // 全局忽略：避免对非业务文件（产物、依赖、文档、测试环境配置）进行 lint，减少噪音
   {
     // ignores 列表越精准，lint 越聚焦真实业务代码
     ignores: ['dist', 'node_modules', 'build', 'coverage', '**/*.md', 'setupTests.ts', 'vitest.config.ts'],
@@ -32,7 +30,6 @@ export default tseslint.config(
         ...globals.node, // 注入 Node 运行时全局变量（process、__dirname 等）
       },
       parserOptions: {
-        project: ['./tsconfig.app.json'], // 指向应用 tsconfig，避免解析根与 node tsconfig 导致“找不到文件”错误
         tsconfigRootDir: import.meta.dirname, // 以当前文件目录为 tsconfig 根，保证路径稳定
         ecmaFeatures: { jsx: true }, // 启用 JSX 解析能力
       },

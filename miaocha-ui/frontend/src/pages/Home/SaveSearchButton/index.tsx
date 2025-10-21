@@ -43,12 +43,8 @@ const SaveSearchButton: React.FC<SaveSearchButtonProps> = ({
           保存
         </Button>
       </Tooltip>
-      
-      <SaveSearchModal
-        searchParams={searchParams}
-        visible={modalVisible}
-        onClose={handleCloseModal}
-      />
+
+      <SaveSearchModal searchParams={searchParams} visible={modalVisible} onClose={handleCloseModal} />
     </>
   );
 };
