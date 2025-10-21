@@ -1,4 +1,8 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-# npm test
+# 进入仓库根目录，再进入 frontend 子项目，使用其 lint-staged 配置执行
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$REPO_ROOT/miaocha-ui/frontend" || exit 1
+
+npx --no-install lint-staged

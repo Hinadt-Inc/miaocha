@@ -70,7 +70,6 @@ const ModulePermissionModal = ({
         await authorizeModule(userId, moduleName);
       }
       messageApi.success('操作成功');
-      // 完全依赖props更新，不再维护本地状态
       onRefresh();
     } finally {
       setLoading(false);
