@@ -1,7 +1,6 @@
 export default {
   singleQuote: true,
   arrowParens: 'always',
-  parser: 'typescript',
   useTabs: false,
   bracketSpacing: true,
   endOfLine: 'auto',
@@ -13,4 +12,15 @@ export default {
   jsxSingleQuote: false,
   quoteProps: 'as-needed',
   htmlWhitespaceSensitivity: 'css',
+  // 按文件类型设置 parser，避免 JSON 被 typescript 解析
+  overrides: [
+    {
+      files: ['*.ts', '*.tsx', '*.js', '*.jsx'],
+      options: { parser: 'typescript' },
+    },
+    {
+      files: ['*.json'],
+      options: { parser: 'json' },
+    },
+  ],
 };

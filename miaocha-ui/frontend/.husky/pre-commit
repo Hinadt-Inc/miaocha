@@ -3,4 +3,8 @@
 REPO_ROOT=$(git rev-parse --show-toplevel)
 cd "$REPO_ROOT/miaocha-ui/frontend" || exit 1
 
-npx --no-install lint-staged
+# 打印已暂存文件清单，便于验证仅处理暂存文件
+echo "[husky] Staged files:" 
+git --no-pager diff --name-only --cached
+
+npx --no-install lint-staged --verbose

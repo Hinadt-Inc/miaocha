@@ -26,6 +26,7 @@ export const useUserData = () => {
 
   const fetchModules = useCallback(async () => {
     const modules = await getModules();
+
     setModuleList(
       modules.map((module) => ({
         value: module.id.toString(),
