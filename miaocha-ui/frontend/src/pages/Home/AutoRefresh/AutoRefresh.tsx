@@ -71,7 +71,7 @@ const AutoRefresh: React.FC<AutoRefreshProps> = ({ onRefresh, loading = false, d
             icon={<ReloadOutlined />}
             loading={loading}
             size="small"
-            type="link"
+            type="text"
             onClick={handleManualRefresh}
           />
         </Tooltip>
@@ -84,7 +84,7 @@ const AutoRefresh: React.FC<AutoRefreshProps> = ({ onRefresh, loading = false, d
               disabled={disabled || refreshInterval === 0}
               icon={isAutoRefreshing ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
               size="small"
-              type="link"
+              type="text"
               onClick={toggleAutoRefresh}
             >
               {isAutoRefreshing ? '停止' : '开始'}

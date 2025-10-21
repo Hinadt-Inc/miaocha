@@ -43,12 +43,8 @@ const ShareButton: React.FC<ShareButtonProps> = ({
           分享
         </Button>
       </Tooltip>
-      
-      <ShareModal
-        searchParams={searchParams}
-        visible={modalVisible}
-        onClose={handleCloseModal}
-      />
+
+      <ShareModal searchParams={searchParams} visible={modalVisible} onClose={handleCloseModal} />
     </>
   );
 };

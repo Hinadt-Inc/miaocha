@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo, Fragment, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useMemo, Fragment } from 'react';
 import { Table } from 'antd';
 import ExpandedRow from '../ExpandedRow/index';
 import { VirtualTableProps } from './types';
@@ -36,7 +36,6 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
   // 状态管理
   const containerRef = useRef<HTMLDivElement>(null);
   const tblRef: Parameters<typeof Table>[0]['ref'] = useRef(null);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [containerHeight, setContainerHeight] = useState<number>(0);
   const [headerHeight, setHeaderHeight] = useState<number>(0);
   const [columns, setColumns] = useState<any[]>([]);
@@ -154,7 +153,7 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
             const parseTime = (timeStr: any) => {
               if (!timeStr) return 0;
               const str = String(timeStr);
-              if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}/.exec(str)) {
+              if (str.match(/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}/)) {
                 return str;
               }
               const date = new Date(str);
@@ -331,52 +330,26 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
     const tableNode = tblRef.current?.nativeElement;
     if (tableNode) {
       const header = tableNode.querySelector('.ant-table-thead');
-      console.log(header?.clientHeight);
       if (header) {
         setHeaderHeight(header.clientHeight);
       }
     }
 
-    // 创建滚动处理函数（不使用useCallback，因为在useEffect内部）
     const handleScroll = () => {
       if (!hasMore || loading) return;
 
-      // 清除之前的定时器
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-
-      // 防抖处理，避免频繁触发
-      scrollTimeoutRef.current = setTimeout(() => {
-        const scrollElement = tableNode?.querySelector('.ant-table-body');
-        if (scrollElement) {
-          const { scrollHeight, scrollTop, clientHeight } = scrollElement;
-          const distanceToBottom = scrollHeight - scrollTop - clientHeight;
-
-          // 调试信息（开发环境下）
-          if (process.env.NODE_ENV === 'development') {
-            console.log('滚动检测:', {
-              scrollHeight,
-              scrollTop,
-              clientHeight,
-              distanceToBottom,
-              hasMore,
-              loading,
-              shouldTrigger: distanceToBottom >= 0 && distanceToBottom <= 200 && scrollHeight > clientHeight,
-            });
-          }
-
-          // 距离底部200px时触发加载，并且确保有足够的数据可以滚动
-          if (distanceToBottom >= 0 && distanceToBottom <= 200 && scrollHeight > clientHeight) {
-            console.log('🚀 触发加载更多数据，距离底部:', distanceToBottom, 'px');
-            onLoadMore();
-          }
+      const scrollElement = tableNode?.querySelector('.ant-table-tbody-virtual-holder');
+      if (scrollElement) {
+        const { scrollHeight, scrollTop, clientHeight } = scrollElement;
+        const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+        if (distanceToBottom > 0 && distanceToBottom < 600) {
+          onLoadMore();
         }
-      }, 150); // 150ms防抖
+      }
     };
 
     if (tableNode) {
-      const scrollElement = tableNode.querySelector('.ant-table-body');
+      const scrollElement = tableNode.querySelector('.ant-table-tbody-virtual-holder');
       if (scrollElement) {
         scrollElement.addEventListener('scroll', handleScroll);
       }
@@ -384,11 +357,8 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
 
     return () => {
       resizeObserver.disconnect();
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
       if (tableNode) {
-        const scrollElement = tableNode.querySelector('.ant-table-body');
+        const scrollElement = tableNode.querySelector('.ant-table-tbody-virtual-holder');
         if (scrollElement) {
           scrollElement.removeEventListener('scroll', handleScroll);
         }
@@ -409,7 +379,7 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
     });
 
     const hasOtherColumns = dynamicCols.length > 0;
-    if (!hasOtherColumns && sourceCol?.width) {
+    if (!hasOtherColumns && sourceCol && sourceCol.width) {
       totalWidth += sourceCol.width;
     } else if (!hasOtherColumns) {
       totalWidth += isSmallScreen ? Math.min(600, screenWidth - 300) : 400;
@@ -512,13 +482,14 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
         }}
         pagination={false}
         rowKey="_key"
+        scroll={{ x: data.length > 0 ? scrollX : 0, y: containerHeight - headerHeight - 1 }}
         showSorterTooltip={{
           title: '点击排序，按住Ctrl+点击可多列排序',
         }}
         size="small"
-        onChange={handleTableChange}
-        // scroll={{ x: data.length > 0 ? scrollX : 0, y: containerHeight - headerHeight - 1 }}
         sortDirections={['ascend', 'descend']}
+        virtual
+        onChange={handleTableChange}
       />
     </div>
   );

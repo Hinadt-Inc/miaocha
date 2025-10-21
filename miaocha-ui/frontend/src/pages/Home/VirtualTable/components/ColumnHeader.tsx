@@ -19,7 +19,7 @@ const ColumnHeader: React.FC<ColumnHeaderProps> = ({
   const [hovered, setHovered] = useState(false);
   const isLeftLogTime = colIndex > 0 && columns[colIndex - 1]?.dataIndex === '_source';
   const isLast = colIndex === columns.length - 1;
-  
+
   return (
     <div
       className={styles.columnHeaderContainer}

@@ -14,7 +14,7 @@ export const useTimeState = (initialSearchParams: any) => {
     const isQuick = QUICK_RANGES[timeRange];
 
     if (!isQuick) {
-      const defaultRange = QUICK_RANGES.last_15m;
+      const defaultRange = QUICK_RANGES['last_15m'];
       return {
         value: 'last_15m',
         range: [defaultRange.from().format(defaultRange.format[0]), defaultRange.to().format(defaultRange.format[1])],

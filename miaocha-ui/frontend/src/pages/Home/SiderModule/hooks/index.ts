@@ -52,7 +52,7 @@ export const useColumns = (
   const getColumns = useRequest(api.fetchColumns, {
     manual: true,
     onSuccess: (res) => {
-      if (res?.length === 0) {
+      if (!res || res.length === 0) {
         console.warn('未获取到任何字段数据');
         setColumns([]);
         return;
@@ -434,7 +434,7 @@ export const useDistributions = (searchParams: ILogSearchParams, availableColumn
   // 验证字段是否存在于可用字段列表中
   const validateFields = useCallback(
     (fields: string[]): string[] => {
-      if (availableColumns?.length === 0) {
+      if (!availableColumns || availableColumns.length === 0) {
         return fields;
       }
 

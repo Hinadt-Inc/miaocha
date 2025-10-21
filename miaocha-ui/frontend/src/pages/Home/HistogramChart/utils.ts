@@ -5,9 +5,9 @@ import { isOverOneDay } from '@/utils/utils';
  */
 export const formatXAxisLabel = (
   value: string,
-  timeGrouping = 'auto',
-  startTime = '',
-  endTime = '',
+  timeGrouping: string = 'auto',
+  startTime: string = '',
+  endTime: string = '',
 ): string => {
   // 是否超过1天
   const overOneDay = isOverOneDay(startTime, endTime);

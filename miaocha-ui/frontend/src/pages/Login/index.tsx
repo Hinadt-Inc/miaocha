@@ -1,7 +1,7 @@
-import { Button, Form, Input, Alert } from 'antd';
+import { Button, Form, Input, Alert, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { login } from '@/store/userSlice';
 import { login as apiLogin, oAuthCallback } from '@/api/auth';
@@ -13,24 +13,13 @@ import login_bg_video from '@/assets/login/banner.mp4';
 import styles from './index.module.less';
 
 const LoginPage = () => {
+  const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams] = useSearchParams();
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
   const [casLoading, setCasLoading] = useState(false);
-  const [error, setError] = useState<string>('');
   const [form] = Form.useForm();
-  // console.log(222, ab);
-
-  // 检查是否有来自OAuth回调的错误信息
-  useEffect(() => {
-    if (location.state?.error) {
-      setError(location.state.error);
-      // 清除location state中的错误信息
-      window.history.replaceState({}, document.title);
-    }
-  }, [location.state]);
 
   // 处理OAuth回调（包括CAS、OAuth2等）
   useEffect(() => {
@@ -43,7 +32,7 @@ const LoginPage = () => {
 
       // 如果有错误参数，直接显示错误
       if (error) {
-        setError(`第三方登录失败: ${searchParams.get('error_description') || error}`);
+        messageApi.error(`第三方登录失败: ${searchParams.get('error_description') || error}`);
         return;
       }
 
@@ -114,7 +103,7 @@ const LoginPage = () => {
           }
         } catch (oauthError) {
           console.error('OAuth回调处理失败:', oauthError);
-          setError('第三方登录失败，请重试');
+          throw new Error('第三方登录失败，请重试');
         } finally {
           setCasLoading(false);
           // 清理URL参数，避免重复处理
@@ -130,12 +119,10 @@ const LoginPage = () => {
     };
 
     handleOAuthCallback();
-  }, [searchParams, dispatch, navigate]);
+  }, [searchParams, dispatch, navigate, messageApi]);
 
   const onFinish = async (values: { username: string; password: string }) => {
     setLoading(true);
-    setError(''); // 清除之前的错误信息
-
     try {
       const response = await apiLogin({
         email: values.username,
@@ -163,18 +150,19 @@ const LoginPage = () => {
       navigate('/', { replace: true });
     } catch (loginError) {
       console.error('登录失败:', loginError);
-      setError('登录失败，请检查用户名和密码');
+      throw new Error('登录失败，请检查用户名和密码');
     } finally {
       setLoading(false);
     }
   };
 
   const handleOAuthError = (errorMessage: string) => {
-    setError(errorMessage);
+    message.error(errorMessage);
   };
 
   return (
     <div className={styles.loginPage}>
+      {contextHolder}
       <video autoPlay className={styles.videoBackground} loop muted playsInline poster={login_bg_poster}>
         <source src={login_bg_video} type="video/mp4" />
       </video>
@@ -190,18 +178,6 @@ const LoginPage = () => {
 
         <div className={styles.loginCard}>
           <div className={styles.cardHeader}>欢迎登录</div>
-
-          {/* 错误信息显示 */}
-          {error && (
-            <Alert
-              closable
-              message={error}
-              showIcon
-              style={{ marginBottom: 16 }}
-              type="error"
-              onClose={() => setError('')}
-            />
-          )}
 
           {/* OAuth回调处理中的提示 */}
           {casLoading && (

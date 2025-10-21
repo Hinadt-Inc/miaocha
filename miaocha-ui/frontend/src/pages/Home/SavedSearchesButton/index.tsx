@@ -48,12 +48,8 @@ const SavedSearchesButton: React.FC<SavedSearchesButtonProps> = ({
           检索书签
         </Button>
       </Tooltip>
-      
-      <SavedSearchesModal
-        visible={modalVisible}
-        onClose={handleCloseModal}
-        onLoadSearch={handleLoadSearch}
-      />
+
+      <SavedSearchesModal visible={modalVisible} onClose={handleCloseModal} onLoadSearch={handleLoadSearch} />
     </>
   );
 };
