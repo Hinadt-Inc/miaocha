@@ -70,6 +70,7 @@ const ModulePermissionModal = ({
         await authorizeModule(userId, moduleName);
       }
       messageApi.success('操作成功');
+      // 更新数据
       onRefresh();
     } finally {
       setLoading(false);
