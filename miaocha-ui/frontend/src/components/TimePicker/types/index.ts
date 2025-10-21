@@ -1,12 +1,13 @@
 /**
  * TimePicker 组件相关类型定义
  */
+import type { Dayjs } from 'dayjs';
 
 // 时间状态接口
 export interface ITimeStatus {
   value?: string;
   label?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // 时间组件的提交参数
@@ -15,8 +16,8 @@ export interface ILogTimeSubmitParams {
   value?: string; // 值, 如：'last_7d'
   range?: string[]; // 时间范围，如：['2020-01-01 12:26:38', '2020-03-02 12:26:38']
   format?: string[]; // 时间格式，如：['YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD HH:mm:ss']
-  from?: () => any; // dayjs函数
-  to?: () => any; // dayjs函数
+  from?: () => Dayjs; // dayjs函数
+  to?: () => Dayjs; // dayjs函数
   type?: 'relative' | 'absolute' | 'quick'; // 时间范围类型，如：'relative', 'absolute', 'quick'
   startOption?: IRelativeTime; // 开始时间选项
   endOption?: IRelativeTime; // 结束时间选项

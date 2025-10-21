@@ -51,7 +51,7 @@ let promiseRejectionHandlerAdded = false;
  */
 const addPromiseRejectionHandler = () => {
   if (promiseRejectionHandlerAdded || typeof window === 'undefined') return;
-
+  // todo 待确认
   window.addEventListener('unhandledrejection', (event) => {
     // 检查是否是Monaco Editor相关的取消错误
     const reason = event.reason;
@@ -154,25 +154,127 @@ export const initMonacoEditorLocally = (): typeof monaco => {
           ],
 
           keywords: [
-            'SELECT', 'FROM', 'WHERE', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'DROP', 'ALTER',
-            'JOIN', 'INNER', 'LEFT', 'RIGHT', 'FULL', 'OUTER', 'ON', 'AS', 'AND', 'OR', 'NOT', 'NULL',
-            'TRUE', 'FALSE', 'DISTINCT', 'ORDER', 'BY', 'GROUP', 'HAVING', 'LIMIT', 'OFFSET',
-            'INTO', 'VALUES', 'SET', 'TABLE', 'INDEX', 'VIEW', 'DATABASE', 'SCHEMA',
-            'PRIMARY', 'KEY', 'FOREIGN', 'REFERENCES', 'UNIQUE', 'CHECK', 'DEFAULT',
-            'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'CASE', 'WHEN', 'THEN', 'ELSE', 'END',
-            'UNION', 'ALL', 'EXISTS', 'IN', 'BETWEEN', 'LIKE', 'IS', 'ISNULL'
+            'SELECT',
+            'FROM',
+            'WHERE',
+            'INSERT',
+            'UPDATE',
+            'DELETE',
+            'CREATE',
+            'DROP',
+            'ALTER',
+            'JOIN',
+            'INNER',
+            'LEFT',
+            'RIGHT',
+            'FULL',
+            'OUTER',
+            'ON',
+            'AS',
+            'AND',
+            'OR',
+            'NOT',
+            'NULL',
+            'TRUE',
+            'FALSE',
+            'DISTINCT',
+            'ORDER',
+            'BY',
+            'GROUP',
+            'HAVING',
+            'LIMIT',
+            'OFFSET',
+            'INTO',
+            'VALUES',
+            'SET',
+            'TABLE',
+            'INDEX',
+            'VIEW',
+            'DATABASE',
+            'SCHEMA',
+            'PRIMARY',
+            'KEY',
+            'FOREIGN',
+            'REFERENCES',
+            'UNIQUE',
+            'CHECK',
+            'DEFAULT',
+            'COUNT',
+            'SUM',
+            'AVG',
+            'MIN',
+            'MAX',
+            'CASE',
+            'WHEN',
+            'THEN',
+            'ELSE',
+            'END',
+            'UNION',
+            'ALL',
+            'EXISTS',
+            'IN',
+            'BETWEEN',
+            'LIKE',
+            'IS',
+            'ISNULL',
           ],
 
-          operators: ['=', '>', '<', '!', '~', '?', ':', '==', '<=', '>=', '!=', '<>', '+=', '-=', '*=', '/=', '%=', '|=', '&=', '^=', '>>=', '<<='],
+          operators: [
+            '=',
+            '>',
+            '<',
+            '!',
+            '~',
+            '?',
+            ':',
+            '==',
+            '<=',
+            '>=',
+            '!=',
+            '<>',
+            '+=',
+            '-=',
+            '*=',
+            '/=',
+            '%=',
+            '|=',
+            '&=',
+            '^=',
+            '>>=',
+            '<<=',
+          ],
 
           builtinFunctions: [
-            'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'CONCAT', 'SUBSTRING', 'LENGTH', 'UPPER', 'LOWER',
-            'TRIM', 'LTRIM', 'RTRIM', 'REPLACE', 'CAST', 'CONVERT', 'COALESCE', 'NULLIF',
-            'DATE', 'TIME', 'DATETIME', 'NOW', 'CURRENT_TIMESTAMP', 'YEAR', 'MONTH', 'DAY'
+            'COUNT',
+            'SUM',
+            'AVG',
+            'MIN',
+            'MAX',
+            'CONCAT',
+            'SUBSTRING',
+            'LENGTH',
+            'UPPER',
+            'LOWER',
+            'TRIM',
+            'LTRIM',
+            'RTRIM',
+            'REPLACE',
+            'CAST',
+            'CONVERT',
+            'COALESCE',
+            'NULLIF',
+            'DATE',
+            'TIME',
+            'DATETIME',
+            'NOW',
+            'CURRENT_TIMESTAMP',
+            'YEAR',
+            'MONTH',
+            'DAY',
           ],
 
           builtinVariables: [],
-          
+
           tokenizer: {
             root: [
               { include: '@comments' },
@@ -190,9 +292,9 @@ export const initMonacoEditorLocally = (): typeof monaco => {
                     '@operators': 'operator',
                     '@builtinFunctions': 'predefined',
                     '@builtinVariables': 'predefined',
-                    '@default': 'identifier'
-                  }
-                }
+                    '@default': 'identifier',
+                  },
+                },
               ],
               [/[<>=!%&+\-*/|~^]/, 'operator'],
             ],
@@ -201,79 +303,79 @@ export const initMonacoEditorLocally = (): typeof monaco => {
 
             comments: [
               [/--+.*/, 'comment'],
-              [/\/\*/, { token: 'comment.quote', next: '@comment' }]
+              [/\/\*/, { token: 'comment.quote', next: '@comment' }],
             ],
 
             comment: [
               [/[^*/]+/, 'comment'],
               [/\*\//, { token: 'comment.quote', next: '@pop' }],
-              [/./, 'comment']
+              [/./, 'comment'],
             ],
 
             numbers: [
               [/0[xX][0-9a-fA-F]*/, 'number'],
               [/[$][+-]*\d*(\.\d*)?/, 'number'],
-              [/((\d+(\.\d*)?)|(\.\d+))([eE][\-+]?\d+)?/, 'number']
+              [/((\d+(\.\d*)?)|(\.\d+))([eE][\-+]?\d+)?/, 'number'],
             ],
 
             strings: [
               [/N?'/, { token: 'string', next: '@string' }],
-              [/N?"/, { token: 'string', next: '@stringDouble' }]
+              [/N?"/, { token: 'string', next: '@stringDouble' }],
             ],
 
             string: [
               [/[^']+/, 'string'],
               [/''/, 'string'],
-              [/'/, { token: 'string', next: '@pop' }]
+              [/'/, { token: 'string', next: '@pop' }],
             ],
 
             stringDouble: [
               [/[^"]+/, 'string'],
               [/""/, 'string'],
-              [/"/, { token: 'string', next: '@pop' }]
+              [/"/, { token: 'string', next: '@pop' }],
             ],
 
             complexIdentifiers: [
               [/\[/, { token: 'identifier.quote', next: '@bracketedIdentifier' }],
-              [/`/, { token: 'identifier.quote', next: '@quotedIdentifier' }]
+              [/`/, { token: 'identifier.quote', next: '@quotedIdentifier' }],
             ],
 
             bracketedIdentifier: [
               [/[^\]]+/, 'identifier'],
               [/]]/, 'identifier'],
-              [/]/, { token: 'identifier.quote', next: '@pop' }]
+              [/]/, { token: 'identifier.quote', next: '@pop' }],
             ],
 
             quotedIdentifier: [
               [/[^`]+/, 'identifier'],
               [/``/, 'identifier'],
-              [/`/, { token: 'identifier.quote', next: '@pop' }]
-            ]
-          }
+              [/`/, { token: 'identifier.quote', next: '@pop' }],
+            ],
+          },
         });
 
         // 设置SQL语言配置
         monaco.languages.setLanguageConfiguration('sql', {
           comments: {
             lineComment: '--',
-            blockComment: ['/*', '*/']
+            blockComment: ['/*', '*/'],
           },
           brackets: [
             ['(', ')'],
-            ['[', ']']
+            ['[', ']'],
           ],
           autoClosingPairs: [
             { open: '(', close: ')' },
             { open: '[', close: ']' },
             { open: "'", close: "'" },
-            { open: '"', close: '"' }
+            { open: '"', close: '"' },
           ],
           surroundingPairs: [
             { open: '(', close: ')' },
             { open: '[', close: ']' },
             { open: "'", close: "'" },
-            { open: '"', close: '"' }
-          ]
+            { open: '"', close: '"' },
+          ],
         });
 
         // SQL补全提供器将在组件中通过 useSQLCompletion hook 注册

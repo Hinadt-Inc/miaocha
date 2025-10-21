@@ -104,25 +104,18 @@ export const useSearchActions = ({
       // 清空输入框
       clearInputs();
 
-      // 触发搜索逻辑：
-      // 1. 如果有新的输入内容，添加到条件后触发搜索
-      // 2. 如果没有新的输入内容，但用户点击了搜索按钮，也要触发搜索（刷新当前条件的搜索结果）
-      const shouldTriggerSearch = hasInput || keywords.length > 0 || sqls.length > 0;
+      // 更新时间到最新并强制触发搜索
+      const latestTime = getLatestTime(timeOption);
+      const forceUpdateTimestamp = Date.now();
 
-      if (shouldTriggerSearch) {
-        // 更新时间到最新并强制触发搜索
-        const latestTime = getLatestTime(timeOption);
-        const forceUpdateTimestamp = Date.now();
-
-        setTimeOption((prev: ITimeOption) => ({
-          ...prev,
-          range: [latestTime.startTime, latestTime.endTime],
-          // 每次点击搜索都生成新的时间戳，确保强制触发重新请求
-          _forceUpdate: forceUpdateTimestamp,
-          // 添加搜索标识，确保这是来自搜索按钮的触发
-          _fromSearch: true,
-        }));
-      }
+      setTimeOption((prev: ITimeOption) => ({
+        ...prev,
+        range: [latestTime.startTime, latestTime.endTime],
+        // 每次点击搜索都生成新的时间戳，确保强制触发重新请求
+        _forceUpdate: forceUpdateTimestamp,
+        // 添加搜索标识，确保这是来自搜索按钮的触发
+        _fromSearch: true,
+      }));
     },
     [keywords, setKeywords, sqls, setSqls, timeOption, setTimeOption],
   );

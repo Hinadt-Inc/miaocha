@@ -22,57 +22,57 @@ export interface ExecuteSQLResult {
 // 向后兼容的完整结构类型
 export interface LegacySchemaResult {
   databaseName: string;
-  tables: Array<{
+  tables: {
     tableName: string;
     tableComment: string;
-    columns: Array<{
+    columns: {
       columnName: string;
       dataType: string;
       columnComment: string;
       isPrimaryKey: boolean;
       isNullable: boolean;
-    }>;
-  }>;
+    }[];
+  }[];
 }
 
 // 主要使用的扩展结构类型（支持按需加载）
 export interface SchemaResult {
   databaseName: string;
-  tables: Array<{
+  tables: {
     tableName: string;
     tableComment: string;
-    columns?: Array<{
+    columns?: {
       columnName: string;
       dataType: string;
       columnComment: string;
       isPrimaryKey: boolean;
       isNullable: boolean;
-    }>;
+    }[];
     isLoaded?: boolean;
     isLoading?: boolean;
-  }>;
+  }[];
 }
 
 // 新增：数据库表列表DTO
 export interface DatabaseTableListDTO {
   databaseName: string;
-  tables: Array<{
+  tables: {
     tableName: string;
     tableComment: string;
-  }>;
+  }[];
 }
 
 // 新增：单个表结构DTO
 export interface TableSchemaDTO {
   tableName: string;
   tableComment: string;
-  columns: Array<{
+  columns: {
     columnName: string;
     dataType: string;
     columnComment: string;
     isPrimaryKey: boolean;
     isNullable: boolean;
-  }>;
+  }[];
 }
 
 /**

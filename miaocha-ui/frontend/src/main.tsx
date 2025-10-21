@@ -2,12 +2,12 @@ import { useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Provider, useDispatch } from 'react-redux';
 import { RouterProvider } from 'react-router-dom';
-import { QueryProvider } from './providers/QueryProvider';
-import { LoadingProvider } from './providers/LoadingProvider';
-import { ErrorProvider } from './providers/ErrorProvider';
+import { App as AntdApp } from 'antd';
 import { store, type AppDispatch } from './store/store';
 import { restoreSession } from './store/userSlice';
+import GlobalErrorListener from '@/providers/GlobalErrorListener';
 import { router } from './routes';
+import 'nprogress/nprogress.css';
 import './index.less';
 
 // 配置 Monaco Editor Workers
@@ -28,13 +28,15 @@ const SessionInitializer = () => {
 
 createRoot(document.getElementById('root')!).render(
   <Provider store={store}>
-    <ErrorProvider>
+    <AntdApp>
       <SessionInitializer />
-      <QueryProvider>
-        <LoadingProvider>
-          <RouterProvider router={router} />
-        </LoadingProvider>
-      </QueryProvider>
-    </ErrorProvider>
+      <GlobalErrorListener />
+      <RouterProvider router={router} />
+    </AntdApp>
   </Provider>,
 );
+
+requestAnimationFrame(() => {
+  const loader = document.getElementById('app-loader');
+  if (loader) loader.remove();
+});

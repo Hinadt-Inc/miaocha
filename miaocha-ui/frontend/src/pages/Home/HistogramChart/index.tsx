@@ -33,15 +33,15 @@ const HistogramChart = (props: IHistogramChartProps) => {
   return (
     <ReactECharts
       option={option}
-      onEvents={{
-        click: handleChartClick,
-        brushEnd: handleBrushEnd,
-      }}
+      style={{ height: 160, width: '100%' }}
       onChartReady={(chart) => {
         chartRef.current = chart;
         handleChartReady(chart);
       }}
-      style={{ height: 160, width: '100%' }}
+      onEvents={{
+        click: handleChartClick,
+        brushEnd: handleBrushEnd,
+      }}
     />
   );
 };

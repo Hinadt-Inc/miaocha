@@ -58,7 +58,7 @@ export const removeSecureStorage = (key: string): boolean => {
     console.warn('SessionStorage不可用，从内存存储移除:', error);
     // 从内存存储移除
     const tempStorage = window._tempStorage;
-    if (tempStorage && tempStorage[key]) {
+    if (tempStorage?.[key]) {
       delete tempStorage[key];
     }
     return true;

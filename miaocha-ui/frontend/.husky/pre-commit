@@ -1,4 +1,10 @@
 #!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
+# 使用 frontend 子项目的 lint-staged 配置在提交前校验与格式化暂存文件
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$REPO_ROOT/miaocha-ui/frontend" || exit 1
 
-# npm test
+# 打印已暂存文件清单，便于验证仅处理暂存文件
+echo "[husky] Staged files:" 
+git --no-pager diff --name-only --cached
+
+npx --no-install lint-staged --verbose

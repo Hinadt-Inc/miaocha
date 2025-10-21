@@ -7,7 +7,7 @@ import styles from '../VirtualTable.module.less';
  */
 const ResizableTitle: React.FC<ResizableTitleProps> = (props) => {
   const { onResize, width, ...restProps } = props;
-  
+
   if (!width) {
     return <th {...restProps} />;
   }
@@ -17,6 +17,11 @@ const ResizableTitle: React.FC<ResizableTitleProps> = (props) => {
       {restProps.children}
       <div
         className={styles.resizeHandle}
+        onClick={(e) => {
+          // 点击调整手柄时阻止冒泡，防止触发排序
+          e.preventDefault();
+          e.stopPropagation();
+        }}
         onMouseDown={(e) => {
           // 阻止事件冒泡，防止触发排序
           e.preventDefault();
@@ -46,11 +51,6 @@ const ResizableTitle: React.FC<ResizableTitleProps> = (props) => {
 
           document.addEventListener('mousemove', handleMouseMove);
           document.addEventListener('mouseup', handleMouseUp);
-        }}
-        onClick={(e) => {
-          // 点击调整手柄时阻止冒泡，防止触发排序
-          e.preventDefault();
-          e.stopPropagation();
         }}
       />
     </th>

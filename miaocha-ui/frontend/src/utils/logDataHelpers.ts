@@ -145,7 +145,7 @@ export const memoize = <F extends (...args: any[]) => any>(func: F): ((...args: 
   return (...args: Parameters<F>): ReturnType<F> => {
     const key = JSON.stringify(args);
     if (cache.has(key)) {
-      return cache.get(key) as ReturnType<F>;
+      return cache.get(key)!;
     }
 
     const result = func(...args);

@@ -19,31 +19,31 @@ const ColumnHeader: React.FC<ColumnHeaderProps> = ({
   const [hovered, setHovered] = useState(false);
   const isLeftLogTime = colIndex > 0 && columns[colIndex - 1]?.dataIndex === '_source';
   const isLast = colIndex === columns.length - 1;
-  
+
   return (
     <div
+      className={styles.columnHeaderContainer}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className={styles.columnHeaderContainer}
     >
       {title}
       {showActions && hovered && (
         <div className={styles.headerActions}>
           <Tooltip title="移除该列">
-            <Button color="primary" variant="link" size="small" onClick={() => onDelete(colIndex)}>
+            <Button color="primary" size="small" variant="link" onClick={() => onDelete(colIndex)}>
               <CloseOutlined />
             </Button>
           </Tooltip>
           {colIndex > 0 && !isLeftLogTime && (
             <Tooltip title="将列左移​">
-              <Button color="primary" variant="link" size="small" onClick={() => onMoveLeft(colIndex)}>
+              <Button color="primary" size="small" variant="link" onClick={() => onMoveLeft(colIndex)}>
                 <DoubleLeftOutlined />
               </Button>
             </Tooltip>
           )}
           {!isLast && (
             <Tooltip title="将列右移​">
-              <Button color="primary" variant="link" size="small" onClick={() => onMoveRight(colIndex)}>
+              <Button color="primary" size="small" variant="link" onClick={() => onMoveRight(colIndex)}>
                 <DoubleRightOutlined />
               </Button>
             </Tooltip>

@@ -448,13 +448,13 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
             ...col,
             title: (
               <ColumnHeader
-                title={col.title}
                 colIndex={idx}
+                columns={columns}
+                showActions={true}
+                title={col.title}
                 onDelete={handleDeleteColumn}
                 onMoveLeft={handleMoveLeft}
                 onMoveRight={handleMoveRight}
-                showActions={true}
-                columns={columns}
               />
             ),
           };
@@ -462,21 +462,16 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
     : columns.filter((col) => !col.hidden); // 过滤掉hidden的列
 
   return (
-    <div className={styles.virtualLayout} ref={containerRef}>
+    <div ref={containerRef} className={styles.virtualLayout}>
       <Table
-        virtual
-        size="small"
         ref={tblRef}
-        rowKey="_key"
-        dataSource={data}
-        pagination={false}
         columns={enhancedColumns}
-        onChange={handleTableChange}
-        scroll={{ x: data.length > 0 ? scrollX : 0, y: containerHeight - headerHeight - 1 }}
-        sortDirections={['ascend', 'descend']}
-        showSorterTooltip={{
-          title: '点击排序，按住Ctrl+点击可多列排序',
+        components={{
+          header: {
+            cell: ResizableTitle,
+          },
         }}
+        dataSource={data}
         expandable={{
           columnWidth: 26,
           expandedRowKeys,
@@ -485,11 +480,16 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
             <ExpandedRow data={record} keywords={keyWordsFormat || []} moduleQueryConfig={moduleQueryConfig} />
           ),
         }}
-        components={{
-          header: {
-            cell: ResizableTitle,
-          },
+        pagination={false}
+        rowKey="_key"
+        scroll={{ x: data.length > 0 ? scrollX : 0, y: containerHeight - headerHeight - 1 }}
+        showSorterTooltip={{
+          title: '点击排序，按住Ctrl+点击可多列排序',
         }}
+        size="small"
+        sortDirections={['ascend', 'descend']}
+        virtual
+        onChange={handleTableChange}
       />
     </div>
   );

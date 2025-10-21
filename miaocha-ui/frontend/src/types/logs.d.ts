@@ -113,10 +113,10 @@ declare global {
     /**
      * 排序字段列表
      */
-    sortFields?: Array<{
+    sortFields?: {
       fieldName: string;
       direction: 'ASC' | 'DESC';
-    }>;
+    }[];
     /**
      * 查询配置
      */
@@ -128,10 +128,10 @@ declare global {
       /**
        * 关键词字段配置列表
        */
-      keywordFields?: Array<{
+      keywordFields?: {
         fieldName: string;
         searchMethod: string;
-      }>;
+      }[];
     };
   }
 
@@ -167,19 +167,19 @@ declare global {
    */
   interface IDistributionsResponse {
     /** 字段数据分布统计信息，用于展示各字段的Top5值及占比 */
-    fieldDistributions: Array<{
+    fieldDistributions: {
       /** 字段名称 */
       fieldName: string;
 
       /** 字段值分布列表，按数量降序排序 */
-      valueDistributions: Array<{
+      valueDistributions: {
         /** 字段值 */
         value: string;
         /** 该值出现的次数 */
         count: number;
         /** 该值占比 */
         percentage: number;
-      }>;
+      }[];
       /** 该字段的总记录数 */
       totalCount: number;
       /** 该字段的非空记录数 */
@@ -188,7 +188,7 @@ declare global {
       nullCount: number;
       /** 该字段的唯一值数 */
       uniqueCount: number;
-    }>;
+    }[];
     sampleSize: number; // 样本大小
     /** 查询是否成功 */
     success: boolean;
@@ -269,10 +269,10 @@ declare global {
     /** 字段列表 */
     fields?: string[];
     /** 排序字段列表（可选） */
-    sortFields?: Array<{
+    sortFields?: {
       fieldName: string;
       direction: 'ASC' | 'DESC';
-    }>;
+    }[];
     /** 搜索条件名称 */
     name: string;
     /** 搜索条件描述（可选） */
@@ -314,10 +314,10 @@ declare global {
     /** 字段列表 */
     fields?: string[];
     /** 排序字段列表 */
-    sortFields?: Array<{
+    sortFields?: {
       fieldName: string;
       direction: 'ASC' | 'DESC';
-    }>;
+    }[];
     /** 搜索条件名称 */
     name: string;
     /** 搜索条件描述 */

@@ -39,15 +39,15 @@ export const OptimizedSQLEditorSidebar: React.FC<OptimizedSQLEditorSidebarProps>
     <div className={styles.sqlEditorSidebar}>
       <div className={styles.sidebarContent}>
         <OptimizedSchemaTree
+          collapsed={collapsed}
           databaseSchema={databaseSchema}
+          fetchTableSchema={fetchTableSchema}
+          handleInsertField={onInsertField}
+          handleInsertTable={onInsertTable}
           loadingSchema={loadingSchema}
           loadingTables={loadingTables}
           refreshSchema={refreshSchema}
-          fetchTableSchema={fetchTableSchema}
           selectedSource={selectedSource}
-          handleInsertTable={onInsertTable}
-          handleInsertField={onInsertField}
-          collapsed={collapsed}
           toggleSider={onToggle}
         />
       </div>

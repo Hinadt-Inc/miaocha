@@ -3,6 +3,8 @@ import customParseFormat from 'dayjs/plugin/customParseFormat';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import duration from 'dayjs/plugin/duration';
+import type { Dayjs } from 'dayjs';
+import type { ManipulateType } from 'dayjs';
 
 import { ILogTimeSubmitParams } from '../types';
 import { QUICK_RANGES, DATE_FORMAT_THOUSOND } from './constants';
@@ -12,6 +14,11 @@ dayjs.extend(duration);
 dayjs.extend(customParseFormat);
 dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
+
+interface LatestTimeRange {
+  startTime?: string;
+  endTime?: string;
+}
 
 /**
  * 格式化时间字符串，处理毫秒部分不足三位的情况
@@ -55,24 +62,31 @@ export const formatTimeString = (timeString: string): string => {
  * @param timeOption 时间选项参数
  * @returns 包含开始时间和结束时间的对象
  */
-export const getLatestTime = (timeOption: ILogTimeSubmitParams) => {
+export const getLatestTime = (timeOption: ILogTimeSubmitParams): LatestTimeRange => {
   const { type, value, startOption, endOption, range } = timeOption;
-  const target: any = {};
+  const target: LatestTimeRange = {};
 
   if (!value) return target;
 
   // 快捷选择
   if (type === 'quick' && value && QUICK_RANGES[value]) {
-    const current = QUICK_RANGES[value];
-    target.startTime = current.from().format(current.format[0]);
-    target.endTime = current.to().format(current.format[1]);
+    const current = QUICK_RANGES[value] as ILogTimeSubmitParams & {
+      from?: () => Dayjs;
+      to?: () => Dayjs;
+      format?: [string, string];
+    };
+    const from = current.from;
+    const to = current.to;
+    const [fmtStart, fmtEnd] = (current.format ?? [DATE_FORMAT_THOUSOND, DATE_FORMAT_THOUSOND]) as [string, string];
+    target.startTime = from ? from().format(fmtStart) : undefined;
+    target.endTime = to ? to().format(fmtEnd) : undefined;
   } else if (type === 'relative' && startOption && endOption) {
     // 相对时间
     const start = dayjs()
-      .subtract(startOption.number || 0, startOption.unitEN as any)
+      .subtract(startOption.number ?? 0, startOption.unitEN as ManipulateType)
       .format(startOption.isExact ? startOption.format : DATE_FORMAT_THOUSOND);
     const end = dayjs()
-      .subtract(endOption.number || 0, endOption.unitEN as any)
+      .subtract(endOption.number ?? 0, endOption.unitEN as ManipulateType)
       .format(endOption.isExact ? endOption.format : DATE_FORMAT_THOUSOND);
     target.startTime = start;
     target.endTime = end;
@@ -112,11 +126,11 @@ export const getTimeDisplayText = (timeOption: ILogTimeSubmitParams): string => 
 
   switch (type) {
     case 'quick':
-      return label || '';
+      return label ?? '';
     case 'absolute':
       return range ? range.join(' ~ ') : '';
     case 'relative':
-      return label || value || '';
+      return label ?? value ?? '';
     default:
       return '';
   }

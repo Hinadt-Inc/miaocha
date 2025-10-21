@@ -14,10 +14,10 @@ export interface Module {
   createUserName: string;
   updateUser: string;
   updateUserName: string;
-  users?: Array<{
+  users?: {
     userId: string;
     nickname: string;
-  }>;
+  }[];
 }
 
 export interface CreateModuleParams {
@@ -104,57 +104,6 @@ export const executeDorisSql = async (id: number, sql: string) => {
   });
 };
 
-// 授权模块
-interface ModulePermissionResponse {
-  success: boolean;
-  message?: string;
-}
-
-export const authorizeModule = async (userId: string, moduleName: string): Promise<boolean> => {
-  try {
-    const response = await request<ModulePermissionResponse>({
-      url: `/api/permissions/modules/user/${userId}/grant?module=${moduleName}`,
-      method: 'POST',
-    });
-    return response.success;
-  } catch (error) {
-    console.error('授权模块失败:', error);
-    return false;
-  }
-};
-
-// 撤销模块授权
-export const revokeModule = async (userId: string, moduleName: string): Promise<boolean> => {
-  try {
-    const response = await request<ModulePermissionResponse>({
-      url: `/api/permissions/modules/user/${userId}/revoke?module=${moduleName}`,
-      method: 'DELETE',
-    });
-    return response.success;
-  } catch (error) {
-    console.error('撤销模块授权失败:', error);
-    return false;
-  }
-};
-
-// 批量授权
-export const batchAuthorizeModules = async (userId: string, moduleNames: string[]) => {
-  return request({
-    url: `/api/permissions/modules/user/${userId}/batch-grant`,
-    method: 'POST',
-    data: { userId, modules: moduleNames },
-  });
-};
-
-// 批量撤销授权
-export const batchRevokeModules = async (userId: string, moduleNames: string[]) => {
-  return request({
-    url: `/api/permissions/modules/user/${userId}/batch-revoke`,
-    method: 'DELETE',
-    data: { userId, modules: moduleNames },
-  });
-};
-
 // 配置模块查询设置
 export const updateModuleQueryConfig = async (params: ModuleQueryConfigParams) => {
   return request({
@@ -178,20 +127,6 @@ export const getModuleFieldNames = async (moduleId: number) => {
   return request<string[]>({
     url: `/api/modules/${moduleId}/field-names`,
     method: 'GET',
-  });
-};
-
-export const batchAuthorizeModulesWithExpiry = async (
-  userId: string,
-  modules: Array<{
-    moduleId: string;
-    expireTime?: string;
-  }>,
-) => {
-  return request({
-    url: `/api/permissions/modules/user/${userId}/batch-grant-with-expiry`,
-    method: 'POST',
-    data: { userId, modules },
   });
 };
 

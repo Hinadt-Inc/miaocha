@@ -3,18 +3,6 @@ import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import NProgress from 'nprogress';
 import { setTokens } from '../store/userSlice';
 import { store } from '../store/store';
-import 'nprogress/nprogress.css';
-
-// 定义全局错误处理器
-let globalErrorHandler: ((error: Error) => void) | null = null;
-
-export function setGlobalErrorHandler(handler: (error: Error) => void) {
-  globalErrorHandler = handler;
-}
-
-NProgress.configure({
-  showSpinner: false, // 是否显示右上角的转圈加载图标
-});
 
 // 创建axios实例
 const service: AxiosInstance = axios.create({
@@ -28,7 +16,7 @@ service.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   NProgress.start(); // 开始进度条
   const token = localStorage.getItem('accessToken');
   if (token) {
-    config.headers['Authorization'] = `Bearer ${token}`;
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
@@ -36,7 +24,7 @@ service.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 // 是否正在刷新token
 let isRefreshing = false;
 // 重试队列
-let retryQueue: Array<() => void> = [];
+let retryQueue: (() => void)[] = [];
 
 // 响应拦截器
 service.interceptors.response.use(
@@ -48,7 +36,6 @@ service.interceptors.response.use(
     }
     // 处理EventSource响应
     if (response.config.responseType === 'text' && response.headers['content-type']?.includes('text/event-stream')) {
-      console.log('EventSource response received:', response);
       // 创建新的EventSource对象
       const eventSource = new EventSource(response.request.responseURL, {
         withCredentials: true,
@@ -70,13 +57,14 @@ service.interceptors.response.use(
     const message = errorMessage || res.message || '操作失败';
     // 根据后端接口返回结构调整
     if (isBizError || isCodeError) {
-      console.log('isError', response);
-      const error = new Error(message);
-      // 使用全局错误处理器
-      if (globalErrorHandler) {
-        globalErrorHandler(error);
-      }
-      return Promise.reject(error);
+      window.dispatchEvent(
+        new CustomEvent('unhandledrejection', {
+          detail: {
+            reason: new Error(message),
+          },
+        }),
+      );
+      return Promise.reject(new Error(message));
     }
     return res.data;
   },
@@ -85,7 +73,7 @@ service.interceptors.response.use(
     const originalRequest = requestError.config;
     const res = requestError.response?.data || {};
     const status = requestError.response?.status;
-    let errorMessage = requestError.response?.data?.message || requestError.message || '请求失败';
+    let errorMessage = requestError.response?.data?.message || requestError.message;
 
     // 常见HTTP状态码友好提示
     const statusMessageMap: Record<number, string> = {
@@ -102,7 +90,7 @@ service.interceptors.response.use(
       503: '服务不可用',
       504: '网关超时',
     };
-    if (status && statusMessageMap[status] && !errorMessage) {
+    if (!errorMessage && status && statusMessageMap[status]) {
       errorMessage = statusMessageMap[status];
     }
 
@@ -156,33 +144,24 @@ service.interceptors.response.use(
 
         // 重试原始请求
         return service(originalRequest);
-      } catch (refreshError) {
+      } catch (err) {
         // 刷新token失败，跳转到登录页
         retryQueue = [];
         window.location.href = '/login';
-        const error = refreshError instanceof Error ? refreshError : new Error('Token refresh failed');
-        if (globalErrorHandler) {
-          globalErrorHandler(error);
-        }
-        return Promise.reject(error);
+        return Promise.reject(err);
       } finally {
         isRefreshing = false;
       }
     }
 
-    // 创建标准化的错误对象
-    const finalError = new Error(errorMessage);
-    // 添加状态码信息到错误对象
-    if (status) {
-      Object.assign(finalError, { status, code: status.toString() });
-    }
-
-    // 使用全局错误处理器
-    if (globalErrorHandler) {
-      globalErrorHandler(finalError);
-    }
-
-    return Promise.reject(finalError);
+    window.dispatchEvent(
+      new CustomEvent('unhandledrejection', {
+        detail: {
+          reason: new Error(errorMessage),
+        },
+      }),
+    );
+    return Promise.reject(new Error(errorMessage));
   },
 );
 
@@ -193,7 +172,7 @@ export function request<T = unknown>(config: AxiosRequestConfig): Promise<T> {
 
 // 封装GET请求
 export function get<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
-  return request({ ...config, method: 'GET', url, params: config?.params });
+  return request({ ...config, method: 'GET', url });
 }
 
 // 封装POST请求

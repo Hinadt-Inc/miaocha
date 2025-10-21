@@ -207,12 +207,9 @@ export const VirtualList = forwardRef(
             {columns ? (
               // 表格模式
               <Table
-                dataSource={visibleData}
+                className="virtual-table"
                 columns={columns}
-                pagination={false}
-                size="middle"
-                scroll={{ x: 'max-content' }}
-                rowKey="key"
+                dataSource={visibleData}
                 expandable={
                   expandRowRender
                     ? {
@@ -222,10 +219,13 @@ export const VirtualList = forwardRef(
                       }
                     : undefined
                 }
-                className="virtual-table"
+                pagination={false}
                 rowClassName={(record) => (record.key === activeRowKey ? 'active-table-row' : '')}
+                rowKey="key"
+                scroll={{ x: 'max-content' }}
+                size="middle"
                 onRow={(record) => ({
-                  onClick: () => onRowClick && onRowClick(record),
+                  onClick: () => onRowClick?.(record),
                   className: record.key === activeRowKey ? 'active-table-row' : '',
                 })}
               />

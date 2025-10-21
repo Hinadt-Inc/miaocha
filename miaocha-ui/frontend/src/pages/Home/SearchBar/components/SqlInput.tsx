@@ -65,11 +65,11 @@ const SqlInput: React.FC<ISqlInputProps> = ({ value, onChange, columns = [] }) =
     <Space.Compact style={{ width: '100%' }}>
       <AutoComplete
         allowClear
+        options={options}
         placeholder={PLACEHOLDERS.SQL}
         style={{ width: '100%' }}
         value={value}
         onChange={onChange}
-        options={options}
       />
     </Space.Compact>
   );

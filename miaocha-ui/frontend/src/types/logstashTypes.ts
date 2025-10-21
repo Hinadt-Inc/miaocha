@@ -45,12 +45,8 @@ export interface LogstashTaskStatus {
   machineName: string; // 添加机器名称字段
   machineIp: string; // 添加机器IP字段
   processName: string; // 添加进程名称字段
-  instanceSteps: {
-    [key: string]: LogstashTaskStep[];
-  };
-  instanceProgressPercentages: {
-    [key: string]: number;
-  };
+  instanceSteps: Record<string, LogstashTaskStep[]>;
+  instanceProgressPercentages: Record<string, number>;
 }
 
 export interface LogstashTaskSummary {
@@ -69,8 +65,7 @@ export interface LogstashTaskSummary {
   skippedCount: number;
   progressPercentage: number;
   errorMessage: string;
-  instanceSteps: {
-    [key: string]: {
+  instanceSteps: Record<string, {
       stepId: string;
       stepName: string;
       status: string;
@@ -78,11 +73,8 @@ export interface LogstashTaskSummary {
       endTime: string;
       duration: number;
       errorMessage: string;
-    }[];
-  };
-  instanceProgressPercentages: {
-    [key: string]: number;
-  };
+    }[]>;
+  instanceProgressPercentages: Record<string, number>;
 }
 
 export type LogstashProcessState =
@@ -112,8 +104,7 @@ export interface MachineTask {
   skippedCount: number;
   progressPercentage: number;
   errorMessage: string;
-  machineSteps: {
-    [key: string]: {
+  machineSteps: Record<string, {
       stepId: string;
       stepName: string;
       status: string;
@@ -121,11 +112,8 @@ export interface MachineTask {
       endTime: string;
       duration: number;
       errorMessage: string;
-    }[];
-  };
-  machineProgressPercentages: {
-    [key: string]: number;
-  };
+    }[]>;
+  machineProgressPercentages: Record<string, number>;
 }
 
 export interface LogstashProcess {
@@ -193,10 +181,6 @@ export interface LogstashTaskStatusV2 {
   skippedCount: number;
   progressPercentage: number;
   errorMessage: string;
-  instanceSteps: {
-    [key: string]: LogstashTaskStep[];
-  };
-  instanceProgressPercentages: {
-    [key: string]: number;
-  };
+  instanceSteps: Record<string, LogstashTaskStep[]>;
+  instanceProgressPercentages: Record<string, number>;
 }

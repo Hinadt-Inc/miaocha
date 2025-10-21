@@ -16,5 +16,5 @@ export interface IAggregatedData {
 
 export interface IChartEvents {
   click: (params: any) => void;
-  brushEnd: (params: { areas: Array<{ coordRange: [number, number] }> }) => void;
+  brushEnd: (params: { areas: { coordRange: [number, number] }[] }) => void;
 }

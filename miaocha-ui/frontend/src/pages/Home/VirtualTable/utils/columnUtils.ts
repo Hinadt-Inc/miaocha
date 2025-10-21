@@ -9,11 +9,7 @@
  * @param fontFamily 字体族，默认Arial
  * @returns 文本宽度（像素）
  */
-export const getTextWidth = (
-  text: string, 
-  fontSize: number = 14, 
-  fontFamily: string = 'Arial'
-): number => {
+export const getTextWidth = (text: string, fontSize: number = 14, fontFamily: string = 'Arial'): number => {
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
   if (!context) return text.length * 8; // 降级处理
@@ -32,23 +28,23 @@ export const getTextWidth = (
  * @returns 计算后的列宽度
  */
 export const getAutoColumnWidth = (
-  columnName: string, 
-  screenWidth: number, 
-  minWidth: number = 120, 
-  maxWidth: number = 400
+  columnName: string,
+  screenWidth: number,
+  minWidth: number = 120,
+  maxWidth: number = 400,
 ): number => {
   const textWidth = getTextWidth(columnName, 14, '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto');
   // 添加padding和排序图标空间：
   // 左右padding各16px，排序图标20px，删除/移动按钮空间40px，安全余量20px
   const totalWidth = textWidth + 112;
-  
+
   // 在小屏幕上进一步限制最大宽度
   let adjustedMaxWidth = maxWidth;
-  
+
   if (screenWidth < 1200) {
     // 小屏幕上，根据屏幕宽度动态调整最大宽度
     adjustedMaxWidth = Math.min(maxWidth, Math.floor((screenWidth - 300) / 4)); // 留出300px给时间列和操作空间，剩余空间平均分配
   }
-  
+
   return Math.min(Math.max(totalWidth, minWidth), adjustedMaxWidth);
 };

@@ -280,10 +280,10 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
       return (
         <FieldListItem
           key={item.columnName}
-          isSelected={false}
           column={item}
           columnIndex={index}
           fieldData={fieldListProps}
+          isSelected={false}
           moduleQueryConfig={moduleQueryConfig}
         />
       );
@@ -309,19 +309,18 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
     <div className={styles.layoutSider}>
       {/* 模块选择器 */}
       <ModuleSelector
+        favoriteModule={favoriteModule}
         modules={modules}
         selectedModule={selectedModule}
-        favoriteModule={favoriteModule}
         onModuleChange={changeModules}
         onToggleFavorite={handleToggleFavorite}
       />
 
       {/* 字段折叠面板 */}
       <Collapse
-        ghost
-        size="small"
         defaultActiveKey={['selected', 'available']}
         expandIcon={() => null}
+        ghost
         items={[
           {
             key: 'selected',
@@ -342,10 +341,10 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
               ?.map((item: ILogColumnsResponse, index: number) => (
                 <FieldListItem
                   key={item.columnName}
-                  isSelected
                   column={item}
                   columnIndex={index}
                   fieldData={fieldListProps}
+                  isSelected
                   moduleQueryConfig={moduleQueryConfig}
                 />
               )),
@@ -356,19 +355,19 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
             children: [
               <Input.Search
                 key="search"
-                placeholder="搜索字段"
                 allowClear
-                variant="filled"
                 className={styles.searchInput}
+                placeholder="搜索字段"
                 value={searchText}
+                variant="filled"
                 onChange={(e) => setSearchText(e.target.value)}
               />,
               <div key="virtual-list-container" className={styles.virtualListWrapper}>
                 {filteredAvailableColumns && filteredAvailableColumns.length > 0 ? (
                   <VirtualFieldList
+                    containerHeight={700}
                     data={filteredAvailableColumns}
                     itemHeight={35}
-                    containerHeight={700}
                     renderItem={renderVirtualItem}
                   />
                 ) : (
@@ -378,6 +377,7 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
             ],
           },
         ]}
+        size="small"
       />
     </div>
   );

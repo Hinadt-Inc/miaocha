@@ -17,10 +17,6 @@ const TimeGroupSelector: React.FC<ITimeGroupSelectorProps> = ({ timeGrouping, op
   return (
     <Popover
       arrow={true}
-      trigger="click"
-      placement="bottomRight"
-      open={open}
-      onOpenChange={onOpenChange}
       content={
         <>
           {Object.entries(TIME_GROUP).map(([value, item]) => (
@@ -30,8 +26,12 @@ const TimeGroupSelector: React.FC<ITimeGroupSelectorProps> = ({ timeGrouping, op
           ))}
         </>
       }
+      open={open}
+      placement="bottomRight"
+      trigger="click"
+      onOpenChange={onOpenChange}
     >
-      <Button color="primary" variant="link" size="small">
+      <Button color="primary" size="small" variant="link">
         按{TIME_GROUP[timeGrouping]}分组
       </Button>
     </Popover>

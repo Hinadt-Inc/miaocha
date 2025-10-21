@@ -128,18 +128,18 @@ const SQLEditorPage: React.FC = () => {
     <Layout style={{ height: '100vh', padding: '10px' }}>
       <Splitter style={{ height: '100%' }}>
         {/* 数据库结构侧边栏 */}
-        <Splitter.Panel size={280} className={styles.databaseSchemaPanel}>
+        <Splitter.Panel className={styles.databaseSchemaPanel} size={280}>
           <div className={styles.siderContainer}>
             <SQLEditorSidebar
+              collapsed={false}
               databaseSchema={databaseSchema}
+              fetchTableSchema={handleFetchTableSchema}
               loadingSchema={loadingSchema}
               loadingTables={loadingTables}
               refreshSchema={handleRefreshSchema}
-              fetchTableSchema={handleFetchTableSchema}
               selectedSource={selectedSource}
-              onInsertTable={handleInsertTable}
               onInsertField={handleInsertField}
-              collapsed={false}
+              onInsertTable={handleInsertTable}
               onToggle={() => {}}
             />
           </div>
@@ -151,48 +151,48 @@ const SQLEditorPage: React.FC = () => {
             <Content className={styles.contentContainer}>
               <Splitter layout="vertical" style={{ height: '100%' }}>
                 {/* 查询编辑器区域 - 简化高度管理，使用100% */}
-                <Splitter.Panel size="35%" className={styles.queryPanelContainer}>
+                <Splitter.Panel className={styles.queryPanelContainer} size="35%">
                   <SQLQueryPanel
-                    sqlQuery={sqlQuery}
-                    onChange={handleSqlQueryChange}
-                    onEditorMount={handleEditorDidMount}
                     editorSettings={editorSettings}
-                    height="100%"
-                    onHeightChange={() => {}} // 空函数，保持接口兼容
-                    onInsertSnippet={insertSnippet}
-                    onCopyToClipboard={() => copyToClipboard(sqlQuery)}
                     header={
                       <SQLEditorHeader
                         dataSources={dataSources}
-                        selectedSource={selectedSource}
-                        onSourceChange={setSelectedSource}
-                        loadingSchema={loadingSchema}
                         loadingDataSources={loadingDataSources}
                         loadingResults={loadingResults}
+                        loadingSchema={loadingSchema}
+                        selectedSource={selectedSource}
+                        sqlQuery={sqlQuery}
                         onExecuteQuery={executeQuery}
+                        onSourceChange={setSelectedSource}
                         onToggleHistory={() => setHistoryDrawerVisible(true)}
                         onToggleSettings={() => setSettingsDrawerVisible(true)}
-                        sqlQuery={sqlQuery}
                       />
                     }
+                    height="100%"
+                    sqlQuery={sqlQuery}
+                    onChange={handleSqlQueryChange}
+                    onCopyToClipboard={() => copyToClipboard(sqlQuery)}
+                    onEditorMount={handleEditorDidMount}
+                    onHeightChange={() => {}} // 空函数，保持接口兼容
+                    onInsertSnippet={insertSnippet}
                   />
                 </Splitter.Panel>
 
                 {/* 查询结果区域 - 获得更多可用空间 */}
                 <Splitter.Panel className={styles.resultsPanelContainer}>
                   <SQLResultsPanel
-                    queryResults={queryResults}
-                    loading={loadingResults}
                     activeTab={activeTab}
-                    onTabChange={setActiveTab}
-                    onDownloadResults={handleDownloadResults}
                     chartType={chartType}
-                    onChartTypeChange={handleChartTypeChange}
-                    xField={xField}
-                    onXFieldChange={setXField}
-                    yField={yField}
-                    onYFieldChange={setYField}
                     fullscreen={fullscreen}
+                    loading={loadingResults}
+                    queryResults={queryResults}
+                    xField={xField}
+                    yField={yField}
+                    onChartTypeChange={handleChartTypeChange}
+                    onDownloadResults={handleDownloadResults}
+                    onTabChange={setActiveTab}
+                    onXFieldChange={setXField}
+                    onYFieldChange={setYField}
                   />
                 </Splitter.Panel>
               </Splitter>
@@ -202,19 +202,19 @@ const SQLEditorPage: React.FC = () => {
       </Splitter>
 
       <SQLHistoryDrawer
+        pagination={pagination}
+        queryHistory={queryHistory}
         visible={historyDrawerVisible}
         onClose={() => setHistoryDrawerVisible(false)}
-        queryHistory={queryHistory}
-        onLoadFromHistory={loadFromHistory}
         onCopyToClipboard={copyToClipboard}
-        pagination={pagination}
+        onLoadFromHistory={loadFromHistory}
         onPaginationChange={handlePaginationChange}
       />
 
       <SQLSettingsDrawer
+        editorSettings={editorSettings}
         visible={settingsDrawerVisible}
         onClose={() => setSettingsDrawerVisible(false)}
-        editorSettings={editorSettings}
         onUpdateSettings={saveEditorSettings}
       />
     </Layout>

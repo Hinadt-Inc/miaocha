@@ -20,7 +20,7 @@ export const extractSqlKeywords = (sqls: string[]): string[] => {
       // 字段名 = "值" 或 字段名="值"
       /([a-zA-Z_][a-zA-Z0-9_.]*)\s*=\s*"([^"]*)"/g,
       // 字段名 = 值 (无引号，匹配到空格、AND、OR或结尾)
-      /([a-zA-Z_][a-zA-Z0-9_.]*)\s*=\s*([^\s'"\(\)]+)(?=\s|$|and|AND|or|OR|\))/g,
+      /([a-zA-Z_][a-zA-Z0-9_.]*)\s*=\s*([^\s'"()]+)(?=\s|$|and|or|\))/gi,
     ];
 
     patterns.forEach((pattern) => {
@@ -105,18 +105,18 @@ export const generateRecordHash = (record: any, timeField: string): string => {
   // 使用时间字段和部分关键字段生成唯一标识，确保唯一性
   const identifyingFields = [timeField, 'host', 'source', 'log_offset'];
   const hashParts = identifyingFields
-    .filter(field => record[field] !== undefined && record[field] !== null)
-    .map(field => `${field}:${String(record[field])}`);
-  
+    .filter((field) => record[field] !== undefined && record[field] !== null)
+    .map((field) => `${field}:${String(record[field])}`);
+
   // 如果基本字段不够唯一，添加更多字段
   if (hashParts.length < 2) {
     const additionalFields = Object.keys(record).slice(0, 5);
-    additionalFields.forEach(field => {
+    additionalFields.forEach((field) => {
       if (!identifyingFields.includes(field) && record[field] !== undefined) {
         hashParts.push(`${field}:${String(record[field]).substring(0, 100)}`);
       }
     });
   }
-  
+
   return hashParts.join('|');
 };

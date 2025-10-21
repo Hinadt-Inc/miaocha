@@ -28,6 +28,11 @@
     "typescript",
     "typescriptreact"
   ],
+  "eslint.experimental.useFlatConfig": true,
+  // 可选：只在保存时应用这些 ESLint 规则的自动修复（不影响其它规则执行）
+  "eslint.codeActionsOnSave.rules": [
+    "react/jsx-sort-props"
+  ],
   "cSpell.words": [
     "Sider","sqls"
   ]

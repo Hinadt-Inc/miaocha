@@ -39,12 +39,12 @@ export const SQLEditorSidebar: React.FC<SQLEditorSidebarProps> = ({
     <div className={styles.sqlEditorSidebar}>
       <div className={styles.sidebarContent}>
         <VirtualizedSchemaTree
+          collapsed={collapsed}
           databaseSchema={databaseSchema}
+          handleInsertField={onInsertField}
+          handleInsertTable={onInsertTable}
           loadingSchema={loadingSchema}
           refreshSchema={refreshSchema}
-          handleInsertTable={onInsertTable}
-          handleInsertField={onInsertField}
-          collapsed={collapsed}
           toggleSider={onToggle}
         />
       </div>
