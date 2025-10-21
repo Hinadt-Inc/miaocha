@@ -300,37 +300,37 @@ const SavedSearchesModal: React.FC<SavedSearchesModalProps> = ({
     <>
       {contextHolder}
       <Modal
-        title="检索书签"
-        open={visible}
-        onCancel={onClose}
-        footer={null}
-        width={800}
         className={styles.savedSearchesModal}
+        footer={null}
+        open={visible}
+        title="检索书签"
+        width={800}
+        onCancel={onClose}
       >
       <div className={styles.topBar}>
         <div className={styles.leftActions}>
           {filteredCachedSearches.length > 0 && (
             <>
               <Checkbox
-                indeterminate={selectedKeys.length > 0 && selectedKeys.length < filteredCachedSearches.length}
                 checked={selectedKeys.length === filteredCachedSearches.length}
+                indeterminate={selectedKeys.length > 0 && selectedKeys.length < filteredCachedSearches.length}
                 onChange={handleSelectAllChange}
               >
                 全选
               </Checkbox>
               {selectedKeys.length > 0 && (
                 <Popconfirm
+                  cancelText="取消"
+                  okText="确定"
                   title={`确定要删除选中的 ${selectedKeys.length} 个搜索条件吗？`}
                   onConfirm={handleDeleteSelected}
-                  okText="确定"
-                  cancelText="取消"
                 >
                   <Button
-                    type="primary"
                     danger
-                    size="small"
-                    loading={deleteLoading}
                     icon={<DeleteOutlined />}
+                    loading={deleteLoading}
+                    size="small"
+                    type="primary"
                   >
                     删除选中 ({selectedKeys.length})
                   </Button>
@@ -341,12 +341,12 @@ const SavedSearchesModal: React.FC<SavedSearchesModalProps> = ({
         </div>
         <div className={styles.rightActions}>
           <Input
+            allowClear
+            className={styles.searchInput}
             placeholder="搜索缓存的条件..."
             prefix={<SearchOutlined />}
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}
-            allowClear
-            className={styles.searchInput}
           />
         </div>
       </div>        {filteredCachedSearches.length === 0 ? (
@@ -363,31 +363,31 @@ const SavedSearchesModal: React.FC<SavedSearchesModalProps> = ({
             dataSource={filteredCachedSearches}
             renderItem={(item: ICachedSearchCondition) => (
               <List.Item
-                className={styles.searchItem}
                 actions={[
                   <Button
                     key="load"
-                    type="primary"
                     size="small"
+                    type="primary"
                     onClick={() => handleLoad(item)}
                   >
                     加载
                   </Button>,
                   <Popconfirm
                     key="delete"
+                    cancelText="取消"
+                    okText="确定"
                     title="确定要删除这个搜索条件吗？"
                     onConfirm={() => handleDeleteSingle(item)}
-                    okText="确定"
-                    cancelText="取消"
                   >
                     <Button
-                      size="small"
                       danger
                       icon={<DeleteOutlined />}
                       loading={deleteLoading}
+                      size="small"
                     />
                   </Popconfirm>,
                 ]}
+                className={styles.searchItem}
               >
                 <List.Item.Meta
                   avatar={
@@ -395,14 +395,6 @@ const SavedSearchesModal: React.FC<SavedSearchesModalProps> = ({
                       checked={selectedKeys.includes(item.cacheKey)}
                       onChange={handleCheckboxChange(item.cacheKey)}
                     />
-                  }
-                  title={
-                    <div className={styles.searchTitle}>
-                      <span className={styles.searchName}>{item.data.name}</span>
-                      <span className={styles.searchTime}>
-                        {formatCreateTime(item.createTime)}
-                      </span>
-                    </div>
                   }
                   description={
                     <div className={styles.searchDescription}>
@@ -414,6 +406,14 @@ const SavedSearchesModal: React.FC<SavedSearchesModalProps> = ({
                       <div className={styles.searchPreview}>
                         {renderSearchPreview(item.data)}
                       </div>
+                    </div>
+                  }
+                  title={
+                    <div className={styles.searchTitle}>
+                      <span className={styles.searchName}>{item.data.name}</span>
+                      <span className={styles.searchTime}>
+                        {formatCreateTime(item.createTime)}
+                      </span>
                     </div>
                   }
                 />

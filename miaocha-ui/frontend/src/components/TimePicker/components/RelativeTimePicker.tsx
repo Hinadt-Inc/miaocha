@@ -1,8 +1,10 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Checkbox, Button, InputNumber, Select, Typography } from 'antd';
 import dayjs from 'dayjs';
+import type { ManipulateType } from 'dayjs';
+import type { SelectProps } from 'antd/es/select';
 
-import { IRelativeTimePickerProps, ILogTimeSubmitParams, IRelativeTimeState } from '../types';
+import { IRelativeTimePickerProps, ILogTimeSubmitParams, IRelativeTime, IRelativeTimeState } from '../types';
 import { RELATIVE_TIME, DATE_FORMAT_THOUSOND } from '../utils';
 import styles from '../styles/Relative.module.less';
 
@@ -29,20 +31,23 @@ const RelativeTimePicker: React.FC<IRelativeTimePickerProps> = ({ onSubmit }) =>
     isExact: false, // 是否精确到秒
   });
 
-  // 获取时间文本的公共函数
-  const getTimeText = useCallback((option: IRelativeTimeState) => {
+  // 获取时间文本的公共函数（返回字符串，去除 any）
+  const getTimeText = useCallback((option: IRelativeTimeState): string => {
     const now = dayjs();
     const { number, unitEN, isExact, label, format } = option;
-    // 时间的文本
-    let timeString: any;
+
     if (number === 0 && unitEN === 'second') {
-      timeString = CURRENT;
-    } else if (label.endsWith('前')) {
-      timeString = now.subtract(number, unitEN as any).format(isExact ? format : DATE_FORMAT_THOUSOND);
-    } else if (label.endsWith('后')) {
-      timeString = now.add(number, unitEN as any).format(isExact ? format : DATE_FORMAT_THOUSOND);
+      return CURRENT;
     }
-    return timeString;
+
+    const unit = unitEN as ManipulateType;
+    const fmt = isExact ? format : DATE_FORMAT_THOUSOND;
+
+    if (label.endsWith('前')) {
+      return now.subtract(number, unit).format(fmt);
+    }
+    // 其余情况均视为「后」
+    return now.add(number, unit).format(fmt);
   }, []);
 
   // 开始时间
@@ -59,13 +64,14 @@ const RelativeTimePicker: React.FC<IRelativeTimePickerProps> = ({ onSubmit }) =>
     return startTime.isBefore(endTime) || startTime.isSame(endTime);
   }, [startTimeText, endTimeText]);
 
-  // 获取Select配置的公共函数
-  const getSelectProps = useCallback((value: string) => {
-    return {
+  // 获取 Select 配置
+  const getSelectProps = useCallback(
+    (value: string): SelectProps<string, IRelativeTime> => ({
       value,
       options: RELATIVE_TIME,
-    };
-  }, []);
+    }),
+    [],
+  );
 
   // 下拉选择的配置项-开始时间
   const startSelectProps = useMemo(() => getSelectProps(startOption.value), [startOption.value, getSelectProps]);
@@ -76,7 +82,7 @@ const RelativeTimePicker: React.FC<IRelativeTimePickerProps> = ({ onSubmit }) =>
   // 设置为当前时间
   const setToCurrentTime = useCallback(
     (type: 'start' | 'end') => {
-      const resetOption = { ...defaultTime, number: 0, isExact: false };
+      const resetOption: IRelativeTimeState = { ...defaultTime, number: 0, isExact: false };
       if (type === 'start') {
         setStartOption(resetOption);
       } else {
@@ -117,22 +123,33 @@ const RelativeTimePicker: React.FC<IRelativeTimePickerProps> = ({ onSubmit }) =>
         <div className={styles.item}>
           <div className={styles.one}>
             <Text strong>开始时间</Text>
-            <Button color="primary" variant="link" size="small" onClick={() => setToCurrentTime('start')}>
+            <Button color="primary" size="small" variant="link" onClick={() => setToCurrentTime('start')}>
               设置为当前时间
             </Button>
           </div>
           <Text type="secondary">{startTimeText}</Text>
           <InputNumber
-            min="0"
-            max="999999999"
-            changeOnWheel
-            value={String(startOption.number || 0)}
-            onChange={(number) => setStartOption((prev) => ({ ...prev, number: Number(number) || 0 }))}
-            parser={(value) => (value ? parseInt(value) : 0) as any}
-            formatter={(value) => (value ? parseInt(value).toString() : '0')}
             addonAfter={
-              <Select {...startSelectProps} onChange={(_, item) => setStartOption((prev) => ({ ...prev, ...item }))} />
+              <Select
+                {...startSelectProps}
+                onChange={(_value, option) => setStartOption((prev) => ({ ...prev, ...(option as IRelativeTime) }))}
+              />
             }
+            changeOnWheel
+            formatter={(value) => {
+              const v = String(value ?? '');
+              const n = parseInt(v, 10);
+              return Number.isNaN(n) ? '0' : String(n);
+            }}
+            max={999999999}
+            min={0}
+            parser={(value) => {
+              const v = String(value ?? '0');
+              const n = parseInt(v, 10);
+              return Number.isNaN(n) ? 0 : n;
+            }}
+            value={startOption.number || 0}
+            onChange={(num) => setStartOption((prev) => ({ ...prev, number: Number(num ?? 0) }))}
           />
           <Checkbox
             checked={startOption.isExact}
@@ -145,22 +162,33 @@ const RelativeTimePicker: React.FC<IRelativeTimePickerProps> = ({ onSubmit }) =>
         <div className={styles.item}>
           <div className={styles.one}>
             <Text strong>结束时间</Text>
-            <Button color="primary" variant="link" size="small" onClick={() => setToCurrentTime('end')}>
+            <Button color="primary" size="small" variant="link" onClick={() => setToCurrentTime('end')}>
               设置为当前时间
             </Button>
           </div>
           <Text type="secondary">{endTimeText}</Text>
           <InputNumber
-            min="0"
-            max="999999999"
-            changeOnWheel
-            value={String(endOption.number || 0)}
-            onChange={(number) => setEndOption((prev) => ({ ...prev, number: Number(number) || 0 }))}
-            parser={(value) => (value ? parseInt(value) : 0) as any}
-            formatter={(value) => (value ? parseInt(value).toString() : '0')}
             addonAfter={
-              <Select {...endSelectProps} onChange={(_, item) => setEndOption((prev) => ({ ...prev, ...item }))} />
+              <Select
+                {...endSelectProps}
+                onChange={(_value, option) => setEndOption((prev) => ({ ...prev, ...(option as IRelativeTime) }))}
+              />
             }
+            changeOnWheel
+            formatter={(value) => {
+              const v = String(value ?? '');
+              const n = parseInt(v, 10);
+              return Number.isNaN(n) ? '0' : String(n);
+            }}
+            max={999999999}
+            min={0}
+            parser={(value) => {
+              const v = String(value ?? '0');
+              const n = parseInt(v, 10);
+              return Number.isNaN(n) ? 0 : n;
+            }}
+            value={endOption.number || 0}
+            onChange={(num) => setEndOption((prev) => ({ ...prev, number: Number(num ?? 0) }))}
           />
           <Checkbox
             checked={endOption.isExact}
@@ -172,7 +200,7 @@ const RelativeTimePicker: React.FC<IRelativeTimePickerProps> = ({ onSubmit }) =>
       </div>
       <div className={styles.btn}>
         <Text type="danger">{!validateTime() && '请确保开始时间不大于结束时间'}</Text>
-        <Button size="small" type="primary" disabled={!validateTime()} onClick={handleSubmit}>
+        <Button disabled={!validateTime()} size="small" type="primary" onClick={handleSubmit}>
           确定
         </Button>
       </div>

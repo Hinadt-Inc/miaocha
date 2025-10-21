@@ -26,22 +26,21 @@ const MachineManagementPage = () => {
       <div className={styles.tableContainer}>
         <div style={{ position: 'relative' }}>
           <Table
-            dataSource={data}
+            bordered
             columns={columns}
-            size="small"
-            rowKey="id"
+            dataSource={data}
             pagination={{
               ...pagination,
               total: data.length,
             }}
+            rowKey="id"
+            size="small"
             onChange={handleTableChange}
-            bordered
           />
           {loading && (
             <Loading
               fullScreen={false}
               size="large"
-              tip="加载机器数据..."
               style={{
                 position: 'absolute',
                 top: 0,
@@ -52,6 +51,7 @@ const MachineManagementPage = () => {
                 backgroundColor: 'rgba(255, 255, 255, 0.8)',
                 backdropFilter: 'blur(2px)',
               }}
+              tip="加载机器数据..."
             />
           )}
         </div>
@@ -59,11 +59,11 @@ const MachineManagementPage = () => {
 
       {/* 新增机器模态框 */}
       <MachineFormModal
-        title="新增机器"
-        open={actions.createModalVisible}
         form={actions.form}
         loading={actions.loading}
+        open={actions.createModalVisible}
         testingConnection={actions.testingConnection}
+        title="新增机器"
         onCancel={actions.handleCloseCreate}
         onFinish={actions.handleCreate}
         onTestConnection={actions.handleTestConnection}
@@ -71,11 +71,11 @@ const MachineManagementPage = () => {
 
       {/* 编辑机器模态框 */}
       <MachineFormModal
-        title="编辑机器"
-        open={actions.editModalVisible}
         form={actions.form}
         loading={actions.loading}
+        open={actions.editModalVisible}
         testingConnection={actions.testingConnection}
+        title="编辑机器"
         onCancel={actions.handleCloseEdit}
         onFinish={actions.handleEdit}
         onTestConnection={actions.handleTestConnection}

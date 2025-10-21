@@ -16,11 +16,11 @@ const KeywordInput: React.FC<IKeywordInputProps> = ({ value, onChange }) => {
     <Space.Compact style={{ width: '100%' }}>
       <AutoComplete
         allowClear
+        options={[]}
         placeholder={PLACEHOLDERS.KEYWORD}
         style={{ width: '100%' }}
         value={value}
         onChange={onChange}
-        options={[]}
       />
     </Space.Compact>
   );

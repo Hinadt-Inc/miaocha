@@ -187,29 +187,29 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
     <>
       {contextHolder}
       <Modal
-        title={`配置查询设置 - ${moduleName}`}
-        open={visible}
-        onCancel={handleCancel}
         footer={[
           <Button key="cancel" onClick={handleCancel}>
             取消
           </Button>,
-          <Button key="submit" type="primary" loading={submitting} onClick={handleSubmit}>
+          <Button key="submit" loading={submitting} type="primary" onClick={handleSubmit}>
             保存
           </Button>,
         ]}
-        width={600}
         maskClosable={false}
+        open={visible}
+        title={`配置查询设置 - ${moduleName}`}
+        width={600}
+        onCancel={handleCancel}
       >
         <div className={styles.container}>
           <Form
             form={form}
-            layout="vertical"
             initialValues={{
               timeField: '',
               excludeFields: [],
               keywordFields: [{ fieldName: '', searchMethod: 'LIKE' }],
             }}
+            layout="vertical"
             onValuesChange={(changedValues, allValues) => {
               // 当字段名发生变化时，检查并自动设置特殊字段的检索方法为LIKE
               if (changedValues.keywordFields) {
@@ -258,19 +258,19 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
               rules={[{ required: true, message: '请选择时间字段' }]}
             >
               <AutoComplete
-                placeholder="请选择时间字段"
+                allowClear
+                filterOption={(inputValue, option) =>
+                  option?.value.toString().toLowerCase().includes(inputValue.toLowerCase()) || false
+                }
+                maxLength={128}
+                notFoundContent={loadingFields ? '加载中...' : '无匹配字段'}
                 options={fieldNames.map((field) => ({
                   value: field,
                   label: field,
                 }))}
-                filterOption={(inputValue, option) =>
-                  option?.value.toString().toLowerCase().includes(inputValue.toLowerCase()) || false
-                }
+                placeholder="请选择时间字段"
                 onBlur={() => updateExcludeFieldNames()}
                 onChange={(value) => updateExcludeFieldNames(value)}
-                notFoundContent={loadingFields ? '加载中...' : '无匹配字段'}
-                allowClear
-                maxLength={128}
               />
             </Form.Item>
             <Form.Item
@@ -285,14 +285,14 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
               name="excludeFields"
             >
               <Select
+                allowClear
                 mode="multiple"
-                placeholder="请选择需要排除的字段"
+                notFoundContent={loadingFields ? '加载中...' : '无匹配字段'}
                 options={excludeFieldNames.map((field) => ({
                   value: field,
                   label: field,
                 }))}
-                notFoundContent={loadingFields ? '加载中...' : '无匹配字段'}
-                allowClear
+                placeholder="请选择需要排除的字段"
               />
             </Form.Item>
 
@@ -304,6 +304,7 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
                       <div key={key} className={styles.keywordFieldRow}>
                         <Form.Item
                           {...restField}
+                          className={styles.fieldNameInput}
                           name={[name, 'fieldName']}
                           rules={[
                             { required: true, message: '请输入字段名称' },
@@ -319,35 +320,19 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
                               validator: validateFieldNameUnique,
                             },
                           ]}
-                          className={styles.fieldNameInput}
                         >
                           <AutoComplete
-                            placeholder="字段名称，如：message"
+                            allowClear
+                            filterOption={(inputValue, option) =>
+                              option?.value.toString().toLowerCase().includes(inputValue.toLowerCase()) || false
+                            }
+                            maxLength={128}
+                            notFoundContent={loadingFields ? '加载中...' : '无匹配字段'}
                             options={fieldNames.map((field) => ({
                               value: field,
                               label: field,
                             }))}
-                            filterOption={(inputValue, option) =>
-                              option?.value.toString().toLowerCase().includes(inputValue.toLowerCase()) || false
-                            }
-                            notFoundContent={loadingFields ? '加载中...' : '无匹配字段'}
-                            allowClear
-                            onSelect={(value) => {
-                              // 确保选择的值能正确设置到表单中
-                              const currentValues = form.getFieldsValue();
-                              const newKeywordFields = [...(currentValues.keywordFields || [])];
-                              if (newKeywordFields[index]) {
-                                newKeywordFields[index].fieldName = value;
-                                // 如果是特殊字段格式，自动设置为 LIKE
-                                if (isSpecialField(value)) {
-                                  newKeywordFields[index].searchMethod = 'LIKE';
-                                }
-                                form.setFieldsValue({
-                                  ...currentValues,
-                                  keywordFields: newKeywordFields,
-                                });
-                              }
-                            }}
+                            placeholder="字段名称，如：message"
                             onChange={(value) => {
                               // 当用户手动输入时也检查是否为特殊字段
                               if (typeof value === 'string') {
@@ -366,18 +351,33 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
                                 }
                               }
                             }}
-                            maxLength={128}
+                            onSelect={(value) => {
+                              // 确保选择的值能正确设置到表单中
+                              const currentValues = form.getFieldsValue();
+                              const newKeywordFields = [...(currentValues.keywordFields || [])];
+                              if (newKeywordFields[index]) {
+                                newKeywordFields[index].fieldName = value;
+                                // 如果是特殊字段格式，自动设置为 LIKE
+                                if (isSpecialField(value)) {
+                                  newKeywordFields[index].searchMethod = 'LIKE';
+                                }
+                                form.setFieldsValue({
+                                  ...currentValues,
+                                  keywordFields: newKeywordFields,
+                                });
+                              }
+                            }}
                           />
                         </Form.Item>
                         <Form.Item
                           {...restField}
+                          className={styles.searchMethodSelect}
                           name={[name, 'searchMethod']}
                           rules={[{ required: true, message: '请选择检索方法' }]}
-                          className={styles.searchMethodSelect}
                         >
                           <Select
-                            placeholder="检索方法"
                             disabled={disabledFields.includes(index)}
+                            placeholder="检索方法"
                             onChange={(value) => {
                               // 手动处理onChange事件，确保表单值正确更新
                               const formValues = form.getFieldsValue();
@@ -403,10 +403,10 @@ const ModuleQueryConfigModal: React.FC<ModuleQueryConfigModalProps> = ({
                     ))}
                     <Form.Item>
                       <Button
-                        type="dashed"
-                        onClick={() => add({ fieldName: '', searchMethod: 'LIKE' })}
                         block
                         icon={<PlusOutlined />}
+                        type="dashed"
+                        onClick={() => add({ fieldName: '', searchMethod: 'LIKE' })}
                       >
                         添加关键词字段
                       </Button>

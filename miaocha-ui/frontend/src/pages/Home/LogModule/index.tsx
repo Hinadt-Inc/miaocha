@@ -43,8 +43,8 @@ const Log: React.FC<ILogProps> = (props) => {
   });
 
   return (
-    <Splitter layout="vertical" className={styles.logContainer}>
-      <Splitter.Panel collapsible defaultSize={170} min={170} max={170}>
+    <Splitter className={styles.logContainer} layout="vertical">
+      <Splitter.Panel collapsible defaultSize={170} max={170} min={170}>
         <LogChart data={histogramData} searchParams={searchParams} onSearch={onSearch} />
       </Splitter.Panel>
       <Splitter.Panel>

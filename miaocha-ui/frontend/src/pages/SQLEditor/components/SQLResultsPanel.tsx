@@ -67,39 +67,39 @@ export const SQLResultsPanel: React.FC<SQLResultsPanelProps> = ({
 
   return (
     <Card
-      title={<Tabs activeKey={activeTab} onChange={onTabChange} className={styles.resultsTabs} items={tabItems} />}
       className={styles.resultsCard}
-      style={{ height: '100%', overflow: 'auto' }}
       extra={
         activeTab === 'results' && (
           <Button
+            aria-label="下载查询结果"
+            disabled={!queryResults?.rows?.length}
             type="primary"
             onClick={onDownloadResults}
-            disabled={!queryResults?.rows?.length}
-            aria-label="下载查询结果"
           >
             下载CSV
           </Button>
         )
       }
+      style={{ height: '100%', overflow: 'auto' }}
+      title={<Tabs activeKey={activeTab} className={styles.resultsTabs} items={tabItems} onChange={onTabChange} />}
     >
       {activeTab === 'results' ? (
         <ResultsViewer
-          queryResults={queryResults}
-          loading={loading}
           downloadResults={onDownloadResults}
           formatTableCell={(value) => formatTableCell(value)}
+          loading={loading}
+          queryResults={queryResults}
         />
       ) : (
         <VisualizationPanel
-          queryResults={queryResults}
           chartType={chartType}
-          setChartType={onChartTypeChange}
-          xField={xField}
-          setXField={onXFieldChange}
-          yField={yField}
-          setYField={onYFieldChange}
           fullscreen={fullscreen}
+          queryResults={queryResults}
+          setChartType={onChartTypeChange}
+          setXField={onXFieldChange}
+          setYField={onYFieldChange}
+          xField={xField}
+          yField={yField}
         />
       )}
     </Card>

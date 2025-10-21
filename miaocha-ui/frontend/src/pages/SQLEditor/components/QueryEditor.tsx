@@ -87,7 +87,7 @@ const QueryEditor: React.FC<QueryEditorProps> = ({
     if (isCollapsed || !containerRef.current || !monacoInitialized) return;
 
     let isMounted = true;
-    let disposables: monaco.IDisposable[] = [];
+    const disposables: monaco.IDisposable[] = [];
 
     const initEditor = () => {
       try {

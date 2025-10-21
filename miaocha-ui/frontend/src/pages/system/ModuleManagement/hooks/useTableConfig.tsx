@@ -41,9 +41,9 @@ export const useTableConfig = ({
       render: (text: string, record: ModuleData) => (
         <Tag
           color="#1677ff"
-          onClick={() => onViewDetail(record)}
-          style={{ cursor: 'pointer' }}
           icon={<DatabaseOutlined />}
+          style={{ cursor: 'pointer' }}
+          onClick={() => onViewDetail(record)}
         >
           {text}
         </Tag>
@@ -68,11 +68,11 @@ export const useTableConfig = ({
       width: 80,
       render: (status: number, record: ModuleData) => (
         <Popconfirm
-          title={`确认${status ? '禁用' : '启用'}该模块吗？`}
-          description={`${status ? '禁用后该模块将无法使用' : '启用后该模块可以正常使用'}`}
-          onConfirm={() => onStatusToggle(record)}
-          okText="确认"
           cancelText="取消"
+          description={`${status ? '禁用后该模块将无法使用' : '启用后该模块可以正常使用'}`}
+          okText="确认"
+          title={`确认${status ? '禁用' : '启用'}该模块吗？`}
+          onConfirm={() => onStatusToggle(record)}
         >
           <Switch checked={status === 1} size="small" />
         </Popconfirm>
@@ -113,25 +113,25 @@ export const useTableConfig = ({
       fixed: 'right' as const,
       width: 220,
       render: (_: any, record: ModuleData) => (
-        <Space size={0} className={styles.tableActionButtons}>
+        <Space className={styles.tableActionButtons} size={0}>
           {/* <Button type="link" onClick={() => onViewDetail(record)} className={styles.actionButton}>
             详情
           </Button> */}
-          <Button type="link" onClick={() => onEdit(record)} className={styles.actionButton}>
+          <Button className={styles.actionButton} type="link" onClick={() => onEdit(record)}>
             编辑
           </Button>
-          <Button type="link" onClick={() => onExecuteSql(record)} className={styles.actionButton}>
+          <Button className={styles.actionButton} type="link" onClick={() => onExecuteSql(record)}>
             {record.dorisSql?.trim() ? '查看SQL' : '执行SQL'}
           </Button>
           <Button
+            className={styles.actionButton}
             type="link"
             // icon={<SettingOutlined />}
             onClick={() => onConfig(record)}
-            className={styles.actionButton}
           >
             配置
           </Button>
-          <Button type="link" danger className={styles.actionButton} onClick={() => onDelete(record)}>
+          <Button className={styles.actionButton} danger type="link" onClick={() => onDelete(record)}>
             删除
           </Button>
         </Space>

@@ -23,7 +23,7 @@ const MachinePageHeader: React.FC<MachinePageHeaderProps> = ({ loading, onAdd })
         ]}
       />
       <div className="actions">
-        <Button type="primary" icon={<PlusOutlined />} onClick={onAdd} loading={loading}>
+        <Button icon={<PlusOutlined />} loading={loading} type="primary" onClick={onAdd}>
           新增机器
         </Button>
       </div>

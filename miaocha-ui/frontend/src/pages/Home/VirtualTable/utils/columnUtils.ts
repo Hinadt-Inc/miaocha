@@ -11,8 +11,8 @@
  */
 export const getTextWidth = (
   text: string, 
-  fontSize: number = 14, 
-  fontFamily: string = 'Arial'
+  fontSize = 14, 
+  fontFamily = 'Arial'
 ): number => {
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
@@ -34,8 +34,8 @@ export const getTextWidth = (
 export const getAutoColumnWidth = (
   columnName: string, 
   screenWidth: number, 
-  minWidth: number = 120, 
-  maxWidth: number = 400
+  minWidth = 120, 
+  maxWidth = 400
 ): number => {
   const textWidth = getTextWidth(columnName, 14, '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto');
   // 添加padding和排序图标空间：

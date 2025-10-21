@@ -57,9 +57,9 @@ const ModuleManagementPage = () => {
       {!actions.isReadOnlyMode && (
         <Tooltip title="应用模板的Doris SQL语句">
           <Button
-            type="text"
-            icon={<DatabaseOutlined />}
             className={styles.templateButton}
+            icon={<DatabaseOutlined />}
+            type="text"
             onClick={actions.handleApplyTemplate}
           />
         </Tooltip>
@@ -73,34 +73,33 @@ const ModuleManagementPage = () => {
 
       <div className={styles.header}>
         <ModulePageHeader
-          searchText={searchText}
           loading={loading}
-          onSearch={handleSearch}
+          searchText={searchText}
           onAdd={() => actions.handleAddEdit()}
           onReload={handleReload}
+          onSearch={handleSearch}
         />
       </div>
 
       <div className={styles.antTable}>
         <div style={{ position: 'relative' }}>
           <Table
+            bordered
             columns={columns}
             dataSource={data}
-            rowKey="key"
-            scroll={{ x: 1340 }}
-            size="small"
-            bordered
             pagination={{
               ...pagination,
               total: data.length,
             }}
+            rowKey="key"
+            scroll={{ x: 1340 }}
+            size="small"
             onChange={handleTableChange}
           />
           {loading && (
             <Loading
               fullScreen={false}
               size="large"
-              tip="加载模块数据..."
               style={{
                 position: 'absolute',
                 top: 0,
@@ -111,6 +110,7 @@ const ModuleManagementPage = () => {
                 backgroundColor: 'rgba(255, 255, 255, 0.8)',
                 backdropFilter: 'blur(2px)',
               }}
+              tip="加载模块数据..."
             />
           )}
         </div>
@@ -118,48 +118,48 @@ const ModuleManagementPage = () => {
 
       {/* 表单模态框 */}
       <ModuleFormModal
-        visible={actions.formModalVisible}
-        selectedRecord={actions.selectedRecord}
         dataSources={dataSources}
-        onSubmit={actions.handleFormSubmit}
+        selectedRecord={actions.selectedRecord}
+        visible={actions.formModalVisible}
         onCancel={() => actions.setFormModalVisible(false)}
+        onSubmit={actions.handleFormSubmit}
       />
 
       {/* 详情模态框 */}
       <ModuleDetailModal
-        visible={actions.detailModalVisible}
         moduleDetail={actions.moduleDetail}
+        visible={actions.detailModalVisible}
         onCancel={() => actions.setDetailModalVisible(false)}
       />
 
       {/* 删除确认模态框 */}
       <DeleteConfirmModal
-        visible={actions.deleteModalVisible}
-        deleteRecord={actions.deleteRecord}
         deleteDorisTable={actions.deleteDorisTable}
-        onDeleteDorisTableChange={actions.setDeleteDorisTable}
-        onConfirm={actions.handleDeleteConfirm}
+        deleteRecord={actions.deleteRecord}
+        visible={actions.deleteModalVisible}
         onCancel={() => actions.setDeleteModalVisible(false)}
+        onConfirm={actions.handleDeleteConfirm}
+        onDeleteDorisTableChange={actions.setDeleteDorisTable}
       />
 
       {/* SQL执行模态框 */}
       <ExecuteConfirmationModal
-        visible={actions.sqlModalVisible}
-        sql={actions.executeSql}
-        onConfirm={actions.handleSqlExecuteConfirm}
-        onCancel={() => actions.setSqlModalVisible(false)}
-        onSqlChange={actions.setExecuteSql}
         loading={actions.executing}
         readonly={actions.isReadOnlyMode}
+        sql={actions.executeSql}
         title={sqlModalTitle}
+        visible={actions.sqlModalVisible}
+        onCancel={() => actions.setSqlModalVisible(false)}
+        onConfirm={actions.handleSqlExecuteConfirm}
+        onSqlChange={actions.setExecuteSql}
       />
 
       {/* 配置模态框 */}
       <ModuleQueryConfigModal
-        visible={actions.configModalVisible}
         moduleId={actions.configRecord ? Number(actions.configRecord.key) : null}
         moduleName={actions.configRecord?.name || ''}
         queryConfig={actions.configRecord?.queryConfig}
+        visible={actions.configModalVisible}
         onCancel={() => actions.setConfigModalVisible(false)}
         onSuccess={actions.handleConfigSuccess}
       />

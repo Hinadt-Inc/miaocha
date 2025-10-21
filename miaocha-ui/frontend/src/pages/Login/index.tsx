@@ -175,14 +175,14 @@ const LoginPage = () => {
 
   return (
     <div className={styles.loginPage}>
-      <video autoPlay muted loop playsInline className={styles.videoBackground} poster={login_bg_poster}>
+      <video autoPlay className={styles.videoBackground} loop muted playsInline poster={login_bg_poster}>
         <source src={login_bg_video} type="video/mp4" />
       </video>
 
       <div className={styles.contentWrapper}>
         <div className={styles.brandSection}>
           <div className={styles.logoContainer}>
-            <img src="/logo.png" alt="Logo" className={styles.logo} />
+            <img alt="Logo" className={styles.logo} src="/logo.png" />
             <span className={styles.brandName}>秒查</span>
           </div>
           <div className={styles.slogan}>一站式日志采集、日志查询、日志分析</div>
@@ -194,45 +194,45 @@ const LoginPage = () => {
           {/* 错误信息显示 */}
           {error && (
             <Alert
-              message={error}
-              type="error"
-              showIcon
               closable
-              onClose={() => setError('')}
+              message={error}
+              showIcon
               style={{ marginBottom: 16 }}
+              type="error"
+              onClose={() => setError('')}
             />
           )}
 
           {/* OAuth回调处理中的提示 */}
           {casLoading && (
-            <Alert message="正在处理第三方登录，请稍候..." type="info" showIcon style={{ marginBottom: 16 }} />
+            <Alert message="正在处理第三方登录，请稍候..." showIcon style={{ marginBottom: 16 }} type="info" />
           )}
 
-          <Form form={form} onFinish={onFinish} size="large" layout="vertical" className={styles.loginForm}>
+          <Form className={styles.loginForm} form={form} layout="vertical" size="large" onFinish={onFinish}>
             <Form.Item
               name="username"
-              rules={[{ required: true, message: '请输入用户名' }]}
               normalize={(value) => value.trim()}
+              rules={[{ required: true, message: '请输入用户名' }]}
             >
-              <Input prefix={<UserOutlined />} placeholder="用户名" allowClear maxLength={30} />
+              <Input allowClear maxLength={30} placeholder="用户名" prefix={<UserOutlined />} />
             </Form.Item>
 
             <Form.Item
               name="password"
-              rules={[{ required: true, message: '请输入密码' }]}
               normalize={(value) => value.trim()}
+              rules={[{ required: true, message: '请输入密码' }]}
             >
-              <Input.Password prefix={<LockOutlined />} placeholder="密码" allowClear maxLength={30} />
+              <Input.Password allowClear maxLength={30} placeholder="密码" prefix={<LockOutlined />} />
             </Form.Item>
 
             <Form.Item>
               <Button
-                type="primary"
-                htmlType="submit"
                 block
-                size="large"
-                loading={loading || casLoading}
                 disabled={loading || casLoading}
+                htmlType="submit"
+                loading={loading || casLoading}
+                size="large"
+                type="primary"
               >
                 {(() => {
                   if (casLoading) return '正在处理第三方登录...';

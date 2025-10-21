@@ -28,17 +28,17 @@ const ModulePageHeader: React.FC<ModulePageHeaderProps> = ({ searchText, loading
       />
       <Space>
         <Input
+          allowClear
+          className={styles.searchInput}
           placeholder="搜索模块/数据源/表名"
+          suffix={<SearchOutlined />}
           value={searchText}
           onChange={(e) => onSearch(e.target.value)}
-          className={styles.searchInput}
-          allowClear
-          suffix={<SearchOutlined />}
         />
-        <Button icon={<ReloadOutlined />} onClick={onReload} loading={loading}>
+        <Button icon={<ReloadOutlined />} loading={loading} onClick={onReload}>
           刷新
         </Button>
-        <Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>
+        <Button icon={<PlusOutlined />} type="primary" onClick={onAdd}>
           添加模块
         </Button>
       </Space>

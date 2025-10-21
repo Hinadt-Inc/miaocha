@@ -97,15 +97,15 @@ export default function LogstashScaleModal({
 
   return (
     <Modal
-      title={`扩容 - ${currentProcess?.name || ''}`}
-      open={visible}
-      onOk={handleOk}
-      onCancel={handleCancel}
       confirmLoading={confirmLoading}
-      width={600}
       maskClosable={false}
+      open={visible}
+      title={`扩容 - ${currentProcess?.name || ''}`}
+      width={600}
+      onCancel={handleCancel}
+      onOk={handleOk}
     >
-      <Form form={form} layout="vertical" initialValues={initialParams}>
+      <Form form={form} initialValues={initialParams} layout="vertical">
         <Title level={5}>当前进程信息</Title>
         <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 4 }}>
           <Text strong>进程名称: </Text>
@@ -124,16 +124,16 @@ export default function LogstashScaleModal({
         <Divider />
 
         <Title level={5}>扩容操作</Title>
-        <Form.Item name="addMachineIds" label="添加机器" help={`共 ${machines.length} 台机器可选`}>
+        <Form.Item help={`共 ${machines.length} 台机器可选`} label="添加机器" name="addMachineIds">
           <Select
-            mode="multiple"
-            placeholder="选择要添加的机器"
-            loading={loading}
-            showSearch
             filterOption={(input, option) => {
               const label = option?.label as string;
               return label?.toLowerCase().includes(input.toLowerCase());
             }}
+            loading={loading}
+            mode="multiple"
+            placeholder="选择要添加的机器"
+            showSearch
           >
             {machines.map((machine) => {
               const instanceCount = getCurrentProcessMachineInstanceCount(machine.ip);
@@ -149,11 +149,11 @@ export default function LogstashScaleModal({
         <Divider />
 
         <Title level={5}>部署配置</Title>
-        <Form.Item name="customDeployPath" label="自定义部署路径" help="可选，留空则使用默认路径">
+        <Form.Item help="可选，留空则使用默认路径" label="自定义部署路径" name="customDeployPath">
           <Input placeholder="例如: /opt/logstash" />
         </Form.Item>
 
-        <Form.Item name="forceScale" valuePropName="checked" help="强制执行扩容操作，即使某些检查失败">
+        <Form.Item help="强制执行扩容操作，即使某些检查失败" name="forceScale" valuePropName="checked">
           <Checkbox>强制执行</Checkbox>
         </Form.Item>
       </Form>

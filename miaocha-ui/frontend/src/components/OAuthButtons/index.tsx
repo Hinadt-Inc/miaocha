@@ -49,15 +49,12 @@ const OAuthButtons = ({ onError }: OAuthButtonsProps) => {
           );
           setProviders(enabledProviders);
         }
-      } catch (error) {
-        console.error('获取第三方登录提供者失败:', error);
-        onError?.('无法加载第三方登录选项');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProviders();
+    void fetchProviders();
   }, [onError]);
 
   // 防抖处理鼠标悬停状态
@@ -133,15 +130,15 @@ const OAuthButtons = ({ onError }: OAuthButtonsProps) => {
 
       <div className={styles.providersContainer}>
         <button
+          aria-label={`使用 ${primaryProvider.displayName} 登录`}
           className={`${styles.compactOAuthButton} ${initiatingLogin === primaryProvider.providerId ? styles.loading : ''} ${isHovered ? styles.hovered : ''}`}
+          disabled={!!initiatingLogin}
           onClick={() => handleOAuthLogin(primaryProvider)}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
-          disabled={!!initiatingLogin}
-          aria-label={`使用 ${primaryProvider.displayName} 登录`}
         >
           {primaryProvider.iconUrl && (
-            <img src={primaryProvider.iconUrl} alt={primaryProvider.displayName} className={styles.compactIcon} />
+            <img alt={primaryProvider.displayName} className={styles.compactIcon} src={primaryProvider.iconUrl} />
           )}
           <span className={styles.buttonText}>
             {initiatingLogin === primaryProvider.providerId

@@ -76,7 +76,7 @@ const LogstashManagementPage = () => {
   };
 
   const renderExpandedRow = (record: any) => (
-    <ExpandedRowRenderer record={record} data={data} machineActions={machineActions} />
+    <ExpandedRowRenderer data={data} machineActions={machineActions} record={record} />
   );
 
   const handleScale = async (
@@ -103,36 +103,35 @@ const LogstashManagementPage = () => {
       {contextHolder}
       <div className={styles.header}>
         <LogstashPageHeader
+          className={styles.tableToolbar}
           loading={loading}
           onAdd={actions.handleAdd}
           onReload={handleReload}
-          className={styles.tableToolbar}
         />
       </div>
 
       <div className={styles.antTable}>
         <div style={{ position: 'relative' }}>
           <Table
+            bordered
             columns={columns}
             dataSource={data}
-            size="small"
-            rowKey="id"
-            bordered
-            scroll={{ x: 'max-content' }}
+            expandable={{
+              expandedRowRender: renderExpandedRow,
+            }}
             pagination={{
               ...pagination,
               total: data.length,
             }}
+            rowKey="id"
+            scroll={{ x: 'max-content' }}
+            size="small"
             onChange={handleTableChange}
-            expandable={{
-              expandedRowRender: renderExpandedRow,
-            }}
           />
           {loading && (
             <Loading
               fullScreen={false}
               size="large"
-              tip="加载Logstash数据..."
               style={{
                 position: 'absolute',
                 top: 0,
@@ -143,6 +142,7 @@ const LogstashManagementPage = () => {
                 backgroundColor: 'rgba(255, 255, 255, 0.8)',
                 backdropFilter: 'blur(2px)',
               }}
+              tip="加载Logstash数据..."
             />
           )}
         </div>
@@ -150,43 +150,37 @@ const LogstashManagementPage = () => {
 
       {/* 告警模态框 */}
       <LogstashAlertModal
+        initialValues={actions.currentProcess}
         visible={actions.alertModalVisible}
         onCancel={() => actions.setAlertModalVisible(false)}
         onOk={actions.handleSubmitAlert}
-        initialValues={actions.currentProcess}
       />
 
       {/* 编辑模态框 */}
       <LogstashEditModal
+        initialValues={actions.currentProcess}
         visible={actions.editModalVisible}
         onCancel={() => actions.setEditModalVisible(false)}
         onOk={actions.handleSubmit}
-        initialValues={actions.currentProcess}
       />
 
       {/* 任务历史模态框 */}
       <TaskHistoryModal
+        taskSummaries={actions.taskSummaries}
         visible={actions.summaryModalVisible}
         onClose={() => actions.setSummaryModalVisible(false)}
-        taskSummaries={actions.taskSummaries}
         onShowSteps={showTaskSteps}
       />
 
       {/* 任务详情模态框 */}
       <TaskDetailModal
+        selectedTask={selectedTask}
         visible={stepsModalVisible}
         onClose={() => setStepsModalVisible(false)}
-        selectedTask={selectedTask}
       />
 
       {/* 进程详情模态框 */}
       <LogstashDetailModal
-        visible={actions.currentDetail ? !!actions.detailModalVisible[actions.currentDetail.id] : false}
-        onClose={() => {
-          if (actions.currentDetail) {
-            actions.setDetailModalVisible({ ...actions.detailModalVisible, [actions.currentDetail.id]: false });
-          }
-        }}
         detail={actions.currentDetail || null}
         styles={{
           configSection: styles.configSection,
@@ -194,30 +188,36 @@ const LogstashManagementPage = () => {
           configContent: styles.configContent,
           machineStatusSection: styles.machineStatusSection,
         }}
+        visible={actions.currentDetail ? !!actions.detailModalVisible[actions.currentDetail.id] : false}
+        onClose={() => {
+          if (actions.currentDetail) {
+            actions.setDetailModalVisible({ ...actions.detailModalVisible, [actions.currentDetail.id]: false });
+          }
+        }}
       />
 
       {/* 机器任务模态框 */}
       <MachineTasksModal
-        visible={machineActions.machineTasksModalVisible}
-        onClose={() => machineActions.setMachineTasksModalVisible(false)}
-        machineTasks={machineActions.machineTasks}
         loading={machineActions.machineTasksLoading}
         machineId={machineActions.currentMachine?.logstashMachineId || 0}
+        machineTasks={machineActions.machineTasks}
+        visible={machineActions.machineTasksModalVisible}
+        onClose={() => machineActions.setMachineTasksModalVisible(false)}
       />
 
       {/* 机器配置模态框 */}
       <LogstashMachineConfigModal
-        visible={machineActions.machineConfigModalVisible}
-        onCancel={() => machineActions.setMachineConfigModalVisible(false)}
-        processId={machineActions.currentMachine?.processId || 0}
-        logstashMachineId={machineActions.currentMachine?.logstashMachineId || 0}
-        moduleName={machineActions.currentMachine?.moduleName}
-        processName={machineActions.currentMachine?.processName}
         initialConfig={{
           configContent: machineActions.currentMachine?.configContent,
           jvmOptions: machineActions.currentMachine?.jvmOptions,
           logstashYml: machineActions.currentMachine?.logstashYml,
         }}
+        logstashMachineId={machineActions.currentMachine?.logstashMachineId || 0}
+        moduleName={machineActions.currentMachine?.moduleName}
+        processId={machineActions.currentMachine?.processId || 0}
+        processName={machineActions.currentMachine?.processName}
+        visible={machineActions.machineConfigModalVisible}
+        onCancel={() => machineActions.setMachineConfigModalVisible(false)}
         onSuccess={() => {
           fetchData();
         }}
@@ -225,16 +225,18 @@ const LogstashManagementPage = () => {
 
       {/* 机器详情模态框 */}
       <LogstashMachineDetailModal
+        detail={machineActions.currentMachineDetail}
         visible={machineActions.machineDetailModalVisible}
         onCancel={() => {
           machineActions.setMachineDetailModalVisible(false);
           machineActions.setCurrentMachineDetail(undefined);
         }}
-        detail={machineActions.currentMachineDetail}
       />
 
       {/* 扩容模态框 */}
       <LogstashScaleModal
+        currentProcess={actions.currentProcess}
+        initialParams={scaleParams}
         visible={actions.scaleModalVisible}
         onCancel={() => actions.setScaleModalVisible(false)}
         onOk={async (params: {
@@ -252,21 +254,19 @@ const LogstashManagementPage = () => {
             await handleScale(actions.currentProcess.id, validParams);
           }
         }}
-        currentProcess={actions.currentProcess}
-        initialParams={scaleParams}
       />
 
       {/* 日志模态框 */}
       <LogstashLogTailModal
-        visible={machineActions.logTailModalVisible}
         logstashMachineId={machineActions.currentLogTailMachineId || 0}
+        visible={machineActions.logTailModalVisible}
         onCancel={() => machineActions.setLogTailModalVisible(false)}
       />
 
       {/* 底部日志模态框 */}
       <LogstashLogTailModal
-        visible={machineActions.bottomLogTailModalVisible}
         logstashMachineId={machineActions.currentLogTailMachineId || 0}
+        visible={machineActions.bottomLogTailModalVisible}
         onCancel={() => machineActions.setBottomLogTailModalVisible(false)}
       />
     </div>

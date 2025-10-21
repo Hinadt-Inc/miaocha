@@ -122,8 +122,8 @@ const FieldListItem: React.FC<IFieldListItemProps> = memo(
     const isTimeField = isSelected && column.columnName === timeField;
 
     // 获取分布数据
-    const dist = distributions[column.columnName as string];
-    const isLoading = distributionLoading[column.columnName as string];
+    const dist = distributions[column.columnName!];
+    const isLoading = distributionLoading[column.columnName!];
     const hasData = hasDistributionData(dist);
 
     // 渲染内容
@@ -147,32 +147,32 @@ const FieldListItem: React.FC<IFieldListItemProps> = memo(
             </div>
             <div className={styles.ul}>
               {dist?.valueDistributions?.map((sub: IValueDistributions, i: number) => (
-                <div className={styles.li} key={`list${columnIndex}${column.columnName}${i}`}>
+                <div key={`list${columnIndex}${column.columnName}${i}`} className={styles.li}>
                   <div className={styles.one}>
                     <div className={styles.left}>
                       <Typography.Paragraph
-                        type="secondary"
                         ellipsis={{
                           rows: 1,
                           tooltip: true,
                           onEllipsis: () => {},
                         }}
+                        type="secondary"
                       >
                         {sub.value}
                       </Typography.Paragraph>
                     </div>
                     <div className={styles.right}>
                       <Button
-                        disabled={searchParams?.whereSqls?.includes(`${column.columnName} = '${sub.value}'`)}
                         color="primary"
+                        disabled={searchParams?.whereSqls?.includes(`${column.columnName} = '${sub.value}'`)}
                         variant="link"
                         onClick={() => handleQuery('=', sub)}
                       >
                         <i className="iconfont icon-fangda" />
                       </Button>
                       <Button
-                        disabled={searchParams?.whereSqls?.includes(`${column.columnName} != '${sub.value}'`)}
                         color="primary"
+                        disabled={searchParams?.whereSqls?.includes(`${column.columnName} != '${sub.value}'`)}
                         variant="link"
                         onClick={() => handleQuery('!=', sub)}
                       >
@@ -197,30 +197,28 @@ const FieldListItem: React.FC<IFieldListItemProps> = memo(
 
     return (
       <Collapse
-        size="small"
         key={column.columnName}
         activeKey={activeKey}
         className={styles.item}
-        onChange={handleCollapseChange}
         expandIcon={() => null}
         items={[
           {
             key: `${column.columnName}`,
             label: (
               <div className={styles.bar}>
-                <Tooltip placement="topLeft" title={column.dataType} arrow={false}>
+                <Tooltip arrow={false} placement="topLeft" title={column.dataType}>
                   <Tag color={getFieldTypeColor(column.dataType)}>
                     {column.dataType?.substring(0, 1)?.toUpperCase()}
                   </Tag>
                 </Tooltip>
-                <Tooltip placement="topLeft" title={column.columnName} arrow={false}>
+                <Tooltip arrow={false} placement="topLeft" title={column.columnName}>
                   <span className={styles.columnName}>{column.columnName}</span>
                 </Tooltip>
                 {!isTimeField && (
                   <Button
+                    className={styles.footBtn}
                     color={isSelected ? 'danger' : 'primary'}
                     variant="link"
-                    className={styles.footBtn}
                     onClick={handleToggle}
                   >
                     {isSelected ? '移除' : '添加'}
@@ -231,6 +229,8 @@ const FieldListItem: React.FC<IFieldListItemProps> = memo(
             children: <div className={styles.record}>{renderContent()}</div>,
           },
         ]}
+        size="small"
+        onChange={handleCollapseChange}
       />
     );
   },
@@ -240,10 +240,10 @@ const FieldListItem: React.FC<IFieldListItemProps> = memo(
       prevProps.isSelected === nextProps.isSelected &&
       prevProps.column.columnName === nextProps.column.columnName &&
       prevProps.column.selected === nextProps.column.selected &&
-      prevProps.fieldData.distributions[prevProps.column.columnName as string] ===
-        nextProps.fieldData.distributions[nextProps.column.columnName as string] &&
-      prevProps.fieldData.distributionLoading[prevProps.column.columnName as string] ===
-        nextProps.fieldData.distributionLoading[nextProps.column.columnName as string] &&
+      prevProps.fieldData.distributions[prevProps.column.columnName!] ===
+        nextProps.fieldData.distributions[nextProps.column.columnName!] &&
+      prevProps.fieldData.distributionLoading[prevProps.column.columnName!] ===
+        nextProps.fieldData.distributionLoading[nextProps.column.columnName!] &&
       prevProps.fieldData.searchParams === nextProps.fieldData.searchParams
     );
   },

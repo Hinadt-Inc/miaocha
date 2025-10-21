@@ -30,22 +30,22 @@ const TimePickerWrapper: React.FC<ITimePickerWrapperProps> = ({
   return (
     <Popover
       arrow={true}
-      trigger="click"
-      open={open}
-      onOpenChange={onOpenChange}
-      placement="bottomRight"
       content={
         <Suspense fallback={<SpinIndicator />}>
           <TimePicker
             activeTab={activeTab}
+            currentTimeOption={timeOption}
             setActiveTab={setActiveTab}
             onSubmit={onSubmit}
-            currentTimeOption={timeOption}
           />
         </Suspense>
       }
+      open={open}
+      placement="bottomRight"
+      trigger="click"
+      onOpenChange={onOpenChange}
     >
-      <Button color="primary" variant="link" size="small">
+      <Button color="primary" size="small" variant="link">
         {timeOption.label}
       </Button>
     </Popover>

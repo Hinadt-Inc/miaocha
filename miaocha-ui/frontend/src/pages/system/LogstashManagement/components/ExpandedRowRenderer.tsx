@@ -1,4 +1,4 @@
-import { MachineTable } from '../components';
+import { MachineTable } from '.';
 import type { LogstashProcess } from '@/types/logstashTypes';
 
 interface ExpandedRowRendererProps {
@@ -21,18 +21,18 @@ interface ExpandedRowRendererProps {
 const ExpandedRowRenderer = ({ record, data, machineActions }: ExpandedRowRendererProps) => {
   return (
     <MachineTable
-      record={record}
       data={data}
-      onStartMachine={machineActions.handleStartMachine}
-      onStopMachine={machineActions.handleStopMachine}
+      record={record}
+      onDeleteMachine={machineActions.handleDeleteMachine}
+      onEditMachineConfig={machineActions.handleEditMachineConfig}
+      onForceStopMachine={machineActions.handleForceStopMachine}
       onRefreshConfig={machineActions.handleRefreshConfig}
       onReinitializeMachine={machineActions.handleReinitializeMachine}
-      onForceStopMachine={machineActions.handleForceStopMachine}
-      onEditMachineConfig={machineActions.handleEditMachineConfig}
+      onShowLog={machineActions.handleShowLog}
       onShowMachineDetail={machineActions.handleShowMachineDetail}
       onShowMachineTasks={machineActions.showMachineTasks}
-      onShowLog={machineActions.handleShowLog}
-      onDeleteMachine={machineActions.handleDeleteMachine}
+      onStartMachine={machineActions.handleStartMachine}
+      onStopMachine={machineActions.handleStopMachine}
     />
   );
 };

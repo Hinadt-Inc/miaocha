@@ -21,13 +21,13 @@ const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
 }) => {
   return (
     <Modal
-      title="删除模块"
-      open={visible}
-      onOk={onConfirm}
-      onCancel={onCancel}
-      okText="确定删除"
       cancelText="取消"
       okButtonProps={{ danger: true }}
+      okText="确定删除"
+      open={visible}
+      title="删除模块"
+      onCancel={onCancel}
+      onOk={onConfirm}
     >
       <div>
         <p>

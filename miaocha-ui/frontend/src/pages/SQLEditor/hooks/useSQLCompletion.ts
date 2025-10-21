@@ -223,7 +223,7 @@ export const useSQLCompletion = (databaseSchema?: any) => {
       const text = model.getValue();
       const context = analyzeContext({ text, position, model });
 
-      let suggestions: monaco.languages.CompletionItem[] = [];
+      const suggestions: monaco.languages.CompletionItem[] = [];
 
       // 根据上下文提供不同的补全
       if (context.isAfterFrom || context.isAfterJoin) {

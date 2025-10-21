@@ -3,17 +3,12 @@
   align-items: center;
 
   .refreshButton {
-    color: #0038ff;
     font-size: 13px;
     
     &:hover {
-      color: #1890ff;
       background-color: rgba(24, 144, 255, 0.1);
     }
     
-    &:focus {
-      color: #1890ff;
-    }
     
     :global {
       .anticon {
@@ -56,7 +51,6 @@
     }
 
     .intervalButton {
-      color: #0038ff;
       font-size: 13px;
       border-left: 1px solid #d9d9d9;
       border-radius: 0;
@@ -121,60 +115,6 @@
         min-width: 35px;
         text-align: right;
         font-weight: 500;
-      }
-    }
-  }
-}
-
-// 响应式设计
-@media (max-width: 1200px) {
-  .autoRefresh {
-    .refreshStatus {
-      .progressContainer {
-        min-width: 80px;
-        
-        .progress {
-          min-width: 40px;
-        }
-        
-        .timeText {
-          font-size: 10px;
-          min-width: 30px;
-        }
-      }
-    }
-  }
-}
-
-@media (max-width: 768px) {
-  .autoRefresh {
-    .autoRefreshControl {
-      .autoRefreshToggle {
-        padding: 4px 6px;
-        font-size: 12px;
-      }
-      
-      .intervalButton {
-        padding: 4px 6px;
-        font-size: 12px;
-      }
-    }
-    
-    .refreshStatus {
-      margin-left: 4px;
-      
-      .progressContainer {
-        min-width: 60px;
-        gap: 4px;
-        
-        .progress {
-          min-width: 30px;
-        }
-        
-        .timeText {
-          font-size: 10px;
-          min-width: 25px;
-        }
       }
     }
   }

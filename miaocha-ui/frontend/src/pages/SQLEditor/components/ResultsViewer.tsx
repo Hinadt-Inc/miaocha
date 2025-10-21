@@ -86,9 +86,9 @@ const ResizableTitle: React.FC<ResizableTitleProps> = (props) => {
       {restProps.children}
       <div
         className={`column-resizer ${innerDragging ? 'dragging' : ''}`}
-        onMouseDown={handleMouseDown}
-        onClick={(e) => e.stopPropagation()}
         title="拖拽调整列宽"
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={handleMouseDown}
       />
     </th>
   );
@@ -165,7 +165,7 @@ const formatLogTime = (value: any): React.ReactNode => {
 // 估算列宽的实用函数
 const estimateColumnWidth = (col: string, rows: any[], maxWidth: number = MAX_COLUMN_WIDTH): number => {
   // 统一使用最大宽度限制，保证表格整齐
-  let columnMaxWidth = maxWidth;
+  const columnMaxWidth = maxWidth;
 
   // 列名长度本身也是重要参考
   let estimatedWidth = Math.max(col.length * 12, MIN_COLUMN_WIDTH);
@@ -353,7 +353,7 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
   // 错误状态
   if (queryResults.status === 'error') {
     console.log('Showing error state:', queryResults.message);
-    return <Alert type="error" message="查询执行错误" description={queryResults.message ?? '未知错误'} showIcon />;
+    return <Alert description={queryResults.message ?? '未知错误'} message="查询执行错误" showIcon type="error" />;
   }
 
   // 检查数据可用性 - 放宽条件
@@ -442,7 +442,7 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
       width: defaultWidth,
       render: (value: any, record: any, index: number) => {
         // 检查当前单元格是否被选中
-        const isSelected = selectedCell && selectedCell.rowIndex === index && selectedCell.columnKey === col;
+        const isSelected = selectedCell?.rowIndex === index && selectedCell.columnKey === col;
 
         // 对 log_time 列进行特殊时间格式化处理
         let displayValue;
@@ -458,19 +458,19 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
         // 渲染单元格内容
         const cellContent = (
           <button
-            type="button"
+            aria-label={`选择单元格: ${col}, 值: ${stringValue}`}
             className={cellClassName}
+            title={stringValue}
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               handleCellClick(record, index, col);
             }}
-            aria-label={`选择单元格: ${col}, 值: ${stringValue}`}
-            title={stringValue}
           >
             {stringValue.length <= 100 ? (
               displayValue
             ) : (
-              <Tooltip title={stringValue} placement="topLeft">
+              <Tooltip placement="topLeft" title={stringValue}>
                 <span>{displayValue}</span>
               </Tooltip>
             )}
@@ -498,11 +498,11 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
         )}
         <div className={styles.toolbarActions}>
           {selectedCell && (
-            <Text type="secondary" className={styles.copyHint}>
+            <Text className={styles.copyHint} type="secondary">
               按 Ctrl+C 复制选中内容
             </Text>
           )}
-          <Button type="link" size="small" onClick={resetColumnWidths}>
+          <Button size="small" type="link" onClick={resetColumnWidths}>
             重置所有列宽
           </Button>
         </div>
@@ -511,17 +511,16 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
   );
 
   return (
-    <div className={styles.resultsViewerContainer} ref={containerRef}>
+    <div ref={containerRef} className={styles.resultsViewerContainer}>
       {executionInfo}
       <ResizeObserver>
         <div className={styles.tableWrapper}>
           <div className={styles.tableContainer}>
             <Table
-              dataSource={queryResults.rows.map((row, index) => ({ ...row, key: index }))}
-              columns={columns}
-              scroll={{ x: 'max-content', y: TABLE_HEIGHT }}
-              size="small" // 使用小尺寸，更紧凑
               bordered={true}
+              className={`${styles.resizableTable} compact-table`}
+              columns={columns}
+              dataSource={queryResults.rows.map((row, index) => ({ ...row, key: index }))}
               pagination={{
                 showSizeChanger: true,
                 showQuickJumper: true,
@@ -529,14 +528,15 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
                 showTotal: (total) => `共 ${total} 条记录`,
                 size: 'small', // 分页器也使用小尺寸
               }}
-              className={`${styles.resizableTable} compact-table`}
+              rowClassName={() => 'compact-row'}
+              scroll={{ x: 'max-content', y: TABLE_HEIGHT }}
               components={{
                 header: {
                   cell: ResizableTitle,
                 },
               }}
               // 设置表格行高更紧凑
-              rowClassName={() => 'compact-row'}
+              size="small" // 使用小尺寸，更紧凑
               onHeaderRow={(columns) => ({
                 onMouseEnter: () => {
                   const columnKey = columns[0]?.key;
@@ -561,7 +561,7 @@ const ResultsViewer: React.FC<ResultsViewerProps> = ({ queryResults, loading, fo
               })}
             />
             {loading && (
-              <Loading fullScreen={false} size="large" tip="查询执行中..." className={styles.tableLoadingOverlay} />
+              <Loading className={styles.tableLoadingOverlay} fullScreen={false} size="large" tip="查询执行中..." />
             )}
           </div>
         </div>

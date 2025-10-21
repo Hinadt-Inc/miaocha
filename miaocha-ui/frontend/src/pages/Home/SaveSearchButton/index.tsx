@@ -33,21 +33,21 @@ const SaveSearchButton: React.FC<SaveSearchButtonProps> = ({
     <>
       <Tooltip title="保存当前搜索条件">
         <Button
+          className={`${styles.saveSearchButton} ${className || ''}`}
           icon={<SaveOutlined />}
-          onClick={handleSave}
           size={size}
           type={type}
           variant={variant}
-          className={`${styles.saveSearchButton} ${className || ''}`}
+          onClick={handleSave}
         >
           保存
         </Button>
       </Tooltip>
       
       <SaveSearchModal
+        searchParams={searchParams}
         visible={modalVisible}
         onClose={handleCloseModal}
-        searchParams={searchParams}
       />
     </>
   );

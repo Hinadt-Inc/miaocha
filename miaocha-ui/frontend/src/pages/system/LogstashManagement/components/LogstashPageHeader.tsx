@@ -25,10 +25,10 @@ const LogstashPageHeader = ({ loading, onAdd, onReload, className }: LogstashPag
         ]}
       />
       <div className={className || 'table-toolbar'}>
-        <Button type="default" icon={<SyncOutlined />} onClick={onReload} loading={loading}>
+        <Button icon={<SyncOutlined />} loading={loading} type="default" onClick={onReload}>
           刷新
         </Button>
-        <Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>
+        <Button icon={<PlusOutlined />} type="primary" onClick={onAdd}>
           新增Logstash进程
         </Button>
       </div>

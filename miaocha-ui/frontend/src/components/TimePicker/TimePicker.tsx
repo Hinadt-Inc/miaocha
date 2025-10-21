@@ -74,7 +74,7 @@ const TimePicker: React.FC<ITimePickerProps> = ({ activeTab, setActiveTab, onSub
 
   return (
     <div className={styles.timePickerLayout}>
-      <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
+      <Tabs activeKey={activeTab} items={tabItems} onChange={setActiveTab} />
     </div>
   );
 };

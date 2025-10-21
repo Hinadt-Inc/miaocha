@@ -22,22 +22,22 @@ const ExpandedRow: React.FC<IExpandedRowProps> = (props) => {
   const tableComponent = useMemo(() => (
     <Table
       bordered
-      dataSource={dataSource}
       columns={columns}
+      dataSource={dataSource}
       pagination={false}
-      size="small"
       rowKey="key"
+      size="small"
     />
   ), [dataSource, columns]);
 
   // JSON组件
   const jsonComponent = useMemo(() => (
     <ReactJson
-      src={filteredJsonData}
       collapsed={REACT_JSON_CONFIG.COLLAPSED_LEVEL}
-      enableClipboard={REACT_JSON_CONFIG.ENABLE_CLIPBOARD}
       displayDataTypes={REACT_JSON_CONFIG.DISPLAY_DATA_TYPES}
+      enableClipboard={REACT_JSON_CONFIG.ENABLE_CLIPBOARD}
       name={REACT_JSON_CONFIG.SHOW_NAME}
+      src={filteredJsonData}
     />
   ), [filteredJsonData]);
 
@@ -47,9 +47,9 @@ const ExpandedRow: React.FC<IExpandedRowProps> = (props) => {
   return (
     <Tabs
       className={styles.expandedRow}
-      size="small"
       defaultActiveKey={TAB_KEYS.TABLE}
       items={items}
+      size="small"
     />
   );
 };

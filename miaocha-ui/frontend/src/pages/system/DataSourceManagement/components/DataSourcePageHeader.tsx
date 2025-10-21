@@ -35,12 +35,12 @@ export const DataSourceToolBar: React.FC<DataSourceToolBarProps> = ({ searchKeyw
   return (
     <Space size={16}>
       <Input
-        placeholder="搜索数据源（支持名称、JDBC地址、描述等关键词）"
         allowClear
+        placeholder="搜索数据源（支持名称、JDBC地址、描述等关键词）"
+        style={{ width: 300 }}
+        suffix={<SearchOutlined />}
         value={searchKeyword}
         onChange={(e) => onSearchChange(e.target.value)}
-        suffix={<SearchOutlined />}
-        style={{ width: 300 }}
       />
       <Button key="button" icon={<PlusOutlined />} type="primary" onClick={onAdd}>
         新增数据源

@@ -247,7 +247,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
     };
   }, [queryResults, xField, yField, chartType]);
 
-  if (!queryResults || !queryResults.rows || !queryResults.rows.length) {
+  if (!queryResults?.rows?.length) {
     return <Empty description="需要有查询结果才能创建可视化" />;
   }
 
@@ -256,14 +256,14 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
       <div className={styles.chartControls}>
         <Form layout="inline">
           <Form.Item label="图表类型">
-            <Select value={chartType} onChange={(value) => setChartType(value)} style={{ width: 120 }}>
+            <Select style={{ width: 120 }} value={chartType} onChange={(value) => setChartType(value)}>
               <Option value="bar">柱状图</Option>
               <Option value="line">折线图</Option>
               <Option value="pie">饼图</Option>
             </Select>
           </Form.Item>
           <Form.Item label="X轴/名称">
-            <Select value={xField} onChange={setXField} style={{ width: 120 }} placeholder="选择字段">
+            <Select placeholder="选择字段" style={{ width: 120 }} value={xField} onChange={setXField}>
               {queryResults.columns?.map((col) => (
                 <Option key={col} value={col}>
                   {col}
@@ -272,7 +272,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
             </Select>
           </Form.Item>
           <Form.Item label="Y轴/值">
-            <Select value={yField} onChange={setYField} style={{ width: 120 }} placeholder="选择字段">
+            <Select placeholder="选择字段" style={{ width: 120 }} value={yField} onChange={setYField}>
               {queryResults.columns?.map((col) => (
                 <Option key={col} value={col}>
                   {col}
@@ -285,9 +285,9 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
       <div className={styles.chartContainer}>
         <ReactECharts
           ref={chartRef}
-          style={{ height: 400, width: '100%' }}
           option={chartOption}
           opts={{ renderer: 'canvas' }}
+          style={{ height: 400, width: '100%' }}
         />
       </div>
     </div>

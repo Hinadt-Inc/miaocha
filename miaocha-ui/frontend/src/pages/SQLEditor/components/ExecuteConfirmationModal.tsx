@@ -79,7 +79,7 @@ const ExecuteConfirmationModal: React.FC<ExecuteConfirmationModalProps> = ({
     if (!visible || !containerRef.current || !monacoInitialized) return;
 
     let isMounted = true;
-    let disposables: monaco.IDisposable[] = [];
+    const disposables: monaco.IDisposable[] = [];
 
     const initEditor = () => {
       try {
@@ -211,22 +211,22 @@ const ExecuteConfirmationModal: React.FC<ExecuteConfirmationModalProps> = ({
 
   return (
     <Modal
-      title={title || '确认执行'}
-      open={visible}
-      onCancel={onCancel}
-      width={800}
-      maskClosable={false}
       footer={
         <Space>
           <Button onClick={onCancel}>取消</Button>
-          <Button type="primary" icon={<PlayCircleOutlined />} loading={loading} onClick={onConfirm}>
+          <Button icon={<PlayCircleOutlined />} loading={loading} type="primary" onClick={onConfirm}>
             执行
           </Button>
         </Space>
       }
+      maskClosable={false}
+      open={visible}
+      title={title || '确认执行'}
+      width={800}
+      onCancel={onCancel}
     >
       {readonly && (
-        <Alert message="此模块已有SQL语句，无法编辑" type="info" className={styles.readonlyAlert} showIcon />
+        <Alert className={styles.readonlyAlert} message="此模块已有SQL语句，无法编辑" showIcon type="info" />
       )}
       <div className={styles.editorWrapper}>
         <div ref={containerRef} className={styles.executeModalEditorContainer} />

@@ -20,10 +20,10 @@ export const SQLSettingsDrawer: React.FC<SQLSettingsDrawerProps> = ({
 }) => {
   return (
     <SettingsDrawer
-      onClose={onClose}
       editorSettings={editorSettings}
       updateEditorSettings={onUpdateSettings}
       visible={visible}
+      onClose={onClose}
     />
   );
 };

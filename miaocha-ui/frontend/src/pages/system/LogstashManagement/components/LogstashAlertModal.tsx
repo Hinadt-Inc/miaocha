@@ -220,14 +220,14 @@ export default function LogstashAlertModal({ visible, onCancel, onOk, initialVal
     <Spin spinning={loading}>
       {contextHolder}
       <Modal
-        title="设置告警邮箱"
-        open={visible}
-        onOk={handleOk}
-        confirmLoading={confirmLoading}
-        onCancel={onCancel}
-        maskClosable={false}
-        width={600}
         className={styles.container}
+        confirmLoading={confirmLoading}
+        maskClosable={false}
+        open={visible}
+        title="设置告警邮箱"
+        width={600}
+        onCancel={onCancel}
+        onOk={handleOk}
       >
         <div className={styles.header}>
           <span className={styles.title}>邮箱地址输入</span>
@@ -236,24 +236,24 @@ export default function LogstashAlertModal({ visible, onCancel, onOk, initialVal
 
         <div className={styles.inputArea}>
           <Input.TextArea
-            rows={6}
-            value={inputValue}
-            onChange={handleSmartInput}
+            className={styles.textArea}
             placeholder="请输入邮箱地址，支持多种格式：
 1. 每行一个邮箱
 2. 逗号分隔：email1@test.com,email2@test.com
 3. 分号分隔：email1@test.com;email2@test.com
 4. 空格分隔：email1@test.com email2@test.com"
-            className={styles.textArea}
+            rows={6}
+            value={inputValue}
+            onChange={handleSmartInput}
           />
 
           <div className={styles.toolbar}>
             <Space>
               <Button
+                className={styles.clearButton}
+                disabled={emails.length === 0}
                 size="small"
                 onClick={handleClearAll}
-                disabled={emails.length === 0}
-                className={styles.clearButton}
               >
                 清空所有
               </Button>
@@ -271,7 +271,7 @@ export default function LogstashAlertModal({ visible, onCancel, onOk, initialVal
                 const isOversized = !validateEmailLength(email);
                 return (
                   <span key={email} className={styles.emailTag}>
-                    <Tag closable onClose={() => handleRemoveEmail(email)} color={isOversized ? 'red' : 'green'}>
+                    <Tag closable color={isOversized ? 'red' : 'green'} onClose={() => handleRemoveEmail(email)}>
                       {email}
                     </Tag>
                   </span>

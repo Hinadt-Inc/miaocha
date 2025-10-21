@@ -56,7 +56,7 @@ const ModuleDetailModal: React.FC<ModuleDetailModalProps> = ({ visible, moduleDe
   };
 
   return (
-    <Modal title="模块详情" open={visible} onCancel={onCancel} footer={null} width={1000}>
+    <Modal footer={null} open={visible} title="模块详情" width={1000} onCancel={onCancel}>
       {moduleDetail && (
         <Descriptions bordered column={2}>
           <Descriptions.Item label="模块名称">{moduleDetail.name}</Descriptions.Item>

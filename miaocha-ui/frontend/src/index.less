@@ -41,7 +41,7 @@ body {
 }
 
 .ant-pro-layout .ant-pro-layout-bg-list {
-  background: #fff !important;
+  background: transparent !important;
 }
 .ant-notification-notice-close {
   top: 10px;
@@ -58,12 +58,6 @@ body {
 #nprogress .spinner-icon {
   border-top-color: var(--primary-color) !important;
   border-left-color: var(--primary-color) !important;
-}
-// App.less
-:root {
-  --ant-menu-item-selected-color: #0038ff;
-  --ant-menu-item-selected-bg: rgba(0, 56, 255, 0.06);
-  --ant-menu-item-active-bg: rgba(0, 56, 255, 0.06);
 }
 
 .app-container {
@@ -97,5 +91,11 @@ body {
         background-color: rgba(0, 56, 255, 0.06) !important;
       }
     }
+  }
+}
+.global-table-action {
+  gap: 0;
+  .ant-btn {
+    padding: 0 4px;
   }
 }

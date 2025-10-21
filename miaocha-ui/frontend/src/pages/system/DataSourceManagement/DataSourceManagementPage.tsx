@@ -35,32 +35,15 @@ const DataSourceManagementPage = () => {
     <div className={styles.container}>
       <div style={{ position: 'relative', minHeight: '400px' }}>
         <ProTable
-          loading={false}
-          className={styles.tableContainer}
-          bordered
-          size="small"
-          search={false}
-          options={false}
-          headerTitle={<DataSourcePageHeader />}
-          toolBarRender={() => [
-            <DataSourceToolBar
-              key="toolbar"
-              searchKeyword={searchKeyword}
-              onSearchChange={(value) => {
-                handleSearchChange(value);
-                // 当输入变化时立即搜索，提供更即时的反馈
-                actions.actionRef.current?.reload();
-              }}
-              onAdd={actions.openCreateModal}
-            />,
-          ]}
           actionRef={actions.actionRef}
-          rowKey="id"
-          scroll={{ x: 'max-content' }}
+          bordered
           cardProps={{ bodyStyle: { padding: '0px' } }}
-          request={fetchDataSources}
-          defaultData={[]}
+          className={styles.tableContainer}
           columns={columns}
+          defaultData={[]}
+          headerTitle={<DataSourcePageHeader />}
+          loading={false}
+          options={false}
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,
@@ -70,12 +53,28 @@ const DataSourceManagementPage = () => {
             showTotal: (total) => `共 ${total} 条`,
             pageSizeOptions: ['10', '20', '50', '100'],
           }}
+          request={fetchDataSources}
+          rowKey="id"
+          scroll={{ x: 'max-content' }}
+          search={false}
+          size="small"
+          toolBarRender={() => [
+            <DataSourceToolBar
+              key="toolbar"
+              searchKeyword={searchKeyword}
+              onAdd={actions.openCreateModal}
+              onSearchChange={(value) => {
+                handleSearchChange(value);
+                // 当输入变化时立即搜索，提供更即时的反馈
+                actions.actionRef.current?.reload();
+              }}
+            />,
+          ]}
         />
         {loading.table && (
           <Loading
             fullScreen={false}
             size="large"
-            tip="加载数据源..."
             style={{
               position: 'absolute',
               top: 0,
@@ -89,17 +88,18 @@ const DataSourceManagementPage = () => {
               alignItems: 'center',
               justifyContent: 'center',
             }}
+            tip="加载数据源..."
           />
         )}
       </div>
 
       <DataSourceFormModal
-        visible={actions.modalVisible}
         currentDataSource={actions.currentDataSource}
-        testLoading={loading.test}
         submitLoading={loading.submit}
-        onSubmit={actions.handleFormSubmit}
+        testLoading={loading.test}
+        visible={actions.modalVisible}
         onCancel={() => actions.setModalVisible(false)}
+        onSubmit={actions.handleFormSubmit}
         onTestConnection={actions.handleTestConnection}
       />
     </div>

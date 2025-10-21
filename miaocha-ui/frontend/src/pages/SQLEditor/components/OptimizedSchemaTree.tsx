@@ -189,10 +189,10 @@ const ColumnNodeComponent = memo(({
       const node: ExtendedDataNode = {
           title: (
             <TableNodeComponent
-              table={table}
-              isLoading={isLoading || false}
-              isLoaded={isLoaded || false}
               handleInsertTable={handleInsertTable}
+              isLoaded={isLoaded || false}
+              isLoading={isLoading || false}
+              table={table}
             />
           ),
         key: tableKey,
@@ -357,9 +357,9 @@ const PerformanceTip = memo(() => {
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           >
             <Button 
-              type="primary" 
+              icon={<ReloadOutlined />} 
+              type="primary"
               onClick={refreshSchema}
-              icon={<ReloadOutlined />}
             >
               重新加载
             </Button>
@@ -368,16 +368,16 @@ const PerformanceTip = memo(() => {
       );
     }
 
-    if (!databaseSchema.tables || databaseSchema.tables.length === 0) {
+    if (databaseSchema.tables?.length === 0) {
       return (
         <Empty 
           description="该数据源下暂无表结构"
           image={Empty.PRESENTED_IMAGE_SIMPLE}
         >
           <Button 
-            type="primary" 
+            icon={<ReloadOutlined />} 
+            type="primary"
             onClick={refreshSchema}
-            icon={<ReloadOutlined />}
           >
             重新加载
           </Button>
@@ -389,19 +389,19 @@ const PerformanceTip = memo(() => {
       <div>
         <PerformanceTip />
         <Tree
+          blockNode={true} // 使节点占据整行，增加点击区域
           className={styles.schemaTree}
-          treeData={treeData as DataNode[]}
           expandedKeys={expandedKeys}
+          height={treeHeight} // 使用动态计算的高度撑满父容器，启用虚拟滚动提高性能
+          selectable={true}
           selectedKeys={selectedKeys}
-          onExpand={handleExpand}
-          onSelect={handleSelect}
-          onRightClick={handleRightClick}
           showLine={{ showLeafIcon: false }}
           switcherIcon={<DownOutlined />}
-          selectable={true}
-          blockNode={true} // 使节点占据整行，增加点击区域
+          treeData={treeData as DataNode[]}
           virtual
-          height={treeHeight} // 使用动态计算的高度撑满父容器，启用虚拟滚动提高性能
+          onExpand={handleExpand}
+          onRightClick={handleRightClick}
+          onSelect={handleSelect}
         />
       </div>
     );
@@ -415,6 +415,7 @@ const PerformanceTip = memo(() => {
     <Card
       ref={containerRef}
       className={cx(styles.schemaTreeCard, collapsed && styles.collapsed)}
+      size="small"
       title={
         <div className={styles.cardHeader}>
           <Space>
@@ -424,17 +425,16 @@ const PerformanceTip = memo(() => {
           <Space>
             <Tooltip title="刷新结构">
               <Button
-                type="text"
-                size="small"
                 icon={<ReloadOutlined />}
-                onClick={refreshSchema}
                 loading={loadingSchema}
+                size="small"
+                type="text"
+                onClick={refreshSchema}
               />
             </Tooltip>
           </Space>
         </div>
       }
-      size="small"
     >
       {renderContent()}
     </Card>

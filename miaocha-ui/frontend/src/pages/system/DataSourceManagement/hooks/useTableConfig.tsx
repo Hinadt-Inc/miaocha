@@ -86,31 +86,31 @@ export const useTableConfig = ({ testExistingLoading, onEdit, onDelete, onTestCo
       render: (_, record) => (
         <Space size="small">
           <Button
-            type="link"
-            size="small"
             loading={testExistingLoading[record.id] || false}
+            size="small"
+            title={`测试 ${record.name} 的数据库连接是否正常`}
+            type="link"
             onClick={() => {
               void onTestConnection(record.id, record.name);
             }}
-            title={`测试 ${record.name} 的数据库连接是否正常`}
           >
             测试连接
           </Button>
-          <Button type="link" size="small" onClick={() => onEdit(record)}>
+          <Button size="small" type="link" onClick={() => onEdit(record)}>
             编辑
           </Button>
           <Popconfirm
-            title={`确定要删除数据源 "${record.name}" 吗？`}
-            description="删除后将无法恢复，请谨慎操作"
-            placement="topRight"
-            okText="确定删除"
             cancelText="取消"
+            description="删除后将无法恢复，请谨慎操作"
             okButtonProps={{ danger: true }}
+            okText="确定删除"
+            placement="topRight"
+            title={`确定要删除数据源 "${record.name}" 吗？`}
             onConfirm={() => {
               void onDelete(record.id, record.name);
             }}
           >
-            <Button type="link" size="small" danger>
+            <Button danger size="small" type="link">
               删除
             </Button>
           </Popconfirm>

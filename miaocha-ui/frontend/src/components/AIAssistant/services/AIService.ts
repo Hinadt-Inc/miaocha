@@ -133,7 +133,7 @@ export class AIService {
 
     // 用户行为追踪
     if (lowerMessage.includes('用户') && (lowerMessage.includes('追踪') || lowerMessage.includes('行为'))) {
-      const userIdMatch = message.match(/用户ID?[：:]?\s*(\w+)/i) || message.match(/用户\s*(\w+)/i);
+      const userIdMatch = (/用户ID?[：:]?\s*(\w+)/i.exec(message)) || (/用户\s*(\w+)/i.exec(message));
       const userId = userIdMatch ? userIdMatch[1] : 'unknown';
 
       return {

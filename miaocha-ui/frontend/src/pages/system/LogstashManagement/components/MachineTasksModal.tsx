@@ -83,7 +83,7 @@ const MachineTasksModal = ({ visible, onClose, machineTasks, loading }: MachineT
 
   // 过滤和排序任务
   const filteredTasks = useMemo(() => {
-    let filtered = machineTasks.filter((task) => {
+    const filtered = machineTasks.filter((task) => {
       const matchesSearch =
         task.name.toLowerCase().includes(searchText.toLowerCase()) ||
         task.description.toLowerCase().includes(searchText.toLowerCase());
@@ -147,6 +147,9 @@ const MachineTasksModal = ({ visible, onClose, machineTasks, loading }: MachineT
 
   return (
     <Modal
+      footer={null}
+      open={visible}
+      style={{ top: 20 }}
       title={
         <div>
           <span>实例任务记录</span>
@@ -157,29 +160,26 @@ const MachineTasksModal = ({ visible, onClose, machineTasks, loading }: MachineT
           )}
         </div>
       }
-      open={visible}
-      onCancel={onClose}
-      footer={null}
       width={1400}
-      style={{ top: 20 }}
+      onCancel={onClose}
     >
       {loading ? (
         <Skeleton active paragraph={{ rows: 8 }} />
       ) : (
         <>
           {/* 统计信息 */}
-          <Row gutter={16} className={styles.statisticsRow}>
+          <Row className={styles.statisticsRow} gutter={16}>
             <Col span={6}>
               <Card size="small">
-                <Statistic title="总任务数" value={statistics.total} prefix={<ClockCircleOutlined />} />
+                <Statistic prefix={<ClockCircleOutlined />} title="总任务数" value={statistics.total} />
               </Card>
             </Col>
             <Col span={6}>
               <Card size="small">
                 <Statistic
+                  prefix={<CheckCircleOutlined />}
                   title="已完成"
                   value={statistics.completed}
-                  prefix={<CheckCircleOutlined />}
                   valueStyle={{ color: '#3f8600' }}
                 />
               </Card>
@@ -187,9 +187,9 @@ const MachineTasksModal = ({ visible, onClose, machineTasks, loading }: MachineT
             <Col span={6}>
               <Card size="small">
                 <Statistic
+                  prefix={<ClockCircleOutlined />}
                   title="执行中"
                   value={statistics.running}
-                  prefix={<ClockCircleOutlined />}
                   valueStyle={{ color: '#1890ff' }}
                 />
               </Card>
@@ -197,9 +197,9 @@ const MachineTasksModal = ({ visible, onClose, machineTasks, loading }: MachineT
             <Col span={6}>
               <Card size="small">
                 <Statistic
+                  prefix={<ExclamationCircleOutlined />}
                   title="失败"
                   value={statistics.failed}
-                  prefix={<ExclamationCircleOutlined />}
                   valueStyle={{ color: '#cf1322' }}
                 />
               </Card>
@@ -207,23 +207,23 @@ const MachineTasksModal = ({ visible, onClose, machineTasks, loading }: MachineT
           </Row>
 
           {/* 筛选和搜索 */}
-          <Card size="small" className={styles.filterCard}>
+          <Card className={styles.filterCard} size="small">
             <Row gutter={16}>
               <Col span={8}>
                 <Input
+                  allowClear
                   placeholder="搜索任务名称或描述"
                   prefix={<SearchOutlined />}
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
-                  allowClear
                 />
               </Col>
               <Col span={8}>
                 <Select
                   placeholder="按状态筛选"
+                  style={{ width: '100%' }}
                   value={statusFilter}
                   onChange={setStatusFilter}
-                  style={{ width: '100%' }}
                 >
                   <Select.Option value="all">全部状态</Select.Option>
                   <Select.Option value="COMPLETED">已完成</Select.Option>
@@ -234,9 +234,9 @@ const MachineTasksModal = ({ visible, onClose, machineTasks, loading }: MachineT
               <Col span={8}>
                 <Select
                   placeholder="按操作类型筛选"
+                  style={{ width: '100%' }}
                   value={operationFilter}
                   onChange={setOperationFilter}
-                  style={{ width: '100%' }}
                 >
                   <Select.Option value="all">全部操作</Select.Option>
                   <Select.Option value="START">启动</Select.Option>
@@ -249,7 +249,7 @@ const MachineTasksModal = ({ visible, onClose, machineTasks, loading }: MachineT
           </Card>
 
           {/* 任务时间线 */}
-          <Card title="任务执行时间线" size="small">
+          <Card size="small" title="任务执行时间线">
             <Timeline mode="left">
               {filteredTasks.map((task) => (
                 <Timeline.Item
@@ -257,7 +257,7 @@ const MachineTasksModal = ({ visible, onClose, machineTasks, loading }: MachineT
                   color={getTimelineColor(task.status)}
                   dot={getOperationIcon(task.operationType)}
                 >
-                  <Card size="small" className={styles.taskCard}>
+                  <Card className={styles.taskCard} size="small">
                     <Row>
                       <Col span={16}>
                         <div className={styles.taskHeader}>
@@ -282,7 +282,7 @@ const MachineTasksModal = ({ visible, onClose, machineTasks, loading }: MachineT
 
                     {/* 任务详情 */}
                     <Divider className={styles.taskDivider} />
-                    <Descriptions size="small" column={4} style={{ marginBottom: 8 }}>
+                    <Descriptions column={4} size="small" style={{ marginBottom: 8 }}>
                       <Descriptions.Item label="总步骤">{task.totalSteps}</Descriptions.Item>
                       <Descriptions.Item label="成功">{task.successCount}</Descriptions.Item>
                       <Descriptions.Item label="失败">{task.failedCount}</Descriptions.Item>
@@ -305,12 +305,12 @@ const MachineTasksModal = ({ visible, onClose, machineTasks, loading }: MachineT
                           </span>
                         </div>
                         <Table
-                          size="small"
                           bordered
-                          dataSource={steps}
-                          rowKey="stepId"
-                          pagination={false}
                           columns={stepColumns}
+                          dataSource={steps}
+                          pagination={false}
+                          rowKey="stepId"
+                          size="small"
                         />
                       </div>
                     ))}

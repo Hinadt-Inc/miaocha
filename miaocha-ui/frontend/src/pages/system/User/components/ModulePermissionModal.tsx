@@ -1,22 +1,19 @@
 import { Modal, Table, Space, Button, Input, Tag, message, Descriptions } from 'antd';
-import styles from './ModulePermissionModal.module.less';
-import { batchRevokeModules, authorizeModule, revokeModule } from '@/api/modules';
-import { SearchOutlined } from '@ant-design/icons';
+import { revokeModule, authorizeModule, batchRevokeModules } from '@/api/user';
 import type { ColumnsType } from 'antd/es/table';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, memo } from 'react';
+import type { ModulePermissionListItem } from '../types';
 
-import type { ModulePermission } from '@/types/permissionTypes';
-
-interface ModulePermissionModalProps {
+interface Props {
   open: boolean;
   onClose: () => void;
-  userId: string;
+  userId: number;
   nickname: string;
   email: string;
-  modules: ModulePermission[];
-  userModulePermissions: Array<{ moduleName: string }>;
-  allModules: Array<{ value: string; label: string }>;
-  onSave: (userId: string, modules: Array<{ moduleId: string; moduleName?: string }>) => Promise<void>;
+  modules: ModulePermissionListItem[];
+  userModulePermissions: { moduleName: string }[];
+  allModules: { value: string; label: string }[];
+  onSave: (userId: number, modules: { moduleId: string; moduleName?: string }[]) => Promise<void>;
   onRefresh: () => void;
 }
 
@@ -31,7 +28,9 @@ const ModulePermissionModal = ({
   allModules,
   onSave,
   onRefresh,
-}: ModulePermissionModalProps) => {
+}: Props) => {
+  console.log('渲染：监听ModulePermissionModal组件');
+
   const [selectedModules, setSelectedModules] = useState<string[]>([]);
   const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -70,41 +69,32 @@ const ModulePermissionModal = ({
       } else {
         await authorizeModule(userId, moduleName);
       }
-      messageApi.success(!isAuthorized ? '授权成功' : '撤销成功');
+      messageApi.success('操作成功');
       // 完全依赖props更新，不再维护本地状态
       onRefresh();
-    } catch (error) {
-      console.error('模块权限操作失败:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // 处理批量操作
+  // 批量
   const handleBatchOperation = async (authorize: boolean) => {
-    if (selectedModules.length === 0) {
-      messageApi.warning('请至少选择一个模块');
-      return;
-    }
-
     setLoading(true);
     try {
       if (authorize) {
+        // 批量授权
         const modulesToUpdate = selectedModules.map((moduleId) => ({
           moduleId,
           moduleName: allModules.find((m) => m.value === moduleId)?.label || moduleId,
         }));
         await onSave(userId, modulesToUpdate);
-        messageApi.success('批量授权成功');
       } else {
+        // 批量撤销
         await batchRevokeModules(userId, selectedModules);
-        messageApi.success('批量撤销成功');
-        // 完全依赖props更新
       }
+      messageApi.success('操作成功');
       setSelectedModules([]);
       onRefresh();
-    } catch {
-      console.error('批量操作失败');
     } finally {
       setLoading(false);
     }
@@ -115,26 +105,25 @@ const ModulePermissionModal = ({
     {
       title: '模块名称',
       dataIndex: 'moduleName',
-      key: 'moduleName',
-      render: (text) => <span>{text}</span>,
     },
     {
       title: '状态',
       dataIndex: 'authorized',
-      key: 'status',
-      render: (authorized, record) => (
-        <Tag color={authorized ? 'green' : 'red'}>
-          {authorized ? `已授权 (${record.modulePermission?.datasourceName})` : '未授权'}
-        </Tag>
-      ),
+      render: (authorized) => <Tag color={authorized ? 'success' : 'default'}>{authorized ? '已授权' : '未授权'}</Tag>,
     },
     {
       title: '操作',
       key: 'action',
       render: (_, record) => (
-        <Button type="link" onClick={() => handleModuleToggle(record.moduleId, record.authorized)} loading={loading}>
-          {record.authorized ? '撤销' : '授权'}
-        </Button>
+        <Space className="global-table-action">
+          <Button
+            danger={record.authorized}
+            type="link"
+            onClick={() => handleModuleToggle(record.moduleId, record.authorized)}
+          >
+            {record.authorized ? '撤销' : '授权'}
+          </Button>
+        </Space>
       ),
     },
   ];
@@ -143,54 +132,51 @@ const ModulePermissionModal = ({
     <>
       {contextHolder}
       <Modal
-        title="模块权限管理"
-        open={open}
-        onCancel={onClose}
-        width={800}
-        style={{ top: 20 }}
         footer={[
           <Space key="footer-buttons">
-            <Button onClick={() => handleBatchOperation(false)} disabled={selectedModules.length === 0}>
+            <Button disabled={selectedModules.length === 0} onClick={() => handleBatchOperation(false)}>
               批量撤销
             </Button>
-            <Button type="primary" onClick={() => handleBatchOperation(true)} disabled={selectedModules.length === 0}>
+            <Button disabled={selectedModules.length === 0} type="primary" onClick={() => handleBatchOperation(true)}>
               批量授权
             </Button>
             <Button onClick={onClose}>关闭</Button>
           </Space>,
         ]}
+        open={open}
+        title="模块权限管理"
+        width={800}
+        onCancel={onClose}
       >
-        <div className={styles.header}>
-          <Descriptions size="small" column={2}>
-            <Descriptions.Item label="用户">{nickname}</Descriptions.Item>
-            <Descriptions.Item label="邮箱">{email}</Descriptions.Item>
-          </Descriptions>
-          <div>
+        <Descriptions column={3} size="small">
+          <Descriptions.Item label="昵称">{nickname}</Descriptions.Item>
+          <Descriptions.Item label="邮箱">{email}</Descriptions.Item>
+          <Descriptions.Item>
             <Input
+              allowClear
               placeholder="搜索模块名称"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              style={{ width: 200 }}
-              allowClear
-              suffix={<SearchOutlined />}
             />
-          </div>
-        </div>
+          </Descriptions.Item>
+        </Descriptions>
         <Table
-          rowKey="moduleName"
           bordered
           columns={columns}
           dataSource={filteredModules}
-          size="small"
+          loading={loading}
+          pagination={{ pageSize: 10 }}
+          rowKey="moduleName"
           rowSelection={{
             selectedRowKeys: selectedModules,
             onChange: handleSelectChange,
           }}
-          pagination={{ pageSize: 10 }}
+          size="small"
+          style={{ marginTop: 16 }}
         />
       </Modal>
     </>
   );
 };
 
-export default ModulePermissionModal;
+export default memo(ModulePermissionModal);

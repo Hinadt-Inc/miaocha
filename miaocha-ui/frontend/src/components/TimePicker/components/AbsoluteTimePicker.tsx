@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { DatePicker, Button, Space } from 'antd';
+import type { RangePickerProps } from 'antd/es/date-picker';
 import { IAbsoluteTimePickerProps, ILogTimeSubmitParams } from '../types';
 
 const { RangePicker } = DatePicker;
@@ -10,7 +11,7 @@ const { RangePicker } = DatePicker;
 const AbsoluteTimePicker: React.FC<IAbsoluteTimePickerProps> = ({ onSubmit }) => {
   const [absoluteOption, setAbsoluteOption] = useState<ILogTimeSubmitParams>();
 
-  const onRangeChange = (dates: any, dateStrings: string[]) => {
+  const onRangeChange: RangePickerProps['onChange'] = (dates, dateStrings) => {
     if (dates) {
       setAbsoluteOption({
         label: dateStrings.join(' ~ '),
@@ -19,7 +20,7 @@ const AbsoluteTimePicker: React.FC<IAbsoluteTimePickerProps> = ({ onSubmit }) =>
         type: 'absolute',
       });
     } else {
-      setAbsoluteOption({} as any);
+      setAbsoluteOption({});
     }
   };
 
@@ -29,16 +30,13 @@ const AbsoluteTimePicker: React.FC<IAbsoluteTimePickerProps> = ({ onSubmit }) =>
     }
   };
 
-  return useMemo(
-    () => (
-      <Space.Compact block>
-        <RangePicker showTime format="YYYY-MM-DD HH:mm:ss" onChange={onRangeChange} />
-        <Button type="primary" onClick={handleSubmit} disabled={!absoluteOption?.value}>
-          确定
-        </Button>
-      </Space.Compact>
-    ),
-    [absoluteOption],
+  return (
+    <Space.Compact block>
+      <RangePicker format="YYYY-MM-DD HH:mm:ss" showTime onChange={onRangeChange} />
+      <Button disabled={!absoluteOption?.value} type="primary" onClick={handleSubmit}>
+        确定
+      </Button>
+    </Space.Compact>
   );
 };
 

@@ -102,9 +102,8 @@ const TreeNodeRenderer = memo(
     // 滚动时使用简化渲染，减少重绘
     if (isScrolling) {
       return (
-        // eslint-disable-next-line react/forbid-dom-props
+         
         <div
-          style={style}
           className={cx(
             styles.virtualTreeNode,
             styles.virtualTreeNodeScrolling,
@@ -112,6 +111,7 @@ const TreeNodeRenderer = memo(
             node.isTable ? styles.tableNode : styles.columnNode,
             collapsed ? styles.virtualTreeNodeCollapsed : '',
           )}
+          style={style}
         >
           <div className={styles.treeNodeContent}>
             {!collapsed && (
@@ -139,8 +139,8 @@ const TreeNodeRenderer = memo(
     // 折叠状态下的渲染
     if (collapsed) {
       return (
-        // eslint-disable-next-line react/forbid-dom-props
-        <div style={style} className={cx(styles.virtualTreeNode, styles.virtualTreeNodeCollapsed)}>
+         
+        <div className={cx(styles.virtualTreeNode, styles.virtualTreeNodeCollapsed)} style={style}>
           {node.isTable && <TableOutlined className={styles.treeTableIcon} />}
         </div>
       );
@@ -152,18 +152,18 @@ const TreeNodeRenderer = memo(
     }
 
     return (
-      // eslint-disable-next-line react/forbid-dom-props, jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions, jsx-a11y/no-noninteractive-tabindex
+      // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions, jsx-a11y/no-noninteractive-tabindex
       <div
-        style={style}
+        aria-label={`${node.isTable ? 'Table' : 'Column'}: ${node.title}`}
         className={cx(
           styles.virtualTreeNode,
           styles[`level${node.level}`],
           node.isTable ? styles.tableNode : styles.columnNode,
         )}
+        style={style}
+        tabIndex={0}
         onClick={handleNodeClick}
         onKeyDown={handleNodeKeyDown}
-        tabIndex={0}
-        aria-label={`${node.isTable ? 'Table' : 'Column'}: ${node.title}`}
       >
         <div className={styles.treeNodeContent}>
           {/* 缩进 */}
@@ -389,6 +389,7 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
 
   return (
     <Card
+      className={cx(styles.virtualizedSchemaTreeCard, collapsed ? styles.virtualizedSchemaTreeCardCollapsed : '')}
       title={
         <Space>
           {!collapsed && (
@@ -397,18 +398,17 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
               <span>数据库结构</span>
               <Tooltip title="刷新数据库结构">
                 <Button
-                  type="text"
-                  size="small"
                   icon={<ReloadOutlined />}
-                  onClick={refreshSchema}
                   loading={loadingSchema}
+                  size="small"
+                  type="text"
+                  onClick={refreshSchema}
                 />
               </Tooltip>
             </>
           )}
         </Space>
       }
-      className={cx(styles.virtualizedSchemaTreeCard, collapsed ? styles.virtualizedSchemaTreeCardCollapsed : '')}
     >
       <div ref={containerRef} className={styles.treeContentWrapper}>
         {(() => {
@@ -418,13 +418,13 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
               <div className={styles.loadingContainer}>
                 <Loading
                   size="default"
-                  tip="加载数据库结构..."
                   style={{
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
                     minHeight: '100px',
                   }}
+                  tip="加载数据库结构..."
                 />
               </div>
             );
@@ -448,21 +448,21 @@ const VirtualizedSchemaTree: React.FC<VirtualizedSchemaTreeProps> = ({
               <div className={styles.virtualizedTreeContainer}>
                 <List
                   ref={listRef}
+                  estimatedItemSize={28} // 估算平均高度，提高滚动性能
                   height={containerHeight}
-                  width="100%"
                   itemCount={flattenedNodes.length}
-                  itemSize={getItemSize} // 使用动态计算的行高
                   itemData={listData}
+                  itemSize={getItemSize} // 使用动态计算的行高
                   overscanCount={25} // 增加预渲染项目数量，减少滚动留白
-                  useIsScrolling // 启用滚动状态，优化性能
-                  onScroll={handleScroll} // 添加滚动处理
-                  // 添加滚动优化配置
                   style={{
                     willChange: 'transform',
                     overflowAnchor: 'none', // 防止浏览器的自动滚动锚定
                   }}
+                  useIsScrolling // 启用滚动状态，优化性能 // 添加滚动处理
+                  // 添加滚动优化配置
+                  width="100%"
                   // 额外的性能优化
-                  estimatedItemSize={28} // 估算平均高度，提高滚动性能
+                  onScroll={handleScroll}
                 >
                   {TreeNodeRenderer}
                 </List>

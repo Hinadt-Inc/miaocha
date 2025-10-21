@@ -33,21 +33,21 @@ const ShareButton: React.FC<ShareButtonProps> = ({
     <>
       <Tooltip title="分享当前查询">
         <Button
+          className={`${styles.shareButton} ${className || ''}`}
           icon={<ShareAltOutlined />}
-          onClick={handleShare}
           size={size}
           type={type}
           variant={variant}
-          className={`${styles.shareButton} ${className || ''}`}
+          onClick={handleShare}
         >
           分享
         </Button>
       </Tooltip>
       
       <ShareModal
+        searchParams={searchParams}
         visible={modalVisible}
         onClose={handleCloseModal}
-        searchParams={searchParams}
       />
     </>
   );

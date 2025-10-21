@@ -54,7 +54,7 @@ export default function LogstashMachineConfigModal({
       setConfirmLoading(true);
 
       const currentValues = form.getFieldsValue();
-      const hasChanges = (Object.keys(currentValues) as Array<keyof typeof initialConfig>).some(
+      const hasChanges = (Object.keys(currentValues) as (keyof typeof initialConfig)[]).some(
         (key) => currentValues[key] !== initialConfig?.[key],
       );
 
@@ -109,110 +109,110 @@ export default function LogstashMachineConfigModal({
 
   return (
     <Modal
+      confirmLoading={confirmLoading}
+      maskClosable={false}
+      open={visible}
       title={
         <span>
           编辑实例配置 - {moduleName ? `模块: ${moduleName}` : ''} {processName ? `进程: ${processName}` : `进程ID: ${processId}`} (实例ID: {logstashMachineId})
         </span>
       }
-      open={visible}
-      onOk={handleOk}
-      confirmLoading={confirmLoading}
-      onCancel={handleCancel}
       width={800}
-      maskClosable={false}
+      onCancel={handleCancel}
+      onOk={handleOk}
     >
       {contextHolder}
-      <Form form={form} layout="vertical" initialValues={initialConfig}>
+      <Form form={form} initialValues={initialConfig} layout="vertical">
         <Form.Item
-          name="configContent"
           label={
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>配置内容</span>
               <Switch
                 checked={enableEdit.configContent}
-                onChange={(checked) => setEnableEdit({ ...enableEdit, configContent: checked })}
                 checkedChildren="可编辑"
-                unCheckedChildren="锁定"
                 size="small"
+                unCheckedChildren="锁定"
+                onChange={(checked) => setEnableEdit({ ...enableEdit, configContent: checked })}
               />
               <Tooltip title="复制">
                 <Button
-                  size="small"
                   icon={<CopyOutlined />}
-                  onClick={() => copyConfigTemplate(initialConfig?.configContent ?? LOGSTASH_CONFIG_TEMPLATE)}
+                  size="small"
                   title="复制配置模板"
+                  onClick={() => copyConfigTemplate(initialConfig?.configContent ?? LOGSTASH_CONFIG_TEMPLATE)}
                 />
               </Tooltip>
             </div>
           }
+          name="configContent"
         >
           <Input.TextArea
+            disabled={!enableEdit.configContent}
+            placeholder="请输入Logstash配置文件内容，例如：input { beats { port => 5044 } }"
             rows={6}
             style={{ width: '100%' }}
-            placeholder="请输入Logstash配置文件内容，例如：input { beats { port => 5044 } }"
-            disabled={!enableEdit.configContent}
           />
         </Form.Item>
 
         <Form.Item
-          name="jvmOptions"
           label={
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>JVM参数</span>
               <Switch
                 checked={enableEdit.jvmOptions}
-                onChange={(checked) => setEnableEdit({ ...enableEdit, jvmOptions: checked })}
                 checkedChildren="可编辑"
-                unCheckedChildren="锁定"
                 size="small"
+                unCheckedChildren="锁定"
+                onChange={(checked) => setEnableEdit({ ...enableEdit, jvmOptions: checked })}
               />
               <Tooltip title="复制">
                 <Button
-                  size="small"
                   icon={<CopyOutlined />}
-                  onClick={() => copyConfigTemplate(initialConfig?.jvmOptions ?? JVM_CONFIG_TEMPLATE)}
+                  size="small"
                   title="复制JVM参数模板"
+                  onClick={() => copyConfigTemplate(initialConfig?.jvmOptions ?? JVM_CONFIG_TEMPLATE)}
                 />
               </Tooltip>
             </div>
           }
+          name="jvmOptions"
         >
           <Input.TextArea
+            disabled={!enableEdit.jvmOptions}
+            placeholder="请输入JVM参数，例如：-Xms1g -Xmx1g -XX:+HeapDumpOnOutOfMemoryError"
             rows={4}
             style={{ width: '100%' }}
-            placeholder="请输入JVM参数，例如：-Xms1g -Xmx1g -XX:+HeapDumpOnOutOfMemoryError"
-            disabled={!enableEdit.jvmOptions}
           />
         </Form.Item>
 
         <Form.Item
-          name="logstashYml"
           label={
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>Logstash配置</span>
               <Switch
                 checked={enableEdit.logstashYml}
-                onChange={(checked) => setEnableEdit({ ...enableEdit, logstashYml: checked })}
                 checkedChildren="可编辑"
-                unCheckedChildren="锁定"
                 size="small"
+                unCheckedChildren="锁定"
+                onChange={(checked) => setEnableEdit({ ...enableEdit, logstashYml: checked })}
               />
               <Tooltip title="复制">
                 <Button
-                  size="small"
                   icon={<CopyOutlined />}
-                  onClick={() => copyConfigTemplate(initialConfig?.logstashYml ?? '')}
+                  size="small"
                   title="复制"
+                  onClick={() => copyConfigTemplate(initialConfig?.logstashYml ?? '')}
                 />
               </Tooltip>
             </div>
           }
+          name="logstashYml"
         >
           <Input.TextArea
+            disabled={!enableEdit.logstashYml}
+            placeholder="请输入logstash.yml配置内容，例如：http.host: 0.0.0.0"
             rows={4}
             style={{ width: '100%' }}
-            placeholder="请输入logstash.yml配置内容，例如：http.host: 0.0.0.0"
-            disabled={!enableEdit.logstashYml}
           />
         </Form.Item>
       </Form>

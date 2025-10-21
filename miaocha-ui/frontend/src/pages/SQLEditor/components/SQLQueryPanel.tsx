@@ -33,6 +33,7 @@ export const SQLQueryPanel: React.FC<SQLQueryPanelProps> = ({
 }) => {
   return (
     <Card
+      className={styles.editorCard}
       hoverable={false}
       title={
         <div className={styles.editorHeaderContainer}>
@@ -40,12 +41,12 @@ export const SQLQueryPanel: React.FC<SQLQueryPanelProps> = ({
             <span>SQL 查询</span>
             <Tooltip title="复制 SQL">
               <Button
-                type="text"
-                size="small"
-                icon={<CopyOutlined />}
-                onClick={onCopyToClipboard}
-                disabled={!sqlQuery.trim()}
                 aria-label="复制SQL语句"
+                disabled={!sqlQuery.trim()}
+                icon={<CopyOutlined />}
+                size="small"
+                type="text"
+                onClick={onCopyToClipboard}
               />
             </Tooltip>
             <SQLSnippetSelector onSelect={onInsertSnippet} />
@@ -53,13 +54,12 @@ export const SQLQueryPanel: React.FC<SQLQueryPanelProps> = ({
           {header}
         </div>
       }
-      className={styles.editorCard}
     >
       <QueryEditor
+        editorSettings={editorSettings}
         sqlQuery={sqlQuery}
         onChange={onChange}
         onEditorMount={onEditorMount}
-        editorSettings={editorSettings}
       />
     </Card>
   );
