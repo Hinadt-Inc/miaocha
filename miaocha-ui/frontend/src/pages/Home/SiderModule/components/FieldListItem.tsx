@@ -1,15 +1,18 @@
 import React, { useState, useCallback, memo } from 'react';
+
 import { Collapse, Tag, Button, Progress, Tooltip, Typography, Empty, Spin } from 'antd';
+
 import { getFieldTypeColor } from '@/utils/logDataHelpers';
-import { IFieldListItemProps } from '../types';
-import { sumArrayCount, hasDistributionData } from '../utils';
+
 import styles from '../styles/FieldListItem.module.less';
+import { FieldListItemProps } from '../types';
+import { sumArrayCount, hasDistributionData } from '../utils';
 
 /**
  * 字段列表项组件
  * 显示字段信息和分布数据
  */
-const FieldListItem: React.FC<IFieldListItemProps> = memo(
+const FieldListItem: React.FC<FieldListItemProps> = memo(
   ({ isSelected, column, columnIndex, fieldData, moduleQueryConfig }) => {
     const {
       distributions = {},

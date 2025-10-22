@@ -1,7 +1,10 @@
 import React from 'react';
-import { Select } from 'antd';
+
 import { StarOutlined, StarFilled } from '@ant-design/icons';
-import { IModuleSelectOption } from '../types';
+import { Select } from 'antd';
+
+import { ModuleSelectOption } from '../types';
+
 import styles from './ModuleSelector.module.less';
 
 interface IProps {
@@ -22,7 +25,7 @@ const ModuleSelector: React.FC<IProps> = ({
   onModuleChange,
   onToggleFavorite,
 }) => {
-  const options: IModuleSelectOption[] = modules?.map((item: any) => ({
+  const options: ModuleSelectOption[] = modules?.map((item: any) => ({
     ...item,
     title: item.label,
     label: (

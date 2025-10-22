@@ -1,24 +1,22 @@
-import { useMemo, useCallback, useEffect } from 'react';
-import { Splitter } from 'antd';
-import SearchBar from './SearchBar/index';
-import Log from './LogModule/index';
-import Sider from './SiderModule/index';
-import styles from './index.module.less';
-import AIAssistantPanel from './components/AIAssistantPanel';
+import { useCallback, useEffect, useMemo } from 'react';
 
-// 导入模块化的hooks
+import { Splitter } from 'antd';
+
+import AIAssistantPanel from './components/AIAssistantPanel';
 import {
+  // useOAuthCallback,
+  useBusinessLogic,
   useHomePageState,
-  useModulesList,
   useLogDetails,
   useLogHistogram,
   useModuleQueryConfig,
+  useModulesList,
   useUrlParams,
-  // useOAuthCallback,
-  useBusinessLogic,
 } from './hooks';
-
-// 导入类型和常量
+import styles from './index.module.less';
+import Log from './LogModule/index';
+import SearchBar from './SearchBar';
+import Sider from './SiderModule/index';
 import type { ILogSearchParams, IStatus } from './types';
 
 /**
@@ -374,20 +372,24 @@ const HomePage = () => {
   // 13. 组件props优化
   const siderProps = useMemo(
     () => ({
+      // 数据与配置
       searchParams,
       modules: moduleOptions,
-      setWhereSqlsFromSider: handleSetWhereSqlsFromSider,
-      onSearch: setSearchParams,
-      onChangeColumns: handleChangeColumns,
-      onActiveColumnsChange: state.setActiveColumns,
-      onSelectedModuleChange: handleSelectedModuleChange,
       moduleQueryConfig,
-      onCommonColumnsChange: state.setCommonColumns,
       selectedModule,
       activeColumns: state.activeColumns, // 传递activeColumns用于同步左侧已选字段显示
+
+      // 回调（动作）
+      onSearch: setSearchParams,
+      setWhereSqlsFromSider: handleSetWhereSqlsFromSider,
+      onChangeColumns: handleChangeColumns,
+      onSelectedModuleChange: handleSelectedModuleChange,
+      onActiveColumnsChange: state.setActiveColumns,
+      onCommonColumnsChange: state.setCommonColumns,
       onColumnsLoaded: setColumnsLoaded, // 传递columns加载完成回调
     }),
     [
+      // 数据与配置
       searchParams,
       moduleOptions,
       moduleQueryConfig,
@@ -399,28 +401,36 @@ const HomePage = () => {
 
   const logProps: any = useMemo(
     () => ({
+      // 数据与配置
       histogramData,
       detailData,
-      getDetailData,
       searchParams,
+      moduleQueryConfig,
       dynamicColumns: state.logTableColumns,
       whereSqlsFromSider: state.whereSqlsFromSider,
       sqls: state.sqls,
+
+      // 加载和排序信息
+      getDetailData,
+      onSortChange: handleSortChange,
+
+      // 回调（动作）
       onSearch: onSearchFromLog,
       onChangeColumns: handleChangeColumnsByLog,
       onSearchFromTable: setSearchParams,
-      moduleQueryConfig,
-      onSortChange: handleSortChange,
     }),
     [
+      // 数据与配置
       histogramData,
       detailData,
-      getDetailData,
-      state.logTableColumns,
       searchParams,
+      moduleQueryConfig,
+      state.logTableColumns,
       state.whereSqlsFromSider,
       state.sqls,
-      moduleQueryConfig,
+
+      // 加载和排序信息
+      getDetailData,
       state.sortConfig,
       // 移除了函数依赖，它们应该是稳定的
     ],
@@ -428,45 +438,55 @@ const HomePage = () => {
 
   const searchBarProps = useMemo(
     () => ({
+      // 数据与配置
       searchParams,
       totalCount: detailData?.totalCount,
+      columns: state.logTableColumns,
+      activeColumns: state.activeColumns,
+      commonColumns: state.commonColumns,
+      sortConfig: state.sortConfig,
+
+      // 查询状态
+      keywords: state.keywords,
+      sqls: state.sqls,
+
+      // 加载态
+      loading: getDetailData.loading,
+
+      // 回调（动作）
       onSearch: setSearchParams,
       onRefresh: handleRefresh,
       setWhereSqlsFromSider: handleSetWhereSqlsFromSider,
       onRemoveSql: handleRemoveSql,
-      columns: state.logTableColumns,
-      onSqlsChange: state.setSqls,
-      activeColumns: state.activeColumns,
       refreshFieldDistributions,
-      sortConfig: state.sortConfig,
-      commonColumns: state.commonColumns,
-      loading: getDetailData.loading,
-      keywords: state.keywords,
+      onSqlsChange: state.setSqls,
       setKeywords: state.setKeywords,
-      sqls: state.sqls,
       setSqls: state.setSqls,
-      sharedParams: state.sharedParams,
-      hasAppliedSharedParams: state.hasAppliedSharedParams,
     }),
     [
+      // 数据与配置
       searchParams,
+      detailData?.totalCount,
+      state.logTableColumns,
+      state.activeColumns,
+      state.commonColumns,
+      state.sortConfig,
+
+      // 查询状态
+      state.keywords,
+      state.sqls,
+
+      // 加载态
+      getDetailData.loading,
+
+      // 回调（动作）
       setSearchParams,
       handleRefresh,
       handleSetWhereSqlsFromSider,
       handleRemoveSql,
       refreshFieldDistributions,
-      detailData?.totalCount,
-      state.logTableColumns,
-      state.activeColumns,
-      state.sortConfig,
-      state.commonColumns,
-      getDetailData.loading,
-      state.keywords,
-      state.sqls,
-      state.sharedParams,
-      state.hasAppliedSharedParams,
-      state.setKeywords,
       state.setSqls,
+      state.setKeywords,
     ],
   );
 

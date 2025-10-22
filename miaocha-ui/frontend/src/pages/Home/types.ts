@@ -92,7 +92,7 @@ export interface ITimeOption {
 }
 
 // 搜索栏Ref接口
-export interface ISearchBarRef {
+export interface SearchBarRef {
   setTimeGroup?: (timeGrouping: string) => void;
   setTimeOption?: (timeOption: ITimeOption) => void;
   removeSql?: (sql: string) => void;
@@ -101,7 +101,7 @@ export interface ISearchBarRef {
 }
 
 // Sider组件Ref接口
-export interface ISiderRef {
+export interface SiderRef {
   refreshFieldDistributions?: () => void;
 }
 

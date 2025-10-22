@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useMemo, forwardRef, useImperativeHandle, useRef, useCallback } from 'react';
+
 import { Collapse, Input } from 'antd';
-import { ISiderProps, ISiderRef, IFieldData } from './types';
+
 import { ModuleSelector, FieldListItem, VirtualFieldList } from './components';
 import { useFavoriteModule, useColumns, useModuleSelection, useDistributions } from './hooks';
-import { getFavoriteModule, removeLocalActiveColumns, updateSearchParamsInStorage } from './utils';
 import styles from './styles/index.module.less';
+import { SiderProps, SiderRef, FieldData } from './types';
+import { getFavoriteModule, removeLocalActiveColumns, updateSearchParamsInStorage } from './utils';
 
 /**
  * 侧边栏组件 - 模块化重构版本
  * 包含模块选择、字段管理和字段分布查询功能
  */
-const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
+const Sider = forwardRef<SiderRef, SiderProps>((props, ref) => {
   const {
     modules,
     onChangeColumns,
@@ -234,7 +236,7 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
   );
 
   // 构建字段数据
-  const fieldListProps: IFieldData = useMemo(() => {
+  const fieldListProps: FieldData = useMemo(() => {
     return {
       searchParams,
       distributions,

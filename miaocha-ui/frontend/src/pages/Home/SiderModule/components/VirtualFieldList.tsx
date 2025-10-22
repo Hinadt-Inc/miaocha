@@ -1,12 +1,14 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react';
-import { IVirtualFieldListProps } from '../types';
+
+import { VirtualFieldListProps } from '../types';
+
 import styles from './VirtualFieldList.module.less';
 
 /**
  * 简化的虚拟滚动组件
  * 用于提高大量字段列表的渲染性能
  */
-const VirtualFieldList: React.FC<IVirtualFieldListProps> = ({ data, itemHeight, containerHeight, renderItem }) => {
+const VirtualFieldList: React.FC<VirtualFieldListProps> = ({ data, itemHeight, containerHeight, renderItem }) => {
   const [scrollTop, setScrollTop] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -36,7 +38,10 @@ const VirtualFieldList: React.FC<IVirtualFieldListProps> = ({ data, itemHeight, 
       {/* 总高度占位符 */}
       <div className={styles.placeholder} style={{ height: `${data.length * itemHeight}px` }}>
         {/* 可视区域内容 */}
-        <div className={styles.visibleContent} style={{transform: `translateY(${visibleRange.start * itemHeight}px)`}}>
+        <div
+          className={styles.visibleContent}
+          style={{ transform: `translateY(${visibleRange.start * itemHeight}px)` }}
+        >
           {visibleData.map((item, index) => renderItem(item, visibleRange.start + index))}
         </div>
       </div>
