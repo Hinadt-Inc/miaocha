@@ -15,7 +15,7 @@ export interface ISearchBarProps {
   columns?: ILogColumnsResponse[]; // 字段列表数据
   onSqlsChange?: (sqls: string[]) => void; // SQL列表变化回调函数
   activeColumns?: string[]; // 激活的字段列表
-  getDistributionWithSearchBar?: () => void; // 获取字段分布回调函数
+  refreshFieldDistributions?: () => void; // 获取字段分布回调函数
   sortConfig?: any[]; // 排序配置
   commonColumns?: string[]; // 普通字段列表（不含有.的字段）
   loading?: boolean; // 加载状态

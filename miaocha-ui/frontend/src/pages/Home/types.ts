@@ -102,7 +102,7 @@ export interface ISearchBarRef {
 
 // Sider组件Ref接口
 export interface ISiderRef {
-  getDistributionWithSearchBar?: () => void;
+  refreshFieldDistributions?: () => void;
 }
 
 // 排序配置类型

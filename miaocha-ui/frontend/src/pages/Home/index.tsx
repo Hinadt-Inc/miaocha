@@ -240,54 +240,57 @@ const HomePage = () => {
   }, [getModuleQueryConfig.data]); // 移除selectedModule依赖，避免循环更新
 
   // 11. 其他业务处理函数
-  const handleSetWhereSqlsFromSider = (flag: '=' | '!=', columnName: string, value: string) => {
-    const sql = `${columnName} ${flag} '${value}'`;
-    const newSearchParams = {
-      ...searchParams,
-      offset: 0,
-    };
+  const handleSetWhereSqlsFromSider = useCallback(
+    (flag: '=' | '!=', columnName: string, value: string) => {
+      const sql = `${columnName} ${flag} '${value}'`;
+      const newSearchParams = {
+        ...searchParams,
+        offset: 0,
+      };
 
-    if (flag === '=') {
-      const oldSql = `${columnName} != '${value}'`;
-      newSearchParams.whereSqls = [...(searchParams?.whereSqls || []), sql];
-      searchBarRef?.current?.removeSql?.(oldSql);
-      state.setWhereSqlsFromSider((prev: any) => [
-        ...prev,
-        {
-          label: sql,
-          value: value,
-          field: columnName,
-        },
-      ]);
-    } else {
-      const oldSql = `${columnName} = '${value}'`;
-      newSearchParams.whereSqls = searchParams?.whereSqls?.filter((item: any) => item !== oldSql);
-      searchBarRef?.current?.removeSql?.(oldSql);
-      state.setWhereSqlsFromSider((prev: any) => prev.filter((item: any) => item.value !== value));
-    }
-
-    if (newSearchParams?.whereSqls?.length === 0) {
-      delete newSearchParams.whereSqls;
-    }
-
-    // 同步更新localStorage中的searchBarParams，确保分布数据查询能获取到最新的whereSqls
-    const savedSearchParams = localStorage.getItem('searchBarParams');
-    if (savedSearchParams) {
-      try {
-        const params = JSON.parse(savedSearchParams);
-        const updatedParams = {
-          ...params,
-          whereSqls: newSearchParams.whereSqls || [],
-        };
-        localStorage.setItem('searchBarParams', JSON.stringify(updatedParams));
-      } catch (error) {
-        console.error('更新localStorage中的searchBarParams失败:', error);
+      if (flag === '=') {
+        const oldSql = `${columnName} != '${value}'`;
+        newSearchParams.whereSqls = [...(searchParams?.whereSqls || []), sql];
+        searchBarRef?.current?.removeSql?.(oldSql);
+        state.setWhereSqlsFromSider((prev: any) => [
+          ...prev,
+          {
+            label: sql,
+            value: value,
+            field: columnName,
+          },
+        ]);
+      } else {
+        const oldSql = `${columnName} = '${value}'`;
+        newSearchParams.whereSqls = searchParams?.whereSqls?.filter((item: any) => item !== oldSql);
+        searchBarRef?.current?.removeSql?.(oldSql);
+        state.setWhereSqlsFromSider((prev: any) => prev.filter((item: any) => item.value !== value));
       }
-    }
 
-    searchBarRef?.current?.addSql?.(sql);
-    setSearchParams(newSearchParams);
-  };
+      if (newSearchParams?.whereSqls?.length === 0) {
+        delete newSearchParams.whereSqls;
+      }
+
+      // 同步更新localStorage中的searchBarParams，确保分布数据查询能获取到最新的whereSqls
+      const savedSearchParams = localStorage.getItem('searchBarParams');
+      if (savedSearchParams) {
+        try {
+          const params = JSON.parse(savedSearchParams);
+          const updatedParams = {
+            ...params,
+            whereSqls: newSearchParams.whereSqls || [],
+          };
+          localStorage.setItem('searchBarParams', JSON.stringify(updatedParams));
+        } catch (error) {
+          console.error('更新localStorage中的searchBarParams失败:', error);
+        }
+      }
+
+      searchBarRef?.current?.addSql?.(sql);
+      setSearchParams(newSearchParams);
+    },
+    [searchParams, state.setWhereSqlsFromSider, setSearchParams],
+  );
 
   // 删除SQL条件的处理函数
   const handleRemoveSql = useCallback(
@@ -321,7 +324,7 @@ const HomePage = () => {
       setSearchParams(newSearchParams);
 
       // 注意：删除SQL标签后的分布数据更新由Sider组件的useEffect自动处理
-      // 不需要手动调用getDistributionWithSearchBar，避免重复调用
+      // 不需要手动调用refreshFieldDistributions，避免重复调用
     },
     [searchParams, state.setWhereSqlsFromSider],
   );
@@ -330,8 +333,9 @@ const HomePage = () => {
     state.setSortConfig(newSortConfig);
   }, []);
 
-  const getDistributionWithSearchBar = useCallback(() => {
-    siderRef.current?.getDistributionWithSearchBar?.();
+  // 分布数据刷新
+  const refreshFieldDistributions = useCallback(() => {
+    siderRef.current?.refreshFieldDistributions?.();
   }, []);
 
   const onSearchFromLog = (params: ILogSearchParams) => {
@@ -433,7 +437,7 @@ const HomePage = () => {
       columns: state.logTableColumns,
       onSqlsChange: state.setSqls,
       activeColumns: state.activeColumns,
-      getDistributionWithSearchBar,
+      refreshFieldDistributions,
       sortConfig: state.sortConfig,
       commonColumns: state.commonColumns,
       loading: getDetailData.loading,
@@ -446,6 +450,11 @@ const HomePage = () => {
     }),
     [
       searchParams,
+      setSearchParams,
+      handleRefresh,
+      handleSetWhereSqlsFromSider,
+      handleRemoveSql,
+      refreshFieldDistributions,
       detailData?.totalCount,
       state.logTableColumns,
       state.activeColumns,
@@ -454,16 +463,16 @@ const HomePage = () => {
       getDetailData.loading,
       state.keywords,
       state.sqls,
-      state.whereSqlsFromSider,
       state.sharedParams,
       state.hasAppliedSharedParams,
-      // 移除了setter函数和回调函数的依赖，它们应该是稳定的
+      state.setKeywords,
+      state.setSqls,
     ],
   );
 
   return (
     <div className={styles.layout}>
-      <SearchBar ref={searchBarRef} {...(searchBarProps as any)} />
+      <SearchBar ref={searchBarRef} {...searchBarProps} />
 
       <Splitter className={styles.container}>
         <Splitter.Panel collapsible defaultSize={200} max="50%" min={0}>
@@ -479,7 +488,7 @@ const HomePage = () => {
       {/* AI助手悬浮窗 */}
       <AIAssistantPanel
         executeDataRequest={executeDataRequest}
-        getDistributionWithSearchBar={getDistributionWithSearchBar}
+        refreshFieldDistributions={refreshFieldDistributions}
         searchBarRef={searchBarRef}
         searchParams={searchParams as any}
         setActiveColumns={setActiveColumns}

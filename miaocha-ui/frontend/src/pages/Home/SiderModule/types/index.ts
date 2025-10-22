@@ -49,7 +49,7 @@ export interface IVirtualFieldListProps {
 
 // Sider Ref接口
 export interface ISiderRef {
-  getDistributionWithSearchBar: () => void;
+  refreshFieldDistributions: () => void;
 }
 
 // 模块选择器选项接口

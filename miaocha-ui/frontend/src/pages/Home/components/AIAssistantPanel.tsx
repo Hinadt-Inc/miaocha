@@ -11,7 +11,7 @@ interface IAIAssistantPanelProps {
   setKeywords: (keywords: string[]) => void;
   setLogTableColumns: (updater: (prev: any) => any) => void;
   executeDataRequest: (params: any) => void;
-  getDistributionWithSearchBar: () => void;
+  refreshFieldDistributions: () => void;
   setHistogramData: (data: any) => void;
 }
 
@@ -25,7 +25,7 @@ const AIAssistantPanel: React.FC<IAIAssistantPanelProps> = ({
   setKeywords,
   setLogTableColumns,
   executeDataRequest,
-  getDistributionWithSearchBar,
+  refreshFieldDistributions,
   setHistogramData,
 }) => {
   return (
@@ -102,7 +102,7 @@ const AIAssistantPanel: React.FC<IAIAssistantPanelProps> = ({
           }
 
           setTimeout(() => {
-            getDistributionWithSearchBar();
+            refreshFieldDistributions();
           }, 100);
         }
       }}

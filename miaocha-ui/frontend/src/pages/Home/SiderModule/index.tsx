@@ -45,7 +45,7 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
     externalSelectedModule,
     onSelectedModuleChange,
   );
-  const { distributions, distributionLoading, getDistributionWithSearchBar, getDistribution } = useDistributions(
+  const { distributions, distributionLoading, refreshFieldDistributions, getDistribution } = useDistributions(
     searchParams,
     columns,
   );
@@ -167,7 +167,7 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
       const parsedParams = JSON.parse(savedSearchParams);
       if (parsedParams?.fields?.length) {
         const timer = setTimeout(() => {
-          getDistributionWithSearchBar();
+          refreshFieldDistributions();
         }, 300);
         return () => clearTimeout(timer);
       }
@@ -176,7 +176,7 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
       const localActiveColumns = JSON.parse(localStorage.getItem('activeColumns') || '[]');
       if (localActiveColumns?.length > 0) {
         const timer = setTimeout(() => {
-          getDistributionWithSearchBar();
+          refreshFieldDistributions();
         }, 300);
         return () => clearTimeout(timer);
       }
@@ -186,7 +186,7 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
     searchParams.keywords,
     searchParams.startTime,
     searchParams.endTime,
-    getDistributionWithSearchBar,
+    refreshFieldDistributions,
     isFirstLoad,
     selectedModule, // 添加selectedModule依赖
     moduleQueryConfig, // 添加moduleQueryConfig依赖
@@ -293,7 +293,7 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
 
   // 暴露给父组件的方法
   useImperativeHandle(ref, () => ({
-    getDistributionWithSearchBar,
+    refreshFieldDistributions,
   }));
 
   // 清理工作
@@ -382,7 +382,5 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
     </div>
   );
 });
-
-Sider.displayName = 'Sider';
 
 export default Sider;

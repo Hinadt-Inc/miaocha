@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
+import { useState, useMemo, useEffect, forwardRef, useImperativeHandle, useRef, memo } from 'react';
 import { Button, Space } from 'antd';
 import dayjs from 'dayjs';
 
@@ -12,7 +12,7 @@ import SavedSearchesButton from '../SavedSearchesButton';
 import ShareButton from '../ShareButton';
 
 // 样式导入
-import { searchBarStyles as styles } from './styles';
+import styles from './index.module.less';
 
 // 钩子导入
 import { useSearchInput, useTimeState, useSearchActions } from './hooks';
@@ -24,6 +24,7 @@ import { STYLES } from './constants';
 import { getLatestTime, DATE_FORMAT_THOUSOND, QUICK_RANGES } from '../utils';
 
 const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
+  console.log('渲染：SearchBar组件');
   const {
     loading = false,
     keywords,
@@ -39,7 +40,7 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
     columns,
     onSqlsChange,
     activeColumns,
-    getDistributionWithSearchBar,
+    refreshFieldDistributions,
     sortConfig = [],
     commonColumns = [],
   } = props;
@@ -132,7 +133,7 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
     // 等待 commonColumns 准备好后再执行（页面初始化时需要等待，后端说模块下一定会有普通字段）
     if (commonColumns.length === 0) return;
 
-    // 页面第一次加载时不调用getDistributionWithSearchBar接口
+    // 页面第一次加载时不调用refreshFieldDistributions接口
     const shouldCallDistribution = !isFirstLoad;
     if (isFirstLoad) {
       setIsFirstLoad(false);
@@ -181,9 +182,9 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
       onSqlsChange(sqls);
     }
 
-    // 调用Sider组件的getDistributionWithSearchBar方法，但第一次加载时跳过
-    if (shouldCallDistribution && getDistributionWithSearchBar) {
-      getDistributionWithSearchBar();
+    // 调用Sider组件的refreshFieldDistributions方法，但第一次加载时跳过
+    if (shouldCallDistribution && refreshFieldDistributions) {
+      refreshFieldDistributions();
     }
   }, [
     timeState.timeGroup,
@@ -200,7 +201,7 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
     searchParams.datasourceId,
     searchParams.module,
     // 移除了timeState.timeOption依赖，避免时间变化引起的循环
-    // 移除了可能导致循环的依赖：onSearch, getDistributionWithSearchBar, searchParams, onSqlsChange
+    // 移除了可能导致循环的依赖：onSearch, refreshFieldDistributions, searchParams, onSqlsChange
   ]);
 
   // 单独处理时间变化的搜索
@@ -294,7 +295,7 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
     onSearch(params as any);
 
     // 同时触发字段分布数据更新
-    if (getDistributionWithSearchBar) {
+    if (refreshFieldDistributions) {
       // 在调用字段分布查询之前，确保localStorage中有最新的参数
       try {
         const currentSearchParams = {
@@ -308,7 +309,7 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
         console.error('SearchBar更新localStorage失败:', error);
       }
 
-      getDistributionWithSearchBar();
+      refreshFieldDistributions();
     }
 
     // 如果是来自搜索按钮的触发，执行完成后清除标识
@@ -477,4 +478,4 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
   );
 });
 
-export default SearchBar;
+export default memo(SearchBar);

@@ -497,7 +497,8 @@ export const useDistributions = (searchParams: ILogSearchParams, availableColumn
     },
   );
 
-  const getDistributionWithSearchBar = useCallback(() => {
+  // 刷新字段分布
+  const refreshFieldDistributions = useCallback(() => {
     const _searchParams = JSON.parse(localStorage.getItem('searchBarParams') || '{}');
     const fields = _searchParams?.fields;
 
@@ -641,7 +642,7 @@ export const useDistributions = (searchParams: ILogSearchParams, availableColumn
   return {
     distributions,
     distributionLoading,
-    getDistributionWithSearchBar,
+    refreshFieldDistributions,
     getDistribution,
   };
 };
