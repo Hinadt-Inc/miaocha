@@ -1,5 +1,7 @@
 export const colorPrimary = '#0038FF'; // 主题色
 
+console.log(333, aaa);
+
 /**
  * 判断两个时间点之间的间隔是否超过一天（24小时）
  * @param startTime 开始时间字符串
@@ -24,7 +26,7 @@ export function debounce<T extends (...args: any[]) => any>(
   wait: number,
   immediate: boolean = false,
 ): T & { cancel: () => void } {
-  let timeout: NodeJS.Timeout | null = null;
+  let timeout: any = null;
   let result: ReturnType<T> | undefined;
 
   const debounced = function (this: ThisParameterType<T>, ...args: Parameters<T>): ReturnType<T> | undefined {
