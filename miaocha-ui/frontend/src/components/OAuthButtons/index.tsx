@@ -36,7 +36,6 @@ const OAuthButtons = ({ onError }: OAuthButtonsProps) => {
   useEffect(() => {
     const fetchProviders = async () => {
       try {
-        console.log('开始获取OAuth提供者列表...');
         const response = await getOAuthProviders();
         if (response) {
           // 只显示启用的提供者，并按排序顺序排列
@@ -130,7 +129,6 @@ const OAuthButtons = ({ onError }: OAuthButtonsProps) => {
 
       <div className={styles.providersContainer}>
         <button
-          aria-label={`使用 ${primaryProvider.displayName} 登录`}
           className={`${styles.compactOAuthButton} ${initiatingLogin === primaryProvider.providerId ? styles.loading : ''} ${isHovered ? styles.hovered : ''}`}
           disabled={!!initiatingLogin}
           onClick={() => handleOAuthLogin(primaryProvider)}
