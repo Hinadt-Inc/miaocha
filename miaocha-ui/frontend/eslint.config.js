@@ -52,7 +52,7 @@ export default tseslint.config(
       // - 允许 any（在实际业务中快速迭代时常用；关键路径再做精细化）
       '@typescript-eslint/no-explicit-any': 'off',
       // - 未使用变量降为 warn，并允许以下划线开头的“有意忽略”变量
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       // - 函数返回类型/模块边界类型不强制，避免样板代码与噪音
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',

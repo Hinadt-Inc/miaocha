@@ -1,6 +1,6 @@
 export const colorPrimary = '#0038FF'; // 主题色
 
-console.log(333, aaa);
+console.log(333, aauua);
 
 /**
  * 判断两个时间点之间的间隔是否超过一天（24小时）
