@@ -3,8 +3,10 @@
  */
 
 import React from 'react';
+
 import { Space, Statistic } from 'antd';
 import CountUp from 'react-countup';
+
 import { STATISTICS } from '../constants';
 
 interface IStatisticsInfoProps {

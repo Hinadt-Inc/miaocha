@@ -1,10 +1,12 @@
 import React from 'react';
+
 import { Table, Tabs } from 'antd';
 import ReactJson from 'react-json-view';
-import type { IExpandedRowProps } from './types';
-import { useTableColumns, useTableDataSource, useFilteredJsonData, useTabItems } from './hooks';
+
 import { REACT_JSON_CONFIG, TAB_KEYS } from './constants';
+import { useTableColumns, useTableDataSource, useFilteredJsonData, useTabItems } from './hooks';
 import styles from './index.module.less';
+import type { IExpandedRowProps } from './types';
 
 /**
  * 展开行组件
@@ -19,39 +21,29 @@ const ExpandedRow: React.FC<IExpandedRowProps> = (props) => {
   const filteredJsonData = useFilteredJsonData(data, moduleQueryConfig);
 
   // 表格组件
-  const tableComponent = React.useMemo(() => (
-    <Table
-      bordered
-      dataSource={dataSource}
-      columns={columns}
-      pagination={false}
-      size="small"
-      rowKey="key"
-    />
-  ), [dataSource, columns]);
+  const tableComponent = React.useMemo(
+    () => <Table bordered columns={columns} dataSource={dataSource} pagination={false} rowKey="key" size="small" />,
+    [dataSource, columns],
+  );
 
   // JSON组件
-  const jsonComponent = React.useMemo(() => (
-    <ReactJson
-      src={filteredJsonData}
-      collapsed={REACT_JSON_CONFIG.COLLAPSED_LEVEL}
-      enableClipboard={REACT_JSON_CONFIG.ENABLE_CLIPBOARD}
-      displayDataTypes={REACT_JSON_CONFIG.DISPLAY_DATA_TYPES}
-      name={REACT_JSON_CONFIG.SHOW_NAME}
-    />
-  ), [filteredJsonData]);
+  const jsonComponent = React.useMemo(
+    () => (
+      <ReactJson
+        collapsed={REACT_JSON_CONFIG.COLLAPSED_LEVEL}
+        displayDataTypes={REACT_JSON_CONFIG.DISPLAY_DATA_TYPES}
+        enableClipboard={REACT_JSON_CONFIG.ENABLE_CLIPBOARD}
+        name={REACT_JSON_CONFIG.SHOW_NAME}
+        src={filteredJsonData}
+      />
+    ),
+    [filteredJsonData],
+  );
 
   // Tabs配置
   const items = useTabItems(tableComponent, jsonComponent);
 
-  return (
-    <Tabs
-      className={styles.expandedRow}
-      size="small"
-      defaultActiveKey={TAB_KEYS.TABLE}
-      items={items}
-    />
-  );
+  return <Tabs className={styles.expandedRow} defaultActiveKey={TAB_KEYS.TABLE} items={items} size="small" />;
 };
 
 export default ExpandedRow;

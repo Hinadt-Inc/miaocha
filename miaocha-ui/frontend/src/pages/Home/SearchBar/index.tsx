@@ -383,7 +383,10 @@ const SearchBar = forwardRef<SearchBarRef, SearchBarProps>((props, ref) => {
       sqls,
       timeState.timeOption,
       // 交互回调
-      searchActions,
+      searchActions.handleClickKeyword,
+      searchActions.handleClickSql,
+      searchActions.handleCloseKeyword,
+      searchActions.handleCloseSql,
       handleTimeFromTag,
     ],
   );

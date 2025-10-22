@@ -1,10 +1,14 @@
 import { useCallback, useRef, useEffect, useMemo } from 'react';
+
 import { message } from 'antd';
-import { debounce } from 'lodash';
 import copy from 'copy-to-clipboard';
 import * as monaco from 'monaco-editor';
-import { downloadAsCSV, insertTextToEditor, getSQLContext, generateColumnList } from '../utils/editorUtils';
+
+import { debounce } from '@/utils/utils';
+
 import { QueryResult } from '../types';
+import { downloadAsCSV, insertTextToEditor, getSQLContext, generateColumnList } from '../utils/editorUtils';
+
 import { useSQLCompletion } from './useSQLCompletion';
 import type { useSQLEditorState } from './useSQLEditorState';
 

@@ -17,7 +17,7 @@ import styles from './index.module.less';
 import Log from './LogModule/index';
 import SearchBar from './SearchBar';
 import Sider from './SiderModule/index';
-import type { ILogSearchParams, IStatus } from './types';
+import type { ILogSearchParams } from './types';
 
 /**
  * Home页面组件
