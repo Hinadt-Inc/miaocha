@@ -51,7 +51,7 @@ const SearchBar = forwardRef<SearchBarRef, SearchBarProps>((props, ref) => {
   const [isFirstLoad, setIsFirstLoad] = useState<boolean>(true); // 标记是否第一次加载
 
   // 使用自定义钩子
-  const { searchState, changeKeyword, changeSql, clearInputs } = useSearchInput();
+  const { searchState, changeKeyword, changeSql, clearInputs } = useSearchInput(); // 搜索输入框
   const { timeState, setTimeOption, setTimeGroup, setOpenTimeRange, setOpenTimeGroup, setActiveTab, submitTime } =
     useTimeState(searchParams);
   const searchActions = useSearchActions({
@@ -70,14 +70,15 @@ const SearchBar = forwardRef<SearchBarRef, SearchBarProps>((props, ref) => {
   // 监听 searchParams 中的时间变化，同步更新 timeOption
   useEffect(() => {
     if (searchParams.startTime && searchParams.endTime) {
-      const newTimeString = `${dayjs(searchParams.startTime).format('YYYY-MM-DD HH:mm:ss')} ~ ${dayjs(searchParams.endTime).format('YYYY-MM-DD HH:mm:ss')}`;
-      const currentTimeString = `${dayjs(timeState.timeOption?.range?.[0]).format('YYYY-MM-DD HH:mm:ss')} ~ ${dayjs(timeState.timeOption?.range?.[1]).format('YYYY-MM-DD HH:mm:ss')}`;
+      const format = 'YYYY-MM-DD HH:mm:ss';
+      const newTimeString = `${dayjs(searchParams.startTime).format(format)} ~ ${dayjs(searchParams.endTime).format(format)}`;
+      const currentTimeString = `${dayjs(timeState.timeOption?.range?.[0]).format(format)} ~ ${dayjs(timeState.timeOption?.range?.[1]).format(format)}`;
 
       // 如果 searchParams 中的时间与当前 timeOption 不一致，更新 timeOption
       if (currentTimeString !== newTimeString) {
         timeUpdateFromParamsRef.current = true; // 标记这次更新来自外部
 
-        const newTimeOption = {
+        const target = {
           value: searchParams.timeRange || newTimeString,
           range: [searchParams.startTime, searchParams.endTime],
           label:
@@ -95,10 +96,19 @@ const SearchBar = forwardRef<SearchBarRef, SearchBarProps>((props, ref) => {
             }),
         };
 
-        setTimeOption(newTimeOption as any);
+        setTimeOption(target as ITimeOption);
       }
     }
-  }, [searchParams.startTime, searchParams.endTime, searchParams.timeRange, setTimeOption]);
+  }, [
+    searchParams.startTime,
+    searchParams.endTime,
+    searchParams.timeRange,
+    searchParams.relativeEndOption,
+    searchParams.relativeStartOption,
+    searchParams.timeType,
+    timeState.timeOption?.range,
+    setTimeOption,
+  ]);
 
   // 暴露给父组件的方法
   useImperativeHandle(
@@ -115,7 +125,7 @@ const SearchBar = forwardRef<SearchBarRef, SearchBarProps>((props, ref) => {
       setTimeOption,
       // 设置时间分组
       setTimeGroup,
-      // 自动刷新方法（供父组件调用）
+      // 自动刷新方法
       autoRefresh: () => {
         // 更新时间到最新
         const latestTime = getLatestTime(timeState.timeOption);
@@ -385,14 +395,12 @@ const SearchBar = forwardRef<SearchBarRef, SearchBarProps>((props, ref) => {
   const timeRender = useMemo(
     () => (
       <TimePickerWrapper
-        // 状态
         activeTab={timeState.activeTab}
         open={timeState.openTimeRange}
+        setActiveTab={setActiveTab}
+        timeOption={timeState.timeOption}
         onOpenChange={setOpenTimeRange}
         onSubmit={submitTime}
-        timeOption={timeState.timeOption}
-        // 回调
-        setActiveTab={setActiveTab}
       />
     ),
     [

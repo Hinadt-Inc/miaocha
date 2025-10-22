@@ -1,7 +1,3 @@
-/**
- * Home页面相关的类型定义
- */
-
 // 搜索参数接口
 export interface ILogSearchParams {
   offset: number;
@@ -22,13 +18,13 @@ export interface ILogSearchParams {
 }
 
 // 模块选项接口
-export interface IStatus {
-  label: string;
-  value: string;
-  datasourceId: string | number;
-  datasourceName: string;
-  module: string;
-}
+// export interface IStatus {
+//   label: string;
+//   value: string;
+//   datasourceId: string | number;
+//   datasourceName: string;
+//   module: string;
+// }
 
 // 日志详情响应接口
 export interface ILogDetailsResponse {

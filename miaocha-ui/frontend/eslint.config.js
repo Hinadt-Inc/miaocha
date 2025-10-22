@@ -92,6 +92,17 @@ export default tseslint.config(
         },
       ],
 
+      // JSX 属性排序：设为 error，以统一属性书写顺序（提升可读性与一致性）
+      'react/jsx-sort-props': [
+        'error',
+        {
+          callbacksLast: true, // 回调放最后
+          ignoreCase: true, // 忽略大小写排序差异
+          noSortAlphabetically: false, // 允许按字母排序
+          reservedFirst: true, // 保留属性（如 key）优先
+        },
+      ],
+
       // 通用代码风格：
       'no-console': ['warn', { allow: ['warn', 'error'] }], // 控制台输出仅允许 warn/error
       'prefer-const': 'warn', // 能用 const 就用 const，减少可变性
@@ -147,6 +158,16 @@ export default tseslint.config(
             order: 'asc',
             caseInsensitive: true,
           },
+        },
+      ],
+      // 统一 JSX 属性排序，保持与 TSX 一致的风格要求
+      'react/jsx-sort-props': [
+        'error',
+        {
+          callbacksLast: true,
+          ignoreCase: true,
+          noSortAlphabetically: false,
+          reservedFirst: true,
         },
       ],
     },

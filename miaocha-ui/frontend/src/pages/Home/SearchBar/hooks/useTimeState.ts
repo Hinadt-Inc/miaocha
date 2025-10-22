@@ -1,13 +1,11 @@
-/**
- * 时间相关的自定义钩子
- */
-
 import { useState, useCallback } from 'react';
-import { ITimeState, ILogTimeSubmitParams } from '../types';
-import { ITimeOption } from '../../types';
-import { QUICK_RANGES } from '../../utils';
 
-export const useTimeState = (initialSearchParams: any) => {
+import { ITimeOption, ILogSearchParams } from '@/pages/Home/types';
+import { QUICK_RANGES } from '@/pages/Home/utils';
+
+import { ITimeState, ILogTimeSubmitParams } from '../types';
+
+export const useTimeState = (initialSearchParams: ILogSearchParams) => {
   // 初始化时间选项
   const initializeTimeOption = useCallback((): ITimeOption => {
     const { timeRange } = initialSearchParams;
