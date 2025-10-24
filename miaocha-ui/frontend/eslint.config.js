@@ -51,20 +51,19 @@ export default tseslint.config(
       // 类型相关规则的“降噪”策略：
       // - 允许 any（在实际业务中快速迭代时常用；关键路径再做精细化）
       '@typescript-eslint/no-explicit-any': 'off',
-      // - 未使用变量降为 warn，并允许以下划线开头的“有意忽略”变量
+      // - 未使用变量，并允许以下划线开头的“有意忽略”变量
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       // - 函数返回类型/模块边界类型不强制，避免样板代码与噪音
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       // - 非空断言设为 warn：提醒但不强制禁止（在确知数据存在时可用）
-      '@typescript-eslint/no-non-null-assertion': 'warn',
+      '@typescript-eslint/no-non-null-assertion': 'error',
       // - 关闭“多余类型断言”规则，避免在联合类型/控制流复杂时产生噪音
       '@typescript-eslint/no-unnecessary-type-assertion': 'off',
 
       // React 常见规则调整：
       'react/prop-types': 'off', // TypeScript 项目通常不使用 PropTypes
       'react/react-in-jsx-scope': 'off', // 新版 React JSX 无需显式引入 React
-      'react/display-name': 'off', // 组件显示名在 TS/函数式组件下不强制
 
       // Import 排序规则
       'import/order': [
@@ -108,71 +107,12 @@ export default tseslint.config(
       'prefer-const': 'warn', // 能用 const 就用 const，减少可变性
 
       // 进一步降低不必要提示的规则：
-      '@typescript-eslint/require-await': 'off', // 允许暂时无 await 的 async（常见在接口预留场景）
-      '@typescript-eslint/no-inferrable-types': 'off', // 允许显式标注字面量类型（有时用于文档性或稳定性）
+      '@typescript-eslint/require-await': 'off',
+      '@typescript-eslint/no-inferrable-types': 'off',
       '@typescript-eslint/consistent-indexed-object-style': 'off', // 不强制 Record 风格，保留索引签名灵活性
     },
     settings: {
       react: { version: 'detect' }, // 自动检测 React 版本，避免手动维护
-      'import/resolver': {
-        typescript: {
-          alwaysTryTypes: true,
-          project: './tsconfig.json',
-        },
-      },
-    },
-  },
-
-  // 纯 JS/JSX 文件：给到基础规则与 JSX 支持，不引入 TS 相关配置
-  {
-    files: ['**/*.{js,jsx}'],
-    extends: [js.configs.recommended], // JS 推荐规则
-    languageOptions: {
-      ecmaVersion: 'latest',
-      globals: {
-        ...globals.browser,
-        ...globals.node,
-      },
-      parserOptions: { ecmaFeatures: { jsx: true } }, // 开启 JSX 支持
-    },
-    plugins: {
-      react: reactPlugin, // React 基础规则
-      import: importPlugin, // Import 规则插件
-    },
-    rules: {
-      // Import 排序规则
-      'import/order': [
-        'error',
-        {
-          groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
-          pathGroups: [
-            {
-              pattern: 'react',
-              group: 'external',
-              position: 'before',
-            },
-          ],
-          pathGroupsExcludedImportTypes: ['react'],
-          'newlines-between': 'always',
-          alphabetize: {
-            order: 'asc',
-            caseInsensitive: true,
-          },
-        },
-      ],
-      // 统一 JSX 属性排序，保持与 TSX 一致的风格要求
-      'react/jsx-sort-props': [
-        'error',
-        {
-          callbacksLast: true,
-          ignoreCase: true,
-          noSortAlphabetically: false,
-          reservedFirst: true,
-        },
-      ],
-    },
-    settings: {
-      react: { version: 'detect' }, // 自动检测 React 版本
       'import/resolver': {
         typescript: {
           alwaysTryTypes: true,

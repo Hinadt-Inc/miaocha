@@ -1,5 +1,6 @@
-import { get, post } from './request';
 import { getOAuthLogoutCallbackUrl } from '../constants/env';
+
+import { get, post } from './request';
 
 // 用户登录接口
 export const login = (data: ILoginParams) => {

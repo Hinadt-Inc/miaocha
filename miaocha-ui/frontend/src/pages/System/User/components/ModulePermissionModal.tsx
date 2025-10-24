@@ -1,7 +1,10 @@
-import { Modal, Table, Space, Button, Input, Tag, message, Descriptions } from 'antd';
-import { revokeModule, authorizeModule, batchRevokeModules } from '@/api/user';
-import type { ColumnsType } from 'antd/es/table';
 import { useState, useMemo, memo } from 'react';
+
+import { Modal, Table, Space, Button, Input, Tag, message, Descriptions } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+
+import { revokeModule, authorizeModule, batchRevokeModules } from '@/api/user';
+
 import type { ModulePermissionListItem } from '../types';
 
 interface Props {
@@ -29,8 +32,6 @@ const ModulePermissionModal = ({
   onSave,
   onRefresh,
 }: Props) => {
-  console.log('渲染：监听ModulePermissionModal组件');
-
   const [selectedModules, setSelectedModules] = useState<string[]>([]);
   const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(false);
