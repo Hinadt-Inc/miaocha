@@ -1,9 +1,8 @@
-import { Table, Space, Button, Popconfirm, Tag } from 'antd';
+import { Table, Space, Button, Popconfirm, Tag, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import type { LogstashProcess } from '@/types/logstashTypes';
 import { useState } from 'react';
-import { useErrorContext } from '@/providers/ErrorProvider';
 import { batchStartLogstashInstances, batchStopLogstashInstances } from '@/api/logstash';
 
 interface MachineTableProps {
@@ -36,13 +35,12 @@ const MachineTable = ({
   onDeleteMachine,
 }: MachineTableProps) => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const { showSuccess } = useErrorContext();
 
   const handleBatchStart = async () => {
     try {
       const instanceIds = selectedRowKeys.map((key) => Number(key));
       await batchStartLogstashInstances(instanceIds);
-      showSuccess('批量启动成功');
+      message.success('批量启动成功');
       setSelectedRowKeys([]);
       // Trigger parent component refresh
       window.location.reload();
@@ -55,7 +53,7 @@ const MachineTable = ({
     try {
       const instanceIds = selectedRowKeys.map((key) => Number(key));
       await batchStopLogstashInstances(instanceIds);
-      showSuccess('批量停止成功');
+      message.success('批量停止成功');
       setSelectedRowKeys([]);
       // Trigger parent component refresh
       window.location.reload();
