@@ -6,6 +6,7 @@ import com.hinadt.miaocha.application.service.LogstashProcessService;
 import com.hinadt.miaocha.common.exception.ErrorCode;
 import com.hinadt.miaocha.domain.dto.ApiResponse;
 import com.hinadt.miaocha.domain.dto.logstash.AlertRecipientsUpdateRequestDTO;
+import com.hinadt.miaocha.domain.dto.logstash.LogstashInstanceBatchOperationRequestDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashMachineDetailDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessConfigUpdateRequestDTO;
 import com.hinadt.miaocha.domain.dto.logstash.LogstashProcessCreateDTO;
@@ -305,5 +306,31 @@ public class LogstashProcessEndpoint {
             @Parameter(description = "Instance ID", required = true) @PathVariable("instanceId")
                     Long instanceId) {
         return ApiResponse.success(logstashProcessService.getLogstashMachineDetail(instanceId));
+    }
+
+    // ==================== Batch instance operations ====================
+
+    /** Batch start multiple instances. */
+    @PostMapping("/instances/batch-start")
+    @Operation(
+            summary = "Batch start instances",
+            description = "Start multiple LogstashMachine instances in batch")
+    public ApiResponse<Void> batchStartLogstashInstances(
+            @Parameter(description = "Batch operation request", required = true) @Valid @RequestBody
+                    LogstashInstanceBatchOperationRequestDTO dto) {
+        logstashProcessService.batchStartLogstashInstances(dto.getInstanceIds());
+        return ApiResponse.success();
+    }
+
+    /** Batch stop multiple instances. */
+    @PostMapping("/instances/batch-stop")
+    @Operation(
+            summary = "Batch stop instances",
+            description = "Stop multiple LogstashMachine instances in batch")
+    public ApiResponse<Void> batchStopLogstashInstances(
+            @Parameter(description = "Batch operation request", required = true) @Valid @RequestBody
+                    LogstashInstanceBatchOperationRequestDTO dto) {
+        logstashProcessService.batchStopLogstashInstances(dto.getInstanceIds());
+        return ApiResponse.success();
     }
 }

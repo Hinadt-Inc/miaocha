@@ -909,6 +909,58 @@ public class LogstashProcessServiceImpl implements LogstashProcessService {
         return logstashMachineConverter.toDetailDTO(logstashMachine, process, machineInfo);
     }
 
+    @Override
+    public void batchStartLogstashInstances(List<Long> instanceIds) {
+        log.info("批量启动LogstashMachine实例: instanceIds={}", instanceIds);
+
+        if (instanceIds == null || instanceIds.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "实例ID列表不能为空");
+        }
+
+        // 验证所有实例是否存在
+        for (Long instanceId : instanceIds) {
+            validateInstanceExists(instanceId);
+        }
+
+        // 批量启动实例
+        for (Long instanceId : instanceIds) {
+            try {
+                startLogstashInstance(instanceId);
+            } catch (Exception e) {
+                log.error("启动实例失败: instanceId={}", instanceId, e);
+                // 继续处理其他实例，不因单个失败而中断整个批量操作
+            }
+        }
+
+        log.info("批量启动LogstashMachine实例完成: instanceIds={}", instanceIds);
+    }
+
+    @Override
+    public void batchStopLogstashInstances(List<Long> instanceIds) {
+        log.info("批量停止LogstashMachine实例: instanceIds={}", instanceIds);
+
+        if (instanceIds == null || instanceIds.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "实例ID列表不能为空");
+        }
+
+        // 验证所有实例是否存在
+        for (Long instanceId : instanceIds) {
+            validateInstanceExists(instanceId);
+        }
+
+        // 批量停止实例
+        for (Long instanceId : instanceIds) {
+            try {
+                stopLogstashInstance(instanceId);
+            } catch (Exception e) {
+                log.error("停止实例失败: instanceId={}", instanceId, e);
+                // 继续处理其他实例，不因单个失败而中断整个批量操作
+            }
+        }
+
+        log.info("批量停止LogstashMachine实例完成: instanceIds={}", instanceIds);
+    }
+
     /**
      * 验证LogstashMachine实例是否存在
      *

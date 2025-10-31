@@ -249,3 +249,19 @@ export function getLogTailContent(lastLogId?: string): Promise<{ logs: string[];
     params: { lastLogId },
   });
 }
+
+export function batchStartLogstashInstances(instanceIds: number[]): Promise<void> {
+  return request({
+    url: '/api/logstash/processes/instances/batch-start',
+    method: 'POST',
+    data: { instanceIds },
+  });
+}
+
+export function batchStopLogstashInstances(instanceIds: number[]): Promise<void> {
+  return request({
+    url: '/api/logstash/processes/instances/batch-stop',
+    method: 'POST',
+    data: { instanceIds },
+  });
+}
