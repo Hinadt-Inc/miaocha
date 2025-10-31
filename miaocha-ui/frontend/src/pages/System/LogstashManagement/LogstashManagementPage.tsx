@@ -76,7 +76,7 @@ const LogstashManagementPage = () => {
   };
 
   const renderExpandedRow = (record: any) => (
-    <ExpandedRowRenderer data={data} machineActions={machineActions} record={record} />
+    <ExpandedRowRenderer data={data} machineActions={machineActions} record={record} onRefresh={fetchData} />
   );
 
   const handleScale = async (

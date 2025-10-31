@@ -18,6 +18,7 @@ interface MachineTableProps {
   onShowMachineTasks: (processId: number, machineId: number) => void;
   onShowLog: (machineId: number, isBottom?: boolean) => void;
   onDeleteMachine: (processId: number, machineId: number) => void;
+  onRefresh?: () => Promise<void>;
 }
 
 const MachineTable = ({
@@ -33,6 +34,7 @@ const MachineTable = ({
   onShowMachineTasks,
   onShowLog,
   onDeleteMachine,
+  onRefresh,
 }: MachineTableProps) => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
@@ -42,8 +44,9 @@ const MachineTable = ({
       await batchStartLogstashInstances(instanceIds);
       message.success('批量启动成功');
       setSelectedRowKeys([]);
-      // Trigger parent component refresh
-      window.location.reload();
+      if (onRefresh) {
+        await onRefresh();
+      }
     } catch (error) {
       // Error already handled by global error handler
     }
@@ -55,8 +58,9 @@ const MachineTable = ({
       await batchStopLogstashInstances(instanceIds);
       message.success('批量停止成功');
       setSelectedRowKeys([]);
-      // Trigger parent component refresh
-      window.location.reload();
+      if (onRefresh) {
+        await onRefresh();
+      }
     } catch (error) {
       // Error already handled by global error handler
     }
