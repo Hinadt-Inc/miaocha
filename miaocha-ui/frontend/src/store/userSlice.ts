@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
+
 import { getUserInfo } from '@/api/auth';
 
 const initialState: IStoreUser = {

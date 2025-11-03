@@ -92,7 +92,6 @@ const ModuleManagementPage = () => {
               total: data.length,
             }}
             rowKey="key"
-            scroll={{ x: 1340 }}
             size="small"
             onChange={handleTableChange}
           />

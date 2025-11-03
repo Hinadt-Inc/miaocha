@@ -1,12 +1,11 @@
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
-    'Noto Color Emoji';
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   line-height: 1.5;
   color: rgba(0, 0, 0, 0.85);
 }
-
 
 #root {
   height: 100vh;
@@ -26,7 +25,7 @@ body {
 ::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.08);
   border-radius: 4px;
-  
+
   &:hover {
     background: rgba(0, 0, 0, 0.2);
   }
@@ -53,7 +52,9 @@ body {
   background: var(--primary-color) !important;
 }
 #nprogress .peg {
-  box-shadow: 0 0 10px var(--primary-color), 0 0 5px var(--primary-color) !important;
+  box-shadow:
+    0 0 10px var(--primary-color),
+    0 0 5px var(--primary-color) !important;
 }
 #nprogress .spinner-icon {
   border-top-color: var(--primary-color) !important;
@@ -70,29 +71,37 @@ body {
         color: #0038ff !important;
         font-weight: 600 !important;
       }
-      
+
       background-color: rgba(0, 56, 255, 0.06) !important;
     }
-    
+
     .ant-menu-item:hover {
       .ant-menu-title-content,
       .ant-menu-item-icon,
       a {
         color: #1646ff !important;
       }
-      
+
       background-color: rgba(0, 56, 255, 0.04) !important;
     }
-    
-    .ant-menu-item[data-menu-id="/"] {
+
+    .ant-menu-item[data-menu-id='/'] {
       color: #0038ff !important;
-      
+
       &.ant-menu-item-selected {
         background-color: rgba(0, 56, 255, 0.06) !important;
       }
     }
   }
 }
+
+// 单行省略号样式
+.global-text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .global-table-action {
   gap: 0;
   .ant-btn {

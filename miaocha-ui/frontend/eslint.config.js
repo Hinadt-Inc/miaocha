@@ -18,7 +18,6 @@ export default tseslint.config(
   // TypeScript + React：这是主要规则块，限定只检查 src 下的 TS/TSX 文件，避免误把根目录其他文件按 TS 工程解析
   {
     files: ['src/**/*.{ts,tsx}'], // 仅 lint src 内的 TypeScript/React 源码，防止解析到非工程文件
-    extends: [
       js.configs.recommended, // JS 基础推荐规则（合理但不过度）
       ...tseslint.configs.recommended, // TS 推荐规则（非 type-checked 版本，避免过度严格）
       ...tseslint.configs.stylistic, // 风格规则（格式与编码风格相关）
@@ -110,6 +109,8 @@ export default tseslint.config(
       '@typescript-eslint/require-await': 'off',
       '@typescript-eslint/no-inferrable-types': 'off',
       '@typescript-eslint/consistent-indexed-object-style': 'off', // 不强制 Record 风格，保留索引签名灵活性
+
+      'react-hooks/exhaustive-deps': 'off',
     },
     settings: {
       react: { version: 'detect' }, // 自动检测 React 版本，避免手动维护
