@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { message } from 'antd';
+import { App } from 'antd';
 import {
   createDataSource,
   updateDataSource,
@@ -26,7 +26,14 @@ export const useDataSourceActions = ({
 }: UseDataSourceActionsProps) => {
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [currentDataSource, setCurrentDataSource] = useState<DataSourceFormData | undefined>(undefined);
-  const showSuccess = () => {};
+  const { message } = App.useApp();
+  /**
+   * 展示成功提示
+   * @param content 成功提示内容
+   */
+  const showSuccess = (content: string) => {
+    message.success(content);
+  };
   // const { handleError, showSuccess } = useErrorContext();
   const actionRef = useRef<ActionType>(null);
 
@@ -114,9 +121,8 @@ export const useDataSourceActions = ({
   const handleTestConnection = async (values: TestConnectionParams) => {
     // 在编辑模式下，如果密码为空，验证是否有原有密码可用
     const passwordToUse = values.password || (currentDataSource?.password ?? '');
-
     if (!values.jdbcUrl || !values.username || !passwordToUse) {
-      const missingFields = [];
+      const missingFields: string[] = [];
       if (!values.jdbcUrl) missingFields.push('JDBC URL');
       if (!values.username) missingFields.push('用户名');
       if (!passwordToUse) missingFields.push('密码');
@@ -138,7 +144,6 @@ export const useDataSourceActions = ({
         username: values.username,
         password: passwordToUse, // 使用处理后的密码
       } as TestConnectionParams;
-
       await testDataSourceConnection(testParams);
       showSuccess('数据库连接测试成功！连接配置正确，可以正常访问数据库');
     } catch {

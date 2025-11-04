@@ -3,6 +3,7 @@ import { Button, Space, Tag, Popconfirm } from 'antd';
 import type { TablePaginationConfig, ColumnsType } from 'antd/es/table';
 import type { LogstashProcess } from '@/types/logstashTypes';
 import dayjs from 'dayjs';
+import { generalSorter } from '@/utils/utils';
 
 interface UseTableConfigProps {
   onEdit: (record: LogstashProcess) => void;
@@ -28,14 +29,23 @@ export const useTableConfig = (props: UseTableConfigProps) => {
     pageSizeOptions: ['10', '20', '50', '100'],
   });
 
-  const checkSubTableStatus = (record: LogstashProcess, action: 'start' | 'stop') => {
+  const handleCheckActions = (
+    record: LogstashProcess,
+    option: {
+      stateList: string[];
+      isInclude?: boolean;
+    } = { stateList: [], isInclude: false },
+  ) => {
     if (!record.logstashMachineStatusInfo) return false;
-
-    return record.logstashMachineStatusInfo.every((machine) =>
-      action === 'start'
-        ? ['RUNNING', 'STARTING', 'STOPPING'].includes(machine.state)
-        : ['STOPPED', 'STOPPING', 'NOT_STARTED'].includes(machine.state),
-    );
+    const { stateList, isInclude } = option;
+    if (!isInclude) {
+      return record.logstashMachineStatusInfo.every((machine) => {
+        return !stateList.includes(machine.state);
+      });
+    }
+    record.logstashMachineStatusInfo.some((machine) => {
+      return stateList.includes(machine.state);
+    });
   };
 
   const hasInitializeFailedMachines = (record: LogstashProcess) => {
@@ -56,6 +66,7 @@ export const useTableConfig = (props: UseTableConfigProps) => {
           {name}
         </Button>
       ),
+      sorter: (a, b) => generalSorter(a, b, 'name'),
     },
     // {
     //   title: '进程ID',
@@ -66,16 +77,19 @@ export const useTableConfig = (props: UseTableConfigProps) => {
       title: '模块',
       dataIndex: 'moduleName',
       key: 'moduleName',
+      sorter: (a, b) => generalSorter(a, b, 'moduleName'),
     },
     {
       title: '数据源',
       dataIndex: 'datasourceName',
       key: 'datasourceName',
+      sorter: (a, b) => generalSorter(a, b, 'datasourceName'),
     },
     {
       title: '表名',
       dataIndex: 'tableName',
       key: 'tableName',
+      sorter: (a, b) => generalSorter(a, b, 'tableName'),
     },
     {
       title: '状态',
@@ -106,11 +120,13 @@ export const useTableConfig = (props: UseTableConfigProps) => {
       dataIndex: 'updateTime',
       key: 'updateTime',
       render: (updateTime: string) => (updateTime ? dayjs(updateTime).format('YYYY-MM-DD HH:mm:ss') : '-'),
+      sorter: (a, b) => generalSorter(a, b, 'updateTime'),
     },
     {
       title: '更新人',
       dataIndex: 'updateUserName',
       key: 'updateUserName',
+      sorter: (a, b) => generalSorter(a, b, 'updateUserName'),
     },
     {
       title: '操作',
@@ -119,15 +135,12 @@ export const useTableConfig = (props: UseTableConfigProps) => {
       width: 300,
       render: (_: unknown, record: LogstashProcess) => (
         <Space size="small">
-          <Button
-            disabled={['RUNNING', 'STARTING', 'STOPPING'].includes(record.state)}
-            style={{ padding: '0 4px' }}
-            type="link"
-            onClick={() => props.onEdit(record)}
-          >
-            编辑
-          </Button>
-          {!checkSubTableStatus(record, 'start') && (
+          {handleCheckActions(record, { stateList: ['RUNNING', 'STARTING', 'STOPPING'] }) && (
+            <Button style={{ padding: '0 4px' }} type="link" onClick={() => props.onEdit(record)}>
+              编辑
+            </Button>
+          )}
+          {handleCheckActions(record, { stateList: ['RUNNING', 'STARTING', 'STOPPING', 'INITIALIZING'] }) && (
             <Popconfirm
               cancelText="取消"
               description="确定要启动这个Logstash进程吗？"
@@ -137,12 +150,12 @@ export const useTableConfig = (props: UseTableConfigProps) => {
                 props.onStart(record.id);
               }}
             >
-              <Button disabled={checkSubTableStatus(record, 'start')} style={{ padding: '0 4px' }} type="link">
+              <Button style={{ padding: '0 4px' }} type="link">
                 启动
               </Button>
             </Popconfirm>
           )}
-          {!checkSubTableStatus(record, 'stop') && (
+          {handleCheckActions(record, { stateList: ['STOPPED', 'STOPPING', 'NOT_STARTED', 'INITIALIZING'] }) && (
             <Popconfirm
               cancelText="取消"
               description="确定要停止这个Logstash进程吗？"
@@ -152,7 +165,7 @@ export const useTableConfig = (props: UseTableConfigProps) => {
                 props.onStop(record.id);
               }}
             >
-              <Button disabled={checkSubTableStatus(record, 'stop')} style={{ padding: '0 4px' }} type="link">
+              <Button style={{ padding: '0 4px' }} type="link">
                 停止
               </Button>
             </Popconfirm>
@@ -172,7 +185,7 @@ export const useTableConfig = (props: UseTableConfigProps) => {
           <Button style={{ padding: '0 4px' }} type="link" onClick={() => props.onShowAlert(record)}>
             告警
           </Button>
-          {!record.logstashMachineStatusInfo.every((el) => el.state === 'RUNNING') && (
+          {handleCheckActions(record, { stateList: ['RUNNING'] }) && (
             <Popconfirm
               cancelText="取消"
               description="确定要刷新非运行状态下所有机器的配置吗？"

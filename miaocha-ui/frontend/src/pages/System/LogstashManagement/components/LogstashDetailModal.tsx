@@ -1,4 +1,4 @@
-import { Modal, Descriptions, Button, Tooltip, Table, Tag } from 'antd';
+import { Modal, Descriptions, Button, Tooltip, Table, Tag, App } from 'antd';
 import { CopyOutlined } from '@ant-design/icons';
 import type { LogstashProcess } from '@/types/logstashTypes';
 import { safeCopy } from '@/utils/clipboard';
