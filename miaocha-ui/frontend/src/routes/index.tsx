@@ -13,7 +13,7 @@ import NotFound from '@/pages/Error/NotFound';
 // 懒加载组件
 const LoginPage = lazy(() => import('@/pages/Login'));
 const HomePage = lazy(() => import('@/pages/Home'));
-const Log = lazy(() => import('@/pages/Log'));
+// const Log = lazy(() => import('@/pages/Log'));
 const SQLEditorPage = lazy(() => import('@/pages/SQLEditor'));
 const User = lazy(() => import('@/pages/System/User'));
 const DataSourceManagementPage = lazy(() => import('@/pages/System/DataSourceManagement'));

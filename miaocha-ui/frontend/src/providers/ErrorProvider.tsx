@@ -25,7 +25,7 @@ export interface ErrorConfig {
 // 导出 hook 供组件使用
 export const useErrorContext = () => {
   const { message } = App.useApp();
-  const handleError = (content: string, errorConfig: any) => {
+  const handleError = (content: string) => {
     message.error(content);
   };
   const showSuccess = (content: string) => {
@@ -33,6 +33,6 @@ export const useErrorContext = () => {
   };
   return {
     handleError,
-    showSuccess
+    showSuccess,
   };
 };

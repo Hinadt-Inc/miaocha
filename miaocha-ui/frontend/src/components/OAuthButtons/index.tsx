@@ -1,8 +1,11 @@
-import { Divider } from 'antd';
 import { useState, useEffect } from 'react';
+
+import { Divider } from 'antd';
+
 import { getOAuthProviders } from '../../api/auth';
 import { getOAuthRedirectUri } from '../../constants/env';
 import { OAuthStorageHelper } from '../../utils/secureStorage';
+
 import styles from './styles.module.less';
 
 interface OAuthButtonsProps {
@@ -42,10 +45,6 @@ const OAuthButtons = ({ onError }: OAuthButtonsProps) => {
           const enabledProviders = response
             .filter((provider) => provider.enabled)
             .sort((a, b) => a.sortOrder - b.sortOrder);
-          console.log(
-            '获取到OAuth提供者:',
-            enabledProviders.map((p) => p.displayName),
-          );
           setProviders(enabledProviders);
         }
       } finally {
@@ -99,7 +98,6 @@ const OAuthButtons = ({ onError }: OAuthButtonsProps) => {
 
       // 构造完整的授权URL并跳转
       const authUrl = `${provider.authorizationEndpoint}?${authParams.toString()}`;
-      console.log('正在跳转到第三方登录:', authUrl);
 
       // 短暂延迟后跳转，让用户看到loading状态
       setTimeout(() => {
@@ -129,6 +127,7 @@ const OAuthButtons = ({ onError }: OAuthButtonsProps) => {
 
       <div className={styles.providersContainer}>
         <button
+          aria-label={`使用 ${primaryProvider.displayName} 登录`}
           className={`${styles.compactOAuthButton} ${initiatingLogin === primaryProvider.providerId ? styles.loading : ''} ${isHovered ? styles.hovered : ''}`}
           disabled={!!initiatingLogin}
           onClick={() => handleOAuthLogin(primaryProvider)}

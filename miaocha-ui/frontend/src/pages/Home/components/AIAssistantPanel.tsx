@@ -1,4 +1,5 @@
 import React from 'react';
+
 import AIAssistant from '@/components/AIAssistant';
 
 interface IAIAssistantPanelProps {
@@ -77,8 +78,8 @@ const AIAssistantPanel: React.FC<IAIAssistantPanelProps> = ({
             setLogTableColumns((prevColumns: any) => {
               return prevColumns.map((column: any) => ({
                 ...column,
-                selected: params.fields!.includes(column.columnName || ''),
-                _createTime: params.fields!.includes(column.columnName || '') ? Date.now() : undefined,
+                selected: params.fields?.includes(column.columnName || '') ?? false,
+                _createTime: params.fields?.includes(column.columnName || '') ? Date.now() : undefined,
               }));
             });
           }

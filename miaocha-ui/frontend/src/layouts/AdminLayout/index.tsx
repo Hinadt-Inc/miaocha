@@ -1,8 +1,10 @@
 import React, { useEffect } from 'react';
-import { Outlet, Navigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import { isAdmin } from '@/constants/roles';
+
 import NProgress from 'nprogress';
+import { useSelector } from 'react-redux';
+import { Outlet, Navigate } from 'react-router-dom';
+
+import { isAdmin } from '@/constants/roles';
 
 const AdminLayout: React.FC = () => {
   const role = useSelector((state: { user: { role: string | null | undefined } }) => state.user.role);
