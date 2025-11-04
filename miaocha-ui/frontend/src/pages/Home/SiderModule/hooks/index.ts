@@ -437,7 +437,6 @@ export const useDistributions = (searchParams: ILogSearchParams, availableColumn
       if (!availableColumns || availableColumns.length === 0) {
         return fields;
       }
-
       const availableFieldNames = availableColumns.map((col) => col.columnName);
       const validFields = fields.filter((field) => availableFieldNames.includes(field));
 
@@ -596,6 +595,7 @@ export const useDistributions = (searchParams: ILogSearchParams, availableColumn
       }
 
       const currentConditions = generateQueryConditionsKey({
+        currentModule,
         columnName: columnName,
         whereSqls: effectiveParams.whereSqls || [],
         keywords: searchParams.keywords || [],
@@ -606,7 +606,6 @@ export const useDistributions = (searchParams: ILogSearchParams, availableColumn
 
       const fieldQueryKey = `${columnName}_query`;
       const lastFieldQuery = (lastQueryConditionsRef.current as any)?.[fieldQueryKey];
-
       // 恢复重复请求检查，现在localStorage同步更新后应该能正确工作
       if (lastFieldQuery === currentConditions) {
         setDistributionLoading((prev) => ({ ...prev, [columnName]: false }));

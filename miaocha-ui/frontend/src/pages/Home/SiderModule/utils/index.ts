@@ -111,6 +111,7 @@ export const sumArrayCount = (valueDistributions: IValueDistributions[]): number
  * 生成查询条件的唯一标识符
  */
 export const generateQueryConditionsKey = (conditions: {
+  currentModule?: string;
   whereSqls?: string[];
   keywords?: string[];
   startTime?: string;

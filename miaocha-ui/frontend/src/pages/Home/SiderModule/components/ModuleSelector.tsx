@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { StarOutlined, StarFilled } from '@ant-design/icons';
-import { Select } from 'antd';
+import { Select, Tooltip } from 'antd';
 
 import { ModuleSelectOption } from '../types';
 
@@ -30,7 +30,11 @@ const ModuleSelector: React.FC<IProps> = ({
     title: item.label,
     label: (
       <div className={styles.moduleOption}>
-        <span className={styles.moduleLabel}>{item.label}</span>
+        <div className={styles.moduleLabel}>
+          <Tooltip title={item.label} placement="topLeft">
+            <span className={styles.moduleLabelText}>{item.label}</span>
+          </Tooltip>
+        </div>
         <button
           className={`${styles.favoriteIcon} ${favoriteModule === item.module ? styles.active : styles.inactive}`}
           type="button"

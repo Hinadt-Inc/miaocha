@@ -5,14 +5,24 @@
 }
 
 .moduleLabel {
-  display: inline-block;
-  max-width: 120px;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.moduleLabelText {
+  display: block;
+  width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .favoriteIcon {
+  width: 20px;
+  flex-shrink: 0;
   cursor: pointer;
   font-size: 12px;
   border: none;

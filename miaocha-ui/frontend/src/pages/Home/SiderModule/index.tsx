@@ -281,7 +281,7 @@ const Sider = forwardRef<SiderRef, SiderProps>((props, ref) => {
     (item: ILogColumnsResponse, index: number) => {
       return (
         <FieldListItem
-          key={item.columnName}
+          key={`${selectedModule}_${item.columnName}`}
           column={item}
           columnIndex={index}
           fieldData={fieldListProps}
@@ -317,7 +317,6 @@ const Sider = forwardRef<SiderRef, SiderProps>((props, ref) => {
         onModuleChange={changeModules}
         onToggleFavorite={handleToggleFavorite}
       />
-
       {/* 字段折叠面板 */}
       <Collapse
         defaultActiveKey={['selected', 'available']}
@@ -342,7 +341,7 @@ const Sider = forwardRef<SiderRef, SiderProps>((props, ref) => {
               })
               ?.map((item: ILogColumnsResponse, index: number) => (
                 <FieldListItem
-                  key={item.columnName}
+                  key={`${selectedModule}_${item.columnName}`}
                   column={item}
                   columnIndex={index}
                   fieldData={fieldListProps}
