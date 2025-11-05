@@ -1,0 +1,107 @@
+name: Sync Dev to Main (Rebase)
+
+on:
+  workflow_dispatch:  # Only manual trigger is allowed
+
+jobs:
+  sync-dev-to-main:
+    runs-on: ubuntu-latest
+
+    # Declare required permissions
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full Git history to ensure correct rebase
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          echo "🔧 Configure Git user info..."
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: Sync dev to main via rebase
+        run: |
+          echo "🔍 Current repository status..."
+          git --no-pager branch -a
+          echo ""
+          
+          echo "📥 Fetching latest changes..."
+          git fetch origin dev
+          git fetch origin main
+          echo ""
+          
+          echo "🔀 Checking out main branch..."
+          git checkout main
+          echo ""
+          
+          echo "📊 Main branch status before rebase:"
+          git --no-pager log --oneline -5
+          echo ""
+          
+          echo "🔄 Rebasing dev onto main..."
+          if git rebase origin/dev; then
+            echo "✅ Rebase successful!"
+          else
+            echo "❌ Rebase failed! There may be conflicts."
+            echo "🔍 Checking conflict status..."
+            git --no-pager status
+            echo ""
+            echo "To resolve conflicts:"
+            echo "1. Clone the repository locally"
+            echo "2. Run: git checkout main && git rebase origin/dev"
+            echo "3. Resolve conflicts manually"
+            echo "4. Run: git rebase --continue"
+            echo "5. Force push: git push origin main --force-with-lease"
+            exit 1
+          fi
+          echo ""
+          
+          echo "📊 Main branch status after rebase:"
+          git --no-pager log --oneline -5
+          echo ""
+          
+          echo "📤 Pushing changes to main branch..."
+          git push origin main --force-with-lease
+          echo ""
+          
+          echo "✅ Successfully synced dev branch to main via rebase!"
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "## ✅ Dev to Main Sync Successful" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 📋 Sync Info" >> $GITHUB_STEP_SUMMARY
+            echo "- **Operation**: Rebase dev onto main" >> $GITHUB_STEP_SUMMARY
+            echo "- **Source branch**: dev" >> $GITHUB_STEP_SUMMARY
+            echo "- **Target branch**: main" >> $GITHUB_STEP_SUMMARY
+            echo "- **Sync time**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🎯 Result" >> $GITHUB_STEP_SUMMARY
+            echo "The main branch has been successfully updated with all commits from dev branch via rebase." >> $GITHUB_STEP_SUMMARY
+            echo "This maintains a linear commit history without merge commits." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Dev to Main Sync Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🔍 Possible causes" >> $GITHUB_STEP_SUMMARY
+            echo "1. Merge conflicts between dev and main branches" >> $GITHUB_STEP_SUMMARY
+            echo "2. Protected branch rules preventing force push" >> $GITHUB_STEP_SUMMARY
+            echo "3. Network or authentication issues" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 📞 How to fix" >> $GITHUB_STEP_SUMMARY
+            echo "If conflicts exist, you need to resolve them manually:" >> $GITHUB_STEP_SUMMARY
+            echo '```bash' >> $GITHUB_STEP_SUMMARY
+            echo "git checkout main" >> $GITHUB_STEP_SUMMARY
+            echo "git fetch origin" >> $GITHUB_STEP_SUMMARY
+            echo "git rebase origin/dev" >> $GITHUB_STEP_SUMMARY
+            echo "# Resolve conflicts, then:" >> $GITHUB_STEP_SUMMARY
+            echo "git rebase --continue" >> $GITHUB_STEP_SUMMARY
+            echo "git push origin main --force-with-lease" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
