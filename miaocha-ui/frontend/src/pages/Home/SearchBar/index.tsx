@@ -103,10 +103,6 @@ const SearchBar = forwardRef<SearchBarRef, SearchBarProps>((props, ref) => {
     searchParams.startTime,
     searchParams.endTime,
     searchParams.timeRange,
-    searchParams.relativeEndOption,
-    searchParams.relativeStartOption,
-    searchParams.timeType,
-    timeState.timeOption?.range,
     setTimeOption,
   ]);
 
@@ -157,6 +153,8 @@ const SearchBar = forwardRef<SearchBarRef, SearchBarProps>((props, ref) => {
     if (activeColumns && activeColumns.length > 0) {
       effectiveFields = fieldsHasDot ? [...commonColumns, ...activeColumns] : activeColumns;
     }
+    console.log('commonColumns=====', commonColumns)
+    console.log('effectiveFields========', effectiveFields)
 
     // 先构建基础参数，避免searchParams中的空fields覆盖我们的effectiveFields
     const baseParams = {

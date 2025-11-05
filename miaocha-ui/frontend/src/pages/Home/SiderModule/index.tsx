@@ -24,6 +24,7 @@ const Sider = forwardRef<SiderRef, SiderProps>((props, ref) => {
     onCommonColumnsChange,
     selectedModule: externalSelectedModule,
     activeColumns: externalActiveColumns,
+    setActiveColumns: setExternalActiveColumns,
     onColumnsLoaded,
   } = props;
 
@@ -44,6 +45,8 @@ const Sider = forwardRef<SiderRef, SiderProps>((props, ref) => {
   );
   const { selectedModule, setSelectedModule, lastModuleRef, changeModules } = useModuleSelection(
     modules,
+    setActiveColumns,
+    setExternalActiveColumns,
     externalSelectedModule,
     onSelectedModuleChange,
   );
@@ -222,6 +225,7 @@ const Sider = forwardRef<SiderRef, SiderProps>((props, ref) => {
 
       if (needSync) {
         console.log('Sider状态不同步 - 外部:', externalActiveColumns, '内部:', currentSelectedColumns);
+        setExternalActiveColumns && setExternalActiveColumns(currentSelectedColumns)
       }
     }
   }, [externalActiveColumns, columns]);
