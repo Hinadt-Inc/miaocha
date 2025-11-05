@@ -1,7 +1,3 @@
-/**
- * Home页面相关的类型定义
- */
-
 // 搜索参数接口
 export interface ILogSearchParams {
   offset: number;
@@ -22,13 +18,13 @@ export interface ILogSearchParams {
 }
 
 // 模块选项接口
-export interface IStatus {
-  label: string;
-  value: string;
-  datasourceId: string | number;
-  datasourceName: string;
-  module: string;
-}
+// export interface IStatus {
+//   label: string;
+//   value: string;
+//   datasourceId: string | number;
+//   datasourceName: string;
+//   module: string;
+// }
 
 // 日志详情响应接口
 export interface ILogDetailsResponse {
@@ -92,7 +88,7 @@ export interface ITimeOption {
 }
 
 // 搜索栏Ref接口
-export interface ISearchBarRef {
+export interface SearchBarRef {
   setTimeGroup?: (timeGrouping: string) => void;
   setTimeOption?: (timeOption: ITimeOption) => void;
   removeSql?: (sql: string) => void;
@@ -101,8 +97,8 @@ export interface ISearchBarRef {
 }
 
 // Sider组件Ref接口
-export interface ISiderRef {
-  getDistributionWithSearchBar?: () => void;
+export interface SiderRef {
+  refreshFieldDistributions?: () => void;
 }
 
 // 排序配置类型

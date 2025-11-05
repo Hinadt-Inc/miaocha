@@ -20,10 +20,10 @@ const OAuthCallback = () => {
       // 检查是否有错误参数
       if (error) {
         console.error('OAuth错误:', error, errorDescription);
-        navigate('/login', { 
-          state: { 
-            error: errorDescription || error || '第三方登录失败' 
-          } 
+        navigate('/login', {
+          state: {
+            error: errorDescription || error || '第三方登录失败',
+          },
         });
         return;
       }
@@ -31,10 +31,10 @@ const OAuthCallback = () => {
       // 检查必要参数 - CAS只需要ticket
       if (!ticket) {
         console.error('缺少必要的CAS票据参数');
-        navigate('/login', { 
-          state: { 
-            error: '登录参数不完整，请重试' 
-          } 
+        navigate('/login', {
+          state: {
+            error: '登录参数不完整，请重试',
+          },
         });
         return;
       }
@@ -42,10 +42,10 @@ const OAuthCallback = () => {
       try {
         // 构造回调URL
         const redirectUri = `${window.location.origin}/login`;
-        
+
         // 从sessionStorage获取provider信息
         const providerId = sessionStorage.getItem('oauthProvider') || 'mandao';
-        
+
         // 调用后端回调接口，对于CAS，我们需要传递ticket
         const response = await oAuthCallback({
           provider: providerId,
@@ -54,10 +54,10 @@ const OAuthCallback = () => {
         });
 
         if (!response) {
-          navigate('/login', { 
-            state: { 
-              error: '登录失败，请重试' 
-            } 
+          navigate('/login', {
+            state: {
+              error: '登录失败，请重试',
+            },
           });
           return;
         }
@@ -79,17 +79,17 @@ const OAuthCallback = () => {
 
         // 清理sessionStorage中的provider信息
         sessionStorage.removeItem('oauthProvider');
-        
+
         // 跳转到首页或用户原本要访问的页面
         const returnUrl = sessionStorage.getItem('returnUrl') || '/';
         sessionStorage.removeItem('returnUrl');
         navigate(returnUrl);
       } catch (error) {
         console.error('CAS回调处理失败:', error);
-        navigate('/login', { 
-          state: { 
-            error: '登录处理失败，请重试' 
-          } 
+        navigate('/login', {
+          state: {
+            error: '登录处理失败，请重试',
+          },
         });
       }
     };

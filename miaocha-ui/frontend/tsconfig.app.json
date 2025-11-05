@@ -35,6 +35,6 @@
     "incremental": true,
     "composite": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts", "src/pages/SQLEditor/hooks"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts", "src/pages/SQLEditor/hooks", "src/types/vite-env.d.ts"],
   "exclude": ["node_modules"]
 }

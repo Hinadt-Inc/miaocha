@@ -1,9 +1,11 @@
 {
-  "editor.formatOnSave": true,
+  "editor.formatOnSave": true, // 保存时自动格式化​​代码（由 Prettier 执行）
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "explicit"
+    // 保存时自动修复​​ ESLint 可修复的代码错误
+    "source.fixAll.eslint": "always"
   },
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.defaultFormatter": "esbenp.prettier-vscode", // 全局默认​​使用 Prettier 进行格式化
+
   "[typescript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
@@ -22,18 +24,10 @@
   "[less]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
-  "eslint.validate": [
-    "javascript",
-    "javascriptreact",
-    "typescript",
-    "typescriptreact"
-  ],
-  "eslint.experimental.useFlatConfig": true,
-  // 可选：只在保存时应用这些 ESLint 规则的自动修复（不影响其它规则执行）
-  "eslint.codeActionsOnSave.rules": [
-    "react/jsx-sort-props"
-  ],
-  "cSpell.words": [
-    "Sider","sqls"
-  ]
-} 
+  // 明确告知 ESLint 需要检查哪些语言的文件
+
+  "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
+  "eslint.useFlatConfig": true,
+  "eslint.codeActionsOnSave.mode": "all",
+  "cSpell.words": ["Sider", "sqls"]
+}

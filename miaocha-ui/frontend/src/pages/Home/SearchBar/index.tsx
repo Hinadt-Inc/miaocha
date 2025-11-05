@@ -1,56 +1,57 @@
-import { useState, useMemo, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
+import { useState, useMemo, useEffect, forwardRef, useImperativeHandle, useRef, useCallback, memo } from 'react';
+
 import { Button, Space } from 'antd';
 import dayjs from 'dayjs';
 
-// 组件导入
-import { FilterTags, StatisticsInfo, KeywordInput, SqlInput, TimePickerWrapper, TimeGroupSelector } from './components';
-
-// 外部组件导入
 import AutoRefresh from '../AutoRefresh/index';
-import SaveSearchButton from '../SaveSearchButton';
 import SavedSearchesButton from '../SavedSearchesButton';
+import SaveSearchButton from '../SaveSearchButton';
 import ShareButton from '../ShareButton';
-
-// 样式导入
-import { searchBarStyles as styles } from './styles';
-
-// 钩子导入
-import { useSearchInput, useTimeState, useSearchActions } from './hooks';
-
-// 类型和常量导入
-import { ISearchBarProps, ISearchBarRef } from './types';
 import type { ITimeOption } from '../types';
-import { STYLES } from './constants';
 import { getLatestTime, DATE_FORMAT_THOUSOND, QUICK_RANGES } from '../utils';
 
-const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
+import { FilterTags, StatisticsInfo, KeywordInput, SqlInput, TimePickerWrapper, TimeGroupSelector } from './components';
+import { STYLES } from './constants';
+import { useSearchInput, useTimeState, useSearchActions } from './hooks';
+import styles from './index.module.less';
+import type { SearchBarProps, SearchBarRef } from './types';
+
+const SearchBar = forwardRef<SearchBarRef, SearchBarProps>((props, ref) => {
+  console.log('渲染：SearchBar组件');
   const {
-    loading = false,
-    keywords,
-    setKeywords,
-    sqls,
-    setSqls,
-    onRefresh,
+    // 数据与配置
     searchParams,
     totalCount = 0,
+    columns,
+    activeColumns,
+    commonColumns = [],
+    sortConfig = [],
+
+    // 查询状态
+    keywords,
+    sqls,
+
+    // 加载态
+    loading = false,
+
+    // 回调（动作）
     onSearch,
+    onRefresh,
+    onSqlsChange,
+    setKeywords,
+    setSqls,
     setWhereSqlsFromSider,
     onRemoveSql,
-    columns,
-    onSqlsChange,
-    activeColumns,
-    getDistributionWithSearchBar,
-    sortConfig = [],
-    commonColumns = [],
+    refreshFieldDistributions,
   } = props;
 
-  const searchBarRef = useRef<HTMLDivElement>(null);
-  const [initialized] = useState(true);
+  const searchBarRef = useRef<HTMLDivElement>(null); // 搜索栏的ref
+  const [initialized] = useState(true); // 标记是否初始化完成
   const timeUpdateFromParamsRef = useRef(false); // 标记时间更新是否来自外部params
   const [isFirstLoad, setIsFirstLoad] = useState<boolean>(true); // 标记是否第一次加载
 
   // 使用自定义钩子
-  const { searchState, changeKeyword, changeSql, clearInputs } = useSearchInput();
+  const { searchState, changeKeyword, changeSql, clearInputs } = useSearchInput(); // 搜索输入框
   const { timeState, setTimeOption, setTimeGroup, setOpenTimeRange, setOpenTimeGroup, setActiveTab, submitTime } =
     useTimeState(searchParams);
   const searchActions = useSearchActions({
@@ -69,14 +70,15 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
   // 监听 searchParams 中的时间变化，同步更新 timeOption
   useEffect(() => {
     if (searchParams.startTime && searchParams.endTime) {
-      const newTimeString = `${dayjs(searchParams.startTime).format('YYYY-MM-DD HH:mm:ss')} ~ ${dayjs(searchParams.endTime).format('YYYY-MM-DD HH:mm:ss')}`;
-      const currentTimeString = `${dayjs(timeState.timeOption?.range?.[0]).format('YYYY-MM-DD HH:mm:ss')} ~ ${dayjs(timeState.timeOption?.range?.[1]).format('YYYY-MM-DD HH:mm:ss')}`;
+      const format = 'YYYY-MM-DD HH:mm:ss';
+      const newTimeString = `${dayjs(searchParams.startTime).format(format)} ~ ${dayjs(searchParams.endTime).format(format)}`;
+      const currentTimeString = `${dayjs(timeState.timeOption?.range?.[0]).format(format)} ~ ${dayjs(timeState.timeOption?.range?.[1]).format(format)}`;
 
       // 如果 searchParams 中的时间与当前 timeOption 不一致，更新 timeOption
       if (currentTimeString !== newTimeString) {
         timeUpdateFromParamsRef.current = true; // 标记这次更新来自外部
 
-        const newTimeOption = {
+        const target = {
           value: searchParams.timeRange || newTimeString,
           range: [searchParams.startTime, searchParams.endTime],
           label:
@@ -94,10 +96,19 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
             }),
         };
 
-        setTimeOption(newTimeOption as any);
+        setTimeOption(target as ITimeOption);
       }
     }
-  }, [searchParams.startTime, searchParams.endTime, searchParams.timeRange, setTimeOption]);
+  }, [
+    searchParams.startTime,
+    searchParams.endTime,
+    searchParams.timeRange,
+    searchParams.relativeEndOption,
+    searchParams.relativeStartOption,
+    searchParams.timeType,
+    timeState.timeOption?.range,
+    setTimeOption,
+  ]);
 
   // 暴露给父组件的方法
   useImperativeHandle(
@@ -114,7 +125,7 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
       setTimeOption,
       // 设置时间分组
       setTimeGroup,
-      // 自动刷新方法（供父组件调用）
+      // 自动刷新方法
       autoRefresh: () => {
         // 更新时间到最新
         const latestTime = getLatestTime(timeState.timeOption);
@@ -132,7 +143,7 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
     // 等待 commonColumns 准备好后再执行（页面初始化时需要等待，后端说模块下一定会有普通字段）
     if (commonColumns.length === 0) return;
 
-    // 页面第一次加载时不调用getDistributionWithSearchBar接口
+    // 页面第一次加载时不调用refreshFieldDistributions接口
     const shouldCallDistribution = !isFirstLoad;
     if (isFirstLoad) {
       setIsFirstLoad(false);
@@ -181,9 +192,9 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
       onSqlsChange(sqls);
     }
 
-    // 调用Sider组件的getDistributionWithSearchBar方法，但第一次加载时跳过
-    if (shouldCallDistribution && getDistributionWithSearchBar) {
-      getDistributionWithSearchBar();
+    // 调用Sider组件的refreshFieldDistributions方法，但第一次加载时跳过
+    if (shouldCallDistribution && refreshFieldDistributions) {
+      refreshFieldDistributions();
     }
   }, [
     timeState.timeGroup,
@@ -200,7 +211,7 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
     searchParams.datasourceId,
     searchParams.module,
     // 移除了timeState.timeOption依赖，避免时间变化引起的循环
-    // 移除了可能导致循环的依赖：onSearch, getDistributionWithSearchBar, searchParams, onSqlsChange
+    // 移除了可能导致循环的依赖：onSearch, refreshFieldDistributions, searchParams, onSqlsChange
   ]);
 
   // 单独处理时间变化的搜索
@@ -294,7 +305,7 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
     onSearch(params as any);
 
     // 同时触发字段分布数据更新
-    if (getDistributionWithSearchBar) {
+    if (refreshFieldDistributions) {
       // 在调用字段分布查询之前，确保localStorage中有最新的参数
       try {
         const currentSearchParams = {
@@ -308,7 +319,7 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
         console.error('SearchBar更新localStorage失败:', error);
       }
 
-      getDistributionWithSearchBar();
+      refreshFieldDistributions();
     }
 
     // 如果是来自搜索按钮的触发，执行完成后清除标识
@@ -321,40 +332,43 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
   }, [timeState.timeOption]); // 只依赖timeOption
 
   // 处理搜索提交
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(() => {
     searchActions.handleSubmit(searchState.keyword, searchState.sql, clearInputs);
-  };
+  }, [searchActions, searchState.keyword, searchState.sql, clearInputs]);
 
   // 处理自动刷新
-  const handleAutoRefresh = () => {
+  const handleAutoRefresh = useCallback(() => {
     if (onRefresh) {
-      // 自动刷新时，直接调用父组件的onRefresh方法
-      // 父组件会通过ref调用SearchBar的autoRefresh方法来更新时间
       onRefresh();
     }
-  };
+  }, [onRefresh]);
 
   // 处理时间分组变化
-  const handleTimeGroupChange = (text: string) => {
-    const latestTime = getLatestTime(timeState.timeOption);
-    setTimeGroup(text);
-    setTimeOption((prev: any) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
-    setOpenTimeGroup(false);
-  };
+  const handleTimeGroupChange = useCallback(
+    (text: string) => {
+      const latestTime = getLatestTime(timeState.timeOption);
+      setTimeGroup(text);
+      setTimeOption((prev: any) => ({ ...prev, range: [latestTime.startTime, latestTime.endTime] }));
+      setOpenTimeGroup(false);
+    },
+    [timeState.timeOption, setTimeGroup, setTimeOption, setOpenTimeGroup],
+  );
 
   // 处理时间标签点击
-  const handleTimeFromTag = () => {
+  const handleTimeFromTag = useCallback(() => {
     setOpenTimeRange(true);
-  };
+  }, [setOpenTimeRange]);
 
   // 渲染过滤标签
   const filterRender = useMemo(
     () => (
       <div className={styles.filter}>
         <FilterTags
+          // 数据
           keywords={keywords}
           sqls={sqls}
           timeOption={timeState.timeOption}
+          // 交互回调
           onClickKeyword={searchActions.handleClickKeyword}
           onClickSql={searchActions.handleClickSql}
           onClickTime={handleTimeFromTag}
@@ -363,7 +377,18 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
         />
       </div>
     ),
-    [sqls, keywords, timeState.timeOption, searchActions, handleTimeFromTag, styles.filter],
+    [
+      // 数据
+      keywords,
+      sqls,
+      timeState.timeOption,
+      // 交互回调
+      searchActions.handleClickKeyword,
+      searchActions.handleClickSql,
+      searchActions.handleCloseKeyword,
+      searchActions.handleCloseSql,
+      handleTimeFromTag,
+    ],
   );
 
   // 渲染左侧统计信息
@@ -381,7 +406,16 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
         onSubmit={submitTime}
       />
     ),
-    [timeState.openTimeRange, timeState.timeOption, timeState.activeTab, setOpenTimeRange, submitTime, setActiveTab],
+    [
+      // 状态
+      timeState.openTimeRange,
+      timeState.timeOption,
+      timeState.activeTab,
+      // 回调
+      setOpenTimeRange,
+      submitTime,
+      setActiveTab,
+    ],
   );
 
   // 渲染关键词输入框
@@ -400,13 +434,22 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
   const timeGroupRender = useMemo(
     () => (
       <TimeGroupSelector
+        // 状态
         open={timeState.openTimeGroup}
         timeGrouping={searchParams.timeGrouping}
+        // 回调
         onChange={handleTimeGroupChange}
         onOpenChange={setOpenTimeGroup}
       />
     ),
-    [searchParams.timeGrouping, timeState.openTimeGroup, setOpenTimeGroup, handleTimeGroupChange],
+    [
+      // 状态
+      searchParams.timeGrouping,
+      timeState.openTimeGroup,
+      // 回调
+      setOpenTimeGroup,
+      handleTimeGroupChange,
+    ],
   );
 
   return (
@@ -477,4 +520,4 @@ const SearchBar = forwardRef<ISearchBarRef, ISearchBarProps>((props, ref) => {
   );
 });
 
-export default SearchBar;
+export default memo(SearchBar);

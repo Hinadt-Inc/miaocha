@@ -55,7 +55,7 @@ export const useSearchActions = ({
       if (onRemoveSql) {
         onRemoveSql(item);
       }
-      // 注意：不在这里调用getDistributionWithSearchBar，因为Home组件的handleRemoveSql会处理
+      // 注意：不在这里调用refreshFieldDistributions，因为Home组件的handleRemoveSql会处理
     },
     [changeSql, sqls, setSqls, onRemoveSql],
   );
@@ -77,7 +77,7 @@ export const useSearchActions = ({
       if (onRemoveSql) {
         onRemoveSql(item);
       }
-      // 注意：不在这里调用getDistributionWithSearchBar，因为Home组件的handleRemoveSql会处理
+      // 注意：不在这里调用refreshFieldDistributions，因为Home组件的handleRemoveSql会处理
     },
     [sqls, setSqls, onRemoveSql],
   );

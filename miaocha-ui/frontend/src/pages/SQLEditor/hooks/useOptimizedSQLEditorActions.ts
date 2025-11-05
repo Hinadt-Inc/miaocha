@@ -1,12 +1,16 @@
 import { useCallback, useRef, useEffect, useMemo } from 'react';
+
 import { message } from 'antd';
-import { debounce } from 'lodash';
 import copy from 'copy-to-clipboard';
 import * as monaco from 'monaco-editor';
-import { downloadAsCSV, insertTextToEditor, getSQLContext } from '../utils/editorUtils';
+
+import { debounce } from '@/utils/utils';
+
 import { QueryResult } from '../types';
-import { useSQLCompletion } from './useSQLCompletion';
+import { downloadAsCSV, insertTextToEditor, getSQLContext } from '../utils/editorUtils';
+
 import type { useOptimizedSQLEditorState } from './useOptimizedSQLEditorState';
+import { useSQLCompletion } from './useSQLCompletion';
 
 type OptimizedSQLEditorState = ReturnType<typeof useOptimizedSQLEditorState>;
 
@@ -182,7 +186,9 @@ export const useOptimizedSQLEditorActions = (editorState: OptimizedSQLEditorStat
   // 清理防抖函数
   useEffect(() => {
     return () => {
-      debouncedExecuteQuery.cancel();
+      if (debouncedExecuteQuery && typeof debouncedExecuteQuery.cancel === 'function') {
+        debouncedExecuteQuery.cancel();
+      }
     };
   }, [debouncedExecuteQuery]);
 

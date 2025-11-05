@@ -1,25 +1,23 @@
-import { useMemo, useCallback, useEffect } from 'react';
-import { Splitter } from 'antd';
-import SearchBar from './SearchBar/index';
-import Log from './LogModule/index';
-import Sider from './SiderModule/index';
-import styles from './index.module.less';
-import AIAssistant from '@/components/AIAssistant/index';
+import { useCallback, useEffect, useMemo } from 'react';
 
-// 导入模块化的hooks
+import { Splitter } from 'antd';
+
+import AIAssistantPanel from './components/AIAssistantPanel';
 import {
+  // useOAuthCallback,
+  useBusinessLogic,
   useHomePageState,
-  useModulesList,
   useLogDetails,
   useLogHistogram,
   useModuleQueryConfig,
+  useModulesList,
   useUrlParams,
-  useOAuthCallback,
-  useBusinessLogic,
 } from './hooks';
-
-// 导入类型和常量
-import type { ILogSearchParams, IStatus } from './types';
+import styles from './index.module.less';
+import Log from './LogModule/index';
+import SearchBar from './SearchBar';
+import Sider from './SiderModule/index';
+import type { ILogSearchParams } from './types';
 
 /**
  * Home页面组件
@@ -61,7 +59,8 @@ const HomePage = () => {
   } = state;
 
   // 2. OAuth回调处理
-  useOAuthCallback();
+  // todo 建议删除
+  // useOAuthCallback();
 
   // 3. URL参数处理（指分享）
   const { cleanupUrlParams } = useUrlParams(
@@ -239,54 +238,57 @@ const HomePage = () => {
   }, [getModuleQueryConfig.data]); // 移除selectedModule依赖，避免循环更新
 
   // 11. 其他业务处理函数
-  const handleSetWhereSqlsFromSider = (flag: '=' | '!=', columnName: string, value: string) => {
-    const sql = `${columnName} ${flag} '${value}'`;
-    const newSearchParams = {
-      ...searchParams,
-      offset: 0,
-    };
+  const handleSetWhereSqlsFromSider = useCallback(
+    (flag: '=' | '!=', columnName: string, value: string) => {
+      const sql = `${columnName} ${flag} '${value}'`;
+      const newSearchParams = {
+        ...searchParams,
+        offset: 0,
+      };
 
-    if (flag === '=') {
-      const oldSql = `${columnName} != '${value}'`;
-      newSearchParams.whereSqls = [...(searchParams?.whereSqls || []), sql];
-      searchBarRef?.current?.removeSql?.(oldSql);
-      state.setWhereSqlsFromSider((prev: any) => [
-        ...prev,
-        {
-          label: sql,
-          value: value,
-          field: columnName,
-        },
-      ]);
-    } else {
-      const oldSql = `${columnName} = '${value}'`;
-      newSearchParams.whereSqls = searchParams?.whereSqls?.filter((item: any) => item !== oldSql);
-      searchBarRef?.current?.removeSql?.(oldSql);
-      state.setWhereSqlsFromSider((prev: any) => prev.filter((item: any) => item.value !== value));
-    }
-
-    if (newSearchParams?.whereSqls?.length === 0) {
-      delete newSearchParams.whereSqls;
-    }
-
-    // 同步更新localStorage中的searchBarParams，确保分布数据查询能获取到最新的whereSqls
-    const savedSearchParams = localStorage.getItem('searchBarParams');
-    if (savedSearchParams) {
-      try {
-        const params = JSON.parse(savedSearchParams);
-        const updatedParams = {
-          ...params,
-          whereSqls: newSearchParams.whereSqls || [],
-        };
-        localStorage.setItem('searchBarParams', JSON.stringify(updatedParams));
-      } catch (error) {
-        console.error('更新localStorage中的searchBarParams失败:', error);
+      if (flag === '=') {
+        const oldSql = `${columnName} != '${value}'`;
+        newSearchParams.whereSqls = [...(searchParams?.whereSqls || []), sql];
+        searchBarRef?.current?.removeSql?.(oldSql);
+        state.setWhereSqlsFromSider((prev: any) => [
+          ...prev,
+          {
+            label: sql,
+            value: value,
+            field: columnName,
+          },
+        ]);
+      } else {
+        const oldSql = `${columnName} = '${value}'`;
+        newSearchParams.whereSqls = searchParams?.whereSqls?.filter((item: any) => item !== oldSql);
+        searchBarRef?.current?.removeSql?.(oldSql);
+        state.setWhereSqlsFromSider((prev: any) => prev.filter((item: any) => item.value !== value));
       }
-    }
 
-    searchBarRef?.current?.addSql?.(sql);
-    setSearchParams(newSearchParams);
-  };
+      if (newSearchParams?.whereSqls?.length === 0) {
+        delete newSearchParams.whereSqls;
+      }
+
+      // 同步更新localStorage中的searchBarParams，确保分布数据查询能获取到最新的whereSqls
+      const savedSearchParams = localStorage.getItem('searchBarParams');
+      if (savedSearchParams) {
+        try {
+          const params = JSON.parse(savedSearchParams);
+          const updatedParams = {
+            ...params,
+            whereSqls: newSearchParams.whereSqls || [],
+          };
+          localStorage.setItem('searchBarParams', JSON.stringify(updatedParams));
+        } catch (error) {
+          console.error('更新localStorage中的searchBarParams失败:', error);
+        }
+      }
+
+      searchBarRef?.current?.addSql?.(sql);
+      setSearchParams(newSearchParams);
+    },
+    [searchParams, state.setWhereSqlsFromSider, setSearchParams],
+  );
 
   // 删除SQL条件的处理函数
   const handleRemoveSql = useCallback(
@@ -320,7 +322,7 @@ const HomePage = () => {
       setSearchParams(newSearchParams);
 
       // 注意：删除SQL标签后的分布数据更新由Sider组件的useEffect自动处理
-      // 不需要手动调用getDistributionWithSearchBar，避免重复调用
+      // 不需要手动调用refreshFieldDistributions，避免重复调用
     },
     [searchParams, state.setWhereSqlsFromSider],
   );
@@ -329,8 +331,9 @@ const HomePage = () => {
     state.setSortConfig(newSortConfig);
   }, []);
 
-  const getDistributionWithSearchBar = useCallback(() => {
-    siderRef.current?.getDistributionWithSearchBar?.();
+  // 分布数据刷新
+  const refreshFieldDistributions = useCallback(() => {
+    siderRef.current?.refreshFieldDistributions?.();
   }, []);
 
   const onSearchFromLog = (params: ILogSearchParams) => {
@@ -369,20 +372,24 @@ const HomePage = () => {
   // 13. 组件props优化
   const siderProps = useMemo(
     () => ({
+      // 数据与配置
       searchParams,
       modules: moduleOptions,
-      setWhereSqlsFromSider: handleSetWhereSqlsFromSider,
-      onSearch: setSearchParams,
-      onChangeColumns: handleChangeColumns,
-      onActiveColumnsChange: state.setActiveColumns,
-      onSelectedModuleChange: handleSelectedModuleChange,
       moduleQueryConfig,
-      onCommonColumnsChange: state.setCommonColumns,
       selectedModule,
       activeColumns: state.activeColumns, // 传递activeColumns用于同步左侧已选字段显示
+
+      // 回调（动作）
+      onSearch: setSearchParams,
+      setWhereSqlsFromSider: handleSetWhereSqlsFromSider,
+      onChangeColumns: handleChangeColumns,
+      onSelectedModuleChange: handleSelectedModuleChange,
+      onActiveColumnsChange: state.setActiveColumns,
+      onCommonColumnsChange: state.setCommonColumns,
       onColumnsLoaded: setColumnsLoaded, // 传递columns加载完成回调
     }),
     [
+      // 数据与配置
       searchParams,
       moduleOptions,
       moduleQueryConfig,
@@ -394,28 +401,36 @@ const HomePage = () => {
 
   const logProps: any = useMemo(
     () => ({
+      // 数据与配置
       histogramData,
       detailData,
-      getDetailData,
       searchParams,
+      moduleQueryConfig,
       dynamicColumns: state.logTableColumns,
       whereSqlsFromSider: state.whereSqlsFromSider,
       sqls: state.sqls,
+
+      // 加载和排序信息
+      getDetailData,
+      onSortChange: handleSortChange,
+
+      // 回调（动作）
       onSearch: onSearchFromLog,
       onChangeColumns: handleChangeColumnsByLog,
       onSearchFromTable: setSearchParams,
-      moduleQueryConfig,
-      onSortChange: handleSortChange,
     }),
     [
+      // 数据与配置
       histogramData,
       detailData,
-      getDetailData,
-      state.logTableColumns,
       searchParams,
+      moduleQueryConfig,
+      state.logTableColumns,
       state.whereSqlsFromSider,
       state.sqls,
-      moduleQueryConfig,
+
+      // 加载和排序信息
+      getDetailData,
       state.sortConfig,
       // 移除了函数依赖，它们应该是稳定的
     ],
@@ -423,49 +438,64 @@ const HomePage = () => {
 
   const searchBarProps = useMemo(
     () => ({
+      // 数据与配置
       searchParams,
       totalCount: detailData?.totalCount,
+      columns: state.logTableColumns,
+      activeColumns: state.activeColumns,
+      commonColumns: state.commonColumns,
+      sortConfig: state.sortConfig,
+
+      // 查询状态
+      keywords: state.keywords,
+      sqls: state.sqls,
+
+      // 加载态
+      loading: getDetailData.loading,
+
+      // 回调（动作）
       onSearch: setSearchParams,
       onRefresh: handleRefresh,
       setWhereSqlsFromSider: handleSetWhereSqlsFromSider,
       onRemoveSql: handleRemoveSql,
-      columns: state.logTableColumns,
+      refreshFieldDistributions,
       onSqlsChange: state.setSqls,
-      activeColumns: state.activeColumns,
-      getDistributionWithSearchBar,
-      sortConfig: state.sortConfig,
-      commonColumns: state.commonColumns,
-      loading: getDetailData.loading,
-      keywords: state.keywords,
       setKeywords: state.setKeywords,
-      sqls: state.sqls,
       setSqls: state.setSqls,
-      sharedParams: state.sharedParams,
-      hasAppliedSharedParams: state.hasAppliedSharedParams,
     }),
     [
+      // 数据与配置
       searchParams,
       detailData?.totalCount,
       state.logTableColumns,
       state.activeColumns,
-      state.sortConfig,
       state.commonColumns,
-      getDetailData.loading,
+      state.sortConfig,
+
+      // 查询状态
       state.keywords,
       state.sqls,
-      state.whereSqlsFromSider,
-      state.sharedParams,
-      state.hasAppliedSharedParams,
-      // 移除了setter函数和回调函数的依赖，它们应该是稳定的
+
+      // 加载态
+      getDetailData.loading,
+
+      // 回调（动作）
+      setSearchParams,
+      handleRefresh,
+      handleSetWhereSqlsFromSider,
+      handleRemoveSql,
+      refreshFieldDistributions,
+      state.setSqls,
+      state.setKeywords,
     ],
   );
 
   return (
     <div className={styles.layout}>
-      <SearchBar ref={searchBarRef} {...(searchBarProps as any)} />
+      <SearchBar ref={searchBarRef} {...searchBarProps} />
 
       <Splitter className={styles.container}>
-        <Splitter.Panel collapsible defaultSize={200} max="40%" min={0}>
+        <Splitter.Panel collapsible defaultSize={200} max="50%" min={0}>
           <Sider ref={siderRef} {...(siderProps as any)} />
         </Splitter.Panel>
         <Splitter.Panel collapsible>
@@ -476,136 +506,18 @@ const HomePage = () => {
       </Splitter>
 
       {/* AI助手悬浮窗 */}
-      <AIAssistant
+      <AIAssistantPanel
+        executeDataRequest={executeDataRequest}
+        refreshFieldDistributions={refreshFieldDistributions}
+        searchBarRef={searchBarRef}
         searchParams={searchParams as any}
-        onFieldSelect={(fields) => {
-          // 更新显示字段
-          setActiveColumns(fields);
-        }}
-        onLogSearch={(data) => {
-          // 处理AI助手的搜索请求
-          let searchParams = data.searchParams || data; // 向后兼容
-
-          // 确保AI提供的searchParams包含必要的模块信息
-          // 如果AI没有提供模块信息，使用当前的模块信息
-          if (!searchParams.datasourceId || !searchParams.module) {
-            searchParams = {
-              ...searchParams,
-              datasourceId: searchParams.datasourceId || state.searchParams.datasourceId,
-              module: searchParams.module || state.searchParams.module,
-            };
-          }
-
-          // 如果有搜索结果，直接更新状态
-          if (data.searchResult) {
-            setDetailData(data.searchResult);
-          }
-
-          // 更新搜索参数
-          setSearchParams(searchParams);
-
-          // 主动更新本地状态以同步到SearchBar
-          if (searchParams.keywords && searchParams.keywords.length > 0) {
-            setKeywords(searchParams.keywords);
-          }
-
-          // 同步更新SQL条件到SearchBar
-          if (searchParams.whereSqls && searchParams.whereSqls.length > 0) {
-            // 更新sqls状态，这会触发SearchBar的useEffect重新搜索
-            state.setSqls(searchParams.whereSqls);
-          } else {
-            // 如果没有SQL条件，清空现有的SQL条件
-            state.setSqls([]);
-          }
-
-          // 主动更新SearchBar组件的显示状态
-          if (searchBarRef.current && searchParams) {
-            // 更新时间范围
-            if (
-              searchParams.startTime &&
-              searchParams.endTime &&
-              typeof searchBarRef.current.setTimeOption === 'function'
-            ) {
-              const timeOption = {
-                label: `${searchParams.startTime} ~ ${searchParams.endTime}`,
-                value: `${searchParams.startTime} ~ ${searchParams.endTime}`,
-                range: [searchParams.startTime, searchParams.endTime],
-                type: 'absolute',
-              };
-              searchBarRef.current.setTimeOption(timeOption);
-            }
-
-            // 更新字段选择
-            if (searchParams.fields && searchParams.fields.length > 0) {
-              setActiveColumns(searchParams.fields);
-
-              // 同步更新logTableColumns的selected状态
-              setLogTableColumns((prevColumns: any) => {
-                return prevColumns.map((column: any) => ({
-                  ...column,
-                  selected: searchParams.fields!.includes(column.columnName || ''),
-                  _createTime: searchParams.fields!.includes(column.columnName || '') ? Date.now() : undefined,
-                }));
-              });
-            }
-          }
-
-          // 只有在没有skipRequest标记时才触发新的搜索请求
-          if (!data.skipRequest) {
-            executeDataRequest(searchParams);
-
-            // 同步更新localStorage中的searchBarParams，确保字段分布查询能获取到最新参数
-            try {
-              const savedSearchParams = localStorage.getItem('searchBarParams');
-              const currentParams = savedSearchParams ? JSON.parse(savedSearchParams) : {};
-              const updatedParams = {
-                ...currentParams,
-                ...searchParams,
-                // 确保关键信息不丢失
-                datasourceId: searchParams.datasourceId,
-                module: searchParams.module,
-              };
-              localStorage.setItem('searchBarParams', JSON.stringify(updatedParams));
-            } catch (error) {
-              console.error('更新localStorage中的searchBarParams失败:', error);
-            }
-
-            // 同时触发字段分布数据更新
-            // 需要延迟执行，确保localStorage和字段状态已经更新
-            setTimeout(() => {
-              getDistributionWithSearchBar();
-            }, 100);
-          }
-        }}
-        onTimeRangeChange={(data) => {
-          // 处理时间范围变更
-          let timeRangeData = data;
-
-          // 向后兼容处理
-          if (typeof data === 'string') {
-            timeRangeData = { timeRange: data };
-          }
-
-          // 如果有直方图数据，直接更新状态
-          if (timeRangeData.histogramData) {
-            // 修正：直接设置整个histogramData，而不是取第一个元素
-            setHistogramData(timeRangeData.histogramData);
-          }
-
-          // 更新搜索参数中的时间范围
-          const newSearchParams = {
-            ...searchParams,
-            timeRange: timeRangeData.timeRange,
-            startTime: timeRangeData.startTime,
-            endTime: timeRangeData.endTime,
-          };
-          setSearchParams(newSearchParams);
-
-          // 只有在没有skipRequest标记时才触发新的搜索请求
-          if (!timeRangeData.skipRequest) {
-            executeDataRequest(newSearchParams);
-          }
-        }}
+        setActiveColumns={setActiveColumns}
+        setDetailData={setDetailData}
+        setHistogramData={setHistogramData}
+        setKeywords={setKeywords}
+        setLogTableColumns={setLogTableColumns}
+        setSearchParams={setSearchParams}
+        state={state as any}
       />
     </div>
   );

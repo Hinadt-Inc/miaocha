@@ -77,8 +77,7 @@ export default defineConfig({
           'ant-design-pro': ['@ant-design/pro-components'],
           'echarts-core': ['echarts'],
           'echarts-react': ['echarts-for-react'],
-          animation: ['@react-spring/web'],
-          utils: ['lodash', 'dayjs', 'axios'],
+          utils: ['dayjs', 'axios'],
         },
       },
     },
@@ -113,7 +112,7 @@ export default defineConfig({
     open: true,
     proxy: {
       '/api': {
-        // target: 'http://10.254.134.115',
+        // target: 'http://10.254.134.115', // 测试环境
         target: 'https://miaocha.hinadt.com', // 生产环境
         // target: 'http://10.0.21.34:31244', // 本地开发环境
         // target: 'http://10.0.21.34:30635', // 本地开发环境

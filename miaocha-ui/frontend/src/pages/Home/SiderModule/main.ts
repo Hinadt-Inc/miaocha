@@ -22,12 +22,12 @@ export { default } from './index';
 
 // 类型定义
 export type {
-  ISiderProps,
-  ISiderRef,
-  IFieldData,
-  IFieldListItemProps,
-  IVirtualFieldListProps,
-  IModuleSelectOption,
+  SiderProps,
+  SiderRef,
+  FieldData,
+  FieldListItemProps,
+  VirtualFieldListProps,
+  ModuleSelectOption,
 } from './types';
 
 // 子组件

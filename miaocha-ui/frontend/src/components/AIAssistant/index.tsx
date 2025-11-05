@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Modal, Button, message, Avatar, Tooltip } from 'antd';
+
 import { RobotOutlined, UserOutlined, CloseOutlined, ClearOutlined } from '@ant-design/icons';
 import { Sender, Bubble } from '@ant-design/x';
+import { Modal, Button, message, Avatar, Tooltip } from 'antd';
 import Draggable from 'react-draggable';
 import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeRaw from 'rehype-raw';
-import { AIAssistantProvider } from './context/AIAssistantContext';
-import { ThinkingIndicator } from './components/ThinkingIndicator';
+import remarkGfm from 'remark-gfm';
+
 import { fetchLogDetails, fetchLogHistogram, fetchDistributions } from '@/api/logs';
+
+import { ThinkingIndicator } from './components/ThinkingIndicator';
+import { AIAssistantProvider } from './context/AIAssistantContext';
 import styles from './index.module.less';
 import markdownStyles from './markdown.module.less';
 import './highlight.css';

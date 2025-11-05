@@ -3,7 +3,7 @@
  */
 
 // Sider组件的Props接口
-export interface ISiderProps {
+export interface SiderProps {
   searchParams: ILogSearchParams; // 搜索参数
   modules: IStatus[]; // 模块名称列表
   onSearch: (params: ILogSearchParams) => void; // 搜索回调函数
@@ -31,7 +31,7 @@ export interface IFieldData {
 }
 
 // 字段列表项Props接口
-export interface IFieldListItemProps {
+export interface FieldListItemProps {
   isSelected: boolean; // 是否选中
   columnIndex: number; // 字段索引
   column: ILogColumnsResponse; // 字段数据
@@ -48,12 +48,12 @@ export interface IVirtualFieldListProps {
 }
 
 // Sider Ref接口
-export interface ISiderRef {
-  getDistributionWithSearchBar: () => void;
+export interface SiderRef {
+  refreshFieldDistributions: () => void;
 }
 
 // 模块选择器选项接口
-export interface IModuleSelectOption {
+export interface ModuleSelectOption {
   value: string;
   label: React.ReactNode;
   title: string;

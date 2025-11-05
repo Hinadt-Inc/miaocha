@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useMemo, forwardRef, useImperativeHandle, useRef, useCallback } from 'react';
+
 import { Collapse, Input } from 'antd';
-import { ISiderProps, ISiderRef, IFieldData } from './types';
+
 import { ModuleSelector, FieldListItem, VirtualFieldList } from './components';
 import { useFavoriteModule, useColumns, useModuleSelection, useDistributions } from './hooks';
-import { getFavoriteModule, removeLocalActiveColumns, updateSearchParamsInStorage } from './utils';
 import styles from './styles/index.module.less';
+import { SiderProps, SiderRef, FieldData } from './types';
+import { getFavoriteModule, removeLocalActiveColumns, updateSearchParamsInStorage } from './utils';
 
 /**
  * 侧边栏组件 - 模块化重构版本
  * 包含模块选择、字段管理和字段分布查询功能
  */
-const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
+const Sider = forwardRef<SiderRef, SiderProps>((props, ref) => {
   const {
     modules,
     onChangeColumns,
@@ -45,7 +47,7 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
     externalSelectedModule,
     onSelectedModuleChange,
   );
-  const { distributions, distributionLoading, getDistributionWithSearchBar, getDistribution } = useDistributions(
+  const { distributions, distributionLoading, refreshFieldDistributions, getDistribution } = useDistributions(
     searchParams,
     columns,
   );
@@ -167,7 +169,7 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
       const parsedParams = JSON.parse(savedSearchParams);
       if (parsedParams?.fields?.length) {
         const timer = setTimeout(() => {
-          getDistributionWithSearchBar();
+          refreshFieldDistributions();
         }, 300);
         return () => clearTimeout(timer);
       }
@@ -176,7 +178,7 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
       const localActiveColumns = JSON.parse(localStorage.getItem('activeColumns') || '[]');
       if (localActiveColumns?.length > 0) {
         const timer = setTimeout(() => {
-          getDistributionWithSearchBar();
+          refreshFieldDistributions();
         }, 300);
         return () => clearTimeout(timer);
       }
@@ -186,7 +188,7 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
     searchParams.keywords,
     searchParams.startTime,
     searchParams.endTime,
-    getDistributionWithSearchBar,
+    refreshFieldDistributions,
     isFirstLoad,
     selectedModule, // 添加selectedModule依赖
     moduleQueryConfig, // 添加moduleQueryConfig依赖
@@ -234,7 +236,7 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
   );
 
   // 构建字段数据
-  const fieldListProps: IFieldData = useMemo(() => {
+  const fieldListProps: FieldData = useMemo(() => {
     return {
       searchParams,
       distributions,
@@ -279,7 +281,7 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
     (item: ILogColumnsResponse, index: number) => {
       return (
         <FieldListItem
-          key={item.columnName}
+          key={`${selectedModule}_${item.columnName}`}
           column={item}
           columnIndex={index}
           fieldData={fieldListProps}
@@ -293,7 +295,7 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
 
   // 暴露给父组件的方法
   useImperativeHandle(ref, () => ({
-    getDistributionWithSearchBar,
+    refreshFieldDistributions,
   }));
 
   // 清理工作
@@ -315,7 +317,6 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
         onModuleChange={changeModules}
         onToggleFavorite={handleToggleFavorite}
       />
-
       {/* 字段折叠面板 */}
       <Collapse
         defaultActiveKey={['selected', 'available']}
@@ -340,7 +341,7 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
               })
               ?.map((item: ILogColumnsResponse, index: number) => (
                 <FieldListItem
-                  key={item.columnName}
+                  key={`${selectedModule}_${item.columnName}`}
                   column={item}
                   columnIndex={index}
                   fieldData={fieldListProps}
@@ -382,7 +383,5 @@ const Sider = forwardRef<ISiderRef, ISiderProps>((props, ref) => {
     </div>
   );
 });
-
-Sider.displayName = 'Sider';
 
 export default Sider;

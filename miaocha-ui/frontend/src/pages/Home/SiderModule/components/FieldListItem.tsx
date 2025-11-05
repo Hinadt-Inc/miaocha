@@ -1,15 +1,18 @@
 import React, { useState, useCallback, memo } from 'react';
+
 import { Collapse, Tag, Button, Progress, Tooltip, Typography, Empty, Spin } from 'antd';
+
 import { getFieldTypeColor } from '@/utils/logDataHelpers';
-import { IFieldListItemProps } from '../types';
-import { sumArrayCount, hasDistributionData } from '../utils';
+
 import styles from '../styles/FieldListItem.module.less';
+import { FieldListItemProps } from '../types';
+import { sumArrayCount, hasDistributionData } from '../utils';
 
 /**
  * 字段列表项组件
  * 显示字段信息和分布数据
  */
-const FieldListItem: React.FC<IFieldListItemProps> = memo(
+const FieldListItem: React.FC<FieldListItemProps> = memo(
   ({ isSelected, column, columnIndex, fieldData, moduleQueryConfig }) => {
     const {
       distributions = {},
@@ -36,7 +39,6 @@ const FieldListItem: React.FC<IFieldListItemProps> = memo(
         if (key.length === 0 && activeKey.length === 0) {
           return;
         }
-
         // 只有当折叠面板状态变化时才更新activeColumns
         if (key.length > 0) {
           // 展开时，无论字段是否已在activeColumns中，都要触发分布数据查询
@@ -243,7 +245,8 @@ const FieldListItem: React.FC<IFieldListItemProps> = memo(
         nextProps.fieldData.distributions[nextProps.column.columnName as string] &&
       prevProps.fieldData.distributionLoading[prevProps.column.columnName as string] ===
         nextProps.fieldData.distributionLoading[nextProps.column.columnName as string] &&
-      prevProps.fieldData.searchParams === nextProps.fieldData.searchParams
+      prevProps.fieldData.searchParams === nextProps.fieldData.searchParams &&
+      prevProps.fieldData.searchParams.module === nextProps.fieldData.searchParams.module
     );
   },
 );

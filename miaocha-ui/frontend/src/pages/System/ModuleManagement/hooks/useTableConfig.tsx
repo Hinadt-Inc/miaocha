@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Space, Button, Tag, Popconfirm, Switch } from 'antd';
-import { DatabaseOutlined } from '@ant-design/icons';
+import { Space, Button, Popconfirm, Switch, Tooltip } from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import dayjs from 'dayjs';
 import type { ModuleData } from '../types';
@@ -37,35 +36,36 @@ export const useTableConfig = ({
       title: '模块名称',
       dataIndex: 'name',
       key: 'name',
-      width: 150,
+      width: 250,
       render: (text: string, record: ModuleData) => (
-        <Tag
-          color="#1677ff"
-          icon={<DatabaseOutlined />}
-          style={{ cursor: 'pointer' }}
-          onClick={() => onViewDetail(record)}
-        >
-          {text}
-        </Tag>
+        <Tooltip placement="topLeft" title={text}>
+          <Button type="link" size="small" onClick={() => onViewDetail(record)}>
+            <div
+              className="global-text-ellipsis"
+              style={{
+                maxWidth: 250,
+              }}
+            >
+              {text}
+            </div>
+          </Button>
+        </Tooltip>
       ),
     },
     {
       title: '数据源',
       dataIndex: 'datasourceName',
       key: 'datasourceName',
-      width: 150,
     },
     {
       title: '表名',
       dataIndex: 'tableName',
       key: 'tableName',
-      width: 150,
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      width: 80,
       render: (status: number, record: ModuleData) => (
         <Popconfirm
           cancelText="取消"
@@ -82,28 +82,24 @@ export const useTableConfig = ({
       title: '创建时间',
       dataIndex: 'createTime',
       key: 'createTime',
-      width: 160,
       render: (createTime: string) => dayjs(createTime).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
       title: '创建人',
       dataIndex: 'createUserName',
       key: 'createUserName',
-      width: 120,
       render: (createUserName: string, record: ModuleData) => createUserName || record.createUser,
     },
     {
       title: '更新时间',
       dataIndex: 'updateTime',
       key: 'updateTime',
-      width: 160,
       render: (updateTime: string) => dayjs(updateTime).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
       title: '更新人',
       dataIndex: 'updateUserName',
       key: 'updateUserName',
-      width: 120,
       render: (updateUserName: string, record: ModuleData) => updateUserName || record.updateUser,
     },
 

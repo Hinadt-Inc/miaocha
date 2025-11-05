@@ -1,8 +1,9 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import NProgress from 'nprogress';
-import { setTokens } from '../store/userSlice';
+
 import { store } from '../store/store';
+import { setTokens } from '../store/userSlice';
 
 // 创建axios实例
 const service: AxiosInstance = axios.create({

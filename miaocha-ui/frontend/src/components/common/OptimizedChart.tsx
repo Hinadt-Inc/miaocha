@@ -1,7 +1,9 @@
 import { useRef, useEffect, useState } from 'react';
-import { init, getInstanceByDom } from 'echarts';
+
 import type { EChartsOption, ECharts } from 'echarts';
-import debounce from 'lodash/debounce';
+import { init, getInstanceByDom } from 'echarts';
+
+import { debounce } from '@/utils/utils';
 
 interface OptimizedChartProps {
   option: EChartsOption;
@@ -38,7 +40,7 @@ const OptimizedChart: React.FC<OptimizedChartProps> = ({
     const chart = chartRef.current.getAttribute('_echarts_instance_')
       ? getInstanceByDom(chartRef.current)
       : init(chartRef.current, theme);
-      
+
     // 存储图表实例
     setChartInstance(chart ?? null);
 
@@ -46,9 +48,9 @@ const OptimizedChart: React.FC<OptimizedChartProps> = ({
     const resizeHandler = debounce(() => {
       chart?.resize();
     }, 100);
-    
+
     window.addEventListener('resize', resizeHandler);
-    
+
     return () => {
       window.removeEventListener('resize', resizeHandler);
       // 在组件卸载时销毁图表实例
@@ -59,7 +61,7 @@ const OptimizedChart: React.FC<OptimizedChartProps> = ({
   // 处理图表选项更新
   useEffect(() => {
     if (!chartInstance) return;
-    
+
     // 显示加载状态
     if (showLoading || loading) {
       chartInstance.showLoading(loadingOption);
@@ -74,33 +76,27 @@ const OptimizedChart: React.FC<OptimizedChartProps> = ({
   // 处理事件绑定
   useEffect(() => {
     if (!chartInstance) return;
-    
+
     // 清除已有事件
     const registeredEvents = Object.keys(onEvents);
-    registeredEvents.forEach(eventName => {
+    registeredEvents.forEach((eventName) => {
       chartInstance.off(eventName);
     });
-    
+
     // 注册新事件
-    registeredEvents.forEach(eventName => {
+    registeredEvents.forEach((eventName) => {
       chartInstance.on(eventName, onEvents[eventName]);
     });
-    
+
     return () => {
       // 在事件更新前清除事件
-      registeredEvents.forEach(eventName => {
+      registeredEvents.forEach((eventName) => {
         chartInstance.off(eventName);
       });
     };
   }, [chartInstance, onEvents]);
 
-  return (
-    <div
-      ref={chartRef}
-      className={className}
-      style={style}
-    />
-  );
+  return <div ref={chartRef} className={className} style={style} />;
 };
 
 export default OptimizedChart;

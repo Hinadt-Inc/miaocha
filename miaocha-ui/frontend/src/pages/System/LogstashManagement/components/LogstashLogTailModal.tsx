@@ -41,8 +41,10 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel }: L
     if (isTailing && eventSourceRef.current) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
+      messageApi.success('Log tail stopped');
       setIsTailing(false);
     }
+    setLogs([]);
     // Call parent component's onCancel
     onCancel();
   };
@@ -184,7 +186,7 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel }: L
         maskClosable={false}
       >
         <div className={styles.statusContainer}>
-          <h4>跟踪状态: {isTailing ? '运行中' : '已停止'}</h4>
+          <h4>跟踪状态: {isTailing ? '运行中' : '已停止'} </h4>
         </div>
         <div
           ref={logsEndRef}

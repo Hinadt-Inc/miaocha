@@ -11,11 +11,13 @@ import { STORAGE_KEYS, URL_PARAMS } from '../constants';
 export const useOAuthCallback = () => {
   const dispatch = useDispatch();
   const [urlSearchParams] = useSearchParams();
+  console.log(22, urlSearchParams);
 
   // 处理CAS回调
   useEffect(() => {
     const handleCASCallback = async () => {
       const ticket = urlSearchParams.get(URL_PARAMS.TICKET);
+      console.log(333, ticket);
 
       if (ticket) {
         try {
