@@ -103,10 +103,6 @@ const SearchBar = forwardRef<SearchBarRef, SearchBarProps>((props, ref) => {
     searchParams.startTime,
     searchParams.endTime,
     searchParams.timeRange,
-    searchParams.relativeEndOption,
-    searchParams.relativeStartOption,
-    searchParams.timeType,
-    timeState.timeOption?.range,
     setTimeOption,
   ]);
 
