@@ -17,6 +17,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.branch || github.ref_name }}  # Checkout the actual branch
           fetch-depth: 0  # Fetch full Git history to ensure correct sync
           submodules: true  # Include submodules
 
