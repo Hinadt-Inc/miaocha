@@ -143,7 +143,6 @@ export const useColumns = (
       // 清理本地存储中的无效字段
       const allFieldNames = (processedColumns?.map((col) => col.columnName).filter(Boolean) as string[]) || [];
       cleanInvalidFieldsFromStorage(allFieldNames);
-
       // 通知父组件commonColumns变化
       if (onCommonColumnsChange) {
         onCommonColumnsChange(commonColumns || []);
@@ -363,6 +362,8 @@ export const useColumns = (
  */
 export const useModuleSelection = (
   modules: IStatus[],
+  setActiveColumns: (columns: string[]) => void,
+  setExternalActiveColumns?: (columns: string[]) => void,
   externalSelectedModule?: string,
   onSelectedModuleChange?: (selectedModule: string, datasourceId?: number) => void,
 ) => {
@@ -381,6 +382,8 @@ export const useModuleSelection = (
     (value: string) => {
       removeLocalActiveColumns();
       clearSearchConditionsKeepFields([]);
+      setActiveColumns([]);
+      setExternalActiveColumns && setExternalActiveColumns([]);
 
       if (!value) {
         setSelectedModule('');

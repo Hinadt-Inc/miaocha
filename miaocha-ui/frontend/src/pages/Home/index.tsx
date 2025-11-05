@@ -378,7 +378,7 @@ const HomePage = () => {
       moduleQueryConfig,
       selectedModule,
       activeColumns: state.activeColumns, // 传递activeColumns用于同步左侧已选字段显示
-
+      setActiveColumns: state.setActiveColumns,
       // 回调（动作）
       onSearch: setSearchParams,
       setWhereSqlsFromSider: handleSetWhereSqlsFromSider,
