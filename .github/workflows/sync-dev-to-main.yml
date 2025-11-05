@@ -105,3 +105,10 @@ jobs:
             echo "git push origin main --force-with-lease" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
           fi
+
+  trigger-gitlab-sync:
+    needs: sync-dev-to-main
+    uses: ./.github/workflows/sync-to-gitlab.yml
+    with:
+      branch: main
+    secrets: inherit

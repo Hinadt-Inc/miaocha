@@ -3,6 +3,12 @@ name: Sync to Internal GitLab
 on:
   push:
     branches: [ dev, main ]
+  workflow_call:
+    inputs:
+      branch:
+        description: 'Branch to sync'
+        required: true
+        type: string
 
 jobs:
   sync-to-gitlab:
@@ -43,8 +49,8 @@ jobs:
           git remote add gitlab "$GITLAB_URL" || git remote set-url gitlab "$GITLAB_URL"
           git fetch gitlab
           
-          # Get current branch name
-          CURRENT_BRANCH="${{ github.ref_name }}"
+          # Get current branch name (from workflow_call input or push event)
+          CURRENT_BRANCH="${{ inputs.branch || github.ref_name }}"
           echo "📤 Current branch: $CURRENT_BRANCH"
           
           # Push to GitLab branch
@@ -56,13 +62,14 @@ jobs:
       - name: Notify sync result
         if: always()
         run: |
+          CURRENT_BRANCH="${{ inputs.branch || github.ref_name }}"
           if [ "${{ job.status }}" = "success" ]; then
             echo "## ✅ GitLab Sync Successful" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### 📋 Sync Info" >> $GITHUB_STEP_SUMMARY
-            echo "- **Source branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Source branch**: $CURRENT_BRANCH" >> $GITHUB_STEP_SUMMARY
             echo "- **Target repo**: git.hinadt.com/middle-software/log-manage-system" >> $GITHUB_STEP_SUMMARY
-            echo "- **Target branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Target branch**: $CURRENT_BRANCH" >> $GITHUB_STEP_SUMMARY
             echo "- **Commit SHA**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
             echo "- **Sync time**: $(date -d '+8 hours' '+%Y-%m-%d %H:%M:%S CST')" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
