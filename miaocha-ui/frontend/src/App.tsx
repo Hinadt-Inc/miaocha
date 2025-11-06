@@ -7,7 +7,7 @@ import ErrorBoundary from '@/components/Error/ErrorBoundary';
 import { colorPrimary } from '@/utils/utils';
 import { getAuthorizedRoutes } from './routes';
 import { useSelector } from 'react-redux';
-import { ConfigProvider } from 'antd';
+import { ConfigProvider, message } from 'antd';
 
 NProgress.configure({
   showSpinner: false, // 是否显示右上角的转圈加载图标
@@ -35,10 +35,13 @@ const setStoredCollapsed = (value: boolean) => {
 };
 
 const App = () => {
+  const [messageApi, contextHolder] = message.useMessage();
   const [collapsed, setCollapsed] = useState(getStoredCollapsed());
   const location = useLocation();
   const userRole = useSelector((state: { user: IStoreUser }) => state.user.role);
   const [openKeys, setOpenKeys] = useState<string[]>([]);
+
+  window.message = messageApi;
 
   // 地址变化时启动进度条
   useEffect(() => {
@@ -80,6 +83,7 @@ const App = () => {
 
   return (
     <div className="app-container">
+      {contextHolder}
       <ConfigProvider
         theme={{
           // algorithm: antdTheme.darkAlgorithm, // 暗色算法

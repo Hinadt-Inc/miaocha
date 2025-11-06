@@ -1,5 +1,13 @@
 export {};
 declare global {
+  interface Window {
+    /**
+     * Ant Design 的全局消息实例
+     * 用法示例：`window.message.success("操作成功")`
+     */
+    message: import('antd/es/message/interface').MessageInstance;
+  }
+
   interface IStatus {
     value?: string;
     label?: string;
