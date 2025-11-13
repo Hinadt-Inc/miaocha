@@ -16,9 +16,10 @@ interface ExpandedRowRendererProps {
     handleShowLog: (machineId: number, isBottom?: boolean) => void;
     handleDeleteMachine: (processId: number, machineId: number) => void;
   };
+  onRefresh?: () => Promise<void>;
 }
 
-const ExpandedRowRenderer = ({ record, data, machineActions }: ExpandedRowRendererProps) => {
+const ExpandedRowRenderer = ({ record, data, machineActions, onRefresh }: ExpandedRowRendererProps) => {
   return (
     <MachineTable
       data={data}
@@ -26,6 +27,7 @@ const ExpandedRowRenderer = ({ record, data, machineActions }: ExpandedRowRender
       onDeleteMachine={machineActions.handleDeleteMachine}
       onEditMachineConfig={machineActions.handleEditMachineConfig}
       onForceStopMachine={machineActions.handleForceStopMachine}
+      onRefresh={onRefresh}
       onRefreshConfig={machineActions.handleRefreshConfig}
       onReinitializeMachine={machineActions.handleReinitializeMachine}
       onShowLog={machineActions.handleShowLog}
