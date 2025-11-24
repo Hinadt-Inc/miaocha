@@ -27,6 +27,7 @@ out
 
 # 编辑器目录和文件
 .vscode/*
+.cursor
 !.vscode/extensions.json
 !.vscode/settings.json
 .idea
