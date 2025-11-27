@@ -6,7 +6,6 @@ import ReactECharts from 'echarts-for-react';
 
 import { useHomeContext } from '../context';
 import { useDataInit } from '../hooks/useDataInit';
-import { IModuleQueryConfig } from '../types';
 import { DATE_FORMAT_THOUSOND } from '../utils';
 
 import { createChartOption } from './chartConfig';
@@ -17,7 +16,7 @@ interface Props {
 
 const HistogramChart = (props: Props) => {
   const { data } = props;
-  const { searchParams, updateSearchParams, moduleQueryConfig } = useHomeContext();
+  const { searchParams, updateSearchParams } = useHomeContext();
   const { fetchData, refreshFieldDistributions } = useDataInit();
   const { distributionData, timeUnit, timeInterval } = data || {};
   const { timeGrouping = 'auto', startTime = '', endTime = '' } = searchParams;
@@ -62,13 +61,12 @@ const HistogramChart = (props: Props) => {
         });
         delete newParams.timeRange;
         fetchData({
-          moduleQueryConfig: moduleQueryConfig as IModuleQueryConfig,
           searchParams: newParams,
         });
         refreshFieldDistributions(newParams);
       }
     },
-    [timeUnit, timeInterval, searchParams, updateSearchParams, fetchData, moduleQueryConfig, refreshFieldDistributions],
+    [timeUnit, timeInterval, searchParams, updateSearchParams, fetchData, refreshFieldDistributions],
   );
 
   const handleBrushEnd = useCallback(
@@ -89,21 +87,12 @@ const HistogramChart = (props: Props) => {
         });
         delete newParams.timeRange;
         fetchData({
-          moduleQueryConfig: moduleQueryConfig as IModuleQueryConfig,
           searchParams: newParams,
         });
         refreshFieldDistributions(newParams);
       }
     },
-    [
-      timeUnit,
-      aggregatedData.labels,
-      searchParams,
-      updateSearchParams,
-      fetchData,
-      moduleQueryConfig,
-      refreshFieldDistributions,
-    ],
+    [timeUnit, aggregatedData.labels, searchParams, updateSearchParams, fetchData, refreshFieldDistributions],
   );
 
   const handleChartReady = (chart: any) => {

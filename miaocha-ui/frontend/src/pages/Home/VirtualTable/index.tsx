@@ -8,7 +8,6 @@ import { highlightText } from '@/utils/highlightText';
 import { useHomeContext } from '../context';
 import ExpandedRow from '../ExpandedRow/index';
 import { useDataInit } from '../hooks/useDataInit';
-import { IModuleQueryConfig } from '../types';
 import { formatTimeString } from '../utils';
 
 import { ResizableTitle, ColumnHeader } from './components';

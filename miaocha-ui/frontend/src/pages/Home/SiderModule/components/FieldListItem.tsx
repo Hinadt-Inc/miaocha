@@ -6,7 +6,6 @@ import { getFieldTypeColor } from '@/utils/logDataHelpers';
 
 import { useHomeContext } from '../../context';
 import { useDataInit } from '../../hooks/useDataInit';
-import { IModuleQueryConfig } from '../../types';
 import { deduplicateAndDeleteWhereSqls, formatSqlKey } from '../../utils';
 import styles from '../styles/FieldListItem.module.less';
 import { FieldListItemProps } from '../types';
@@ -25,7 +24,6 @@ const FieldListItem: React.FC<FieldListItemProps> = memo(
       distributionLoading,
       logTableColumns,
       setLogTableColumns,
-      setSearchParams,
       updateSearchParams,
     } = useHomeContext();
     const { fetchFieldDistribution, fetchData } = useDataInit();
@@ -112,7 +110,6 @@ const FieldListItem: React.FC<FieldListItemProps> = memo(
             fields: newFields,
           });
           fetchData({
-            moduleQueryConfig: moduleQueryConfig as IModuleQueryConfig,
             searchParams: paramsWidthFields,
           });
         }
@@ -129,9 +126,11 @@ const FieldListItem: React.FC<FieldListItemProps> = memo(
           [...(searchParams.whereSqls || []), newSql] as string[],
           needRemoveSql,
         );
-        setSearchParams({
-          ...searchParams,
+        const newSearchParams = updateSearchParams({
           whereSqls: newWhereSqls,
+        });
+        fetchData({
+          searchParams: newSearchParams,
         });
       },
       [searchParams, column],
