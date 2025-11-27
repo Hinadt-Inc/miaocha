@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo, Fragment, useCallback } from 'react';
 
-import { useRequest } from 'ahooks';
 import { Table } from 'antd';
 
 import * as api from '@/api/logs';
@@ -14,7 +13,6 @@ import { formatTimeString } from '../utils';
 
 import { ResizableTitle, ColumnHeader } from './components';
 import { useScreenWidth, useExpandedRows } from './hooks';
-import { VirtualTableProps } from './types';
 import {
   extractSqlKeywords,
   formatSearchKeywords,
@@ -22,15 +20,14 @@ import {
   getAutoColumnWidth,
   isFieldSortable,
   createColumnSorter,
+  createTimeSorter,
 } from './utils';
 import styles from './VirtualTable.module.less';
 
 /**
  * 虚拟化表格组件
  */
-const VirtualTable: React.FC<VirtualTableProps> = (props) => {
-  const { whereSqlsFromSider = [], sqls } = props;
-
+const VirtualTable: React.FC = () => {
   const {
     searchParams,
     detailData,
@@ -42,45 +39,7 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
   } = useHomeContext();
   const { fetchData } = useDataInit();
 
-  const hasMore = useMemo(() => {
-    return detailData?.totalCount ? (detailData?.rows?.length || 0) < detailData?.totalCount : false;
-  }, [searchParams, detailData, moduleQueryConfig]);
-
-  const getDetailDataRequest = useRequest(
-    async (params: ILogSearchParams & { signal?: AbortSignal }) => {
-      const requestParams: any = { ...params };
-      delete requestParams?.datasourceId;
-      return api.fetchLogDetails(requestParams, { signal: params.signal });
-    },
-    {
-      manual: true,
-      onSuccess: (res) => {
-        const { rows } = res;
-        const timeField = moduleQueryConfig?.timeField || 'log_time';
-
-        // 为每条记录添加唯一ID并格式化时间字段
-        (rows || []).forEach((item, index) => {
-          item._key = `${Date.now()}_${index}`;
-
-          if (item[timeField]) {
-            item[timeField] = formatTimeString(item[timeField] as string);
-          }
-          item._originalSource = { ...item };
-        });
-        const newDetailData = { ...detailData, rows: [...(detailData?.rows || []), ...rows] };
-        setDetailData(newDetailData as ILogDetailsResponse);
-      },
-      onError: (error) => {
-        console.error('获取日志详情失败:', error);
-      },
-    },
-  );
-
-  const onLoadMore = useCallback(async () => {
-    if (getDetailDataRequest.loading) return;
-    const newSearchParams = { ...searchParams, offset: detailData?.rows?.length || 0 };
-    getDetailDataRequest.run(newSearchParams);
-  }, [detailData, moduleQueryConfig, searchParams, setDetailData]);
+  const detailDataLoading = useRef(false); // 防止重复请求
 
   // 状态管理
   const containerRef = useRef<HTMLDivElement>(null);
@@ -96,12 +55,10 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
   const { expandedRowKeys, handleExpand } = useExpandedRows(detailData?.rows || [], searchParams, moduleQueryConfig);
 
   // 数据处理
-  const sqlFilterValue = useMemo(() => extractSqlKeywords(sqls || []), [sqls]);
+  const sqlFilterValue = useMemo(() => extractSqlKeywords(searchParams.whereSqls || []), [searchParams.whereSqls]);
   const keyWordsFormat = useMemo(() => formatSearchKeywords(searchParams.keywords || []), [searchParams.keywords]);
-
   // 表格列配置Hook（简化版本，仅提取timeField）
-  const timeField = moduleQueryConfig?.timeField || 'log_time';
-
+  const timeField = useMemo(() => moduleQueryConfig?.timeField || 'log_time', [moduleQueryConfig]);
   // 构建完整的列配置
   const getBaseColumns = useMemo(() => {
     const otherColumns = logTableColumns?.filter((item) => item.selected && item.columnName !== timeField);
@@ -141,8 +98,6 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
       });
     }
 
-    console.log('_columns====', _columns);
-
     return [
       {
         title: timeField,
@@ -150,36 +105,7 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
         width: 190,
         resizable: false,
         sorter: {
-          compare: (a: any, b: any) => {
-            const timeA = a[timeField];
-            const timeB = b[timeField];
-
-            if (!timeA && !timeB) return 0;
-            if (!timeA) return 1;
-            if (!timeB) return -1;
-
-            const parseTime = (timeStr: any) => {
-              if (!timeStr) return 0;
-              const str = String(timeStr);
-              if (str.match(/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}/)) {
-                return str;
-              }
-              const date = new Date(str);
-              if (!isNaN(date.getTime())) {
-                return date.getTime();
-              }
-              return str;
-            };
-
-            const parsedA = parseTime(timeA);
-            const parsedB = parseTime(timeB);
-
-            if (typeof parsedA === 'number' && typeof parsedB === 'number') {
-              return parsedA - parsedB;
-            }
-
-            return String(parsedA).localeCompare(String(parsedB));
-          },
+          compare: createTimeSorter(timeField),
           multiple: 1,
         },
         render: (text: any) => {
@@ -189,68 +115,54 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
           return str.replace('T', ' ');
         },
       },
-      {
-        title: '_source',
-        dataIndex: '_source',
-        width: (() => {
-          const isSmallScreen = screenWidth < 1200;
-          if (isSmallScreen) {
-            const hasOtherColumns = _columns.length > 0;
-            if (!hasOtherColumns) {
-              return Math.min(600, screenWidth - 300);
-            }
-          }
-          return undefined;
-        })(),
-        ellipsis: false,
-        hidden: _columns.length > 0, // 当有其他字段时隐藏_source列
-        render: (_: any, record: ILogColumnsResponse) => {
-          // console.log('🔍 [_source 列渲染] record:', record);
-          // console.log('🔍 [_source 列渲染] _originalSource:', (record as any)._originalSource);
-
-          // const whereValues = whereSqlsFromSider.map((item) => String(item.value)).filter(Boolean);
-          const allKeywords = Array.from(new Set([...keyWordsFormat])).filter(Boolean);
-          const finalKeywords = Array.from(
-            new Set([...(keyWordsFormat?.length ? allKeywords : sqlFilterValue)]),
-          ).filter(Boolean);
-
-          // 使用原始完整数据来渲染 _source 列，如果没有则使用当前记录
-          const sourceData = (record as any)._originalSource || record;
-          // console.log('🔍 [_source 列渲染] sourceData:', sourceData);
-
-          const entries = Object.entries(sourceData)
-            .filter(([key]) => !key.startsWith('_')) // 过滤掉内部字段如 _key, _originalSource
-            .map(([key, value]) => {
-              let priority = 2;
-              let highlightArr: string[] = finalKeywords;
-
-              const whereMatch = whereSqlsFromSider.find((item) => item.field === key);
-              if (whereMatch) {
-                priority = 0;
-                highlightArr = [String(whereMatch.value)];
-              } else {
-                const valueStr = String(value);
-                if (finalKeywords.some((kw) => valueStr.includes(kw))) {
-                  priority = 1;
+      ...(_columns.length < 1
+        ? [
+            {
+              title: '_source',
+              dataIndex: '_source',
+              width: (() => {
+                const isSmallScreen = screenWidth < 1200;
+                if (isSmallScreen) {
+                  const hasOtherColumns = _columns.length > 0;
+                  if (!hasOtherColumns) {
+                    return Math.min(600, screenWidth - 300);
+                  }
                 }
-              }
-              return { key, value, priority, highlightArr };
-            });
+                return undefined;
+              })(),
+              ellipsis: false,
+              render: (_: any, record: ILogColumnsResponse) => {
+                const sourceData = (record as any)._originalSource || record;
 
-          const sortedEntries = entries.sort((a, b) => a.priority - b.priority);
+                const entries = Object.entries(sourceData)
+                  .filter(([key]) => !key.startsWith('_')) // 过滤掉内部字段如 _key, _originalSource
+                  .map(([key, value]) => {
+                    let priority = 2;
+                    const highlightArr: string[] = [...keyWordsFormat, ...sqlFilterValue];
+                    if (!keyWordsFormat.includes(key)) {
+                      if (sqlFilterValue.some((kw) => String(value).includes(kw))) {
+                        priority = 1;
+                      }
+                    }
+                    return { key, value, priority, highlightArr };
+                  });
 
-          return (
-            <dl className={styles.source}>
-              {sortedEntries.map(({ key, value, highlightArr }) => (
-                <Fragment key={key}>
-                  <dt>{key}</dt>
-                  <dd>{highlightText(String(value), highlightArr)}</dd>
-                </Fragment>
-              ))}
-            </dl>
-          );
-        },
-      },
+                const sortedEntries = entries.sort((a, b) => a.priority - b.priority);
+
+                return (
+                  <dl className={styles.source}>
+                    {sortedEntries.map(({ key, value, highlightArr }) => (
+                      <Fragment key={key}>
+                        <dt>{key}</dt>
+                        <dd>{highlightText(String(value), highlightArr)}</dd>
+                      </Fragment>
+                    ))}
+                  </dl>
+                );
+              },
+            },
+          ]
+        : []),
       ..._columns.map((column, idx) => {
         const isLast = idx === _columns.length - 1;
         let columnWidth;
@@ -264,15 +176,35 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
           ...column,
           width: columnWidth,
           render: (text: string) => {
-            return highlightText(text, [
-              ...(keyWordsFormat || []),
-              ...((whereSqlsFromSider.map((item) => item.value) || []) as string[]),
-            ]);
+            return highlightText(text, [...(keyWordsFormat || []), ...(sqlFilterValue || [])]);
           },
         };
       }),
     ];
-  }, [logTableColumns, keyWordsFormat, columnWidths, whereSqlsFromSider, sqlFilterValue, screenWidth, timeField]);
+  }, [logTableColumns, keyWordsFormat, columnWidths, sqlFilterValue, screenWidth, timeField]);
+
+  const hasMore = useMemo(() => {
+    return detailData?.totalCount ? (detailData?.rows?.length || 0) < detailData?.totalCount : false;
+  }, [searchParams, detailData, moduleQueryConfig]);
+
+  const onLoadMore = useCallback(async () => {
+    const newSearchParams = { ...searchParams, offset: detailData?.rows?.length || 0 };
+    const res = await api.fetchLogDetails(newSearchParams);
+    const { rows } = res;
+    const timeField = moduleQueryConfig?.timeField || 'log_time';
+
+    // 为每条记录添加唯一ID并格式化时间字段
+    (rows || []).forEach((item, index) => {
+      if (item[timeField]) {
+        item[timeField] = formatTimeString(item[timeField] as string);
+      }
+      item._originalSource = { ...item };
+      item._key = `${Date.now()}_${index}`;
+    });
+    const newDetailData = { ...detailData, rows: [...(detailData?.rows || []), ...rows] };
+    setDetailData(newDetailData as ILogDetailsResponse);
+    detailDataLoading.current = false;
+  }, [detailData, moduleQueryConfig, searchParams, setDetailData]);
 
   // 列宽调整处理
   const handleResize = (index: number) => (width: number) => {
@@ -296,17 +228,58 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
     });
   };
 
+  const handleDeleteColumn = (colIndex: number) => {
+    const col = columns[colIndex];
+    const newCols = columns.filter((_, idx) => idx !== colIndex);
+    setColumns(newCols);
+
+    // 重置左侧选中状态
+    const newLogTableColumns = [...logTableColumns];
+    const idx = newLogTableColumns.findIndex((c) => c.columnName === col.dataIndex);
+    if (idx > -1) {
+      newLogTableColumns[idx].selected = false;
+    }
+    setLogTableColumns(newLogTableColumns);
+
+    let newFields = [...(searchParams.fields || [])];
+    if (col.dataIndex.indexOf('.') > -1) {
+      newFields = newFields.filter((f) => f !== col.dataIndex);
+    }
+    const paramsWidthFields = updateSearchParams({
+      fields: newFields,
+      sortFields: searchParams.sortFields?.filter((e) => e.fieldName !== col.columnName),
+    });
+    fetchData({
+      searchParams: paramsWidthFields,
+    });
+  };
+
+  const handleMoveLeft = (colIndex: number) => {
+    if (colIndex < 2) return;
+    const newCols = [...columns];
+    [newCols[colIndex - 1], newCols[colIndex]] = [newCols[colIndex], newCols[colIndex - 1]];
+    setColumns(newCols);
+  };
+
+  const handleMoveRight = (colIndex: number) => {
+    if (colIndex >= columns.length - 1) return;
+    const newCols = [...columns];
+    [newCols[colIndex], newCols[colIndex + 1]] = [newCols[colIndex + 1], newCols[colIndex]];
+    setColumns(newCols);
+  };
+
+  // 表格变化处理
+  const handleTableChange = (_pagination: any, _filters: any, sorter: any) => {
+    const resultSorter = processSorterChange(sorter);
+    const newSearchParams = updateSearchParams({
+      sortFields: resultSorter,
+    });
+    fetchData({ searchParams: newSearchParams });
+  };
+
   // 设置列配置
   useEffect(() => {
     const resizableColumns = getBaseColumns.map((col, index) => {
-      if (col.dataIndex === timeField) {
-        return {
-          ...col,
-          width: 190,
-          onHeaderCell: undefined,
-        };
-      }
-
       return {
         ...col,
         onHeaderCell: (column: any) => ({
@@ -344,13 +317,14 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
     }
 
     const handleScroll = () => {
-      if (!hasMore || getDetailDataRequest.loading) return;
+      if (!hasMore || detailDataLoading.current) return;
 
       const scrollElement = tableNode?.querySelector('.ant-table-tbody-virtual-holder');
       if (scrollElement) {
         const { scrollHeight, scrollTop, clientHeight } = scrollElement;
         const distanceToBottom = scrollHeight - scrollTop - clientHeight;
         if (distanceToBottom > 0 && distanceToBottom < 600) {
+          detailDataLoading.current = true;
           onLoadMore();
         }
       }
@@ -372,7 +346,7 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
         }
       }
     };
-  }, [containerRef.current, tblRef.current, hasMore, getDetailDataRequest.loading, onLoadMore]);
+  }, [containerRef.current, tblRef.current, hasMore, onLoadMore]);
 
   // 动态计算scroll.x
   useEffect(() => {
@@ -402,83 +376,32 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
     }
   }, [columns, timeField, screenWidth]);
 
-  // 列操作处理
-  const hasSourceColumn = columns.some((col) => col.dataIndex === '_source') && columns.length === 2;
-
-  const handleDeleteColumn = (colIndex: number) => {
-    const col = columns[colIndex];
-    const newCols = columns.filter((_, idx) => idx !== colIndex);
-    setColumns(newCols);
-
-    const newLogTableColumns = [...logTableColumns];
-    const idx = newLogTableColumns.findIndex((c) => c.columnName === col.columnName);
-    if (idx > -1) {
-      newLogTableColumns[idx].selected = false;
+  const enhancedColumns = useMemo(() => {
+    const hasSourceCol = columns.find((col) => col.dataIndex === '_source');
+    if (!hasSourceCol) {
+      return columns.map((col, idx) => {
+        if (col.dataIndex === timeField) {
+          return col;
+        }
+        return {
+          ...col,
+          title: (
+            <ColumnHeader
+              canMoveLeft={idx > 1}
+              canMoveRight={idx < columns.length - 1}
+              colIndex={idx}
+              title={col.title}
+              onDelete={handleDeleteColumn}
+              onMoveLeft={handleMoveLeft}
+              onMoveRight={handleMoveRight}
+            />
+          ),
+        };
+      });
     }
-    setLogTableColumns(newLogTableColumns);
+    return columns;
+  }, [columns]);
 
-    let newFields = [...(searchParams.fields || [])];
-    if (col.columnName.indexOf('.') > -1) {
-      newFields = newFields.filter((f) => f !== col.columnName);
-    }
-    const paramsWidthFields = updateSearchParams({
-      fields: newFields,
-      sortFields: searchParams.sortFields?.filter((e) => e.fieldName !== col.columnName),
-    });
-    fetchData({
-      searchParams: paramsWidthFields,
-    });
-  };
-
-  const handleMoveLeft = (colIndex: number) => {
-    if (colIndex <= 0) return;
-    const newCols = [...columns];
-    [newCols[colIndex - 1], newCols[colIndex]] = [newCols[colIndex], newCols[colIndex - 1]];
-    setColumns(newCols);
-  };
-
-  const handleMoveRight = (colIndex: number) => {
-    if (colIndex >= columns.length - 1) return;
-    const newCols = [...columns];
-    [newCols[colIndex], newCols[colIndex + 1]] = [newCols[colIndex + 1], newCols[colIndex]];
-    setColumns(newCols);
-  };
-
-  // 表格变化处理
-  const handleTableChange = (_pagination: any, _filters: any, sorter: any) => {
-    const resultSorter = processSorterChange(sorter);
-    const newSearchParams = updateSearchParams({
-      sortFields: resultSorter,
-    });
-    fetchData({ searchParams: newSearchParams });
-  };
-
-  // 包装列头，添加操作按钮
-  const enhancedColumns = !hasSourceColumn
-    ? columns
-        .filter((col) => !col.hidden) // 过滤掉hidden的列
-        .map((col, idx) => {
-          if (col.dataIndex === timeField) {
-            return col;
-          }
-          return {
-            ...col,
-            title: (
-              <ColumnHeader
-                colIndex={idx}
-                columns={columns}
-                showActions={true}
-                title={col.title}
-                onDelete={handleDeleteColumn}
-                onMoveLeft={handleMoveLeft}
-                onMoveRight={handleMoveRight}
-              />
-            ),
-          };
-        })
-    : columns.filter((col) => !col.hidden); // 过滤掉hidden的列
-
-  console.log('columns======', columns);
   return (
     <div ref={containerRef} className={styles.virtualLayout}>
       <Table
@@ -495,11 +418,7 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
           expandedRowKeys,
           onExpand: handleExpand,
           expandedRowRender: (record) => (
-            <ExpandedRow
-              data={record}
-              keywords={keyWordsFormat || []}
-              moduleQueryConfig={moduleQueryConfig as IModuleQueryConfig}
-            />
+            <ExpandedRow data={record} enhancedColumns={enhancedColumns} keywords={keyWordsFormat || []} />
           ),
         }}
         pagination={false}

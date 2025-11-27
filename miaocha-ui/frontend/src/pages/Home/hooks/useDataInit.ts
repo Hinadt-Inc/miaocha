@@ -157,12 +157,11 @@ export const useDataInit = () => {
 
         // 为每条记录添加唯一ID并格式化时间字段
         (rows || []).forEach((item, index) => {
-          item._key = `${Date.now()}_${index}`;
-
           if (item[timeField]) {
             item[timeField] = formatTimeString(item[timeField] as string);
           }
           item._originalSource = { ...item };
+          item._key = `${Date.now()}_${index}`;
         });
         setDetailData(res);
       });

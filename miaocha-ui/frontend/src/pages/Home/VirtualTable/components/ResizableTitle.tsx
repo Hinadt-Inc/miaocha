@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { ResizableTitleProps } from '../types';
 import styles from '../VirtualTable.module.less';
 

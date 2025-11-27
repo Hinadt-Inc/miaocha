@@ -9,7 +9,7 @@ export interface IExpandedRowProps {
   /** 搜索关键词列表，用于高亮显示 */
   keywords: string[];
   /** 模块查询配置，包含时间字段等信息 */
-  moduleQueryConfig?: IModuleQueryConfig;
+  enhancedColumns: any[];
 }
 
 // 模块查询配置接口（从父级类型继承）

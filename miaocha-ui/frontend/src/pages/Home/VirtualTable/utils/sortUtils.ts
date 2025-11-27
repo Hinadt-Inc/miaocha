@@ -115,3 +115,36 @@ export const createColumnSorter = (columnName: string, dataType: string) => {
     }
   };
 };
+
+export const createTimeSorter = (timeField: string) => {
+  return (a: any, b: any) => {
+    const timeA = a[timeField];
+    const timeB = b[timeField];
+
+    if (!timeA && !timeB) return 0;
+    if (!timeA) return 1;
+    if (!timeB) return -1;
+
+    const parseTime = (timeStr: any) => {
+      if (!timeStr) return 0;
+      const str = String(timeStr);
+      if (str.match(/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}/)) {
+        return str;
+      }
+      const date = new Date(str);
+      if (!isNaN(date.getTime())) {
+        return date.getTime();
+      }
+      return str;
+    };
+
+    const parsedA = parseTime(timeA);
+    const parsedB = parseTime(timeB);
+
+    if (typeof parsedA === 'number' && typeof parsedB === 'number') {
+      return parsedA - parsedB;
+    }
+
+    return String(parsedA).localeCompare(String(parsedB));
+  };
+};

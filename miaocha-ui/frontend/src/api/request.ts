@@ -95,7 +95,7 @@ service.interceptors.response.use(
       errorMessage = statusMessageMap[status];
     }
 
-    if (requestError.code === 'ERR_CANCELED') return Promise.reject(new Error('请求已取消'));
+    // if (requestError.code === 'ERR_CANCELED') return Promise.reject(new Error('请求已取消'));
 
     // 如果是401错误且不是刷新token请求
     if (status === 401 && !originalRequest._retry) {
