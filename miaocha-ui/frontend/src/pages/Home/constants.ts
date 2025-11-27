@@ -1,20 +1,20 @@
 import { QUICK_RANGES, DATE_FORMAT_THOUSOND } from './utils';
-import type { ILogSearchParams } from './types';
 
 /**
  * Home页面相关的常量定义
  */
 
-// 默认的搜索参数
+// 默认的搜索参数（使用全局类型）
 export const DEFAULT_SEARCH_PARAMS: ILogSearchParams = {
   offset: 0,
-  pageSize: 1000,
+  // pageSize: 50,
   datasourceId: null,
   module: null,
   startTime: QUICK_RANGES.last_15m.from().format(DATE_FORMAT_THOUSOND),
   endTime: QUICK_RANGES.last_15m.to().format(DATE_FORMAT_THOUSOND),
   timeRange: 'last_15m',
   timeGrouping: 'auto',
+  sortFields: [],
 };
 
 // 请求防抖延迟时间（毫秒）

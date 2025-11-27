@@ -1,37 +1,86 @@
-import React, { useEffect, useRef, useState, useMemo, Fragment } from 'react';
+import React, { useEffect, useRef, useState, useMemo, Fragment, useCallback } from 'react';
+
+import { useRequest } from 'ahooks';
 import { Table } from 'antd';
+
+import * as api from '@/api/logs';
+import { highlightText } from '@/utils/highlightText';
+
+import { useHomeContext } from '../context';
 import ExpandedRow from '../ExpandedRow/index';
-import { VirtualTableProps } from './types';
+import { useDataInit } from '../hooks/useDataInit';
+import { IModuleQueryConfig } from '../types';
+import { formatTimeString } from '../utils';
+
 import { ResizableTitle, ColumnHeader } from './components';
 import { useScreenWidth, useExpandedRows } from './hooks';
+import { VirtualTableProps } from './types';
 import {
   extractSqlKeywords,
   formatSearchKeywords,
   processSorterChange,
   getAutoColumnWidth,
   isFieldSortable,
+  createColumnSorter,
 } from './utils';
-import { highlightText } from '@/utils/highlightText';
 import styles from './VirtualTable.module.less';
 
 /**
  * 虚拟化表格组件
  */
 const VirtualTable: React.FC<VirtualTableProps> = (props) => {
+  const { whereSqlsFromSider = [], sqls } = props;
+
   const {
-    data,
-    loading = false,
-    onLoadMore,
-    hasMore = false,
-    dynamicColumns,
     searchParams,
-    onChangeColumns,
-    whereSqlsFromSider = [],
-    sqls,
-    onSearch,
+    detailData,
     moduleQueryConfig,
-    onSortChange,
-  } = props;
+    logTableColumns,
+    updateSearchParams,
+    setDetailData,
+    setLogTableColumns,
+  } = useHomeContext();
+  const { fetchData } = useDataInit();
+
+  const hasMore = useMemo(() => {
+    return detailData?.totalCount ? (detailData?.rows?.length || 0) < detailData?.totalCount : false;
+  }, [searchParams, detailData, moduleQueryConfig]);
+
+  const getDetailDataRequest = useRequest(
+    async (params: ILogSearchParams & { signal?: AbortSignal }) => {
+      const requestParams: any = { ...params };
+      delete requestParams?.datasourceId;
+      return api.fetchLogDetails(requestParams, { signal: params.signal });
+    },
+    {
+      manual: true,
+      onSuccess: (res) => {
+        const { rows } = res;
+        const timeField = moduleQueryConfig?.timeField || 'log_time';
+
+        // 为每条记录添加唯一ID并格式化时间字段
+        (rows || []).forEach((item, index) => {
+          item._key = `${Date.now()}_${index}`;
+
+          if (item[timeField]) {
+            item[timeField] = formatTimeString(item[timeField] as string);
+          }
+          item._originalSource = { ...item };
+        });
+        const newDetailData = { ...detailData, rows: [...(detailData?.rows || []), ...rows] };
+        setDetailData(newDetailData as ILogDetailsResponse);
+      },
+      onError: (error) => {
+        console.error('获取日志详情失败:', error);
+      },
+    },
+  );
+
+  const onLoadMore = useCallback(async () => {
+    if (getDetailDataRequest.loading) return;
+    const newSearchParams = { ...searchParams, offset: detailData?.rows?.length || 0 };
+    getDetailDataRequest.run(newSearchParams);
+  }, [detailData, moduleQueryConfig, searchParams, setDetailData]);
 
   // 状态管理
   const containerRef = useRef<HTMLDivElement>(null);
@@ -44,7 +93,7 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
 
   // 自定义hooks
   const screenWidth = useScreenWidth();
-  const { expandedRowKeys, handleExpand } = useExpandedRows(data, searchParams, moduleQueryConfig);
+  const { expandedRowKeys, handleExpand } = useExpandedRows(detailData?.rows || [], searchParams, moduleQueryConfig);
 
   // 数据处理
   const sqlFilterValue = useMemo(() => extractSqlKeywords(sqls || []), [sqls]);
@@ -55,13 +104,13 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
 
   // 构建完整的列配置
   const getBaseColumns = useMemo(() => {
-    const otherColumns = dynamicColumns?.filter((item) => item.selected && item.columnName !== timeField);
+    const otherColumns = logTableColumns?.filter((item) => item.selected && item.columnName !== timeField);
     const _columns: any[] = [];
 
     if (otherColumns && otherColumns.length > 0) {
       const isSmallScreen = screenWidth < 1200;
 
-      otherColumns.forEach((item: ILogColumnsResponse) => {
+      otherColumns.forEach((item: any) => {
         const { columnName = '' } = item;
 
         let columnWidth;
@@ -83,50 +132,7 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
           ...(isFieldSortable(item.dataType)
             ? {
                 sorter: {
-                  compare: (a: any, b: any) => {
-                    const valueA = a[columnName];
-                    const valueB = b[columnName];
-
-                    if (valueA === null || valueA === undefined) {
-                      if (valueB === null || valueB === undefined) return 0;
-                      return -1;
-                    }
-                    if (valueB === null || valueB === undefined) {
-                      return 1;
-                    }
-
-                    const dataType = item.dataType?.toUpperCase();
-                    const isNumericType = [
-                      'INT',
-                      'INTEGER',
-                      'BIGINT',
-                      'TINYINT',
-                      'SMALLINT',
-                      'FLOAT',
-                      'DOUBLE',
-                      'DECIMAL',
-                      'NUMERIC',
-                    ].includes(dataType);
-
-                    if (isNumericType) {
-                      const numA = parseFloat(valueA);
-                      const numB = parseFloat(valueB);
-
-                      if (!isNaN(numA) && !isNaN(numB)) {
-                        return numA - numB;
-                      }
-
-                      if (isNaN(numA) && !isNaN(numB)) return 1;
-                      if (!isNaN(numA) && isNaN(numB)) return -1;
-
-                      return String(valueA).localeCompare(String(valueB));
-                    } else {
-                      if (typeof valueA === 'string' && typeof valueB === 'string') {
-                        return valueA.localeCompare(valueB);
-                      }
-                      return (valueA || '').toString().localeCompare((valueB || '').toString());
-                    }
-                  },
+                  compare: createColumnSorter(columnName, item.dataType),
                   multiple: otherColumns.findIndex((col) => col.columnName === columnName) + 2,
                 },
               }
@@ -134,6 +140,8 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
         });
       });
     }
+
+    console.log('_columns====', _columns);
 
     return [
       {
@@ -200,8 +208,8 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
           // console.log('🔍 [_source 列渲染] record:', record);
           // console.log('🔍 [_source 列渲染] _originalSource:', (record as any)._originalSource);
 
-          const whereValues = whereSqlsFromSider.map((item) => String(item.value)).filter(Boolean);
-          const allKeywords = Array.from(new Set([...keyWordsFormat, ...whereValues])).filter(Boolean);
+          // const whereValues = whereSqlsFromSider.map((item) => String(item.value)).filter(Boolean);
+          const allKeywords = Array.from(new Set([...keyWordsFormat])).filter(Boolean);
           const finalKeywords = Array.from(
             new Set([...(keyWordsFormat?.length ? allKeywords : sqlFilterValue)]),
           ).filter(Boolean);
@@ -264,7 +272,7 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
         };
       }),
     ];
-  }, [dynamicColumns, keyWordsFormat, columnWidths, whereSqlsFromSider, sqlFilterValue, screenWidth, timeField]);
+  }, [logTableColumns, keyWordsFormat, columnWidths, whereSqlsFromSider, sqlFilterValue, screenWidth, timeField]);
 
   // 列宽调整处理
   const handleResize = (index: number) => (width: number) => {
@@ -336,7 +344,7 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
     }
 
     const handleScroll = () => {
-      if (!hasMore || loading) return;
+      if (!hasMore || getDetailDataRequest.loading) return;
 
       const scrollElement = tableNode?.querySelector('.ant-table-tbody-virtual-holder');
       if (scrollElement) {
@@ -364,7 +372,7 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
         }
       }
     };
-  }, [containerRef.current, tblRef.current, hasMore, loading, onLoadMore]);
+  }, [containerRef.current, tblRef.current, hasMore, getDetailDataRequest.loading, onLoadMore]);
 
   // 动态计算scroll.x
   useEffect(() => {
@@ -401,16 +409,25 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
     const col = columns[colIndex];
     const newCols = columns.filter((_, idx) => idx !== colIndex);
     setColumns(newCols);
-    onChangeColumns(col);
 
-    const _fields = newCols?.filter((item) => ![timeField, '_source'].includes(item.title)) || [];
-    if (_fields.length === 0 && onSearch) {
-      const params = {
-        ...searchParams,
-        fields: [],
-      };
-      onSearch(params);
+    const newLogTableColumns = [...logTableColumns];
+    const idx = newLogTableColumns.findIndex((c) => c.columnName === col.columnName);
+    if (idx > -1) {
+      newLogTableColumns[idx].selected = false;
     }
+    setLogTableColumns(newLogTableColumns);
+
+    let newFields = [...(searchParams.fields || [])];
+    if (col.columnName.indexOf('.') > -1) {
+      newFields = newFields.filter((f) => f !== col.columnName);
+    }
+    const paramsWidthFields = updateSearchParams({
+      fields: newFields,
+      sortFields: searchParams.sortFields?.filter((e) => e.fieldName !== col.columnName),
+    });
+    fetchData({
+      searchParams: paramsWidthFields,
+    });
   };
 
   const handleMoveLeft = (colIndex: number) => {
@@ -430,10 +447,10 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
   // 表格变化处理
   const handleTableChange = (_pagination: any, _filters: any, sorter: any) => {
     const resultSorter = processSorterChange(sorter);
-
-    if (onSortChange) {
-      onSortChange(resultSorter);
-    }
+    const newSearchParams = updateSearchParams({
+      sortFields: resultSorter,
+    });
+    fetchData({ searchParams: newSearchParams });
   };
 
   // 包装列头，添加操作按钮
@@ -461,6 +478,7 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
         })
     : columns.filter((col) => !col.hidden); // 过滤掉hidden的列
 
+  console.log('columns======', columns);
   return (
     <div ref={containerRef} className={styles.virtualLayout}>
       <Table
@@ -471,18 +489,25 @@ const VirtualTable: React.FC<VirtualTableProps> = (props) => {
             cell: ResizableTitle,
           },
         }}
-        dataSource={data}
+        dataSource={detailData?.rows || []}
         expandable={{
           columnWidth: 26,
           expandedRowKeys,
           onExpand: handleExpand,
           expandedRowRender: (record) => (
-            <ExpandedRow data={record} keywords={keyWordsFormat || []} moduleQueryConfig={moduleQueryConfig} />
+            <ExpandedRow
+              data={record}
+              keywords={keyWordsFormat || []}
+              moduleQueryConfig={moduleQueryConfig as IModuleQueryConfig}
+            />
           ),
         }}
         pagination={false}
         rowKey="_key"
-        scroll={{ x: data.length > 0 ? scrollX : 0, y: containerHeight - headerHeight - 1 }}
+        scroll={{
+          x: ((detailData?.rows as any[]) || []).length > 0 ? scrollX : 0,
+          y: containerHeight - headerHeight - 1,
+        }}
         showSorterTooltip={{
           title: '点击排序，按住Ctrl+点击可多列排序',
         }}

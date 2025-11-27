@@ -21,14 +21,7 @@ export {
 export { default } from './index';
 
 // 类型定义
-export type {
-  SiderProps,
-  SiderRef,
-  FieldData,
-  FieldListItemProps,
-  VirtualFieldListProps,
-  ModuleSelectOption,
-} from './types';
+export type { SiderProps, SiderRef, FieldListItemProps, ModuleSelectOption } from './types';
 
 // 子组件
 export { VirtualFieldList, ModuleSelector, FieldListItem } from './components';
@@ -43,7 +36,6 @@ export {
   toggleFavoriteModule,
   getLocalActiveColumns,
   setLocalActiveColumns,
-  removeLocalActiveColumns,
   updateSearchParamsInStorage,
   clearSearchConditionsKeepFields,
   sumArrayCount,

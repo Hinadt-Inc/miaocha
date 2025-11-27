@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+
 import { useRequest } from 'ahooks';
+
 import * as api from '@/api/logs';
+
 import {
   getFavoriteModule,
   toggleFavoriteModule,
-  removeLocalActiveColumns,
   clearSearchConditionsKeepFields,
   generateQueryConditionsKey,
   cleanInvalidFieldsFromStorage,
@@ -380,7 +382,6 @@ export const useModuleSelection = (
 
   const changeModules = useCallback(
     (value: string) => {
-      removeLocalActiveColumns();
       clearSearchConditionsKeepFields([]);
       setActiveColumns([]);
       setExternalActiveColumns && setExternalActiveColumns([]);

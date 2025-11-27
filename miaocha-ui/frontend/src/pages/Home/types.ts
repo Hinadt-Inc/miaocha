@@ -18,13 +18,14 @@ export interface ILogSearchParams {
 }
 
 // 模块选项接口
-// export interface IStatus {
-//   label: string;
-//   value: string;
-//   datasourceId: string | number;
-//   datasourceName: string;
-//   module: string;
-// }
+export interface IStatus {
+  label: string;
+  value: string;
+  datasourceId: string | number;
+  datasourceName: string;
+  module: string;
+  [key: string]: any;
+}
 
 // 日志详情响应接口
 export interface ILogDetailsResponse {
@@ -44,11 +45,15 @@ export interface ILogHistogramData {
   distributionData: any[];
   timeUnit: string;
   timeInterval: number;
+  [key: string]: any;
 }
 
 // 日志时间分布响应接口（API返回）
 export interface ILogHistogramResponse {
   distributionData: ILogHistogramData[];
+  timeUnit: string;
+  timeInterval: number;
+  [key: string]: any;
 }
 
 // 模块响应接口

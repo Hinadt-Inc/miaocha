@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+
 import { ILogTableProps } from '../types';
 import { mergeDataArrays } from '../utils';
 

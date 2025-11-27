@@ -33,11 +33,10 @@ export interface IFieldData {
 
 // 字段列表项Props接口
 export interface FieldListItemProps {
+  key: string;
   isSelected: boolean; // 是否选中
   columnIndex: number; // 字段索引
   column: ILogColumnsResponse; // 字段数据
-  fieldData: IFieldData; // 合并后的字段数据
-  moduleQueryConfig?: any; // 模块查询配置
 }
 
 // 虚拟列表Props接口

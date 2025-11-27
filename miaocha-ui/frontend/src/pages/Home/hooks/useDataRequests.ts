@@ -1,8 +1,10 @@
 import { useRequest } from 'ahooks';
+
 import * as api from '@/api/logs';
 import * as modulesApi from '@/api/modules';
-import { formatTimeString } from '../utils';
+
 import type { ILogSearchParams, IModuleQueryConfig } from '../types';
+import { formatTimeString } from '../utils';
 
 /**
  * 数据请求相关的hooks

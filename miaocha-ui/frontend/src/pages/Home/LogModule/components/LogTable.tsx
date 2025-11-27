@@ -4,9 +4,10 @@
  */
 
 import React from 'react';
+
 import VirtualTable from '../../VirtualTable';
-import { ILogTableProps } from '../types';
 import styles from '../styles/LogTable.module.less';
+import { ILogTableProps } from '../types';
 
 const LogTable: React.FC<ILogTableProps> = (props) => {
   return (

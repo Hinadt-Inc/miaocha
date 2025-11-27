@@ -6,8 +6,17 @@ import { SortConfig } from '../types';
 
 // 不支持排序的字段类型
 export const UNSORTABLE_FIELD_TYPES = [
-  'LONGTEXT', 'MEDIUMTEXT', 'TINYTEXT', 'JSON', 'BLOB',
-  'BITMAP', 'ARRAY', 'MAP', 'STRUCT', 'JSONB', 'VARIANT'
+  'LONGTEXT',
+  'MEDIUMTEXT',
+  'TINYTEXT',
+  'JSON',
+  'BLOB',
+  'BITMAP',
+  'ARRAY',
+  'MAP',
+  'STRUCT',
+  'JSONB',
+  'VARIANT',
 ];
 
 /**
@@ -26,7 +35,7 @@ export const isFieldSortable = (dataType: string): boolean => {
  */
 export const processSorterChange = (sorter: any): SortConfig[] => {
   let resultSorter: SortConfig[] = [];
-  
+
   if (sorter) {
     // 判断是单个排序还是多个排序
     if (Array.isArray(sorter)) {
@@ -46,6 +55,63 @@ export const processSorterChange = (sorter: any): SortConfig[] => {
       }
     }
   }
-  
+
   return resultSorter;
+};
+
+/**
+ * 创建列排序比较函数
+ * @param columnName 列名
+ * @param dataType 数据类型
+ * @returns 排序比较函数
+ */
+export const createColumnSorter = (columnName: string, dataType: string) => {
+  return (a: any, b: any) => {
+    const valueA = a[columnName];
+    const valueB = b[columnName];
+
+    // 处理 null/undefined 值
+    if (valueA === null || valueA === undefined) {
+      if (valueB === null || valueB === undefined) return 0;
+      return -1;
+    }
+    if (valueB === null || valueB === undefined) {
+      return 1;
+    }
+
+    // 判断是否为数值类型
+    const upperDataType = dataType?.toUpperCase();
+    const isNumericType = [
+      'INT',
+      'INTEGER',
+      'BIGINT',
+      'TINYINT',
+      'SMALLINT',
+      'FLOAT',
+      'DOUBLE',
+      'DECIMAL',
+      'NUMERIC',
+    ].includes(upperDataType);
+
+    if (isNumericType) {
+      // 数值类型排序
+      const numA = parseFloat(valueA);
+      const numB = parseFloat(valueB);
+
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB;
+      }
+
+      if (isNaN(numA) && !isNaN(numB)) return 1;
+      if (!isNaN(numA) && isNaN(numB)) return -1;
+
+      return String(valueA).localeCompare(String(valueB));
+    } else {
+      // 字符串类型排序
+      if (typeof valueA === 'string' && typeof valueB === 'string') {
+        return valueA.localeCompare(valueB);
+      }
+      return (valueA || '').toString().localeCompare((valueB || '').toString());
+    }
+  };
 };

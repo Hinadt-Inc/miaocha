@@ -1,9 +1,10 @@
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
-import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
-import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-
 import duration from 'dayjs/plugin/duration';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+
+import { QueryConfig } from '@/api/modules';
 
 // 扩展 dayjs 功能
 dayjs.extend(duration);
@@ -242,4 +243,53 @@ export const getLatestTime = (timeOption: ILogTimeSubmitParams) => {
     target.endTime = range[1];
   }
   return target;
+};
+
+// 动态确定时间字段的逻辑
+export const determineTimeField = (availableColumns: ILogColumnsResponse[], moduleQueryConfig: QueryConfig): string => {
+  const availableFieldNames = availableColumns.map((col) => col.columnName).filter(Boolean) as string[];
+  // 优先使用配置的时间字段
+  if (moduleQueryConfig?.timeField && availableFieldNames.includes(moduleQueryConfig.timeField)) {
+    return moduleQueryConfig.timeField;
+  }
+
+  // 如果配置的时间字段不存在，按优先级查找常见时间字段
+  const commonTimeFields = ['logs_timestamp', 'log_time', 'timestamp', 'time', '@timestamp'];
+  for (const timeField of commonTimeFields) {
+    if (availableFieldNames.includes(timeField)) {
+      return timeField;
+    }
+  }
+
+  // 如果都没找到，尝试查找包含time关键字的字段
+  const timeRelatedField = availableFieldNames.find(
+    (field) => field?.toLowerCase().includes('time') || field?.toLowerCase().includes('timestamp'),
+  );
+  if (timeRelatedField) {
+    return timeRelatedField;
+  }
+
+  if (availableFieldNames.length > 0 && availableFieldNames[0]) {
+    return availableFieldNames[0];
+  }
+
+  return '';
+};
+
+export const formatSqlKey = (sql: string) => {
+  return sql.replace(/\s+/g, '');
+};
+
+export const deduplicateAndDeleteWhereSqls = (sqls: string[], deleteSql?: string) => {
+  const seen = new Map<string, string>();
+  const deleteKey = formatSqlKey(deleteSql || '');
+  sqls.forEach((sql) => {
+    // 去掉所有空格作为key
+    const normalizedKey = formatSqlKey(sql || '');
+    if (deleteKey && deleteKey === normalizedKey) return;
+    if (!seen.has(normalizedKey)) {
+      seen.set(normalizedKey, sql);
+    }
+  });
+  return Array.from(seen.values());
 };
