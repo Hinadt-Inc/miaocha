@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useRef, MutableRefObject } from 'react';
+import { createContext, useContext, useState, ReactNode, useRef, MutableRefObject, useEffect } from 'react';
 
 import { DEFAULT_SEARCH_PARAMS } from '../constants';
 import type {
@@ -9,7 +9,7 @@ import type {
   IStatus,
   SortConfig,
 } from '../types';
-import { DATE_FORMAT_THOUSOND, deduplicateAndDeleteWhereSqls, QUICK_RANGES } from '../utils';
+import { deduplicateAndDeleteWhereSqls, parseTimeRange } from '../utils';
 
 /**
  * Home页面Context值接口
@@ -36,6 +36,7 @@ interface HomeContextValue {
   searchParams: ILogSearchParams;
   loading: boolean;
   abortRef: MutableRefObject<AbortController | null>;
+  searchParamsRef: MutableRefObject<ILogSearchParams>; // 暴露 ref 用于获取最新的 searchParams
   distributions: Record<string, IFieldDistributions>;
   distributionLoading: Record<string, boolean>;
 
@@ -101,6 +102,12 @@ export const HomeProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState<boolean>(false);
 
   const abortRef = useRef<AbortController | null>(null);
+  const searchParamsRef = useRef<ILogSearchParams>(searchParams); // 创建 searchParams 的 ref
+
+  // 同步 searchParams 到 ref
+  useEffect(() => {
+    searchParamsRef.current = searchParams;
+  }, [searchParams]);
 
   // 重置搜索参数
   const resetSearchParams = () => {
@@ -114,7 +121,7 @@ export const HomeProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const handleSetSearchParams = (params: ILogSearchParams) => {
-    const { whereSqls, fields, timeRange, timeType, keywords, ...rest } = params;
+    const { whereSqls, fields, timeRange, keywords, ...rest } = params;
     // 去重whereSqls：去掉空格后完全一致的元素只保留一个
     const newWhereSqls = deduplicateAndDeleteWhereSqls(whereSqls || []);
     const newKeywords = Array.from(new Set(keywords || []));
@@ -126,13 +133,10 @@ export const HomeProvider = ({ children }: { children: ReactNode }) => {
       fields: newFields,
       keywords: newKeywords,
       timeRange,
-      timeType,
     };
-    if (timeType === 'quick') {
-      newSearchParams.startTime = QUICK_RANGES[timeRange || 'last_15m'].from().format(DATE_FORMAT_THOUSOND);
-      newSearchParams.endTime = QUICK_RANGES[timeRange || 'last_15m'].to().format(DATE_FORMAT_THOUSOND);
-    }
 
+    const { range, type } = parseTimeRange(newSearchParams?.timeRange);
+    Object.assign(newSearchParams, { startTime: range?.[0], endTime: range?.[1], range, type });
     setSearchParams(newSearchParams);
     return newSearchParams;
   };
@@ -184,6 +188,7 @@ export const HomeProvider = ({ children }: { children: ReactNode }) => {
     searchParams,
     loading,
     abortRef,
+    searchParamsRef, // 暴露 searchParamsRef
     distributions,
     distributionLoading,
 

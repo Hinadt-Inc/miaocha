@@ -114,7 +114,7 @@ const FieldListItem: React.FC<FieldListItemProps> = memo(
           });
         }
       },
-      [column, logTableColumns],
+      [column, searchParams.fields, logTableColumns],
     );
 
     // 点击查询的回调

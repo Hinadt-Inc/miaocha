@@ -1,35 +1,76 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+
 import { Checkbox, Button, InputNumber, Select, Typography } from 'antd';
+import type { SelectProps } from 'antd/es/select';
 import dayjs from 'dayjs';
 import type { ManipulateType } from 'dayjs';
-import type { SelectProps } from 'antd/es/select';
 
+import styles from '../styles/Relative.module.less';
 import { IRelativeTimePickerProps, ILogTimeSubmitParams, IRelativeTime, IRelativeTimeState } from '../types';
 import { RELATIVE_TIME, DATE_FORMAT_THOUSOND } from '../utils';
-import styles from '../styles/Relative.module.less';
 
 const { Text } = Typography;
 
 /**
  * 相对时间选择组件
  */
-const RelativeTimePicker: React.FC<IRelativeTimePickerProps> = ({ onSubmit }) => {
+const RelativeTimePicker: React.FC<IRelativeTimePickerProps> = ({ onSubmit, currentTimeOption }) => {
   const CURRENT = '现在';
   const defaultTime = RELATIVE_TIME[0];
 
   // 开始时间的配置项
-  const [startOption, setStartOption] = useState<IRelativeTimeState>({
-    ...defaultTime,
-    number: 0, // 数字框的值
-    isExact: false, // 是否精确到秒
+  const [startOption, setStartOption] = useState<IRelativeTimeState>(() => {
+    // 如果有回显数据且类型为 relative，则使用回显数据
+    if (currentTimeOption?.type === 'relative' && currentTimeOption.startOption) {
+      return {
+        ...currentTimeOption.startOption,
+        number: currentTimeOption.startOption.number ?? 0,
+        isExact: currentTimeOption.startOption.isExact ?? false,
+      };
+    }
+    return {
+      ...defaultTime,
+      number: 0,
+      isExact: false,
+    };
   });
 
   // 结束时间的配置项
-  const [endOption, setEndOption] = useState<IRelativeTimeState>({
-    ...defaultTime,
-    number: 0, // 数字框的值
-    isExact: false, // 是否精确到秒
+  const [endOption, setEndOption] = useState<IRelativeTimeState>(() => {
+    // 如果有回显数据且类型为 relative，则使用回显数据
+    if (currentTimeOption?.type === 'relative' && currentTimeOption.endOption) {
+      return {
+        ...currentTimeOption.endOption,
+        number: currentTimeOption.endOption.number ?? 0,
+        isExact: currentTimeOption.endOption.isExact ?? false,
+      };
+    }
+    return {
+      ...defaultTime,
+      number: 0,
+      isExact: false,
+    };
   });
+
+  // 当 currentTimeOption 变化时，同步更新状态
+  useEffect(() => {
+    if (currentTimeOption?.type === 'relative') {
+      if (currentTimeOption.startOption) {
+        setStartOption({
+          ...currentTimeOption.startOption,
+          number: currentTimeOption.startOption.number ?? 0,
+          isExact: currentTimeOption.startOption.isExact ?? false,
+        });
+      }
+      if (currentTimeOption.endOption) {
+        setEndOption({
+          ...currentTimeOption.endOption,
+          number: currentTimeOption.endOption.number ?? 0,
+          isExact: currentTimeOption.endOption.isExact ?? false,
+        });
+      }
+    }
+  }, [currentTimeOption]);
 
   // 获取时间文本的公共函数（返回字符串，去除 any）
   const getTimeText = useCallback((option: IRelativeTimeState): string => {

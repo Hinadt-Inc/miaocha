@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { StarOutlined, StarFilled } from '@ant-design/icons';
 import { Select, Tooltip } from 'antd';
@@ -15,15 +15,14 @@ import styles from './ModuleSelector.module.less';
 const ModuleSelector: React.FC = () => {
   const { moduleOptions, searchParams, updateSearchParams } = useHomeContext();
   const { handleReloadData } = useDataInit();
-  const [selectedModule, setSelectedModule] = useState<string>(searchParams.module || '');
   const [favoriteModule, setFavoriteModule] = useState<string | null>();
+
+  const selectedModule = useMemo(() => searchParams.module || '', [searchParams.module]);
 
   const handleChangeModule = useCallback(
     (value: string) => {
       const moduleItem = moduleOptions.find((item) => item.value === value);
       if (moduleItem) {
-        // todo 重置一些状态， distributionData, distributionLoading, logTableColumns
-        setSelectedModule(moduleItem?.module || '');
         updateSearchParams({
           datasourceId: moduleItem.datasourceId as number,
           module: moduleItem.module,

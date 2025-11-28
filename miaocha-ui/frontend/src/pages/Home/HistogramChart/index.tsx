@@ -1,4 +1,4 @@
-import { useRef, useMemo, useCallback, useEffect } from 'react';
+import { useRef, useMemo, useCallback } from 'react';
 
 import { Empty } from 'antd';
 import dayjs from 'dayjs';
@@ -6,7 +6,7 @@ import ReactECharts from 'echarts-for-react';
 
 import { useHomeContext } from '../context';
 import { useDataInit } from '../hooks/useDataInit';
-import { DATE_FORMAT_THOUSOND } from '../utils';
+import { DATE_FORMAT_THOUSOND, debounce } from '../utils';
 
 import { createChartOption } from './chartConfig';
 
@@ -16,7 +16,7 @@ interface Props {
 
 const HistogramChart = (props: Props) => {
   const { data } = props;
-  const { searchParams, updateSearchParams } = useHomeContext();
+  const { searchParams, searchParamsRef, distributions, logTableColumns, updateSearchParams } = useHomeContext();
   const { fetchData, refreshFieldDistributions } = useDataInit();
   const { distributionData, timeUnit, timeInterval } = data || {};
   const { timeGrouping = 'auto', startTime = '', endTime = '' } = searchParams;
@@ -38,62 +38,84 @@ const HistogramChart = (props: Props) => {
       labels,
       originalData: data,
     };
-  }, [distributionData, data]);
+  }, [distributionData, data, searchParams]);
 
   // 构建图表选项
   const option = useMemo(() => {
     return createChartOption(aggregatedData, distributionData, timeGrouping, startTime, endTime);
-  }, [aggregatedData, distributionData, timeGrouping, startTime, endTime]);
+  }, [aggregatedData, distributionData, distributions, logTableColumns]);
 
   // 事件处理器
-  const handleChartClick = useCallback(
-    (params: any) => {
-      if (params.componentType === 'series' && timeUnit) {
-        const { name } = params;
-        const newParams = updateSearchParams({
-          ...searchParams,
-          startTime: dayjs(name).format(DATE_FORMAT_THOUSOND),
-          endTime: dayjs(name)
-            .add(timeInterval || 1, timeUnit as any)
-            .format(DATE_FORMAT_THOUSOND),
-          offset: 0,
-          timeType: 'absolute',
-        });
-        delete newParams.timeRange;
-        fetchData({
-          searchParams: newParams,
-        });
-        refreshFieldDistributions(newParams);
-      }
-    },
-    [timeUnit, timeInterval, searchParams, updateSearchParams, fetchData, refreshFieldDistributions],
-  );
+  const handleChartClick = (params: any) => {
+    if (params.componentType === 'series' && timeUnit) {
+      const { name } = params;
+      const startTime = dayjs(name).format(DATE_FORMAT_THOUSOND);
+      const endTime = dayjs(name)
+        .add(timeInterval || 1, timeUnit as any)
+        .format(DATE_FORMAT_THOUSOND);
+      // 使用 searchParamsRef.current 获取最新的 searchParams
+      const newParams = updateSearchParams({
+        ...searchParamsRef.current,
+        startTime,
+        endTime,
+        offset: 0,
+        timeRange: `${startTime} ~ ${endTime}`,
+      });
+      fetchData({
+        searchParams: newParams,
+      });
+      refreshFieldDistributions(newParams);
+    }
+  };
 
-  const handleBrushEnd = useCallback(
-    (params: { areas: { coordRange: [number, number] }[] }) => {
-      if (params.areas && params.areas.length > 0 && timeUnit) {
-        const [start, end] = params.areas[0].coordRange;
-        const startTime = aggregatedData.labels[start];
-        const endTime = aggregatedData.labels[end];
+  // 防抖处理图表点击（200ms）
+  const debouncedHandleChartClick = useMemo(() => {
+    return debounce(handleChartClick, 300);
+  }, [
+    handleChartClick,
+    timeUnit,
+    timeInterval,
+    searchParamsRef,
+    updateSearchParams,
+    fetchData,
+    refreshFieldDistributions,
+  ]);
 
-        const newParams = updateSearchParams({
-          ...searchParams,
-          startTime: dayjs(startTime).format(DATE_FORMAT_THOUSOND),
-          endTime: dayjs(endTime)
-            .add(1, timeUnit as any)
-            .format(DATE_FORMAT_THOUSOND),
-          offset: 0,
-          timeType: 'absolute',
-        });
-        delete newParams.timeRange;
-        fetchData({
-          searchParams: newParams,
-        });
-        refreshFieldDistributions(newParams);
-      }
-    },
-    [timeUnit, aggregatedData.labels, searchParams, updateSearchParams, fetchData, refreshFieldDistributions],
-  );
+  const handleBrushEnd = (params: { areas: { coordRange: [number, number] }[] }) => {
+    if (params.areas && params.areas.length > 0 && timeUnit) {
+      const [start, end] = params.areas[0].coordRange;
+      const startTime = dayjs(aggregatedData.labels[start]).format(DATE_FORMAT_THOUSOND);
+      const endTime = dayjs(aggregatedData.labels[end])
+        .add(1, timeUnit as any)
+        .format(DATE_FORMAT_THOUSOND);
+
+      // 使用 searchParamsRef.current 获取最新的 searchParams
+      const newParams = updateSearchParams({
+        ...searchParamsRef.current,
+        startTime,
+        endTime,
+        offset: 0,
+        timeRange: `${startTime} ~ ${endTime}`,
+      });
+      fetchData({
+        searchParams: newParams,
+      });
+      refreshFieldDistributions(newParams);
+    }
+  };
+
+  // 防抖处理刷选结束（200ms）
+  const debouncedHandleBrushEnd = useMemo(() => debounce(handleBrushEnd, 200), [handleBrushEnd]);
+
+  const resetEvent = () => {
+    const chartInstance = chartRef.current;
+    if (!chartInstance) return;
+    chartInstance.off('click', debouncedHandleChartClick);
+    chartInstance.off('brushEnd', debouncedHandleBrushEnd);
+    // 绑定事件
+    chartInstance.on('click', debouncedHandleChartClick);
+    chartInstance.on('brushEnd', debouncedHandleBrushEnd);
+  };
 
   const handleChartReady = (chart: any) => {
     // 设置全局鼠标样式为横向选择
@@ -110,23 +132,8 @@ const HistogramChart = (props: Props) => {
       type: 'brush',
       areas: [],
     });
+    resetEvent();
   };
-
-  // 手动管理事件监听器，避免重复绑定
-  useEffect(() => {
-    const chartInstance = chartRef.current;
-    if (!chartInstance) return;
-
-    // 绑定事件
-    chartInstance.on('click', handleChartClick);
-    chartInstance.on('brushEnd', handleBrushEnd);
-
-    // 清理函数：组件卸载或依赖变化时解绑事件
-    return () => {
-      chartInstance.off('click', handleChartClick);
-      chartInstance.off('brushEnd', handleBrushEnd);
-    };
-  }, [handleChartClick, handleBrushEnd]);
 
   // 如果没有数据或显示标志为false，则不显示图表
   if (!distributionData || distributionData?.length === 0) {

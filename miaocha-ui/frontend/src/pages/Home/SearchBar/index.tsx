@@ -4,6 +4,8 @@ import { Button, Space } from 'antd';
 
 import { useHomeContext } from '../context';
 import { useDataInit } from '../hooks/useDataInit';
+import SavedSearchesButton from '../SavedSearchesButton';
+import SaveSearchButton from '../SaveSearchButton';
 import { debounce } from '../utils';
 
 import { FilterTags, StatisticsInfo, KeywordInput, SqlInput, TimePickerWrapper, TimeGroupSelector } from './components';
@@ -14,8 +16,8 @@ import type { ISearchState } from './types';
 const SearchBar = () => {
   const searchBarRef = useRef<HTMLDivElement>(null); // 搜索栏的ref
   const timePickerRef = useRef<TimePickerWrapperRef>(null); // TimePickerWrapper的ref
-  const { searchParams, logTableColumns, detailData, updateSearchParams } = useHomeContext(); // 获取context中的数据
-  const { fetchData } = useDataInit();
+  const { searchParams, distributions, logTableColumns, detailData, updateSearchParams } = useHomeContext(); // 获取context中的数据
+  const { fetchData, refreshFieldDistributions } = useDataInit();
 
   const [searchState, setSearchState] = useState<ISearchState>({
     keywords: '',
@@ -30,7 +32,8 @@ const SearchBar = () => {
     const newSearchParams = updateSearchParams(params);
     setSearchState((prev) => ({ ...prev, keywords: '', sql: '' }));
     fetchData({ searchParams: newSearchParams });
-  }, [searchState, searchParams, fetchData, updateSearchParams]);
+    refreshFieldDistributions(newSearchParams);
+  }, [searchState, searchParams, distributions, fetchData, updateSearchParams]);
 
   // 防抖处理搜索（300ms）
   const debouncedHandleSubmit = useMemo(() => debounce(handleSubmit, 300), [handleSubmit]);
@@ -73,6 +76,7 @@ const SearchBar = () => {
     }
     if (type === 'time') return;
     fetchData({ searchParams: newSearchParams });
+    refreshFieldDistributions(newSearchParams);
   };
 
   // 渲染左侧统计信息
@@ -118,10 +122,7 @@ const SearchBar = () => {
   );
 
   // 渲染时间范围选择器
-  const timeRender = useMemo(
-    () => <TimePickerWrapper ref={timePickerRef} />,
-    [searchParams.startTime, searchParams.endTime, searchParams.timeRange, searchParams.timeType],
-  );
+  const timeRender = useMemo(() => <TimePickerWrapper ref={timePickerRef} />, [searchParams.timeRange]);
 
   // 渲染过滤标签
   const filterRender = useMemo(
@@ -139,29 +140,10 @@ const SearchBar = () => {
         <div className={styles.left}>{leftRender}</div>
         <div className={styles.right}>
           <Space size={8}>
-            {/* <AutoRefresh disabled={false} loading={loading} onRefresh={handleAutoRefresh} />
-            <SaveSearchButton
-              searchParams={{
-                keywords,
-                whereSqls: sqls,
-                timeRange: timeState.timeOption.value,
-                startTime: timeState.timeOption.range?.[0],
-                endTime: timeState.timeOption.range?.[1],
-                timeGrouping: timeState.timeGroup,
-                module: searchParams.module,
-                sortConfig,
-                timeType: timeState.timeOption?.type, // 添加时间类型信息
-                ...(timeState.timeOption?.type === 'relative' &&
-                  timeState.timeOption?.startOption &&
-                  timeState.timeOption?.endOption && {
-                    relativeStartOption: timeState.timeOption.startOption,
-                    relativeEndOption: timeState.timeOption.endOption,
-                  }),
-              }}
-              size="small"
-            />
-            <SavedSearchesButton size="small" onLoadSearch={searchActions.handleLoadSearch} />
-            <ShareButton
+            {/* <AutoRefresh disabled={false} loading={loading} onRefresh={handleAutoRefresh} /> */}
+            <SaveSearchButton size="small" />
+            <SavedSearchesButton size="small" />
+            {/* <ShareButton
               searchParams={{
                 keywords,
                 whereSqls: sqls,
@@ -191,7 +173,6 @@ const SearchBar = () => {
         <div className={styles.item}>{keywordRender}</div>
         <div className={styles.item}>{sqlRender}</div>
         <div className={styles.item}>
-          {/* loading={loading} */}
           <Button size="small" type="primary" onClick={debouncedHandleSubmit}>
             搜索
           </Button>

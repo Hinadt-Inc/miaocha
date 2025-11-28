@@ -1,18 +1,23 @@
 import React from 'react';
-import { Modal, Form, Input, message } from 'antd';
+
 import { useRequest } from 'ahooks';
+import { Modal, Form, Input, message } from 'antd';
+
 import * as logsApi from '@/api/logs';
+
+import { useHomeContext } from '../context';
+
 import styles from './index.module.less';
 
 interface SaveSearchModalProps {
   visible: boolean;
   onClose: () => void;
-  searchParams: any;
 }
 
-const SaveSearchModal: React.FC<SaveSearchModalProps> = ({ visible, onClose, searchParams }) => {
+const SaveSearchModal: React.FC<SaveSearchModalProps> = ({ visible, onClose }) => {
   const [form] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
+  const { searchParams } = useHomeContext();
 
   // 时间范围转译
   const getTimeRangeLabel = (timeRange: string) => {
@@ -67,34 +72,13 @@ const SaveSearchModal: React.FC<SaveSearchModalProps> = ({ visible, onClose, sea
 
       // 构建保存参数
       const saveParams: ISaveSearchConditionWithCacheParams = {
-        module: searchParams.module || '',
+        ...searchParams,
         name: values.name,
         description: values.description,
         targetBuckets: 50,
         pageSize: 50,
         offset: 0,
-        startTime: searchParams.startTime,
-        endTime: searchParams.endTime,
-        timeRange: searchParams.timeRange,
-        timeGrouping: searchParams.timeGrouping,
-      };
-
-      // 添加可选参数
-      if (searchParams.keywords?.length > 0) {
-        saveParams.keywords = searchParams.keywords;
-      }
-      if (searchParams.whereSqls?.length > 0) {
-        saveParams.whereSqls = searchParams.whereSqls;
-      }
-      if (searchParams.fields?.length > 0) {
-        saveParams.fields = searchParams.fields;
-      }
-      if (searchParams.sortConfig?.length > 0) {
-        saveParams.sortFields = searchParams.sortConfig.map((item: any) => ({
-          fieldName: String(item.fieldName || ''),
-          direction: item.direction === 'ASC' || item.direction === 'DESC' ? item.direction : 'DESC',
-        }));
-      }
+      } as ISaveSearchConditionWithCacheParams;
 
       saveSearchCondition(saveParams);
     } catch (error) {
@@ -141,13 +125,13 @@ const SaveSearchModal: React.FC<SaveSearchModalProps> = ({ visible, onClose, sea
         <div className={styles.previewContainer}>
           <div className={styles.previewTitle}>当前搜索条件预览</div>
           <div className={styles.previewContent}>
-            {searchParams?.keywords?.length > 0 && (
+            {searchParams?.keywords && searchParams.keywords.length > 0 && (
               <div>
                 <strong>关键词:</strong>
                 <span>{searchParams.keywords.join(', ')}</span>
               </div>
             )}
-            {searchParams?.whereSqls?.length > 0 && (
+            {searchParams?.whereSqls && searchParams.whereSqls.length > 0 && (
               <div>
                 <strong>SQL条件:</strong>
                 <span>{searchParams.whereSqls.join(' AND ')}</span>
@@ -171,11 +155,11 @@ const SaveSearchModal: React.FC<SaveSearchModalProps> = ({ visible, onClose, sea
                 <span>{searchParams.module}</span>
               </div>
             )}
-            {searchParams?.sortConfig?.length > 0 && (
+            {searchParams?.sortFields && searchParams.sortFields.length > 0 && (
               <div>
                 <strong>排序:</strong>
                 <span>
-                  {searchParams.sortConfig
+                  {searchParams.sortFields
                     .map((item: any) => `${item.fieldName} (${item.direction === 'ASC' ? '升序' : '降序'})`)
                     .join(', ')}
                 </span>

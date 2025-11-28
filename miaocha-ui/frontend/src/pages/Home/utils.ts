@@ -1,10 +1,11 @@
-import dayjs from 'dayjs';
+import dayjs, { ManipulateType } from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import duration from 'dayjs/plugin/duration';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 
 import { QueryConfig } from '@/api/modules';
+import { IRelativeTimeState } from '@/components/TimePicker';
 
 // 扩展 dayjs 功能
 dayjs.extend(duration);
@@ -315,5 +316,135 @@ export const debounce = <T extends (...args: any[]) => any>(
       func(...args);
       timeout = null;
     }, wait);
+  };
+};
+
+/**
+ * 解析 timeRange 字符串，返回标准的时间选项对象
+ * @param timeRange 时间范围字符串，支持三种模式：
+ *   1. quick模式：如 'last_5m', 'today' 等
+ *   2. relative模式：如 '23秒前 ~ 2秒前', '现在 ~ 现在'
+ *   3. absolute模式：如 '2025-11-28 00:00:00 ~ 2025-11-30 00:00:00'
+ * @returns ILogTimeSubmitParams 时间选项对象
+ */
+export const parseTimeRange = (timeRange?: string): ILogTimeSubmitParams => {
+  if (!timeRange) {
+    // 默认返回最近15分钟
+    const defaultRange = QUICK_RANGES['last_15m'];
+    return {
+      range: [defaultRange.from().format(defaultRange.format[0]), defaultRange.to().format(defaultRange.format[1])],
+      label: defaultRange.label,
+      value: 'last_15m',
+      type: 'quick',
+    };
+  }
+
+  // 1. 检查是否为 quick 模式
+  if (QUICK_RANGES[timeRange] || !timeRange.includes('~')) {
+    const quickRange = QUICK_RANGES[timeRange] || QUICK_RANGES['last_15m'];
+    return {
+      range: [quickRange.from().format(quickRange.format[0]), quickRange.to().format(quickRange.format[1])],
+      label: quickRange.label,
+      value: timeRange,
+      type: 'quick',
+    };
+  }
+
+  const [startPart, endPart] = timeRange.split('~').map((s) => s.trim());
+
+  // 2. 检查是否为 absolute 模式（包含完整日期时间格式）
+  // absolute 格式示例：'2025-11-28 00:00:00' 或 '2025-11-28 00:00:00.000'
+  const absoluteTimeRegex = /^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(\.\d{3})?$/;
+  if (absoluteTimeRegex.test(startPart) && absoluteTimeRegex.test(endPart)) {
+    // 格式化为带毫秒的格式
+    const startTime = dayjs(startPart).format(DATE_FORMAT_THOUSOND);
+    const endTime = dayjs(endPart).format(DATE_FORMAT_THOUSOND);
+    return {
+      range: [startTime, endTime],
+      label: timeRange,
+      value: timeRange,
+      type: 'absolute',
+    };
+  }
+
+  // 3. relative 模式
+  // relative 格式示例：'23秒前 ~ 2秒前', '现在 ~ 现在', '1分钟前(精确到分钟) ~ 现在'
+  const parseRelativePart = (part: string): IRelativeTimeState | null => {
+    // 处理 "现在" 的情况，等同于 "0秒前"
+    if (part === '现在') {
+      const relativeItem = RELATIVE_TIME.find((item) => item.value === '秒前');
+      if (relativeItem) {
+        return {
+          ...relativeItem,
+          number: 0,
+          isExact: false,
+        };
+      }
+      return null;
+    }
+
+    // 检查是否包含精确标记
+    const exactMatch = part.match(/\(精确到(.+?)\)/);
+    const isExact = !!exactMatch;
+    const cleanPart = part.replace(/\(精确到.+?\)/, '').trim();
+
+    // 解析数字和单位
+    // 格式：数字 + 单位（秒前/分钟前/小时前等）
+    const match = cleanPart.match(/^(\d+)(.+)$/);
+    if (!match) return null;
+
+    const number = parseInt(match[1], 10);
+    const unit = match[2]; // 如：秒前、分钟前、小时前等
+
+    // 在 RELATIVE_TIME 中查找对应的配置
+    const relativeItem = RELATIVE_TIME.find((item) => item.value === unit);
+    if (!relativeItem) return null;
+
+    return {
+      ...relativeItem,
+      number,
+      isExact,
+    };
+  };
+
+  const getTimeText = (option: IRelativeTimeState): string => {
+    const now = dayjs();
+    const { number, unitEN, isExact, label, format } = option;
+
+    const unit = unitEN as ManipulateType;
+    const fmt = isExact ? format : DATE_FORMAT_THOUSOND;
+
+    if (number === 0 && unitEN === 'second') {
+      return now.format(fmt);
+    }
+
+    if (label.endsWith('前')) {
+      return now.subtract(number, unit).format(fmt);
+    }
+    // 其余情况均视为「后」
+    return now.add(number, unit).format(fmt);
+  };
+
+  const startOption = parseRelativePart(startPart);
+  const endOption = parseRelativePart(endPart);
+
+  if (startOption && endOption) {
+    return {
+      range: [getTimeText(startOption), getTimeText(endOption)],
+      label: timeRange,
+      value: timeRange,
+      type: 'relative',
+      startOption,
+      endOption,
+    };
+  }
+
+  // 无法解析，返回默认值
+  const defaultRange = QUICK_RANGES['last_15m'];
+  return {
+    range: [defaultRange.from().format(defaultRange.format[0]), defaultRange.to().format(defaultRange.format[1])],
+    label: defaultRange.label,
+    value: 'last_15m',
+    type: 'quick',
   };
 };

@@ -99,7 +99,8 @@ declare global {
       | 'last_24h'
       | 'today'
       | 'yesterday'
-      | 'last_week';
+      | 'last_week'
+      | string;
     /**
      * 时间分组
      */

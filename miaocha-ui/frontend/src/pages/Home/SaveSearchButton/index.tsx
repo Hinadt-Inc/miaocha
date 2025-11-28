@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Button, Tooltip } from 'antd';
+
 import { SaveOutlined } from '@ant-design/icons';
+import { Button, Tooltip } from 'antd';
+
 import SaveSearchModal from '../SaveSearchModal';
+
 import styles from './index.module.less';
 
 interface SaveSearchButtonProps {
-  searchParams: any;
   size?: 'small' | 'middle' | 'large';
   type?: 'default' | 'primary' | 'text' | 'link';
   variant?: 'outlined' | 'filled' | 'text' | 'link';
@@ -13,7 +15,6 @@ interface SaveSearchButtonProps {
 }
 
 const SaveSearchButton: React.FC<SaveSearchButtonProps> = ({
-  searchParams,
   size = 'small',
   type = 'link',
   variant = 'link',
@@ -44,7 +45,7 @@ const SaveSearchButton: React.FC<SaveSearchButtonProps> = ({
         </Button>
       </Tooltip>
 
-      <SaveSearchModal searchParams={searchParams} visible={modalVisible} onClose={handleCloseModal} />
+      <SaveSearchModal visible={modalVisible} onClose={handleCloseModal} />
     </>
   );
 };

@@ -2,16 +2,15 @@
  * 时间选择器组件
  */
 
-import React, { Suspense, lazy, useState, forwardRef, useImperativeHandle } from 'react';
+import { Suspense, lazy, useState, forwardRef, useImperativeHandle, useMemo } from 'react';
 
 import { Button, Popover } from 'antd';
-import dayjs from 'dayjs';
 
 import SpinIndicator from '@/components/SpinIndicator';
-import { DATE_FORMAT_THOUSOND, QUICK_RANGES } from '@/components/TimePicker';
 
 import { useHomeContext } from '../../context';
 import { useDataInit } from '../../hooks/useDataInit';
+import { parseTimeRange } from '../../utils';
 import { ILogTimeSubmitParams } from '../types';
 
 const TimePicker = lazy(() => import('@/components/TimePicker'));
@@ -24,39 +23,35 @@ export interface TimePickerWrapperRef {
 }
 
 const TimePickerWrapper = forwardRef<TimePickerWrapperRef>((_props, ref) => {
-  const { updateSearchParams } = useHomeContext();
-  const { fetchData } = useDataInit();
+  const { searchParams, updateSearchParams } = useHomeContext();
+  const { fetchData, refreshFieldDistributions } = useDataInit();
 
   const [visible, setVisible] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>('quick');
-  const [timeOption, setTimeOption] = useState<ILogTimeSubmitParams>({
-    value: 'last_15m',
-    label: '最近15分钟',
-    type: 'quick',
-  });
-
+  const timeOption: ILogTimeSubmitParams = useMemo(() => {
+    const { timeRange } = searchParams;
+    const result = parseTimeRange(timeRange as string);
+    const { type } = result || {};
+    if (type) {
+      setActiveTab(type as string);
+    }
+    return result;
+  }, [searchParams.timeRange]); // 只依赖真正使用的 timeRange
   // 暴露方法给父组件
   useImperativeHandle(ref, () => ({
     setVisible,
   }));
 
   const handleSubmit = (timeOption: ILogTimeSubmitParams) => {
-    const { range, type, value, startOption, endOption } = timeOption;
+    const { range, value } = timeOption;
 
     const paramsWidthSearchParams = updateSearchParams({
-      startTime: dayjs(range?.[0]).format(DATE_FORMAT_THOUSOND),
-      endTime: dayjs(range?.[1]).format(DATE_FORMAT_THOUSOND),
-      timeRange: value,
-      timeType: type,
-      ...(type === 'relative' &&
-        startOption &&
-        endOption && {
-          relativeStartOption: timeOption.startOption,
-          relativeEndOption: timeOption.endOption,
-        }),
+      startTime: range?.[0],
+      endTime: range?.[1],
+      timeRange: value as any,
     });
     fetchData({ searchParams: paramsWidthSearchParams });
-    setTimeOption(timeOption);
+    refreshFieldDistributions(paramsWidthSearchParams);
     setVisible(false);
   };
 

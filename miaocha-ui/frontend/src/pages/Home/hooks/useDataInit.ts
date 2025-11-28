@@ -28,6 +28,7 @@ export const useDataInit = () => {
     setLoading,
     abortRef,
     distributions,
+    distributionLoading,
     setDistributions,
     setDistributionLoading,
     moduleQueryConfig: homeModuleQueryConfig,
@@ -120,23 +121,10 @@ export const useDataInit = () => {
   );
 
   const fetchTableColumns = useCallback(
-    async (module: string, moduleQueryConfig: modulesApi.QueryConfig) => {
+    async (module: string) => {
       const currentModule = (module || searchParams.module) as string;
       const columns = await api.fetchColumns({ module: currentModule });
-      const timeField = moduleQueryConfig?.timeField || 'log_time';
-      const normalizedColumns = columns.map((col) => ({
-        ...col,
-        selected: col.columnName === timeField ? true : (col.selected ?? false),
-        _createTime: new Date().getTime(),
-      }));
-      setLogTableColumns(normalizedColumns);
-      const fields = columns.map((item: any) => item.columnName)?.filter((item: any) => !item.includes('.'));
-      setCommonColumns(fields);
-      return updateSearchParams({
-        ...searchParams,
-        fields,
-        module: currentModule,
-      });
+      return columns;
     },
     [setCommonColumns, setLogTableColumns, updateSearchParams],
   );
@@ -146,7 +134,6 @@ export const useDataInit = () => {
       const { moduleQueryConfig, searchParams } = options;
 
       const params: ILogSearchParams = { ...searchParams };
-      delete params.datasourceId;
       if (abortRef.current) {
         abortRef.current.abort();
       }
@@ -172,15 +159,116 @@ export const useDataInit = () => {
     [setDetailData, setHistogramData],
   );
 
+  // 切换数据源，重置状态
   const handleReloadData = async (options: { module: string }) => {
     const { module } = options;
     // 重置searchParams
-    // todo  sortField 等
     // 4. 获取模块查询配置（使用最新的params）
     const moduleQueryConfig = await fetchModuleQueryConfig(module as string);
 
     // 5. 获取列配置
-    const paramsWidthFields = await fetchTableColumns(module as string, moduleQueryConfig);
+    const columns = await fetchTableColumns(module as string);
+
+    // 6. 重置状态
+    const timeField = moduleQueryConfig?.timeField || 'log_time';
+    const normalizedColumns = columns.map((col) => ({
+      ...col,
+      selected: col.columnName === timeField ? true : (col.selected ?? false),
+      _createTime: new Date().getTime(),
+    }));
+    setLogTableColumns(normalizedColumns);
+    const fields = columns.map((item: any) => item.columnName)?.filter((item: any) => !item.includes('.'));
+    setCommonColumns(fields);
+    const paramsWidthFields = updateSearchParams({
+      ...searchParams,
+      fields,
+      sortFields: [],
+      keywords: [],
+      whereSqls: [],
+      offset: 50,
+      timeGrouping: 'auto',
+      timeRange: 'last_15m',
+      module,
+    });
+    setDistributions({});
+    setDistributionLoading({});
+
+    // 7. 使用最终的params获取日志数据
+    fetchData({
+      moduleQueryConfig,
+      searchParams: paramsWidthFields,
+    });
+  };
+
+  // 空状态初始化
+  const handleInitData = async (module: string) => {
+    updateSearchParams({ module });
+    // 4. 获取模块查询配置（使用最新的params）
+    const moduleQueryConfig = await fetchModuleQueryConfig(module as string);
+
+    // 5. 获取列配置
+    const columns = await fetchTableColumns(module as string);
+
+    // 便于后续处理分享和本地化存储
+    const timeField = moduleQueryConfig?.timeField || 'log_time';
+    const normalizedColumns = columns.map((col) => ({
+      ...col,
+      selected: col.columnName === timeField ? true : (col.selected ?? false),
+      _createTime: new Date().getTime(),
+    }));
+    setLogTableColumns(normalizedColumns);
+    const fields = columns.map((item: any) => item.columnName)?.filter((item: any) => !item.includes('.'));
+    setCommonColumns(fields);
+    const paramsWidthFields = updateSearchParams({
+      ...searchParams,
+      fields,
+      sortFields: [],
+      keywords: [],
+      whereSqls: [],
+      offset: 50,
+      module,
+    });
+    setDistributions({});
+    setDistributionLoading({});
+
+    // 7. 使用最终的params获取日志数据
+    fetchData({
+      moduleQueryConfig,
+      searchParams: paramsWidthFields,
+    });
+  };
+
+  // 本地化回显 | 分享回显 | 检索条件回显
+  const handleLoadCacheData = async (params: Partial<ILogSearchParams>) => {
+    const { module, fields, ...rest } = params;
+    updateSearchParams({ module });
+    // 4. 获取模块查询配置（使用最新的params）
+    const moduleQueryConfig = await fetchModuleQueryConfig(module as string);
+
+    // 5. 获取列配置
+    const columns = await fetchTableColumns(module as string);
+
+    // 便于后续处理分享和本地化存储
+    const timeField = moduleQueryConfig?.timeField || 'log_time';
+    const fieldsDots = fields?.filter((field) => field.includes('.')) || [];
+    const normalizedColumns = columns.map((col) => ({
+      ...col,
+      selected: col.columnName && [...fieldsDots, timeField].includes(col.columnName) ? true : (col.selected ?? false),
+      _createTime: new Date().getTime(),
+    }));
+    setLogTableColumns(normalizedColumns);
+    const commonFields = columns.map((item: any) => item.columnName)?.filter((item: any) => !item.includes('.'));
+    setCommonColumns(commonFields);
+    const newFields = normalizedColumns.filter((item: any) => item.selected).map((item: any) => item.columnName);
+    const paramsWidthFields = updateSearchParams({
+      ...searchParams,
+      fields: Array.from(new Set([...commonFields, ...newFields])),
+      offset: 50,
+      module,
+      ...rest,
+    });
+    setDistributions({});
+    setDistributionLoading({});
 
     // 7. 使用最终的params获取日志数据
     fetchData({
@@ -210,39 +298,42 @@ export const useDataInit = () => {
       const favoriteModule = localStorage.getItem('favoriteModule') || '';
 
       const favoriteModuleData = moduleOptions.find((item) => item.module === favoriteModule);
-
+      console.log('favoriteModuleData======', favoriteModuleData);
       // 2. 确定初始模块（可以从缓存、URL参数或默认取第一个）
-      const initModule = favoriteModuleData || moduleData[0];
+      const initModule = favoriteModuleData?.module || moduleData[0]?.module || '';
       if (!initModule) {
         throw new Error('没有可用的模块');
       }
 
-      // 3. 更新searchParams并获取最新值
-      const paramsWithModule = updateSearchParams({
-        datasourceId: initModule.datasourceId,
-        module: initModule.module,
-      });
+      const cachedParams: Partial<ILogSearchParams> = {};
 
-      // 4. 获取模块查询配置（使用最新的params）
-      const moduleQueryConfig = await fetchModuleQueryConfig(paramsWithModule.module as string);
-
-      // 5. 获取列配置
-      const paramsWidthFields = await fetchTableColumns(paramsWithModule.module as string, moduleQueryConfig);
-
-      // 7. 使用最终的params获取日志数据
-      fetchData({
-        moduleQueryConfig,
-        searchParams: paramsWidthFields,
-      });
+      if (cachedParams.module) {
+        handleLoadCacheData(cachedParams);
+      } else {
+        handleInitData(initModule);
+      }
     } catch (error) {
       console.error('初始化数据失败:', error);
     } finally {
       setLoading?.(false);
     }
-  }, [updateSearchParams, setModuleOptions, setModuleQueryConfig, setLogTableColumns, setDetailData, setLoading]);
+  }, [
+    searchParams,
+    distributions,
+    distributionLoading,
+    setDistributionLoading,
+    setDistributions,
+    updateSearchParams,
+    setModuleOptions,
+    setModuleQueryConfig,
+    setLogTableColumns,
+    setDetailData,
+    setLoading,
+  ]);
 
   return {
     initializeData,
+    handleLoadCacheData,
     handleReloadData,
     fetchData,
     fetchFieldDistribution,
