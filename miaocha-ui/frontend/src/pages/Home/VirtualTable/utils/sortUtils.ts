@@ -56,7 +56,7 @@ export const processSorterChange = (sorter: any): SortConfig[] => {
     }
   }
 
-  return resultSorter;
+  return resultSorter.filter((sort) => !sort.fieldName.includes('.'));
 };
 
 /**

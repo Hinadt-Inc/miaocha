@@ -3,7 +3,9 @@
  */
 
 import React from 'react';
+
 import { AutoComplete, Space } from 'antd';
+
 import { ILogColumnsResponse } from '../../types';
 import { PLACEHOLDERS } from '../constants';
 

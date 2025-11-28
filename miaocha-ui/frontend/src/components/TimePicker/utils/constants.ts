@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+
 import { ITimeStatus, IRelativeTime } from '../types';
 
 // 日期格式常量

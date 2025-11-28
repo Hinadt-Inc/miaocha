@@ -3,43 +3,30 @@
  */
 
 import React from 'react';
+
 import { Space, Tag, Tooltip } from 'antd';
-import { ITimeOption } from '../../types';
+
+import { useHomeContext } from '../../context';
 import { TAG_COLORS } from '../constants';
 
 interface IFilterTagsProps {
-  keywords: string[];
-  sqls: string[];
-  timeOption: ITimeOption;
-  onClickKeyword: (keyword: string) => void;
-  onCloseKeyword: (keyword: string) => void;
-  onClickSql: (sql: string) => void;
-  onCloseSql: (sql: string) => void;
-  onClickTime: () => void;
+  handleClickTag: (type: string, value: string) => void;
 }
 
-const FilterTags: React.FC<IFilterTagsProps> = ({
-  keywords,
-  sqls,
-  timeOption,
-  onClickKeyword,
-  onCloseKeyword,
-  onClickSql,
-  onCloseSql,
-  onClickTime,
-}) => {
-  const { range = [] } = timeOption;
+const FilterTags: React.FC<IFilterTagsProps> = ({ handleClickTag }) => {
+  const { searchParams } = useHomeContext();
+  const { startTime, endTime, keywords, whereSqls } = searchParams;
 
   return (
     <Space wrap>
       {/* 关键词标签 */}
-      {keywords.map((item: string) => (
+      {(keywords || []).map((item: string) => (
         <Tooltip key={item} placement="topLeft" title={item}>
           <Tag
             closable
             color={TAG_COLORS.KEYWORD}
-            onClick={() => onClickKeyword(item)}
-            onClose={() => onCloseKeyword(item)}
+            onClick={() => handleClickTag('keywords', item)}
+            onClose={() => handleClickTag('closeKeywords', item)}
           >
             <span className="tagContent">{item}</span>
           </Tag>
@@ -47,18 +34,23 @@ const FilterTags: React.FC<IFilterTagsProps> = ({
       ))}
 
       {/* SQL条件标签 */}
-      {[...new Set(sqls)].map((item: string) => (
+      {[...new Set(whereSqls)].map((item: string) => (
         <Tooltip key={item} placement="topLeft" title={item}>
-          <Tag closable color={TAG_COLORS.SQL} onClick={() => onClickSql(item)} onClose={() => onCloseSql(item)}>
+          <Tag
+            closable
+            color={TAG_COLORS.SQL}
+            onClick={() => handleClickTag('sql', item)}
+            onClose={() => handleClickTag('closeSql', item)}
+          >
             <span className="tagContent">{item}</span>
           </Tag>
         </Tooltip>
       ))}
 
       {/* 时间范围标签 */}
-      {range.length === 2 && (
-        <Tag color={TAG_COLORS.TIME} onClick={onClickTime}>
-          {range[0]} ~ {range[1]}
+      {startTime && endTime && (
+        <Tag color={TAG_COLORS.TIME} onClick={() => handleClickTag('time', '')}>
+          {startTime} ~ {endTime}
         </Tag>
       )}
     </Space>

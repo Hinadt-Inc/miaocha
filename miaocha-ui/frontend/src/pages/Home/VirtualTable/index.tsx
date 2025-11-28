@@ -8,7 +8,7 @@ import { highlightText } from '@/utils/highlightText';
 import { useHomeContext } from '../context';
 import ExpandedRow from '../ExpandedRow/index';
 import { useDataInit } from '../hooks/useDataInit';
-import { formatTimeString } from '../utils';
+import { formatTimeString, debounce } from '../utils';
 
 import { ResizableTitle, ColumnHeader } from './components';
 import { useScreenWidth, useExpandedRows } from './hooks';
@@ -268,13 +268,19 @@ const VirtualTable: React.FC = () => {
   };
 
   // 表格变化处理
-  const handleTableChange = (_pagination: any, _filters: any, sorter: any) => {
-    const resultSorter = processSorterChange(sorter);
-    const newSearchParams = updateSearchParams({
-      sortFields: resultSorter,
-    });
-    fetchData({ searchParams: newSearchParams });
-  };
+  const handleTableChange = useCallback(
+    (_pagination: any, _filters: any, sorter: any) => {
+      const resultSorter = processSorterChange(sorter);
+      const newSearchParams = updateSearchParams({
+        sortFields: resultSorter,
+      });
+      fetchData({ searchParams: newSearchParams });
+    },
+    [updateSearchParams, fetchData],
+  );
+
+  // 防抖处理表格变化（300ms）
+  const debouncedHandleTableChange = useMemo(() => debounce(handleTableChange, 300), [handleTableChange]);
 
   // 设置列配置
   useEffect(() => {
@@ -432,7 +438,7 @@ const VirtualTable: React.FC = () => {
         size="small"
         sortDirections={['ascend', 'descend']}
         virtual
-        onChange={handleTableChange}
+        onChange={debouncedHandleTableChange}
       />
     </div>
   );

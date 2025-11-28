@@ -13,7 +13,9 @@ export const DEFAULT_SEARCH_PARAMS: ILogSearchParams = {
   startTime: QUICK_RANGES.last_15m.from().format(DATE_FORMAT_THOUSOND),
   endTime: QUICK_RANGES.last_15m.to().format(DATE_FORMAT_THOUSOND),
   timeRange: 'last_15m',
+  timeType: 'quick',
   timeGrouping: 'auto',
+  range: [],
   sortFields: [],
 };
 

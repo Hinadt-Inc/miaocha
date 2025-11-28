@@ -6,6 +6,7 @@ import { HomeProvider, useHomeContext } from './context';
 import { useDataInit } from './hooks/useDataInit';
 import styles from './index.module.less';
 import Log from './LogModule/index';
+import SearchBar from './SearchBar';
 import Sider from './SiderModule/index';
 
 /**
@@ -34,7 +35,7 @@ const HomePageContent = () => {
   console.log('state======', state);
   return (
     <div className={styles.layout}>
-      {/* <SearchBar ref={searchBarRef} {...searchBarProps} /> */}
+      <SearchBar />
 
       <Splitter className={styles.container}>
         <Splitter.Panel collapsible defaultSize={200} max="50%" min={0}>

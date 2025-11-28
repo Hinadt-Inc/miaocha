@@ -1,6 +1,16 @@
 export {};
 declare global {
   /**
+   * 时间分组类型
+   * - second: 按秒分组
+   * - minute: 按分钟分组
+   * - hour: 按小时分组
+   * - day: 按天分组
+   * - auto: 自动分组
+   */
+  type TimeGrouping = 'second' | 'minute' | 'hour' | 'day' | 'auto';
+
+  /**
    * 模块信息接口
    */
   interface IModules {
@@ -67,6 +77,7 @@ declare global {
      * 结束时间，格式为YYYY-MM-DD HH:mm:ss
      */
     endTime?: string;
+    range: string[];
     /**
      * 时间范围，支持以下值：
      * "last_5m" - 最近5分钟
@@ -90,14 +101,9 @@ declare global {
       | 'yesterday'
       | 'last_week';
     /**
-     * 时间分组，支持以下值：
-     * "second" - 按秒分组
-     * "minute" - 按分钟分组
-     * "hour" - 按小时分组
-     * "day" - 按天分组
-     * "auto" - 自动分组
+     * 时间分组
      */
-    timeGrouping?: 'second' | 'minute' | 'hour' | 'day' | 'auto';
+    timeGrouping?: TimeGrouping;
     timeType?: string;
     /**
      * 每页记录数
@@ -118,6 +124,8 @@ declare global {
       fieldName: string;
       direction: 'ASC' | 'DESC';
     }[];
+    relativeStartOption?: IRelativeTime;
+    relativeEndOption?: IRelativeTime;
     /**
      * 查询配置
      */

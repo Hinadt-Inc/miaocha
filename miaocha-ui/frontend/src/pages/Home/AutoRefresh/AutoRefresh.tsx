@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Button, Dropdown, Space, Progress, Tooltip } from 'antd';
+
 import {
   PlayCircleOutlined,
   PauseCircleOutlined,
@@ -7,11 +7,13 @@ import {
   ClockCircleOutlined,
   CaretDownOutlined,
 } from '@ant-design/icons';
-import { AutoRefreshProps } from './types';
+import { Button, Dropdown, Space, Progress, Tooltip } from 'antd';
+
 import { REFRESH_INTERVALS } from './constants';
+import styles from './index.module.less';
+import { AutoRefreshProps } from './types';
 import { useAutoRefresh } from './useAutoRefresh';
 import { formatRemainingTime, calculateProgressPercent, generateTooltipContent } from './utils';
-import styles from './index.module.less';
 
 /**
  * 自动刷新组件

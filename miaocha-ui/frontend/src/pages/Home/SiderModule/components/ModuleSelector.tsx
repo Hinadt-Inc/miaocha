@@ -13,7 +13,7 @@ import styles from './ModuleSelector.module.less';
  * 模块选择器组件
  */
 const ModuleSelector: React.FC = () => {
-  const { moduleOptions, searchParams, setSearchParams } = useHomeContext();
+  const { moduleOptions, searchParams, updateSearchParams } = useHomeContext();
   const { handleReloadData } = useDataInit();
   const [selectedModule, setSelectedModule] = useState<string>(searchParams.module || '');
   const [favoriteModule, setFavoriteModule] = useState<string | null>();
@@ -24,8 +24,7 @@ const ModuleSelector: React.FC = () => {
       if (moduleItem) {
         // todo 重置一些状态， distributionData, distributionLoading, logTableColumns
         setSelectedModule(moduleItem?.module || '');
-        setSearchParams({
-          ...searchParams,
+        updateSearchParams({
           datasourceId: moduleItem.datasourceId as number,
           module: moduleItem.module,
         });

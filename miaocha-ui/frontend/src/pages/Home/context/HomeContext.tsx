@@ -9,7 +9,7 @@ import type {
   IStatus,
   SortConfig,
 } from '../types';
-import { deduplicateAndDeleteWhereSqls } from '../utils';
+import { DATE_FORMAT_THOUSOND, deduplicateAndDeleteWhereSqls, QUICK_RANGES } from '../utils';
 
 /**
  * Home页面Context值接口
@@ -88,7 +88,6 @@ export const HomeProvider = ({ children }: { children: ReactNode }) => {
   const [distributionLoading, setDistributionLoading] = useState<Record<string, boolean>>({});
 
   const [activeColumns, setActiveColumns] = useState<string[]>([]);
-
   const [whereSqlsFromSider, setWhereSqlsFromSider] = useState<IStatus[]>([]);
   const [keywords, setKeywords] = useState<string[]>([]);
   const [sqls, setSqls] = useState<string[]>([]);
@@ -115,11 +114,24 @@ export const HomeProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const handleSetSearchParams = (params: ILogSearchParams) => {
-    const { whereSqls, fields, ...rest } = params;
+    const { whereSqls, fields, timeRange, timeType, keywords, ...rest } = params;
     // 去重whereSqls：去掉空格后完全一致的元素只保留一个
     const newWhereSqls = deduplicateAndDeleteWhereSqls(whereSqls || []);
+    const newKeywords = Array.from(new Set(keywords || []));
     const newFields = Array.from(new Set(fields || []));
-    const newSearchParams = { ...rest, whereSqls: newWhereSqls, fields: newFields };
+
+    const newSearchParams = {
+      ...rest,
+      whereSqls: newWhereSqls,
+      fields: newFields,
+      keywords: newKeywords,
+      timeRange,
+      timeType,
+    };
+    if (timeType === 'quick') {
+      newSearchParams.startTime = QUICK_RANGES[timeRange || 'last_15m'].from().format(DATE_FORMAT_THOUSOND);
+      newSearchParams.endTime = QUICK_RANGES[timeRange || 'last_15m'].to().format(DATE_FORMAT_THOUSOND);
+    }
 
     setSearchParams(newSearchParams);
     return newSearchParams;

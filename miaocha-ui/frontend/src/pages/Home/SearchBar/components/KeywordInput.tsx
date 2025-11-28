@@ -3,7 +3,9 @@
  */
 
 import React from 'react';
+
 import { AutoComplete, Space } from 'antd';
+
 import { PLACEHOLDERS } from '../constants';
 
 interface IKeywordInputProps {

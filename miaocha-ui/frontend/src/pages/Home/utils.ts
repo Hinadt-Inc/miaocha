@@ -293,3 +293,27 @@ export const deduplicateAndDeleteWhereSqls = (sqls: string[], deleteSql?: string
   });
   return Array.from(seen.values());
 };
+
+/**
+ * 防抖函数
+ * @param func 需要防抖的函数
+ * @param wait 延迟时间（毫秒）
+ * @returns 防抖后的函数
+ */
+export const debounce = <T extends (...args: any[]) => any>(
+  func: T,
+  wait: number,
+): ((...args: Parameters<T>) => void) => {
+  let timeout: NodeJS.Timeout | null = null;
+
+  return (...args: Parameters<T>) => {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+
+    timeout = setTimeout(() => {
+      func(...args);
+      timeout = null;
+    }, wait);
+  };
+};

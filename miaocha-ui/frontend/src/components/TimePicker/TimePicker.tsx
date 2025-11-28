@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback, Suspense } from 'react';
+
 import { Tabs } from 'antd';
 
 import SpinIndicator from '@/components/SpinIndicator';
+
 import { QuickTimePicker, AbsoluteTimePicker, RelativeTimePicker } from './components';
+import styles from './styles/TimePicker.module.less';
 import { ITimePickerProps, ILogTimeSubmitParams } from './types';
 import { QUICK_RANGES } from './utils';
-import styles from './styles/TimePicker.module.less';
 
 /**
  * 时间选择器组件
