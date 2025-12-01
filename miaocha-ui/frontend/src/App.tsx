@@ -1,13 +1,16 @@
-import { ProLayout } from '@ant-design/pro-components';
-import { Link, Outlet, useLocation } from 'react-router-dom';
-import Profile from '@/components/Profile';
 import { useState, useEffect } from 'react';
+
+import { ProLayout } from '@ant-design/pro-components';
+import { ConfigProvider, message } from 'antd';
 import NProgress from 'nprogress';
-import ErrorBoundary from '@/components/Error/ErrorBoundary';
-import { colorPrimary } from '@/utils/utils';
-import { getAuthorizedRoutes } from './routes';
 import { useSelector } from 'react-redux';
-import { ConfigProvider } from 'antd';
+import { Link, Outlet, useLocation } from 'react-router-dom';
+
+import ErrorBoundary from '@/components/Error/ErrorBoundary';
+import Profile from '@/components/Profile';
+import { colorPrimary } from '@/utils/utils';
+
+import { getAuthorizedRoutes } from './routes';
 
 NProgress.configure({
   showSpinner: false, // 是否显示右上角的转圈加载图标
@@ -38,6 +41,8 @@ const App = () => {
   const [collapsed, setCollapsed] = useState(getStoredCollapsed());
   const location = useLocation();
   const userRole = useSelector((state: { user: IStoreUser }) => state.user.role);
+  const [messageApi, contextHolder] = message.useMessage();
+  window.messageApi = messageApi;
   const [openKeys, setOpenKeys] = useState<string[]>([]);
 
   // 地址变化时启动进度条
@@ -115,6 +120,7 @@ const App = () => {
           onOpenChange={handleOpenChange}
         >
           <ErrorBoundary key={location.pathname}>
+            {contextHolder}
             <Outlet />
           </ErrorBoundary>
         </ProLayout>

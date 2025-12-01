@@ -6,6 +6,7 @@ import { useHomeContext } from '../context';
 import { useDataInit } from '../hooks/useDataInit';
 import SavedSearchesButton from '../SavedSearchesButton';
 import SaveSearchButton from '../SaveSearchButton';
+import ShareButton from '../ShareButton';
 import { debounce } from '../utils';
 
 import { FilterTags, StatisticsInfo, KeywordInput, SqlInput, TimePickerWrapper, TimeGroupSelector } from './components';
@@ -143,27 +144,7 @@ const SearchBar = () => {
             {/* <AutoRefresh disabled={false} loading={loading} onRefresh={handleAutoRefresh} /> */}
             <SaveSearchButton size="small" />
             <SavedSearchesButton size="small" />
-            {/* <ShareButton
-              searchParams={{
-                keywords,
-                whereSqls: sqls,
-                timeRange: timeState.timeOption.value,
-                startTime: timeState.timeOption.range?.[0],
-                endTime: timeState.timeOption.range?.[1],
-                timeGrouping: timeState.timeGroup,
-                module: searchParams.module,
-                fields: activeColumns, // 使用用户实际选择的字段列表
-                sortConfig,
-                timeType: timeState.timeOption?.type, // 添加时间类型信息
-                ...(timeState.timeOption?.type === 'relative' &&
-                  timeState.timeOption?.startOption &&
-                  timeState.timeOption?.endOption && {
-                    relativeStartOption: timeState.timeOption.startOption,
-                    relativeEndOption: timeState.timeOption.endOption,
-                  }),
-              }}
-              size="small"
-            /> */}
+            <ShareButton size="small" />
             {timeGroupRender}
             {timeRender}
           </Space>

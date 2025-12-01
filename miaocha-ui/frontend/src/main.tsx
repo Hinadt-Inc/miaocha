@@ -1,12 +1,16 @@
 import { useEffect } from 'react';
+
+import { App as AntdApp } from 'antd';
 import { createRoot } from 'react-dom/client';
 import { Provider, useDispatch } from 'react-redux';
 import { RouterProvider } from 'react-router-dom';
-import { App as AntdApp } from 'antd';
+
+import GlobalErrorListener from '@/providers/GlobalErrorListener';
+
+import { router } from './routes';
 import { store, type AppDispatch } from './store/store';
 import { restoreSession } from './store/userSlice';
-import GlobalErrorListener from '@/providers/GlobalErrorListener';
-import { router } from './routes';
+
 import 'nprogress/nprogress.css';
 import './index.less';
 

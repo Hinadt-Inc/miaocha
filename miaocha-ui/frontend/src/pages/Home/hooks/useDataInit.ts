@@ -1,11 +1,13 @@
 import { useCallback, useRef, useEffect } from 'react';
 
+import { useSearchParams } from 'react-router-dom';
+
 import * as api from '@/api/logs';
 import * as modulesApi from '@/api/modules';
 
 import { useHomeContext } from '../context';
 import { IModuleQueryConfig } from '../types';
-import { formatTimeString } from '../utils';
+import { formatTimeString, handleShareSearchParams } from '../utils';
 
 export interface IDetailOptions {
   moduleQueryConfig?: IModuleQueryConfig;
@@ -16,6 +18,7 @@ export interface IDetailOptions {
  * 数据初始化Hook - 处理链式接口调用
  */
 export const useDataInit = () => {
+  const [urlSearchParams] = useSearchParams();
   const {
     searchParams,
     updateSearchParams,
@@ -295,21 +298,23 @@ export const useDataInit = () => {
       }));
       setModuleOptions(moduleOptions);
 
-      const favoriteModule = localStorage.getItem('favoriteModule') || '';
+      let cachedParams: Partial<ILogSearchParams> = {};
 
-      const favoriteModuleData = moduleOptions.find((item) => item.module === favoriteModule);
-      console.log('favoriteModuleData======', favoriteModuleData);
-      // 2. 确定初始模块（可以从缓存、URL参数或默认取第一个）
-      const initModule = favoriteModuleData?.module || moduleData[0]?.module || '';
-      if (!initModule) {
-        throw new Error('没有可用的模块');
-      }
+      const sharedParams = handleShareSearchParams(urlSearchParams);
 
-      const cachedParams: Partial<ILogSearchParams> = {};
+      console.log('sharedParams=======', sharedParams);
+      cachedParams = sharedParams as Partial<ILogSearchParams>;
 
       if (cachedParams.module) {
         handleLoadCacheData(cachedParams);
       } else {
+        const favoriteModule = localStorage.getItem('favoriteModule') || '';
+        const favoriteModuleData = moduleOptions.find((item) => item.module === favoriteModule);
+        // 2. 确定初始模块（可以从缓存、URL参数或默认取第一个）
+        const initModule = favoriteModuleData?.module || moduleData[0]?.module || '';
+        if (!initModule) {
+          throw new Error('没有可用的模块');
+        }
         handleInitData(initModule);
       }
     } catch (error) {

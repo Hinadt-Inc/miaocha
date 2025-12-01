@@ -448,3 +448,49 @@ export const parseTimeRange = (timeRange?: string): ILogTimeSubmitParams => {
     type: 'quick',
   };
 };
+
+export const handleShareSearchParams = (urlSearchParams: URLSearchParams): Partial<ILogSearchParams> => {
+  const keywords = urlSearchParams.get('keywords');
+  const whereSqls = urlSearchParams.get('whereSqls');
+  const timeRange = urlSearchParams.get('timeRange');
+  const startTime = urlSearchParams.get('startTime');
+  const endTime = urlSearchParams.get('endTime');
+  const module = urlSearchParams.get('module');
+  const timeGrouping = urlSearchParams.get('timeGrouping');
+  const fields = urlSearchParams.get('fields');
+  const relativeStartOption = urlSearchParams.get('relativeStartOption');
+  const relativeEndOption = urlSearchParams.get('relativeEndOption');
+
+  const parsedParams: Partial<ILogSearchParams> = {};
+  if (keywords) {
+    try {
+      parsedParams.keywords = JSON.parse(keywords);
+    } catch (e) {
+      console.error('解析keywords参数失败:', e);
+    }
+  }
+
+  if (whereSqls) {
+    try {
+      parsedParams.whereSqls = JSON.parse(whereSqls);
+    } catch (e) {
+      console.error('解析whereSqls参数失败:', e);
+    }
+  }
+
+  if (fields) {
+    try {
+      parsedParams.fields = JSON.parse(fields);
+    } catch (e) {
+      console.error('解析fields参数失败:', e);
+    }
+  }
+  if (timeRange) parsedParams.timeRange = timeRange;
+  if (startTime) parsedParams.startTime = dayjs(startTime).format(DATE_FORMAT_THOUSOND);
+  if (endTime) parsedParams.endTime = dayjs(endTime).format(DATE_FORMAT_THOUSOND);
+  if (module) parsedParams.module = module;
+  if (timeGrouping) parsedParams.timeGrouping = timeGrouping as TimeGrouping;
+  if (relativeStartOption) parsedParams.relativeStartOption = JSON.parse(relativeStartOption);
+  if (relativeEndOption) parsedParams.relativeEndOption = JSON.parse(relativeEndOption);
+  return parsedParams;
+};
