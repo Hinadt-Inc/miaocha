@@ -22,12 +22,13 @@ import { formatRemainingTime, calculateProgressPercent, generateTooltipContent }
  * 自动刷新组件
  */
 const AutoRefresh: React.FC<AutoRefreshProps> = ({ disabled = false }) => {
-  const { loading, searchParams } = useHomeContext();
-  const { fetchData } = useDataInit();
+  const { loading, searchParams, distributions, distributionLoading } = useHomeContext();
+  const { fetchData, refreshFieldDistributions } = useDataInit();
 
   const onRefresh = useCallback(() => {
     fetchData({ searchParams });
-  }, [searchParams]);
+    refreshFieldDistributions();
+  }, [searchParams, distributions, distributionLoading]);
 
   // 使用自定义Hook管理状态
   const {

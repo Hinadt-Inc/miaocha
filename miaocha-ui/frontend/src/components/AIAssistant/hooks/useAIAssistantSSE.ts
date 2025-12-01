@@ -1,4 +1,5 @@
 import { useCallback, useRef, useEffect } from 'react';
+
 import { useAIAssistantContext, IMessage, ISearchHistory } from '../context/AIAssistantContext';
 import { AISSEService, ISSEData, parseSSEData } from '../services/AISSEService';
 import { MockAISSEService } from '../services/MockAISSEService';

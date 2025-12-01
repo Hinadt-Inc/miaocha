@@ -347,8 +347,6 @@ export const useDataInit = () => {
    */
   const initializeData = useCallback(async () => {
     try {
-      setLoading?.(true);
-
       const tabId = urlSearchParams.get('tabId');
 
       // 1. 获取模块列表

@@ -117,39 +117,42 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
   }, []);
 
   // 处理action执行
-  const handleActionExecution = useCallback(async (messageId: string, toolName: string, payload: any) => {
-    // 生成唯一的action标识符，防止重复执行
-    const actionKey = `${toolName}_${JSON.stringify(payload)}_${messageId}`;
+  const handleActionExecution = useCallback(
+    async (messageId: string, toolName: string, payload: any) => {
+      // 生成唯一的action标识符，防止重复执行
+      const actionKey = `${toolName}_${JSON.stringify(payload)}_${messageId}`;
 
-    // 如果这个action正在执行，直接返回
-    if (executingActions.has(actionKey)) {
-      return;
-    }
-
-    // 标记action开始执行
-    executingActions.add(actionKey);
-
-    try {
-      switch (toolName) {
-        case 'sendSearchLogDetailsAction':
-          await executeLogSearchAction(payload);
-          break;
-        case 'sendSearchLogHistogramAction':
-          await executeLogHistogramAction(payload);
-          break;
-        case 'sendSearchFieldDistributionAction':
-          await executeFieldDistributionAction(payload);
-          break;
-        default:
-          break;
+      // 如果这个action正在执行，直接返回
+      if (executingActions.has(actionKey)) {
+        return;
       }
-    } catch (error) {
-      console.error('执行action失败:', error);
-    } finally {
-      // 执行完成后移除标记
-      executingActions.delete(actionKey);
-    }
-  }, []);
+
+      // 标记action开始执行
+      executingActions.add(actionKey);
+
+      try {
+        switch (toolName) {
+          case 'sendSearchLogDetailsAction':
+            await executeLogSearchAction(payload);
+            break;
+          case 'sendSearchLogHistogramAction':
+            await executeLogHistogramAction(payload);
+            break;
+          case 'sendSearchFieldDistributionAction':
+            await executeFieldDistributionAction(payload);
+            break;
+          default:
+            break;
+        }
+      } catch (error) {
+        console.error('执行action失败:', error);
+      } finally {
+        // 执行完成后移除标记
+        executingActions.delete(actionKey);
+      }
+    },
+    [searchParams, onLogSearch],
+  );
 
   // 执行日志搜索action
   const executeLogSearchAction = async (payload: ILogSearchParams) => {
@@ -540,7 +543,7 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
         }
       });
     },
-    [conversationId, handleActionExecution, searchParams],
+    [conversationId, handleActionExecution, searchParams, onLogSearch],
   );
 
   // 清空对话，开始新会话
@@ -567,7 +570,7 @@ const AIAssistantComponent: React.FC<IAIAssistantProps> = ({
         message.error('AI服务暂时不可用，请稍后重试');
       }
     },
-    [callAIAPIStream],
+    [callAIAPIStream, onLogSearch],
   );
 
   // 稳定的事件处理函数 - 移到组件外部避免重新创建
