@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, ReactNode, useRef, MutableRefObject, useEffect } from 'react';
 
+import { useSearchParams } from 'react-router-dom';
+
 import { DEFAULT_SEARCH_PARAMS } from '../constants';
 import type {
   ILogColumnsResponse,
@@ -77,6 +79,7 @@ interface HomeContextValue {
 const HomeContext = createContext<HomeContextValue | undefined>(undefined);
 
 export const HomeProvider = ({ children }: { children: ReactNode }) => {
+  const [urlSearchParams] = useSearchParams();
   // 使用独立的useState管理每个状态
   const [moduleOptions, setModuleOptions] = useState<IStatus[]>([]);
   const [moduleQueryConfig, setModuleQueryConfig] = useState<IModuleQueryConfig | null>(null);
@@ -138,6 +141,10 @@ export const HomeProvider = ({ children }: { children: ReactNode }) => {
     const { range, type } = parseTimeRange(newSearchParams?.timeRange);
     Object.assign(newSearchParams, { startTime: range?.[0], endTime: range?.[1], range, type });
     setSearchParams(newSearchParams);
+    const tabId = urlSearchParams.get('tabId');
+    if (tabId) {
+      localStorage.setItem(`${tabId}_searchParams`, JSON.stringify(newSearchParams));
+    }
     return newSearchParams;
   };
 

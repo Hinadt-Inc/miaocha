@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 
 import { Splitter } from 'antd';
+import { useSearchParams } from 'react-router-dom';
 
 import { HomeProvider, useHomeContext } from './context';
 import { useDataInit } from './hooks/useDataInit';
@@ -14,6 +15,7 @@ import Sider from './SiderModule/index';
  * 使用模块化的hooks来组织代码，提供日志查询和分析功能
  */
 const HomePageContent = () => {
+  const [urlSearchParams] = useSearchParams();
   const { loading, abortRef } = useHomeContext();
   const state = useHomeContext();
   const { initializeData } = useDataInit();
@@ -25,6 +27,10 @@ const HomePageContent = () => {
       if (abortRef.current) {
         abortRef.current.abort();
       }
+      // const tabId = urlSearchParams.get('tabId');
+      // if (tabId) {
+      //   localStorage.removeItem(`${tabId}_searchParams`);
+      // }
     };
   }, []);
 

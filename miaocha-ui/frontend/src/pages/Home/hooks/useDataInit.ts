@@ -18,7 +18,7 @@ export interface IDetailOptions {
  * 数据初始化Hook - 处理链式接口调用
  */
 export const useDataInit = () => {
-  const [urlSearchParams] = useSearchParams();
+  const [urlSearchParams, setUrlSearchParams] = useSearchParams();
   const {
     searchParams,
     updateSearchParams,
@@ -287,6 +287,8 @@ export const useDataInit = () => {
     try {
       setLoading?.(true);
 
+      const tabId = urlSearchParams.get('tabId');
+
       // 1. 获取模块列表
       const moduleData = await api.fetchMyModules();
       const moduleOptions = moduleData.map(({ datasourceId, datasourceName, module }) => ({
@@ -301,9 +303,33 @@ export const useDataInit = () => {
       let cachedParams: Partial<ILogSearchParams> = {};
 
       const sharedParams = handleShareSearchParams(urlSearchParams);
+      if (sharedParams && sharedParams.module) {
+        cachedParams = sharedParams as Partial<ILogSearchParams>;
+      } else {
+        try {
+          if (tabId) {
+            const storageParams = JSON.parse(localStorage.getItem(`${tabId}_searchParams`) || '{}');
+            if (storageParams && storageParams.module) {
+              cachedParams = storageParams || {};
+            }
+          } else {
+            const storageTabIds = JSON.parse(localStorage.getItem('tabIds') || '[]');
+            const tempId = new Date().getTime().toString();
+            const newParams = new URLSearchParams(urlSearchParams);
+            newParams.set('tabId', tempId);
+            setUrlSearchParams(newParams, { replace: true });
 
-      console.log('sharedParams=======', sharedParams);
-      cachedParams = sharedParams as Partial<ILogSearchParams>;
+            if (storageTabIds.length >= 5) {
+              const oldTabId = storageTabIds.pop();
+              localStorage.removeItem(`${oldTabId}_searchParams`);
+            }
+            localStorage.setItem(`${tempId}_searchParams`, JSON.stringify({}));
+            localStorage.setItem('tabIds', JSON.stringify([tempId, ...storageTabIds]));
+          }
+        } catch (error) {
+          console.log('error', error);
+        }
+      }
 
       if (cachedParams.module) {
         handleLoadCacheData(cachedParams);
