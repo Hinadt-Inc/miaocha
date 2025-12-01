@@ -20,7 +20,12 @@ export interface IDetailOptions {
 export const useDataInit = () => {
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
   const {
+    abortRef,
     searchParams,
+    logTableColumns,
+    moduleQueryConfig,
+    distributions,
+    distributionLoading,
     updateSearchParams,
     setModuleOptions,
     setModuleQueryConfig,
@@ -29,9 +34,6 @@ export const useDataInit = () => {
     setDetailData,
     setHistogramData,
     setLoading,
-    abortRef,
-    distributions,
-    distributionLoading,
     setDistributions,
     setDistributionLoading,
     moduleQueryConfig: homeModuleQueryConfig,
@@ -109,7 +111,7 @@ export const useDataInit = () => {
         }, 200);
       }
     },
-    [distributions, searchParams],
+    [distributions, searchParams, distributionLoading],
   );
 
   const fetchModuleQueryConfig = useCallback(
@@ -120,7 +122,7 @@ export const useDataInit = () => {
       setModuleQueryConfig(normalizedConfig);
       return normalizedConfig;
     },
-    [setModuleQueryConfig],
+    [searchParams, setModuleQueryConfig],
   );
 
   const fetchTableColumns = useCallback(
@@ -129,7 +131,7 @@ export const useDataInit = () => {
       const columns = await api.fetchColumns({ module: currentModule });
       return columns;
     },
-    [setCommonColumns, setLogTableColumns, updateSearchParams],
+    [searchParams, setCommonColumns, setLogTableColumns, updateSearchParams],
   );
 
   const fetchData = useCallback(
@@ -163,122 +165,174 @@ export const useDataInit = () => {
   );
 
   // 切换数据源，重置状态
-  const handleReloadData = async (options: { module: string }) => {
-    const { module } = options;
-    // 重置searchParams
-    // 4. 获取模块查询配置（使用最新的params）
-    const moduleQueryConfig = await fetchModuleQueryConfig(module as string);
+  const handleReloadData = useCallback(
+    async (options: { module: string }) => {
+      const { module } = options;
+      // 重置searchParams
+      // 4. 获取模块查询配置（使用最新的params）
+      const moduleQueryConfig = await fetchModuleQueryConfig(module as string);
 
-    // 5. 获取列配置
-    const columns = await fetchTableColumns(module as string);
+      // 5. 获取列配置
+      const columns = await fetchTableColumns(module as string);
 
-    // 6. 重置状态
-    const timeField = moduleQueryConfig?.timeField || 'log_time';
-    const normalizedColumns = columns.map((col) => ({
-      ...col,
-      selected: col.columnName === timeField ? true : (col.selected ?? false),
-      _createTime: new Date().getTime(),
-    }));
-    setLogTableColumns(normalizedColumns);
-    const fields = columns.map((item: any) => item.columnName)?.filter((item: any) => !item.includes('.'));
-    setCommonColumns(fields);
-    const paramsWidthFields = updateSearchParams({
-      ...searchParams,
-      fields,
-      sortFields: [],
-      keywords: [],
-      whereSqls: [],
-      offset: 50,
-      timeGrouping: 'auto',
-      timeRange: 'last_15m',
-      module,
-    });
-    setDistributions({});
-    setDistributionLoading({});
+      // 6. 重置状态
+      const timeField = moduleQueryConfig?.timeField || 'log_time';
+      const normalizedColumns = columns.map((col) => ({
+        ...col,
+        selected: col.columnName === timeField ? true : (col.selected ?? false),
+        _createTime: new Date().getTime(),
+      }));
+      setLogTableColumns(normalizedColumns);
+      const fields = columns.map((item: any) => item.columnName)?.filter((item: any) => !item.includes('.'));
+      setCommonColumns(fields);
+      const paramsWidthFields = updateSearchParams({
+        ...searchParams,
+        fields,
+        sortFields: [],
+        keywords: [],
+        whereSqls: [],
+        offset: 50,
+        timeGrouping: 'auto',
+        timeRange: 'last_15m',
+        module,
+      });
+      setDistributions({});
+      setDistributionLoading({});
 
-    // 7. 使用最终的params获取日志数据
-    fetchData({
+      // 7. 使用最终的params获取日志数据
+      fetchData({
+        moduleQueryConfig,
+        searchParams: paramsWidthFields,
+      });
+    },
+    [
+      fetchModuleQueryConfig,
+      fetchTableColumns,
+      setLogTableColumns,
+      setCommonColumns,
+      updateSearchParams,
+      searchParams,
+      logTableColumns,
       moduleQueryConfig,
-      searchParams: paramsWidthFields,
-    });
-  };
+      distributions,
+      distributionLoading,
+      setDistributions,
+      setDistributionLoading,
+      fetchData,
+    ],
+  );
 
   // 空状态初始化
-  const handleInitData = async (module: string) => {
-    updateSearchParams({ module });
-    // 4. 获取模块查询配置（使用最新的params）
-    const moduleQueryConfig = await fetchModuleQueryConfig(module as string);
+  const handleInitData = useCallback(
+    async (module: string) => {
+      updateSearchParams({ module });
+      // 4. 获取模块查询配置（使用最新的params）
+      const moduleQueryConfig = await fetchModuleQueryConfig(module as string);
 
-    // 5. 获取列配置
-    const columns = await fetchTableColumns(module as string);
+      // 5. 获取列配置
+      const columns = await fetchTableColumns(module as string);
 
-    // 便于后续处理分享和本地化存储
-    const timeField = moduleQueryConfig?.timeField || 'log_time';
-    const normalizedColumns = columns.map((col) => ({
-      ...col,
-      selected: col.columnName === timeField ? true : (col.selected ?? false),
-      _createTime: new Date().getTime(),
-    }));
-    setLogTableColumns(normalizedColumns);
-    const fields = columns.map((item: any) => item.columnName)?.filter((item: any) => !item.includes('.'));
-    setCommonColumns(fields);
-    const paramsWidthFields = updateSearchParams({
-      ...searchParams,
-      fields,
-      sortFields: [],
-      keywords: [],
-      whereSqls: [],
-      offset: 50,
-      module,
-    });
-    setDistributions({});
-    setDistributionLoading({});
+      // 便于后续处理分享和本地化存储
+      const timeField = moduleQueryConfig?.timeField || 'log_time';
+      const normalizedColumns = columns.map((col) => ({
+        ...col,
+        selected: col.columnName === timeField ? true : (col.selected ?? false),
+        _createTime: new Date().getTime(),
+      }));
+      setLogTableColumns(normalizedColumns);
+      const fields = columns.map((item: any) => item.columnName)?.filter((item: any) => !item.includes('.'));
+      setCommonColumns(fields);
+      const paramsWidthFields = updateSearchParams({
+        ...searchParams,
+        fields,
+        sortFields: [],
+        keywords: [],
+        whereSqls: [],
+        offset: 50,
+        module,
+      });
+      setDistributions({});
+      setDistributionLoading({});
 
-    // 7. 使用最终的params获取日志数据
-    fetchData({
+      // 7. 使用最终的params获取日志数据
+      fetchData({
+        moduleQueryConfig,
+        searchParams: paramsWidthFields,
+      });
+    },
+    [
+      updateSearchParams,
+      fetchModuleQueryConfig,
+      fetchTableColumns,
+      setLogTableColumns,
+      setCommonColumns,
+      searchParams,
+      logTableColumns,
       moduleQueryConfig,
-      searchParams: paramsWidthFields,
-    });
-  };
+      distributions,
+      distributionLoading,
+      setDistributions,
+      setDistributionLoading,
+      fetchData,
+    ],
+  );
 
   // 本地化回显 | 分享回显 | 检索条件回显
-  const handleLoadCacheData = async (params: Partial<ILogSearchParams>) => {
-    const { module, fields, ...rest } = params;
-    updateSearchParams({ module });
-    // 4. 获取模块查询配置（使用最新的params）
-    const moduleQueryConfig = await fetchModuleQueryConfig(module as string);
+  const handleLoadCacheData = useCallback(
+    async (params: Partial<ILogSearchParams>) => {
+      const { module, fields, ...rest } = params;
+      updateSearchParams({ module });
+      // 4. 获取模块查询配置（使用最新的params）
+      const moduleQueryConfig = await fetchModuleQueryConfig(module as string);
 
-    // 5. 获取列配置
-    const columns = await fetchTableColumns(module as string);
+      // 5. 获取列配置
+      const columns = await fetchTableColumns(module as string);
 
-    // 便于后续处理分享和本地化存储
-    const timeField = moduleQueryConfig?.timeField || 'log_time';
-    const fieldsDots = fields?.filter((field) => field.includes('.')) || [];
-    const normalizedColumns = columns.map((col) => ({
-      ...col,
-      selected: col.columnName && [...fieldsDots, timeField].includes(col.columnName) ? true : (col.selected ?? false),
-      _createTime: new Date().getTime(),
-    }));
-    setLogTableColumns(normalizedColumns);
-    const commonFields = columns.map((item: any) => item.columnName)?.filter((item: any) => !item.includes('.'));
-    setCommonColumns(commonFields);
-    const newFields = normalizedColumns.filter((item: any) => item.selected).map((item: any) => item.columnName);
-    const paramsWidthFields = updateSearchParams({
-      ...searchParams,
-      fields: Array.from(new Set([...commonFields, ...newFields])),
-      offset: 50,
-      module,
-      ...rest,
-    });
-    setDistributions({});
-    setDistributionLoading({});
+      // 便于后续处理分享和本地化存储
+      const timeField = moduleQueryConfig?.timeField || 'log_time';
+      const fieldsDots = fields?.filter((field) => field.includes('.')) || [];
+      const normalizedColumns = columns.map((col) => ({
+        ...col,
+        selected:
+          col.columnName && [...fieldsDots, timeField].includes(col.columnName) ? true : (col.selected ?? false),
+        _createTime: new Date().getTime(),
+      }));
+      setLogTableColumns(normalizedColumns);
+      const commonFields = columns.map((item: any) => item.columnName)?.filter((item: any) => !item.includes('.'));
+      setCommonColumns(commonFields);
+      const newFields = normalizedColumns.filter((item: any) => item.selected).map((item: any) => item.columnName);
+      const paramsWidthFields = updateSearchParams({
+        ...searchParams,
+        fields: Array.from(new Set([...commonFields, ...newFields])),
+        offset: 50,
+        module,
+        ...rest,
+      });
+      setDistributions({});
+      setDistributionLoading({});
 
-    // 7. 使用最终的params获取日志数据
-    fetchData({
+      // 7. 使用最终的params获取日志数据
+      fetchData({
+        moduleQueryConfig,
+        searchParams: paramsWidthFields,
+      });
+    },
+    [
+      searchParams,
+      logTableColumns,
       moduleQueryConfig,
-      searchParams: paramsWidthFields,
-    });
-  };
+      distributions,
+      distributionLoading,
+      updateSearchParams,
+      fetchModuleQueryConfig,
+      fetchTableColumns,
+      setLogTableColumns,
+      setCommonColumns,
+      setDistributions,
+      setDistributionLoading,
+      fetchData,
+    ],
+  );
 
   /**
    * 初始化完整流程 - 链式调用多个接口
