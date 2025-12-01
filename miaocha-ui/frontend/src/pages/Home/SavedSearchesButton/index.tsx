@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { HistoryOutlined } from '@ant-design/icons';
 import { Button, Tooltip } from 'antd';
 
-import { useHomeContext } from '../context';
 import { useDataInit } from '../hooks/useDataInit';
 import SavedSearchesModal from '../SavedSearchesModal';
 
@@ -22,8 +21,6 @@ const SavedSearchesButton: React.FC<SavedSearchesButtonProps> = ({
   variant = 'link',
   className,
 }) => {
-  const { searchParams, logTableColumns, moduleQueryConfig, updateSearchParams } = useHomeContext();
-  const { handleLoadCacheData } = useDataInit();
   const [modalVisible, setModalVisible] = useState(false);
 
   const handleOpen = () => {
@@ -31,11 +28,6 @@ const SavedSearchesButton: React.FC<SavedSearchesButtonProps> = ({
   };
 
   const handleCloseModal = () => {
-    setModalVisible(false);
-  };
-
-  const handleLoadSearch = (cacheSearchParams: ILogSearchParams) => {
-    handleLoadCacheData(cacheSearchParams);
     setModalVisible(false);
   };
 
@@ -54,7 +46,7 @@ const SavedSearchesButton: React.FC<SavedSearchesButtonProps> = ({
         </Button>
       </Tooltip>
 
-      <SavedSearchesModal visible={modalVisible} onClose={handleCloseModal} onLoadSearch={handleLoadSearch} />
+      <SavedSearchesModal visible={modalVisible} onClose={handleCloseModal} />
     </>
   );
 };
