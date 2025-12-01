@@ -1,6 +1,9 @@
-import { Modal, Button, message } from 'antd';
 import { useEffect, useState, useRef } from 'react';
+
+import { Modal, Button, message } from 'antd';
+
 import { startLogTail } from '@/api/logstash';
+
 import styles from './LogstashLogTailModal.module.less';
 
 interface LogTailModalProps {
@@ -99,7 +102,7 @@ export default function LogTailModal({ visible, logstashMachineId, onCancel }: L
         }
       });
 
-      eventSourceRef.current.onerror = (err) => {
+      eventSourceRef.current.onerror = () => {
         setIsTailing(false);
         eventSourceRef.current?.close();
         eventSourceRef.current = null;

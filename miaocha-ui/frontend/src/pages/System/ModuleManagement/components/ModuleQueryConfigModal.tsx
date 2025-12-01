@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Modal, Form, Button, Select, message, AutoComplete, Tooltip } from 'antd';
+import React, { useState, useEffect } from 'react';
+
 import { PlusOutlined, MinusCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { Modal, Form, Button, Select, message, AutoComplete, Tooltip } from 'antd';
+
 import { updateModuleQueryConfig, getModuleFieldNames } from '@/api/modules';
 import type { QueryConfigKeywordField, QueryConfig } from '@/api/modules';
+
 import styles from './ModuleQueryConfigModal.module.less';
 
 interface ModuleQueryConfigModalProps {

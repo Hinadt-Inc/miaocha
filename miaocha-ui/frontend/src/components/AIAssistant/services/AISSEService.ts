@@ -170,12 +170,12 @@ export class AISSEService {
   /**
    * 触发事件
    */
-  private emit(type: string, data: ISSEData): void {
-    const listeners = this.listeners.get(type);
-    if (listeners) {
-      listeners.forEach((listener) => listener(data));
-    }
-  }
+  // private emit(type: string, data: ISSEData): void {
+  //   const listeners = this.listeners.get(type);
+  //   if (listeners) {
+  //     listeners.forEach((listener) => listener(data));
+  //   }
+  // }
 
   /**
    * 清理日志数据，避免发送过大的数据
@@ -204,9 +204,9 @@ export class AISSEService {
   /**
    * 获取认证 token
    */
-  private getAuthToken(): string {
-    return localStorage.getItem('auth_token') || '';
-  }
+  // private getAuthToken(): string {
+  //   return localStorage.getItem('auth_token') || '';
+  // }
 
   /**
    * 析构函数，确保连接被关闭

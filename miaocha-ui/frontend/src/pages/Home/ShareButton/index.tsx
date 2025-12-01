@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-import { ShareAltOutlined } from '@ant-design/icons';
+// import { ShareAltOutlined } from '@ant-design/icons';
 import { Button, Tooltip } from 'antd';
 
 import ShareModal from '../ShareModal';

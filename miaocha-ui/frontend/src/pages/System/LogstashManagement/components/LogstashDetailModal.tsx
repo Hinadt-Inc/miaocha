@@ -1,9 +1,9 @@
-import { Modal, Descriptions, Button, Tooltip, Table, Tag, App } from 'antd';
 import { CopyOutlined } from '@ant-design/icons';
+import { Modal, Descriptions, Button, Tooltip, Table, Tag } from 'antd';
+import dayjs from 'dayjs';
+
 import type { LogstashProcess } from '@/types/logstashTypes';
 import { safeCopy } from '@/utils/clipboard';
-import { useErrorContext } from '@/providers/ErrorProvider';
-import dayjs from 'dayjs';
 
 interface LogstashDetailModalProps {
   visible: boolean;
@@ -18,14 +18,11 @@ interface LogstashDetailModalProps {
 }
 
 const LogstashDetailModal = ({ visible, onClose, detail, styles: customStyles }: LogstashDetailModalProps) => {
-  const { showSuccess } = useErrorContext();
-
   const handleCopy = async (text: string, label: string) => {
     const success = await safeCopy(text);
     if (success) {
-      showSuccess(`${label}已复制到剪贴板`);
+      window.messageApi.success(`${label}已复制到剪贴板`);
     }
-    // 错误提示不处理，因为已有全局处理
   };
 
   if (!detail) return null;

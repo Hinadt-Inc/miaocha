@@ -60,7 +60,7 @@ export class AIService {
     } catch (error) {
       console.error('AI服务调用错误:', error);
       // 如果后端服务不可用，返回模拟响应
-      return this.getMockResponse(message, context);
+      return this.getMockResponse(message);
     }
   }
 
@@ -79,7 +79,7 @@ export class AIService {
   /**
    * 获取模拟响应（用于开发阶段或后端不可用时）
    */
-  private getMockResponse(message: string, context: IAIContext): IAIResponse {
+  private getMockResponse(message: string): IAIResponse {
     const lowerMessage = message.toLowerCase();
 
     // 错误日志查询
@@ -133,7 +133,7 @@ export class AIService {
 
     // 用户行为追踪
     if (lowerMessage.includes('用户') && (lowerMessage.includes('追踪') || lowerMessage.includes('行为'))) {
-      const userIdMatch = (/用户ID?[：:]?\s*(\w+)/i.exec(message)) || (/用户\s*(\w+)/i.exec(message));
+      const userIdMatch = /用户ID?[：:]?\s*(\w+)/i.exec(message) || /用户\s*(\w+)/i.exec(message);
       const userId = userIdMatch ? userIdMatch[1] : 'unknown';
 
       return {

@@ -1,7 +1,9 @@
 import { EChartsOption } from 'echarts';
+
 import { colorPrimary } from '@/utils/utils';
-import { formatXAxisLabel, calculateBarWidth } from './utils';
+
 import { IAggregatedData } from './types';
+import { formatXAxisLabel, calculateBarWidth } from './utils';
 
 /**
  * 创建图表配置选项

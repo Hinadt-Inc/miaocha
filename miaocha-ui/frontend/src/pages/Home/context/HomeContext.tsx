@@ -3,14 +3,7 @@ import { createContext, useContext, useState, ReactNode, useRef, MutableRefObjec
 import { useSearchParams } from 'react-router-dom';
 
 import { DEFAULT_SEARCH_PARAMS } from '../constants';
-import type {
-  ILogColumnsResponse,
-  ILogDetailsResponse,
-  IModuleQueryConfig,
-  ISharedParams,
-  IStatus,
-  SortConfig,
-} from '../types';
+import type { ILogColumnsResponse, ILogDetailsResponse, IModuleQueryConfig, IStatus } from '../types';
 import { deduplicateAndDeleteWhereSqls, parseTimeRange } from '../utils';
 
 /**
@@ -23,18 +16,7 @@ interface HomeContextValue {
   detailData: ILogDetailsResponse | null;
   logTableColumns: ILogColumnsResponse[];
   histogramData: ILogHistogramResponse | null;
-  whereSqlsFromSider: IStatus[];
-  keywords: string[];
-  sqls: string[];
-  activeColumns: string[];
-  selectedModule: string;
-  sortConfig: SortConfig;
   commonColumns: string[];
-  loadingQueryConfig: boolean;
-  columnsLoaded: boolean;
-  sharedParams: ISharedParams | null;
-  hasAppliedSharedParams: boolean;
-  isInitialized: boolean;
   searchParams: ILogSearchParams;
   loading: boolean;
   abortRef: MutableRefObject<AbortController | null>;
@@ -48,18 +30,7 @@ interface HomeContextValue {
   setDetailData: (data: ILogDetailsResponse | null) => void;
   setLogTableColumns: (columns: ILogColumnsResponse[]) => void;
   setHistogramData: (data: ILogHistogramResponse | null) => void;
-  setWhereSqlsFromSider: (sqls: IStatus[]) => void;
-  setKeywords: (keywords: string[]) => void;
-  setSqls: (sqls: string[]) => void;
-  setActiveColumns: (columns: string[]) => void;
-  setSelectedModule: (module: string) => void;
-  setSortConfig: (config: SortConfig) => void;
   setCommonColumns: (columns: string[]) => void;
-  setLoadingQueryConfig: (loading: boolean) => void;
-  setColumnsLoaded: (loaded: boolean) => void;
-  setSharedParams: (params: ISharedParams | null) => void;
-  setHasAppliedSharedParams: (applied: boolean) => void;
-  setIsInitialized: (initialized: boolean) => void;
   setSearchParams: (params: ILogSearchParams) => void;
   setLoading: (loading: boolean) => void;
   // 新增：更新searchParams并返回最新值（用于立即调用接口）
@@ -91,18 +62,6 @@ export const HomeProvider = ({ children }: { children: ReactNode }) => {
   const [distributions, setDistributions] = useState<Record<string, IFieldDistributions>>({});
   const [distributionLoading, setDistributionLoading] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState<boolean>(false);
-
-  const [activeColumns, setActiveColumns] = useState<string[]>([]);
-  const [whereSqlsFromSider, setWhereSqlsFromSider] = useState<IStatus[]>([]);
-  const [keywords, setKeywords] = useState<string[]>([]);
-  const [sqls, setSqls] = useState<string[]>([]);
-  const [selectedModule, setSelectedModule] = useState<string>('');
-  const [sortConfig, setSortConfig] = useState<SortConfig>([]);
-  const [loadingQueryConfig, setLoadingQueryConfig] = useState<boolean>(false);
-  const [columnsLoaded, setColumnsLoaded] = useState<boolean>(false);
-  const [sharedParams, setSharedParams] = useState<ISharedParams | null>(null);
-  const [hasAppliedSharedParams, setHasAppliedSharedParams] = useState<boolean>(false);
-  const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
   const abortRef = useRef<AbortController | null>(null);
   const searchParamsRef = useRef<ILogSearchParams>(searchParams); // 创建 searchParams 的 ref
@@ -155,18 +114,7 @@ export const HomeProvider = ({ children }: { children: ReactNode }) => {
     setDetailData(null);
     setLogTableColumns([]);
     setHistogramData(null);
-    setWhereSqlsFromSider([]);
-    setKeywords([]);
-    setSqls([]);
-    setActiveColumns([]);
-    setSelectedModule('');
-    setSortConfig([]);
     setCommonColumns([]);
-    setLoadingQueryConfig(false);
-    setColumnsLoaded(false);
-    setSharedParams(null);
-    setHasAppliedSharedParams(false);
-    setIsInitialized(false);
     setSearchParams({ ...DEFAULT_SEARCH_PARAMS });
     setLoading(false);
     setDistributions({});
@@ -180,18 +128,7 @@ export const HomeProvider = ({ children }: { children: ReactNode }) => {
     detailData,
     logTableColumns,
     histogramData,
-    whereSqlsFromSider,
-    keywords,
-    sqls,
-    activeColumns,
-    selectedModule,
-    sortConfig,
     commonColumns,
-    loadingQueryConfig,
-    columnsLoaded,
-    sharedParams,
-    hasAppliedSharedParams,
-    isInitialized,
     searchParams,
     loading,
     abortRef,
@@ -205,18 +142,7 @@ export const HomeProvider = ({ children }: { children: ReactNode }) => {
     setDetailData,
     setLogTableColumns,
     setHistogramData,
-    setWhereSqlsFromSider,
-    setKeywords,
-    setSqls,
-    setActiveColumns,
-    setSelectedModule,
-    setSortConfig,
     setCommonColumns,
-    setLoadingQueryConfig,
-    setColumnsLoaded,
-    setSharedParams,
-    setHasAppliedSharedParams,
-    setIsInitialized,
     setSearchParams: handleSetSearchParams,
     setLoading,
     updateSearchParams,

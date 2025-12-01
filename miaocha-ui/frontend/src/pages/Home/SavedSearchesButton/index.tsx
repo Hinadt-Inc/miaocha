@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 
-import { HistoryOutlined } from '@ant-design/icons';
 import { Button, Tooltip } from 'antd';
 
-import { useDataInit } from '../hooks/useDataInit';
 import SavedSearchesModal from '../SavedSearchesModal';
 
 import styles from './index.module.less';

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useErrorContext } from '@/providers/ErrorProvider';
+
 import {
   deleteLogstashProcess,
   startLogstashProcess,
@@ -19,7 +19,6 @@ interface UseLogstashActionsProps {
 }
 
 export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
-  const { showSuccess } = useErrorContext();
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [currentProcess, setCurrentProcess] = useState<LogstashProcess | null>(null);
   const [taskSummaries, setTaskSummaries] = useState<LogstashTaskSummary[]>([]);
@@ -56,7 +55,7 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
         await updateLogstashAlertRecipients(values.id, {
           alertRecipients: values.alertRecipients,
         });
-        showSuccess('告警邮箱设置成功');
+        window.messageApi.success('告警邮箱设置成功'); // 显示成功消息
         await fetchData(); // 刷新数据
       }
     } catch (error) {
@@ -68,7 +67,7 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
   const handleDelete = async (id: number) => {
     try {
       await deleteLogstashProcess(id);
-      showSuccess('删除成功');
+      window.messageApi.success('删除成功'); // 显示成功消息
       await fetchData();
     } catch {
       // API 错误已由全局错误处理器处理
@@ -78,7 +77,7 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
   const handleStart = async (id: number) => {
     try {
       await startLogstashProcess(id);
-      showSuccess('启动命令已发送');
+      window.messageApi.success('启动命令已发送');
       await fetchData();
     } catch {
       // API 错误已由全局错误处理器处理
@@ -88,7 +87,7 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
   const handleStop = async (id: number) => {
     try {
       await stopLogstashProcess(id);
-      showSuccess('停止命令已发送');
+      window.messageApi.success('停止命令已发送');
       await fetchData();
     } catch {
       // API 错误已由全局错误处理器处理
@@ -118,7 +117,7 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
       await refreshLogstashConfig(record.id, {
         logstashMachineIds,
       });
-      showSuccess('配置刷新命令已发送');
+      window.messageApi.success('配置刷新命令已发送');
       await fetchData();
     } catch {
       // API 错误已由全局错误处理器处理
@@ -128,7 +127,7 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
   const handleReinitializeFailedMachines = async (processId: number) => {
     try {
       await reinitializeFailedMachines(processId);
-      showSuccess('重新初始化命令已发送');
+      window.messageApi.success('重新初始化命令已发送');
       await fetchData();
     } catch {
       // API 错误已由全局错误处理器处理
@@ -138,7 +137,7 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
   const handleForceStopProcess = async (id: number) => {
     try {
       await forceStopLogstashProcess(id);
-      showSuccess('全局强制停止命令已发送');
+      window.messageApi.success('全局强制停止命令已发送');
       await fetchData();
     } catch {
       // API 错误已由全局错误处理器处理
@@ -170,10 +169,10 @@ export const useLogstashActions = ({ fetchData }: UseLogstashActionsProps) => {
         if (values.logstashYml) configData.logstashYml = values.logstashYml;
         await updateLogstashConfig(currentProcess.id, configData);
 
-        showSuccess('更新成功');
+        window.messageApi.success('更新成功');
       } else {
         await createLogstashProcess(values);
-        showSuccess('创建成功');
+        window.messageApi.success('创建成功');
       }
       setEditModalVisible(false);
       await fetchData();

@@ -1,11 +1,9 @@
-import { Form, Input, Modal, Tag, Spin, Button, Space, Tooltip, message, theme } from 'antd';
-import type { InputRef } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
+
+import { Input, Modal, Tag, Spin, Button, Space, message } from 'antd';
+
 import type { LogstashProcess } from '@/types/logstashTypes';
-import { getModules } from '@/api/modules';
-import { getMachines } from '@/api/machine';
-import type { Module } from '@/api/modules';
+
 import styles from './LogstashAlertModal.module.less';
 
 interface LogstashAlertModalProps {
@@ -16,13 +14,10 @@ interface LogstashAlertModalProps {
 }
 
 export default function LogstashAlertModal({ visible, onCancel, onOk, initialValues }: LogstashAlertModalProps) {
-  const [form] = Form.useForm();
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [moduleData, setModuleData] = useState<Module[]>([]);
   const [messageApi, contextHolder] = message.useMessage();
 
-  const { token } = theme.useToken();
   const [emails, setEmails] = useState<string[]>([]);
   const [inputValue, setInputValue] = useState('');
 
@@ -121,11 +116,6 @@ export default function LogstashAlertModal({ visible, onCancel, onOk, initialVal
   // 将输入框文本转换为邮箱数组
   const inputTextToEmails = (text: string): string[] => {
     return parseEmails(text).filter(validateEmail).filter(validateEmailLength);
-  };
-
-  // 获取所有邮箱（包括超长的）
-  const getAllEmails = (): string[] => {
-    return parseEmails(inputValue).filter(validateEmail);
   };
 
   useEffect(() => {

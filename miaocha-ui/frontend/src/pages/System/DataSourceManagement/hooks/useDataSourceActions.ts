@@ -1,5 +1,8 @@
 import { useState, useRef } from 'react';
+
+import type { ActionType } from '@ant-design/pro-components';
 import { App } from 'antd';
+
 import {
   createDataSource,
   updateDataSource,
@@ -8,10 +11,10 @@ import {
   testExistingDataSourceConnection,
 } from '@/api/datasource';
 import type { CreateDataSourceParams, TestConnectionParams } from '@/types/datasourceTypes';
-import type { DataSourceItem } from './useDataSourceData';
+
 import type { DataSourceFormData } from '../components';
-// import { useErrorContext, ErrorType } from '@/providers/ErrorProvider';
-import type { ActionType } from '@ant-design/pro-components';
+
+import type { DataSourceItem } from './useDataSourceData';
 
 interface UseDataSourceActionsProps {
   setSubmitLoading: (loading: boolean) => void;
@@ -34,7 +37,6 @@ export const useDataSourceActions = ({
   const showSuccess = (content: string) => {
     message.success(content);
   };
-  // const { handleError, showSuccess } = useErrorContext();
   const actionRef = useRef<ActionType>(null);
 
   // 打开新增模态框

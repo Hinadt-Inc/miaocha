@@ -1,8 +1,10 @@
 import { Table } from 'antd';
+
+import Loading from '@/components/Loading';
+import withAdminAuth from '@/utils/withAdminAuth';
+
 import { MachinePageHeader, MachineFormModal } from './components';
 import { useMachineData, useMachineActions, useTableConfig } from './hooks';
-import withAdminAuth from '@/utils/withAdminAuth';
-import Loading from '@/components/Loading';
 import styles from './MachineManagement.module.less';
 
 const MachineManagementPage = () => {
