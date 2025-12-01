@@ -136,30 +136,38 @@ export const useDataInit = () => {
 
   const fetchData = useCallback(
     async (options: IDetailOptions) => {
-      const { moduleQueryConfig, searchParams } = options;
+      try {
+        setLoading?.(true);
+        const { moduleQueryConfig, searchParams } = options;
 
-      const params: ILogSearchParams = { ...searchParams };
-      if (abortRef.current) {
-        abortRef.current.abort();
-      }
-      abortRef.current = new AbortController();
-      api.fetchLogDetails(params, { signal: abortRef.current.signal }).then((res) => {
-        const { rows } = res;
-        const timeField = moduleQueryConfig?.timeField || homeModuleQueryConfig?.timeField || 'log_time';
+        const params: ILogSearchParams = { ...searchParams };
+        if (abortRef.current) {
+          abortRef.current.abort();
+        }
+        abortRef.current = new AbortController();
+        api.fetchLogDetails(params, { signal: abortRef.current.signal }).then((res) => {
+          const { rows } = res;
+          const timeField = moduleQueryConfig?.timeField || homeModuleQueryConfig?.timeField || 'log_time';
 
-        // 为每条记录添加唯一ID并格式化时间字段
-        (rows || []).forEach((item, index) => {
-          if (item[timeField]) {
-            item[timeField] = formatTimeString(item[timeField] as string);
-          }
-          item._originalSource = { ...item };
-          item._key = `${Date.now()}_${index}`;
+          // 为每条记录添加唯一ID并格式化时间字段
+          (rows || []).forEach((item, index) => {
+            if (item[timeField]) {
+              item[timeField] = formatTimeString(item[timeField] as string);
+            }
+            item._originalSource = { ...item };
+            item._key = `${Date.now()}_${index}`;
+          });
+          setDetailData(res);
         });
-        setDetailData(res);
-      });
-      api.fetchLogHistogram(params, { signal: abortRef.current.signal }).then((historyRes) => {
-        setHistogramData(historyRes);
-      });
+        api.fetchLogHistogram(params, { signal: abortRef.current.signal }).then((historyRes) => {
+          setHistogramData(historyRes);
+          setLoading?.(false);
+        });
+      } catch (error) {
+        console.error('fetchData error:', error);
+      } finally {
+        setLoading?.(false);
+      }
     },
     [setDetailData, setHistogramData],
   );

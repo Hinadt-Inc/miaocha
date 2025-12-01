@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { AutoRefreshState } from './types';
+
 import { DEFAULT_CONFIG } from './constants';
+import { AutoRefreshState } from './types';
 
 /**
  * 自动刷新功能的自定义Hook
@@ -32,14 +33,12 @@ export const useAutoRefresh = (onRefresh: () => void, loading?: boolean) => {
   // 开始倒计时
   const startCountdown = useCallback(() => {
     if (state.refreshInterval <= 0 || loading || state.isPaused) return;
-    
-    
-    
+
     // 如果剩余时间为0，重置为完整间隔
     if (state.remainingTime <= 0) {
-      setState(prev => ({ ...prev, remainingTime: prev.refreshInterval }));
+      setState((prev) => ({ ...prev, remainingTime: prev.refreshInterval }));
     }
-    setState(prev => {
+    setState((prev) => {
       // 如果不满足条件，直接返回原状态，不启动倒计时
       if (prev.refreshInterval <= 0 || loading || prev.isPaused) {
         return prev;
@@ -52,9 +51,9 @@ export const useAutoRefresh = (onRefresh: () => void, loading?: boolean) => {
     });
     // 清除之前的定时器
     clearTimers();
-    
+
     countdownRef.current = setInterval(() => {
-      setState(prev => {
+      setState((prev) => {
         const newTime = prev.remainingTime - DEFAULT_CONFIG.COUNTDOWN_INTERVAL;
         if (newTime <= 0) {
           // 倒计时结束，执行刷新
@@ -73,15 +72,15 @@ export const useAutoRefresh = (onRefresh: () => void, loading?: boolean) => {
   // 开始自动刷新
   const startAutoRefresh = useCallback(() => {
     if (state.refreshInterval <= 0) return;
-    
-    setState(prev => ({
+
+    setState((prev) => ({
       ...prev,
       isAutoRefreshing: true,
       isPaused: false,
       lastRefreshTime: new Date(),
       remainingTime: prev.refreshInterval,
     }));
-    
+
     // 如果不在loading状态，立即开始倒计时
     if (!loading) {
       setTimeout(startCountdown, 0);
@@ -90,7 +89,7 @@ export const useAutoRefresh = (onRefresh: () => void, loading?: boolean) => {
 
   // 停止自动刷新
   const stopAutoRefresh = useCallback(() => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       isAutoRefreshing: false,
       isPaused: false,
@@ -109,31 +108,34 @@ export const useAutoRefresh = (onRefresh: () => void, loading?: boolean) => {
   }, [state.isAutoRefreshing, startAutoRefresh, stopAutoRefresh]);
 
   // 设置刷新间隔
-  const setRefreshInterval = useCallback((value: number) => {
-    setState(prev => ({ ...prev, refreshInterval: value }));
-    
-    if (value === 0) {
-      // 如果选择关闭，停止自动刷新
-      stopAutoRefresh();
-    } else if (state.isAutoRefreshing) {
-      // 如果正在自动刷新，重新开始
-      clearTimers();
-      setState(prev => ({ ...prev, remainingTime: value }));
-      if (!loading) {
-        setTimeout(startCountdown, 0);
+  const setRefreshInterval = useCallback(
+    (value: number) => {
+      setState((prev) => ({ ...prev, refreshInterval: value }));
+
+      if (value === 0) {
+        // 如果选择关闭，停止自动刷新
+        stopAutoRefresh();
+      } else if (state.isAutoRefreshing) {
+        // 如果正在自动刷新，重新开始
+        clearTimers();
+        setState((prev) => ({ ...prev, remainingTime: value }));
+        if (!loading) {
+          setTimeout(startCountdown, 0);
+        }
       }
-    }
-  }, [state.isAutoRefreshing, loading, stopAutoRefresh, clearTimers, startCountdown]);
+    },
+    [state.isAutoRefreshing, loading, stopAutoRefresh, clearTimers, startCountdown],
+  );
 
   // 手动刷新
   const handleManualRefresh = useCallback(() => {
     onRefresh();
-    setState(prev => ({ ...prev, lastRefreshTime: new Date() }));
-    
+    setState((prev) => ({ ...prev, lastRefreshTime: new Date() }));
+
     // 如果正在自动刷新，重新开始倒计时
     if (state.isAutoRefreshing && state.refreshInterval > 0 && !loading) {
       clearTimers();
-      setState(prev => ({ ...prev, remainingTime: prev.refreshInterval }));
+      setState((prev) => ({ ...prev, remainingTime: prev.refreshInterval }));
       setTimeout(startCountdown, 0);
     }
   }, [onRefresh, state.isAutoRefreshing, state.refreshInterval, loading, clearTimers, startCountdown]);
@@ -141,14 +143,14 @@ export const useAutoRefresh = (onRefresh: () => void, loading?: boolean) => {
   // 处理loading状态变化
   useEffect(() => {
     if (!state.isAutoRefreshing || state.refreshInterval <= 0) return;
-    
+
     if (loading) {
       // 开始loading时暂停倒计时
-      setState(prev => ({ ...prev, isPaused: true }));
+      setState((prev) => ({ ...prev, isPaused: true }));
       clearTimers();
     } else {
       // loading结束，恢复倒计时
-      setState(prev => ({ ...prev, isPaused: false }));
+      setState((prev) => ({ ...prev, isPaused: false }));
       // 延迟一点时间再开始，确保状态稳定
       setTimeout(() => {
         if (state.isAutoRefreshing && state.refreshInterval > 0 && !loading) {

@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useCallback, memo } from 'react';
 
 import { Button, Space } from 'antd';
 
+import AutoRefresh from '../AutoRefresh';
 import { useHomeContext } from '../context';
 import { useDataInit } from '../hooks/useDataInit';
 import SavedSearchesButton from '../SavedSearchesButton';
@@ -141,7 +142,7 @@ const SearchBar = () => {
         <div className={styles.left}>{leftRender}</div>
         <div className={styles.right}>
           <Space size={8}>
-            {/* <AutoRefresh disabled={false} loading={loading} onRefresh={handleAutoRefresh} /> */}
+            <AutoRefresh />
             <SaveSearchButton size="small" />
             <SavedSearchesButton size="small" />
             <ShareButton size="small" />

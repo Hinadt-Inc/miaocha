@@ -90,6 +90,7 @@ export const HomeProvider = ({ children }: { children: ReactNode }) => {
   const [searchParams, setSearchParams] = useState<ILogSearchParams>({ ...DEFAULT_SEARCH_PARAMS });
   const [distributions, setDistributions] = useState<Record<string, IFieldDistributions>>({});
   const [distributionLoading, setDistributionLoading] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState<boolean>(false);
 
   const [activeColumns, setActiveColumns] = useState<string[]>([]);
   const [whereSqlsFromSider, setWhereSqlsFromSider] = useState<IStatus[]>([]);
@@ -102,7 +103,6 @@ export const HomeProvider = ({ children }: { children: ReactNode }) => {
   const [sharedParams, setSharedParams] = useState<ISharedParams | null>(null);
   const [hasAppliedSharedParams, setHasAppliedSharedParams] = useState<boolean>(false);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
 
   const abortRef = useRef<AbortController | null>(null);
   const searchParamsRef = useRef<ILogSearchParams>(searchParams); // 创建 searchParams 的 ref

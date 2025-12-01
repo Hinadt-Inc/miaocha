@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 
 import {
   PlayCircleOutlined,
@@ -9,6 +9,9 @@ import {
 } from '@ant-design/icons';
 import { Button, Dropdown, Space, Progress, Tooltip } from 'antd';
 
+import { useHomeContext } from '../context';
+import { useDataInit } from '../hooks/useDataInit';
+
 import { REFRESH_INTERVALS } from './constants';
 import styles from './index.module.less';
 import { AutoRefreshProps } from './types';
@@ -18,7 +21,14 @@ import { formatRemainingTime, calculateProgressPercent, generateTooltipContent }
 /**
  * 自动刷新组件
  */
-const AutoRefresh: React.FC<AutoRefreshProps> = ({ onRefresh, loading = false, disabled = false }) => {
+const AutoRefresh: React.FC<AutoRefreshProps> = ({ disabled = false }) => {
+  const { loading, searchParams } = useHomeContext();
+  const { fetchData } = useDataInit();
+
+  const onRefresh = useCallback(() => {
+    fetchData({ searchParams });
+  }, [searchParams]);
+
   // 使用自定义Hook管理状态
   const {
     isAutoRefreshing,
