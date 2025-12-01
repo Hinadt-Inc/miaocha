@@ -77,7 +77,7 @@ const AutoRefresh: React.FC<AutoRefreshProps> = ({ disabled = false }) => {
     <div className={styles.autoRefresh}>
       <Space size={4}>
         {/* 手动刷新按钮 */}
-        <Tooltip title="手动刷新">
+        <Tooltip title="刷新">
           <Button
             className={styles.refreshButton}
             disabled={disabled}

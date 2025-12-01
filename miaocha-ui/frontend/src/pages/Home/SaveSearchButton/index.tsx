@@ -35,7 +35,7 @@ const SaveSearchButton: React.FC<SaveSearchButtonProps> = ({
       <Tooltip title="保存当前搜索条件">
         <Button
           className={`${styles.saveSearchButton} ${className || ''}`}
-          icon={<SaveOutlined />}
+          // icon={<SaveOutlined />}
           size={size}
           type={type}
           variant={variant}

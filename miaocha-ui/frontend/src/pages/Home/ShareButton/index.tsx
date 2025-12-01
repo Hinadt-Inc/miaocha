@@ -30,7 +30,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({ size = 'small', type = 'link'
       <Tooltip title="分享当前查询">
         <Button
           className={`${styles.shareButton} ${className || ''}`}
-          icon={<ShareAltOutlined />}
+          // icon={<ShareAltOutlined />}
           size={size}
           type={type}
           variant={variant}

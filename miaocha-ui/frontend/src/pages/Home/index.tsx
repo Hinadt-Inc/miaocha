@@ -15,8 +15,7 @@ import Sider from './SiderModule/index';
  * 使用模块化的hooks来组织代码，提供日志查询和分析功能
  */
 const HomePageContent = () => {
-  const { loading, abortRef, logTableColumns } = useHomeContext();
-  const state = useHomeContext();
+  const { loading, abortRef } = useHomeContext();
   const { initializeData } = useDataInit();
 
   // 初始化数据
@@ -28,11 +27,6 @@ const HomePageContent = () => {
       }
     };
   }, []);
-
-  // useEffect(() => {
-  //   console.log('=====logTableColumns123', logTableColumns);
-  // }, [logTableColumns]);
-  // console.log('=====state', state);
 
   if (loading) {
     return <div className={styles.layout}>加载中...</div>;

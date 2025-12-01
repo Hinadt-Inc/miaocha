@@ -20,13 +20,14 @@ const ExpandedRow: React.FC<IExpandedRowProps> = (props) => {
   const { data, keywords, enhancedColumns } = props;
   const { moduleQueryConfig, searchParams } = useHomeContext();
 
-  const hasSource = useMemo(() => enhancedColumns.some((item) => item.dataIndex === '_source'), [enhancedColumns]);
+  // const hasSource = useMemo(() => enhancedColumns.some((item) => item.dataIndex === '_source'), [enhancedColumns]);
   const showKey = useMemo(() => {
-    const temp: string[] = enhancedColumns.map((item) => item.dataIndex);
-    if (hasSource) {
-      return searchParams.fields || [];
-    }
-    return temp;
+    return searchParams.fields || [];
+    // const temp: string[] = enhancedColumns.map((item) => item.dataIndex);
+    // if (hasSource) {
+    //   return searchParams.fields || [];
+    // }
+    // return temp;
   }, [enhancedColumns]);
 
   // 使用hooks生成表格配置和数据
@@ -69,8 +70,8 @@ const ExpandedRow: React.FC<IExpandedRowProps> = (props) => {
     const excludeFields = moduleQueryConfig?.excludeFields || [];
     Object.entries(data).forEach(([key, value]) => {
       if (!excludeFields.includes(key)) {
-        const showKeyList: string[] = hasSource ? showKey : [...showKey, '_originalSource'];
-        if (showKeyList.includes(key)) {
+        // const showKeyList: string[] = hasSource ? showKey : [...showKey, '_originalSource'];
+        if ([...showKey].includes(key)) {
           filteredData[key] = value;
         }
       }

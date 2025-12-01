@@ -351,7 +351,7 @@ const SavedSearchesModal: React.FC<SavedSearchesModalProps> = ({ visible, onClos
               onChange={(e) => setSearchKeyword(e.target.value)}
             />
           </div>
-        </div>{' '}
+        </div>
         {filteredCachedSearches.length === 0 ? (
           <Empty description={cachedSearches.length === 0 ? '暂无缓存的搜索条件' : '没有找到匹配的缓存搜索条件'} />
         ) : (
@@ -371,7 +371,9 @@ const SavedSearchesModal: React.FC<SavedSearchesModalProps> = ({ visible, onClos
                     title="确定要删除这个搜索条件吗？"
                     onConfirm={() => handleDeleteSingle(item)}
                   >
-                    <Button danger icon={<DeleteOutlined />} loading={deleteLoading} size="small" />
+                    <Button danger loading={deleteLoading} size="small">
+                      删除
+                    </Button>
                   </Popconfirm>,
                 ]}
                 className={styles.searchItem}
