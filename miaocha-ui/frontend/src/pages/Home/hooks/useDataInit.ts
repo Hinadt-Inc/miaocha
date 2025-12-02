@@ -199,7 +199,7 @@ export const useDataInit = () => {
         sortFields: [],
         keywords: [],
         whereSqls: [],
-        offset: 50,
+        offset: 0,
         timeGrouping: 'auto',
         timeRange: 'last_15m',
         module,
@@ -256,7 +256,7 @@ export const useDataInit = () => {
         sortFields: [],
         keywords: [],
         whereSqls: [],
-        offset: 50,
+        offset: 0,
         module,
       });
       setDistributions({});
@@ -312,7 +312,7 @@ export const useDataInit = () => {
       const paramsWidthFields = updateSearchParams({
         ...searchParams,
         fields: Array.from(new Set([...commonFields, ...newFields])),
-        offset: 50,
+        offset: 0,
         module,
         ...rest,
       });

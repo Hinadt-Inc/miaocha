@@ -29,5 +29,8 @@
   "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
   "eslint.useFlatConfig": true,
   "eslint.codeActionsOnSave.mode": "all",
-  "cSpell.words": ["Sider", "sqls"]
+  "cSpell.words": ["Sider", "sqls"],
+  "[xml]": {
+    "editor.defaultFormatter": "redhat.vscode-xml"
+  }
 }

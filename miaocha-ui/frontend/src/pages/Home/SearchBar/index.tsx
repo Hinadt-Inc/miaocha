@@ -95,9 +95,10 @@ const SearchBar = () => {
         onChange={(value: string) => {
           setSearchState((prevState: any) => ({ ...prevState, keywords: value }));
         }}
+        onPressEnter={debouncedHandleSubmit}
       />
     ),
-    [searchState.keywords],
+    [searchState.keywords, debouncedHandleSubmit],
   );
 
   // 渲染SQL输入框
@@ -109,9 +110,10 @@ const SearchBar = () => {
         onChange={(value: string) => {
           setSearchState((prevState: any) => ({ ...prevState, sql: value }));
         }}
+        onPressEnter={debouncedHandleSubmit}
       />
     ),
-    [searchState.sql, logTableColumns],
+    [searchState.sql, logTableColumns, debouncedHandleSubmit],
   );
 
   // 渲染时间分组选择器

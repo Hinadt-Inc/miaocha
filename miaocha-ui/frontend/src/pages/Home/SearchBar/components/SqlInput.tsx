@@ -13,9 +13,10 @@ interface ISqlInputProps {
   value: string;
   onChange: (value: string) => void;
   columns?: ILogColumnsResponse[];
+  onPressEnter?: () => void;
 }
 
-const SqlInput: React.FC<ISqlInputProps> = ({ value, onChange, columns = [] }) => {
+const SqlInput: React.FC<ISqlInputProps> = ({ value, onChange, columns = [], onPressEnter }) => {
   // 获取当前正在输入的词汇，用于字段匹配
   const getCurrentInputWord = (inputValue: string) => {
     if (!inputValue) return '';
@@ -72,6 +73,11 @@ const SqlInput: React.FC<ISqlInputProps> = ({ value, onChange, columns = [] }) =
         style={{ width: '100%' }}
         value={value}
         onChange={onChange}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && onPressEnter) {
+            onPressEnter();
+          }
+        }}
       />
     </Space.Compact>
   );

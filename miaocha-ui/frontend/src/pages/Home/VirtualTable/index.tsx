@@ -48,6 +48,13 @@ const VirtualTable: React.FC = () => {
   const [columns, setColumns] = useState<any[]>([]);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [scrollX, setScrollX] = useState(1300);
+  const prevShouldUseVirtualRef = useRef(false); // 用于追踪虚拟滚动状态变化
+
+  // 混合模式配置: 300条以内不启用虚拟滚动
+  const VIRTUAL_THRESHOLD = 300;
+  const shouldUseVirtual = useMemo(() => {
+    return (detailData?.rows?.length || 0) > VIRTUAL_THRESHOLD;
+  }, [detailData?.rows?.length]);
 
   // 自定义hooks
   const screenWidth = useScreenWidth();
@@ -324,7 +331,11 @@ const VirtualTable: React.FC = () => {
     const handleScroll = () => {
       if (!hasMore || detailDataLoading.current) return;
 
-      const scrollElement = tableNode?.querySelector('.ant-table-tbody-virtual-holder');
+      // 根据是否启用虚拟滚动选择不同的滚动容器
+      const scrollElement = shouldUseVirtual
+        ? tableNode?.querySelector('.ant-table-tbody-virtual-holder')
+        : tableNode?.querySelector('.ant-table-body');
+
       if (scrollElement) {
         const { scrollHeight, scrollTop, clientHeight } = scrollElement;
         const distanceToBottom = scrollHeight - scrollTop - clientHeight;
@@ -336,7 +347,9 @@ const VirtualTable: React.FC = () => {
     };
 
     if (tableNode) {
-      const scrollElement = tableNode.querySelector('.ant-table-tbody-virtual-holder');
+      const scrollElement = shouldUseVirtual
+        ? tableNode.querySelector('.ant-table-tbody-virtual-holder')
+        : tableNode.querySelector('.ant-table-body');
       if (scrollElement) {
         scrollElement.addEventListener('scroll', handleScroll);
       }
@@ -345,13 +358,44 @@ const VirtualTable: React.FC = () => {
     return () => {
       resizeObserver.disconnect();
       if (tableNode) {
-        const scrollElement = tableNode.querySelector('.ant-table-tbody-virtual-holder');
+        const scrollElement = shouldUseVirtual
+          ? tableNode.querySelector('.ant-table-tbody-virtual-holder')
+          : tableNode.querySelector('.ant-table-body');
         if (scrollElement) {
           scrollElement.removeEventListener('scroll', handleScroll);
         }
       }
     };
-  }, [containerRef.current, tblRef.current, hasMore, onLoadMore]);
+  }, [containerRef.current, tblRef.current, hasMore, onLoadMore, shouldUseVirtual]);
+
+  // 初始化时重置 loading 标志
+  useEffect(() => {
+    detailDataLoading.current = false;
+  }, [searchParams]);
+
+  // 当切换到虚拟滚动模式时，自动滚动到第501条
+  useEffect(() => {
+    // 检测是否从非虚拟滚动切换到虚拟滚动
+    if (!prevShouldUseVirtualRef.current && shouldUseVirtual) {
+      const targetIndex = VIRTUAL_THRESHOLD;
+
+      if (tblRef.current && detailData?.rows?.[targetIndex]) {
+        // 使用 setTimeout 确保 DOM 已更新为虚拟滚动模式
+        setTimeout(() => {
+          try {
+            // 使用 scrollTo 方法滚动到指定的索引
+            tblRef.current?.scrollTo?.({ index: targetIndex });
+            console.log(`已切换到虚拟滚动模式，自动滚动到第${targetIndex + 1}条数据`);
+          } catch (error) {
+            console.warn('滚动失败:', error);
+          }
+        }, 100);
+      }
+    }
+
+    // 更新前一个状态
+    prevShouldUseVirtualRef.current = shouldUseVirtual;
+  }, [shouldUseVirtual, detailData?.rows, VIRTUAL_THRESHOLD]);
 
   // 动态计算scroll.x
   useEffect(() => {
@@ -437,7 +481,7 @@ const VirtualTable: React.FC = () => {
         }}
         size="small"
         sortDirections={['ascend', 'descend']}
-        virtual
+        virtual={shouldUseVirtual}
         onChange={debouncedHandleTableChange}
       />
     </div>
