@@ -44,6 +44,7 @@ const VirtualTable: React.FC = () => {
 
   // 混合模式配置: 300条以内不启用虚拟滚动
   const VIRTUAL_THRESHOLD = 10000;
+  const MAX_LOAD_COUNT = 1000; // 最大加载条数限制
   // 状态管理
   const detailDataLoading = useRef(false); // 防止重复请求
   const containerRef = useRef<HTMLDivElement>(null);
@@ -55,6 +56,8 @@ const VirtualTable: React.FC = () => {
   const [columns, setColumns] = useState<any[]>([]);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => safeParseJson('columnWidths'));
   const [scrollX, setScrollX] = useState(1300);
+  const [limitNoticeHeight, setLimitNoticeHeight] = useState(0); // 底部提示高度
+  const limitNoticeRef = useRef<HTMLDivElement>(null); // 底部提示 ref
 
   const shouldUseVirtual = useMemo(() => {
     return (detailData?.rows?.length || 0) > VIRTUAL_THRESHOLD;
@@ -75,11 +78,23 @@ const VirtualTable: React.FC = () => {
   // 表格列配置Hook（简化版本，仅提取timeField）
   const timeField = useMemo(() => moduleQueryConfig?.timeField || 'log_time', [moduleQueryConfig]);
   const hasMore = useMemo(() => {
-    return detailData?.totalCount ? (detailData?.rows?.length || 0) < detailData?.totalCount : false;
-  }, [searchParams, detailData, moduleQueryConfig]);
+    const currentCount = detailData?.rows?.length || 0;
+    // 如果已经达到最大加载条数，不再加载
+    if (currentCount >= MAX_LOAD_COUNT) {
+      return false;
+    }
+    return detailData?.totalCount ? currentCount < detailData?.totalCount : false;
+  }, [searchParams, detailData, moduleQueryConfig, MAX_LOAD_COUNT]);
 
   const onLoadMore = useCallback(async () => {
-    const newSearchParams = { ...searchParams, offset: detailData?.rows?.length || 0 };
+    const currentCount = detailData?.rows?.length || 0;
+    // 检查是否达到最大加载条数
+    if (currentCount >= MAX_LOAD_COUNT) {
+      console.log(`已达到最大加载条数 ${MAX_LOAD_COUNT}，停止加载`);
+      return;
+    }
+
+    const newSearchParams = { ...searchParams, offset: currentCount };
     const res = await api.fetchLogDetails(newSearchParams);
     const { rows } = res;
     const timeField = moduleQueryConfig?.timeField || 'log_time';
@@ -92,15 +107,18 @@ const VirtualTable: React.FC = () => {
       item._originalSource = { ...item };
       item._key = `${Date.now()}_${index}`;
     });
-    const newDetailData = { ...detailData, rows: [...(detailData?.rows || []), ...rows] };
+
+    // 限制总数不超过 MAX_LOAD_COUNT
+    const newRows = [...(detailData?.rows || []), ...rows].slice(0, MAX_LOAD_COUNT);
+    const newDetailData = { ...detailData, rows: newRows };
     setDetailData(newDetailData as ILogDetailsResponse);
     detailDataLoading.current = false;
-  }, [detailData, moduleQueryConfig, searchParams, setDetailData]);
+  }, [detailData, moduleQueryConfig, searchParams, setDetailData, MAX_LOAD_COUNT]);
 
   // 列宽调整处理
   const handleResize = (index: number) => (width: number) => {
     const column = columnsRef.current[index];
-    if (!column?.dataIndex) return;
+    if (!column?.dataIndex || width < 150) return;
 
     setColumnWidths((prev) => {
       const result = {
@@ -171,6 +189,40 @@ const VirtualTable: React.FC = () => {
     columnsRef.current = columns;
   }, [columns]);
 
+  // 回到顶部功能
+  const scrollToTop = useCallback(() => {
+    const tableNode = tblRef.current?.nativeElement;
+    if (!tableNode) return;
+
+    const scrollElement = shouldUseVirtual
+      ? tableNode.querySelector('.ant-table-tbody-virtual-holder')
+      : tableNode.querySelector('.ant-table-body');
+
+    if (scrollElement) {
+      scrollElement.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // 如果是虚拟滚动，使用 scrollTo 方法
+    if (shouldUseVirtual && tblRef.current?.scrollTo) {
+      tblRef.current.scrollTo({ index: 0 });
+    }
+  }, [shouldUseVirtual]);
+
+  // 判断是否达到最大加载条数
+  const hasReachedLimit = useMemo(() => {
+    return (detailData?.rows?.length || 0) >= MAX_LOAD_COUNT;
+  }, [detailData?.rows?.length, MAX_LOAD_COUNT]);
+
+  // 监听底部提示高度变化
+  useEffect(() => {
+    if (limitNoticeRef.current) {
+      const height = limitNoticeRef.current.offsetHeight;
+      setLimitNoticeHeight(height);
+    } else {
+      setLimitNoticeHeight(0);
+    }
+  }, [hasReachedLimit]);
+
   // 初始化时重置 loading 标志
   useEffect(() => {
     detailDataLoading.current = false;
@@ -233,6 +285,7 @@ const VirtualTable: React.FC = () => {
           title: columnName,
           dataIndex: columnName,
           width: isLast ? undefined : columnWidth || 150,
+          minWidth: 150,
           onHeaderCell: (item: any) => ({
             width: item.width,
             onResize: handleResize(idx + 1),
@@ -419,34 +472,46 @@ const VirtualTable: React.FC = () => {
 
   return (
     <div ref={containerRef} className={styles.virtualLayout}>
-      <Table
-        ref={tblRef}
-        columns={enhancedColumns}
-        components={{
-          header: {
-            cell: ResizableTitle,
-          },
-        }}
-        dataSource={detailData?.rows || []}
-        expandable={{
-          expandedRowRender: (record) => (
-            <ExpandedRow data={record} enhancedColumns={enhancedColumns} keywords={keyWordsFormat || []} />
-          ),
-        }}
-        pagination={false}
-        rowKey="_key"
-        scroll={{
-          x: ((detailData?.rows as any[]) || []).length > 0 ? scrollX : 0,
-          y: containerHeight - headerHeight - 1,
-        }}
-        showSorterTooltip={{
-          title: '点击排序，按住Ctrl+点击可多列排序',
-        }}
-        size="small"
-        sortDirections={['ascend', 'descend']}
-        virtual={shouldUseVirtual}
-        onChange={debouncedHandleTableChange}
-      />
+      <div className={styles.tableWrapper}>
+        <Table
+          ref={tblRef}
+          columns={enhancedColumns}
+          components={{
+            header: {
+              cell: ResizableTitle,
+            },
+          }}
+          dataSource={detailData?.rows || []}
+          expandable={{
+            expandedRowRender: (record) => (
+              <ExpandedRow data={record} enhancedColumns={enhancedColumns} keywords={keyWordsFormat || []} />
+            ),
+          }}
+          pagination={false}
+          rowKey="_key"
+          scroll={{
+            x: ((detailData?.rows as any[]) || []).length > 0 ? scrollX : 0,
+            y: containerHeight - headerHeight - limitNoticeHeight - 1,
+          }}
+          showSorterTooltip={{
+            title: '点击排序，按住Ctrl+点击可多列排序',
+          }}
+          size="small"
+          sortDirections={['ascend', 'descend']}
+          virtual={shouldUseVirtual}
+          onChange={debouncedHandleTableChange}
+        />
+      </div>
+      {hasReachedLimit && (
+        <div ref={limitNoticeRef} className={styles.limitNotice}>
+          <span className={styles.noticeText}>
+            这是前 <strong>{MAX_LOAD_COUNT}</strong> 条与您搜索匹配的文档，请细化搜索条件以查看其他结果。
+          </span>
+          <span className={styles.backToTop} onClick={scrollToTop}>
+            回到顶部
+          </span>
+        </div>
+      )}
     </div>
   );
 };
