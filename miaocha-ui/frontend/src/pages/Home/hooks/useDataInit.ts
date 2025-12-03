@@ -197,6 +197,7 @@ export const useDataInit = () => {
         ...searchParams,
         fields,
         sortFields: [],
+        activeFields: [],
         keywords: [],
         whereSqls: [],
         offset: 0,
@@ -259,6 +260,8 @@ export const useDataInit = () => {
         offset: 0,
         module,
       });
+      // 清除自定义列宽缓存
+      localStorage.removeItem('commonColumns');
       setDistributions({});
       setDistributionLoading({});
 
@@ -288,7 +291,7 @@ export const useDataInit = () => {
   // 本地化回显 | 分享回显 | 检索条件回显
   const handleLoadCacheData = useCallback(
     async (params: Partial<ILogSearchParams>) => {
-      const { module, fields, ...rest } = params;
+      const { module, fields, activeFields, ...rest } = params;
       updateSearchParams({ module });
       // 4. 获取模块查询配置（使用最新的params）
       const moduleQueryConfig = await fetchModuleQueryConfig(module as string);
@@ -302,19 +305,23 @@ export const useDataInit = () => {
       const normalizedColumns = columns.map((col) => ({
         ...col,
         selected:
-          col.columnName && [...fieldsDots, timeField].includes(col.columnName) ? true : (col.selected ?? false),
+          col.columnName && [...fieldsDots, timeField, ...(activeFields || [])].includes(col.columnName)
+            ? true
+            : (col.selected ?? false),
         _createTime: new Date().getTime(),
       }));
       setLogTableColumns(normalizedColumns);
       const commonFields = columns.map((item: any) => item.columnName)?.filter((item: any) => !item.includes('.'));
       setCommonColumns(commonFields);
       const newFields = normalizedColumns.filter((item: any) => item.selected).map((item: any) => item.columnName);
+      console.log('activeFields====', activeFields);
       const paramsWidthFields = updateSearchParams({
         ...searchParams,
+        ...rest,
         fields: Array.from(new Set([...commonFields, ...newFields])),
+        activeFields,
         offset: 0,
         module,
-        ...rest,
       });
       setDistributions({});
       setDistributionLoading({});

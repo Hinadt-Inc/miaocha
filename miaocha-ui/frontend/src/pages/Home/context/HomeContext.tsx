@@ -97,6 +97,13 @@ export const HomeProvider = ({ children }: { children: ReactNode }) => {
       timeRange,
     };
 
+    if (logTableColumns.length > 0) {
+      const activeFields: string[] = logTableColumns
+        .filter((column) => !!column.selected)
+        .map((column) => column.columnName as string);
+      newSearchParams.activeFields = activeFields;
+    }
+
     const { range, type } = parseTimeRange(newSearchParams?.timeRange);
     Object.assign(newSearchParams, { startTime: range?.[0], endTime: range?.[1], range, type });
     setSearchParams(newSearchParams);

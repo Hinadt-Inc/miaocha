@@ -7,12 +7,14 @@ import { QUICK_RANGES, DATE_FORMAT_THOUSOND } from './utils';
 // 默认的搜索参数（使用全局类型）
 export const DEFAULT_SEARCH_PARAMS: ILogSearchParams = {
   offset: 0,
-  pageSize: 100,
+  pageSize: 50,
   module: null,
   startTime: QUICK_RANGES.last_15m.from().format(DATE_FORMAT_THOUSOND),
   endTime: QUICK_RANGES.last_15m.to().format(DATE_FORMAT_THOUSOND),
   timeRange: 'last_15m',
   timeGrouping: 'auto',
+  fields: [],
+  activeFields: [],
   range: [],
   sortFields: [],
 };

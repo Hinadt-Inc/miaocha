@@ -4,6 +4,7 @@ import { Table } from 'antd';
 
 import * as api from '@/api/logs';
 import { highlightText } from '@/utils/highlightText';
+import { safeParseJson } from '@/utils/utils';
 
 import { useHomeContext } from '../context';
 import ExpandedRow from '../ExpandedRow/index';
@@ -11,7 +12,7 @@ import { useDataInit } from '../hooks/useDataInit';
 import { formatTimeString, debounce } from '../utils';
 
 import { ResizableTitle, ColumnHeader } from './components';
-import { useScreenWidth, useExpandedRows } from './hooks';
+import { useScreenWidth } from './hooks';
 import {
   extractSqlKeywords,
   formatSearchKeywords,
@@ -38,157 +39,41 @@ const VirtualTable: React.FC = () => {
   } = useHomeContext();
   const { fetchData } = useDataInit();
 
-  const detailDataLoading = useRef(false); // 防止重复请求
+  // 自定义hooks
+  const screenWidth = useScreenWidth();
 
+  // 混合模式配置: 300条以内不启用虚拟滚动
+  const VIRTUAL_THRESHOLD = 10000;
   // 状态管理
+  const detailDataLoading = useRef(false); // 防止重复请求
   const containerRef = useRef<HTMLDivElement>(null);
   const tblRef: Parameters<typeof Table>[0]['ref'] = useRef(null);
+  const columnsRef = useRef<any[]>([]);
+  const prevShouldUseVirtualRef = useRef(false); // 用于追踪虚拟滚动状态变化
   const [containerHeight, setContainerHeight] = useState<number>(0);
   const [headerHeight, setHeaderHeight] = useState<number>(0);
   const [columns, setColumns] = useState<any[]>([]);
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => safeParseJson('columnWidths'));
   const [scrollX, setScrollX] = useState(1300);
-  const prevShouldUseVirtualRef = useRef(false); // 用于追踪虚拟滚动状态变化
 
-  // 混合模式配置: 300条以内不启用虚拟滚动
-  const VIRTUAL_THRESHOLD = 300;
   const shouldUseVirtual = useMemo(() => {
     return (detailData?.rows?.length || 0) > VIRTUAL_THRESHOLD;
   }, [detailData?.rows?.length]);
-
-  // 自定义hooks
-  const screenWidth = useScreenWidth();
-  const { expandedRowKeys, handleExpand } = useExpandedRows(detailData?.rows || [], searchParams, moduleQueryConfig);
-
   // 数据处理
   const sqlFilterValue = useMemo(() => extractSqlKeywords(searchParams.whereSqls || []), [searchParams.whereSqls]);
   const keyWordsFormat = useMemo(() => formatSearchKeywords(searchParams.keywords || []), [searchParams.keywords]);
+  const sortFieldsMap = useMemo(() => {
+    if (!searchParams.sortFields) return {};
+    return searchParams.sortFields?.reduce(
+      (acc: Record<string, string>, item: any) => {
+        acc[item.fieldName] = item.direction === 'ASC' ? 'ascend' : 'descend';
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
+  }, [searchParams.sortFields]);
   // 表格列配置Hook（简化版本，仅提取timeField）
   const timeField = useMemo(() => moduleQueryConfig?.timeField || 'log_time', [moduleQueryConfig]);
-  // 构建完整的列配置
-  const getBaseColumns = useMemo(() => {
-    const otherColumns = logTableColumns?.filter((item) => item.selected && item.columnName !== timeField);
-    const _columns: any[] = [];
-
-    if (otherColumns && otherColumns.length > 0) {
-      const isSmallScreen = screenWidth < 1200;
-
-      otherColumns.forEach((item: any) => {
-        const { columnName = '' } = item;
-
-        let columnWidth;
-        if (columnWidths[columnName]) {
-          columnWidth = columnWidths[columnName];
-        } else if (isSmallScreen) {
-          const availableWidth = screenWidth - 250;
-          const maxWidthPerColumn = Math.floor(availableWidth / Math.max(otherColumns.length, 2));
-          columnWidth = Math.min(getAutoColumnWidth(columnName, screenWidth), maxWidthPerColumn);
-        } else {
-          columnWidth = getAutoColumnWidth(columnName, screenWidth);
-        }
-
-        _columns.push({
-          title: columnName,
-          dataIndex: columnName,
-          width: columnWidth,
-          render: (text: string) => highlightText(text, keyWordsFormat || []),
-          ...(isFieldSortable(item.dataType)
-            ? {
-                sorter: {
-                  compare: createColumnSorter(columnName, item.dataType),
-                  multiple: otherColumns.findIndex((col) => col.columnName === columnName) + 2,
-                },
-              }
-            : {}),
-        });
-      });
-    }
-
-    return [
-      {
-        title: timeField,
-        dataIndex: timeField,
-        width: 190,
-        resizable: false,
-        sorter: {
-          compare: createTimeSorter(timeField),
-          multiple: 1,
-        },
-        render: (text: any) => {
-          if (!text) return '';
-          const str = String(text);
-          if (str === 'Invalid Date' || str === 'NaN') return '';
-          return str.replace('T', ' ');
-        },
-      },
-      ...(_columns.length < 1
-        ? [
-            {
-              title: '_source',
-              dataIndex: '_source',
-              width: (() => {
-                const isSmallScreen = screenWidth < 1200;
-                if (isSmallScreen) {
-                  const hasOtherColumns = _columns.length > 0;
-                  if (!hasOtherColumns) {
-                    return Math.min(600, screenWidth - 300);
-                  }
-                }
-                return undefined;
-              })(),
-              ellipsis: false,
-              render: (_: any, record: ILogColumnsResponse) => {
-                const sourceData = (record as any)._originalSource || record;
-
-                const entries = Object.entries(sourceData)
-                  .filter(([key]) => !key.startsWith('_')) // 过滤掉内部字段如 _key, _originalSource
-                  .map(([key, value]) => {
-                    let priority = 2;
-                    const highlightArr: string[] = [...keyWordsFormat, ...sqlFilterValue];
-                    if (!keyWordsFormat.includes(key)) {
-                      if (sqlFilterValue.some((kw) => String(value).includes(kw))) {
-                        priority = 1;
-                      }
-                    }
-                    return { key, value, priority, highlightArr };
-                  });
-
-                const sortedEntries = entries.sort((a, b) => a.priority - b.priority);
-
-                return (
-                  <dl className={styles.source}>
-                    {sortedEntries.map(({ key, value, highlightArr }) => (
-                      <Fragment key={key}>
-                        <dt>{key}</dt>
-                        <dd>{highlightText(String(value), highlightArr)}</dd>
-                      </Fragment>
-                    ))}
-                  </dl>
-                );
-              },
-            },
-          ]
-        : []),
-      ..._columns.map((column, idx) => {
-        const isLast = idx === _columns.length - 1;
-        let columnWidth;
-        if (columnWidths[column.dataIndex]) {
-          columnWidth = columnWidths[column.dataIndex];
-        } else {
-          columnWidth = isLast ? undefined : column.width || 150;
-        }
-
-        return {
-          ...column,
-          width: columnWidth,
-          render: (text: string) => {
-            return highlightText(text, [...(keyWordsFormat || []), ...(sqlFilterValue || [])]);
-          },
-        };
-      }),
-    ];
-  }, [logTableColumns, keyWordsFormat, columnWidths, sqlFilterValue, screenWidth, timeField]);
-
   const hasMore = useMemo(() => {
     return detailData?.totalCount ? (detailData?.rows?.length || 0) < detailData?.totalCount : false;
   }, [searchParams, detailData, moduleQueryConfig]);
@@ -214,23 +99,16 @@ const VirtualTable: React.FC = () => {
 
   // 列宽调整处理
   const handleResize = (index: number) => (width: number) => {
-    const column = columns[index];
+    const column = columnsRef.current[index];
     if (!column?.dataIndex) return;
 
-    setColumnWidths((prev) => ({
-      ...prev,
-      [column.dataIndex]: width,
-    }));
-
-    setColumns((prevColumns) => {
-      const newColumns = [...prevColumns];
-      if (newColumns[index]) {
-        newColumns[index] = {
-          ...newColumns[index],
-          width: width,
-        };
-      }
-      return newColumns;
+    setColumnWidths((prev) => {
+      const result = {
+        ...prev,
+        [column.dataIndex]: width,
+      };
+      localStorage.setItem('columnWidths', JSON.stringify(result));
+      return result;
     });
   };
 
@@ -289,19 +167,112 @@ const VirtualTable: React.FC = () => {
   // 防抖处理表格变化（300ms）
   const debouncedHandleTableChange = useMemo(() => debounce(handleTableChange, 300), [handleTableChange]);
 
-  // 设置列配置
   useEffect(() => {
-    const resizableColumns = getBaseColumns.map((col, index) => {
-      return {
-        ...col,
-        onHeaderCell: (column: any) => ({
-          width: column.width,
-          onResize: handleResize(index),
-        }),
-      };
-    });
-    setColumns(resizableColumns);
-  }, [getBaseColumns, timeField]);
+    columnsRef.current = columns;
+  }, [columns]);
+
+  // 初始化时重置 loading 标志
+  useEffect(() => {
+    detailDataLoading.current = false;
+  }, [searchParams]);
+
+  // 构建完整的列配置
+  useEffect(() => {
+    const otherColumns = logTableColumns?.filter((item) => item.selected && item.columnName !== timeField);
+    const sourceColumn = [];
+    let commonColumns: any = [];
+    if (otherColumns.length < 1) {
+      sourceColumn.push({
+        title: '_source',
+        dataIndex: '_source',
+        ellipsis: false,
+        render: (_: any, record: ILogColumnsResponse) => {
+          const sourceData = (record as any)._originalSource || record;
+          const entries = Object.entries(sourceData)
+            .filter(([key]) => !key.startsWith('_')) // 过滤掉内部字段如 _key, _originalSource
+            .map(([key, value]) => {
+              let priority = 2;
+              const highlightArr: string[] = [...keyWordsFormat, ...sqlFilterValue];
+              if (!keyWordsFormat.includes(key)) {
+                if (sqlFilterValue.some((kw) => String(value).includes(kw))) {
+                  priority = 1;
+                }
+              }
+              return { key, value, priority, highlightArr };
+            });
+          const sortedEntries = entries.sort((a, b) => a.priority - b.priority);
+          return (
+            <dl className={styles.source}>
+              {sortedEntries.map(({ key, value, highlightArr }) => (
+                <Fragment key={key}>
+                  <dt>{key}</dt>
+                  <dd>{highlightText(String(value), highlightArr)}</dd>
+                </Fragment>
+              ))}
+            </dl>
+          );
+        },
+      });
+    } else {
+      const isSmallScreen = screenWidth < 1200;
+      commonColumns = otherColumns.map((item: any, idx: number) => {
+        const isLast = idx === otherColumns.length - 1;
+        const { columnName = '' } = item;
+
+        let columnWidth;
+        if (columnWidths[columnName]) {
+          columnWidth = columnWidths[columnName];
+        } else if (isSmallScreen) {
+          const availableWidth = screenWidth - 250;
+          const maxWidthPerColumn = Math.floor(availableWidth / Math.max(otherColumns.length, 2));
+          columnWidth = Math.min(getAutoColumnWidth(columnName, screenWidth), maxWidthPerColumn);
+        } else {
+          columnWidth = getAutoColumnWidth(columnName, screenWidth);
+        }
+        return {
+          title: columnName,
+          dataIndex: columnName,
+          width: isLast ? undefined : columnWidth || 150,
+          onHeaderCell: (item: any) => ({
+            width: item.width,
+            onResize: handleResize(idx + 1),
+          }),
+          render: (text: string) => highlightText(text, [...(keyWordsFormat || []), ...(sqlFilterValue || [])]),
+          ...(isFieldSortable(item.dataType)
+            ? {
+                sortOrder: sortFieldsMap[columnName] || null, // 使用受控的 sortOrder
+                sorter: {
+                  compare: createColumnSorter(columnName, item.dataType),
+                  multiple: otherColumns.findIndex((col) => col.columnName === columnName) + 2,
+                },
+              }
+            : {}),
+        };
+      });
+    }
+
+    const result = [
+      {
+        title: timeField,
+        dataIndex: timeField,
+        width: 190,
+        resizable: false,
+        sorter: {
+          compare: createTimeSorter(timeField),
+          multiple: 1,
+        },
+        render: (text: any) => {
+          if (!text) return '';
+          const str = String(text);
+          if (str === 'Invalid Date' || str === 'NaN') return '';
+          return str.replace('T', ' ');
+        },
+      },
+      ...sourceColumn,
+      ...commonColumns,
+    ];
+    setColumns(result);
+  }, [logTableColumns, keyWordsFormat, columnWidths, sqlFilterValue, screenWidth, timeField, sortFieldsMap]);
 
   // 容器大小和滚动处理
   useEffect(() => {
@@ -367,11 +338,6 @@ const VirtualTable: React.FC = () => {
       }
     };
   }, [containerRef.current, tblRef.current, hasMore, onLoadMore, shouldUseVirtual]);
-
-  // 初始化时重置 loading 标志
-  useEffect(() => {
-    detailDataLoading.current = false;
-  }, [searchParams]);
 
   // 当切换到虚拟滚动模式时，自动滚动到第501条
   useEffect(() => {
@@ -463,9 +429,6 @@ const VirtualTable: React.FC = () => {
         }}
         dataSource={detailData?.rows || []}
         expandable={{
-          columnWidth: 26,
-          expandedRowKeys,
-          onExpand: handleExpand,
           expandedRowRender: (record) => (
             <ExpandedRow data={record} enhancedColumns={enhancedColumns} keywords={keyWordsFormat || []} />
           ),

@@ -20,14 +20,8 @@ const ExpandedRow: React.FC<IExpandedRowProps> = (props) => {
   const { data, keywords, enhancedColumns } = props;
   const { moduleQueryConfig, searchParams } = useHomeContext();
 
-  // const hasSource = useMemo(() => enhancedColumns.some((item) => item.dataIndex === '_source'), [enhancedColumns]);
   const showKey = useMemo(() => {
     return searchParams.fields || [];
-    // const temp: string[] = enhancedColumns.map((item) => item.dataIndex);
-    // if (hasSource) {
-    //   return searchParams.fields || [];
-    // }
-    // return temp;
   }, [enhancedColumns]);
 
   // 使用hooks生成表格配置和数据

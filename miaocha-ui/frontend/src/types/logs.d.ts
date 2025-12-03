@@ -118,6 +118,8 @@ declare global {
      * 需要查询的字段列表
      */
     fields?: string[];
+    // 当前选中的查询字段列表
+    activeFields?: string[];
     /**
      * 排序字段列表
      */
