@@ -120,6 +120,7 @@ declare global {
     fields?: string[];
     // 当前选中的查询字段列表
     activeFields?: string[];
+    columnWidths?: Record<string, number>;
     /**
      * 排序字段列表
      */

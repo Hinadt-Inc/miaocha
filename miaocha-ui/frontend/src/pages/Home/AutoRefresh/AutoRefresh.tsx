@@ -1,13 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
 
-import {
-  PlayCircleOutlined,
-  PauseCircleOutlined,
-  ReloadOutlined,
-  ClockCircleOutlined,
-  CaretDownOutlined,
-} from '@ant-design/icons';
-import { Button, Dropdown, Space, Progress, Tooltip } from 'antd';
+import { PlayCircleOutlined, PauseCircleOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Button, Dropdown, Space, Tooltip } from 'antd';
 
 import { useHomeContext } from '../context';
 import { useDataInit } from '../hooks/useDataInit';
@@ -16,7 +10,7 @@ import { REFRESH_INTERVALS } from './constants';
 import styles from './index.module.less';
 import { AutoRefreshProps } from './types';
 import { useAutoRefresh } from './useAutoRefresh';
-import { formatRemainingTime, calculateProgressPercent, generateTooltipContent } from './utils';
+import { calculateProgressPercent, generateTooltipContent } from './utils';
 
 /**
  * 自动刷新组件
@@ -31,20 +25,8 @@ const AutoRefresh: React.FC<AutoRefreshProps> = ({ disabled = false }) => {
   }, [searchParams, distributions, distributionLoading]);
 
   // 使用自定义Hook管理状态
-  const {
-    isAutoRefreshing,
-    refreshInterval,
-    remainingTime,
-    lastRefreshTime,
-    toggleAutoRefresh,
-    setRefreshInterval,
-    handleManualRefresh,
-  } = useAutoRefresh(onRefresh, loading);
-
-  // 计算进度百分比
-  const progressPercent = useMemo(() => {
-    return calculateProgressPercent(refreshInterval, remainingTime, isAutoRefreshing, loading);
-  }, [refreshInterval, remainingTime, isAutoRefreshing, loading]);
+  const { isAutoRefreshing, refreshInterval, remainingTime, lastRefreshTime, toggleAutoRefresh, setRefreshInterval } =
+    useAutoRefresh(onRefresh, loading);
 
   // 下拉菜单项
   const menuItems = useMemo(() => {
@@ -58,7 +40,9 @@ const AutoRefresh: React.FC<AutoRefreshProps> = ({ disabled = false }) => {
 
   // 当前选中的间隔标签
   const currentIntervalLabel = useMemo(() => {
-    return REFRESH_INTERVALS.find((item) => item.value === refreshInterval)?.label || '关闭';
+    const label = REFRESH_INTERVALS.find((item) => item.value === refreshInterval)?.label || '关闭';
+    if (label === '关闭') return '自动刷新';
+    return label;
   }, [refreshInterval]);
 
   // 构建tooltip内容
@@ -77,7 +61,7 @@ const AutoRefresh: React.FC<AutoRefreshProps> = ({ disabled = false }) => {
     <div className={styles.autoRefresh}>
       <Space size={4}>
         {/* 手动刷新按钮 */}
-        <Tooltip title="刷新">
+        {/* <Tooltip title="刷新">
           <Button
             className={styles.refreshButton}
             disabled={disabled}
@@ -87,22 +71,20 @@ const AutoRefresh: React.FC<AutoRefreshProps> = ({ disabled = false }) => {
             type="text"
             onClick={handleManualRefresh}
           />
-        </Tooltip>
+        </Tooltip> */}
 
         {/* 自动刷新控制区域 */}
         <div className={styles.autoRefreshControl}>
-          <Tooltip title={tooltipContent}>
-            <Button
-              className={`${styles.autoRefreshToggle} ${isAutoRefreshing ? styles.active : ''}`}
-              disabled={disabled || refreshInterval === 0}
-              icon={isAutoRefreshing ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
-              size="small"
-              type="text"
-              onClick={toggleAutoRefresh}
-            >
-              {isAutoRefreshing ? '停止' : '开始'}
-            </Button>
-          </Tooltip>
+          {/* 暂停/继续按钮，仅在refreshInterval不为0时显示 */}
+          {refreshInterval !== 0 && (
+            <Tooltip title={tooltipContent}>
+              {isAutoRefreshing ? (
+                <PauseCircleOutlined className={`${styles.refreshButton}`} onClick={toggleAutoRefresh} />
+              ) : (
+                <PlayCircleOutlined className={`${styles.refreshButton}`} onClick={toggleAutoRefresh} />
+              )}
+            </Tooltip>
+          )}
 
           {/* 刷新间隔选择 */}
           <Dropdown
@@ -111,18 +93,18 @@ const AutoRefresh: React.FC<AutoRefreshProps> = ({ disabled = false }) => {
             placement="bottomRight"
             trigger={['click']}
           >
-            <Button className={styles.intervalButton} size="small" type="text">
+            <Button className={styles.intervalButton} size="small" type="link">
               <Space size={2}>
-                <ClockCircleOutlined />
+                {refreshInterval === 0 && <ReloadOutlined />}
                 <span>{currentIntervalLabel}</span>
-                <CaretDownOutlined style={{ fontSize: '10px' }} />
+                {/* <CaretDownOutlined style={{ fontSize: '10px' }} /> */}
               </Space>
             </Button>
           </Dropdown>
         </div>
 
         {/* 刷新状态显示 */}
-        {isAutoRefreshing && refreshInterval > 0 && (
+        {/* {isAutoRefreshing && refreshInterval > 0 && (
           <div className={styles.refreshStatus}>
             <div className={styles.progressContainer}>
               <Progress
@@ -135,7 +117,7 @@ const AutoRefresh: React.FC<AutoRefreshProps> = ({ disabled = false }) => {
               <span className={styles.timeText}>{formatRemainingTime(remainingTime, loading)}</span>
             </div>
           </div>
-        )}
+        )} */}
       </Space>
     </div>
   );

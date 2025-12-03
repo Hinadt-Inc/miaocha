@@ -4,7 +4,27 @@ import { useSearchParams } from 'react-router-dom';
 
 import { DEFAULT_SEARCH_PARAMS } from '../constants';
 import type { ILogColumnsResponse, ILogDetailsResponse, IModuleQueryConfig, IStatus } from '../types';
-import { deduplicateAndDeleteWhereSqls, parseTimeRange } from '../utils';
+import {
+  deduplicateAndDeleteWhereSqls,
+  parseTimeRange,
+  getAllCacheParams,
+  saveCacheParams,
+  cleanupOldCache,
+} from '../utils';
+
+/**
+ * 缓存参数的数据结构
+ */
+export interface ICacheParamsData {
+  searchParams: ILogSearchParams;
+  // 后续可扩展其他参数
+  columnWidths?: Record<string, number>;
+  // otherConfig?: any;
+}
+
+export interface ICacheParams {
+  [tabId: string]: ICacheParamsData;
+}
 
 /**
  * Home页面Context值接口
@@ -23,6 +43,7 @@ interface HomeContextValue {
   searchParamsRef: MutableRefObject<ILogSearchParams>; // 暴露 ref 用于获取最新的 searchParams
   distributions: Record<string, IFieldDistributions>;
   distributionLoading: Record<string, boolean>;
+  cacheParams: ICacheParams; // 缓存参数状态
 
   // 方法
   setModuleOptions: (data: IStatus[]) => void;
@@ -45,6 +66,8 @@ interface HomeContextValue {
   setDistributionLoading: (
     columns: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>),
   ) => void;
+  // 缓存参数管理方法
+  updateCacheParams: (tabId: string, data: Partial<ICacheParamsData>) => void;
 }
 
 const HomeContext = createContext<HomeContextValue | undefined>(undefined);
@@ -62,6 +85,8 @@ export const HomeProvider = ({ children }: { children: ReactNode }) => {
   const [distributions, setDistributions] = useState<Record<string, IFieldDistributions>>({});
   const [distributionLoading, setDistributionLoading] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState<boolean>(false);
+  // 缓存参数状态，从 localStorage 初始化
+  const [cacheParams, setCacheParams] = useState<ICacheParams>(() => getAllCacheParams());
 
   const abortRef = useRef<AbortController | null>(null);
   const searchParamsRef = useRef<ILogSearchParams>(searchParams); // 创建 searchParams 的 ref
@@ -70,6 +95,16 @@ export const HomeProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     searchParamsRef.current = searchParams;
   }, [searchParams]);
+
+  // 同步 cacheParams 到 localStorage
+  useEffect(() => {
+    // 清理超限的缓存并保存
+    const cleanedCache = cleanupOldCache(cacheParams);
+    if (cleanedCache !== cacheParams) {
+      setCacheParams(cleanedCache);
+    }
+    saveCacheParams(cleanedCache);
+  }, [cacheParams]);
 
   // 重置搜索参数
   const resetSearchParams = () => {
@@ -107,11 +142,26 @@ export const HomeProvider = ({ children }: { children: ReactNode }) => {
     const { range, type } = parseTimeRange(newSearchParams?.timeRange);
     Object.assign(newSearchParams, { startTime: range?.[0], endTime: range?.[1], range, type });
     setSearchParams(newSearchParams);
+
+    // 更新缓存参数（自动同步到 localStorage）
     const tabId = urlSearchParams.get('tabId');
     if (tabId) {
-      localStorage.setItem(`${tabId}_searchParams`, JSON.stringify(newSearchParams));
+      updateCacheParams(tabId, { searchParams: newSearchParams });
     }
     return newSearchParams;
+  };
+
+  /**
+   * 更新指定 tabId 的缓存参数（支持部分更新）
+   */
+  const updateCacheParams = (tabId: string, data: Partial<ICacheParamsData>) => {
+    setCacheParams((prev) => ({
+      ...prev,
+      [tabId]: {
+        ...prev[tabId],
+        ...data,
+      },
+    }));
   };
 
   // 重置所有状态
@@ -125,6 +175,7 @@ export const HomeProvider = ({ children }: { children: ReactNode }) => {
     setSearchParams({ ...DEFAULT_SEARCH_PARAMS });
     setLoading(false);
     setDistributions({});
+    setCacheParams({});
     abortRef.current?.abort();
   };
 
@@ -142,6 +193,7 @@ export const HomeProvider = ({ children }: { children: ReactNode }) => {
     searchParamsRef, // 暴露 searchParamsRef
     distributions,
     distributionLoading,
+    cacheParams, // 暴露 cacheParams
 
     // 方法
     setModuleOptions,
@@ -157,6 +209,8 @@ export const HomeProvider = ({ children }: { children: ReactNode }) => {
     resetAllState,
     setDistributions,
     setDistributionLoading,
+    // 缓存参数管理方法
+    updateCacheParams,
   };
 
   return <HomeContext.Provider value={value}>{children}</HomeContext.Provider>;

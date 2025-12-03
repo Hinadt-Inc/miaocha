@@ -449,6 +449,86 @@ export const parseTimeRange = (timeRange?: string): ILogTimeSubmitParams => {
   };
 };
 
+/**
+ * 缓存参数的数据结构
+ */
+export interface ICacheParamsData {
+  searchParams: ILogSearchParams;
+  // 后续可扩展其他参数
+  columnWidths?: Record<string, number>;
+  // otherConfig?: any;
+}
+
+export interface ICacheParams {
+  [tabId: string]: ICacheParamsData;
+}
+
+const CACHE_PARAMS_KEY = 'cacheParams';
+const MAX_CACHE_SIZE = 10;
+const CLEANUP_COUNT = 3;
+
+/**
+ * 获取所有缓存参数
+ */
+export const getAllCacheParams = (): ICacheParams => {
+  try {
+    const cache = localStorage.getItem(CACHE_PARAMS_KEY);
+    return cache ? JSON.parse(cache) : {};
+  } catch (error) {
+    console.error('获取缓存参数失败:', error);
+    return {};
+  }
+};
+
+/**
+ * 保存缓存参数到 localStorage
+ */
+export const saveCacheParams = (cacheParams: ICacheParams): void => {
+  try {
+    localStorage.setItem(CACHE_PARAMS_KEY, JSON.stringify(cacheParams));
+  } catch (error) {
+    console.error('保存缓存参数失败:', error);
+  }
+};
+
+/**
+ * 清理最早的缓存（根据 tabId 的时间戳）
+ */
+export const cleanupOldCache = (cacheParams: ICacheParams): ICacheParams => {
+  const tabIds = Object.keys(cacheParams);
+
+  if (tabIds.length <= MAX_CACHE_SIZE) {
+    return cacheParams;
+  }
+
+  // 按照 tabId（时间戳）排序，删除最早的 CLEANUP_COUNT 个
+  const sortedTabIds = tabIds.sort((a, b) => {
+    const timeA = parseInt(a, 10);
+    const timeB = parseInt(b, 10);
+    return timeA - timeB; // 升序排列，最早的在前面
+  });
+
+  // 删除最早的 CLEANUP_COUNT 个
+  const tabIdsToDelete = sortedTabIds.slice(0, CLEANUP_COUNT);
+  const newCacheParams = { ...cacheParams };
+
+  tabIdsToDelete.forEach((tabId) => {
+    delete newCacheParams[tabId];
+    // 同时删除其他相关的本地存储
+    localStorage.removeItem(`${tabId}_commonColumns`);
+    localStorage.removeItem(`${tabId}_columnWidths`);
+  });
+
+  return newCacheParams;
+};
+
+/**
+ * 生成新的 tabId（基于时间戳）
+ */
+export const generateTabId = (): string => {
+  return new Date().getTime().toString();
+};
+
 export const handleShareSearchParams = (urlSearchParams: URLSearchParams): Partial<ILogSearchParams> => {
   const keywords = urlSearchParams.get('keywords');
   const whereSqls = urlSearchParams.get('whereSqls');

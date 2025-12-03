@@ -7,7 +7,7 @@ import * as modulesApi from '@/api/modules';
 
 import { useHomeContext } from '../context';
 import { IModuleQueryConfig } from '../types';
-import { formatTimeString, handleShareSearchParams } from '../utils';
+import { formatTimeString, handleShareSearchParams, generateTabId } from '../utils';
 
 export interface IDetailOptions {
   moduleQueryConfig?: IModuleQueryConfig;
@@ -37,6 +37,8 @@ export const useDataInit = () => {
     setDistributions,
     setDistributionLoading,
     moduleQueryConfig: homeModuleQueryConfig,
+    cacheParams, // 使用 Context 中的方法
+    updateCacheParams, // 使用 Context 中的方法
   } = useHomeContext();
 
   // 使用ref保存最新的searchParams，避免闭包陷阱
@@ -144,6 +146,8 @@ export const useDataInit = () => {
         if (abortRef.current) {
           abortRef.current.abort();
         }
+        if (params.activeFields) delete params.activeFields;
+        if (params.columnWidths) delete params.columnWidths;
         abortRef.current = new AbortController();
         api.fetchLogDetails(params, { signal: abortRef.current.signal }).then((res) => {
           const { rows } = res;
@@ -198,6 +202,7 @@ export const useDataInit = () => {
         fields,
         sortFields: [],
         activeFields: [],
+        columnWidths: {},
         keywords: [],
         whereSqls: [],
         offset: 0,
@@ -208,6 +213,14 @@ export const useDataInit = () => {
       setDistributions({});
       setDistributionLoading({});
 
+      // 重置缓存数据
+      const tabId = urlSearchParams.get('tabId');
+      if (tabId) {
+        updateCacheParams(tabId, {
+          columnWidths: {},
+        });
+      }
+
       // 7. 使用最终的params获取日志数据
       fetchData({
         moduleQueryConfig,
@@ -215,16 +228,18 @@ export const useDataInit = () => {
       });
     },
     [
-      fetchModuleQueryConfig,
-      fetchTableColumns,
-      setLogTableColumns,
-      setCommonColumns,
-      updateSearchParams,
+      cacheParams,
       searchParams,
       logTableColumns,
       moduleQueryConfig,
       distributions,
       distributionLoading,
+      updateCacheParams,
+      fetchModuleQueryConfig,
+      fetchTableColumns,
+      setLogTableColumns,
+      setCommonColumns,
+      updateSearchParams,
       setDistributions,
       setDistributionLoading,
       fetchData,
@@ -260,8 +275,6 @@ export const useDataInit = () => {
         offset: 0,
         module,
       });
-      // 清除自定义列宽缓存
-      localStorage.removeItem('commonColumns');
       setDistributions({});
       setDistributionLoading({});
 
@@ -314,7 +327,6 @@ export const useDataInit = () => {
       const commonFields = columns.map((item: any) => item.columnName)?.filter((item: any) => !item.includes('.'));
       setCommonColumns(commonFields);
       const newFields = normalizedColumns.filter((item: any) => item.selected).map((item: any) => item.columnName);
-      console.log('activeFields====', activeFields);
       const paramsWidthFields = updateSearchParams({
         ...searchParams,
         ...rest,
@@ -371,30 +383,25 @@ export const useDataInit = () => {
 
       const sharedParams = handleShareSearchParams(urlSearchParams);
       if (sharedParams && sharedParams.module) {
+        // 分享链接的参数优先
         cachedParams = sharedParams as Partial<ILogSearchParams>;
       } else {
         try {
           if (tabId) {
-            const storageParams = JSON.parse(localStorage.getItem(`${tabId}_searchParams`) || '{}');
-            if (storageParams && storageParams.module) {
-              cachedParams = storageParams || {};
+            // 如果 URL 中已有 tabId，尝试从 Context 中的 cacheParams 读取
+            const cachedData = cacheParams[tabId] || null;
+            if (cachedData?.searchParams && cachedData.searchParams.module) {
+              cachedParams = cachedData.searchParams;
             }
           } else {
-            const storageTabIds = JSON.parse(localStorage.getItem('tabIds') || '[]');
-            const tempId = new Date().getTime().toString();
+            // 如果 URL 中没有 tabId，生成新的 tabId 并添加到 URL
+            const newTabId = generateTabId();
             const newParams = new URLSearchParams(urlSearchParams);
-            newParams.set('tabId', tempId);
+            newParams.set('tabId', newTabId);
             setUrlSearchParams(newParams, { replace: true });
-
-            if (storageTabIds.length >= 5) {
-              const oldTabId = storageTabIds.pop();
-              localStorage.removeItem(`${oldTabId}_searchParams`);
-            }
-            localStorage.setItem(`${tempId}_searchParams`, JSON.stringify({}));
-            localStorage.setItem('tabIds', JSON.stringify([tempId, ...storageTabIds]));
           }
         } catch (error) {
-          console.log('error', error);
+          console.error('处理缓存参数失败:', error);
         }
       }
 
@@ -417,6 +424,7 @@ export const useDataInit = () => {
     }
   }, [
     searchParams,
+    cacheParams,
     distributions,
     distributionLoading,
     setDistributionLoading,

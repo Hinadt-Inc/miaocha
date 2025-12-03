@@ -115,16 +115,22 @@ export const useAutoRefresh = (onRefresh: () => void, loading?: boolean) => {
       if (value === 0) {
         // 如果选择关闭，停止自动刷新
         stopAutoRefresh();
-      } else if (state.isAutoRefreshing) {
-        // 如果正在自动刷新，重新开始
+      } else {
+        // 选择非0值时，立即启动自动刷新
+        setState((prev) => ({
+          ...prev,
+          isAutoRefreshing: true,
+          isPaused: false,
+          remainingTime: value,
+          lastRefreshTime: new Date(),
+        }));
         clearTimers();
-        setState((prev) => ({ ...prev, remainingTime: value }));
         if (!loading) {
           setTimeout(startCountdown, 0);
         }
       }
     },
-    [state.isAutoRefreshing, loading, stopAutoRefresh, clearTimers, startCountdown],
+    [loading, stopAutoRefresh, clearTimers, startCountdown],
   );
 
   // 手动刷新

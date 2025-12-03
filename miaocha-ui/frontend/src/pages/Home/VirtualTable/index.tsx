@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState, useMemo, Fragment, useCallback } from 'react';
 
 import { Table } from 'antd';
+import { useSearchParams } from 'react-router-dom';
 
 import * as api from '@/api/logs';
 import { highlightText } from '@/utils/highlightText';
-import { safeParseJson } from '@/utils/utils';
 
 import { useHomeContext } from '../context';
 import ExpandedRow from '../ExpandedRow/index';
@@ -28,6 +28,8 @@ import styles from './VirtualTable.module.less';
  * 虚拟化表格组件
  */
 const VirtualTable: React.FC = () => {
+  const [urlSearchParams] = useSearchParams();
+  const tabId = urlSearchParams.get('tabId');
   const {
     searchParams,
     detailData,
@@ -36,6 +38,8 @@ const VirtualTable: React.FC = () => {
     updateSearchParams,
     setDetailData,
     setLogTableColumns,
+    cacheParams,
+    updateCacheParams,
   } = useHomeContext();
   const { fetchData } = useDataInit();
 
@@ -54,11 +58,16 @@ const VirtualTable: React.FC = () => {
   const [containerHeight, setContainerHeight] = useState<number>(0);
   const [headerHeight, setHeaderHeight] = useState<number>(0);
   const [columns, setColumns] = useState<any[]>([]);
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => safeParseJson('columnWidths'));
   const [scrollX, setScrollX] = useState(1300);
   const [limitNoticeHeight, setLimitNoticeHeight] = useState(0); // 底部提示高度
   const limitNoticeRef = useRef<HTMLDivElement>(null); // 底部提示 ref
 
+  const cacheColumnWidths = useMemo(() => {
+    if (tabId) {
+      return cacheParams?.[tabId]?.columnWidths || {};
+    }
+    return {};
+  }, [tabId, cacheParams]);
   const shouldUseVirtual = useMemo(() => {
     return (detailData?.rows?.length || 0) > VIRTUAL_THRESHOLD;
   }, [detailData?.rows?.length]);
@@ -119,15 +128,14 @@ const VirtualTable: React.FC = () => {
   const handleResize = (index: number) => (width: number) => {
     const column = columnsRef.current[index];
     if (!column?.dataIndex || width < 150) return;
-
-    setColumnWidths((prev) => {
-      const result = {
-        ...prev,
-        [column.dataIndex]: width,
-      };
-      localStorage.setItem('columnWidths', JSON.stringify(result));
-      return result;
-    });
+    if (tabId) {
+      updateCacheParams(tabId, {
+        columnWidths: {
+          ...cacheColumnWidths,
+          [column.dataIndex]: width,
+        },
+      });
+    }
   };
 
   const handleDeleteColumn = (colIndex: number) => {
@@ -272,8 +280,8 @@ const VirtualTable: React.FC = () => {
         const { columnName = '' } = item;
 
         let columnWidth;
-        if (columnWidths[columnName]) {
-          columnWidth = columnWidths[columnName];
+        if (cacheColumnWidths?.[columnName]) {
+          columnWidth = cacheColumnWidths[columnName];
         } else if (isSmallScreen) {
           const availableWidth = screenWidth - 250;
           const maxWidthPerColumn = Math.floor(availableWidth / Math.max(otherColumns.length, 2));
@@ -325,7 +333,7 @@ const VirtualTable: React.FC = () => {
       ...commonColumns,
     ];
     setColumns(result);
-  }, [logTableColumns, keyWordsFormat, columnWidths, sqlFilterValue, screenWidth, timeField, sortFieldsMap]);
+  }, [logTableColumns, keyWordsFormat, cacheColumnWidths, sqlFilterValue, screenWidth, timeField, sortFieldsMap]);
 
   // 容器大小和滚动处理
   useEffect(() => {
