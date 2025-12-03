@@ -110,7 +110,6 @@ const SearchBar = () => {
         onChange={(value: string) => {
           setSearchState((prevState: any) => ({ ...prevState, sql: value }));
         }}
-        onPressEnter={debouncedHandleSubmit}
       />
     ),
     [searchState.sql, logTableColumns, debouncedHandleSubmit],

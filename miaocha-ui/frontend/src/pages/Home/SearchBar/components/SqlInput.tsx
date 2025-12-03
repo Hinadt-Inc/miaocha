@@ -5,7 +5,7 @@
 import React, { useRef } from 'react';
 
 import { DownOutlined } from '@ant-design/icons';
-import { AutoComplete, Button, Dropdown, Space } from 'antd';
+import { AutoComplete, Button, Dropdown, Space, Tag } from 'antd';
 import type { MenuProps } from 'antd';
 
 import { ILogColumnsResponse } from '../../types';
@@ -15,7 +15,6 @@ interface ISqlInputProps {
   value: string;
   onChange: (value: string) => void;
   columns?: ILogColumnsResponse[];
-  onPressEnter?: () => void;
 }
 
 // SQL操作符配置（带值模板）
@@ -61,7 +60,6 @@ const SqlInput: React.FC<ISqlInputProps> = ({ value, onChange, columns = [] }) =
         // 负数表示从末尾往前偏移
         cursorPos = newValue.length + cursorOffset;
       }
-      console.log('设置光标位置到:', cursorPos);
       input.setSelectionRange(cursorPos, cursorPos);
       input.focus();
     }, 0);
@@ -224,37 +222,18 @@ const SqlInput: React.FC<ISqlInputProps> = ({ value, onChange, columns = [] }) =
               onClick={(e) => e.stopPropagation()}
             >
               {SQL_OPERATORS.map((op) => (
-                <Button
+                <Tag
                   key={op.key}
-                  size="small"
-                  style={{
-                    padding: '0 8px',
-                    height: '24px',
-                    fontSize: '12px',
-                    minWidth: '40px',
-                    border: '1px solid #d9d9d9',
-                    borderRadius: '4px',
-                  }}
-                  type="default"
+                  color="processing"
                   onClick={(e) => handleOperatorClick(columnName, op.sql, op.valueTemplate, op.cursorOffset, e)}
                 >
                   {op.label}
-                </Button>
+                </Tag>
               ))}
               <Dropdown menu={{ items: moreMenuItems }} placement="bottomRight" trigger={['click']}>
-                <Button
-                  icon={<DownOutlined />}
-                  size="small"
-                  style={{
-                    padding: '0 8px',
-                    height: '24px',
-                    minWidth: '32px',
-                    border: '1px solid #d9d9d9',
-                    borderRadius: '4px',
-                  }}
-                  type="default"
-                  onClick={(e) => e.stopPropagation()}
-                />
+                <Tag color="#0038ff" onClick={(e) => e.stopPropagation()}>
+                  <DownOutlined />
+                </Tag>
               </Dropdown>
             </div>
           </div>
@@ -273,11 +252,6 @@ const SqlInput: React.FC<ISqlInputProps> = ({ value, onChange, columns = [] }) =
         style={{ width: '100%' }}
         value={value}
         onChange={onChange}
-        // onKeyDown={(e) => {
-        //   if (e.key === 'Enter' && onPressEnter) {
-        //     onPressEnter();
-        //   }
-        // }}
       />
     </Space.Compact>
   );
