@@ -1,15 +1,19 @@
-import { Button, Form, Input, Alert, message } from 'antd';
-import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+
+import { UserOutlined, LockOutlined } from '@ant-design/icons';
+import { Button, Form, Input, Alert, message } from 'antd';
 import { useDispatch } from 'react-redux';
-import { login } from '@/store/userSlice';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+
 import { login as apiLogin, oAuthCallback } from '@/api/auth';
-import { getOAuthRedirectUri } from '@/constants/env';
-import { OAuthStorageHelper } from '@/utils/secureStorage';
-import OAuthButtons from '@/components/OAuthButtons/index';
 import login_bg_poster from '@/assets/login/banner-bg.png';
 import login_bg_video from '@/assets/login/banner.mp4';
+import OAuthButtons from '@/components/OAuthButtons/index';
+import { getOAuthRedirectUri } from '@/constants/env';
+import { login } from '@/store/userSlice';
+import { broadcastLogin, onLogin, offLogin } from '@/utils/crossWindowSync';
+import { OAuthStorageHelper } from '@/utils/secureStorage';
+
 import styles from './index.module.less';
 
 const LoginPage = () => {
@@ -20,6 +24,23 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [casLoading, setCasLoading] = useState(false);
   const [form] = Form.useForm();
+
+  // 监听跨窗口登录/登出事件
+  useEffect(() => {
+    const handleLogin = () => {
+      console.log('[LoginPage] 接收到跨窗口登录成功事件');
+      // 刷新页面，跳转到首页
+      window.location.href = window.location.origin;
+    };
+
+    // 注册监听器
+    onLogin(handleLogin);
+
+    // 清理监听器
+    return () => {
+      offLogin(handleLogin);
+    };
+  }, [form]);
 
   // 处理OAuth回调（包括CAS、OAuth2等）
   useEffect(() => {
@@ -97,6 +118,9 @@ const LoginPage = () => {
             // 使用setTimeout确保Redux状态更新完成后再跳转
             setTimeout(() => {
               navigate(returnUrl, { replace: true });
+
+              // 广播登录成功事件到所有窗口
+              broadcastLogin();
             }, 100);
           } else {
             throw new Error('OAuth回调返回空响应');
@@ -148,6 +172,9 @@ const LoginPage = () => {
       // 跳转到首页
       console.log('普通登录成功，跳转到首页');
       navigate('/', { replace: true });
+
+      // 广播登录成功事件到所有窗口
+      broadcastLogin();
     } catch (loginError) {
       console.error('登录失败:', loginError);
       throw new Error('登录失败，请检查用户名和密码');

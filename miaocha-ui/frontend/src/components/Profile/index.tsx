@@ -1,15 +1,19 @@
 import { useState, useEffect, useCallback, useMemo, memo } from 'react';
+
+import { UserOutlined, LogoutOutlined, ReloadOutlined, LockOutlined } from '@ant-design/icons';
 import { Form, Input, Modal } from 'antd';
-import { changePasswordBySuperAdmin } from '@/api/user';
-import type { ChangePasswordPayloadBySuperAdmin } from '@/pages/System/User/types';
-import { getOAuthProviders, logoutToOAuthProvider } from '@/api/auth';
-import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
 import { Avatar, Dropdown, Button, Typography, Space, Spin, Tooltip, Card, Row, Col, Divider, Tag, App } from 'antd';
 import type { MenuProps } from 'antd';
-import { UserOutlined, LogoutOutlined, ReloadOutlined, LockOutlined } from '@ant-design/icons';
-import { fetchUserInfo, logoutUser } from '@/store/userSlice';
+import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+
+import { getOAuthProviders, logoutToOAuthProvider } from '@/api/auth';
+import { changePasswordBySuperAdmin } from '@/api/user';
+import type { ChangePasswordPayloadBySuperAdmin } from '@/pages/System/User/types';
 import type { AppDispatch } from '@/store/store';
+import { fetchUserInfo, logoutUser } from '@/store/userSlice';
+import { broadcastLogout } from '@/utils/crossWindowSync';
+
 import styles from './index.module.less';
 
 const { Text } = Typography;
@@ -39,12 +43,16 @@ const Profile: React.FC<IProps> = ({ collapsed = false }) => {
           // 执行本地退出登录（不再调用后端接口）
           await dispatch(logoutUser());
 
+          // 广播退出登录事件到所有窗口
+          broadcastLogout();
+
           // 判断登录类型，决定退出方式
           if (user.loginType === 'mandao') {
             console.log('mandao用户退出，跳转到第三方退出页面');
             // mandao用户需要跳转到第三方退出
             try {
               const providers = await getOAuthProviders();
+              localStorage.clear();
               const mandaoProvider = providers?.find((p) => p.providerId === 'mandao');
               if (mandaoProvider?.revocationEndpoint) {
                 logoutToOAuthProvider(mandaoProvider.revocationEndpoint);

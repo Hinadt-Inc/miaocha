@@ -4,10 +4,11 @@ import { ProLayout } from '@ant-design/pro-components';
 import { ConfigProvider, message } from 'antd';
 import NProgress from 'nprogress';
 import { useSelector } from 'react-redux';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import ErrorBoundary from '@/components/Error/ErrorBoundary';
 import Profile from '@/components/Profile';
+import { onLogout, offLogout } from '@/utils/crossWindowSync';
 import { colorPrimary } from '@/utils/utils';
 
 import { getAuthorizedRoutes } from './routes';
@@ -40,10 +41,28 @@ const setStoredCollapsed = (value: boolean) => {
 const App = () => {
   const [collapsed, setCollapsed] = useState(getStoredCollapsed());
   const location = useLocation();
+  const navigate = useNavigate();
   const userRole = useSelector((state: { user: IStoreUser }) => state.user.role);
   const [messageApi, contextHolder] = message.useMessage();
   window.messageApi = messageApi;
   const [openKeys, setOpenKeys] = useState<string[]>([]);
+
+  // 监听跨窗口登出事件
+  useEffect(() => {
+    const handleLogout = () => {
+      console.log('[App] 接收到跨窗口退出登录事件');
+      // 跳转到登录页
+      navigate('/login', { replace: true });
+    };
+
+    // 注册监听器
+    onLogout(handleLogout);
+
+    // 清理监听器
+    return () => {
+      offLogout(handleLogout);
+    };
+  }, [navigate]);
 
   // 地址变化时启动进度条
   useEffect(() => {

@@ -31,6 +31,7 @@ export const fetchUserInfo: any = createAsyncThunk('user/fetchUserInfo', async (
 export const logoutUser = createAsyncThunk('user/logoutUser', () => {
   try {
     // 不再调用后端logout接口，直接返回成功
+    localStorage.clear();
     return true;
   } catch (error: unknown) {
     console.error('退出登录失败:', error);
