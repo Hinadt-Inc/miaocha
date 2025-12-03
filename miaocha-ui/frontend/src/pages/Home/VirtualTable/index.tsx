@@ -48,7 +48,7 @@ const VirtualTable: React.FC = () => {
 
   // 混合模式配置: 300条以内不启用虚拟滚动
   const VIRTUAL_THRESHOLD = 10000;
-  const MAX_LOAD_COUNT = 1000; // 最大加载条数限制
+  const MAX_LOAD_COUNT = 10; // 最大加载条数限制
   // 状态管理
   const detailDataLoading = useRef(false); // 防止重复请求
   const containerRef = useRef<HTMLDivElement>(null);

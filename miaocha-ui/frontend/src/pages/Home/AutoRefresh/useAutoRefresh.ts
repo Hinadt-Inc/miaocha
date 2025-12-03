@@ -32,7 +32,7 @@ export const useAutoRefresh = (onRefresh: () => void, loading?: boolean) => {
 
   // 开始倒计时
   const startCountdown = useCallback(() => {
-    if (state.refreshInterval <= 0 || loading || state.isPaused) return;
+    if (state.refreshInterval <= 0 || loading || state.isPaused || !state.isAutoRefreshing) return;
 
     // 如果剩余时间为0，重置为完整间隔
     if (state.remainingTime <= 0) {
@@ -95,7 +95,9 @@ export const useAutoRefresh = (onRefresh: () => void, loading?: boolean) => {
       isPaused: false,
       remainingTime: 0,
     }));
-    clearTimers();
+    setTimeout(() => {
+      clearTimers();
+    }, 100);
   }, [clearTimers]);
 
   // 切换自动刷新状态

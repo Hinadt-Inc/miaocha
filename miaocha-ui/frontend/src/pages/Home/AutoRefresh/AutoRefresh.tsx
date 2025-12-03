@@ -10,23 +10,27 @@ import { REFRESH_INTERVALS } from './constants';
 import styles from './index.module.less';
 import { AutoRefreshProps } from './types';
 import { useAutoRefresh } from './useAutoRefresh';
-import { calculateProgressPercent, generateTooltipContent } from './utils';
+import { generateTooltipContent } from './utils';
 
 /**
  * 自动刷新组件
  */
 const AutoRefresh: React.FC<AutoRefreshProps> = ({ disabled = false }) => {
-  const { loading, searchParams, distributions, distributionLoading } = useHomeContext();
+  const { loading, searchParams, distributions, distributionLoading, updateSearchParams } = useHomeContext();
   const { fetchData, refreshFieldDistributions } = useDataInit();
 
   const onRefresh = useCallback(() => {
-    fetchData({ searchParams });
+    // 刷新数据，重新计算时间
+    const newParams = updateSearchParams({});
+    fetchData({ searchParams: newParams });
     refreshFieldDistributions();
   }, [searchParams, distributions, distributionLoading]);
 
   // 使用自定义Hook管理状态
-  const { isAutoRefreshing, refreshInterval, remainingTime, lastRefreshTime, toggleAutoRefresh, setRefreshInterval } =
-    useAutoRefresh(onRefresh, loading);
+  const { isAutoRefreshing, refreshInterval, remainingTime, toggleAutoRefresh, setRefreshInterval } = useAutoRefresh(
+    onRefresh,
+    loading,
+  );
 
   // 下拉菜单项
   const menuItems = useMemo(() => {
@@ -47,32 +51,12 @@ const AutoRefresh: React.FC<AutoRefreshProps> = ({ disabled = false }) => {
 
   // 构建tooltip内容
   const tooltipContent = useMemo(() => {
-    return generateTooltipContent(
-      isAutoRefreshing,
-      refreshInterval,
-      currentIntervalLabel,
-      loading,
-      remainingTime,
-      lastRefreshTime,
-    );
-  }, [isAutoRefreshing, refreshInterval, currentIntervalLabel, loading, remainingTime, lastRefreshTime]);
+    return generateTooltipContent(isAutoRefreshing, refreshInterval, loading, remainingTime);
+  }, [isAutoRefreshing, refreshInterval, loading, remainingTime]);
 
   return (
     <div className={styles.autoRefresh}>
       <Space size={4}>
-        {/* 手动刷新按钮 */}
-        {/* <Tooltip title="刷新">
-          <Button
-            className={styles.refreshButton}
-            disabled={disabled}
-            icon={<ReloadOutlined />}
-            loading={loading}
-            size="small"
-            type="text"
-            onClick={handleManualRefresh}
-          />
-        </Tooltip> */}
-
         {/* 自动刷新控制区域 */}
         <div className={styles.autoRefreshControl}>
           {/* 暂停/继续按钮，仅在refreshInterval不为0时显示 */}
@@ -97,27 +81,10 @@ const AutoRefresh: React.FC<AutoRefreshProps> = ({ disabled = false }) => {
               <Space size={2}>
                 {refreshInterval === 0 && <ReloadOutlined />}
                 <span>{currentIntervalLabel}</span>
-                {/* <CaretDownOutlined style={{ fontSize: '10px' }} /> */}
               </Space>
             </Button>
           </Dropdown>
         </div>
-
-        {/* 刷新状态显示 */}
-        {/* {isAutoRefreshing && refreshInterval > 0 && (
-          <div className={styles.refreshStatus}>
-            <div className={styles.progressContainer}>
-              <Progress
-                className={styles.progress}
-                percent={progressPercent}
-                showInfo={false}
-                size="small"
-                strokeColor={loading ? '#d9d9d9' : '#1890ff'}
-              />
-              <span className={styles.timeText}>{formatRemainingTime(remainingTime, loading)}</span>
-            </div>
-          </div>
-        )} */}
       </Space>
     </div>
   );
