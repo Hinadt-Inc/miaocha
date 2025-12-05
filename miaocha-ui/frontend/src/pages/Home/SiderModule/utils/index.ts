@@ -50,13 +50,6 @@ export const setLocalActiveColumns = (columns: string[]): void => {
 };
 
 /**
- * 移除本地存储的激活字段
- */
-export const removeLocalActiveColumns = (): void => {
-  localStorage.removeItem('activeColumns');
-};
-
-/**
  * 更新搜索参数到本地存储
  */
 export const updateSearchParamsInStorage = (fields: string[]): void => {

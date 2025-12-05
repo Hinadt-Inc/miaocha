@@ -1,5 +1,6 @@
-import { Layout, Dropdown, Avatar } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
+import { Layout, Dropdown, Avatar } from 'antd';
+
 import styles from './index.module.less';
 
 const { Header: AntdHeader } = Layout;

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
+
 import { Button, Tooltip } from 'antd';
-import { HistoryOutlined } from '@ant-design/icons';
+
 import SavedSearchesModal from '../SavedSearchesModal';
+
 import styles from './index.module.less';
 
 interface SavedSearchesButtonProps {
-  onLoadSearch: (searchParams: any) => void;
   size?: 'small' | 'middle' | 'large';
   type?: 'default' | 'primary' | 'text' | 'link';
   variant?: 'outlined' | 'filled' | 'text' | 'link';
@@ -13,7 +14,6 @@ interface SavedSearchesButtonProps {
 }
 
 const SavedSearchesButton: React.FC<SavedSearchesButtonProps> = ({
-  onLoadSearch,
   size = 'small',
   type = 'link',
   variant = 'link',
@@ -29,17 +29,12 @@ const SavedSearchesButton: React.FC<SavedSearchesButtonProps> = ({
     setModalVisible(false);
   };
 
-  const handleLoadSearch = (searchParams: any) => {
-    onLoadSearch(searchParams);
-    setModalVisible(false);
-  };
-
   return (
     <>
       <Tooltip title="查看已保存的搜索">
         <Button
           className={`${styles.savedSearchesButton} ${className || ''}`}
-          icon={<HistoryOutlined />}
+          // icon={<HistoryOutlined />}
           size={size}
           type={type}
           variant={variant}
@@ -49,7 +44,7 @@ const SavedSearchesButton: React.FC<SavedSearchesButtonProps> = ({
         </Button>
       </Tooltip>
 
-      <SavedSearchesModal visible={modalVisible} onClose={handleCloseModal} onLoadSearch={handleLoadSearch} />
+      <SavedSearchesModal visible={modalVisible} onClose={handleCloseModal} />
     </>
   );
 };

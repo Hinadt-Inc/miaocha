@@ -4,14 +4,14 @@
  */
 
 import React from 'react';
+
 import VirtualTable from '../../VirtualTable';
-import { ILogTableProps } from '../types';
 import styles from '../styles/LogTable.module.less';
 
-const LogTable: React.FC<ILogTableProps> = (props) => {
+const LogTable: React.FC = () => {
   return (
     <div className={styles.tableContainer}>
-      <VirtualTable {...(props as any)} />
+      <VirtualTable />
     </div>
   );
 };

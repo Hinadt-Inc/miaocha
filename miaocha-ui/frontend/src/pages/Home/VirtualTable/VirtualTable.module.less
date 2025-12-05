@@ -1,6 +1,15 @@
 .virtualLayout {
   width: 100%;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; // 防止整体滚动
+
+  .tableWrapper {
+    flex: 1;
+    overflow: hidden;
+    min-height: 0; // 关键：确保 flex 子元素可以正确收缩
+  }
   :global {
     .ant-table-cell {
       word-break: break-all;
@@ -13,9 +22,22 @@
         font-size: 11px; // 稍微减小字体
       }
     }
+
+    // 虚拟滚动模式下的行样式
     .ant-table-row {
       max-height: 155px;
       overflow: hidden;
+    }
+
+    // 非虚拟滚动模式下的行样式(为了兼容性保持一致)
+    .ant-table-tbody > tr {
+      > td {
+        dl {
+          max-height: 140px;
+          overflow: hidden;
+        }
+        vertical-align: top !important;
+      }
     }
 
     // 小屏幕上的表格容器优化
@@ -132,8 +154,58 @@
   .columnHeaderContainer {
     display: flex;
     align-items: center;
+    font-size: 12px;
+    font-family: 'Lucida Console', Monaco, monospace;
   }
-  .resizableHeader {
-    position: relative;
+
+  // 数据限制提示样式
+  .limitNotice {
+    flex-shrink: 0; // 不允许压缩
+    padding: 6px 16px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #f0f2f5 100%);
+    border-top: 1px solid #e8e8e8;
+    border-radius: 0 0 8px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.04);
+    backdrop-filter: blur(8px);
+
+    .noticeText {
+      color: #8c8c8c;
+      font-size: 12px;
+      line-height: 1.4;
+
+      strong {
+        color: #595959;
+        font-weight: 600;
+      }
+    }
+
+    .backToTop {
+      color: #0038ff;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      text-decoration: none;
+      padding: 2px 10px;
+      border-radius: 12px;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      white-space: nowrap;
+      background-color: rgba(24, 144, 255, 0.06);
+
+      &:hover {
+        color: #40a9ff;
+        background-color: rgba(24, 144, 255, 0.12);
+        transform: translateY(-1px);
+      }
+
+      &:active {
+        color: #096dd9;
+        background-color: rgba(24, 144, 255, 0.18);
+        transform: translateY(0);
+      }
+    }
   }
 }

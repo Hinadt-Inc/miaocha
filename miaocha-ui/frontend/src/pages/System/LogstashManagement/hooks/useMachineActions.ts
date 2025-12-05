@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useErrorContext } from '@/providers/ErrorProvider';
+
 import {
   startLogstashMachine,
   stopLogstashMachine,
@@ -17,7 +17,6 @@ interface UseMachineActionsProps {
 }
 
 export const useMachineActions = ({ fetchData }: UseMachineActionsProps) => {
-  const { showSuccess, showWarning } = useErrorContext();
   const [machineTasks, setMachineTasks] = useState<LogstashTaskStatus[]>([]);
   const [machineTasksModalVisible, setMachineTasksModalVisible] = useState(false);
   const [machineTasksLoading, setMachineTasksLoading] = useState(false);
@@ -40,7 +39,7 @@ export const useMachineActions = ({ fetchData }: UseMachineActionsProps) => {
   const handleStartMachine = async (machineId: number) => {
     try {
       await startLogstashMachine(machineId);
-      showSuccess('启动命令已发送');
+      window.messageApi.success('启动命令已发送');
       await fetchData();
     } catch {
       // API 错误已由全局错误处理器处理
@@ -50,7 +49,7 @@ export const useMachineActions = ({ fetchData }: UseMachineActionsProps) => {
   const handleStopMachine = async (machineId: number) => {
     try {
       await stopLogstashMachine(machineId);
-      showSuccess('停止命令已发送');
+      window.messageApi.success('停止命令已发送'); // 使用 messageApi 显示成功消息
       await fetchData();
     } catch {
       // API 错误已由全局错误处理器处理
@@ -62,7 +61,7 @@ export const useMachineActions = ({ fetchData }: UseMachineActionsProps) => {
       await refreshLogstashConfig(processId, {
         logstashMachineIds: [machineId],
       });
-      showSuccess('配置刷新命令已发送');
+      window.messageApi.success('配置刷新命令已发送'); // 使用 messageApi 显示成功消息
       await fetchData();
     } catch {
       // API 错误已由全局错误处理器处理
@@ -72,7 +71,7 @@ export const useMachineActions = ({ fetchData }: UseMachineActionsProps) => {
   const handleReinitializeMachine = async (machineId: number) => {
     try {
       await reinitializeMachine(machineId);
-      showSuccess('重新初始化命令已发送');
+      window.messageApi.success('重新初始化命令已发送'); // 使用 messageApi 显示成功消息
       await fetchData();
     } catch {
       // API 错误已由全局错误处理器处理
@@ -82,7 +81,7 @@ export const useMachineActions = ({ fetchData }: UseMachineActionsProps) => {
   const handleForceStopMachine = async (processId: number, machineId: number) => {
     try {
       await forceStopLogstashMachine(processId, machineId);
-      showSuccess('强制停止命令已发送');
+      window.messageApi.success('强制停止命令已发送'); // 使用 messageApi 显示成功消息
       await fetchData();
     } catch {
       // API 错误已由全局错误处理器处理
@@ -97,7 +96,7 @@ export const useMachineActions = ({ fetchData }: UseMachineActionsProps) => {
         customDeployPath: '',
         forceScale: false,
       });
-      showSuccess('机器删除成功');
+      window.messageApi.success('机器删除成功'); // 使用 messageApi 显示成功消息
       await fetchData();
     } catch {
       // API 错误已由全局错误处理器处理
@@ -134,7 +133,7 @@ export const useMachineActions = ({ fetchData }: UseMachineActionsProps) => {
       });
       setMachineConfigModalVisible(true);
     } catch {
-      showWarning('获取机器配置失败，使用进程级别配置');
+      window.messageApi.warning('获取机器配置失败，使用进程级别配置');
       const process = data.find((p: any) => p.id === processId);
       setCurrentMachine({
         logstashMachineId: machineId,

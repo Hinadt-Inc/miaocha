@@ -1,6 +1,12 @@
-import { Table } from 'antd';
 import { useState } from 'react';
-import { useErrorContext } from '@/providers/ErrorProvider';
+
+import { Table } from 'antd';
+
+import { scaleProcess } from '@/api/logstash';
+import Loading from '@/components/Loading';
+import type { LogstashTaskSummary, LogstashProcess } from '@/types/logstashTypes';
+import withAdminAuth from '@/utils/withAdminAuth';
+
 import {
   LogstashPageHeader,
   TaskHistoryModal,
@@ -16,14 +22,10 @@ import {
   LogstashLogTailModal,
 } from './components';
 import { useLogstashData, useTableConfig, useLogstashActions, useMachineActions } from './hooks';
-import { scaleProcess } from '@/api/logstash';
-import type { LogstashTaskSummary, LogstashProcess } from '@/types/logstashTypes';
 import styles from './LogstashManagement.module.less';
-import Loading from '@/components/Loading';
 
 const LogstashManagementPage = () => {
   const { data, loading, fetchData, handleReload, messageApi, contextHolder } = useLogstashData();
-  const { showSuccess } = useErrorContext();
 
   const actions = useLogstashActions({ fetchData });
   const machineActions = useMachineActions({ fetchData });
@@ -91,7 +93,7 @@ const LogstashManagementPage = () => {
     try {
       const scaleParameters = params || scaleParams;
       await scaleProcess(processId, scaleParameters);
-      showSuccess('操作成功');
+      window.messageApi.success('操作成功');
       actions.setScaleModalVisible(false);
       await fetchData();
     } catch {
@@ -273,5 +275,4 @@ const LogstashManagementPage = () => {
   );
 };
 
-import withAdminAuth from '@/utils/withAdminAuth';
 export default withAdminAuth(LogstashManagementPage);

@@ -1,7 +1,8 @@
 import { useState } from 'react';
+
 import { Form } from 'antd';
+
 import { createMachine, updateMachine, deleteMachine, testMachineConnection } from '@/api/machine';
-import { useErrorContext, ErrorType } from '@/providers/ErrorProvider';
 import type { Machine, CreateMachineParams } from '@/types/machineTypes';
 
 interface UseMachineActionsProps {
@@ -16,7 +17,6 @@ export const useMachineActions = ({ fetchMachines }: UseMachineActionsProps) => 
   const [loading, setLoading] = useState(false);
 
   const [form] = Form.useForm<CreateMachineParams>();
-  const { handleError, showSuccess } = useErrorContext();
 
   // 处理创建机器
   const handleCreate = async (values: CreateMachineParams) => {
@@ -24,15 +24,12 @@ export const useMachineActions = ({ fetchMachines }: UseMachineActionsProps) => 
       setTestingConnection(true);
       const testResult = await testMachineConnection(values);
       if (!testResult) {
-        handleError('连接测试失败，请检查配置', {
-          type: ErrorType.VALIDATION,
-          showType: 'message',
-        });
+        window.messageApi.warning('连接测试失败，请检查配置');
         return;
       }
 
       await createMachine(values);
-      showSuccess('机器创建成功');
+      window.messageApi.success('机器创建成功');
       setCreateModalVisible(false);
       form.resetFields();
       fetchMachines();
@@ -50,10 +47,7 @@ export const useMachineActions = ({ fetchMachines }: UseMachineActionsProps) => 
       setLoading(true);
       const testResult = await testMachineConnection(values);
       if (!testResult) {
-        handleError('连接测试失败，请检查配置', {
-          type: ErrorType.VALIDATION,
-          showType: 'message',
-        });
+        window.messageApi.warning('连接测试失败，请检查配置');
         return;
       }
 
@@ -61,7 +55,7 @@ export const useMachineActions = ({ fetchMachines }: UseMachineActionsProps) => 
         ...values,
         id: editingMachine.id,
       });
-      showSuccess('机器更新成功');
+      window.messageApi.success('机器更新成功');
       setEditModalVisible(false);
       form.resetFields();
       fetchMachines();
@@ -76,7 +70,7 @@ export const useMachineActions = ({ fetchMachines }: UseMachineActionsProps) => 
   const handleDelete = async (record: Machine) => {
     try {
       await deleteMachine(record.id);
-      showSuccess('删除成功');
+      window.messageApi.success('删除成功');
       fetchMachines();
     } catch {
       // API 错误已由全局错误处理器处理，这里不再重复处理
@@ -90,20 +84,14 @@ export const useMachineActions = ({ fetchMachines }: UseMachineActionsProps) => 
       setTestingConnection(true);
       const success = await testMachineConnection(values);
       if (success) {
-        showSuccess('连接测试成功');
+        window.messageApi.success('连接测试成功');
       } else {
-        handleError('连接测试失败', {
-          type: ErrorType.VALIDATION,
-          showType: 'message',
-        });
+        window.messageApi.warning('连接测试失败');
       }
     } catch (error) {
       if (error && typeof error === 'object' && 'errorFields' in error) {
         // 表单验证错误 - 这类错误不会触发全局错误处理器
-        handleError('请完善表单信息', {
-          type: ErrorType.VALIDATION,
-          showType: 'message',
-        });
+        window.messageApi.warning('请完善表单信息');
       }
       // 其他错误（如网络错误、API错误）已由全局错误处理器处理，这里不再重复处理
     } finally {

@@ -7,7 +7,7 @@ import * as monaco from 'monaco-editor';
 import { debounce } from '@/utils/utils';
 
 import { QueryResult } from '../types';
-import { downloadAsCSV, insertTextToEditor, getSQLContext, generateColumnList } from '../utils/editorUtils';
+import { downloadAsCSV, insertTextToEditor, getSQLContext } from '../utils/editorUtils';
 
 import { useSQLCompletion } from './useSQLCompletion';
 import type { useSQLEditorState } from './useSQLEditorState';
@@ -250,16 +250,7 @@ export const useSQLEditorActions = (editorState: SQLEditorState) => {
 
   // 插入表格
   const handleInsertTable = useCallback(
-    (
-      tableName: string,
-      columns: {
-        columnName: string;
-        dataType: string;
-        columnComment: string;
-        isPrimaryKey: boolean;
-        isNullable: boolean;
-      }[],
-    ) => {
+    (tableName: string) => {
       if (!editorRef.current) return;
       const editor = editorRef.current;
       const safeTableName = tableName.replace(/[^\w]/g, '');

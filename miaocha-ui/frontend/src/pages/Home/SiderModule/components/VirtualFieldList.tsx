@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 
-import { VirtualFieldListProps } from '../types';
+import { IVirtualFieldListProps } from '../types';
 
 import styles from './VirtualFieldList.module.less';
 
@@ -8,7 +8,7 @@ import styles from './VirtualFieldList.module.less';
  * 简化的虚拟滚动组件
  * 用于提高大量字段列表的渲染性能
  */
-const VirtualFieldList: React.FC<VirtualFieldListProps> = ({ data, itemHeight, containerHeight, renderItem }) => {
+const VirtualFieldList: React.FC<IVirtualFieldListProps> = ({ data, itemHeight, containerHeight, renderItem }) => {
   const [scrollTop, setScrollTop] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 

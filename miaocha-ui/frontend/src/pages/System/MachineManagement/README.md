@@ -78,5 +78,4 @@ import MachineManagementPage from '@/pages/system/MachineManagement';
 - Ant Design
 - @/api/machine
 - @/types/machineTypes
-- @/providers/ErrorProvider
 - @/utils/withSystemAccess

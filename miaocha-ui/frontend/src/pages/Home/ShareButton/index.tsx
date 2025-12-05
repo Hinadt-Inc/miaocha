@@ -1,24 +1,20 @@
 import React, { useState } from 'react';
+
+// import { ShareAltOutlined } from '@ant-design/icons';
 import { Button, Tooltip } from 'antd';
-import { ShareAltOutlined } from '@ant-design/icons';
+
 import ShareModal from '../ShareModal';
+
 import styles from './index.module.less';
 
 interface ShareButtonProps {
-  searchParams: any;
   size?: 'small' | 'middle' | 'large';
   type?: 'default' | 'primary' | 'text' | 'link';
   variant?: 'outlined' | 'filled' | 'text' | 'link';
   className?: string;
 }
 
-const ShareButton: React.FC<ShareButtonProps> = ({
-  searchParams,
-  size = 'small',
-  type = 'link',
-  variant = 'link',
-  className,
-}) => {
+const ShareButton: React.FC<ShareButtonProps> = ({ size = 'small', type = 'link', variant = 'link', className }) => {
   const [modalVisible, setModalVisible] = useState(false);
 
   const handleShare = () => {
@@ -34,7 +30,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({
       <Tooltip title="分享当前查询">
         <Button
           className={`${styles.shareButton} ${className || ''}`}
-          icon={<ShareAltOutlined />}
+          // icon={<ShareAltOutlined />}
           size={size}
           type={type}
           variant={variant}
@@ -44,7 +40,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({
         </Button>
       </Tooltip>
 
-      <ShareModal searchParams={searchParams} visible={modalVisible} onClose={handleCloseModal} />
+      <ShareModal visible={modalVisible} onClose={handleCloseModal} />
     </>
   );
 };

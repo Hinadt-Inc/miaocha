@@ -1,5 +1,7 @@
 import React, { useCallback } from 'react';
+
 import { Layout, Splitter } from 'antd';
+
 import {
   SQLEditorHeader,
   SQLQueryPanel,
@@ -76,8 +78,6 @@ const OptimizedSQLEditorPage: React.FC = () => {
     saveEditorSettings,
     handleEditorDidMount,
 
-    // 其他操作
-    fetchDatabaseSchema,
     fetchDatabaseTables,
     handleDownloadResults,
     loadFromHistory,
@@ -113,7 +113,7 @@ const OptimizedSQLEditorPage: React.FC = () => {
       }
       return null;
     },
-    [selectedSource, fetchTableSchema] // 修复：添加fetchTableSchema依赖，确保使用最新的函数引用
+    [selectedSource, fetchTableSchema], // 修复：添加fetchTableSchema依赖，确保使用最新的函数引用
   );
 
   // 处理数据库结构刷新 - 修复：使用快速表列表加载而不是完整结构加载

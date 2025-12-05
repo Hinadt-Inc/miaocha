@@ -23,8 +23,8 @@ export interface ColumnHeaderProps {
   onDelete: (colIndex: number) => void;
   onMoveLeft: (colIndex: number) => void;
   onMoveRight: (colIndex: number) => void;
-  showActions: boolean;
-  columns: any[];
+  canMoveRight: boolean;
+  canMoveLeft: boolean;
 }
 
 export interface ResizableTitleProps {

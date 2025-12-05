@@ -182,3 +182,12 @@ export function generalSorter<T extends Record<string, any>>(prevRow: T, nextRow
       return 0;
   }
 }
+
+export const safeParseJson = (key: string) => {
+  try {
+    return JSON.parse(localStorage.getItem(key) || '{}');
+  } catch (error) {
+    console.error('error====', error);
+    return {};
+  }
+};

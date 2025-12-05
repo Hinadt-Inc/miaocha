@@ -67,7 +67,6 @@ const DataSourceManagement = lazy(() => import('@/pages/system/DataSourceManagem
 
 ## 注意事项
 
-1. 模块依赖全局错误处理系统 (`ErrorProvider`)
 2. 需要配合 `withSystemAccess` 高阶组件使用，进行系统权限控制
 3. 依赖 ProTable 组件提供表格功能
 4. 支持 Doris 数据库类型，可扩展支持其他数据库类型

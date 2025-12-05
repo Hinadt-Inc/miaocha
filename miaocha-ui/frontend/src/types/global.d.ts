@@ -1,5 +1,10 @@
+import type { MessageInstance } from 'antd/es/message/interface';
+
 export {};
 declare global {
+  interface Window {
+    messageApi: MessageInstance;
+  }
   interface IStatus {
     value?: string;
     label?: string;

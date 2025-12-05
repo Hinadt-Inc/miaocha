@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, List, Button, message, Input, Tag, Empty, Popconfirm, Checkbox } from 'antd';
+
 import { SearchOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
-import * as logsApi from '@/api/logs';
+import { Modal, List, Button, message, Input, Tag, Empty, Popconfirm, Checkbox } from 'antd';
 import dayjs from 'dayjs';
+
+import * as logsApi from '@/api/logs';
+
+import { useDataInit } from '../hooks/useDataInit';
+
 import styles from './index.module.less';
 
 interface SavedSearchesModalProps {
   visible: boolean;
   onClose: () => void;
-  onLoadSearch: (searchParams: any) => void;
 }
 
-const SavedSearchesModal: React.FC<SavedSearchesModalProps> = ({ visible, onClose, onLoadSearch }) => {
+const SavedSearchesModal: React.FC<SavedSearchesModalProps> = ({ visible, onClose }) => {
+  const { handleLoadCacheData } = useDataInit();
   const [cachedSearches, setCachedSearches] = useState<ICachedSearchCondition[]>([]);
   const [filteredCachedSearches, setFilteredCachedSearches] = useState<ICachedSearchCondition[]>([]);
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -69,8 +74,9 @@ const SavedSearchesModal: React.FC<SavedSearchesModalProps> = ({ visible, onClos
 
   // 加载缓存搜索
   const handleLoad = (search: ICachedSearchCondition) => {
-    onLoadSearch(search.data);
-    messageApi.success(`已加载缓存搜索条件: ${search.data.name}`);
+    const { name, description: _description, targetBuckets: _t, ...rest } = search.data;
+    handleLoadCacheData(rest as ILogSearchParams);
+    messageApi.success(`已加载缓存搜索条件: ${name}`);
     onClose();
   };
 
@@ -345,7 +351,7 @@ const SavedSearchesModal: React.FC<SavedSearchesModalProps> = ({ visible, onClos
               onChange={(e) => setSearchKeyword(e.target.value)}
             />
           </div>
-        </div>{' '}
+        </div>
         {filteredCachedSearches.length === 0 ? (
           <Empty description={cachedSearches.length === 0 ? '暂无缓存的搜索条件' : '没有找到匹配的缓存搜索条件'} />
         ) : (
@@ -365,7 +371,9 @@ const SavedSearchesModal: React.FC<SavedSearchesModalProps> = ({ visible, onClos
                     title="确定要删除这个搜索条件吗？"
                     onConfirm={() => handleDeleteSingle(item)}
                   >
-                    <Button danger icon={<DeleteOutlined />} loading={deleteLoading} size="small" />
+                    <Button danger loading={deleteLoading} size="small">
+                      删除
+                    </Button>
                   </Popconfirm>,
                 ]}
                 className={styles.searchItem}

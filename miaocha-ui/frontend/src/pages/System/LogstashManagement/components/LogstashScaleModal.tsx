@@ -1,8 +1,10 @@
-import { Form, Input, Modal, Select, Checkbox, message, Divider, Typography } from 'antd';
 import { useEffect, useState } from 'react';
+
+import { Form, Input, Modal, Select, Checkbox, Divider, Typography } from 'antd';
+
+import { getMachines } from '@/api/machine';
 import type { LogstashProcess } from '@/types/logstashTypes';
 import type { Machine } from '@/types/machineTypes';
-import { getMachines } from '@/api/machine';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -56,7 +58,7 @@ export default function LogstashScaleModal({
             forceScale: initialParams.forceScale,
           });
         } catch (err) {
-          message.error('获取机器列表失败');
+          window.messageApi.error('获取机器列表失败');
           console.error('获取机器列表失败:', err);
         } finally {
           setLoading(false);
@@ -73,7 +75,7 @@ export default function LogstashScaleModal({
 
       // 验证机器选择
       if (!values.addMachineIds || values.addMachineIds.length === 0) {
-        message.warning('请选择要添加的机器');
+        window.messageApi.warning('请选择要添加的机器');
         return;
       }
 

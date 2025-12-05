@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
+
 import { getMachines } from '@/api/machine';
 import type { Machine } from '@/types/machineTypes';
-import { useErrorContext, ErrorType } from '@/providers/ErrorProvider';
 
 // 转换API数据到表格数据
 const transformMachineData = (machines: Machine[]) => {
@@ -15,7 +15,6 @@ export const useMachineData = () => {
   const [data, setData] = useState<Machine[]>([]);
   const [loading, setLoading] = useState(false);
   const originalDataRef = useRef<Machine[]>([]);
-  const { handleError } = useErrorContext();
 
   // 获取机器列表
   const fetchMachines = async () => {
@@ -27,10 +26,7 @@ export const useMachineData = () => {
       originalDataRef.current = transformedData;
     } catch (error) {
       if (error && typeof error === 'object' && 'name' in error && error.name !== 'CanceledError') {
-        handleError(error instanceof Error ? error : new Error('获取机器列表失败'), {
-          type: ErrorType.BUSINESS,
-          showType: 'notification',
-        });
+        window.messageApi.error('获取机器列表失败');
       }
     } finally {
       setLoading(false);

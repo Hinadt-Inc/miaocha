@@ -1,9 +1,11 @@
-import { Form, Input, Modal, message, Switch, Button, Tooltip } from 'antd';
-import { LOGSTASH_CONFIG_TEMPLATE, JVM_CONFIG_TEMPLATE } from '@/utils/logstashTemplates';
-import { CopyOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
+
+import { CopyOutlined } from '@ant-design/icons';
+import { Form, Input, Modal, Switch, Button, Tooltip } from 'antd';
+
 import { updateLogstashMachineConfig } from '@/api/logstash';
 import { safeCopy } from '@/utils/clipboard';
+import { LOGSTASH_CONFIG_TEMPLATE, JVM_CONFIG_TEMPLATE } from '@/utils/logstashTemplates';
 
 interface LogstashMachineConfigModalProps {
   readonly visible: boolean;
@@ -37,7 +39,6 @@ export default function LogstashMachineConfigModal({
     jvmOptions: false,
     logstashYml: false,
   });
-  const [messageApi, contextHolder] = message.useMessage();
 
   useEffect(() => {
     if (visible) {
@@ -59,7 +60,7 @@ export default function LogstashMachineConfigModal({
       );
 
       if (!hasChanges) {
-        messageApi.info('配置内容未修改');
+        window.messageApi.info('配置内容未修改');
         return;
       }
 
@@ -75,11 +76,11 @@ export default function LogstashMachineConfigModal({
         data.logstashYml = values.logstashYml;
       }
       if (Object.keys(data).length === 0) {
-        messageApi.warning('请至少修改一项配置');
+        window.messageApi.warning('请至少修改一项配置');
         return;
       }
       await updateLogstashMachineConfig(processId, logstashMachineId, data);
-      messageApi.success('机器配置更新成功');
+      window.messageApi.success('机器配置更新成功');
       onCancel();
       // 调用成功回调，刷新父组件数据
       if (onSuccess) {
@@ -93,7 +94,7 @@ export default function LogstashMachineConfigModal({
   // 复制
   const copyConfigTemplate = async (text: string) => {
     await safeCopy(text);
-    messageApi.success('已复制到剪贴板');
+    window.messageApi.success('已复制到剪贴板');
   };
 
   // 关闭并重置状态
@@ -114,14 +115,14 @@ export default function LogstashMachineConfigModal({
       open={visible}
       title={
         <span>
-          编辑实例配置 - {moduleName ? `模块: ${moduleName}` : ''} {processName ? `进程: ${processName}` : `进程ID: ${processId}`} (实例ID: {logstashMachineId})
+          编辑实例配置 - {moduleName ? `模块: ${moduleName}` : ''}{' '}
+          {processName ? `进程: ${processName}` : `进程ID: ${processId}`} (实例ID: {logstashMachineId})
         </span>
       }
       width={800}
       onCancel={handleCancel}
       onOk={handleOk}
     >
-      {contextHolder}
       <Form form={form} initialValues={initialConfig} layout="vertical">
         <Form.Item
           label={

@@ -7,6 +7,11 @@ import type { Dayjs } from 'dayjs';
 export interface ITimeStatus {
   value?: string;
   label?: string;
+  //  from: () => dayjs().subtract(1, 'week').startOf('week'),
+  //     to: () => dayjs().subtract(1, 'week').endOf('week'),
+  from?: () => Dayjs;
+  to?: () => Dayjs;
+  format?: string[];
   [key: string]: unknown;
 }
 
@@ -45,6 +50,7 @@ export interface ITimePickerProps {
 // 相对时间组件 Props
 export interface IRelativeTimePickerProps {
   onSubmit: (params: ILogTimeSubmitParams) => void; // 提交时间
+  currentTimeOption?: ILogTimeSubmitParams; // 当前选择的时间选项
 }
 
 // 快速选择组件 Props
@@ -56,6 +62,7 @@ export interface IQuickTimePickerProps {
 // 绝对时间组件 Props
 export interface IAbsoluteTimePickerProps {
   onSubmit: (params: ILogTimeSubmitParams) => void;
+  currentTimeOption?: ILogTimeSubmitParams; // 当前选择的时间选项
 }
 
 // 相对时间内部状态

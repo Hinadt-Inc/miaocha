@@ -1,12 +1,13 @@
-import { get, post, request } from './request';
 import type { AxiosRequestConfig } from 'axios';
+
 import type {
   UserListItem,
   CreateUserPayload,
   UpdateUserPayload,
   ChangePasswordPayloadBySuperAdmin,
-  ModulePermissionResponse,
 } from '@/pages/System/User/types';
+
+import { get, post, request } from './request';
 
 // 获取所有用户
 export function getUsers(config?: AxiosRequestConfig): Promise<UserListItem[]> {

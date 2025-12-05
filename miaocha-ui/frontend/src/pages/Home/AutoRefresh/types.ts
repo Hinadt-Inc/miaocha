@@ -3,8 +3,6 @@
  */
 
 export interface AutoRefreshProps {
-  onRefresh: () => void; // 刷新回调函数
-  loading?: boolean; // 是否正在加载
   disabled?: boolean; // 是否禁用
 }
 

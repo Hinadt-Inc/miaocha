@@ -1,6 +1,16 @@
 export {};
 declare global {
   /**
+   * 时间分组类型
+   * - second: 按秒分组
+   * - minute: 按分钟分组
+   * - hour: 按小时分组
+   * - day: 按天分组
+   * - auto: 自动分组
+   */
+  type TimeGrouping = 'second' | 'minute' | 'hour' | 'day' | 'auto';
+
+  /**
    * 模块信息接口
    */
   interface IModules {
@@ -46,7 +56,7 @@ declare global {
     /**
      * 数据源ID
      */
-    datasourceId: number | null;
+    datasourceId?: number | null;
     /**
      * 模块名称
      */
@@ -67,6 +77,7 @@ declare global {
      * 结束时间，格式为YYYY-MM-DD HH:mm:ss
      */
     endTime?: string;
+    range: string[];
     /**
      * 时间范围，支持以下值：
      * "last_5m" - 最近5分钟
@@ -88,16 +99,13 @@ declare global {
       | 'last_24h'
       | 'today'
       | 'yesterday'
-      | 'last_week';
+      | 'last_week'
+      | string;
     /**
-     * 时间分组，支持以下值：
-     * "second" - 按秒分组
-     * "minute" - 按分钟分组
-     * "hour" - 按小时分组
-     * "day" - 按天分组
-     * "auto" - 自动分组
+     * 时间分组
      */
-    timeGrouping?: 'second' | 'minute' | 'hour' | 'day' | 'auto';
+    timeGrouping?: TimeGrouping;
+    timeType?: string;
     /**
      * 每页记录数
      */
@@ -110,6 +118,9 @@ declare global {
      * 需要查询的字段列表
      */
     fields?: string[];
+    // 当前选中的查询字段列表
+    activeFields?: string[];
+    columnWidths?: Record<string, number>;
     /**
      * 排序字段列表
      */
@@ -117,6 +128,8 @@ declare global {
       fieldName: string;
       direction: 'ASC' | 'DESC';
     }[];
+    relativeStartOption?: IRelativeTime;
+    relativeEndOption?: IRelativeTime;
     /**
      * 查询配置
      */
@@ -162,33 +175,36 @@ declare global {
     distributionData: ILogHistogramData[]; // 数据分布
   }
 
+  // interface IFieldDistributions {
+  //   /** 字段名称 */
+  //   fieldName: string;
+
+  //   /** 字段值分布列表，按数量降序排序 */
+  //   valueDistributions: {
+  //     /** 字段值 */
+  //     value: string;
+  //     /** 该值出现的次数 */
+  //     count: number;
+  //     /** 该值占比 */
+  //     percentage: number;
+  //   }[];
+  //   /** 该字段的总记录数 */
+  //   totalCount?: number;
+  //   /** 该字段的非空记录数 */
+  //   nonNullCount?: number;
+  //   /** 该字段的空记录数 */
+  //   nullCount?: number;
+  //   /** 该字段的唯一值数 */
+  //   uniqueCount?: number;
+  //   sampleSize?: number; // 样本大小
+  // }
+
   /**
    * 日志字段分布响应接口
    */
   interface IDistributionsResponse {
     /** 字段数据分布统计信息，用于展示各字段的Top5值及占比 */
-    fieldDistributions: {
-      /** 字段名称 */
-      fieldName: string;
-
-      /** 字段值分布列表，按数量降序排序 */
-      valueDistributions: {
-        /** 字段值 */
-        value: string;
-        /** 该值出现的次数 */
-        count: number;
-        /** 该值占比 */
-        percentage: number;
-      }[];
-      /** 该字段的总记录数 */
-      totalCount: number;
-      /** 该字段的非空记录数 */
-      nonNullCount: number;
-      /** 该字段的空记录数 */
-      nullCount: number;
-      /** 该字段的唯一值数 */
-      uniqueCount: number;
-    }[];
+    fieldDistributions: IFieldDistributions[];
     sampleSize: number; // 样本大小
     /** 查询是否成功 */
     success: boolean;

@@ -11,16 +11,16 @@ export const highlightText = (text: string, keywords: string[]) => {
 
   // 判定是否为 XML/HTML：包含典型标记即可认为是标记文本
   // 规则：含有 \n 与成对尖括号、或以 '<?xml'、'<![CDATA['、'<xml' 开头
-  const looksLikeXml = /<\?xml|<!\[CDATA\[|<xml|<[^>]+>/i.test(raw);
+  // const looksLikeXml = /<\?xml|<!\[CDATA\[|<xml|<[^>]+>/i.test(raw);
 
-  // XML/HTML 文本：直接按原样输出，使用 pre-wrap 保留换行与空格
-  if (looksLikeXml) {
-    return (
-      <span style={{ whiteSpace: 'pre-wrap' }} title={raw}>
-        {raw}
-      </span>
-    );
-  }
+  // // XML/HTML 文本：直接按原样输出，使用 pre-wrap 保留换行与空格
+  // if (looksLikeXml) {
+  //   return (
+  //     <span style={{ whiteSpace: 'pre-wrap' }} title={raw}>
+  //       {raw}
+  //     </span>
+  //   );
+  // }
 
   // 普通文本高亮处理
   const validKeywords = Array.from(new Set((keywords || []).filter(Boolean)));
@@ -51,11 +51,8 @@ export const highlightText = (text: string, keywords: string[]) => {
     if (lastIndex < start) {
       nodes.push(raw.slice(lastIndex, start));
     }
-
     // 推入高亮部分（保留原始大小写）
-    nodes.push(
-      <mark key={`hl-${start}-${end}`}>{match[0]}</mark>
-    );
+    nodes.push(<mark key={`hl-${start}-${end}`}>{match[0]}</mark>);
 
     lastIndex = end;
   }

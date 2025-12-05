@@ -1,5 +1,5 @@
-import type { ITableDataSource, IModuleQueryConfig } from './types';
 import { DEFAULT_TIME_FIELD } from './constants';
+import type { ITableDataSource, IModuleQueryConfig } from './types';
 
 /**
  * ExpandedRow组件相关的工具函数
@@ -36,12 +36,12 @@ export const formatFieldValue = (key: string, value: any, timeField: string): st
  */
 export const transformDataToTableSource = (
   data: Record<string, any>,
-  moduleQueryConfig?: IModuleQueryConfig
+  moduleQueryConfig?: IModuleQueryConfig,
+  showKey?: string[],
 ): ITableDataSource[] => {
   const timeField = moduleQueryConfig?.timeField || DEFAULT_TIME_FIELD;
-  
   return Object.entries(data)
-    .filter(([key]) => key !== '_key') // 过滤掉内部key
+    .filter(([key]) => (showKey || []).includes(key)) // 过滤掉内部key
     .map(([key, value], index) => ({
       key: `${key}_${index}`,
       field: key,
@@ -70,12 +70,11 @@ export const shouldExcludeField = (fieldName: string, excludeFields?: string[]):
  */
 export const filterDataByConfig = (
   data: Record<string, any>,
-  moduleQueryConfig?: IModuleQueryConfig
+  moduleQueryConfig: IModuleQueryConfig,
 ): Record<string, any> => {
   if (!moduleQueryConfig?.excludeFields) {
     return data;
   }
-
   const filteredData: Record<string, any> = {};
   Object.entries(data).forEach(([key, value]) => {
     if (!shouldExcludeField(key, moduleQueryConfig.excludeFields)) {

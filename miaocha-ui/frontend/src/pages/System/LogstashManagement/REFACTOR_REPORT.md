@@ -175,10 +175,8 @@ LogstashManagement/
   - `LogstashLogTailModal.module.less` - 日志模态框样式文件
 - ✅ **导入路径更新**: 更新了所有相关文件的导入路径，确保模块完全自包含
 - ✅ **导出文件更新**: 更新了 `components/index.ts` 导出文件，包含所有组件
-- ✅ **消息提示重构**: 完成了所有消息提示组件的重构，使用统一的 `useErrorContext` hook
 
 ### 消息提示系统重构
-- ✅ **统一提示方式**: 参考 `MachineManagement` 模式，使用 `useErrorContext` 替代传统的 `messageApi`
 - ✅ **全局错误处理**: 错误提示由全局错误处理器统一管理，无需在每个组件中重复处理
 - ✅ **代码简化**: 大幅简化了错误处理逻辑，提高了代码的可维护性
 - ✅ **类型安全**: 所有 TypeScript 编译错误已修复

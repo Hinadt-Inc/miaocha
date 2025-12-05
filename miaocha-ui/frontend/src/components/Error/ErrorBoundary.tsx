@@ -3,8 +3,9 @@
 //   Promise 异常/异步回调里的错误（axios 拦截器、fetch、setTimeout、事件回调等）
 //   window 上派发的自定义事件错误
 import { Component, ErrorInfo, ReactNode } from 'react';
-import { Result, Button } from 'antd';
+
 import { ReloadOutlined, HomeOutlined } from '@ant-design/icons';
+import { Result, Button } from 'antd';
 
 interface Props {
   children?: ReactNode;

@@ -2,37 +2,48 @@
  * 时间分组选择器组件
  */
 
-import React from 'react';
+import React, { useState } from 'react';
+
 import { Button, Popover, Tag } from 'antd';
+
+import { useHomeContext } from '../../context';
+import { useDataInit } from '../../hooks/useDataInit';
 import { TIME_GROUP } from '../../utils';
 
-interface ITimeGroupSelectorProps {
-  timeGrouping: string;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onChange: (value: string) => void;
-}
+const TimeGroupSelector: React.FC = () => {
+  const [visible, setVisible] = useState(false);
+  const { searchParams, updateSearchParams } = useHomeContext();
+  const { fetchData } = useDataInit();
 
-const TimeGroupSelector: React.FC<ITimeGroupSelectorProps> = ({ timeGrouping, open, onOpenChange, onChange }) => {
+  const onChange = (value: TimeGrouping) => {
+    const paramsWidthSearchParams = updateSearchParams({ timeGrouping: value });
+    setVisible(false);
+    fetchData({ searchParams: paramsWidthSearchParams });
+  };
+
   return (
     <Popover
       arrow={true}
       content={
         <>
           {Object.entries(TIME_GROUP).map(([value, item]) => (
-            <Tag.CheckableTag key={value} checked={timeGrouping === value} onChange={() => onChange(value)}>
+            <Tag.CheckableTag
+              key={value}
+              checked={searchParams?.timeGrouping === value}
+              onChange={() => onChange(value as TimeGrouping)}
+            >
               {item}
             </Tag.CheckableTag>
           ))}
         </>
       }
-      open={open}
+      open={visible}
       placement="bottomRight"
       trigger="click"
-      onOpenChange={onOpenChange}
+      onOpenChange={setVisible}
     >
       <Button color="primary" size="small" variant="link">
-        按{TIME_GROUP[timeGrouping]}分组
+        按{TIME_GROUP[searchParams?.timeGrouping ?? 'day']}分组
       </Button>
     </Popover>
   );

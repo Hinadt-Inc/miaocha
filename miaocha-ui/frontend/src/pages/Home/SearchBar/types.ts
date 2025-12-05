@@ -77,3 +77,8 @@ export interface ITimeState {
   openTimeGroup: boolean;
   activeTab: string;
 }
+
+export interface ISearchState {
+  keywords: string;
+  sql: string;
+}

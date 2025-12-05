@@ -10,9 +10,6 @@ export { default } from './index';
 // 子组件
 export { LogChart, LogTable } from './components';
 
-// 自定义 Hooks
-export * from './hooks';
-
 // 类型定义
 export type { ILogProps, ILogChartProps, ILogTableProps } from './types';
 

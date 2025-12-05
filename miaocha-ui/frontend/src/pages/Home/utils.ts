@@ -1,9 +1,11 @@
-import dayjs from 'dayjs';
+import dayjs, { ManipulateType } from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
-import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
-import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-
 import duration from 'dayjs/plugin/duration';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+
+import { QueryConfig } from '@/api/modules';
+import { IRelativeTimeState } from '@/components/TimePicker';
 
 // 扩展 dayjs 功能
 dayjs.extend(duration);
@@ -242,4 +244,330 @@ export const getLatestTime = (timeOption: ILogTimeSubmitParams) => {
     target.endTime = range[1];
   }
   return target;
+};
+
+// 动态确定时间字段的逻辑
+export const determineTimeField = (availableColumns: ILogColumnsResponse[], moduleQueryConfig: QueryConfig): string => {
+  const availableFieldNames = availableColumns.map((col) => col.columnName).filter(Boolean) as string[];
+  // 优先使用配置的时间字段
+  if (moduleQueryConfig?.timeField && availableFieldNames.includes(moduleQueryConfig.timeField)) {
+    return moduleQueryConfig.timeField;
+  }
+
+  // 如果配置的时间字段不存在，按优先级查找常见时间字段
+  const commonTimeFields = ['logs_timestamp', 'log_time', 'timestamp', 'time', '@timestamp'];
+  for (const timeField of commonTimeFields) {
+    if (availableFieldNames.includes(timeField)) {
+      return timeField;
+    }
+  }
+
+  // 如果都没找到，尝试查找包含time关键字的字段
+  const timeRelatedField = availableFieldNames.find(
+    (field) => field?.toLowerCase().includes('time') || field?.toLowerCase().includes('timestamp'),
+  );
+  if (timeRelatedField) {
+    return timeRelatedField;
+  }
+
+  if (availableFieldNames.length > 0 && availableFieldNames[0]) {
+    return availableFieldNames[0];
+  }
+
+  return '';
+};
+
+export const formatSqlKey = (sql: string) => {
+  return sql.replace(/\s+/g, '');
+};
+
+export const deduplicateAndDeleteWhereSqls = (sqls: string[], deleteSql?: string) => {
+  const seen = new Map<string, string>();
+  const deleteKey = formatSqlKey(deleteSql || '');
+  sqls.forEach((sql) => {
+    // 去掉所有空格作为key
+    const normalizedKey = formatSqlKey(sql || '');
+    if (deleteKey && deleteKey === normalizedKey) return;
+    if (!seen.has(normalizedKey)) {
+      seen.set(normalizedKey, sql);
+    }
+  });
+  return Array.from(seen.values());
+};
+
+/**
+ * 防抖函数
+ * @param func 需要防抖的函数
+ * @param wait 延迟时间（毫秒）
+ * @returns 防抖后的函数
+ */
+export const debounce = <T extends (...args: any[]) => any>(
+  func: T,
+  wait: number,
+): ((...args: Parameters<T>) => void) => {
+  let timeout: NodeJS.Timeout | null = null;
+
+  return (...args: Parameters<T>) => {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+
+    timeout = setTimeout(() => {
+      func(...args);
+      timeout = null;
+    }, wait);
+  };
+};
+
+/**
+ * 解析 timeRange 字符串，返回标准的时间选项对象
+ * @param timeRange 时间范围字符串，支持三种模式：
+ *   1. quick模式：如 'last_5m', 'today' 等
+ *   2. relative模式：如 '23秒前 ~ 2秒前', '现在 ~ 现在'
+ *   3. absolute模式：如 '2025-11-28 00:00:00 ~ 2025-11-30 00:00:00'
+ * @returns ILogTimeSubmitParams 时间选项对象
+ */
+export const parseTimeRange = (timeRange?: string): ILogTimeSubmitParams => {
+  if (!timeRange) {
+    // 默认返回最近15分钟
+    const defaultRange = QUICK_RANGES['last_15m'];
+    return {
+      range: [defaultRange.from().format(defaultRange.format[0]), defaultRange.to().format(defaultRange.format[1])],
+      label: defaultRange.label,
+      value: 'last_15m',
+      type: 'quick',
+    };
+  }
+
+  // 1. 检查是否为 quick 模式
+  if (QUICK_RANGES[timeRange] || !timeRange.includes('~')) {
+    const quickRange = QUICK_RANGES[timeRange] || QUICK_RANGES['last_15m'];
+    return {
+      range: [quickRange.from().format(quickRange.format[0]), quickRange.to().format(quickRange.format[1])],
+      label: quickRange.label,
+      value: timeRange,
+      type: 'quick',
+    };
+  }
+
+  const [startPart, endPart] = timeRange.split('~').map((s) => s.trim());
+
+  // 2. 检查是否为 absolute 模式（包含完整日期时间格式）
+  // absolute 格式示例：'2025-11-28 00:00:00' 或 '2025-11-28 00:00:00.000'
+  const absoluteTimeRegex = /^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(\.\d{3})?$/;
+  if (absoluteTimeRegex.test(startPart) && absoluteTimeRegex.test(endPart)) {
+    // 格式化为带毫秒的格式
+    const startTime = dayjs(startPart).format(DATE_FORMAT_THOUSOND);
+    const endTime = dayjs(endPart).format(DATE_FORMAT_THOUSOND);
+    return {
+      range: [startTime, endTime],
+      label: timeRange,
+      value: timeRange,
+      type: 'absolute',
+    };
+  }
+
+  // 3. relative 模式
+  // relative 格式示例：'23秒前 ~ 2秒前', '现在 ~ 现在', '1分钟前(精确到分钟) ~ 现在'
+  const parseRelativePart = (part: string): IRelativeTimeState | null => {
+    // 处理 "现在" 的情况，等同于 "0秒前"
+    if (part === '现在') {
+      const relativeItem = RELATIVE_TIME.find((item) => item.value === '秒前');
+      if (relativeItem) {
+        return {
+          ...relativeItem,
+          number: 0,
+          isExact: false,
+        };
+      }
+      return null;
+    }
+
+    // 检查是否包含精确标记
+    const exactMatch = part.match(/\(精确到(.+?)\)/);
+    const isExact = !!exactMatch;
+    const cleanPart = part.replace(/\(精确到.+?\)/, '').trim();
+
+    // 解析数字和单位
+    // 格式：数字 + 单位（秒前/分钟前/小时前等）
+    const match = cleanPart.match(/^(\d+)(.+)$/);
+    if (!match) return null;
+
+    const number = parseInt(match[1], 10);
+    const unit = match[2]; // 如：秒前、分钟前、小时前等
+
+    // 在 RELATIVE_TIME 中查找对应的配置
+    const relativeItem = RELATIVE_TIME.find((item) => item.value === unit);
+    if (!relativeItem) return null;
+
+    return {
+      ...relativeItem,
+      number,
+      isExact,
+    };
+  };
+
+  const getTimeText = (option: IRelativeTimeState): string => {
+    const now = dayjs();
+    const { number, unitEN, isExact, label, format } = option;
+
+    const unit = unitEN as ManipulateType;
+    const fmt = isExact ? format : DATE_FORMAT_THOUSOND;
+
+    if (number === 0 && unitEN === 'second') {
+      return now.format(fmt);
+    }
+
+    if (label.endsWith('前')) {
+      return now.subtract(number, unit).format(fmt);
+    }
+    // 其余情况均视为「后」
+    return now.add(number, unit).format(fmt);
+  };
+
+  const startOption = parseRelativePart(startPart);
+  const endOption = parseRelativePart(endPart);
+
+  if (startOption && endOption) {
+    return {
+      range: [getTimeText(startOption), getTimeText(endOption)],
+      label: timeRange,
+      value: timeRange,
+      type: 'relative',
+      startOption,
+      endOption,
+    };
+  }
+
+  // 无法解析，返回默认值
+  const defaultRange = QUICK_RANGES['last_15m'];
+  return {
+    range: [defaultRange.from().format(defaultRange.format[0]), defaultRange.to().format(defaultRange.format[1])],
+    label: defaultRange.label,
+    value: 'last_15m',
+    type: 'quick',
+  };
+};
+
+/**
+ * 缓存参数的数据结构
+ */
+export interface ICacheParamsData {
+  searchParams: ILogSearchParams;
+  // 后续可扩展其他参数
+  columnWidths?: Record<string, number>;
+  // otherConfig?: any;
+}
+
+export interface ICacheParams {
+  [tabId: string]: ICacheParamsData;
+}
+
+const CACHE_PARAMS_KEY = 'cacheParams';
+const MAX_CACHE_SIZE = 10;
+const CLEANUP_COUNT = 3;
+
+/**
+ * 获取所有缓存参数
+ */
+export const getAllCacheParams = (): ICacheParams => {
+  try {
+    const cache = localStorage.getItem(CACHE_PARAMS_KEY);
+    return cache ? JSON.parse(cache) : {};
+  } catch (error) {
+    console.error('获取缓存参数失败:', error);
+    return {};
+  }
+};
+
+/**
+ * 保存缓存参数到 localStorage
+ */
+export const saveCacheParams = (cacheParams: ICacheParams): void => {
+  try {
+    localStorage.setItem(CACHE_PARAMS_KEY, JSON.stringify(cacheParams));
+  } catch (error) {
+    console.error('保存缓存参数失败:', error);
+  }
+};
+
+/**
+ * 清理最早的缓存（根据 tabId 的时间戳）
+ */
+export const cleanupOldCache = (cacheParams: ICacheParams): ICacheParams => {
+  const tabIds = Object.keys(cacheParams);
+
+  if (tabIds.length <= MAX_CACHE_SIZE) {
+    return cacheParams;
+  }
+
+  // 按照 tabId（时间戳）排序，删除最早的 CLEANUP_COUNT 个
+  const sortedTabIds = tabIds.sort((a, b) => {
+    const timeA = parseInt(a, 10);
+    const timeB = parseInt(b, 10);
+    return timeA - timeB; // 升序排列，最早的在前面
+  });
+
+  // 删除最早的 CLEANUP_COUNT 个
+  const tabIdsToDelete = sortedTabIds.slice(0, CLEANUP_COUNT);
+  const newCacheParams = { ...cacheParams };
+
+  tabIdsToDelete.forEach((tabId) => {
+    delete newCacheParams[tabId];
+  });
+
+  return newCacheParams;
+};
+
+/**
+ * 生成新的 tabId（基于时间戳）
+ */
+export const generateTabId = (): string => {
+  return new Date().getTime().toString();
+};
+
+export const handleShareSearchParams = (urlSearchParams: URLSearchParams): Partial<ILogSearchParams> => {
+  const keywords = urlSearchParams.get('keywords');
+  const whereSqls = urlSearchParams.get('whereSqls');
+  const timeRange = urlSearchParams.get('timeRange');
+  const startTime = urlSearchParams.get('startTime');
+  const endTime = urlSearchParams.get('endTime');
+  const module = urlSearchParams.get('module');
+  const timeGrouping = urlSearchParams.get('timeGrouping');
+  const fields = urlSearchParams.get('fields');
+  const relativeStartOption = urlSearchParams.get('relativeStartOption');
+  const relativeEndOption = urlSearchParams.get('relativeEndOption');
+
+  const parsedParams: Partial<ILogSearchParams> = {};
+  if (keywords) {
+    try {
+      parsedParams.keywords = JSON.parse(keywords);
+    } catch (e) {
+      console.error('解析keywords参数失败:', e);
+    }
+  }
+
+  if (whereSqls) {
+    try {
+      parsedParams.whereSqls = JSON.parse(whereSqls);
+    } catch (e) {
+      console.error('解析whereSqls参数失败:', e);
+    }
+  }
+
+  if (fields) {
+    try {
+      parsedParams.fields = JSON.parse(fields);
+    } catch (e) {
+      console.error('解析fields参数失败:', e);
+    }
+  }
+  if (timeRange) parsedParams.timeRange = timeRange;
+  if (startTime) parsedParams.startTime = dayjs(startTime).format(DATE_FORMAT_THOUSOND);
+  if (endTime) parsedParams.endTime = dayjs(endTime).format(DATE_FORMAT_THOUSOND);
+  if (module) parsedParams.module = module;
+  if (timeGrouping) parsedParams.timeGrouping = timeGrouping as TimeGrouping;
+  if (relativeStartOption) parsedParams.relativeStartOption = JSON.parse(relativeStartOption);
+  if (relativeEndOption) parsedParams.relativeEndOption = JSON.parse(relativeEndOption);
+  return parsedParams;
 };

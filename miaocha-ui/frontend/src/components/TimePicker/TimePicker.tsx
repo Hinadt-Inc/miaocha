@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback, Suspense } from 'react';
+
 import { Tabs } from 'antd';
 
 import SpinIndicator from '@/components/SpinIndicator';
+
 import { QuickTimePicker, AbsoluteTimePicker, RelativeTimePicker } from './components';
+import styles from './styles/TimePicker.module.less';
 import { ITimePickerProps, ILogTimeSubmitParams } from './types';
 import { QUICK_RANGES } from './utils';
-import styles from './styles/TimePicker.module.less';
 
 /**
  * 时间选择器组件
@@ -37,6 +39,8 @@ const TimePicker: React.FC<ITimePickerProps> = ({ activeTab, setActiveTab, onSub
       if (!isExist) return;
 
       const { from, to, format } = isExist;
+      if (!from || !to || !format) return;
+
       const params: ILogTimeSubmitParams = {
         value,
         range: [from().format(format[0]), to().format(format[1])],
@@ -61,14 +65,14 @@ const TimePicker: React.FC<ITimePickerProps> = ({ activeTab, setActiveTab, onSub
       label: '相对时间',
       children: (
         <Suspense fallback={<SpinIndicator />}>
-          <RelativeTimePicker onSubmit={onSubmit} />
+          <RelativeTimePicker currentTimeOption={currentTimeOption} onSubmit={onSubmit} />
         </Suspense>
       ),
     },
     {
       key: 'absolute',
       label: '绝对时间',
-      children: <AbsoluteTimePicker onSubmit={onSubmit} />,
+      children: <AbsoluteTimePicker currentTimeOption={currentTimeOption} onSubmit={onSubmit} />,
     },
   ];
 
