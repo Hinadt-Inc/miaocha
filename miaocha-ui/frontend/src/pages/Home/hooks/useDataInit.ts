@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect, useMemo } from 'react';
 
 import { useSearchParams } from 'react-router-dom';
 
@@ -7,7 +7,7 @@ import * as modulesApi from '@/api/modules';
 
 import { useHomeContext } from '../context';
 import { IModuleQueryConfig } from '../types';
-import { formatTimeString, handleShareSearchParams, generateTabId } from '../utils';
+import { formatTimeString, handleShareSearchParams, generateTabId, debounce } from '../utils';
 
 export interface IDetailOptions {
   moduleQueryConfig?: IModuleQueryConfig;
@@ -136,7 +136,8 @@ export const useDataInit = () => {
     [searchParams, setCommonColumns, setLogTableColumns, updateSearchParams],
   );
 
-  const fetchData = useCallback(
+  // 原始 fetchData 函数（不带防抖）
+  const fetchDataOriginal = useCallback(
     async (options: IDetailOptions) => {
       try {
         setLoading?.(true);
@@ -173,8 +174,11 @@ export const useDataInit = () => {
         setLoading?.(false);
       }
     },
-    [setDetailData, setHistogramData],
+    [setDetailData, setHistogramData, abortRef, setLoading, homeModuleQueryConfig],
   );
+
+  // 使用 useMemo 创建防抖版本的 fetchData
+  const fetchData = useMemo(() => debounce(fetchDataOriginal, 200), [fetchDataOriginal]);
 
   // 切换数据源，重置状态
   const handleReloadData = useCallback(
@@ -442,6 +446,7 @@ export const useDataInit = () => {
     handleLoadCacheData,
     handleReloadData,
     fetchData,
+    fetchDataOriginal, // 导出原始版本，以备需要立即执行的场景
     fetchFieldDistribution,
     refreshFieldDistributions,
   };

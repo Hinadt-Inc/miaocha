@@ -514,9 +514,6 @@ export const cleanupOldCache = (cacheParams: ICacheParams): ICacheParams => {
 
   tabIdsToDelete.forEach((tabId) => {
     delete newCacheParams[tabId];
-    // 同时删除其他相关的本地存储
-    localStorage.removeItem(`${tabId}_commonColumns`);
-    localStorage.removeItem(`${tabId}_columnWidths`);
   });
 
   return newCacheParams;
