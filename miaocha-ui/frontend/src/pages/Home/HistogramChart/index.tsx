@@ -20,6 +20,7 @@ const HistogramChart = (props: Props) => {
   const { fetchData, refreshFieldDistributions } = useDataInit();
   const { distributionData, timeUnit, timeInterval } = data || {};
   const { timeGrouping = 'auto', startTime = '', endTime = '' } = searchParams;
+  const chartKey = useRef(new Date().getTime()); // 临时key，用于强制更新图表
 
   const chartRef = useRef<any>(null);
 
@@ -42,8 +43,13 @@ const HistogramChart = (props: Props) => {
 
   // 构建图表选项
   const option = useMemo(() => {
+    console.log('=====123', startTime, endTime);
     return createChartOption(aggregatedData, distributionData, timeGrouping, startTime, endTime);
   }, [aggregatedData, distributionData, distributions, logTableColumns]);
+
+  const refreshChart = () => {
+    chartKey.current = new Date().getTime();
+  };
 
   // 事件处理器
   const handleChartClick = (params: any) => {
@@ -65,6 +71,7 @@ const HistogramChart = (props: Props) => {
         searchParams: newParams,
       });
       refreshFieldDistributions(newParams);
+      refreshChart();
     }
   };
 
@@ -86,7 +93,7 @@ const HistogramChart = (props: Props) => {
       const [start, end] = params.areas[0].coordRange;
       const startTime = dayjs(aggregatedData.labels[start]).format(DATE_FORMAT_THOUSOND);
       const endTime = dayjs(aggregatedData.labels[end])
-        .add(timeInterval || 1, timeUnit as any)
+        .add(1, timeUnit as any)
         .format(DATE_FORMAT_THOUSOND);
 
       // 使用 searchParamsRef.current 获取最新的 searchParams
@@ -101,6 +108,7 @@ const HistogramChart = (props: Props) => {
         searchParams: newParams,
       });
       refreshFieldDistributions(newParams);
+      refreshChart();
     }
   };
 
@@ -143,6 +151,7 @@ const HistogramChart = (props: Props) => {
   return (
     <>
       <ReactECharts
+        key={chartKey.current}
         option={option}
         style={{ height: 160, width: '100%' }}
         onChartReady={(chart) => {
