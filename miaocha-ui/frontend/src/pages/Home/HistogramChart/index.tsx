@@ -43,7 +43,6 @@ const HistogramChart = (props: Props) => {
 
   // 构建图表选项
   const option = useMemo(() => {
-    console.log('=====123', startTime, endTime);
     return createChartOption(aggregatedData, distributionData, timeGrouping, startTime, endTime);
   }, [aggregatedData, distributionData, distributions, logTableColumns]);
 
