@@ -66,8 +66,31 @@ const ShareModal: React.FC<ShareModalProps> = ({ visible, onClose }) => {
   const handleCopyLink = async () => {
     try {
       setCopying(true);
-      await navigator.clipboard.writeText(shareUrl);
-      window.messageApi.success('链接已复制到剪贴板');
+
+      // 优先使用现代 Clipboard API（需要 HTTPS 或 localhost）
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(shareUrl);
+        window.messageApi.success('链接已复制到剪贴板');
+      } else {
+        // 降级方案：使用传统的 document.execCommand 方法（兼容 HTTP）
+        const textArea = document.createElement('textarea');
+        textArea.value = shareUrl;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+
+        if (successful) {
+          window.messageApi.success('链接已复制到剪贴板');
+        } else {
+          throw new Error('复制命令执行失败');
+        }
+      }
     } catch (error) {
       console.error('复制失败:', error);
       window.messageApi.error('复制失败，请手动复制');
