@@ -84,16 +84,8 @@ const HistogramChart = (props: Props) => {
   const handleBrushEnd = (params: { areas: { coordRange: [number, number] }[] }) => {
     if (params.areas && params.areas.length > 0 && timeUnit) {
       const [start, end] = params.areas[0].coordRange;
-
-      // 确保索引在有效范围内
-      const startIndex = Math.max(0, Math.floor(start));
-      const endIndex = Math.min(aggregatedData.labels.length - 1, Math.floor(end));
-
-      // 开始时间：使用选中范围的第一个数据点
-      const startTime = dayjs(aggregatedData.labels[startIndex]).format(DATE_FORMAT_THOUSOND);
-
-      // 结束时间：使用选中范围的最后一个数据点，并加上时间间隔以包含完整的时间段
-      const endTime = dayjs(aggregatedData.labels[endIndex])
+      const startTime = dayjs(aggregatedData.labels[start]).format(DATE_FORMAT_THOUSOND);
+      const endTime = dayjs(aggregatedData.labels[end])
         .add(timeInterval || 1, timeUnit as any)
         .format(DATE_FORMAT_THOUSOND);
 
