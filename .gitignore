@@ -126,3 +126,5 @@ miaocha-server/src/main/resources/application-dev.yml
 
 # Also ignore legacy AI dir
 .github/ai
+.cursor/rules/code-auto-collection.mdc
+.qoder/rules/code-auto-collection.mdc
