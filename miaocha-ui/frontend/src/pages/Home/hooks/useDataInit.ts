@@ -7,7 +7,7 @@ import * as modulesApi from '@/api/modules';
 
 import { useHomeContext } from '../context';
 import { IModuleQueryConfig } from '../types';
-import { formatTimeString, handleShareSearchParams, generateTabId, debounce } from '../utils';
+import { formatTimeString, handleShareSearchParams, generateTabId, debounce, validateSQL } from '../utils';
 
 export interface IDetailOptions {
   moduleQueryConfig?: IModuleQueryConfig;
@@ -150,6 +150,19 @@ export const useDataInit = () => {
         if (params.activeFields) delete params.activeFields;
         if (params.columnWidths) delete params.columnWidths;
         abortRef.current = new AbortController();
+
+        const flag = (params.whereSqls || []).some((sqlItem: string) => {
+          const checkRes = validateSQL(sqlItem ? `select * from demo where ${sqlItem}` : '');
+          if (checkRes.error) {
+            window.messageApi.error(`where子句：${sqlItem} 异常，请检查！`);
+            return true;
+          }
+        });
+
+        if (flag) {
+          return;
+        }
+
         api.fetchLogDetails(params, { signal: abortRef.current.signal }).then((res) => {
           const { rows } = res;
           const timeField = moduleQueryConfig?.timeField || homeModuleQueryConfig?.timeField || 'log_time';
