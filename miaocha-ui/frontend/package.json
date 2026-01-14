@@ -34,6 +34,7 @@
     "echarts": "^5.6.0",
     "echarts-for-react": "^3.0.2",
     "monaco-sql-languages": "^0.13.1",
+    "node-sql-parser": "^5.3.13",
     "nprogress": "^0.2.0",
     "rc-resize-observer": "^1.4.3",
     "rc-virtual-list": "^3.18.5",

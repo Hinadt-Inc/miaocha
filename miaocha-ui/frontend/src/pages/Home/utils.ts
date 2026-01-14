@@ -3,6 +3,7 @@ import customParseFormat from 'dayjs/plugin/customParseFormat';
 import duration from 'dayjs/plugin/duration';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import { Parser } from 'node-sql-parser';
 
 import { QueryConfig } from '@/api/modules';
 import { IRelativeTimeState } from '@/components/TimePicker';
@@ -570,4 +571,33 @@ export const handleShareSearchParams = (urlSearchParams: URLSearchParams): Parti
   if (relativeStartOption) parsedParams.relativeStartOption = JSON.parse(relativeStartOption);
   if (relativeEndOption) parsedParams.relativeEndOption = JSON.parse(relativeEndOption);
   return parsedParams;
+};
+
+/**
+ * 检查SQL语句的准确性
+ * @param sql 要检查的SQL语句
+ * @returns 如果SQL有效返回null，否则返回错误信息
+ */
+export const validateSQL = (sql: string): { error: boolean; message: string } => {
+  if (!sql || typeof sql !== 'string') {
+    return {
+      error: true,
+      message: 'SQL语句不能为空',
+    };
+  }
+  // 尝试解析SQL语句
+  try {
+    const parser1 = new Parser();
+    parser1.parse(sql, { database: 'mysql' });
+    return {
+      error: false,
+      message: '',
+    }; // 解析成功，SQL语法正确
+  } catch (parseError: any) {
+    // 返回具体的错误信息
+    return {
+      error: true,
+      message: parseError?.message || 'SQL语法错误',
+    };
+  }
 };
