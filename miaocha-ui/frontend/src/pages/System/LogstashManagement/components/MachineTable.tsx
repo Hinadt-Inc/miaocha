@@ -1,7 +1,9 @@
-import { Table, Space, Button, Popconfirm, Tag } from 'antd';
+import { Table, Space, Button, Popconfirm, Tag, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import type { LogstashProcess } from '@/types/logstashTypes';
+import { useState } from 'react';
+import { batchStartLogstashInstances, batchStopLogstashInstances } from '@/api/logstash';
 
 interface MachineTableProps {
   record: LogstashProcess;
@@ -16,6 +18,7 @@ interface MachineTableProps {
   onShowMachineTasks: (processId: number, machineId: number) => void;
   onShowLog: (machineId: number, isBottom?: boolean) => void;
   onDeleteMachine: (processId: number, machineId: number) => void;
+  onRefresh?: () => Promise<void>;
 }
 
 const MachineTable = ({
@@ -31,7 +34,44 @@ const MachineTable = ({
   onShowMachineTasks,
   onShowLog,
   onDeleteMachine,
+  onRefresh,
 }: MachineTableProps) => {
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+
+  const handleBatchStart = async () => {
+    try {
+      const instanceIds = selectedRowKeys.map((key) => Number(key));
+      await batchStartLogstashInstances(instanceIds);
+      message.success('批量启动成功');
+      setSelectedRowKeys([]);
+      if (onRefresh) {
+        await onRefresh();
+      }
+    } catch (error) {
+      // Error already handled by global error handler
+    }
+  };
+
+  const handleBatchStop = async () => {
+    try {
+      const instanceIds = selectedRowKeys.map((key) => Number(key));
+      await batchStopLogstashInstances(instanceIds);
+      message.success('批量停止成功');
+      setSelectedRowKeys([]);
+      if (onRefresh) {
+        await onRefresh();
+      }
+    } catch (error) {
+      // Error already handled by global error handler
+    }
+  };
+
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: (newSelectedRowKeys: React.Key[]) => {
+      setSelectedRowKeys(newSelectedRowKeys);
+    },
+  };
   const columns: ColumnsType<any> = [
     {
       title: '实例ID',
@@ -206,14 +246,49 @@ const MachineTable = ({
   ];
 
   return (
-    <Table
-      bordered
-      columns={columns}
-      dataSource={record.logstashMachineStatusInfo}
-      pagination={false}
-      rowKey="machineId"
-      size="small"
-    />
+    <>
+      {selectedRowKeys.length > 0 && (
+        <div style={{ marginBottom: 8 }}>
+          <Space>
+            <span>已选择 {selectedRowKeys.length} 个实例</span>
+            <Popconfirm
+              cancelText="取消"
+              description={`确定要批量启动选中的 ${selectedRowKeys.length} 个实例吗？`}
+              okText="确认"
+              title="确认批量启动"
+              onConfirm={handleBatchStart}
+            >
+              <Button size="small" type="primary">
+                批量启动
+              </Button>
+            </Popconfirm>
+            <Popconfirm
+              cancelText="取消"
+              description={`确定要批量停止选中的 ${selectedRowKeys.length} 个实例吗？`}
+              okText="确认"
+              title="确认批量停止"
+              onConfirm={handleBatchStop}
+            >
+              <Button danger size="small" type="primary">
+                批量停止
+              </Button>
+            </Popconfirm>
+            <Button size="small" onClick={() => setSelectedRowKeys([])}>
+              取消选择
+            </Button>
+          </Space>
+        </div>
+      )}
+      <Table
+        bordered
+        columns={columns}
+        dataSource={record.logstashMachineStatusInfo}
+        pagination={false}
+        rowKey="logstashMachineId"
+        rowSelection={rowSelection}
+        size="small"
+      />
+    </>
   );
 };
 
